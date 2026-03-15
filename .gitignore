@@ -1,0 +1,11 @@
+.*/
+.*
+!.gitignore
+.luarc.json
+!.github/
+!.github/**
+lsp/
+/config*
+tools/
+lotro-api/
+.doc/
