@@ -29,7 +29,14 @@ local BASE_ROW_PAD_X = 8
 local BASE_ROW_PAD_Y = 6
 local BASE_ROW_GAP_Y = 3
 local BASE_LINE_H = 14
-local BASE_ROW_SEPARATOR = 1
+local BASE_ROW_SEPARATOR = 2
+local BASE_CHIP_H = 18
+local BASE_CHIP_PAD_X = 6
+local BASE_CHIP_GAP_X = 4
+local BASE_CHIP_GAP_Y = 4
+local BASE_CHIP_BORDER = 1
+local BASE_CHIP_MIN_W = 52
+local BASE_CHIP_CHAR_W = 5.8
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
@@ -462,27 +469,97 @@ local function _compare_records(sort_mode, left, right)
     return _lower_text(left.name) < _lower_text(right.name)
 end
 
-local function _wrap_drop_lines(parts, max_chars)
-    local lines = {}
-    local current = ""
+local function _estimate_chip_width(text)
+    local char_w = BASE_CHIP_CHAR_W * _G.settings.global.scale
+    local pad_x = _scaled_int(BASE_CHIP_PAD_X)
+    local border_w = _scaled_int(BASE_CHIP_BORDER)
+    local text_w = math.floor((string.len(text or "") * char_w) + 0.5)
+    local min_w = _scaled_int(BASE_CHIP_MIN_W)
+    local width = text_w + (2 * (pad_x + border_w))
+    if width < min_w then
+        width = min_w
+    end
+    return width
+end
 
-    for i = 1, #parts do
-        local part = parts[i]
-        if current == "" then
-            current = part
-        elseif (#current + 2 + #part) <= max_chars then
-            current = current .. ", " .. part
-        else
-            lines[#lines + 1] = current
-            current = part
+local function _build_chip_layout(texts, max_width)
+    local layout = {}
+    local chip_h = _scaled_int(BASE_CHIP_H)
+    local gap_x = _scaled_int(BASE_CHIP_GAP_X)
+    local gap_y = _scaled_int(BASE_CHIP_GAP_Y)
+    local x = 0
+    local y = 0
+
+    for i = 1, #texts do
+        local text = texts[i]
+        local width = _estimate_chip_width(text)
+        if width > max_width then
+            width = max_width
         end
+
+        if x > 0 and (x + width) > max_width then
+            x = 0
+            y = y + chip_h + gap_y
+        end
+
+        layout[#layout + 1] = {
+            text = text,
+            x = x,
+            y = y,
+            w = width,
+        }
+
+        x = x + width + gap_x
     end
 
-    if current ~= "" then
-        lines[#lines + 1] = current
+    if #layout == 0 then
+        return layout, chip_h
     end
 
-    return lines
+    return layout, y + chip_h
+end
+
+local DropChip = class(Turbine.UI.Control)
+
+function DropChip:Constructor()
+    Turbine.UI.Control.Constructor(self)
+
+    self:SetMouseVisible(false)
+    self:SetBackColor(Turbine.UI.Color(1, 0.28, 0.28, 0.28))
+
+    self.inner = Turbine.UI.Control()
+    self.inner:SetParent(self)
+    self.inner:SetMouseVisible(false)
+    self.inner:SetBackColor(Turbine.UI.Color(1, 0.08, 0.08, 0.08))
+
+    self.label = Turbine.UI.Label()
+    self.label:SetParent(self.inner)
+    self.label:SetMouseVisible(false)
+    self.label:SetMultiline(false)
+    self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+
+    self:apply_settings()
+end
+
+function DropChip:apply_settings()
+    local border_w = _scaled_int(BASE_CHIP_BORDER)
+    self.inner:SetPosition(border_w, border_w)
+    self.label:SetFont(_scaled_font("Verdana", BASE_TEXT_FONT_SIZE))
+    self.label:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.label:SetForeColor(Turbine.UI.Color(1, 0.76, 0.88, 0.79))
+    self.label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+end
+
+function DropChip:bind(text, width, height)
+    local border_w = _scaled_int(BASE_CHIP_BORDER)
+    local pad_x = _scaled_int(BASE_CHIP_PAD_X)
+
+    self:SetSize(width, height)
+    self.inner:SetSize(math.max(1, width - (2 * border_w)), math.max(1, height - (2 * border_w)))
+    self.label:SetPosition(pad_x, 0)
+    self.label:SetSize(math.max(1, self.inner:GetWidth() - (2 * pad_x)), self.inner:GetHeight())
+    self.label:SetText(text or "")
+    self:SetVisible(true)
 end
 
 local BestiaryRow = class(Turbine.UI.Control)
@@ -516,11 +593,10 @@ function BestiaryRow:Constructor()
     self.power_label:SetMultiline(false)
     self.power_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
 
-    self.drops_label = Turbine.UI.Label()
-    self.drops_label:SetParent(self)
-    self.drops_label:SetMouseVisible(false)
-    self.drops_label:SetMultiline(true)
-    self.drops_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.drop_area = Turbine.UI.Control()
+    self.drop_area:SetParent(self)
+    self.drop_area:SetMouseVisible(false)
+    self.drop_chips = {}
 
     self.separator = Turbine.UI.Control()
     self.separator:SetParent(self)
@@ -539,23 +615,33 @@ function BestiaryRow:apply_settings()
     local meta_font = _scaled_font("Verdana", BASE_TEXT_FONT_SIZE)
     self.level_label:SetFont(meta_font)
     self.level_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.level_label:SetForeColor(Turbine.UI.Color(1, 0.85, 0.85, 0.85))
+    self.level_label:SetForeColor(Turbine.UI.Color(1, 0.72, 0.58, 0.20))
     self.level_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 
     self.morale_label:SetFont(meta_font)
     self.morale_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.morale_label:SetForeColor(Turbine.UI.Color(1, 0.85, 0.85, 0.85))
+    self.morale_label:SetForeColor(Turbine.UI.Color(1, 0.42, 0.86, 0.44))
     self.morale_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 
     self.power_label:SetFont(meta_font)
     self.power_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.power_label:SetForeColor(Turbine.UI.Color(1, 0.85, 0.85, 0.85))
+    self.power_label:SetForeColor(Turbine.UI.Color(1, 0.40, 0.68, 0.96))
     self.power_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 
-    self.drops_label:SetFont(meta_font)
-    self.drops_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.drops_label:SetForeColor(Turbine.UI.Color(1, 0.75, 0.88, 0.78))
-    self.drops_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.separator:SetBackColor(Turbine.UI.Color(0.85, 0.32, 0.32, 0.32))
+
+    for i = 1, #self.drop_chips do
+        self.drop_chips[i]:apply_settings()
+    end
+end
+
+function BestiaryRow:_ensure_chip_count(count)
+    while #self.drop_chips < count do
+        local chip = DropChip()
+        chip:SetParent(self.drop_area)
+        chip:SetVisible(false)
+        self.drop_chips[#self.drop_chips + 1] = chip
+    end
 end
 
 function BestiaryRow:bind(record, width)
@@ -569,9 +655,9 @@ function BestiaryRow:bind(record, width)
     local right_w = math.min(_scaled_int(120), math.max(_scaled_int(72), math.floor(inner_w * 0.28)))
     local left_w = math.max(1, inner_w - right_w - _scaled_int(6))
 
-    local drop_lines = record ~= nil and record._drop_lines or { TR("No drops seen.") }
-    local drop_line_count = math.max(1, #drop_lines)
-    local height = pad_y + line_h + row_gap_y + line_h + row_gap_y + (drop_line_count * line_h) + pad_y + separator_h
+    local drop_layout = record ~= nil and record._chip_layout or {}
+    local drop_h = record ~= nil and _to_number(record._drop_height, _scaled_int(BASE_CHIP_H)) or _scaled_int(BASE_CHIP_H)
+    local height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
 
     self:SetSize(width, height)
 
@@ -585,22 +671,37 @@ function BestiaryRow:bind(record, width)
     self.power_label:SetPosition(pad_x + left_w + _scaled_int(6), pad_y + line_h + row_gap_y)
     self.power_label:SetSize(right_w, line_h)
 
-    self.drops_label:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
-    self.drops_label:SetSize(inner_w, drop_line_count * line_h)
+    self.drop_area:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.drop_area:SetSize(inner_w, drop_h)
 
     self.separator:SetPosition(0, height - separator_h)
     self.separator:SetSize(width, separator_h)
 
     if record == nil then
+        for i = 1, #self.drop_chips do
+            self.drop_chips[i]:SetVisible(false)
+        end
         self:SetVisible(false)
         return
     end
 
+    self:_ensure_chip_count(#drop_layout)
     self.name_label:SetText(record.name)
     self.level_label:SetText(record.level_text)
     self.morale_label:SetText(record.morale_text)
     self.power_label:SetText(record.power_text)
-    self.drops_label:SetText(table.concat(drop_lines, "\n"))
+
+    local chip_h = _scaled_int(BASE_CHIP_H)
+    for i = 1, #drop_layout do
+        local chip_info = drop_layout[i]
+        local chip = self.drop_chips[i]
+        chip:SetPosition(chip_info.x, chip_info.y)
+        chip:bind(chip_info.text, chip_info.w, chip_h)
+    end
+    for i = #drop_layout + 1, #self.drop_chips do
+        self.drop_chips[i]:SetVisible(false)
+    end
+
     self:SetVisible(true)
 end
 
@@ -618,6 +719,8 @@ function BestiaryWindow:Constructor()
     self.update_every = 0.5
     self._last_generation = nil
     self._suppress_size_changed = false
+    self._persist_dirty = false
+    self._persist_due_at = nil
 
     self.sort_mode = SORT_NAME_ASC
     self.filter_groups = {}
@@ -707,6 +810,12 @@ function BestiaryWindow:Constructor()
         self:handle_user_resize()
     end
 
+    self.PositionChanged = function()
+        if self._suppress_size_changed ~= true then
+            self:queue_persist()
+        end
+    end
+
     self.VisibleChanged = function()
         local visible = self:IsVisible() == true
         self:SetWantsUpdates(visible)
@@ -719,6 +828,7 @@ function BestiaryWindow:Constructor()
             if self.sort_dropdown ~= nil and self.sort_dropdown.Close ~= nil then
                 self.sort_dropdown:Close()
             end
+            self:persist_geometry()
         end
     end
 
@@ -741,8 +851,35 @@ function BestiaryWindow:toggle()
     end
 end
 
+function BestiaryWindow:persist_geometry()
+    local raw = _G.loaded_settings ~= nil and _G.loaded_settings.bestiary or nil
+    if type(raw) ~= "table" or type(raw.window) ~= "table" then
+        return
+    end
+
+    self._persist_dirty = false
+    self._persist_due_at = nil
+
+    local left, top = self:GetPosition()
+    local width, height = self:GetSize()
+    raw.window.left = left
+    raw.window.top = top
+    raw.window.width = width
+    raw.window.height = height
+    save_settings()
+end
+
+function BestiaryWindow:queue_persist()
+    self._persist_dirty = true
+    self._persist_due_at = Turbine.Engine.GetGameTime() + 0.4
+end
+
 function BestiaryWindow:apply_settings()
     self.update_every = 1.0 / math.max(1, _to_number(_G.settings.global.refresh_rate, 30))
+
+    if self._persist_dirty == true then
+        self:persist_geometry()
+    end
 
     local button_font = _scaled_font("Verdana", 10)
     self.order_label:SetFont(button_font)
@@ -760,6 +897,20 @@ function BestiaryWindow:apply_settings()
 
     for i = 1, #self.entries do
         self.entries[i]:apply_settings()
+    end
+
+    local raw = _G.loaded_settings ~= nil and _G.loaded_settings.bestiary or nil
+    local window = raw ~= nil and raw.window or nil
+    if type(window) == "table" then
+        local left = _to_number(window.left, self:GetLeft())
+        local top = _to_number(window.top, self:GetTop())
+        local width = _to_number(window.width, self:GetWidth())
+        local height = _to_number(window.height, self:GetHeight())
+
+        self._suppress_size_changed = true
+        self:SetPosition(left, top)
+        self:SetSize(math.max(_scaled_int(BASE_MIN_W), width), math.max(_scaled_int(BASE_MIN_H), height))
+        self._suppress_size_changed = false
     end
 
     self:layout()
@@ -785,6 +936,12 @@ function BestiaryWindow:Update()
     if self._last_generation ~= generation then
         self:refresh_from_store(true)
     end
+
+    if self._persist_dirty == true and self._persist_due_at ~= nil and now >= self._persist_due_at then
+        self._persist_dirty = false
+        self._persist_due_at = nil
+        self:persist_geometry()
+    end
 end
 
 function BestiaryWindow:handle_user_resize()
@@ -800,9 +957,11 @@ function BestiaryWindow:handle_user_resize()
         self._suppress_size_changed = true
         self:SetSize(next_w, next_h)
         self._suppress_size_changed = false
+        self:queue_persist()
         return
     end
 
+    self:queue_persist()
     self:layout()
     self:apply_view()
 end
@@ -925,29 +1084,28 @@ function BestiaryWindow:_prepare_records(records)
     local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
     local pad_y = _scaled_int(BASE_ROW_PAD_Y)
     local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
-    local approx_chars = math.max(18, math.floor((content_w - (2 * _scaled_int(BASE_ROW_PAD_X))) / math.max(1, _scaled_int(6))))
+    local inner_w = math.max(1, content_w - (2 * _scaled_int(BASE_ROW_PAD_X)))
 
     for i = 1, #records do
         local record = records[i]
-        local parts = {}
+        local chip_texts = {}
         for di = 1, #record.drops do
             local drop = record.drops[di]
-            parts[#parts + 1] = drop.name .. ": " .. _format_percent(drop.rate)
+            chip_texts[#chip_texts + 1] = drop.name .. ": " .. _format_percent(drop.rate)
         end
 
-        local drop_lines = nil
-        if #parts > 0 then
-            drop_lines = _wrap_drop_lines(parts, approx_chars)
-        else
-            drop_lines = { TR("No drops seen.") }
+        if #chip_texts == 0 then
+            chip_texts = { TR("No drops seen.") }
         end
 
-        record.level_text = _format_range(record.level_min, record.level_max)
+        local chip_layout, drop_h = _build_chip_layout(chip_texts, inner_w)
+
+        record.level_text = TR("Level") .. ": " .. _format_range(record.level_min, record.level_max)
         record.morale_text = TR("Morale") .. ": " .. _format_number_range(record.morale_min, record.morale_max)
         record.power_text = TR("Power") .. ": " .. _format_number_range(record.power_min, record.power_max)
-        record._drop_lines = drop_lines
-        record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + (#drop_lines * line_h) + pad_y +
-            separator_h
+        record._chip_layout = chip_layout
+        record._drop_height = drop_h
+        record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
     end
 end
 

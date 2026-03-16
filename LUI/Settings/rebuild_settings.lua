@@ -93,6 +93,7 @@ function _G.rebuild_settings()
         },
         inventory = { window = {} },
         assets = { window = {}, tile = {}, layouts = { icons = {}, details = {} } },
+        bestiary = { window = {} },
     }
 
     _G.settings.global.scale = scaling
@@ -192,6 +193,11 @@ function _G.rebuild_settings()
         assets.stack_items = raw_assets.stack_items
         assets.tile.icons = scaled_int(raw_assets.tile.icons)
         assets.tile.details = scaled_int(raw_assets.tile.details)
+    end
+
+    local raw_bestiary = raw.bestiary
+    if raw_bestiary ~= nil then
+        _G.settings.bestiary.window = raw_bestiary.window
     end
 
     local raw_party_ci = raw.party.class_icon

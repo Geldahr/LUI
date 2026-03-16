@@ -40,6 +40,7 @@ function _G.ensure_loaded_settings()
     ensure_table(s, "party")
     ensure_table(s, "inventory")
     ensure_table(s, "assets")
+    ensure_table(s, "bestiary")
     ensure_table(s, "status_bar")
 
     ensure_table_at(s, { "global", "config_window" })
@@ -129,6 +130,7 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "assets", "layouts" })
     ensure_table_at(s, { "assets", "layouts", "icons" })
     ensure_table_at(s, { "assets", "layouts", "details" })
+    ensure_table_at(s, { "bestiary", "window" })
 
     ensure_table_at(s, { "self", "expiring_effects" })
     ensure_table_at(s, { "self", "expiring_effects", "window" })
@@ -398,6 +400,20 @@ function _G.ensure_loaded_settings()
     end
     ensure_assets_layout(assets_layouts.icons, 16, 8)
     ensure_assets_layout(assets_layouts.details, 4, 10)
+
+    local bestiary = s.bestiary
+    if bestiary.window.left == nil then
+        bestiary.window.left = _pos_x(900)
+    end
+    if bestiary.window.top == nil then
+        bestiary.window.top = _pos_y(180)
+    end
+    if bestiary.window.width == nil then
+        bestiary.window.width = 700
+    end
+    if bestiary.window.height == nil then
+        bestiary.window.height = 520
+    end
 
     local cw = s.global.config_window
     if cw.width == nil then cw.width = 1005 end

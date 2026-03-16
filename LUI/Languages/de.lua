@@ -15,6 +15,7 @@ return {
     ["Party"] = "Gruppe",
     ["Vitals"] = "Vitals",
     ["Layout"] = "Layout",
+    ["Level"] = "Stufe",
     ["Expiring Effects"] = "Auslaufende Effekte",
     ["Expiring Effects (Self)"] = "Auslaufende Effekte (Selbst)",
     ["Expiring Effects (Target)"] = "Auslaufende Effekte (Ziel)",
