@@ -719,8 +719,6 @@ function BestiaryWindow:Constructor()
     self.update_every = 0.5
     self._last_generation = nil
     self._suppress_size_changed = false
-    self._persist_dirty = false
-    self._persist_due_at = nil
 
     self.sort_mode = SORT_NAME_ASC
     self.filter_groups = {}
@@ -810,12 +808,6 @@ function BestiaryWindow:Constructor()
         self:handle_user_resize()
     end
 
-    self.PositionChanged = function()
-        if self._suppress_size_changed ~= true then
-            self:queue_persist()
-        end
-    end
-
     self.VisibleChanged = function()
         local visible = self:IsVisible() == true
         self:SetWantsUpdates(visible)
@@ -828,7 +820,6 @@ function BestiaryWindow:Constructor()
             if self.sort_dropdown ~= nil and self.sort_dropdown.Close ~= nil then
                 self.sort_dropdown:Close()
             end
-            self:persist_geometry()
         end
     end
 
@@ -851,14 +842,11 @@ function BestiaryWindow:toggle()
     end
 end
 
-function BestiaryWindow:persist_geometry()
+function BestiaryWindow:capture_geometry()
     local raw = _G.loaded_settings ~= nil and _G.loaded_settings.bestiary or nil
     if type(raw) ~= "table" or type(raw.window) ~= "table" then
         return
     end
-
-    self._persist_dirty = false
-    self._persist_due_at = nil
 
     local left, top = self:GetPosition()
     local width, height = self:GetSize()
@@ -866,20 +854,14 @@ function BestiaryWindow:persist_geometry()
     raw.window.top = top
     raw.window.width = width
     raw.window.height = height
-    save_settings()
 end
 
-function BestiaryWindow:queue_persist()
-    self._persist_dirty = true
-    self._persist_due_at = Turbine.Engine.GetGameTime() + 0.4
+function BestiaryWindow:persist_geometry()
+    self:capture_geometry()
 end
 
 function BestiaryWindow:apply_settings()
     self.update_every = 1.0 / math.max(1, _to_number(_G.settings.global.refresh_rate, 30))
-
-    if self._persist_dirty == true then
-        self:persist_geometry()
-    end
 
     local button_font = _scaled_font("Verdana", 10)
     self.order_label:SetFont(button_font)
@@ -936,12 +918,6 @@ function BestiaryWindow:Update()
     if self._last_generation ~= generation then
         self:refresh_from_store(true)
     end
-
-    if self._persist_dirty == true and self._persist_due_at ~= nil and now >= self._persist_due_at then
-        self._persist_dirty = false
-        self._persist_due_at = nil
-        self:persist_geometry()
-    end
 end
 
 function BestiaryWindow:handle_user_resize()
@@ -957,11 +933,9 @@ function BestiaryWindow:handle_user_resize()
         self._suppress_size_changed = true
         self:SetSize(next_w, next_h)
         self._suppress_size_changed = false
-        self:queue_persist()
         return
     end
 
-    self:queue_persist()
     self:layout()
     self:apply_view()
 end
