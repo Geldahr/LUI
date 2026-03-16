@@ -159,7 +159,8 @@ _G.DEFAULT_LAYOUT_TOP =
 				["top"] = 1054.000000
 			},
 			["text_alignment"] = 2.000000,
-			["threshold"] = 90.000000
+			["threshold"] = 90.000000,
+			["min_base_cooldown"] = 1.000000
 		},
 		["vitals"] =
 		{

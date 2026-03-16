@@ -271,6 +271,8 @@ return {
     ["This action cannot be undone."] = "Diese Aktion kann nicht rückgängig gemacht werden.",
     ["This will delete it for all characters using it."] = "Dadurch wird es für alle Charaktere gelöscht, die es verwenden.",
     ["Threshold (s)"] = "Schwellenwert (s)",
+    ["Min base cooldown (s)"] = "Min. Basis-Abklingzeit (s)",
+    ["Skills whose base cooldown is below this value are ignored."] = "Fertigkeiten, deren Basis-Abklingzeit unter diesem Wert liegt, werden ignoriert.",
     ["Tile Size"] = "Kachelgröße",
     ["Tiles"] = "Kacheln",
     ["Time (local)"] = "Zeit (lokal)",

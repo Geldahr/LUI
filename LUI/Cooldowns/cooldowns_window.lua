@@ -610,7 +610,9 @@ function CooldownsWindow:_discover_skills(force)
     local wl_prefixes = self._wl_prefixes
     local bl = self._bl_set
     local bl_prefixes = self._bl_prefixes
-    local threshold = self:get_settings().threshold
+    local settings = self:get_settings()
+    local threshold = settings.threshold
+    local min_base_cooldown = settings.min_base_cooldown or 0
 
     local lp = Turbine.Gameplay.LocalPlayer.GetInstance()
     if lp == nil or lp.GetTrainedSkills == nil then
@@ -636,40 +638,48 @@ function CooldownsWindow:_discover_skills(force)
                 if name ~= "" then
                     local name_key = string.lower(name)
                     if _matches_name_filter(bl, bl_prefixes, name_key) ~= true then
-                        out_len = out_len + 1
-                        local rec = RecoveringSkill(
-                            skill,
-                            name_key,
-                            name,
-                            _matches_name_filter(wl, wl_prefixes, name_key)
-                        )
-
-                        if info.GetIconImageID ~= nil then
-                            local icon_id = info:GetIconImageID()
-                            if icon_id ~= nil then
-                                rec.icon = Turbine.UI.Graphic(icon_id)
-                            end
+                        local base_cooldown_seconds = skill.GetCooldown ~= nil and skill:GetCooldown() or nil
+                        local passes_min_base = true
+                        if min_base_cooldown > 0 and base_cooldown_seconds ~= nil and base_cooldown_seconds > 0 then
+                            passes_min_base = base_cooldown_seconds >= min_base_cooldown
                         end
 
-                        self:_refresh_skill_state(rec)
+                        if passes_min_base then
+                            out_len = out_len + 1
+                            local rec = RecoveringSkill(
+                                skill,
+                                name_key,
+                                name,
+                                _matches_name_filter(wl, wl_prefixes, name_key)
+                            )
 
-                        if threshold > 0 and rec.reset_time ~= nil then
-                            local remaining = rec.reset_time - now
-                            if remaining > 0 then
-                                if remaining <= threshold then
-                                    self:_insert_active_skill(rec)
-                                else
-                                    self:_insert_pending_skill(rec, threshold)
+                            if info.GetIconImageID ~= nil then
+                                local icon_id = info:GetIconImageID()
+                                if icon_id ~= nil then
+                                    rec.icon = Turbine.UI.Graphic(icon_id)
                                 end
                             end
-                        end
 
-                        rec.cb_reset = add_callback(skill, "ResetTimeChanged", function()
                             self:_refresh_skill_state(rec)
-                            self:_update_skill_runtime(rec)
-                        end)
 
-                        out[out_len] = rec
+                            if threshold > 0 and rec.reset_time ~= nil then
+                                local remaining = rec.reset_time - now
+                                if remaining > 0 then
+                                    if remaining <= threshold then
+                                        self:_insert_active_skill(rec)
+                                    else
+                                        self:_insert_pending_skill(rec, threshold)
+                                    end
+                                end
+                            end
+
+                            rec.cb_reset = add_callback(skill, "ResetTimeChanged", function()
+                                self:_refresh_skill_state(rec)
+                                self:_update_skill_runtime(rec)
+                            end)
+
+                            out[out_len] = rec
+                        end
                     end
                 end
             end

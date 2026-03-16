@@ -130,6 +130,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			["text_margin"] = 4.000000,
 			["icon_side"] = 2.000000,
 			["threshold"] = 90.000000,
+			["min_base_cooldown"] = 1.000000,
 			["font"] =
 			{
 				["outline_color"] =

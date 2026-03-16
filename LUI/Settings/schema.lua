@@ -652,6 +652,9 @@ function _G.ensure_loaded_settings()
     if cd.threshold == nil then
         cd.threshold = 90.0
     end
+    if cd.min_base_cooldown == nil then
+        cd.min_base_cooldown = 1.0
+    end
     if cd.columns == nil then
         cd.columns = 1
     end

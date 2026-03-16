@@ -271,6 +271,8 @@ return {
     ["This action cannot be undone."] = "Cette action ne peut pas être annulée.",
     ["This will delete it for all characters using it."] = "Cela le supprimera pour tous les personnages qui l'utilisent.",
     ["Threshold (s)"] = "Seuil (s)",
+    ["Min base cooldown (s)"] = "Recharge de base min. (s)",
+    ["Skills whose base cooldown is below this value are ignored."] = "Les compétences dont le temps de recharge de base est inférieur à cette valeur sont ignorées.",
     ["Tile Size"] = "Taille des tuiles",
     ["Tiles"] = "Tuiles",
     ["Time (local)"] = "Heure (locale)",

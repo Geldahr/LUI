@@ -77,10 +77,12 @@ function Cooldowns.create_controls(window, ui)
     local bar_mode_values = { LUI_ENUMS.bar_mode.LOAD, LUI_ENUMS.bar_mode.UNLOAD }
     local flow_labels = { TR("Top to bottom"), TR("Bottom to top") }
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
+    local min_base_help = TR("Skills whose base cooldown is below this value are ignored.")
 
     ui.add_checkbox("cd_enabled", TR("Enabled"), true)
 
     ui.add_text("cd_threshold", TR("Threshold (s)"))
+    ui.add_text("cd_min_base_cooldown", TR("Min base cooldown (s)"), false, min_base_help)
 
     ui.add_custom("cooldowns_preview", 52)
 
@@ -134,6 +136,7 @@ function Cooldowns.register(window, ui)
         ui.add_title(TR("General")),
         window.controls.cd_enabled,
         window.controls.cd_threshold,
+        window.controls.cd_min_base_cooldown,
 
         ui.add_hr(),
         ui.add_title(TR("Layout")),
@@ -182,6 +185,7 @@ function Cooldowns.load(window, s, ui)
 
     window.controls.cd_enabled.cb:SetChecked(cd.enabled == true)
     window.controls.cd_threshold.tb:SetText(tostring(cd.threshold))
+    window.controls.cd_min_base_cooldown.tb:SetText(tostring(cd.min_base_cooldown or 0))
     window.controls.cd_item_w.tb:SetText(tostring(cd.item_w))
     window.controls.cd_item_h.tb:SetText(tostring(cd.item_h))
     window.controls.cd_spacing.tb:SetText(tostring(cd.spacing))
@@ -219,6 +223,10 @@ function Cooldowns.apply(window, s, ui)
     local threshold = tonumber(window.controls.cd_threshold.tb:GetText())
     if threshold ~= nil then
         cd.threshold = threshold
+    end
+    local min_base_cooldown = tonumber(window.controls.cd_min_base_cooldown.tb:GetText())
+    if min_base_cooldown ~= nil then
+        cd.min_base_cooldown = min_base_cooldown
     end
 
     local item_w = tonumber(window.controls.cd_item_w.tb:GetText())
