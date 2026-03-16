@@ -4,6 +4,7 @@ local SERVER_DATA_SCOPE = Turbine.DataScope.Server
 local ACCOUNT_DATA_KEY = "LUI_PROFILES"
 local SERVER_DATA_KEY = "LUI_CHARACTERS"
 local SERVER_ASSETS_CACHE_KEY = "LUI_ASSETS_CACHE"
+local SERVER_BESTIARY_CACHE_KEY = "LUI_BESTIARY_CACHE"
 
 local FALLBACK_PROFILE_NAME = "Configuration"
 local UNKNOWN_CHARACTER_NAME = "__unknown_character__"
@@ -104,6 +105,17 @@ function _G.ensure_server_settings()
     if type(s.characters) ~= "table" then
         s.characters = {}
     end
+end
+
+function _G.ensure_bestiary_cache()
+    if type(_G.bestiary_cache) ~= "table" then
+        _G.bestiary_cache = {}
+    end
+    if type(_G.bestiary_cache_generation) ~= "number" then
+        _G.bestiary_cache_generation = 1
+    end
+
+    return _G.bestiary_cache
 end
 
 function _G.create_configuration(name, settings)
@@ -299,13 +311,20 @@ function _G.save_assets_cache()
     Turbine.PluginData.Save(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, _G.assets_cache)
 end
 
+function _G.save_bestiary_cache()
+    _G.ensure_bestiary_cache()
+    Turbine.PluginData.Save(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, _G.bestiary_cache)
+end
+
 function _G.load_settings()
     _G.account_settings = Turbine.PluginData.Load(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY)
     _G.server_settings = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_DATA_KEY)
     _G.assets_cache = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY)
+    _G.bestiary_cache = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY)
 
     _G.ensure_account_settings()
     _G.ensure_server_settings()
+    _G.ensure_bestiary_cache()
 
     _G.current_character_name = _get_current_character_name()
     _G.current_profile_id = nil

@@ -152,6 +152,12 @@ function _G.ensure_loaded_settings()
     if s.global.refresh_rate == nil then
         s.global.refresh_rate = 30
     end
+    if s.global.bestiary_capture == nil then
+        s.global.bestiary_capture = false
+    end
+    if is_lui_english_language ~= nil and is_lui_english_language() ~= true then
+        s.global.bestiary_capture = false
+    end
 
     local function apply_vital_defaults(v, is_target, morale_default, power_default, default_left, default_top,
                                         default_tt_left, default_tt_top, default_track_noncurable,

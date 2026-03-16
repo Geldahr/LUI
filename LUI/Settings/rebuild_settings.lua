@@ -31,6 +31,7 @@ function _G.rebuild_settings()
     _G.settings = {
         global = {
             number_abbrev = {},
+            bestiary_capture = false,
         },
         status_bar = {
             window = {},
@@ -97,6 +98,7 @@ function _G.rebuild_settings()
     _G.settings.global.scale = scaling
     _G.settings.global.refresh_rate = refresh_rate
     _G.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
+    _G.settings.global.bestiary_capture = raw.global.bestiary_capture == true
 
     local function build_vital(dst, src)
         dst.window = src.window

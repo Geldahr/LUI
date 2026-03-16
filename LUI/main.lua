@@ -10,6 +10,7 @@ import "Geldahr.LUI.UI"
 import "Geldahr.LUI.ExpiringEffects"
 import "Geldahr.LUI.Cooldowns"
 import "Geldahr.LUI.Assets"
+import "Geldahr.LUI.Bestiary"
 
 local function set_backpacks_enabled(enabled)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Backpack1, enabled == true)
@@ -129,10 +130,15 @@ ASSETS_STORE = nil
 ASSETS_WINDOW = nil
 STATUS_BAR = nil
 COOLDOWNS_WINDOW = nil
+BESTIARY_WINDOW = nil
+BESTIARY_TRACKER = Bestiary.Collector()
 apply_inventory_settings()
 apply_assets_settings()
 apply_status_bar_settings()
 apply_cooldowns_settings()
+if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.apply_settings ~= nil then
+    BESTIARY_TRACKER:apply_settings()
+end
 
 Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Vitals, false)
 Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Target, false)
@@ -150,7 +156,21 @@ Turbine.Shell.WriteLine(string.format(TR("LUI v%s loaded at %02d:%02d:%02d"), Pl
 
 Plugins["LUI"].Unload = function()
     save_settings()
-
+    if BESTIARY_WINDOW ~= nil then
+        if BESTIARY_WINDOW.SetVisible ~= nil then
+            BESTIARY_WINDOW:SetVisible(false)
+        end
+        BESTIARY_WINDOW = nil
+    end
+    if BESTIARY_TRACKER ~= nil then
+        if BESTIARY_TRACKER.save ~= nil then
+            BESTIARY_TRACKER:save()
+        end
+        if BESTIARY_TRACKER.destroy ~= nil then
+            BESTIARY_TRACKER:destroy()
+        end
+        BESTIARY_TRACKER = nil
+    end
     if ASSETS_STORE ~= nil then
         ASSETS_STORE:destroy()
         ASSETS_STORE = nil

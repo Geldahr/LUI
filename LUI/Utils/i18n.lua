@@ -60,6 +60,10 @@ end
 
 TR_TABLE = _load_translations()
 
+function _G.is_lui_english_language()
+    return _detect_language_code() == "en"
+end
+
 function _G.TR(text)
     return TR_TABLE[text] or text
 end

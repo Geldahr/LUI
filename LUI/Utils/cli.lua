@@ -7,6 +7,8 @@ local function display_help()
     Turbine.Shell.WriteLine(TR("  /lui move cancel - Cancel move mode changes"))
     Turbine.Shell.WriteLine(TR("  /lui inventory  - Toggle inventory window"))
     Turbine.Shell.WriteLine(TR("  /lui assets      - Toggle assets window"))
+    Turbine.Shell.WriteLine(TR("  /lui bestiary   - Toggle bestiary window"))
+    Turbine.Shell.WriteLine(TR("  /lui bestiary export - Dump captured bestiary data as Lua"))
 end
 
 function command:Execute(_, str)
@@ -46,6 +48,22 @@ function command:Execute(_, str)
     elseif cmd == "assets" or cmd == "a" then
         if ASSETS_WINDOW ~= nil and ASSETS_WINDOW.toggle ~= nil then
             ASSETS_WINDOW:toggle()
+        end
+    elseif cmd == "bestiary" then
+        local action = list[2] ~= nil and string.lower(list[2]) or nil
+        if action == "export" then
+            if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.export_to_shell ~= nil then
+                BESTIARY_TRACKER:export_to_shell()
+            end
+        elseif action == nil then
+            if BESTIARY_WINDOW == nil and Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil then
+                BESTIARY_WINDOW = Bestiary.BestiaryWindow()
+            end
+            if BESTIARY_WINDOW ~= nil and BESTIARY_WINDOW.toggle ~= nil then
+                BESTIARY_WINDOW:toggle()
+            end
+        else
+            display_help()
         end
     end
 end

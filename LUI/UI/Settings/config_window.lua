@@ -4699,6 +4699,12 @@ function ConfigWindow:refresh_runtime_settings()
     if COOLDOWNS_WINDOW ~= nil and COOLDOWNS_WINDOW.apply_settings ~= nil then
         COOLDOWNS_WINDOW:apply_settings()
     end
+    if BESTIARY_WINDOW ~= nil and BESTIARY_WINDOW.apply_settings ~= nil then
+        BESTIARY_WINDOW:apply_settings()
+    end
+    if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.apply_settings ~= nil then
+        BESTIARY_TRACKER:apply_settings()
+    end
     if PLAYER_VITAL ~= nil and PLAYER_VITAL.on_target_changed ~= nil then
         PLAYER_VITAL:on_target_changed()
     end

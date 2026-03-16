@@ -12,7 +12,7 @@ local LINK_BACKGROUND = Turbine.UI.Color(1.0, 0.2, 0.2, 0.2)
 local GITHUB_LABEL_TEXT = TR("For more information, feature requests, or bug reports, please visit the GitHub repository:")
 local ABOUT_HEIGHT = 156
 local GITHUB_HEIGHT = 59
-local COMMANDS_HEIGHT = 133
+local COMMANDS_HEIGHT = 169
 local GITHUB_LINK_HEIGHT = 22
 local GITHUB_LABEL_HEIGHT = 30
 
@@ -127,6 +127,8 @@ function Help.create_controls(window, ui)
         TR("/lui inventory - Toggle the inventory window."),
         TR("/lui inv - Short alias for /lui inventory."),
         TR("/lui assets - Toggle the assets window."),
+        TR("/lui bestiary - Toggle the bestiary window."),
+        TR("/lui bestiary export - Dump captured bestiary data as Lua."),
     }, "\n")
 
     _create_help_text(window, ui, "help_about", about_text, ABOUT_HEIGHT)

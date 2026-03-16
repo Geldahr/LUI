@@ -26,6 +26,7 @@ function Global.create_controls(window, ui)
 
     ui.add_text("refresh_rate", TR("Refresh rate of some UI elements (fps)"))
     ui.add_checkbox("move_mode_shortcut", TR("Use LotRO move mode shortcut"))
+    ui.add_checkbox("bestiary_capture", TR("Enable bestiary capture (English client only)"), true)
 
     ui.add_checkbox("abbrev_enabled", TR("Shorten large numbers"))
     ui.add_dropdown("abbrev_digits", TR("Digits Before Shortening"), ui.abbrev_digits_labels, ui.abbrev_digits_values,
@@ -43,6 +44,7 @@ function Global.register(window, ui)
         window.controls.scale,
         window.controls.refresh_rate,
         window.controls.move_mode_shortcut,
+        window.controls.bestiary_capture,
 
         ui.add_hr(),
         ui.add_title(TR("Numbers")),
@@ -59,6 +61,11 @@ function Global.load(window, s)
 
     local abbrev = s.global.number_abbrev
     window.controls.move_mode_shortcut.cb:SetChecked(s.global.move_mode_shortcut == true)
+    local english_only = is_lui_english_language == nil or is_lui_english_language() == true
+    window.controls.bestiary_capture.cb:SetChecked(english_only == true and s.global.bestiary_capture == true)
+    if window.controls.bestiary_capture.cb.SetEnabled ~= nil then
+        window.controls.bestiary_capture.cb:SetEnabled(english_only == true)
+    end
     window.controls.abbrev_enabled.cb:SetChecked(abbrev.enabled == true)
     window.controls.abbrev_digits:set_value(abbrev.digits)
     window.controls.abbrev_width:set_value(abbrev.width)
@@ -76,6 +83,11 @@ function Global.apply(window, s)
     end
 
     s.global.move_mode_shortcut = window.controls.move_mode_shortcut.cb:IsChecked() == true
+    if is_lui_english_language == nil or is_lui_english_language() == true then
+        s.global.bestiary_capture = window.controls.bestiary_capture.cb:IsChecked() == true
+    else
+        s.global.bestiary_capture = false
+    end
     s.global.number_abbrev.enabled = window.controls.abbrev_enabled.cb:IsChecked()
     s.global.number_abbrev.digits = window.controls.abbrev_digits:get_value()
     s.global.number_abbrev.width = window.controls.abbrev_width:get_value()

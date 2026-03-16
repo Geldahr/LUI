@@ -655,6 +655,7 @@ _G.DEFAULT_LAYOUT_TOP =
 			["left"] = 583.000000,
 			["width"] = 1052.000000
 		},
+		["bestiary_capture"] = false,
 		["move_mode_shortcut"] = true
 	},
 	["target"] =
