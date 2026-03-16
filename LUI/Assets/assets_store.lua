@@ -6,8 +6,6 @@ import "Geldahr.LUI.Utils.callbacks"
 AssetsStore = class(Turbine.UI.Control)
 
 local UPDATE_EVERY = 0.50
-local PERSIST_DEBOUNCE = 30.00
-
 local SOURCE_BACKPACK = "backpack"
 local SOURCE_BANK = "bank"
 local SOURCE_VAULT = "vault"
@@ -476,9 +474,6 @@ function AssetsStore:Constructor()
     self._vault_available = nil
     self._shared_available = nil
 
-    self._persist_dirty = false
-    self._persist_due_at = nil
-
     self.generation = 1
 
     self:refresh_bindings()
@@ -496,9 +491,6 @@ function AssetsStore:destroy()
         self.generation = self.generation + 1
     end
 
-    self._persist_dirty = false
-    self._persist_due_at = nil
-    save_assets_cache()
     self:_detach_callbacks()
     self:SetWantsUpdates(false)
     self:SetVisible(false)
@@ -520,18 +512,9 @@ function AssetsStore:refresh_now(source_key, force_bindings)
 
     self:_refresh_availability_flags()
 
-    local changed, persist_changed = self:_flush_dirty_snapshots()
+    local changed = self:_flush_dirty_snapshots()
     if changed == true then
         self.generation = self.generation + 1
-        if persist_changed == true then
-            if force_bindings == true or bindings_changed == true then
-                self._persist_dirty = false
-                self._persist_due_at = nil
-                save_assets_cache()
-            else
-                self:_queue_persist()
-            end
-        end
     end
 
     return changed
@@ -654,29 +637,11 @@ function AssetsStore:Update()
     self:_sync_bindings(false)
     self:_refresh_availability_flags()
 
-    local changed, persist_changed = self:_flush_dirty_snapshots()
+    local changed = self:_flush_dirty_snapshots()
 
     if changed == true then
         self.generation = self.generation + 1
-        if persist_changed == true then
-            self:_queue_persist()
-        end
     end
-
-    if self._persist_dirty == true and self._persist_due_at ~= nil and now >= self._persist_due_at then
-        self._persist_dirty = false
-        self._persist_due_at = nil
-        save_assets_cache()
-    end
-end
-
----------------------------------------------------------------------
--- Private functions
----------------------------------------------------------------------
-
-function AssetsStore:_queue_persist()
-    self._persist_dirty = true
-    self._persist_due_at = Turbine.Engine.GetGameTime() + PERSIST_DEBOUNCE
 end
 
 function AssetsStore:_mark_source_dirty(source_key)

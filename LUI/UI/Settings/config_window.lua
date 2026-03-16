@@ -312,16 +312,11 @@ function ConfigWindow:Constructor()
         self:layout()
     end
 
-    self.PositionChanged = function()
-        self:update_saved_geometry()
-    end
-
     self.VisibleChanged = function()
         if self:IsVisible() == false then
             self:hide_hint()
             self:hide_confirmation_dialog()
             self:close_all_dropdowns()
-            self:persist_geometry()
         end
     end
 
@@ -853,7 +848,6 @@ end
 
 function ConfigWindow:persist_geometry()
     self:update_saved_geometry()
-    save_settings()
 end
 
 function ConfigWindow:apply_saved_geometry()
@@ -4742,6 +4736,10 @@ function ConfigWindow:apply_changes_v2(close_after)
         end
     end
 
+    if _G.capture_runtime_geometry ~= nil then
+        _G.capture_runtime_geometry()
+    end
+
     self:refresh_runtime_settings()
 
     self:update_saved_geometry()
@@ -4761,6 +4759,10 @@ function ConfigWindow:use_selected_profile()
     local profile_id = profile_control:get_value()
     if profile_id == nil or profile_id == _G.current_profile_id then
         return
+    end
+
+    if _G.capture_runtime_geometry ~= nil then
+        _G.capture_runtime_geometry()
     end
 
     if assign_character_profile(profile_id) ~= true then
@@ -4842,6 +4844,10 @@ end
 function ConfigWindow:create_profile_from_current()
     if _G.current_profile_id == nil then
         return
+    end
+
+    if _G.capture_runtime_geometry ~= nil then
+        _G.capture_runtime_geometry()
     end
 
     local duplicate_profile_id = duplicate_configuration(_G.current_profile_id)

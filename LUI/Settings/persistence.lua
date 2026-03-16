@@ -263,10 +263,36 @@ function _G.save_settings()
     _G.ensure_account_settings()
     _G.ensure_server_settings()
 
+    if _G.capture_runtime_geometry ~= nil then
+        _G.capture_runtime_geometry()
+    end
+
     _sync_current_profile_settings()
 
     Turbine.PluginData.Save(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, _G.account_settings)
     Turbine.PluginData.Save(SERVER_DATA_SCOPE, SERVER_DATA_KEY, _G.server_settings)
+end
+
+function _G.capture_runtime_geometry()
+    if CONFIG_WINDOW ~= nil and CONFIG_WINDOW.update_saved_geometry ~= nil then
+        CONFIG_WINDOW:update_saved_geometry()
+    end
+
+    if INVENTORY_WINDOW ~= nil then
+        if INVENTORY_WINDOW.capture_geometry ~= nil then
+            INVENTORY_WINDOW:capture_geometry()
+        elseif INVENTORY_WINDOW.persist_geometry ~= nil then
+            INVENTORY_WINDOW:persist_geometry()
+        end
+    end
+
+    if ASSETS_WINDOW ~= nil then
+        if ASSETS_WINDOW.capture_geometry ~= nil then
+            ASSETS_WINDOW:capture_geometry()
+        elseif ASSETS_WINDOW.persist_geometry ~= nil then
+            ASSETS_WINDOW:persist_geometry()
+        end
+    end
 end
 
 function _G.save_assets_cache()

@@ -143,9 +143,6 @@ function InventoryWindow:Constructor()
     self._haystack_dirty = false
     self._display_dirty = true
 
-    self._persist_due_at = nil
-    self._persist_dirty = false
-
     self._suppress_size_changed = false
 
     self.tile_size = 40
@@ -299,10 +296,6 @@ function InventoryWindow:Constructor()
         self:handle_user_resize()
     end
 
-    self.PositionChanged = function()
-        self:queue_persist()
-    end
-
     self.VisibleChanged = function()
         local visible = self:IsVisible() == true
         self:SetWantsUpdates(visible)
@@ -331,18 +324,16 @@ function InventoryWindow:bring_to_front()
     self:SetZOrder(200)
 end
 
-function InventoryWindow:queue_persist()
-    self._persist_dirty = true
-    self._persist_due_at = Turbine.Engine.GetGameTime() + 0.4
-end
-
-function InventoryWindow:persist_geometry()
+function InventoryWindow:capture_geometry()
     local raw = _G.loaded_settings.inventory
     local x, y = self:GetPosition()
     raw.window.left = x
     raw.window.top = y
     raw.cols = self.cols
-    save_settings()
+end
+
+function InventoryWindow:persist_geometry()
+    self:capture_geometry()
 end
 
 function InventoryWindow:get_needed_rows(cols)
@@ -600,7 +591,6 @@ function InventoryWindow:handle_user_resize()
     self._dirty = true
     self._filter_dirty = true
     self._display_dirty = true
-    self:queue_persist()
 end
 
 function InventoryWindow:build_grid()
@@ -852,12 +842,6 @@ function InventoryWindow:Update()
     end
     self:update_slots()
     self:update_money()
-
-    if self._persist_dirty and self._persist_due_at ~= nil and now >= self._persist_due_at then
-        self._persist_due_at = nil
-        self._persist_dirty = false
-        self:persist_geometry()
-    end
 end
 
 function InventoryWindow:open()

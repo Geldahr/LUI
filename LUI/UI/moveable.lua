@@ -457,7 +457,6 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
 
     if not enabled then
         if save_changes == true then
-            save_settings()
             MOVE_UI_POSITION_SNAPSHOT = nil
         else
             _restore_saved_move_settings()

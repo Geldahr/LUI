@@ -805,7 +805,6 @@ function AssetsWindow:Constructor()
             self:refresh_from_store(true)
         else
             self:_hide_stack_hint()
-            self:persist_geometry()
         end
     end
 
@@ -837,13 +836,15 @@ function AssetsWindow:toggle()
     end
 end
 
-function AssetsWindow:persist_geometry()
+function AssetsWindow:capture_geometry()
     local raw = _G.loaded_settings.assets
     self:_save_current_layout()
     raw.view_mode = self.view_mode
     raw.stack_items = self.stack_items
+end
 
-    save_settings()
+function AssetsWindow:persist_geometry()
+    self:capture_geometry()
 end
 
 function AssetsWindow:set_view_mode(mode, persist)
