@@ -321,7 +321,9 @@ end
 ---------------------------------------------------------------------
 
 function InventoryWindow:bring_to_front()
-    self:SetZOrder(200)
+    if self:IsVisible() == true and self.Activate ~= nil then
+        self:Activate()
+    end
 end
 
 function InventoryWindow:capture_geometry()

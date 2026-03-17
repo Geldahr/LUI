@@ -820,7 +820,9 @@ end
 ---------------------------------------------------------------------
 
 function AssetsWindow:bring_to_front()
-    self:SetZOrder(210)
+    if self:IsVisible() == true and self.Activate ~= nil then
+        self:Activate()
+    end
 end
 
 function AssetsWindow:open()

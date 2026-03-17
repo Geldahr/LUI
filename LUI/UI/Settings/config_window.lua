@@ -539,7 +539,9 @@ function ConfigWindow:open(main_key, preferred_sub_key)
 end
 
 function ConfigWindow:bring_to_front()
-    self:SetZOrder(999)
+    if self:IsVisible() == true and self.Activate ~= nil then
+        self:Activate()
+    end
 end
 
 function ConfigWindow:build_tabs()
