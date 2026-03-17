@@ -22,6 +22,18 @@ local function _curability_state(effect)
     return CURABILITY_UNKNOWN
 end
 
+local function _show_unknown_curability(settings)
+    if settings == nil or settings.debuffs == nil then
+        return false
+    end
+
+    -- Treat unknown curability as its own state. Only show it when both known
+    -- debuff kinds are enabled, so a transient nil/unknown value does not leak
+    -- into curable-only or non-curable-only views.
+    return settings.debuffs.track_curable == true
+        and settings.debuffs.track_noncurable == true
+end
+
 ---@class DebuffArea : EffectsArea
 DebuffArea = class(EffectsArea)
 
@@ -58,6 +70,5 @@ function DebuffArea:_should_track_effect(effect)
     if curability == CURABILITY_NONCURABLE then
         return self.effects_settings.debuffs.track_noncurable == true
     end
-    return self.effects_settings.debuffs.track_curable == true
-        or self.effects_settings.debuffs.track_noncurable == true
+    return _show_unknown_curability(self.effects_settings)
 end

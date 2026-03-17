@@ -46,6 +46,13 @@ local function _curability_state(effect)
     return CURABILITY_UNKNOWN
 end
 
+local function _show_unknown_curability(show_curable, show_noncurable)
+    -- Treat unknown curability as its own state. Only show it when both known
+    -- debuff kinds are enabled, so a transient nil/unknown value does not leak
+    -- into curable-only or non-curable-only views.
+    return show_curable == true and show_noncurable == true
+end
+
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
@@ -257,7 +264,7 @@ function ExpiringEffectsWindow:Update()
     local show_curable = s.show_curable_debuffs ~= false
     local show_noncurable = s.show_noncurable_debuffs ~= false
     local show_debuffs = (show_curable == true) or (show_noncurable == true)
-    local show_unknown = show_debuffs == true
+    local show_unknown = _show_unknown_curability(show_curable, show_noncurable)
 
     if show_buffs ~= true and show_debuffs ~= true then
         for i = 1, #self.slots do
