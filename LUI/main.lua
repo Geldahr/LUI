@@ -146,7 +146,7 @@ if _G.loaded_settings_was_new == true then
 end
 
 local date = Turbine.Engine.GetDate()
-Turbine.Shell.WriteLine(string.format(TR("LUI v0.1.7 loaded at %02d:%02d:%02d"), date.Hour, date.Minute, date.Second))
+Turbine.Shell.WriteLine(string.format(TR("LUI v%s loaded at %02d:%02d:%02d"), Plugins["LUI"]:GetVersion(), date.Hour, date.Minute, date.Second))
 
 Plugins["LUI"].Unload = function()
     save_settings()

@@ -199,7 +199,7 @@ return {
     ["Item width"] = "Elementbreite",
     ["LUI"] = "LUI",
     ["LUI replaces and extends key LotRO UI elements with a cleaner and more configurable layout."] = "LUI ersetzt und erweitert zentrale LotRO-UI-Elemente durch ein saubereres und besser konfigurierbares Layout.",
-    ["LUI v0.0.10 loaded at %02d:%02d:%02d"] = "LUI v0.1.7 geladen um %02d:%02d:%02d",
+    ["LUI %s loaded at %02d:%02d:%02d"] = "LUI %s geladen um %02d:%02d:%02d",
     ["Large (48)"] = "Groß (48)",
     ["Leader Icon Size"] = "Größe des Gruppenleiter-Symbols",
     ["Leader Icon X"] = "Gruppenleiter-Symbol X",
