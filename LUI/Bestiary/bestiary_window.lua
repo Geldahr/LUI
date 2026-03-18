@@ -21,13 +21,16 @@ local BASE_ORDER_LABEL_W = 41
 local BASE_SORT_W = 68
 local BASE_NAV_W = 22
 local BASE_PAGE_W = 74
+local BASE_GENUS_LABEL_W = 40
+local BASE_SUBCATEGORY_LABEL_W = 72
 local BASE_MIN_W = 360
 local BASE_MIN_H = 240
 local BASE_NAME_FONT_SIZE = 12
 local BASE_TEXT_FONT_SIZE = 10
+local BASE_TAXONOMY_FONT_SIZE = 10
 local BASE_ROW_PAD_X = 8
-local BASE_ROW_PAD_Y = 6
-local BASE_ROW_GAP_Y = 3
+local BASE_ROW_PAD_Y = 4
+local BASE_ROW_GAP_Y = 2
 local BASE_LINE_H = 14
 local BASE_ROW_SEPARATOR = 2
 local BASE_CHIP_H = 18
@@ -37,11 +40,20 @@ local BASE_CHIP_GAP_Y = 4
 local BASE_CHIP_BORDER = 1
 local BASE_CHIP_MIN_W = 52
 local BASE_CHIP_CHAR_W = 5.8
+local BASE_NAME_CHAR_W = 6.9
+local BASE_TAXONOMY_CHAR_W = 5.8
+local BASE_TAXONOMY_PAD_X = 5
+local BASE_TAXONOMY_ARROW_W = 14
+local BASE_TAXONOMY_START_RATIO = 0.40
+local BASE_RESIZE_REFRESH_DELAY = 0.10
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
 local SORT_LEVEL_ASC = "level_asc"
 local SORT_LEVEL_DESC = "level_desc"
+
+local FILTER_ALL = "__all"
+local FILTER_NONE = "__none"
 
 local function _push_filter_term(cur_group, term)
     if term ~= nil and term ~= "" then
@@ -177,42 +189,86 @@ local function _to_number(value, fallback)
     return value
 end
 
-local function _copy_levels(levels)
-    local out = {}
-    if type(levels) ~= "table" then
-        return out
+local function _copy_range(range_values)
+    if type(range_values) ~= "table" then
+        return nil
     end
 
-    for level, info in pairs(levels) do
-        if type(info) == "table" then
-            out[level] = {
-                m = _to_number(info.m, 0),
-                p = _to_number(info.p, 0),
-            }
-        end
+    local min_value = _to_number(range_values[1], 0)
+    local max_value = _to_number(range_values[2], 0)
+    if min_value <= 0 and max_value <= 0 then
+        return nil
+    end
+    if min_value <= 0 then
+        min_value = max_value
+    end
+    if max_value <= 0 then
+        max_value = min_value
     end
 
-    return out
+    return { min_value, max_value }
 end
 
-local function _copy_drops(drops)
-    local out = {}
-    if type(drops) ~= "table" then
-        return out
-    end
-
-    for name, count in pairs(drops) do
-        if type(name) == "string" then
-            out[name] = _to_number(count, 0)
-        end
-    end
-
-    return out
-end
-
-local function _merge_entry(dst, src)
-    if type(dst) ~= "table" or type(src) ~= "table" then
+local function _append_unique_name(list, value)
+    if type(list) ~= "table" or type(value) ~= "string" or value == "" then
         return
+    end
+
+    for i = 1, #list do
+        if list[i] == value then
+            return
+        end
+    end
+
+    list[#list + 1] = value
+end
+
+local function _merge_range(dst, field_name, src_value)
+    local src_range = _copy_range(src_value)
+    if src_range == nil then
+        return
+    end
+
+    local dst_range = dst[field_name]
+    if type(dst_range) ~= "table" then
+        dst[field_name] = src_range
+        return
+    end
+
+    if src_range[1] < dst_range[1] then
+        dst_range[1] = src_range[1]
+    end
+    if src_range[2] > dst_range[2] then
+        dst_range[2] = src_range[2]
+    end
+end
+
+local function _merge_entry(dst, src, name)
+    if type(dst) ~= "table" or type(src) ~= "table" or type(name) ~= "string" then
+        return
+    end
+
+    if type(src.n) == "string" and src.n ~= "" then
+        dst.display_name = src.n
+    elseif type(dst.display_name) ~= "string" or dst.display_name == "" then
+        dst.display_name = name
+    end
+
+    if type(dst.genus) ~= "string" and type(src.g) == "string" and src.g ~= "" then
+        dst.genus = src.g
+    end
+    if type(dst.subcategory) ~= "string" and type(src.s) == "string" and src.s ~= "" then
+        dst.subcategory = src.s
+    end
+
+    _merge_range(dst, "static_levels", src.l)
+    _merge_range(dst, "static_morale", src.m)
+    _merge_range(dst, "static_power", src.p)
+
+    if type(src.w) == "table" then
+        for i = 1, #src.w do
+            _append_unique_name(dst.w, src.w[i])
+        end
     end
 
     dst.k = _to_number(dst.k, 0) + _to_number(src.k, 0)
@@ -260,13 +316,20 @@ local function _merged_bestiary()
             if type(name) == "string" and type(entry) == "table" then
                 if type(merged[name]) ~= "table" then
                     merged[name] = {
-                        levels = _copy_levels(entry.levels),
-                        k = _to_number(entry.k, 0),
-                        d = _copy_drops(entry.d),
+                        display_name = name,
+                        genus = nil,
+                        subcategory = nil,
+                        static_levels = nil,
+                        static_morale = nil,
+                        static_power = nil,
+                        w = {},
+                        levels = {},
+                        k = 0,
+                        d = {},
                     }
-                else
-                    _merge_entry(merged[name], entry)
                 end
+
+                _merge_entry(merged[name], entry, name)
             end
         end
     end
@@ -354,27 +417,74 @@ local function _format_percent(percent)
     return text .. "%"
 end
 
-local function _build_drop_records(entry)
-    local drops = {}
-    local kills = _to_number(entry.k, 0)
-    if type(entry.d) ~= "table" then
-        return drops
+local function _collect_unique_record_values(records, field_name, genus_filter)
+    local out = {}
+    local seen = {}
+    if type(records) ~= "table" then
+        return out
     end
 
-    for item_name, count in pairs(entry.d) do
-        if type(item_name) == "string" then
-            local n = _to_number(count, 0)
-            local rate = kills > 0 and ((n / kills) * 100) or 0
-            drops[#drops + 1] = {
-                name = item_name,
-                count = n,
-                rate = rate,
-            }
+    for i = 1, #records do
+        local record = records[i]
+        if type(record) == "table" and (genus_filter == nil or record.genus == genus_filter) then
+            local value = record[field_name]
+            if type(value) == "string" and value ~= "" and seen[value] ~= true then
+                seen[value] = true
+                out[#out + 1] = value
+            end
         end
     end
 
+    table.sort(out, function(left, right)
+        return _lower_text(left) < _lower_text(right)
+    end)
+
+    return out
+end
+
+local function _build_drop_records(entry)
+    local drops = {}
+    local kills = _to_number(entry.k, 0)
+
+    local by_name = {}
+    if type(entry.w) == "table" then
+        for i = 1, #entry.w do
+            local item_name = entry.w[i]
+            if type(item_name) == "string" and item_name ~= "" and by_name[item_name] == nil then
+                by_name[item_name] = { name = item_name, count = 0, rate = nil }
+            end
+        end
+    end
+
+    if type(entry.d) == "table" then
+        for item_name, count in pairs(entry.d) do
+            if type(item_name) == "string" then
+                local drop = by_name[item_name]
+                if type(drop) ~= "table" then
+                    drop = { name = item_name, count = 0, rate = nil }
+                    by_name[item_name] = drop
+                end
+
+                local n = _to_number(count, 0)
+                drop.count = n
+                if kills > 0 and n > 0 then
+                    drop.rate = (n / kills) * 100
+                end
+            end
+        end
+    end
+
+    for _, drop in pairs(by_name) do
+        drops[#drops + 1] = drop
+    end
+
     table.sort(drops, function(left, right)
-        if left.rate ~= right.rate then
+        local left_has_rate = type(left.rate) == "number"
+        local right_has_rate = type(right.rate) == "number"
+        if left_has_rate ~= right_has_rate then
+            return left_has_rate == true
+        end
+        if left_has_rate == true and right_has_rate == true and left.rate ~= right.rate then
             return left.rate > right.rate
         end
         return _lower_text(left.name) < _lower_text(right.name)
@@ -394,6 +504,19 @@ local function _build_records()
         local power_max = 0
         local level_min = 0
         local level_max = 0
+
+        if type(entry.static_levels) == "table" then
+            level_min = _to_number(entry.static_levels[1], 0)
+            level_max = _to_number(entry.static_levels[2], level_min)
+        end
+        if type(entry.static_morale) == "table" then
+            morale_min = _to_number(entry.static_morale[1], 0)
+            morale_max = _to_number(entry.static_morale[2], morale_min)
+        end
+        if type(entry.static_power) == "table" then
+            power_min = _to_number(entry.static_power[1], 0)
+            power_max = _to_number(entry.static_power[2], power_min)
+        end
 
         if type(entry.levels) == "table" then
             for level, info in pairs(entry.levels) do
@@ -415,13 +538,17 @@ local function _build_records()
         end
 
         local drop_records = _build_drop_records(entry)
-        local filter_parts = { _lower_text(name) }
+        local display_name = type(entry.display_name) == "string" and entry.display_name or name
+        local filter_parts = { _lower_text(name), _lower_text(display_name), _lower_text(entry.genus), _lower_text(entry.subcategory) }
         for i = 1, #drop_records do
             filter_parts[#filter_parts + 1] = _lower_text(drop_records[i].name)
         end
 
         out[#out + 1] = {
-            name = name,
+            key = name,
+            name = display_name,
+            genus = entry.genus,
+            subcategory = entry.subcategory,
             level_min = level_min,
             level_max = level_max,
             morale_min = morale_min,
@@ -480,6 +607,10 @@ local function _estimate_chip_width(text)
         width = min_w
     end
     return width
+end
+
+local function _estimate_text_width(text, base_char_w)
+    return math.floor((string.len(text or "") * base_char_w * _G.settings.global.scale) + 0.5)
 end
 
 local function _build_chip_layout(texts, max_width)
@@ -564,9 +695,10 @@ end
 
 local BestiaryRow = class(Turbine.UI.Control)
 
-function BestiaryRow:Constructor()
+function BestiaryRow:Constructor(owner_window)
     Turbine.UI.Control.Constructor(self)
 
+    self.owner_window = owner_window
     self:SetMouseVisible(false)
 
     self.name_label = Turbine.UI.Label()
@@ -574,6 +706,55 @@ function BestiaryRow:Constructor()
     self.name_label:SetMouseVisible(false)
     self.name_label:SetMultiline(false)
     self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+
+    self.taxonomy_prefix_label = Turbine.UI.TextBox()
+    self.taxonomy_prefix_label:SetParent(self)
+    self.taxonomy_prefix_label:SetMouseVisible(false)
+    self.taxonomy_prefix_label:SetReadOnly(true)
+    self.taxonomy_prefix_label:SetSelectable(false)
+    self.taxonomy_prefix_label:SetMultiline(false)
+    self.taxonomy_prefix_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+
+    self.genus_link = Turbine.UI.TextBox()
+    self.genus_link:SetParent(self)
+    self.genus_link:SetMouseVisible(true)
+    self.genus_link:SetReadOnly(true)
+    self.genus_link:SetSelectable(false)
+    self.genus_link:SetMultiline(false)
+    self.genus_link:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.genus_link.MouseClick = function(_, args)
+        if args == nil or args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        if self.owner_window ~= nil and self._record ~= nil and type(self._record.genus) == "string" and self._record.genus ~= "" then
+            self.owner_window:set_taxonomy_filters(self._record.genus, FILTER_ALL)
+        end
+    end
+
+    self.taxonomy_arrow_label = Turbine.UI.TextBox()
+    self.taxonomy_arrow_label:SetParent(self)
+    self.taxonomy_arrow_label:SetMouseVisible(false)
+    self.taxonomy_arrow_label:SetReadOnly(true)
+    self.taxonomy_arrow_label:SetSelectable(false)
+    self.taxonomy_arrow_label:SetMultiline(false)
+    self.taxonomy_arrow_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+
+    self.subcategory_link = Turbine.UI.TextBox()
+    self.subcategory_link:SetParent(self)
+    self.subcategory_link:SetMouseVisible(true)
+    self.subcategory_link:SetReadOnly(true)
+    self.subcategory_link:SetSelectable(false)
+    self.subcategory_link:SetMultiline(false)
+    self.subcategory_link:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.subcategory_link.MouseClick = function(_, args)
+        if args == nil or args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        if self.owner_window ~= nil and self._record ~= nil and type(self._record.genus) == "string" and self._record.genus ~= ""
+            and type(self._record.subcategory) == "string" and self._record.subcategory ~= "" then
+            self.owner_window:set_taxonomy_filters(self._record.genus, self._record.subcategory)
+        end
+    end
 
     self.level_label = Turbine.UI.Label()
     self.level_label:SetParent(self)
@@ -613,6 +794,28 @@ function BestiaryRow:apply_settings()
     self.name_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 
     local meta_font = _scaled_font("Verdana", BASE_TEXT_FONT_SIZE)
+    local taxonomy_font = _scaled_font("Verdana", BASE_TAXONOMY_FONT_SIZE)
+
+    self.taxonomy_prefix_label:SetFont(taxonomy_font)
+    self.taxonomy_prefix_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.taxonomy_prefix_label:SetForeColor(Turbine.UI.Color(1, 0.62, 0.62, 0.62))
+    self.taxonomy_prefix_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+
+    self.genus_link:SetFont(taxonomy_font)
+    self.genus_link:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.genus_link:SetForeColor(Turbine.UI.Color(1, 0.82, 0.78, 0.55))
+    self.genus_link:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+
+    self.taxonomy_arrow_label:SetFont(taxonomy_font)
+    self.taxonomy_arrow_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.taxonomy_arrow_label:SetForeColor(Turbine.UI.Color(1, 0.62, 0.62, 0.62))
+    self.taxonomy_arrow_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+
+    self.subcategory_link:SetFont(taxonomy_font)
+    self.subcategory_link:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.subcategory_link:SetForeColor(Turbine.UI.Color(1, 0.67, 0.82, 0.93))
+    self.subcategory_link:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+
     self.level_label:SetFont(meta_font)
     self.level_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.level_label:SetForeColor(Turbine.UI.Color(1, 0.72, 0.58, 0.20))
@@ -650,10 +853,18 @@ function BestiaryRow:bind(record, width)
     local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
     local line_h = _scaled_int(BASE_LINE_H)
     local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
+    local taxonomy_pad_x = _scaled_int(BASE_TAXONOMY_PAD_X)
+    local taxonomy_arrow_w = _scaled_int(BASE_TAXONOMY_ARROW_W)
+    local layout_gap_x = _scaled_int(BASE_GAP)
+    local column_gap_x = _scaled_int(6)
 
     local inner_w = math.max(1, width - (2 * pad_x))
-    local right_w = math.min(_scaled_int(120), math.max(_scaled_int(72), math.floor(inner_w * 0.28)))
-    local left_w = math.max(1, inner_w - right_w - _scaled_int(6))
+    local right_text_w = math.max(
+        _estimate_text_width(record ~= nil and record.level_text or "", BASE_TAXONOMY_CHAR_W),
+        _estimate_text_width(record ~= nil and record.power_text or "", BASE_TAXONOMY_CHAR_W)
+    )
+    local right_w = math.min(_scaled_int(120), math.max(_scaled_int(72), right_text_w + (2 * taxonomy_pad_x)))
+    local left_w = math.max(1, inner_w - right_w - column_gap_x)
 
     local drop_layout = record ~= nil and record._chip_layout or {}
     local drop_h = record ~= nil and _to_number(record._drop_height, _scaled_int(BASE_CHIP_H)) or _scaled_int(BASE_CHIP_H)
@@ -661,14 +872,12 @@ function BestiaryRow:bind(record, width)
 
     self:SetSize(width, height)
 
-    self.name_label:SetPosition(pad_x, pad_y)
-    self.name_label:SetSize(left_w, line_h)
-    self.level_label:SetPosition(pad_x + left_w + _scaled_int(6), pad_y)
+    self.level_label:SetPosition(pad_x + left_w + column_gap_x, pad_y)
     self.level_label:SetSize(right_w, line_h)
 
     self.morale_label:SetPosition(pad_x, pad_y + line_h + row_gap_y)
     self.morale_label:SetSize(left_w, line_h)
-    self.power_label:SetPosition(pad_x + left_w + _scaled_int(6), pad_y + line_h + row_gap_y)
+    self.power_label:SetPosition(pad_x + left_w + column_gap_x, pad_y + line_h + row_gap_y)
     self.power_label:SetSize(right_w, line_h)
 
     self.drop_area:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
@@ -678,6 +887,11 @@ function BestiaryRow:bind(record, width)
     self.separator:SetSize(width, separator_h)
 
     if record == nil then
+        self._record = nil
+        self.taxonomy_prefix_label:SetVisible(false)
+        self.genus_link:SetVisible(false)
+        self.taxonomy_arrow_label:SetVisible(false)
+        self.subcategory_link:SetVisible(false)
         for i = 1, #self.drop_chips do
             self.drop_chips[i]:SetVisible(false)
         end
@@ -685,11 +899,67 @@ function BestiaryRow:bind(record, width)
         return
     end
 
+    self._record = record
     self:_ensure_chip_count(#drop_layout)
     self.name_label:SetText(record.name)
     self.level_label:SetText(record.level_text)
     self.morale_label:SetText(record.morale_text)
     self.power_label:SetText(record.power_text)
+
+    local taxonomy_y = pad_y
+    local arrow_text = ">"
+    local genus_text = record.genus
+    local subcategory_text = record.subcategory
+    local has_genus = type(genus_text) == "string" and genus_text ~= ""
+    local has_subcategory = type(subcategory_text) == "string" and subcategory_text ~= ""
+    local genus_w = has_genus == true and (_estimate_text_width(genus_text, BASE_TAXONOMY_CHAR_W) + (2 * taxonomy_pad_x)) or 0
+    local subcategory_w = has_subcategory == true and (_estimate_text_width(subcategory_text, BASE_TAXONOMY_CHAR_W) + (2 * taxonomy_pad_x)) or 0
+    local arrow_w = (has_genus == true and has_subcategory == true) and taxonomy_arrow_w or 0
+    local taxonomy_total_w = genus_w + arrow_w + subcategory_w
+    if taxonomy_total_w > left_w then
+        if has_genus == true and has_subcategory == true then
+            local text_total_w = math.max(1, genus_w + subcategory_w)
+            local content_w = math.max(1, left_w - arrow_w)
+            genus_w = math.max(1, math.floor((content_w * genus_w) / text_total_w))
+            subcategory_w = math.max(1, content_w - genus_w)
+        elseif has_genus == true then
+            genus_w = left_w
+        end
+        taxonomy_total_w = math.min(left_w, genus_w + arrow_w + subcategory_w)
+    end
+
+    local level_x = pad_x + left_w + column_gap_x
+    local taxonomy_x = pad_x + math.max(0, math.floor(inner_w * BASE_TAXONOMY_START_RATIO))
+    local max_taxonomy_x = level_x - layout_gap_x - taxonomy_total_w
+    if taxonomy_x > max_taxonomy_x then
+        taxonomy_x = math.max(pad_x, max_taxonomy_x)
+    end
+    local name_w = left_w
+    if taxonomy_total_w > 0 then
+        name_w = math.max(1, math.min(left_w, taxonomy_x - pad_x - layout_gap_x))
+    end
+
+    self.name_label:SetPosition(pad_x, pad_y)
+    self.name_label:SetSize(name_w, line_h)
+
+    self.taxonomy_prefix_label:SetVisible(false)
+
+    self.genus_link:SetText(genus_text or "")
+    self.genus_link:SetPosition(taxonomy_x, taxonomy_y)
+    self.genus_link:SetSize(math.max(1, genus_w), line_h)
+    self.genus_link:SetVisible(has_genus == true)
+    taxonomy_x = taxonomy_x + genus_w
+
+    self.taxonomy_arrow_label:SetText(arrow_text)
+    self.taxonomy_arrow_label:SetPosition(taxonomy_x, taxonomy_y)
+    self.taxonomy_arrow_label:SetSize(math.max(1, arrow_w), line_h)
+    self.taxonomy_arrow_label:SetVisible(arrow_w > 0)
+    taxonomy_x = taxonomy_x + arrow_w
+
+    self.subcategory_link:SetText(subcategory_text or "")
+    self.subcategory_link:SetPosition(taxonomy_x, taxonomy_y)
+    self.subcategory_link:SetSize(math.max(1, subcategory_w), line_h)
+    self.subcategory_link:SetVisible(has_subcategory == true)
 
     local chip_h = _scaled_int(BASE_CHIP_H)
     for i = 1, #drop_layout do
@@ -719,9 +989,18 @@ function BestiaryWindow:Constructor()
     self.update_every = 0.5
     self._last_generation = nil
     self._suppress_size_changed = false
+    self._resize_dirty = false
+    self._last_resize_at = 0
+    self._last_resize_reflow_at = 0
+    self._prepared_content_w = 0
+    self._prepared_content_h = 0
 
     self.sort_mode = SORT_NAME_ASC
     self.filter_groups = {}
+    self.genus_filter = FILTER_ALL
+    self.subcategory_filter = FILTER_NONE
+    self._suppress_genus_changed = false
+    self._suppress_subcategory_changed = false
     self.all_records = {}
     self.records = {}
     self.pages = {}
@@ -793,6 +1072,52 @@ function BestiaryWindow:Constructor()
         self.filter_tb:Focus()
     end
 
+    self.taxonomy_bar = Turbine.UI.Control()
+    self.taxonomy_bar:SetParent(self)
+
+    self.genus_label = Turbine.UI.TextBox()
+    self.genus_label:SetParent(self.taxonomy_bar)
+    self.genus_label:SetMouseVisible(false)
+    self.genus_label:SetReadOnly(true)
+    self.genus_label:SetSelectable(false)
+    self.genus_label:SetMultiline(false)
+    self.genus_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.genus_label:SetText(TR("Genus") .. ":")
+
+    self.genus_dropdown = UI.Widgets.LuiDropdown()
+    self.genus_dropdown:SetParent(self.taxonomy_bar)
+    self.genus_dropdown:SetPopupHost(self)
+    self.genus_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.genus_dropdown:SetMappedOptions({ TR("All") }, { FILTER_ALL })
+    self.genus_dropdown.ValueChanged = function(_, value)
+        if self._suppress_genus_changed == true then
+            return
+        end
+        self:set_genus_filter(value)
+    end
+
+    self.subcategory_label = Turbine.UI.TextBox()
+    self.subcategory_label:SetParent(self.taxonomy_bar)
+    self.subcategory_label:SetMouseVisible(false)
+    self.subcategory_label:SetReadOnly(true)
+    self.subcategory_label:SetSelectable(false)
+    self.subcategory_label:SetMultiline(false)
+    self.subcategory_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.subcategory_label:SetText(TR("Subcategory") .. ":")
+
+    self.subcategory_dropdown = UI.Widgets.LuiDropdown()
+    self.subcategory_dropdown:SetParent(self.taxonomy_bar)
+    self.subcategory_dropdown:SetPopupHost(self)
+    self.subcategory_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.subcategory_dropdown:SetMappedOptions({ "-" }, { FILTER_NONE })
+    self.subcategory_dropdown:SetEnabled(false)
+    self.subcategory_dropdown.ValueChanged = function(_, value)
+        if self._suppress_subcategory_changed == true then
+            return
+        end
+        self:set_subcategory_filter(value)
+    end
+
     self.content = Turbine.UI.Control()
     self.content:SetParent(self)
     self.content:SetMouseVisible(false)
@@ -819,6 +1144,12 @@ function BestiaryWindow:Constructor()
         else
             if self.sort_dropdown ~= nil and self.sort_dropdown.Close ~= nil then
                 self.sort_dropdown:Close()
+            end
+            if self.genus_dropdown ~= nil and self.genus_dropdown.Close ~= nil then
+                self.genus_dropdown:Close()
+            end
+            if self.subcategory_dropdown ~= nil and self.subcategory_dropdown.Close ~= nil then
+                self.subcategory_dropdown:Close()
             end
         end
     end
@@ -876,6 +1207,12 @@ function BestiaryWindow:apply_settings()
     self.next_button:SetFont(button_font)
     self.filter_tb:SetFont(button_font)
     self.clear_button:SetFont(button_font)
+    self.genus_label:SetFont(button_font)
+    self.genus_dropdown:SetFont(button_font)
+    self.genus_dropdown:SetScale(_G.settings.global.scale)
+    self.subcategory_label:SetFont(button_font)
+    self.subcategory_dropdown:SetFont(button_font)
+    self.subcategory_dropdown:SetScale(_G.settings.global.scale)
     self.empty_label:SetFont(_scaled_font("Verdana", 12))
     self.empty_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.empty_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
@@ -920,6 +1257,10 @@ function BestiaryWindow:Update()
     local generation = _G.bestiary_cache_generation or 0
     if self._last_generation ~= generation then
         self:refresh_from_store(true)
+    elseif self._resize_dirty == true and (now - self._last_resize_at) >= BASE_RESIZE_REFRESH_DELAY then
+        self._resize_dirty = false
+        self._last_resize_reflow_at = now
+        self:refresh_layout_view(true)
     end
 end
 
@@ -940,12 +1281,147 @@ function BestiaryWindow:handle_user_resize()
     end
 
     self:layout()
-    self:apply_view()
+    self._resize_dirty = true
+    self._last_resize_at = Turbine.Engine.GetGameTime()
+
+    if (self._last_resize_at - self._last_resize_reflow_at) >= BASE_RESIZE_REFRESH_DELAY then
+        self._resize_dirty = false
+        self._last_resize_reflow_at = self._last_resize_at
+        self:refresh_layout_view(true)
+    end
 end
 
 function BestiaryWindow:update_filter()
     local query = self.filter_tb:GetText() or ""
     self.filter_groups = _normalize_groups(_parse_query(query))
+    self.page_index = 1
+    self:apply_view()
+end
+
+function BestiaryWindow:_refresh_genus_dropdown()
+    local labels = { TR("All") }
+    local values = { FILTER_ALL }
+    local genera = _collect_unique_record_values(self.all_records, "genus", nil)
+    for i = 1, #genera do
+        labels[#labels + 1] = genera[i]
+        values[#values + 1] = genera[i]
+    end
+
+    local selected = self.genus_filter
+    local found = selected == FILTER_ALL
+    if found ~= true then
+        for i = 1, #values do
+            if values[i] == selected then
+                found = true
+                break
+            end
+        end
+    end
+    if found ~= true then
+        selected = FILTER_ALL
+        self.genus_filter = selected
+    end
+
+    self._suppress_genus_changed = true
+    self.genus_dropdown:SetMappedOptions(labels, values)
+    self.genus_dropdown:SetValue(selected)
+    self._suppress_genus_changed = false
+end
+
+function BestiaryWindow:_refresh_subcategory_dropdown()
+    local labels = { "-" }
+    local values = { FILTER_NONE }
+    local enabled = false
+    local selected = FILTER_NONE
+
+    if self.genus_filter ~= FILTER_ALL then
+        local subcategories = _collect_unique_record_values(self.all_records, "subcategory", self.genus_filter)
+        if #subcategories > 0 then
+            labels = { TR("All") }
+            values = { FILTER_ALL }
+            for i = 1, #subcategories do
+                labels[#labels + 1] = subcategories[i]
+                values[#values + 1] = subcategories[i]
+            end
+            enabled = true
+            selected = self.subcategory_filter
+            local found = selected == FILTER_ALL
+            if found ~= true then
+                for i = 1, #values do
+                    if values[i] == selected then
+                        found = true
+                        break
+                    end
+                end
+            end
+            if found ~= true then
+                selected = FILTER_ALL
+            end
+        end
+    end
+
+    self.subcategory_filter = selected
+    self._suppress_subcategory_changed = true
+    self.subcategory_dropdown:SetMappedOptions(labels, values)
+    self.subcategory_dropdown:SetValue(selected)
+    self.subcategory_dropdown:SetEnabled(enabled)
+    self._suppress_subcategory_changed = false
+end
+
+function BestiaryWindow:refresh_taxonomy_filters()
+    self:_refresh_genus_dropdown()
+    self:_refresh_subcategory_dropdown()
+end
+
+function BestiaryWindow:set_taxonomy_filters(genus_value, subcategory_value)
+    if type(genus_value) ~= "string" or genus_value == "" then
+        genus_value = FILTER_ALL
+    end
+
+    if genus_value == FILTER_ALL then
+        subcategory_value = FILTER_NONE
+    elseif type(subcategory_value) ~= "string" or subcategory_value == "" then
+        subcategory_value = FILTER_ALL
+    end
+
+    if self.genus_filter == genus_value and self.subcategory_filter == subcategory_value then
+        return
+    end
+
+    self.genus_filter = genus_value
+    self.subcategory_filter = subcategory_value
+    self:refresh_taxonomy_filters()
+    self.page_index = 1
+    self:apply_view()
+end
+
+function BestiaryWindow:set_genus_filter(value)
+    if type(value) ~= "string" or value == "" then
+        value = FILTER_ALL
+    end
+    if self.genus_filter == value then
+        return
+    end
+
+    self.genus_filter = value
+    self.subcategory_filter = value == FILTER_ALL and FILTER_NONE or FILTER_ALL
+    self:refresh_taxonomy_filters()
+    self.page_index = 1
+    self:apply_view()
+end
+
+function BestiaryWindow:set_subcategory_filter(value)
+    if self.genus_filter == FILTER_ALL then
+        value = FILTER_NONE
+    elseif type(value) ~= "string" or value == "" then
+        value = FILTER_ALL
+    end
+
+    if self.subcategory_filter == value then
+        return
+    end
+
+    self.subcategory_filter = value
     self.page_index = 1
     self:apply_view()
 end
@@ -980,7 +1456,7 @@ end
 
 function BestiaryWindow:_ensure_rows(count)
     while #self.entries < count do
-        local row = BestiaryRow()
+        local row = BestiaryRow(self)
         row:SetParent(self.content)
         row:SetVisible(false)
         self.entries[#self.entries + 1] = row
@@ -996,7 +1472,7 @@ function BestiaryWindow:_content_metrics()
     local filter_h = _scaled_int(BASE_FILTER_H)
     local gap = _scaled_int(BASE_GAP)
     local inner_w = self:GetWidth() - margin_left - margin_right
-    local content_top = margin_top + bar_h + gap + filter_h + gap
+    local content_top = margin_top + bar_h + gap + filter_h + gap + filter_h + gap
     local content_h = self:GetHeight() - content_top - margin_bottom
     return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, filter_h, gap
 end
@@ -1037,6 +1513,24 @@ function BestiaryWindow:layout()
     self.filter_tb:SetPosition(0, 0)
     self.filter_tb:SetSize(math.max(1, inner_w - clear_w - gap), filter_h)
 
+    self.taxonomy_bar:SetPosition(margin_left, margin_top + bar_h + gap + filter_h + gap)
+    self.taxonomy_bar:SetSize(inner_w, filter_h)
+
+    local left_w = math.floor((inner_w - gap) / 2)
+    local right_w = math.max(1, inner_w - left_w - gap)
+    local genus_label_w = math.min(_scaled_int(BASE_GENUS_LABEL_W), math.max(1, left_w - _scaled_int(80)))
+    local subcategory_label_w = math.min(_scaled_int(BASE_SUBCATEGORY_LABEL_W), math.max(1, right_w - _scaled_int(80)))
+
+    self.genus_label:SetPosition(0, 0)
+    self.genus_label:SetSize(genus_label_w, filter_h)
+    self.genus_dropdown:SetPosition(genus_label_w + gap, 0)
+    self.genus_dropdown:SetSize(math.max(1, left_w - genus_label_w - gap), filter_h)
+
+    self.subcategory_label:SetPosition(left_w + gap, 0)
+    self.subcategory_label:SetSize(subcategory_label_w, filter_h)
+    self.subcategory_dropdown:SetPosition(left_w + gap + subcategory_label_w + gap, 0)
+    self.subcategory_dropdown:SetSize(math.max(1, right_w - subcategory_label_w - gap), filter_h)
+
     self.content:SetPosition(margin_left, content_top)
     self.content:SetSize(inner_w, content_h)
 
@@ -1052,6 +1546,9 @@ function BestiaryWindow:refresh_from_store(force)
 
     self._last_generation = generation
     self.all_records = _build_records()
+    self._prepared_content_w = 0
+    self._prepared_content_h = 0
+    self:refresh_taxonomy_filters()
     self:apply_view()
 end
 
@@ -1065,25 +1562,73 @@ function BestiaryWindow:_prepare_records(records)
 
     for i = 1, #records do
         local record = records[i]
-        local chip_texts = {}
-        for di = 1, #record.drops do
-            local drop = record.drops[di]
-            chip_texts[#chip_texts + 1] = drop.name .. ": " .. _format_percent(drop.rate)
-        end
+        local chip_texts = record._drop_texts
+        if type(chip_texts) ~= "table" then
+            chip_texts = {}
+            for di = 1, #record.drops do
+                local drop = record.drops[di]
+                if type(drop.rate) == "number" then
+                    chip_texts[#chip_texts + 1] = drop.name .. ": " .. _format_percent(drop.rate)
+                else
+                    chip_texts[#chip_texts + 1] = drop.name
+                end
+            end
 
-        if #chip_texts == 0 then
-            chip_texts = { TR("No drops seen.") }
+            if #chip_texts == 0 then
+                chip_texts = { TR("No drops seen.") }
+            end
+
+            record._drop_texts = chip_texts
         end
 
         local chip_layout, drop_h = _build_chip_layout(chip_texts, inner_w)
 
+        local meta_parts = {}
+        if type(record.genus) == "string" and record.genus ~= "" then
+            meta_parts[#meta_parts + 1] = record.genus
+        end
+        if type(record.subcategory) == "string" and record.subcategory ~= "" then
+            meta_parts[#meta_parts + 1] = record.subcategory
+        end
+
         record.level_text = TR("Level") .. ": " .. _format_range(record.level_min, record.level_max)
+        record.meta_text = #meta_parts > 0 and table.concat(meta_parts, " / ") or "-"
         record.morale_text = TR("Morale") .. ": " .. _format_number_range(record.morale_min, record.morale_max)
         record.power_text = TR("Power") .. ": " .. _format_number_range(record.power_min, record.power_max)
         record._chip_layout = chip_layout
         record._drop_height = drop_h
         record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
     end
+end
+
+function BestiaryWindow:refresh_layout_view(force)
+    local content_w = math.max(1, self.content:GetWidth())
+    local content_h = math.max(1, self.content:GetHeight())
+    local width_changed = self._prepared_content_w ~= content_w
+    local height_changed = self._prepared_content_h ~= content_h
+
+    if force ~= true and width_changed ~= true and height_changed ~= true then
+        self:render_page()
+        return
+    end
+
+    self._prepared_content_w = content_w
+    self._prepared_content_h = content_h
+
+    if width_changed == true then
+        self:_prepare_records(self.records)
+    end
+    self.pages = self:_build_pages(self.records)
+
+    if #self.pages == 0 then
+        self.page_index = 1
+    elseif self.page_index > #self.pages then
+        self.page_index = #self.pages
+    elseif self.page_index < 1 then
+        self.page_index = 1
+    end
+
+    self:render_page()
 end
 
 function BestiaryWindow:_build_pages(records)
@@ -1121,7 +1666,9 @@ function BestiaryWindow:apply_view()
     local filtered = {}
     for i = 1, #self.all_records do
         local record = self.all_records[i]
-        if _matches_groups(self.filter_groups, record.haystack_lower) == true then
+        local genus_ok = self.genus_filter == FILTER_ALL or record.genus == self.genus_filter
+        local subcategory_ok = self.subcategory_filter == FILTER_NONE or self.subcategory_filter == FILTER_ALL or record.subcategory == self.subcategory_filter
+        if genus_ok == true and subcategory_ok == true and _matches_groups(self.filter_groups, record.haystack_lower) == true then
             filtered[#filtered + 1] = record
         end
     end
@@ -1131,18 +1678,9 @@ function BestiaryWindow:apply_view()
     end)
 
     self.records = filtered
-    self:_prepare_records(self.records)
-    self.pages = self:_build_pages(self.records)
-
-    if #self.pages == 0 then
-        self.page_index = 1
-    elseif self.page_index > #self.pages then
-        self.page_index = #self.pages
-    elseif self.page_index < 1 then
-        self.page_index = 1
-    end
-
-    self:render_page()
+    self._prepared_content_w = 0
+    self._prepared_content_h = 0
+    self:refresh_layout_view(true)
 end
 
 function BestiaryWindow:render_page()
