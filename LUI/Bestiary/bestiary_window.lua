@@ -261,6 +261,15 @@ local function _merge_entry(dst, src, name)
     if type(dst.subcategory) ~= "string" and type(src.s) == "string" and src.s ~= "" then
         dst.subcategory = src.s
     end
+    if type(dst.region) ~= "string" and type(src.r) == "string" and src.r ~= "" then
+        dst.region = src.r
+    end
+    if type(dst.area) ~= "string" and type(src.a) == "string" and src.a ~= "" then
+        dst.area = src.a
+    end
+    if type(dst.instance) ~= "string" and type(src.i) == "string" and src.i ~= "" then
+        dst.instance = src.i
+    end
 
     _merge_range(dst, "static_levels", src.l)
     _merge_range(dst, "static_morale", src.m)
@@ -320,6 +329,9 @@ local function _merged_bestiary()
                         display_name = name,
                         genus = nil,
                         subcategory = nil,
+                        region = nil,
+                        area = nil,
+                        instance = nil,
                         static_levels = nil,
                         static_morale = nil,
                         static_power = nil,
@@ -540,7 +552,15 @@ local function _build_records()
 
         local drop_records = _build_drop_records(entry)
         local display_name = type(entry.display_name) == "string" and entry.display_name or name
-        local filter_parts = { _lower_text(name), _lower_text(display_name), _lower_text(entry.genus), _lower_text(entry.subcategory) }
+        local filter_parts = {
+            _lower_text(name),
+            _lower_text(display_name),
+            _lower_text(entry.genus),
+            _lower_text(entry.subcategory),
+            _lower_text(entry.region),
+            _lower_text(entry.area),
+            _lower_text(entry.instance),
+        }
         for i = 1, #drop_records do
             filter_parts[#filter_parts + 1] = _lower_text(drop_records[i].name)
         end
@@ -550,6 +570,9 @@ local function _build_records()
             name = display_name,
             genus = entry.genus,
             subcategory = entry.subcategory,
+            region = entry.region,
+            area = entry.area,
+            instance = entry.instance,
             level_min = level_min,
             level_max = level_max,
             morale_min = morale_min,
