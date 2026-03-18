@@ -23,7 +23,7 @@ local BASE_NAV_W = 22
 local BASE_PAGE_W = 74
 local BASE_GENUS_LABEL_W = 40
 local BASE_SUBCATEGORY_LABEL_W = 72
-local BASE_MIN_W = 360
+local BASE_MIN_W = 600
 local BASE_MIN_H = 240
 local BASE_NAME_FONT_SIZE = 12
 local BASE_TEXT_FONT_SIZE = 10
@@ -46,6 +46,7 @@ local BASE_TAXONOMY_PAD_X = 5
 local BASE_TAXONOMY_ARROW_W = 14
 local BASE_TAXONOMY_START_RATIO = 0.40
 local BASE_RESIZE_REFRESH_DELAY = 0.10
+local BASE_COLUMN_W = 600
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
@@ -365,7 +366,7 @@ local function _format_number(value)
         count = count + 1
         out[#out + 1] = string.sub(text, i, i)
         if count == 3 and i > 1 then
-            out[#out + 1] = ","
+            out[#out + 1] = " "
             count = 0
         end
     end
@@ -650,6 +651,11 @@ local function _build_chip_layout(texts, max_width)
     return layout, y + chip_h
 end
 
+local function _apply_separator_style(control)
+    control:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    control:SetBackColor(Turbine.UI.Color(1, 0.20, 0.20, 0.20))
+end
+
 local DropChip = class(Turbine.UI.Control)
 
 function DropChip:Constructor()
@@ -782,7 +788,7 @@ function BestiaryRow:Constructor(owner_window)
     self.separator = Turbine.UI.Control()
     self.separator:SetParent(self)
     self.separator:SetMouseVisible(false)
-    self.separator:SetBackColor(Turbine.UI.Color(1, 0.12, 0.12, 0.12))
+    _apply_separator_style(self.separator)
 
     self:apply_settings()
 end
@@ -831,7 +837,7 @@ function BestiaryRow:apply_settings()
     self.power_label:SetForeColor(Turbine.UI.Color(1, 0.40, 0.68, 0.96))
     self.power_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 
-    self.separator:SetBackColor(Turbine.UI.Color(0.85, 0.32, 0.32, 0.32))
+    _apply_separator_style(self.separator)
 
     for i = 1, #self.drop_chips do
         self.drop_chips[i]:apply_settings()
@@ -994,6 +1000,7 @@ function BestiaryWindow:Constructor()
     self._last_resize_reflow_at = 0
     self._prepared_content_w = 0
     self._prepared_content_h = 0
+    self._prepared_record_key = 0
 
     self.sort_mode = SORT_NAME_ASC
     self.filter_groups = {}
@@ -1006,6 +1013,7 @@ function BestiaryWindow:Constructor()
     self.pages = {}
     self.page_index = 1
     self.entries = {}
+    self.column_separators = {}
 
     self.nav_bar = Turbine.UI.Control()
     self.nav_bar:SetParent(self)
@@ -1032,7 +1040,7 @@ function BestiaryWindow:Constructor()
     end
 
     self.page_bar = Turbine.UI.Control()
-    self.page_bar:SetParent(self.nav_bar)
+    self.page_bar:SetParent(self)
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
@@ -1073,7 +1081,7 @@ function BestiaryWindow:Constructor()
     end
 
     self.taxonomy_bar = Turbine.UI.Control()
-    self.taxonomy_bar:SetParent(self)
+    self.taxonomy_bar:SetParent(self.nav_bar)
 
     self.genus_label = Turbine.UI.TextBox()
     self.genus_label:SetParent(self.taxonomy_bar)
@@ -1128,6 +1136,7 @@ function BestiaryWindow:Constructor()
     self.empty_label:SetMultiline(true)
     self.empty_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.empty_label:SetText(TR("No bestiary entries yet."))
+    self.empty_label:SetZOrder(3)
 
     self.SizeChanged = function()
         self:handle_user_resize()
@@ -1231,7 +1240,7 @@ function BestiaryWindow:apply_settings()
 
         self._suppress_size_changed = true
         self:SetPosition(left, top)
-        self:SetSize(math.max(_scaled_int(BASE_MIN_W), width), math.max(_scaled_int(BASE_MIN_H), height))
+        self:SetSize(math.max(BASE_MIN_W, width), math.max(_scaled_int(BASE_MIN_H), height))
         self._suppress_size_changed = false
     end
 
@@ -1265,7 +1274,7 @@ function BestiaryWindow:Update()
 end
 
 function BestiaryWindow:handle_user_resize()
-    local min_w = _scaled_int(BASE_MIN_W)
+    local min_w = BASE_MIN_W
     local min_h = _scaled_int(BASE_MIN_H)
     local cur_w, cur_h = self:GetSize()
     local next_w = cur_w
@@ -1458,8 +1467,21 @@ function BestiaryWindow:_ensure_rows(count)
     while #self.entries < count do
         local row = BestiaryRow(self)
         row:SetParent(self.content)
+        row:SetZOrder(2)
         row:SetVisible(false)
         self.entries[#self.entries + 1] = row
+    end
+end
+
+function BestiaryWindow:_ensure_column_separators(count)
+    while #self.column_separators < count do
+        local separator = Turbine.UI.Control()
+        separator:SetParent(self.content)
+        separator:SetMouseVisible(false)
+        separator:SetZOrder(1)
+        _apply_separator_style(separator)
+        separator:SetVisible(false)
+        self.column_separators[#self.column_separators + 1] = separator
     end
 end
 
@@ -1472,8 +1494,8 @@ function BestiaryWindow:_content_metrics()
     local filter_h = _scaled_int(BASE_FILTER_H)
     local gap = _scaled_int(BASE_GAP)
     local inner_w = self:GetWidth() - margin_left - margin_right
-    local content_top = margin_top + bar_h + gap + filter_h + gap + filter_h + gap
-    local content_h = self:GetHeight() - content_top - margin_bottom
+    local content_top = margin_top + bar_h + gap + filter_h + gap
+    local content_h = self:GetHeight() - content_top - margin_bottom - gap - bar_h
     return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, filter_h, gap
 end
 
@@ -1495,7 +1517,10 @@ function BestiaryWindow:layout()
     self.sort_dropdown:SetSize(sort_w, bar_h)
 
     self.page_bar:SetSize((2 * nav_w) + page_w + (2 * gap), bar_h)
-    self.page_bar:SetPosition(math.max(0, inner_w - self.page_bar:GetWidth()), 0)
+    self.page_bar:SetPosition(
+        margin_left + math.max(0, math.floor((inner_w - self.page_bar:GetWidth()) / 2)),
+        self:GetHeight() - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h
+    )
 
     self.prev_button:SetPosition(0, 0)
     self.prev_button:SetSize(nav_w, bar_h)
@@ -1503,6 +1528,26 @@ function BestiaryWindow:layout()
     self.page_label:SetSize(page_w, bar_h)
     self.next_button:SetPosition(nav_w + gap + page_w + gap, 0)
     self.next_button:SetSize(nav_w, bar_h)
+
+    local taxonomy_left = order_label_w + gap + sort_w + (2 * gap)
+    local taxonomy_w = math.max(1, inner_w - taxonomy_left)
+    self.taxonomy_bar:SetPosition(taxonomy_left, 0)
+    self.taxonomy_bar:SetSize(taxonomy_w, bar_h)
+
+    local taxonomy_left_w = math.floor((taxonomy_w - gap) / 2)
+    local taxonomy_right_w = math.max(1, taxonomy_w - taxonomy_left_w - gap)
+    local genus_label_w = math.min(_scaled_int(BASE_GENUS_LABEL_W), math.max(1, taxonomy_left_w - _scaled_int(80)))
+    local subcategory_label_w = math.min(_scaled_int(BASE_SUBCATEGORY_LABEL_W), math.max(1, taxonomy_right_w - _scaled_int(80)))
+
+    self.genus_label:SetPosition(0, 0)
+    self.genus_label:SetSize(genus_label_w, bar_h)
+    self.genus_dropdown:SetPosition(genus_label_w + gap, 0)
+    self.genus_dropdown:SetSize(math.max(1, taxonomy_left_w - genus_label_w - gap), bar_h)
+
+    self.subcategory_label:SetPosition(taxonomy_left_w + gap, 0)
+    self.subcategory_label:SetSize(subcategory_label_w, bar_h)
+    self.subcategory_dropdown:SetPosition(taxonomy_left_w + gap + subcategory_label_w + gap, 0)
+    self.subcategory_dropdown:SetSize(math.max(1, taxonomy_right_w - subcategory_label_w - gap), bar_h)
 
     self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap)
     self.filter_bar:SetSize(inner_w, filter_h)
@@ -1512,24 +1557,6 @@ function BestiaryWindow:layout()
     self.clear_button:SetSize(clear_w, filter_h)
     self.filter_tb:SetPosition(0, 0)
     self.filter_tb:SetSize(math.max(1, inner_w - clear_w - gap), filter_h)
-
-    self.taxonomy_bar:SetPosition(margin_left, margin_top + bar_h + gap + filter_h + gap)
-    self.taxonomy_bar:SetSize(inner_w, filter_h)
-
-    local left_w = math.floor((inner_w - gap) / 2)
-    local right_w = math.max(1, inner_w - left_w - gap)
-    local genus_label_w = math.min(_scaled_int(BASE_GENUS_LABEL_W), math.max(1, left_w - _scaled_int(80)))
-    local subcategory_label_w = math.min(_scaled_int(BASE_SUBCATEGORY_LABEL_W), math.max(1, right_w - _scaled_int(80)))
-
-    self.genus_label:SetPosition(0, 0)
-    self.genus_label:SetSize(genus_label_w, filter_h)
-    self.genus_dropdown:SetPosition(genus_label_w + gap, 0)
-    self.genus_dropdown:SetSize(math.max(1, left_w - genus_label_w - gap), filter_h)
-
-    self.subcategory_label:SetPosition(left_w + gap, 0)
-    self.subcategory_label:SetSize(subcategory_label_w, filter_h)
-    self.subcategory_dropdown:SetPosition(left_w + gap + subcategory_label_w + gap, 0)
-    self.subcategory_dropdown:SetSize(math.max(1, right_w - subcategory_label_w - gap), filter_h)
 
     self.content:SetPosition(margin_left, content_top)
     self.content:SetSize(inner_w, content_h)
@@ -1548,17 +1575,19 @@ function BestiaryWindow:refresh_from_store(force)
     self.all_records = _build_records()
     self._prepared_content_w = 0
     self._prepared_content_h = 0
+    self._prepared_record_key = 0
     self:refresh_taxonomy_filters()
     self:apply_view()
 end
 
 function BestiaryWindow:_prepare_records(records)
-    local content_w = math.max(1, self.content:GetWidth())
+    local column_count, _, bucket_content_w = self:_column_metrics()
     local line_h = _scaled_int(BASE_LINE_H)
     local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
     local pad_y = _scaled_int(BASE_ROW_PAD_Y)
     local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
-    local inner_w = math.max(1, content_w - (2 * _scaled_int(BASE_ROW_PAD_X)))
+    local column_w = math.max(1, math.floor(bucket_content_w / column_count))
+    local inner_w = math.max(1, column_w - (2 * _scaled_int(BASE_ROW_PAD_X)))
 
     for i = 1, #records do
         local record = records[i]
@@ -1601,11 +1630,24 @@ function BestiaryWindow:_prepare_records(records)
     end
 end
 
+function BestiaryWindow:_column_metrics()
+    local window_w = math.max(1, math.floor(self:GetWidth() + 0.5))
+    local content_w = math.max(1, math.floor(self.content:GetWidth() + 0.5))
+    local margin_left = _scaled_int(BASE_MARGIN_LEFT)
+    local margin_right = _scaled_int(BASE_MARGIN_RIGHT)
+    local column_target_w = math.max(1, BASE_COLUMN_W)
+    local column_count = math.max(1, math.floor(window_w / column_target_w))
+    local bucket_window_w = math.max(column_target_w, column_count * column_target_w)
+    local bucket_content_w = math.max(1, bucket_window_w - margin_left - margin_right)
+    return column_count, content_w, bucket_content_w
+end
+
 function BestiaryWindow:refresh_layout_view(force)
-    local content_w = math.max(1, self.content:GetWidth())
+    local column_count, content_w, bucket_content_w = self:_column_metrics()
     local content_h = math.max(1, self.content:GetHeight())
     local width_changed = self._prepared_content_w ~= content_w
     local height_changed = self._prepared_content_h ~= content_h
+    local record_key = (column_count * 10000) + bucket_content_w
 
     if force ~= true and width_changed ~= true and height_changed ~= true then
         self:render_page()
@@ -1615,7 +1657,8 @@ function BestiaryWindow:refresh_layout_view(force)
     self._prepared_content_w = content_w
     self._prepared_content_h = content_h
 
-    if width_changed == true then
+    if self._prepared_record_key ~= record_key then
+        self._prepared_record_key = record_key
         self:_prepare_records(self.records)
     end
     self.pages = self:_build_pages(self.records)
@@ -1634,29 +1677,57 @@ end
 function BestiaryWindow:_build_pages(records)
     local pages = {}
     local content_h = math.max(1, self.content:GetHeight())
-    local gap = _scaled_int(BASE_GAP)
-    local start_index = 1
+    local column_count, content_w = self:_column_metrics()
+    local row_gap = _scaled_int(BASE_GAP)
     local used = 0
+    local page = nil
+    local i = 1
 
-    for i = 1, #records do
-        local height = math.max(1, _to_number(records[i]._view_height, 1))
-        local needed = used
+    while i <= #records do
+        local row_last = math.min(#records, i + column_count - 1)
+        local row_h = 1
+        for record_index = i, row_last do
+            row_h = math.max(row_h, math.max(1, _to_number(records[record_index]._view_height, 1)))
+        end
+
+        local next_y = used
         if used > 0 then
-            needed = needed + gap
+            next_y = next_y + row_gap
         end
-        needed = needed + height
 
-        if used > 0 and needed > content_h then
-            pages[#pages + 1] = { first = start_index, last = i - 1 }
-            start_index = i
-            used = height
-        else
-            used = needed
+        if used > 0 and (next_y + row_h) > content_h then
+            pages[#pages + 1] = page
+            page = nil
+            used = 0
+            next_y = 0
         end
+
+        if page == nil then
+            page = { items = {} }
+        end
+
+        for column_index = 0, (column_count - 1) do
+            local record_index = i + column_index
+            if record_index > #records then
+                break
+            end
+
+            local x = math.floor((column_index * content_w) / column_count)
+            local next_x = math.floor(((column_index + 1) * content_w) / column_count)
+            page.items[#page.items + 1] = {
+                index = record_index,
+                x = x,
+                y = next_y,
+                w = math.max(1, next_x - x),
+            }
+        end
+
+        used = next_y + row_h
+        i = row_last + 1
     end
 
-    if #records > 0 then
-        pages[#pages + 1] = { first = start_index, last = #records }
+    if page ~= nil and #page.items > 0 then
+        pages[#pages + 1] = page
     end
 
     return pages
@@ -1680,6 +1751,7 @@ function BestiaryWindow:apply_view()
     self.records = filtered
     self._prepared_content_w = 0
     self._prepared_content_h = 0
+    self._prepared_record_key = 0
     self:refresh_layout_view(true)
 end
 
@@ -1700,6 +1772,9 @@ function BestiaryWindow:render_page()
             self.empty_label:SetText(TR("No matching bestiary entries."))
         end
         self.empty_label:SetVisible(true)
+        for i = 1, #self.column_separators do
+            self.column_separators[i]:SetVisible(false)
+        end
         for i = 1, #self.entries do
             self.entries[i]:SetVisible(false)
         end
@@ -1710,25 +1785,40 @@ function BestiaryWindow:render_page()
 
     local page = self.pages[self.page_index]
     if page == nil then
+        for i = 1, #self.column_separators do
+            self.column_separators[i]:SetVisible(false)
+        end
         for i = 1, #self.entries do
             self.entries[i]:SetVisible(false)
         end
         return
     end
 
-    local count = page.last - page.first + 1
+    local items = page.items or {}
+    local count = #items
     self:_ensure_rows(count)
 
-    local y = 0
-    local width = math.max(1, self.content:GetWidth())
-    local gap = _scaled_int(BASE_GAP)
+    local column_count, content_w = self:_column_metrics()
+    local separator_w = _scaled_int(BASE_ROW_SEPARATOR)
+    local separator_count = math.max(0, math.min(column_count, count) - 1)
+    self:_ensure_column_separators(separator_count)
+    for i = 1, separator_count do
+        local boundary_x = math.floor((i * content_w) / column_count)
+        local separator = self.column_separators[i]
+        separator:SetPosition(math.max(0, boundary_x - math.floor(separator_w / 2)), 0)
+        separator:SetSize(separator_w, self.content:GetHeight())
+        separator:SetVisible(true)
+    end
+    for i = separator_count + 1, #self.column_separators do
+        self.column_separators[i]:SetVisible(false)
+    end
 
     for i = 1, count do
-        local record = self.records[page.first + i - 1]
+        local item = items[i]
+        local record = self.records[item.index]
         local row = self.entries[i]
-        row:SetPosition(0, y)
-        row:bind(record, width)
-        y = y + row:GetHeight() + gap
+        row:SetPosition(item.x, item.y)
+        row:bind(record, item.w)
     end
 
     for i = count + 1, #self.entries do
