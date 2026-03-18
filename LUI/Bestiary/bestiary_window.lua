@@ -399,7 +399,7 @@ local function _format_number_range(min_value, max_value)
         return _format_number(min_value)
     end
 
-    return _format_number(min_value) .. "-" .. _format_number(max_value)
+    return _format_number(min_value) .. " - " .. _format_number(max_value)
 end
 
 local function _format_percent(percent)
@@ -1681,7 +1681,6 @@ function BestiaryWindow:_build_pages(records)
     local row_gap = _scaled_int(BASE_GAP)
     local page = nil
     local column_heights = nil
-    local page_item_count = 0
 
     local function begin_page()
         page = { items = {} }
@@ -1689,7 +1688,19 @@ function BestiaryWindow:_build_pages(records)
         for ci = 1, column_count do
             column_heights[ci] = 0
         end
-        page_item_count = 0
+    end
+
+    local function shortest_column_slot()
+        local best_slot = 1
+        local best_height = column_heights[1]
+        for ci = 2, column_count do
+            local height = column_heights[ci]
+            if height < best_height then
+                best_slot = ci
+                best_height = height
+            end
+        end
+        return best_slot
     end
 
     for record_index = 1, #records do
@@ -1699,14 +1710,14 @@ function BestiaryWindow:_build_pages(records)
             begin_page()
         end
 
-        local column_index = page_item_count % column_count
-        local column_slot = column_index + 1
+        local column_slot = shortest_column_slot()
+        local column_index = column_slot - 1
         local y = column_heights[column_slot]
         if y > 0 then
             y = y + row_gap
         end
 
-        if page_item_count > 0 and (y + height) > content_h then
+        if #page.items > 0 and (y + height) > content_h then
             pages[#pages + 1] = page
             begin_page()
             column_index = 0
@@ -1724,7 +1735,6 @@ function BestiaryWindow:_build_pages(records)
         }
 
         column_heights[column_slot] = y + height
-        page_item_count = page_item_count + 1
     end
 
     if page ~= nil and #page.items > 0 then
