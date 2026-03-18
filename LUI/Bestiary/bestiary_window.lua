@@ -1679,51 +1679,52 @@ function BestiaryWindow:_build_pages(records)
     local content_h = math.max(1, self.content:GetHeight())
     local column_count, content_w = self:_column_metrics()
     local row_gap = _scaled_int(BASE_GAP)
-    local used = 0
     local page = nil
-    local i = 1
+    local column_heights = nil
+    local page_item_count = 0
 
-    while i <= #records do
-        local row_last = math.min(#records, i + column_count - 1)
-        local row_h = 1
-        for record_index = i, row_last do
-            row_h = math.max(row_h, math.max(1, _to_number(records[record_index]._view_height, 1)))
+    local function begin_page()
+        page = { items = {} }
+        column_heights = {}
+        for ci = 1, column_count do
+            column_heights[ci] = 0
         end
+        page_item_count = 0
+    end
 
-        local next_y = used
-        if used > 0 then
-            next_y = next_y + row_gap
-        end
-
-        if used > 0 and (next_y + row_h) > content_h then
-            pages[#pages + 1] = page
-            page = nil
-            used = 0
-            next_y = 0
-        end
+    for record_index = 1, #records do
+        local height = math.max(1, _to_number(records[record_index]._view_height, 1))
 
         if page == nil then
-            page = { items = {} }
+            begin_page()
         end
 
-        for column_index = 0, (column_count - 1) do
-            local record_index = i + column_index
-            if record_index > #records then
-                break
-            end
-
-            local x = math.floor((column_index * content_w) / column_count)
-            local next_x = math.floor(((column_index + 1) * content_w) / column_count)
-            page.items[#page.items + 1] = {
-                index = record_index,
-                x = x,
-                y = next_y,
-                w = math.max(1, next_x - x),
-            }
+        local column_index = page_item_count % column_count
+        local column_slot = column_index + 1
+        local y = column_heights[column_slot]
+        if y > 0 then
+            y = y + row_gap
         end
 
-        used = next_y + row_h
-        i = row_last + 1
+        if page_item_count > 0 and (y + height) > content_h then
+            pages[#pages + 1] = page
+            begin_page()
+            column_index = 0
+            column_slot = 1
+            y = 0
+        end
+
+        local x = math.floor((column_index * content_w) / column_count)
+        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
+        page.items[#page.items + 1] = {
+            index = record_index,
+            x = x,
+            y = y,
+            w = math.max(1, next_x - x),
+        }
+
+        column_heights[column_slot] = y + height
+        page_item_count = page_item_count + 1
     end
 
     if page ~= nil and #page.items > 0 then
