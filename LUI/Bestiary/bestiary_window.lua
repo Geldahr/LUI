@@ -872,8 +872,8 @@ function BestiaryRow:bind(record, width)
     local right_w = math.min(_scaled_int(120), math.max(_scaled_int(72), right_text_w + (2 * taxonomy_pad_x)))
     local left_w = math.max(1, inner_w - right_w - column_gap_x)
 
-    local drop_layout = record ~= nil and record._chip_layout or {}
-    local drop_h = record ~= nil and _to_number(record._drop_height, _scaled_int(BASE_CHIP_H)) or _scaled_int(BASE_CHIP_H)
+    local drop_layout = {}
+    local drop_h = _scaled_int(BASE_CHIP_H)
     local height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
 
     self:SetSize(width, height)
@@ -906,11 +906,21 @@ function BestiaryRow:bind(record, width)
     end
 
     self._record = record
-    self:_ensure_chip_count(#drop_layout)
     self.name_label:SetText(record.name)
     self.level_label:SetText(record.level_text)
     self.morale_label:SetText(record.morale_text)
     self.power_label:SetText(record.power_text)
+
+    local drop_texts = record._drop_texts
+    if type(drop_texts) ~= "table" then
+        drop_texts = { TR("No drops seen.") }
+    end
+    drop_layout, drop_h = _build_chip_layout(drop_texts, inner_w)
+    height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
+    self:SetSize(width, height)
+    self.drop_area:SetSize(inner_w, drop_h)
+    self.separator:SetPosition(0, height - separator_h)
+    self:_ensure_chip_count(#drop_layout)
 
     local taxonomy_y = pad_y
     local arrow_text = ">"
@@ -1630,6 +1640,23 @@ function BestiaryWindow:_prepare_records(records)
     end
 end
 
+function BestiaryWindow:_measure_record_height(record, width)
+    local pad_x = _scaled_int(BASE_ROW_PAD_X)
+    local pad_y = _scaled_int(BASE_ROW_PAD_Y)
+    local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
+    local line_h = _scaled_int(BASE_LINE_H)
+    local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
+    local inner_w = math.max(1, width - (2 * pad_x))
+    local drop_texts = record ~= nil and record._drop_texts or nil
+
+    if type(drop_texts) ~= "table" then
+        drop_texts = { TR("No drops seen.") }
+    end
+
+    local _, drop_h = _build_chip_layout(drop_texts, inner_w)
+    return pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
+end
+
 function BestiaryWindow:_column_metrics()
     local window_w = math.max(1, math.floor(self:GetWidth() + 0.5))
     local content_w = math.max(1, math.floor(self.content:GetWidth() + 0.5))
@@ -1704,14 +1731,16 @@ function BestiaryWindow:_build_pages(records)
     end
 
     for record_index = 1, #records do
-        local height = math.max(1, _to_number(records[record_index]._view_height, 1))
-
         if page == nil then
             begin_page()
         end
 
         local column_slot = shortest_column_slot()
         local column_index = column_slot - 1
+        local x = math.floor((column_index * content_w) / column_count)
+        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
+        local item_w = math.max(1, next_x - x)
+        local height = self:_measure_record_height(records[record_index], item_w)
         local y = column_heights[column_slot]
         if y > 0 then
             y = y + row_gap
@@ -1722,16 +1751,19 @@ function BestiaryWindow:_build_pages(records)
             begin_page()
             column_index = 0
             column_slot = 1
+            x = 0
+            next_x = math.floor(content_w / column_count)
+            item_w = math.max(1, next_x - x)
+            height = self:_measure_record_height(records[record_index], item_w)
             y = 0
         end
 
-        local x = math.floor((column_index * content_w) / column_count)
-        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
         page.items[#page.items + 1] = {
             index = record_index,
+            c = column_slot,
             x = x,
             y = y,
-            w = math.max(1, next_x - x),
+            w = item_w,
         }
 
         column_heights[column_slot] = y + height
@@ -1828,8 +1860,24 @@ function BestiaryWindow:render_page()
         local item = items[i]
         local record = self.records[item.index]
         local row = self.entries[i]
-        row:SetPosition(item.x, item.y)
         row:bind(record, item.w)
+    end
+
+    local column_heights = {}
+    for i = 1, column_count do
+        column_heights[i] = 0
+    end
+
+    for i = 1, count do
+        local item = items[i]
+        local row = self.entries[i]
+        local column_slot = item.c or 1
+        local y = column_heights[column_slot]
+        if y > 0 then
+            y = y + _scaled_int(BASE_GAP)
+        end
+        row:SetPosition(item.x, y)
+        column_heights[column_slot] = y + row:GetHeight()
     end
 
     for i = count + 1, #self.entries do
