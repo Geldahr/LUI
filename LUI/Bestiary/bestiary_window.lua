@@ -9,6 +9,14 @@ Bestiary = Bestiary or {}
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
 
+-- Bestiary icon for shortcut button: 0x410E0435
+-- Parchment icon: 0x410E9288
+-- Book no background: 0x41003199
+-- Book background: 0x41002DC3
+-- Book icon pressed: 0x41005F00 25x25
+-- Book icon normal: 0x41005F07 25x25
+-- Book icon hover: 0x41005F0F 25x25
+
 local BASE_MARGIN_LEFT = 15
 local BASE_MARGIN_TOP = 33
 local BASE_MARGIN_RIGHT = 15
@@ -17,13 +25,11 @@ local BASE_BAR_H = 21
 local BASE_FILTER_H = 21
 local BASE_GAP = 4
 local BASE_CLEAR_W = 59
-local BASE_AREA_LABEL_W = 108
 local BASE_ORDER_LABEL_W = 41
 local BASE_SORT_W = 68
 local BASE_NAV_W = 22
 local BASE_PAGE_W = 74
 local BASE_GENUS_LABEL_W = 40
-local BASE_SUBCATEGORY_LABEL_W = 72
 local BASE_TAXONOMY_VALUE_MAX_W = 200
 local BASE_MIN_W = 600
 local BASE_MIN_H = 240
@@ -49,6 +55,9 @@ local BASE_TAXONOMY_ARROW_W = 14
 local BASE_TAXONOMY_START_RATIO = 0.40
 local BASE_RESIZE_REFRESH_DELAY = 0.10
 local BASE_COLUMN_W = 600
+
+local AREA_COMPASS_ICON = "Geldahr/LUI/PluginAssets/ui/compass_64.tga"
+local AREA_COMPASS_HOVER_ICON = "Geldahr/LUI/PluginAssets/ui/compass_hover_64.tga"
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
@@ -180,6 +189,50 @@ local function _lower_text(text)
         return ""
     end
     return string.lower(text)
+end
+
+local function _area_compass_icon(hovered)
+    if hovered == true then
+        return AREA_COMPASS_HOVER_ICON
+    end
+
+    return AREA_COMPASS_ICON
+end
+
+local function _set_area_slot_icon_background(window, target_w, target_h)
+    if type(window) ~= "table" or window.area_slot_icon == nil then
+        return
+    end
+
+    local background = _area_compass_icon(window._area_slot_hovered == true)
+    if type(target_w) ~= "number" or target_w < 1 or type(target_h) ~= "number" or target_h < 1 then
+        if window.area_slot ~= nil and window.area_slot.GetSize ~= nil then
+            target_w, target_h = window.area_slot:GetSize()
+        end
+    end
+
+    if type(target_w) ~= "number" or target_w < 1 then
+        target_w = _scaled_int(BASE_FILTER_H)
+    end
+    if type(target_h) ~= "number" or target_h < 1 then
+        target_h = target_w
+    end
+
+    if window._area_slot_icon_background ~= background then
+        window._area_slot_icon_background = background
+    end
+
+    if window.area_slot_icon.SetBackground ~= nil then
+        window.area_slot_icon:SetBackground(background)
+    end
+
+    _G.refresh_stretch_mode_1_from_current_content(window.area_slot_icon)
+    -- if window.area_slot_icon.SetStretchMode ~= nil then
+    --     window.area_slot_icon:SetStretchMode(1)
+    -- end
+    if window.area_slot_icon.SetSize ~= nil then
+        window.area_slot_icon:SetSize(target_w, target_h)
+    end
 end
 
 local function _to_number(value, fallback)
@@ -1147,7 +1200,7 @@ function BestiaryWindow:Constructor()
     self.area_label:SetSelectable(false)
     self.area_label:SetMultiline(false)
     self.area_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.area_label:SetText(TR("In my area"))
+    self.area_label:SetVisible(false)
 
     self.area_shortcut = Turbine.UI.Lotro.Shortcut(Turbine.UI.Lotro.ShortcutType.Alias, "")
     self.area_shortcut:SetData(TR("/loc"))
@@ -1155,8 +1208,34 @@ function BestiaryWindow:Constructor()
     self.area_slot = Turbine.UI.Lotro.Quickslot()
     self.area_slot:SetParent(self.filter_bar)
     self.area_slot:SetAllowDrop(false)
+    self.area_slot:SetZOrder(1)
     self.area_slot:SetShortcut(self.area_shortcut)
     self.area_slot:SetVisible(true)
+    self._area_slot_hovered = false
+    self.area_slot.MouseEnter = function()
+        self._area_slot_hovered = true
+        local icon_w, icon_h = self.area_slot:GetSize()
+        _set_area_slot_icon_background(self, icon_w, icon_h)
+    end
+    self.area_slot.MouseLeave = function()
+        self._area_slot_hovered = false
+        local icon_w, icon_h = self.area_slot:GetSize()
+        _set_area_slot_icon_background(self, icon_w, icon_h)
+    end
+
+    self.area_slot_cover = Turbine.UI.Control()
+    self.area_slot_cover:SetParent(self.filter_bar)
+    self.area_slot_cover:SetMouseVisible(false)
+    self.area_slot_cover:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.area_slot_cover:SetBackColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.area_slot_cover:SetZOrder(2)
+
+    self.area_slot_icon = Turbine.UI.Control()
+    self.area_slot_icon:SetParent(self.filter_bar)
+    self.area_slot_icon:SetMouseVisible(false)
+    self.area_slot_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.area_slot_icon:SetZOrder(3)
+    _set_area_slot_icon_background(self, _scaled_int(BASE_FILTER_H), _scaled_int(BASE_FILTER_H))
 
     self.taxonomy_bar = Turbine.UI.Control()
     self.taxonomy_bar:SetParent(self.nav_bar)
@@ -1189,7 +1268,7 @@ function BestiaryWindow:Constructor()
     self.subcategory_label:SetSelectable(false)
     self.subcategory_label:SetMultiline(false)
     self.subcategory_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.subcategory_label:SetText(TR("Subcategory") .. ":")
+    self.subcategory_label:SetVisible(false)
 
     self.subcategory_dropdown = UI.Widgets.LuiDropdown()
     self.subcategory_dropdown:SetParent(self.taxonomy_bar)
@@ -1306,15 +1385,10 @@ function BestiaryWindow:apply_settings()
     self.next_button:SetFont(button_font)
     self.filter_tb:SetFont(button_font)
     self.clear_button:SetFont(button_font)
-    self.area_label:SetFont(button_font)
-    self.area_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.area_label:SetForeColor(Turbine.UI.Color(1, 0.82, 0.82, 0.82))
-    self.area_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
     self:ensure_area_shortcut()
     self.genus_label:SetFont(button_font)
     self.genus_dropdown:SetFont(button_font)
     self.genus_dropdown:SetScale(_G.settings.global.scale)
-    self.subcategory_label:SetFont(button_font)
     self.subcategory_dropdown:SetFont(button_font)
     self.subcategory_dropdown:SetScale(_G.settings.global.scale)
     self.empty_label:SetFont(_scaled_font("Verdana", 12))
@@ -1660,7 +1734,6 @@ function BestiaryWindow:layout()
     self.taxonomy_bar:SetSize(taxonomy_w, bar_h)
 
     local genus_label_w = math.min(_scaled_int(BASE_GENUS_LABEL_W), math.max(1, taxonomy_w))
-    local subcategory_label_w = math.min(_scaled_int(BASE_SUBCATEGORY_LABEL_W), math.max(1, taxonomy_w))
     local taxonomy_value_max_w = _scaled_int(BASE_TAXONOMY_VALUE_MAX_W)
     local cursor_x = 0
 
@@ -1668,35 +1741,49 @@ function BestiaryWindow:layout()
     self.genus_label:SetSize(genus_label_w, bar_h)
     cursor_x = cursor_x + genus_label_w + gap
 
-    local genus_dropdown_w = math.min(math.max(1, taxonomy_w - cursor_x), taxonomy_value_max_w)
+    local dropdown_space = math.max(2, taxonomy_w - cursor_x)
+    local dropdown_gap = math.min(gap, math.max(0, dropdown_space - 2))
+    local shared_dropdown_space = math.max(2, dropdown_space - dropdown_gap)
+    local genus_dropdown_w
+    local subcategory_dropdown_w
+
+    if shared_dropdown_space >= (2 * taxonomy_value_max_w) then
+        genus_dropdown_w = taxonomy_value_max_w
+        subcategory_dropdown_w = taxonomy_value_max_w
+    else
+        genus_dropdown_w = math.max(1, math.floor(shared_dropdown_space / 2))
+        subcategory_dropdown_w = math.max(1, shared_dropdown_space - genus_dropdown_w)
+    end
+
     self.genus_dropdown:SetPosition(cursor_x, 0)
     self.genus_dropdown:SetSize(genus_dropdown_w, bar_h)
-    cursor_x = cursor_x + genus_dropdown_w + gap
+    cursor_x = cursor_x + genus_dropdown_w + dropdown_gap
 
-    local remaining_after_subcategory_label = math.max(1, taxonomy_w - cursor_x)
-    subcategory_label_w = math.min(subcategory_label_w, remaining_after_subcategory_label)
     self.subcategory_label:SetPosition(cursor_x, 0)
-    self.subcategory_label:SetSize(subcategory_label_w, bar_h)
-    cursor_x = cursor_x + subcategory_label_w + gap
-
-    local subcategory_dropdown_w = math.min(math.max(1, taxonomy_w - cursor_x), taxonomy_value_max_w)
+    self.subcategory_label:SetSize(0, 0)
     self.subcategory_dropdown:SetPosition(cursor_x, 0)
     self.subcategory_dropdown:SetSize(subcategory_dropdown_w, bar_h)
 
     self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap)
     self.filter_bar:SetSize(inner_w, filter_h)
 
-    local area_label_w = _scaled_int(BASE_AREA_LABEL_W)
-    local area_slot_w = filter_h
+    local area_slot_size = filter_h
     local clear_w = _scaled_int(BASE_CLEAR_W)
+    local area_slot_x = 0
+    local filter_x = area_slot_size + gap
+    local filter_w = math.max(1, inner_w - clear_w - gap - filter_x)
     self.clear_button:SetPosition(inner_w - clear_w, 0)
     self.clear_button:SetSize(clear_w, filter_h)
-    self.area_slot:SetPosition(inner_w - clear_w - gap - area_slot_w, 0)
-    self.area_slot:SetSize(area_slot_w, area_slot_w)
-    self.area_label:SetPosition(math.max(0, inner_w - clear_w - (2 * gap) - area_slot_w - area_label_w), 0)
-    self.area_label:SetSize(area_label_w, filter_h)
-    self.filter_tb:SetPosition(0, 0)
-    self.filter_tb:SetSize(math.max(1, self.area_label:GetLeft() - gap), filter_h)
+    self.area_slot:SetPosition(area_slot_x, 0)
+    self.area_slot:SetSize(area_slot_size, area_slot_size)
+    self.area_slot_cover:SetPosition(area_slot_x, 0)
+    self.area_slot_cover:SetSize(area_slot_size, area_slot_size)
+    self.area_slot_icon:SetPosition(area_slot_x, 0)
+    _set_area_slot_icon_background(self, area_slot_size, area_slot_size)
+    self.area_label:SetPosition(0, 0)
+    self.area_label:SetSize(0, 0)
+    self.filter_tb:SetPosition(filter_x, 0)
+    self.filter_tb:SetSize(filter_w, filter_h)
 
     self.content:SetPosition(margin_left, content_top)
     self.content:SetSize(inner_w, content_h)
