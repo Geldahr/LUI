@@ -1,4 +1,4 @@
-import "Geldahr.LUI.Utils.CoordsData"
+import "Geldahr.LUI.Utils.coords_data"
 
 local REGION_NAMES = {
     [1] = "Eriador",
@@ -10,25 +10,41 @@ local REGION_NAMES = {
 }
 
 local REGION_ORIGINS = {
-    -- r1: values commonly used for Eriador in /loc conversions.
-    -- Add other regions here if your /loc output uses r2/r3/... and you need zone lookup there.
+    -- LotRO reuses the same developer/player origin offset across region layers.
     [1] = { origin_x = 29360, origin_y = 24880 },
+    [2] = { origin_x = 29360, origin_y = 24880 },
+    [3] = { origin_x = 29360, origin_y = 24880 },
+    [4] = { origin_x = 29360, origin_y = 24880 },
+    [5] = { origin_x = 29360, origin_y = 24880 },
+    [14] = { origin_x = 29360, origin_y = 24880 },
 }
 
-Coords = Coords or {}
-Coords.DATA = CoordsData
+_G.Coords = _G.Coords or {}
+local Coords = _G.Coords
+Coords.DATA = _G.CoordsData
+
+local function _parse_decimal(value)
+    if type(value) ~= "string" then
+        return tonumber(value)
+    end
+
+    local normalized = value:gsub(",", ".")
+    return tonumber(normalized)
+end
 
 local function parse_loc(loc_text)
     if type(loc_text) ~= "string" then
         return nil, "loc_text must be a string"
     end
 
-    local region_id = tonumber(loc_text:match("%sat%s+r(%d+)%s"))
-    local lx = tonumber(loc_text:match("%slx(-?%d+)%s"))
-    local ly = tonumber(loc_text:match("%sly(-?%d+)%s"))
-    local ox = tonumber(loc_text:match("%sox([%-%d%.]+)%s"))
-    local oy = tonumber(loc_text:match("%soy([%-%d%.]+)%s"))
-    local oz = tonumber(loc_text:match("%soz([%-%d%.]+)%s"))
+    local normalized = " " .. string.lower(loc_text) .. " "
+
+    local region_id = tonumber(normalized:match("[^%w]r%s*(%d+)"))
+    local lx = tonumber(normalized:match("[^%w]lx%s*[:=]?%s*(-?%d+)"))
+    local ly = tonumber(normalized:match("[^%w]ly%s*[:=]?%s*(-?%d+)"))
+    local ox = _parse_decimal(normalized:match("[^%w]ox%s*[:=]?%s*([%-%d%.,]+)"))
+    local oy = _parse_decimal(normalized:match("[^%w]oy%s*[:=]?%s*([%-%d%.,]+)"))
+    local oz = _parse_decimal(normalized:match("[^%w]oz%s*[:=]?%s*([%-%d%.,]+)"))
 
     if (region_id == nil or lx == nil or ly == nil or ox == nil or oy == nil or oz == nil) then
         return nil, "could not parse /loc string"
@@ -131,10 +147,7 @@ function Coords.get_best_zone(ns, ew)
 end
 
 function Coords.get_best_zone_in_region(region_id, ns, ew)
-    local best_zone = nil
-    local best_zone_area = nil
-
-    local region = CoordsData[region_id]
+    local region = _G.CoordsData[region_id]
     if region == nil or region.zones == nil then
         return nil
     end
@@ -143,20 +156,11 @@ function Coords.get_best_zone_in_region(region_id, ns, ew)
     for i = 1, #zones do
         local zone = zones[i]
         if rect_contains_point(zone.coords, ns, ew) then
-            local area = rect_area(zone.coords)
-            if best_zone == nil or area < best_zone_area then
-                best_zone = zone
-                best_zone_area = area
-            end
+            return zone, find_deepest(zone, ns, ew)
         end
     end
 
-    if best_zone == nil then
-        return nil
-    end
-
-    local best_sub_zone = find_deepest(best_zone, ns, ew)
-    return best_zone, best_sub_zone
+    return nil
 end
 
 function Coords.get_zone_from_loc(loc_text)
@@ -184,4 +188,27 @@ function Coords.get_zone_name_from_loc(loc_text)
         return nil, nil, err
     end
     return result.zone, result.sub_zone, nil
+end
+
+function Coords.resolve_location_from_chat(loc_text)
+    return Coords.resolve_location_from_loc(loc_text)
+end
+
+function Coords.resolve_location_from_loc(loc_text)
+    local result, err = Coords.get_zone_from_loc(loc_text)
+    if result == nil then
+        return nil, err
+    end
+
+    local area = result.sub_zone
+    if area == result.zone then
+        area = nil
+    end
+
+    return {
+        region = result.zone,
+        area = area,
+        player_coords = result.player_coords,
+        region_id = result.region_id,
+    }
 end

@@ -1,9 +1,11 @@
 import "Turbine.Gameplay"
 
 import "Geldahr.LUI.Utils.callbacks"
+import "Geldahr.LUI.Utils.coords"
 
 Bestiary = Bestiary or {}
 Bestiary.Collector = class()
+Bestiary.current_location = Bestiary.current_location or nil
 
 local DROP_GRACE_SECONDS = 1.0
 
@@ -36,6 +38,83 @@ local function _trim(text)
     end
 
     return trimmed
+end
+
+local function _is_bestiary_open()
+    local window = _G.BESTIARY_WINDOW
+    return window ~= nil
+        and window.IsVisible ~= nil
+        and window:IsVisible() == true
+end
+
+local function _quote_filter_term(term)
+    if type(term) ~= "string" or term == "" then
+        return nil
+    end
+
+    return "\"" .. term:gsub("\"", "") .. "\""
+end
+
+local function _build_location_filter_query(location)
+    if type(location) ~= "table" then
+        return ""
+    end
+
+    local terms = {}
+    local quoted_region = _quote_filter_term(location.region)
+    local quoted_area = _quote_filter_term(location.area)
+
+    if quoted_region ~= nil then
+        terms[#terms + 1] = quoted_region
+    end
+    if quoted_area ~= nil and location.area ~= location.region then
+        terms[#terms + 1] = quoted_area
+    end
+
+    return table.concat(terms, " ")
+end
+
+function Bestiary.get_current_location()
+    return Bestiary.current_location
+end
+
+function Bestiary.set_current_location(location)
+    if type(location) ~= "table" then
+        return
+    end
+
+    local region = _trim(location.region)
+    if region == nil then
+        return
+    end
+
+    local area = _trim(location.area)
+    if area == region then
+        area = nil
+    end
+
+    local current_location = {
+        region = region,
+        area = area,
+        player_coords = location.player_coords,
+        region_id = location.region_id,
+    }
+    local query = _build_location_filter_query(current_location)
+    if query == "" then
+        return
+    end
+
+    Bestiary.current_location = current_location
+    _G.bestiary_area_filter_query = query
+
+    local window = _G.BESTIARY_WINDOW
+    if window ~= nil and window.on_location_resolved ~= nil then
+        window:on_location_resolved()
+    end
+end
+
+local function _apply_location_filter(location)
+    Bestiary.set_current_location(location)
 end
 
 local function _to_number(value, fallback)
@@ -375,12 +454,14 @@ function Bestiary.Collector:apply_settings()
     local should_enable = self:is_enabled()
     self.enabled = should_enable
 
+    self:_bind()
+
     if should_enable == true then
-        self:_bind()
         self:_track_current_target()
     else
         self:_flush_pending_kills(true)
-        self:_unbind()
+        self:_unbind_target_events()
+        self:_unbind_player_events()
     end
 end
 
@@ -425,10 +506,12 @@ function Bestiary.Collector:_bind()
         end
     end
 
-    if self._cb_target == nil and self.player ~= nil then
+    if self.enabled == true and self._cb_target == nil and self.player ~= nil then
         self._cb_target = add_callback(self.player, "TargetChanged", function()
             self:_on_target_changed()
         end)
+    elseif self.enabled ~= true and self._cb_target ~= nil then
+        self:_unbind_player_events()
     end
 
     if self._cb_chat == nil then
@@ -436,6 +519,13 @@ function Bestiary.Collector:_bind()
             self:_on_chat_received(args)
         end)
     end
+end
+
+function Bestiary.Collector:_unbind_player_events()
+    if self._cb_target ~= nil and self.player ~= nil then
+        remove_callback(self.player, "TargetChanged", self._cb_target)
+    end
+    self._cb_target = nil
 end
 
 function Bestiary.Collector:_unbind_target_events()
@@ -469,11 +559,7 @@ end
 
 function Bestiary.Collector:_unbind()
     self:_unbind_target_events()
-
-    if self._cb_target ~= nil and self.player ~= nil then
-        remove_callback(self.player, "TargetChanged", self._cb_target)
-        self._cb_target = nil
-    end
+    self:_unbind_player_events()
 
     if self._cb_chat ~= nil then
         remove_callback(Turbine.Chat, "Received", self._cb_chat)
@@ -625,7 +711,7 @@ function Bestiary.Collector:_on_target_changed()
 end
 
 function Bestiary.Collector:_on_chat_received(args)
-    if self.enabled ~= true or type(args) ~= "table" then
+    if type(args) ~= "table" then
         return
     end
 
@@ -642,6 +728,17 @@ function Bestiary.Collector:_on_chat_received(args)
 
     message = _strip_timestamp(message)
     if message == "" then
+        return
+    end
+
+    if _is_bestiary_open() == true then
+        local location = Coords.resolve_location_from_chat(message)
+        if location ~= nil then
+            _apply_location_filter(location)
+        end
+    end
+
+    if self.enabled ~= true then
         return
     end
 

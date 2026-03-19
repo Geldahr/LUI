@@ -17,12 +17,14 @@ local BASE_BAR_H = 21
 local BASE_FILTER_H = 21
 local BASE_GAP = 4
 local BASE_CLEAR_W = 59
+local BASE_AREA_LABEL_W = 108
 local BASE_ORDER_LABEL_W = 41
 local BASE_SORT_W = 68
 local BASE_NAV_W = 22
 local BASE_PAGE_W = 74
 local BASE_GENUS_LABEL_W = 40
 local BASE_SUBCATEGORY_LABEL_W = 72
+local BASE_TAXONOMY_VALUE_MAX_W = 200
 local BASE_MIN_W = 600
 local BASE_MIN_H = 240
 local BASE_NAME_FONT_SIZE = 12
@@ -1034,6 +1036,9 @@ function BestiaryWindow:Constructor()
     self._prepared_content_w = 0
     self._prepared_content_h = 0
     self._prepared_record_key = 0
+    self.current_area = nil
+    self.last_applied_area_query = nil
+    self._suppress_area_text_changed = false
 
     self.sort_mode = SORT_NAME_ASC
     self.filter_groups = {}
@@ -1101,6 +1106,11 @@ function BestiaryWindow:Constructor()
     self.filter_tb:SetParent(self.filter_bar)
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.filter_tb.TextChanged = function()
+        if self._suppress_area_text_changed ~= true then
+            self.current_area = nil
+            self.last_applied_area_query = nil
+            _G.bestiary_area_filter_query = nil
+        end
         self:update_filter()
     end
 
@@ -1108,10 +1118,31 @@ function BestiaryWindow:Constructor()
     self.clear_button:SetParent(self.filter_bar)
     self.clear_button:SetText(TR("Clear"))
     self.clear_button.Click = function()
+        self.current_area = nil
+        self.last_applied_area_query = nil
+        _G.bestiary_area_filter_query = nil
         self.filter_tb:SetText("")
         self:update_filter()
         self.filter_tb:Focus()
     end
+
+    self.area_label = Turbine.UI.TextBox()
+    self.area_label:SetParent(self.filter_bar)
+    self.area_label:SetMouseVisible(false)
+    self.area_label:SetReadOnly(true)
+    self.area_label:SetSelectable(false)
+    self.area_label:SetMultiline(false)
+    self.area_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.area_label:SetText(TR("In my area"))
+
+    self.area_shortcut = Turbine.UI.Lotro.Shortcut(Turbine.UI.Lotro.ShortcutType.Alias, "")
+    self.area_shortcut:SetData(TR("/loc"))
+
+    self.area_slot = Turbine.UI.Lotro.Quickslot()
+    self.area_slot:SetParent(self.filter_bar)
+    self.area_slot:SetAllowDrop(false)
+    self.area_slot:SetShortcut(self.area_shortcut)
+    self.area_slot:SetVisible(true)
 
     self.taxonomy_bar = Turbine.UI.Control()
     self.taxonomy_bar:SetParent(self.nav_bar)
@@ -1183,6 +1214,8 @@ function BestiaryWindow:Constructor()
             self._last_generation = nil
             self:bring_to_front()
             self:refresh_from_store(true)
+            self:sync_area_filter_query()
+            self:apply_current_area_filter(true)
         else
             if self.sort_dropdown ~= nil and self.sort_dropdown.Close ~= nil then
                 self.sort_dropdown:Close()
@@ -1236,6 +1269,16 @@ function BestiaryWindow:persist_geometry()
     self:capture_geometry()
 end
 
+function BestiaryWindow:ensure_area_shortcut()
+    if self.area_shortcut == nil or self.area_slot == nil then
+        return
+    end
+
+    self.area_shortcut:SetData(TR("/loc"))
+    self.area_slot:SetShortcut(self.area_shortcut)
+    self.area_slot:SetAllowDrop(false)
+end
+
 function BestiaryWindow:apply_settings()
     self.update_every = 1.0 / math.max(1, _to_number(_G.settings.global.refresh_rate, 30))
 
@@ -1249,6 +1292,11 @@ function BestiaryWindow:apply_settings()
     self.next_button:SetFont(button_font)
     self.filter_tb:SetFont(button_font)
     self.clear_button:SetFont(button_font)
+    self.area_label:SetFont(button_font)
+    self.area_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.area_label:SetForeColor(Turbine.UI.Color(1, 0.82, 0.82, 0.82))
+    self.area_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self:ensure_area_shortcut()
     self.genus_label:SetFont(button_font)
     self.genus_dropdown:SetFont(button_font)
     self.genus_dropdown:SetScale(_G.settings.global.scale)
@@ -1292,8 +1340,13 @@ function BestiaryWindow:Update()
     end
     self.last_update_at = now
 
-    if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.flush_expired ~= nil then
-        BESTIARY_TRACKER:flush_expired()
+    self:ensure_area_shortcut()
+    self:sync_area_filter_query()
+    self:apply_current_area_filter(false)
+
+    local tracker = _G.BESTIARY_TRACKER
+    if tracker ~= nil and tracker.flush_expired ~= nil then
+        tracker:flush_expired()
     end
 
     local generation = _G.bestiary_cache_generation or 0
@@ -1338,6 +1391,49 @@ function BestiaryWindow:update_filter()
     self.filter_groups = _normalize_groups(_parse_query(query))
     self.page_index = 1
     self:apply_view()
+end
+
+function BestiaryWindow:sync_area_filter_query()
+    local query = _G.bestiary_area_filter_query
+    if type(query) ~= "string" or query == "" then
+        self.current_area = nil
+        return
+    end
+
+    self.current_area = query
+end
+
+function BestiaryWindow:apply_current_area_filter(force)
+    local query = self.current_area
+    if type(query) ~= "string" or query == "" then
+        return
+    end
+
+    local current = self.filter_tb:GetText() or ""
+    if force ~= true and self.last_applied_area_query == query and current == query then
+        return
+    end
+
+    self._suppress_area_text_changed = true
+    self.filter_tb:SetText(query)
+    self._suppress_area_text_changed = false
+    self.last_applied_area_query = query
+    self:update_filter()
+end
+
+function BestiaryWindow:on_location_resolved()
+    self:sync_area_filter_query()
+    self:apply_current_area_filter(true)
+end
+
+function BestiaryWindow:set_area_filter_query(query)
+    if type(query) ~= "string" or query == "" then
+        return
+    end
+
+    _G.bestiary_area_filter_query = query
+    self.current_area = query
+    self:apply_current_area_filter(true)
 end
 
 function BestiaryWindow:_refresh_genus_dropdown()
@@ -1567,29 +1663,44 @@ function BestiaryWindow:layout()
     self.taxonomy_bar:SetPosition(taxonomy_left, 0)
     self.taxonomy_bar:SetSize(taxonomy_w, bar_h)
 
-    local taxonomy_left_w = math.floor((taxonomy_w - gap) / 2)
-    local taxonomy_right_w = math.max(1, taxonomy_w - taxonomy_left_w - gap)
-    local genus_label_w = math.min(_scaled_int(BASE_GENUS_LABEL_W), math.max(1, taxonomy_left_w - _scaled_int(80)))
-    local subcategory_label_w = math.min(_scaled_int(BASE_SUBCATEGORY_LABEL_W), math.max(1, taxonomy_right_w - _scaled_int(80)))
+    local genus_label_w = math.min(_scaled_int(BASE_GENUS_LABEL_W), math.max(1, taxonomy_w))
+    local subcategory_label_w = math.min(_scaled_int(BASE_SUBCATEGORY_LABEL_W), math.max(1, taxonomy_w))
+    local taxonomy_value_max_w = _scaled_int(BASE_TAXONOMY_VALUE_MAX_W)
+    local cursor_x = 0
 
-    self.genus_label:SetPosition(0, 0)
+    self.genus_label:SetPosition(cursor_x, 0)
     self.genus_label:SetSize(genus_label_w, bar_h)
-    self.genus_dropdown:SetPosition(genus_label_w + gap, 0)
-    self.genus_dropdown:SetSize(math.max(1, taxonomy_left_w - genus_label_w - gap), bar_h)
+    cursor_x = cursor_x + genus_label_w + gap
 
-    self.subcategory_label:SetPosition(taxonomy_left_w + gap, 0)
+    local genus_dropdown_w = math.min(math.max(1, taxonomy_w - cursor_x), taxonomy_value_max_w)
+    self.genus_dropdown:SetPosition(cursor_x, 0)
+    self.genus_dropdown:SetSize(genus_dropdown_w, bar_h)
+    cursor_x = cursor_x + genus_dropdown_w + gap
+
+    local remaining_after_subcategory_label = math.max(1, taxonomy_w - cursor_x)
+    subcategory_label_w = math.min(subcategory_label_w, remaining_after_subcategory_label)
+    self.subcategory_label:SetPosition(cursor_x, 0)
     self.subcategory_label:SetSize(subcategory_label_w, bar_h)
-    self.subcategory_dropdown:SetPosition(taxonomy_left_w + gap + subcategory_label_w + gap, 0)
-    self.subcategory_dropdown:SetSize(math.max(1, taxonomy_right_w - subcategory_label_w - gap), bar_h)
+    cursor_x = cursor_x + subcategory_label_w + gap
+
+    local subcategory_dropdown_w = math.min(math.max(1, taxonomy_w - cursor_x), taxonomy_value_max_w)
+    self.subcategory_dropdown:SetPosition(cursor_x, 0)
+    self.subcategory_dropdown:SetSize(subcategory_dropdown_w, bar_h)
 
     self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap)
     self.filter_bar:SetSize(inner_w, filter_h)
 
+    local area_label_w = _scaled_int(BASE_AREA_LABEL_W)
+    local area_slot_w = filter_h
     local clear_w = _scaled_int(BASE_CLEAR_W)
     self.clear_button:SetPosition(inner_w - clear_w, 0)
     self.clear_button:SetSize(clear_w, filter_h)
+    self.area_slot:SetPosition(inner_w - clear_w - gap - area_slot_w, 0)
+    self.area_slot:SetSize(area_slot_w, area_slot_w)
+    self.area_label:SetPosition(math.max(0, inner_w - clear_w - (2 * gap) - area_slot_w - area_label_w), 0)
+    self.area_label:SetSize(area_label_w, filter_h)
     self.filter_tb:SetPosition(0, 0)
-    self.filter_tb:SetSize(math.max(1, inner_w - clear_w - gap), filter_h)
+    self.filter_tb:SetSize(math.max(1, self.area_label:GetLeft() - gap), filter_h)
 
     self.content:SetPosition(margin_left, content_top)
     self.content:SetSize(inner_w, content_h)

@@ -3,6 +3,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "Geldahr.LUI.Utils"
+import "Geldahr.LUI.Utils.coords"
 import "Geldahr.LUI.Settings"
 import "Geldahr.LUI.Settings.default_layouts"
 

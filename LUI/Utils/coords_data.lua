@@ -1,4 +1,4 @@
-CoordsData = {
+_G.CoordsData = {
     [1] = {
         name = "Eriador",
         zones = {

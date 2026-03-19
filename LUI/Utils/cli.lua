@@ -52,15 +52,18 @@ function command:Execute(_, str)
     elseif cmd == "bestiary" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == "export" then
-            if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.export_to_shell ~= nil then
-                BESTIARY_TRACKER:export_to_shell()
+            local tracker = _G.BESTIARY_TRACKER
+            if tracker ~= nil and tracker.export_to_shell ~= nil then
+                tracker:export_to_shell()
             end
         elseif action == nil then
-            if BESTIARY_WINDOW == nil and Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil then
-                BESTIARY_WINDOW = Bestiary.BestiaryWindow()
+            local window = _G.BESTIARY_WINDOW
+            if window == nil and Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil then
+                window = Bestiary.BestiaryWindow()
+                _G.BESTIARY_WINDOW = window
             end
-            if BESTIARY_WINDOW ~= nil and BESTIARY_WINDOW.toggle ~= nil then
-                BESTIARY_WINDOW:toggle()
+            if window ~= nil and window.toggle ~= nil then
+                window:toggle()
             end
         else
             display_help()
