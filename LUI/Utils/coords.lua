@@ -110,9 +110,13 @@ end
 
 local function find_deepest(node, ns, ew)
     local children = node.sub_zones
+    if type(children) ~= "table" then
+        return node
+    end
+
     for i = 1, #children do
         local child = children[i]
-        if rect_contains_point(child.coords, ns, ew) then
+        if type(child) == "table" and type(child.coords) == "table" and rect_contains_point(child.coords, ns, ew) then
             return find_deepest(child, ns, ew)
         end
     end
@@ -147,7 +151,7 @@ function Coords.get_best_zone(ns, ew)
 end
 
 function Coords.get_best_zone_in_region(region_id, ns, ew)
-    local region = _G.CoordsData[region_id]
+    local region = Coords.DATA[region_id]
     if region == nil or region.zones == nil then
         return nil
     end
@@ -155,7 +159,7 @@ function Coords.get_best_zone_in_region(region_id, ns, ew)
     local zones = region.zones
     for i = 1, #zones do
         local zone = zones[i]
-        if rect_contains_point(zone.coords, ns, ew) then
+        if type(zone) == "table" and type(zone.coords) == "table" and rect_contains_point(zone.coords, ns, ew) then
             return zone, find_deepest(zone, ns, ew)
         end
     end

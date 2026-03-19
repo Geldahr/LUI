@@ -226,6 +226,20 @@ local function _append_unique_name(list, value)
     list[#list + 1] = value
 end
 
+local function _contains_value(list, value)
+    if type(list) ~= "table" then
+        return false
+    end
+
+    for i = 1, #list do
+        if list[i] == value then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function _merge_range(dst, field_name, src_value)
     local src_range = _copy_range(src_value)
     if src_range == nil then
@@ -1446,16 +1460,7 @@ function BestiaryWindow:_refresh_genus_dropdown()
     end
 
     local selected = self.genus_filter
-    local found = selected == FILTER_ALL
-    if found ~= true then
-        for i = 1, #values do
-            if values[i] == selected then
-                found = true
-                break
-            end
-        end
-    end
-    if found ~= true then
+    if selected ~= FILTER_ALL and _contains_value(values, selected) ~= true then
         selected = FILTER_ALL
         self.genus_filter = selected
     end
@@ -1483,16 +1488,7 @@ function BestiaryWindow:_refresh_subcategory_dropdown()
             end
             enabled = true
             selected = self.subcategory_filter
-            local found = selected == FILTER_ALL
-            if found ~= true then
-                for i = 1, #values do
-                    if values[i] == selected then
-                        found = true
-                        break
-                    end
-                end
-            end
-            if found ~= true then
+            if selected ~= FILTER_ALL and _contains_value(values, selected) ~= true then
                 selected = FILTER_ALL
             end
         end

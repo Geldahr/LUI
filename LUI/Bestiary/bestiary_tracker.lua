@@ -196,72 +196,57 @@ local function _merge_cache_entry(dst, src)
     end
 end
 
-local function _ensure_bestiary_cache()
-    if ensure_bestiary_cache ~= nil then
-        local cache = ensure_bestiary_cache()
-        if type(cache) == "table" then
-            local renames = {}
-            for _, entry in pairs(cache) do
-                if type(entry) == "table" then
-                    entry.lmin = nil
-                    entry.lmax = nil
-                end
-            end
-            for name, entry in pairs(cache) do
-                if type(name) == "string" and type(entry) == "table" then
-                    local normalized = _normalize_bestiary_name(name)
-                    if normalized ~= nil and normalized ~= name then
-                        renames[#renames + 1] = { from = name, to = normalized }
-                    end
-                end
-            end
-            for i = 1, #renames do
-                local rename = renames[i]
-                local entry = cache[rename.from]
-                if type(entry) == "table" then
-                    if type(cache[rename.to]) == "table" and cache[rename.to] ~= entry then
-                        _merge_cache_entry(cache[rename.to], entry)
-                    else
-                        cache[rename.to] = entry
-                    end
-                    cache[rename.from] = nil
-                end
+local function _clear_legacy_level_bounds(entry)
+    if type(entry) ~= "table" then
+        return
+    end
+
+    entry.lmin = nil
+    entry.lmax = nil
+end
+
+local function _normalize_bestiary_cache_table(cache)
+    if type(cache) ~= "table" then
+        return cache
+    end
+
+    local renames = {}
+    for name, entry in pairs(cache) do
+        _clear_legacy_level_bounds(entry)
+        if type(name) == "string" and type(entry) == "table" then
+            local normalized = _normalize_bestiary_name(name)
+            if normalized ~= nil and normalized ~= name then
+                renames[#renames + 1] = { from = name, to = normalized }
             end
         end
-        return cache
+    end
+
+    for i = 1, #renames do
+        local rename = renames[i]
+        local entry = cache[rename.from]
+        if type(entry) == "table" then
+            if type(cache[rename.to]) == "table" and cache[rename.to] ~= entry then
+                _merge_cache_entry(cache[rename.to], entry)
+            else
+                cache[rename.to] = entry
+            end
+            cache[rename.from] = nil
+        end
+    end
+
+    return cache
+end
+
+local function _ensure_bestiary_cache()
+    if ensure_bestiary_cache ~= nil then
+        return _normalize_bestiary_cache_table(ensure_bestiary_cache())
     end
 
     if type(_G.bestiary_cache) ~= "table" then
         _G.bestiary_cache = {}
     end
 
-    local renames = {}
-    for name, entry in pairs(_G.bestiary_cache) do
-        if type(entry) == "table" then
-            entry.lmin = nil
-            entry.lmax = nil
-            if type(name) == "string" then
-                local normalized = _normalize_bestiary_name(name)
-                if normalized ~= nil and normalized ~= name then
-                    renames[#renames + 1] = { from = name, to = normalized }
-                end
-            end
-        end
-    end
-    for i = 1, #renames do
-        local rename = renames[i]
-        local entry = _G.bestiary_cache[rename.from]
-        if type(entry) == "table" then
-            if type(_G.bestiary_cache[rename.to]) == "table" and _G.bestiary_cache[rename.to] ~= entry then
-                _merge_cache_entry(_G.bestiary_cache[rename.to], entry)
-            else
-                _G.bestiary_cache[rename.to] = entry
-            end
-            _G.bestiary_cache[rename.from] = nil
-        end
-    end
-
-    return _G.bestiary_cache
+    return _normalize_bestiary_cache_table(_G.bestiary_cache)
 end
 
 local function _touch_generation()
