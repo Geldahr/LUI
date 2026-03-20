@@ -7,8 +7,8 @@ import "LUI.src.Utils.color"
 ---@class LuiColorField : Turbine.UI.Control
 LuiColorField = class(Turbine.UI.Control)
 
-local HS_TEXTURE = "Geldahr/LUI/PluginAssets/ui/color_hs_140.tga"
-local VALUE_GRADIENT_TEXTURE = "Geldahr/LUI/PluginAssets/ui/value_gradient_140.tga"
+local HS_TEXTURE = "LUI/src/PluginAssets/ui/color_hs_140.tga"
+local VALUE_GRADIENT_TEXTURE = "LUI/src/PluginAssets/ui/value_gradient_140.tga"
 
 local BASE_SWATCH_SIZE = 13
 local BASE_SWATCH_GAP = 4

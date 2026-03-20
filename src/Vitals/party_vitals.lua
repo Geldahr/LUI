@@ -4,9 +4,31 @@ import "Turbine.UI.Lotro"
 
 import "LUI.src.Vitals.vitals_base"
 import "LUI.src.UI.moveable"
-import "LUI.src.Utils.class_icons"
+import "LUI.src.Utils.icons"
+import "LUI.src.Utils.stretch"
 
-local LEADER_ICON_PREFIX = "Geldahr/LUI/PluginAssets/scaled/gold_shield"
+local function _apply_scaled_icon(control, background, width, height, left, top)
+    if control == nil or background == nil then
+        return false
+    end
+
+    if prepare_background_stretch_mode_1 ~= nil then
+        prepare_background_stretch_mode_1(control, background)
+    elseif control.SetBackground ~= nil then
+        control:SetBackground(background)
+    else
+        return false
+    end
+
+    if left ~= nil and top ~= nil and control.SetPosition ~= nil then
+        control:SetPosition(left, top)
+    end
+    if width ~= nil and height ~= nil and control.SetSize ~= nil then
+        control:SetSize(width, height)
+    end
+
+    return true
+end
 
 ---@class PartyMemberVitals : VitalsBase
 PartyMemberVitals = class(VitalsBase)
@@ -67,12 +89,11 @@ function PartyMemberVitals:_update_class_icon()
     end
 
     local icon = _G.get_class_icon(self.entity:GetClass(), self.class_icon:GetHeight())
-    if icon == nil then
+    if icon == nil or _apply_scaled_icon(self.class_icon, icon, ci.size, ci.size, ci.x, ci.y) ~= true then
         self.class_icon:SetVisible(false)
         return
     end
 
-    self.class_icon:SetBackground(icon)
     self.class_icon:SetVisible(true)
 end
 
@@ -90,7 +111,12 @@ function PartyMemberVitals:_update_leader_icon()
         return
     end
 
-    self.leader_icon:SetBackground(LEADER_ICON_PREFIX .. "_" .. li.size .. ".tga")
+    local icon = _G.get_party_leader_icon ~= nil and _G.get_party_leader_icon() or nil
+    if icon == nil or _apply_scaled_icon(self.leader_icon, icon, li.size, li.size, li.x, li.y) ~= true then
+        self.leader_icon:SetVisible(false)
+        return
+    end
+
     self.leader_icon:SetVisible(true)
 end
 
@@ -103,8 +129,6 @@ function PartyMemberVitals:_build_extra_controls()
     self.class_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self.class_icon:SetZOrder(10)
     self.class_icon:SetVisible(false)
-    -- BUG: There is a strange bug with SetStretchMode the icon will appear ABOVE everything
-    -- self.class_icon:SetStretchMode(1)
 
     self.leader_icon = Turbine.UI.Control()
     self.leader_icon:SetParent(self)

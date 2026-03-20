@@ -155,8 +155,10 @@ if _G.loaded_settings_was_new == true then
     FIRST_RUN_QUICK_SETUP_WINDOW:open()
 end
 
-local date = Turbine.Engine.GetDate()
-Turbine.Shell.WriteLine(string.format(TR("LUI v%s loaded at %02d:%02d:%02d"), Plugins["LUI"]:GetVersion(), date.Hour, date.Minute, date.Second))
+Turbine.Shell.WriteLine(string.format(
+    "<rgb=#3399FA>LUI</rgb> v%s by <rgb=#008080>Geldahr</rgb>",
+    Plugins["LUI"]:GetVersion()
+))
 
 Plugins["LUI"].Unload = function()
     save_settings()

@@ -1,16 +1,37 @@
 command = Turbine.ShellCommand()
 
+local HELP_COMMAND_COLOR = "#33C7FF"
+
+local function _write_help_command(prefix, translated_line_key)
+    local line = TR(translated_line_key)
+    if type(line) ~= "string" then
+        return
+    end
+
+    local start_at, end_at = string.find(line, prefix, 1, true)
+    if start_at ~= nil and end_at ~= nil then
+        Turbine.Shell.WriteLine(
+            string.sub(line, 1, start_at - 1) ..
+            "<rgb=" .. HELP_COMMAND_COLOR .. ">" .. prefix .. "</rgb>" ..
+            string.sub(line, end_at + 1)
+        )
+        return
+    end
+
+    Turbine.Shell.WriteLine(line)
+end
+
 local function display_help()
     Turbine.Shell.WriteLine(TR("Available commands:"))
-    Turbine.Shell.WriteLine(TR("  /lui config     - Open configuration window"))
-    Turbine.Shell.WriteLine(TR("  /lui move       - Toggle move mode"))
-    Turbine.Shell.WriteLine(TR("  /lui move cancel - Cancel move mode changes"))
-    Turbine.Shell.WriteLine(TR("  /lui inventory  - Toggle inventory window"))
-    Turbine.Shell.WriteLine(TR("  /lui assets      - Toggle assets window"))
-    Turbine.Shell.WriteLine(TR("  /lui bestiary   - Toggle bestiary window"))
-    Turbine.Shell.WriteLine(TR("  /lui beast      - Alias for /lui bestiary"))
-    Turbine.Shell.WriteLine(TR("  /lui b          - Short alias for /lui bestiary"))
-    Turbine.Shell.WriteLine(TR("  /lui card [monster name] - Open the bestiary card for a monster"))
+    _write_help_command("/lui config", "  /lui config     - Open configuration window")
+    _write_help_command("/lui move", "  /lui move       - Toggle move mode")
+    _write_help_command("/lui move cancel", "  /lui move cancel - Cancel move mode changes")
+    _write_help_command("/lui inventory", "  /lui inventory  - Toggle inventory window")
+    _write_help_command("/lui assets", "  /lui assets      - Toggle assets window")
+    _write_help_command("/lui bestiary", "  /lui bestiary   - Toggle bestiary window")
+    _write_help_command("/lui beast", "  /lui beast      - Alias for /lui bestiary")
+    _write_help_command("/lui b", "  /lui b          - Short alias for /lui bestiary")
+    _write_help_command("/lui card [monster name]", "  /lui card [monster name] - Open the bestiary card for a monster")
 end
 
 function command:Execute(_, str)

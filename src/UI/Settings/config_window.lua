@@ -3,9 +3,10 @@ import "Turbine.UI.Lotro"
 import "Turbine.Gameplay"
 
 import "LUI.src.UI.Widgets"
-import "LUI.src.Utils.class_icons"
+import "LUI.src.Utils.icons"
 import "LUI.src.Utils.color"
 import "LUI.src.Utils.number_abbrev"
+import "LUI.src.Utils.stretch"
 import "LUI.src.Utils.time_format"
 import "LUI.src.Utils.token_format"
 import "LUI.src.Settings.enums"
@@ -3916,16 +3917,17 @@ function ConfigWindow:update_party_vitals_preview()
             m.root:SetPosition(x, y)
             m.root:SetSize(frame_w, member_h)
 
-            -- BUG: There is a strange bug with SetStretchMode the icon will appear ABOVE everything
-            -- m.class_icon:SetStretchMode(1)
-
             if icon_enabled == true and icon_size > 0 then
                 m.class_icon:SetVisible(true)
-                m.class_icon:SetSize(icon_size, icon_size)
-                m.class_icon:SetPosition(icon_x, icon_y)
                 local icon = _G.get_class_icon(icon_classes[((i - 1) % #icon_classes) + 1], icon_size)
                 if icon ~= nil then
-                    m.class_icon:SetBackground(icon)
+                    if prepare_background_stretch_mode_1 ~= nil then
+                        prepare_background_stretch_mode_1(m.class_icon, icon)
+                    else
+                        m.class_icon:SetBackground(icon)
+                    end
+                    m.class_icon:SetPosition(icon_x, icon_y)
+                    m.class_icon:SetSize(icon_size, icon_size)
                 else
                     m.class_icon:SetVisible(false)
                 end
@@ -3935,9 +3937,18 @@ function ConfigWindow:update_party_vitals_preview()
 
             if leader_enabled == true and leader_size > 0 and i == 1 then
                 m.leader_icon:SetVisible(true)
-                m.leader_icon:SetSize(leader_size, leader_size)
-                m.leader_icon:SetPosition(leader_x, leader_y)
-                m.leader_icon:SetBackground("Geldahr/LUI/PluginAssets/scaled/gold_shield_" .. leader_size .. ".tga")
+                local icon = _G.get_party_leader_icon ~= nil and _G.get_party_leader_icon() or nil
+                if icon ~= nil then
+                    if prepare_background_stretch_mode_1 ~= nil then
+                        prepare_background_stretch_mode_1(m.leader_icon, icon)
+                    else
+                        m.leader_icon:SetBackground(icon)
+                    end
+                    m.leader_icon:SetPosition(leader_x, leader_y)
+                    m.leader_icon:SetSize(leader_size, leader_size)
+                else
+                    m.leader_icon:SetVisible(false)
+                end
             else
                 m.leader_icon:SetVisible(false)
             end
