@@ -56,8 +56,8 @@ local BASE_TAXONOMY_START_RATIO = 0.40
 local BASE_RESIZE_REFRESH_DELAY = 0.10
 local BASE_COLUMN_W = 600
 
-local AREA_COMPASS_ICON = "Geldahr/LUI/PluginAssets/ui/compass_64.tga"
-local AREA_COMPASS_HOVER_ICON = "Geldahr/LUI/PluginAssets/ui/compass_hover_64.tga"
+local AREA_COMPASS_ICON = "LUI/src/PluginAssets/ui/compass_64.tga"
+local AREA_COMPASS_HOVER_ICON = "LUI/src/PluginAssets/ui/compass_hover_64.tga"
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
@@ -894,6 +894,49 @@ local function _apply_separator_style(control)
     control:SetBackColor(Turbine.UI.Color(1, 0.20, 0.20, 0.20))
 end
 
+local function _build_taxonomy_text(record)
+    if type(record) ~= "table" then
+        return ""
+    end
+
+    local genus = type(record.genus) == "string" and record.genus or ""
+    local subcategory = type(record.subcategory) == "string" and record.subcategory or ""
+
+    if genus ~= "" and subcategory ~= "" then
+        return genus .. " > " .. subcategory
+    end
+    if genus ~= "" then
+        return genus
+    end
+    if subcategory ~= "" then
+        return subcategory
+    end
+
+    return ""
+end
+
+local function _build_location_text(record)
+    if type(record) ~= "table" then
+        return ""
+    end
+
+    local region = type(record.region) == "string" and record.region or ""
+    local area = type(record.area) == "string" and record.area or ""
+    local instance = type(record.instance) == "string" and record.instance or ""
+
+    if region ~= "" and area ~= "" then
+        return region .. " > " .. area
+    end
+    if region ~= "" then
+        return region
+    end
+    if instance ~= "" then
+        return instance
+    end
+
+    return ""
+end
+
 local DropChip = class(Turbine.UI.Control)
 
 function DropChip:Constructor()
@@ -951,7 +994,15 @@ function BestiaryRow:Constructor(owner_window)
     Turbine.UI.Control.Constructor(self)
 
     self.owner_window = owner_window
-    self:SetMouseVisible(false)
+    self:SetMouseVisible(true)
+    self.MouseDoubleClick = function(_, args)
+        if args == nil or args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        if self.owner_window ~= nil and self.owner_window.open_card_for_record ~= nil then
+            self.owner_window:open_card_for_record(self._record, self)
+        end
+    end
 
     self.name_label = Turbine.UI.Label()
     self.name_label:SetParent(self)
@@ -959,54 +1010,11 @@ function BestiaryRow:Constructor(owner_window)
     self.name_label:SetMultiline(false)
     self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
-    self.taxonomy_prefix_label = Turbine.UI.TextBox()
-    self.taxonomy_prefix_label:SetParent(self)
-    self.taxonomy_prefix_label:SetMouseVisible(false)
-    self.taxonomy_prefix_label:SetReadOnly(true)
-    self.taxonomy_prefix_label:SetSelectable(false)
-    self.taxonomy_prefix_label:SetMultiline(false)
-    self.taxonomy_prefix_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-
-    self.genus_link = Turbine.UI.TextBox()
-    self.genus_link:SetParent(self)
-    self.genus_link:SetMouseVisible(true)
-    self.genus_link:SetReadOnly(true)
-    self.genus_link:SetSelectable(false)
-    self.genus_link:SetMultiline(false)
-    self.genus_link:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.genus_link.MouseClick = function(_, args)
-        if args == nil or args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        if self.owner_window ~= nil and self._record ~= nil and type(self._record.genus) == "string" and self._record.genus ~= "" then
-            self.owner_window:set_taxonomy_filters(self._record.genus, FILTER_ALL)
-        end
-    end
-
-    self.taxonomy_arrow_label = Turbine.UI.TextBox()
-    self.taxonomy_arrow_label:SetParent(self)
-    self.taxonomy_arrow_label:SetMouseVisible(false)
-    self.taxonomy_arrow_label:SetReadOnly(true)
-    self.taxonomy_arrow_label:SetSelectable(false)
-    self.taxonomy_arrow_label:SetMultiline(false)
-    self.taxonomy_arrow_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-
-    self.subcategory_link = Turbine.UI.TextBox()
-    self.subcategory_link:SetParent(self)
-    self.subcategory_link:SetMouseVisible(true)
-    self.subcategory_link:SetReadOnly(true)
-    self.subcategory_link:SetSelectable(false)
-    self.subcategory_link:SetMultiline(false)
-    self.subcategory_link:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.subcategory_link.MouseClick = function(_, args)
-        if args == nil or args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        if self.owner_window ~= nil and self._record ~= nil and type(self._record.genus) == "string" and self._record.genus ~= ""
-            and type(self._record.subcategory) == "string" and self._record.subcategory ~= "" then
-            self.owner_window:set_taxonomy_filters(self._record.genus, self._record.subcategory)
-        end
-    end
+    self.taxonomy_label = Turbine.UI.Label()
+    self.taxonomy_label:SetParent(self)
+    self.taxonomy_label:SetMouseVisible(false)
+    self.taxonomy_label:SetMultiline(false)
+    self.taxonomy_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.level_label = Turbine.UI.Label()
     self.level_label:SetParent(self)
@@ -1025,6 +1033,12 @@ function BestiaryRow:Constructor(owner_window)
     self.power_label:SetMouseVisible(false)
     self.power_label:SetMultiline(false)
     self.power_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+
+    self.location_label = Turbine.UI.Label()
+    self.location_label:SetParent(self)
+    self.location_label:SetMouseVisible(false)
+    self.location_label:SetMultiline(false)
+    self.location_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
 
     self.drop_area = Turbine.UI.Control()
     self.drop_area:SetParent(self)
@@ -1048,25 +1062,10 @@ function BestiaryRow:apply_settings()
     local meta_font = _scaled_font("Verdana", BASE_TEXT_FONT_SIZE)
     local taxonomy_font = _scaled_font("Verdana", BASE_TAXONOMY_FONT_SIZE)
 
-    self.taxonomy_prefix_label:SetFont(taxonomy_font)
-    self.taxonomy_prefix_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.taxonomy_prefix_label:SetForeColor(Turbine.UI.Color(1, 0.62, 0.62, 0.62))
-    self.taxonomy_prefix_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
-
-    self.genus_link:SetFont(taxonomy_font)
-    self.genus_link:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.genus_link:SetForeColor(Turbine.UI.Color(1, 0.82, 0.78, 0.55))
-    self.genus_link:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
-
-    self.taxonomy_arrow_label:SetFont(taxonomy_font)
-    self.taxonomy_arrow_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.taxonomy_arrow_label:SetForeColor(Turbine.UI.Color(1, 0.62, 0.62, 0.62))
-    self.taxonomy_arrow_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
-
-    self.subcategory_link:SetFont(taxonomy_font)
-    self.subcategory_link:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.subcategory_link:SetForeColor(Turbine.UI.Color(1, 0.67, 0.82, 0.93))
-    self.subcategory_link:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.taxonomy_label:SetFont(taxonomy_font)
+    self.taxonomy_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.taxonomy_label:SetForeColor(Turbine.UI.Color(1, 0.82, 0.78, 0.55))
+    self.taxonomy_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 
     self.level_label:SetFont(meta_font)
     self.level_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
@@ -1082,6 +1081,11 @@ function BestiaryRow:apply_settings()
     self.power_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.power_label:SetForeColor(Turbine.UI.Color(1, 0.40, 0.68, 0.96))
     self.power_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+
+    self.location_label:SetFont(taxonomy_font)
+    self.location_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.location_label:SetForeColor(Turbine.UI.Color(1, 0.67, 0.82, 0.93))
+    self.location_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 
     _apply_separator_style(self.separator)
 
@@ -1105,22 +1109,24 @@ function BestiaryRow:bind(record, width)
     local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
     local line_h = _scaled_int(BASE_LINE_H)
     local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
-    local taxonomy_pad_x = _scaled_int(BASE_TAXONOMY_PAD_X)
-    local taxonomy_arrow_w = _scaled_int(BASE_TAXONOMY_ARROW_W)
-    local layout_gap_x = _scaled_int(BASE_GAP)
     local column_gap_x = _scaled_int(6)
+    local taxonomy_text = record ~= nil and (record.taxonomy_text or _build_taxonomy_text(record)) or ""
+    local location_text = record ~= nil and (record.location_text or _build_location_text(record)) or ""
+    local has_meta_line = taxonomy_text ~= "" or location_text ~= ""
 
     local inner_w = math.max(1, width - (2 * pad_x))
     local right_text_w = math.max(
         _estimate_text_width(record ~= nil and record.level_text or "", BASE_TAXONOMY_CHAR_W),
-        _estimate_text_width(record ~= nil and record.power_text or "", BASE_TAXONOMY_CHAR_W)
+        _estimate_text_width(record ~= nil and record.power_text or "", BASE_TAXONOMY_CHAR_W),
+        _estimate_text_width(location_text, BASE_TAXONOMY_CHAR_W)
     )
-    local right_w = math.min(_scaled_int(120), math.max(_scaled_int(72), right_text_w + (2 * taxonomy_pad_x)))
+    local right_w = math.min(_scaled_int(140), math.max(_scaled_int(72), right_text_w + (2 * _scaled_int(BASE_TAXONOMY_PAD_X))))
     local left_w = math.max(1, inner_w - right_w - column_gap_x)
 
     local drop_layout = {}
     local drop_h = _scaled_int(BASE_CHIP_H)
-    local height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
+    local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
+    local height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
 
     self:SetSize(width, height)
 
@@ -1132,7 +1138,12 @@ function BestiaryRow:bind(record, width)
     self.power_label:SetPosition(pad_x + left_w + column_gap_x, pad_y + line_h + row_gap_y)
     self.power_label:SetSize(right_w, line_h)
 
-    self.drop_area:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.taxonomy_label:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.taxonomy_label:SetSize(left_w, line_h)
+    self.location_label:SetPosition(pad_x + left_w + column_gap_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.location_label:SetSize(right_w, line_h)
+
+    self.drop_area:SetPosition(pad_x, pad_y + (2 * line_h) + (2 * row_gap_y) + meta_line_extra)
     self.drop_area:SetSize(inner_w, drop_h)
 
     self.separator:SetPosition(0, height - separator_h)
@@ -1140,10 +1151,8 @@ function BestiaryRow:bind(record, width)
 
     if record == nil then
         self._record = nil
-        self.taxonomy_prefix_label:SetVisible(false)
-        self.genus_link:SetVisible(false)
-        self.taxonomy_arrow_label:SetVisible(false)
-        self.subcategory_link:SetVisible(false)
+        self.taxonomy_label:SetVisible(false)
+        self.location_label:SetVisible(false)
         for i = 1, #self.drop_chips do
             self.drop_chips[i]:SetVisible(false)
         end
@@ -1162,66 +1171,21 @@ function BestiaryRow:bind(record, width)
         drop_texts = { { text = TR("No drops seen."), chest = false } }
     end
     drop_layout, drop_h = _build_chip_layout(drop_texts, inner_w)
-    height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
+    meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
+    height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
     self:SetSize(width, height)
     self.drop_area:SetSize(inner_w, drop_h)
     self.separator:SetPosition(0, height - separator_h)
     self:_ensure_chip_count(#drop_layout)
 
-    local taxonomy_y = pad_y
-    local arrow_text = ">"
-    local genus_text = record.genus
-    local subcategory_text = record.subcategory
-    local has_genus = type(genus_text) == "string" and genus_text ~= ""
-    local has_subcategory = type(subcategory_text) == "string" and subcategory_text ~= ""
-    local genus_w = has_genus == true and (_estimate_text_width(genus_text, BASE_TAXONOMY_CHAR_W) + (2 * taxonomy_pad_x)) or 0
-    local subcategory_w = has_subcategory == true and (_estimate_text_width(subcategory_text, BASE_TAXONOMY_CHAR_W) + (2 * taxonomy_pad_x)) or 0
-    local arrow_w = (has_genus == true and has_subcategory == true) and taxonomy_arrow_w or 0
-    local taxonomy_total_w = genus_w + arrow_w + subcategory_w
-    if taxonomy_total_w > left_w then
-        if has_genus == true and has_subcategory == true then
-            local text_total_w = math.max(1, genus_w + subcategory_w)
-            local content_w = math.max(1, left_w - arrow_w)
-            genus_w = math.max(1, math.floor((content_w * genus_w) / text_total_w))
-            subcategory_w = math.max(1, content_w - genus_w)
-        elseif has_genus == true then
-            genus_w = left_w
-        end
-        taxonomy_total_w = math.min(left_w, genus_w + arrow_w + subcategory_w)
-    end
-
-    local level_x = pad_x + left_w + column_gap_x
-    local taxonomy_x = pad_x + math.max(0, math.floor(inner_w * BASE_TAXONOMY_START_RATIO))
-    local max_taxonomy_x = level_x - layout_gap_x - taxonomy_total_w
-    if taxonomy_x > max_taxonomy_x then
-        taxonomy_x = math.max(pad_x, max_taxonomy_x)
-    end
-    local name_w = left_w
-    if taxonomy_total_w > 0 then
-        name_w = math.max(1, math.min(left_w, taxonomy_x - pad_x - layout_gap_x))
-    end
-
     self.name_label:SetPosition(pad_x, pad_y)
-    self.name_label:SetSize(name_w, line_h)
+    self.name_label:SetSize(left_w, line_h)
 
-    self.taxonomy_prefix_label:SetVisible(false)
+    self.taxonomy_label:SetText(taxonomy_text)
+    self.taxonomy_label:SetVisible(taxonomy_text ~= "")
 
-    self.genus_link:SetText(genus_text or "")
-    self.genus_link:SetPosition(taxonomy_x, taxonomy_y)
-    self.genus_link:SetSize(math.max(1, genus_w), line_h)
-    self.genus_link:SetVisible(has_genus == true)
-    taxonomy_x = taxonomy_x + genus_w
-
-    self.taxonomy_arrow_label:SetText(arrow_text)
-    self.taxonomy_arrow_label:SetPosition(taxonomy_x, taxonomy_y)
-    self.taxonomy_arrow_label:SetSize(math.max(1, arrow_w), line_h)
-    self.taxonomy_arrow_label:SetVisible(arrow_w > 0)
-    taxonomy_x = taxonomy_x + arrow_w
-
-    self.subcategory_link:SetText(subcategory_text or "")
-    self.subcategory_link:SetPosition(taxonomy_x, taxonomy_y)
-    self.subcategory_link:SetSize(math.max(1, subcategory_w), line_h)
-    self.subcategory_link:SetVisible(has_subcategory == true)
+    self.location_label:SetText(location_text)
+    self.location_label:SetVisible(location_text ~= "")
 
     local chip_h = _scaled_int(BASE_CHIP_H)
     for i = 1, #drop_layout do
@@ -1823,6 +1787,25 @@ function BestiaryWindow:set_page(index)
     self:render_page()
 end
 
+function BestiaryWindow:open_card_for_record(record, anchor)
+    if type(record) ~= "table" then
+        return false
+    end
+
+    local name = nil
+    if type(record.key) == "string" and record.key ~= "" then
+        name = record.key
+    elseif type(record.name) == "string" and record.name ~= "" then
+        name = record.name
+    end
+
+    if name == nil or BESTIARY_CARD == nil or BESTIARY_CARD.show_for_name == nil then
+        return false
+    end
+
+    return BESTIARY_CARD:show_for_name(name, anchor)
+end
+
 function BestiaryWindow:_ensure_rows(count)
     while #self.entries < count do
         local row = BestiaryRow(self)
@@ -2012,11 +1995,15 @@ function BestiaryWindow:_prepare_records(records)
 
         record.level_text = TR("Level") .. ": " .. _format_range(record.level_min, record.level_max)
         record.meta_text = #meta_parts > 0 and table.concat(meta_parts, " / ") or "-"
+        record.taxonomy_text = _build_taxonomy_text(record)
+        record.location_text = _build_location_text(record)
         record.morale_text = TR("Morale") .. ": " .. _format_number_range(record.morale_min, record.morale_max)
         record.power_text = TR("Power") .. ": " .. _format_number_range(record.power_min, record.power_max)
         record._chip_layout = chip_layout
         record._drop_height = drop_h
-        record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
+        local has_meta_line = record.taxonomy_text ~= "" or record.location_text ~= ""
+        local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
+        record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
     end
 end
 
@@ -2034,7 +2021,11 @@ function BestiaryWindow:_measure_record_height(record, width)
     end
 
     local _, drop_h = _build_chip_layout(drop_texts, inner_w)
-    return pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
+    local taxonomy_text = record ~= nil and (record.taxonomy_text or _build_taxonomy_text(record)) or ""
+    local location_text = record ~= nil and (record.location_text or _build_location_text(record)) or ""
+    local has_meta_line = taxonomy_text ~= "" or location_text ~= ""
+    local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
+    return pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
 end
 
 function BestiaryWindow:_column_metrics()

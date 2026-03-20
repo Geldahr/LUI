@@ -384,15 +384,14 @@ local function _merged_entry_for_name(name)
         d = {},
     }
 
-    local found = false
-
     local resolved_name = normalized
     local builtin_name, builtin = _lookup_named_entry(BUILTIN_BESTIARY, normalized)
-    if type(builtin) == "table" then
-        resolved_name = builtin_name or resolved_name
-        _merge_entry(merged, builtin, resolved_name)
-        found = true
+    if type(builtin) ~= "table" then
+        return nil
     end
+
+    resolved_name = builtin_name or resolved_name
+    _merge_entry(merged, builtin, resolved_name)
 
     local cache = _G.bestiary_cache
     if type(cache) == "table" then
@@ -400,12 +399,7 @@ local function _merged_entry_for_name(name)
         if type(cached) == "table" then
             resolved_name = cached_name or resolved_name
             _merge_entry(merged, cached, resolved_name)
-            found = true
         end
-    end
-
-    if found ~= true then
-        return nil
     end
 
     return resolved_name, merged
@@ -1146,6 +1140,29 @@ end
 BestiaryCard = class(Turbine.UI.Lotro.Window)
 Bestiary.BestiaryCard = BestiaryCard
 
+local function _card_window_settings(create)
+    local root = _G.loaded_settings
+    if type(root) ~= "table" then
+        return nil
+    end
+
+    if type(root.bestiary) ~= "table" then
+        if create ~= true then
+            return nil
+        end
+        root.bestiary = {}
+    end
+
+    if type(root.bestiary.card_window) ~= "table" then
+        if create ~= true then
+            return nil
+        end
+        root.bestiary.card_window = {}
+    end
+
+    return root.bestiary.card_window
+end
+
 function BestiaryCard:Constructor()
     Turbine.UI.Lotro.Window.Constructor(self)
 
@@ -1155,6 +1172,7 @@ function BestiaryCard:Constructor()
     self.drop_panel_h = _scaled_int(BASE_DROP_MIN_H)
     self.drop_layout = {}
     self.sticky_position = false
+    self._suppress_position_persist = false
 
     self:SetText(TR("Bestiary"))
     self:SetVisible(false)
@@ -1214,9 +1232,19 @@ function BestiaryCard:Constructor()
     self.deeds_text = _create_text(self.deeds_panel.body, true, Turbine.UI.ContentAlignment.TopLeft)
 
     self.VisibleChanged = function()
-        if self:IsVisible() ~= true then
+        if self:IsVisible() == true then
+            self:_clamp_to_display()
+            self:_persist_current_position()
+        else
             self.current_key = nil
         end
+    end
+    self.PositionChanged = function()
+        if self._suppress_position_persist == true or self:IsVisible() ~= true then
+            return
+        end
+        self.sticky_position = true
+        self:_persist_current_position()
     end
 
     self:apply_settings()
@@ -1292,24 +1320,63 @@ function BestiaryCard:_measure_content_height()
 end
 
 function BestiaryCard:_clamp_to_display()
-    local offset = _scaled_int(BASE_OFFSET)
     local display_w, display_h = Turbine.UI.Display.GetSize()
     local left, top = self:GetPosition()
+    local width = self:GetWidth()
+    local height = self:GetHeight()
 
-    if left + self:GetWidth() > display_w - offset then
-        left = display_w - self:GetWidth() - offset
+    if width > display_w then
+        width = math.max(1, display_w)
     end
-    if top + self:GetHeight() > display_h - offset then
-        top = display_h - self:GetHeight() - offset
-    end
-    if left < offset then
-        left = offset
-    end
-    if top < offset then
-        top = offset
+    if height > display_h then
+        height = math.max(1, display_h)
     end
 
+    if left + width > display_w then
+        left = display_w - width
+    end
+    if top + height > display_h then
+        top = display_h - height
+    end
+    if left < 0 then
+        left = 0
+    end
+    if top < 0 then
+        top = 0
+    end
+
+    self._suppress_position_persist = true
     self:SetPosition(left, top)
+    self._suppress_position_persist = false
+end
+
+function BestiaryCard:_persist_current_position()
+    local window = _card_window_settings(true)
+    if type(window) ~= "table" then
+        return
+    end
+
+    local left, top = self:GetPosition()
+    window.left = left
+    window.top = top
+end
+
+function BestiaryCard:_restore_saved_position()
+    local window = _card_window_settings(false)
+    if type(window) ~= "table" then
+        return false
+    end
+
+    local left = window.left
+    local top = window.top
+    if type(left) ~= "number" or type(top) ~= "number" then
+        return false
+    end
+
+    self._suppress_position_persist = true
+    self:SetPosition(left, top)
+    self._suppress_position_persist = false
+    return true
 end
 
 function BestiaryCard:_fit_window_height()
@@ -1618,7 +1685,19 @@ function BestiaryCard:_position_near_anchor(anchor)
         top = _scaled_int(BASE_OFFSET)
     end
 
+    self._suppress_position_persist = true
     self:SetPosition(left, top)
+    self._suppress_position_persist = false
+end
+
+function BestiaryCard:_prepare_position(anchor)
+    if self:_restore_saved_position() ~= true and self.sticky_position ~= true then
+        self:_position_near_anchor(anchor)
+    end
+
+    self:_clamp_to_display()
+    self:_persist_current_position()
+    self.sticky_position = true
 end
 
 function BestiaryCard:toggle_for_target(target, anchor)
@@ -1635,10 +1714,7 @@ function BestiaryCard:toggle_for_target(target, anchor)
     self.current_key = record.key
     self:SetText(record.name or record.key or TR("Bestiary"))
     self:_apply_record(record)
-    if self.sticky_position ~= true then
-        self:_position_near_anchor(anchor)
-        self.sticky_position = true
-    end
+    self:_prepare_position(anchor)
     self:SetVisible(true)
     self:bring_to_front()
     return true
@@ -1653,10 +1729,7 @@ function BestiaryCard:show_for_name(name, anchor)
     self.current_key = record.key
     self:SetText(record.name or record.key or TR("Bestiary"))
     self:_apply_record(record)
-    if self.sticky_position ~= true then
-        self:_position_near_anchor(anchor)
-        self.sticky_position = true
-    end
+    self:_prepare_position(anchor)
     self:SetVisible(true)
     self:bring_to_front()
     return true

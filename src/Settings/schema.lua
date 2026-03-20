@@ -131,6 +131,7 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "assets", "layouts", "icons" })
     ensure_table_at(s, { "assets", "layouts", "details" })
     ensure_table_at(s, { "bestiary", "window" })
+    ensure_table_at(s, { "bestiary", "card_window" })
 
     ensure_table_at(s, { "self", "expiring_effects" })
     ensure_table_at(s, { "self", "expiring_effects", "window" })
