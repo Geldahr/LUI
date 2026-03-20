@@ -35,7 +35,7 @@ jobs:
           rm -rf dist "${zip_name}"
           mkdir -p dist/LUI
 
-          cp -r LUI dist/LUI/
+          cp -r src dist/LUI/
           cp LUI.* dist/LUI/
           cp LICENSE dist/LUI/
           cp README.md dist/LUI/
