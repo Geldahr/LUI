@@ -67,6 +67,13 @@ local SORT_LEVEL_DESC = "level_desc"
 local FILTER_ALL = "__all"
 local FILTER_NONE = "__none"
 
+local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
+local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
+local COLOR_DROP_CHIP_TEXT = Turbine.UI.Color(1, 0.76, 0.88, 0.79)
+local COLOR_CHEST_CHIP_BORDER = Turbine.UI.Color(1, 0.45, 0.32, 0.12)
+local COLOR_CHEST_CHIP_BG = Turbine.UI.Color(1, 0.14, 0.10, 0.04)
+local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.98, 0.86, 0.52)
+
 local function _push_filter_term(cur_group, term)
     if term ~= nil and term ~= "" then
         cur_group[#cur_group + 1] = term
@@ -279,6 +286,71 @@ local function _append_unique_name(list, value)
     list[#list + 1] = value
 end
 
+local function _merge_text_values(current, next_value)
+    if type(next_value) ~= "string" or next_value == "" then
+        return current
+    end
+    if type(current) ~= "string" or current == "" then
+        return next_value
+    end
+    if string.lower(current) == string.lower(next_value) then
+        return current
+    end
+
+    local parts = {}
+    local seen = {}
+
+    local function push_parts(source)
+        if type(source) ~= "string" then
+            return
+        end
+
+        for part in string.gmatch(source, "([^/]+)") do
+            local candidate = part:gsub("^%s+", ""):gsub("%s+$", "")
+            if candidate ~= "" then
+                local key = string.lower(candidate)
+                if seen[key] ~= true then
+                    seen[key] = true
+                    parts[#parts + 1] = candidate
+                end
+            end
+        end
+    end
+
+    push_parts(current)
+    push_parts(next_value)
+    return table.concat(parts, " / ")
+end
+
+local function _merge_string_map(dst, field_name, src)
+    if type(dst) ~= "table" or type(src) ~= "table" then
+        return
+    end
+
+    if type(dst[field_name]) ~= "table" then
+        dst[field_name] = {}
+    end
+
+    local dst_map = dst[field_name]
+    for key, value in pairs(src) do
+        if type(key) == "string" and type(value) == "string" and value ~= "" and dst_map[key] == nil then
+            dst_map[key] = value
+        end
+    end
+end
+
+local function _append_filter_values(filter_parts, values)
+    if type(filter_parts) ~= "table" or type(values) ~= "table" then
+        return
+    end
+
+    for _, value in pairs(values) do
+        if type(value) == "string" and value ~= "" then
+            filter_parts[#filter_parts + 1] = _lower_text(value)
+        end
+    end
+end
+
 local function _contains_value(list, value)
     if type(list) ~= "table" then
         return false
@@ -330,6 +402,11 @@ local function _merge_entry(dst, src, name)
     if type(dst.subcategory) ~= "string" and type(src.s) == "string" and src.s ~= "" then
         dst.subcategory = src.s
     end
+    if type(src.sp) == "string" and src.sp ~= "" then
+        dst.species = _merge_text_values(dst.species, src.sp)
+    elseif type(dst.species) ~= "string" and type(src.s) == "string" and src.s ~= "" then
+        dst.species = src.s
+    end
     if type(dst.region) ~= "string" and type(src.r) == "string" and src.r ~= "" then
         dst.region = src.r
     end
@@ -339,14 +416,40 @@ local function _merge_entry(dst, src, name)
     if type(dst.instance) ~= "string" and type(src.i) == "string" and src.i ~= "" then
         dst.instance = src.i
     end
+    if type(src.t) == "string" and src.t ~= "" then
+        dst.monster_type = _merge_text_values(dst.monster_type, src.t)
+    end
 
     _merge_range(dst, "static_levels", src.l)
     _merge_range(dst, "static_morale", src.m)
     _merge_range(dst, "static_power", src.p)
+    _merge_string_map(dst, "combat_effectiveness", src.ce)
+    _merge_string_map(dst, "resistances", src.rs)
+    _merge_string_map(dst, "mitigation", src.mi)
 
     if type(src.w) == "table" then
         for i = 1, #src.w do
             _append_unique_name(dst.w, src.w[i])
+        end
+    end
+    if type(src.cw) == "table" then
+        for i = 1, #src.cw do
+            _append_unique_name(dst.cw, src.cw[i])
+        end
+    end
+    if type(src.ab) == "table" then
+        for i = 1, #src.ab do
+            _append_unique_name(dst.abilities, src.ab[i])
+        end
+    end
+    if type(src.qi) == "table" then
+        for i = 1, #src.qi do
+            _append_unique_name(dst.quest_involvement, src.qi[i])
+        end
+    end
+    if type(src.di) == "table" then
+        for i = 1, #src.di do
+            _append_unique_name(dst.deed_involvement, src.di[i])
         end
     end
 
@@ -398,13 +501,22 @@ local function _merged_bestiary()
                         display_name = name,
                         genus = nil,
                         subcategory = nil,
+                        species = nil,
                         region = nil,
                         area = nil,
                         instance = nil,
+                        monster_type = nil,
                         static_levels = nil,
                         static_morale = nil,
                         static_power = nil,
+                        combat_effectiveness = {},
+                        resistances = {},
+                        mitigation = {},
+                        abilities = {},
+                        quest_involvement = {},
+                        deed_involvement = {},
                         w = {},
+                        cw = {},
                         levels = {},
                         k = 0,
                         d = {},
@@ -529,11 +641,24 @@ local function _build_drop_records(entry)
     local kills = _to_number(entry.k, 0)
 
     local by_name = {}
+    local function drop_key(item_name, chest)
+        return (chest == true and "c:" or "d:") .. item_name
+    end
     if type(entry.w) == "table" then
         for i = 1, #entry.w do
             local item_name = entry.w[i]
-            if type(item_name) == "string" and item_name ~= "" and by_name[item_name] == nil then
-                by_name[item_name] = { name = item_name, count = 0, rate = nil }
+            local key = type(item_name) == "string" and drop_key(item_name, false) or nil
+            if key ~= nil and item_name ~= "" and by_name[key] == nil then
+                by_name[key] = { name = item_name, count = 0, rate = nil, chest = false }
+            end
+        end
+    end
+    if type(entry.cw) == "table" then
+        for i = 1, #entry.cw do
+            local item_name = entry.cw[i]
+            local key = type(item_name) == "string" and drop_key(item_name, true) or nil
+            if key ~= nil and item_name ~= "" and by_name[key] == nil then
+                by_name[key] = { name = item_name, count = 0, rate = nil, chest = true }
             end
         end
     end
@@ -541,10 +666,10 @@ local function _build_drop_records(entry)
     if type(entry.d) == "table" then
         for item_name, count in pairs(entry.d) do
             if type(item_name) == "string" then
-                local drop = by_name[item_name]
+                local drop = by_name[drop_key(item_name, false)]
                 if type(drop) ~= "table" then
-                    drop = { name = item_name, count = 0, rate = nil }
-                    by_name[item_name] = drop
+                    drop = { name = item_name, count = 0, rate = nil, chest = false }
+                    by_name[drop_key(item_name, false)] = drop
                 end
 
                 local n = _to_number(count, 0)
@@ -561,6 +686,9 @@ local function _build_drop_records(entry)
     end
 
     table.sort(drops, function(left, right)
+        if (left.chest == true) ~= (right.chest == true) then
+            return left.chest ~= true
+        end
         local left_has_rate = type(left.rate) == "number"
         local right_has_rate = type(right.rate) == "number"
         if left_has_rate ~= right_has_rate then
@@ -626,28 +754,44 @@ local function _build_records()
             _lower_text(display_name),
             _lower_text(entry.genus),
             _lower_text(entry.subcategory),
+            _lower_text(entry.species),
             _lower_text(entry.region),
             _lower_text(entry.area),
             _lower_text(entry.instance),
+            _lower_text(entry.monster_type),
         }
         for i = 1, #drop_records do
             filter_parts[#filter_parts + 1] = _lower_text(drop_records[i].name)
         end
+        _append_filter_values(filter_parts, entry.combat_effectiveness)
+        _append_filter_values(filter_parts, entry.resistances)
+        _append_filter_values(filter_parts, entry.mitigation)
+        _append_filter_values(filter_parts, entry.abilities)
+        _append_filter_values(filter_parts, entry.quest_involvement)
+        _append_filter_values(filter_parts, entry.deed_involvement)
 
         out[#out + 1] = {
             key = name,
             name = display_name,
             genus = entry.genus,
             subcategory = entry.subcategory,
+            species = entry.species,
             region = entry.region,
             area = entry.area,
             instance = entry.instance,
+            type = entry.monster_type,
             level_min = level_min,
             level_max = level_max,
             morale_min = morale_min,
             morale_max = morale_max,
             power_min = power_min,
             power_max = power_max,
+            combat_effectiveness = entry.combat_effectiveness,
+            resistances = entry.resistances,
+            mitigation = entry.mitigation,
+            abilities = entry.abilities,
+            quest_involvement = entry.quest_involvement,
+            deed_involvement = entry.deed_involvement,
             kills = _to_number(entry.k, 0),
             drops = drop_records,
             haystack_lower = table.concat(filter_parts, "\n"),
@@ -715,7 +859,8 @@ local function _build_chip_layout(texts, max_width)
     local y = 0
 
     for i = 1, #texts do
-        local text = texts[i]
+        local item = texts[i]
+        local text = type(item) == "table" and item.text or item
         local width = _estimate_chip_width(text)
         if width > max_width then
             width = max_width
@@ -728,6 +873,7 @@ local function _build_chip_layout(texts, max_width)
 
         layout[#layout + 1] = {
             text = text,
+            chest = type(item) == "table" and item.chest == true,
             x = x,
             y = y,
             w = width,
@@ -754,12 +900,12 @@ function DropChip:Constructor()
     Turbine.UI.Control.Constructor(self)
 
     self:SetMouseVisible(false)
-    self:SetBackColor(Turbine.UI.Color(1, 0.28, 0.28, 0.28))
+    self:SetBackColor(COLOR_DROP_CHIP_BORDER)
 
     self.inner = Turbine.UI.Control()
     self.inner:SetParent(self)
     self.inner:SetMouseVisible(false)
-    self.inner:SetBackColor(Turbine.UI.Color(1, 0.08, 0.08, 0.08))
+    self.inner:SetBackColor(COLOR_DROP_CHIP_BG)
 
     self.label = Turbine.UI.Label()
     self.label:SetParent(self.inner)
@@ -770,12 +916,20 @@ function DropChip:Constructor()
     self:apply_settings()
 end
 
-function DropChip:apply_settings()
+function DropChip:apply_settings(chest)
     local border_w = _scaled_int(BASE_CHIP_BORDER)
     self.inner:SetPosition(border_w, border_w)
     self.label:SetFont(_scaled_font("Verdana", BASE_TEXT_FONT_SIZE))
     self.label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.label:SetForeColor(Turbine.UI.Color(1, 0.76, 0.88, 0.79))
+    if chest == true then
+        self:SetBackColor(COLOR_CHEST_CHIP_BORDER)
+        self.inner:SetBackColor(COLOR_CHEST_CHIP_BG)
+        self.label:SetForeColor(COLOR_CHEST_CHIP_TEXT)
+    else
+        self:SetBackColor(COLOR_DROP_CHIP_BORDER)
+        self.inner:SetBackColor(COLOR_DROP_CHIP_BG)
+        self.label:SetForeColor(COLOR_DROP_CHIP_TEXT)
+    end
     self.label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 end
 
@@ -1005,7 +1159,7 @@ function BestiaryRow:bind(record, width)
 
     local drop_texts = record._drop_texts
     if type(drop_texts) ~= "table" then
-        drop_texts = { TR("No drops seen.") }
+        drop_texts = { { text = TR("No drops seen."), chest = false } }
     end
     drop_layout, drop_h = _build_chip_layout(drop_texts, inner_w)
     height = pad_y + line_h + row_gap_y + line_h + row_gap_y + drop_h + pad_y + separator_h
@@ -1074,6 +1228,7 @@ function BestiaryRow:bind(record, width)
         local chip_info = drop_layout[i]
         local chip = self.drop_chips[i]
         chip:SetPosition(chip_info.x, chip_info.y)
+        chip:apply_settings(chip_info.chest == true)
         chip:bind(chip_info.text, chip_info.w, chip_h)
     end
     for i = #drop_layout + 1, #self.drop_chips do
@@ -1823,15 +1978,17 @@ function BestiaryWindow:_prepare_records(records)
             chip_texts = {}
             for di = 1, #record.drops do
                 local drop = record.drops[di]
+                local text
                 if type(drop.rate) == "number" then
-                    chip_texts[#chip_texts + 1] = drop.name .. ": " .. _format_percent(drop.rate)
+                    text = drop.name .. ": " .. _format_percent(drop.rate)
                 else
-                    chip_texts[#chip_texts + 1] = drop.name
+                    text = drop.name
                 end
+                chip_texts[#chip_texts + 1] = { text = text, chest = drop.chest == true }
             end
 
             if #chip_texts == 0 then
-                chip_texts = { TR("No drops seen.") }
+                chip_texts = { { text = TR("No drops seen."), chest = false } }
             end
 
             record._drop_texts = chip_texts

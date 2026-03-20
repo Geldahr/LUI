@@ -12,6 +12,13 @@ local function _text_alignment(value)
     return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
 end
 
+local function _target_is_player(target)
+    if type(target.IsPlayer) ~= "function" then
+        return false
+    end
+    return target:IsPlayer() == true
+end
+
 local _gradient_morale_color = lui_gradient_morale_color
 
 ---@class TargetVitals : VitalsBase
@@ -27,6 +34,11 @@ function TargetVitals:Constructor(entity)
     self.em = nil
 
     VitalsBase.Constructor(self, "target", entity, TR("Target Vitals"))
+
+    self.entity_control:SetMouseVisible(true)
+    self.entity_control.MouseDoubleClick = function(_, args)
+        self:_on_entity_control_double_click(args)
+    end
 end
 
 ---------------------------------------------------------------------
@@ -459,6 +471,17 @@ function TargetVitals:_build_extra_controls()
             self.targets_target_window.targets_control:SetEntity(entity)
         end,
     }
+end
+
+function TargetVitals:_on_entity_control_double_click(args)
+    if args.Button ~= Turbine.UI.MouseButton.Left then
+        return
+    end
+    if self.entity == nil or _target_is_player(self.entity) == true then
+        return
+    end
+
+    BESTIARY_CARD:toggle_for_target(self.entity, self)
 end
 
 function TargetVitals:_resize_extra_controls()

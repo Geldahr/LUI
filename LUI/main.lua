@@ -118,6 +118,9 @@ if _G.loaded_settings_was_new == true then
     _G.rebuild_settings()
 end
 
+BESTIARY_CARD = Bestiary.BestiaryCard()
+_G.BESTIARY_CARD = BESTIARY_CARD
+
 -- Initializing TARGET_VITAL first: self vitals will drive its visibility based on current target.
 TARGET_VITAL = UI.TargetVitals(nil)
 BOSS_VITAL = UI.BossVitals(nil)
@@ -162,6 +165,13 @@ Plugins["LUI"].Unload = function()
             BESTIARY_WINDOW:SetVisible(false)
         end
         BESTIARY_WINDOW = nil
+    end
+    if BESTIARY_CARD ~= nil then
+        if BESTIARY_CARD.SetVisible ~= nil then
+            BESTIARY_CARD:SetVisible(false)
+        end
+        BESTIARY_CARD = nil
+        _G.BESTIARY_CARD = nil
     end
     if BESTIARY_TRACKER ~= nil then
         if BESTIARY_TRACKER.save ~= nil then

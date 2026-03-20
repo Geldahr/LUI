@@ -8,6 +8,7 @@ local function display_help()
     Turbine.Shell.WriteLine(TR("  /lui inventory  - Toggle inventory window"))
     Turbine.Shell.WriteLine(TR("  /lui assets      - Toggle assets window"))
     Turbine.Shell.WriteLine(TR("  /lui bestiary   - Toggle bestiary window"))
+    Turbine.Shell.WriteLine(TR("  /lui card [monster name] - Open the bestiary card for a monster"))
     Turbine.Shell.WriteLine(TR("  /lui bestiary export - Dump captured bestiary data as Lua"))
 end
 
@@ -67,6 +68,16 @@ function command:Execute(_, str)
             end
         else
             display_help()
+        end
+    elseif cmd == "card" then
+        local monster_name = table.concat(list, " ", 2)
+        if monster_name == nil or monster_name == "" then
+            Turbine.Shell.WriteLine(TR("Usage: /lui card [monster name]"))
+            return
+        end
+
+        if BESTIARY_CARD:show_for_name(monster_name, nil) ~= true then
+            Turbine.Shell.WriteLine(TR("Monster not found in bestiary: ") .. monster_name)
         end
     end
 end
