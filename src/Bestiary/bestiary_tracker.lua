@@ -316,96 +316,6 @@ local function _parse_drop_name(message)
     return _trim(string.sub(bracketed, 2, -2))
 end
 
-local function _format_lua_string(value)
-    return string.format("%q", value)
-end
-
-local function _sorted_keys(t)
-    local keys = {}
-    for key in pairs(t) do
-        keys[#keys + 1] = key
-    end
-
-    local preferred = {
-        levels = 1,
-        k = 2,
-        d = 3,
-        m = 4,
-        p = 5,
-    }
-
-    table.sort(keys, function(a, b)
-        local ta = type(a)
-        local tb = type(b)
-        if ta == tb then
-            if ta == "string" then
-                local pa = preferred[a]
-                local pb = preferred[b]
-                if pa ~= nil or pb ~= nil then
-                    pa = pa or 999
-                    pb = pb or 999
-                    if pa ~= pb then
-                        return pa < pb
-                    end
-                end
-                return string.lower(a) < string.lower(b)
-            end
-            return a < b
-        end
-
-        if ta == "number" then
-            return true
-        end
-        if tb == "number" then
-            return false
-        end
-
-        return ta < tb
-    end)
-
-    return keys
-end
-
-local function _serialize_lua(value, depth)
-    local kind = type(value)
-    if kind == "nil" then
-        return "nil"
-    end
-    if kind == "number" or kind == "boolean" then
-        return tostring(value)
-    end
-    if kind == "string" then
-        return _format_lua_string(value)
-    end
-    if kind ~= "table" then
-        return "nil"
-    end
-
-    local keys = _sorted_keys(value)
-    if #keys == 0 then
-        return "{}"
-    end
-
-    local indent = string.rep("    ", depth)
-    local child_indent = string.rep("    ", depth + 1)
-    local lines = { "{\n" }
-
-    for i = 1, #keys do
-        local key = keys[i]
-        local key_repr
-        if type(key) == "number" then
-            key_repr = "[" .. tostring(key) .. "]"
-        else
-            key_repr = "[" .. _format_lua_string(tostring(key)) .. "]"
-        end
-
-        lines[#lines + 1] = child_indent .. key_repr .. " = " .. _serialize_lua(value[key], depth + 1) .. ",\n"
-    end
-
-    lines[#lines + 1] = indent .. "}"
-    return table.concat(lines)
-end
-
 function Bestiary.Collector:Constructor()
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.player_name = nil
@@ -464,23 +374,6 @@ end
 function Bestiary.Collector:destroy()
     self:_flush_pending_kills(true)
     self:_unbind()
-end
-
-function Bestiary.Collector:export_to_shell()
-    self:_flush_pending_kills(true)
-
-    Turbine.Shell.WriteLine("LUI_BESTIARY_EXPORT_BEGIN")
-    local payload = table.concat({
-        "Bestiary = Bestiary or {}",
-        "Bestiary.Data = " .. _serialize_lua(_ensure_bestiary_cache(), 0),
-    }, "\n")
-    for line in payload:gmatch("([^\n]*)\n?") do
-        if line == "" then
-            break
-        end
-        Turbine.Shell.WriteLine(line)
-    end
-    Turbine.Shell.WriteLine("LUI_BESTIARY_EXPORT_END")
 end
 
 function Bestiary.Collector:_bind()
