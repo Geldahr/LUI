@@ -33,14 +33,14 @@ jobs:
           zip_name="LUI-${version}.zip"
 
           rm -rf dist "${zip_name}"
-          mkdir -p dist/Geldahr
+          mkdir -p dist/LUI
 
-          cp -r LUI dist/Geldahr/
-          cp LUI.* dist/Geldahr/
-          cp LICENSE dist/Geldahr/
-          cp README.md dist/Geldahr/
+          cp -r LUI dist/LUI/
+          cp LUI.* dist/LUI/
+          cp LICENSE dist/LUI/
+          cp README.md dist/LUI/
 
-          (cd dist && zip -r "../${zip_name}" Geldahr)
+          (cd dist && zip -r "../${zip_name}" LUI)
 
       - name: Create GitHub release
         run: |

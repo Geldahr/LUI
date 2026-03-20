@@ -752,7 +752,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build the seeded LUI bestiary data file from Lotro-Wiki.")
     parser.add_argument(
         "--output",
-        default="LUI/Bestiary/data.lua",
+        default="src/Bestiary/data.lua",
         help="Relative output path for the generated Lua data file.",
     )
     args = parser.parse_args()
