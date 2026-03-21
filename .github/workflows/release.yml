@@ -14,7 +14,7 @@ on:
 jobs:
   release:
     name: Release
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -23,64 +23,61 @@ jobs:
 
       - name: Resolve version
         id: vars
-        shell: pwsh
+        shell: bash
         run: |
-          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
-            $version = "${{ inputs.version }}"
-          } else {
-            $version = "${{ github.ref_name }}"
-          }
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            version="${{ inputs.version }}"
+          else
+            version="${{ github.ref_name }}"
+          fi
 
-          if ($version -notmatch '^v\d+\.\d+\.\d+$') {
-            throw "Invalid version '$version'. Expected vX.Y.Z."
-          }
+          if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version '$version'. Expected vX.Y.Z." >&2
+            exit 1
+          fi
 
-          "version=$version" >> $env:GITHUB_OUTPUT
-          "zip_name=LUI-$version.zip" >> $env:GITHUB_OUTPUT
-          "installer_name=LUI-$version-installer.exe" >> $env:GITHUB_OUTPUT
-          "zip_path=dist\LUI-$version.zip" >> $env:GITHUB_OUTPUT
-          "installer_path=dist\LUI-$version-installer.exe" >> $env:GITHUB_OUTPUT
+          {
+            echo "version=$version"
+            echo "zip_path=dist/LUI-$version.zip"
+            echo "bat_path=dist/LUI-$version-windows-installer.bat"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare staged payload
-        shell: pwsh
+        shell: bash
         run: |
-          $stageRoot = Join-Path $PWD "dist\stage"
-          $payloadRoot = Join-Path $stageRoot "LUI"
+          stage_root="$PWD/dist/stage"
+          payload_root="$stage_root/LUI"
 
-          Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path $payloadRoot | Out-Null
+          rm -rf dist
+          mkdir -p "$payload_root"
 
-          Copy-Item src -Destination $payloadRoot -Recurse -Force
-          Copy-Item LUI.plugin -Destination $payloadRoot -Force
-          Copy-Item LICENSE -Destination $payloadRoot -Force
-          Copy-Item README.md -Destination $payloadRoot -Force
+          cp -R src "$payload_root/"
+          cp LUI.plugin "$payload_root/"
+          cp LICENSE "$payload_root/"
+          cp README.md "$payload_root/"
 
       - name: Package zip
-        shell: pwsh
+        shell: bash
         run: |
-          Compress-Archive -Path "dist\stage\LUI" -DestinationPath "${{ steps.vars.outputs.zip_path }}" -Force
+          (
+            cd dist/stage
+            zip -qr "$GITHUB_WORKSPACE/${{ steps.vars.outputs.zip_path }}" LUI
+          )
 
-      - name: Install Inno Setup
-        shell: pwsh
+      - name: Build batch installer
+        shell: bash
         run: |
-          choco install innosetup --no-progress -y
-
-      - name: Build installer
-        shell: pwsh
-        run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
-            "/DMyAppVersion=${{ steps.vars.outputs.version }}" `
-            "/DMySourceDir=$((Resolve-Path 'dist\stage\LUI').Path)" `
-            "/DMyOutputDir=$((Resolve-Path 'dist').Path)" `
-            "/DMyOutputBaseFilename=LUI-${{ steps.vars.outputs.version }}-installer" `
-            "installer\LUI.iss"
+          bash tools/build_embedded_zip_bat.sh \
+            --zip-path "${{ steps.vars.outputs.zip_path }}" \
+            --bat-path "${{ steps.vars.outputs.bat_path }}" \
+            --target-root '%USERPROFILE%\Documents\The Lord of the Rings Online\Plugins'
 
       - name: Create GitHub release
-        shell: pwsh
+        shell: bash
         run: |
-          gh release create "${{ steps.vars.outputs.version }}" `
-            "${{ steps.vars.outputs.zip_path }}" `
-            "${{ steps.vars.outputs.installer_path }}" `
+          gh release create "${{ steps.vars.outputs.version }}" \
+            "${{ steps.vars.outputs.zip_path }}" \
+            "${{ steps.vars.outputs.bat_path }}" \
             --target "${{ github.sha }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

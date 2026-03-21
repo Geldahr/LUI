@@ -35,15 +35,15 @@ LUI is a custom user interface plugin for The Lord of the Rings Online. It focus
 3. Keep the archive's folder structure intact. Do not flatten or rename the shipped folders.
 4. In-game, load the plugin from the Plugin Manager.
 
-### Method 2: from the installer
+### Method 2: from the batch installer
 
-1. Download the latest installer release from the [GitHub releases page](https://github.com/Geldahr/LUI/releases).
-2. Execute it to install the files automatically to `C:\Users\<your user>\Documents\The Lord of the Rings Online\Plugins`.
+1. Download the latest batch installer release from the [GitHub releases page](https://github.com/Geldahr/LUI/releases).
+2. Execute it to replace any existing `LUI` folder and install the files automatically to `C:\Users\<your user>\Documents\The Lord of the Rings Online\Plugins`.
 3. In-game, load the plugin from the Plugin Manager.
 
 ### Method 3: from Git
 
-If you install from source instead of a release ZIP or installer:
+If you install from source instead of a release ZIP or batch installer:
 
 ```bash
 # WSL
