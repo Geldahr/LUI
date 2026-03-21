@@ -6,9 +6,6 @@
 !.github/**
 lsp/
 /config*
-tools/
-!tools/
-tools/*
-!tools/build_bestiary_seed.py
+__pycache__/
 lotro-api/
 .doc/
