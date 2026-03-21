@@ -13,37 +13,74 @@ on:
 
 jobs:
   release:
-    name: Release ${{ github.ref_name }}
-    runs-on: ubuntu-latest
+    name: Release
+    runs-on: windows-latest
     permissions:
       contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Package zip
-        id: package
-        shell: bash
+      - name: Resolve version
+        id: vars
+        shell: pwsh
         run: |
-          version="${GITHUB_REF_NAME}"
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            version="${{ inputs.version }}"
-          fi
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}"
+          } else {
+            $version = "${{ github.ref_name }}"
+          }
 
-          zip_name="LUI-${version}.zip"
+          if ($version -notmatch '^v\d+\.\d+\.\d+$') {
+            throw "Invalid version '$version'. Expected vX.Y.Z."
+          }
 
-          rm -rf dist "${zip_name}"
-          mkdir -p dist/Geldahr
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "zip_name=LUI-$version.zip" >> $env:GITHUB_OUTPUT
+          "installer_name=LUI-$version-installer.exe" >> $env:GITHUB_OUTPUT
+          "zip_path=dist\LUI-$version.zip" >> $env:GITHUB_OUTPUT
+          "installer_path=dist\LUI-$version-installer.exe" >> $env:GITHUB_OUTPUT
 
-          cp -r LUI dist/Geldahr/
-          cp LUI.* dist/Geldahr/
-          cp LICENSE dist/Geldahr/
-          cp README.md dist/Geldahr/
+      - name: Prepare staged payload
+        shell: pwsh
+        run: |
+          $stageRoot = Join-Path $PWD "dist\stage"
+          $payloadRoot = Join-Path $stageRoot "LUI"
 
-          (cd dist && zip -r "../${zip_name}" Geldahr)
+          Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $payloadRoot | Out-Null
+
+          Copy-Item src -Destination $payloadRoot -Recurse -Force
+          Copy-Item LUI.plugin -Destination $payloadRoot -Force
+          Copy-Item LICENSE -Destination $payloadRoot -Force
+          Copy-Item README.md -Destination $payloadRoot -Force
+
+      - name: Package zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist\stage\LUI" -DestinationPath "${{ steps.vars.outputs.zip_path }}" -Force
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            "/DMyAppVersion=${{ steps.vars.outputs.version }}" `
+            "/DMySourceDir=$((Resolve-Path 'dist\stage\LUI').Path)" `
+            "/DMyOutputDir=$((Resolve-Path 'dist').Path)" `
+            "/DMyOutputBaseFilename=LUI-${{ steps.vars.outputs.version }}-installer" `
+            "installer\LUI.iss"
 
       - name: Create GitHub release
+        shell: pwsh
         run: |
-            gh release create ${{ github.ref_name }} LUI-*.zip
+          gh release create "${{ steps.vars.outputs.version }}" `
+            "${{ steps.vars.outputs.zip_path }}" `
+            "${{ steps.vars.outputs.installer_path }}" `
+            --target "${{ github.sha }}"
         env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

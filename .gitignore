@@ -6,6 +6,6 @@
 !.github/**
 lsp/
 /config*
-tools/
+__pycache__/
 lotro-api/
 .doc/
