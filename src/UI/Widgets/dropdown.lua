@@ -15,6 +15,7 @@ local BASE_DROPDOWN_H = 21
 local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_FLIP_GAP = 4
+local BASE_SCROLL_W = 10
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -100,6 +101,7 @@ function LuiDropdown:Constructor()
     self.popup_scroll = Turbine.UI.Lotro.ScrollBar()
     self.popup_scroll:SetParent(self.popup_inner)
     self.popup_scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
+    self.popup_scroll:SetWidth(BASE_SCROLL_W)
     self.popup_list:SetVerticalScrollBar(self.popup_scroll)
 
     self._items = {}
@@ -299,7 +301,7 @@ function LuiDropdown:Open()
     local list_width = width
 
     local border = self._popup_border
-    local scroll_w = math.max(0, self.popup_scroll:GetWidth())
+    local scroll_w = BASE_SCROLL_W
     local use_scroll = item_count > visible_count
 
     self.popup:SetSize(list_width + (2 * border), list_height + (2 * border))

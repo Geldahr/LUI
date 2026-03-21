@@ -41,6 +41,7 @@ local CONFIRM_DIALOG_W = 296
 local CONFIRM_DIALOG_H = 126
 local CONFIRM_DIALOG_PADDING = 12
 local CONFIRM_DIALOG_BUTTON_GAP = 7
+local BASE_SCROLL_W = 10
 local function _scaled_size(value)
     return value * _G.settings.global.scale
 end
@@ -197,6 +198,7 @@ function ConfigWindow:Constructor()
     self.scroll_bar = Turbine.UI.Lotro.ScrollBar()
     self.scroll_bar:SetParent(self)
     self.scroll_bar:SetOrientation(Turbine.UI.Orientation.Vertical)
+    self.scroll_bar:SetWidth(BASE_SCROLL_W)
     self.scroll:SetVerticalScrollBar(self.scroll_bar)
     self.scroll_bar.ValueChanged = function()
         if self.active_tab == "party_vitals" then
@@ -4314,7 +4316,7 @@ function ConfigWindow:layout()
     local min_main_remainder = _scaled_int(89)
     local min_content_w = _scaled_int(104)
     local desired_tab_width = _scaled_int(104)
-    local scroll_w = math.max(0, self.scroll_bar:GetWidth())
+    local scroll_w = BASE_SCROLL_W
     local content_gap = _scaled_int(7)
     local title_h = _scaled_int(22)
     local title_gap = _scaled_int(24)
