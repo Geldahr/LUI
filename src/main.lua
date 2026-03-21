@@ -22,6 +22,69 @@ local function set_backpacks_enabled(enabled)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Backpack6, enabled == true)
 end
 
+local function _ensure_bestiary_window()
+    local window = _G.BESTIARY_WINDOW
+    if window == nil and Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil then
+        window = Bestiary.BestiaryWindow()
+        _G.BESTIARY_WINDOW = window
+    end
+    return window
+end
+
+function _G.toggle_config_shortcut()
+    if CONFIG_WINDOW == nil then
+        return
+    end
+
+    if CONFIG_WINDOW:IsVisible() == true then
+        if CONFIG_WINDOW.cancel ~= nil then
+            CONFIG_WINDOW:cancel()
+        else
+            CONFIG_WINDOW:SetVisible(false)
+        end
+        return
+    end
+
+    if CONFIG_WINDOW.open ~= nil then
+        CONFIG_WINDOW:open()
+    end
+end
+
+function _G.toggle_assets_shortcut()
+    if ASSETS_WINDOW == nil then
+        return
+    end
+
+    if ASSETS_WINDOW:IsVisible() == true then
+        ASSETS_WINDOW:SetVisible(false)
+        return
+    end
+
+    if ASSETS_WINDOW.open ~= nil then
+        ASSETS_WINDOW:open()
+    else
+        ASSETS_WINDOW:SetVisible(true)
+    end
+end
+
+function _G.toggle_bestiary_shortcut()
+    local window = _ensure_bestiary_window()
+    if window == nil then
+        return
+    end
+
+    if window:IsVisible() == true then
+        window:SetVisible(false)
+        return
+    end
+
+    if window.open ~= nil then
+        window:open()
+    else
+        window:SetVisible(true)
+    end
+end
+
 function apply_inventory_settings()
     local enabled = _G.settings.inventory.enabled == true
     local replace = enabled and _G.settings.inventory.replace == true

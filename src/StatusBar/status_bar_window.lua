@@ -21,9 +21,23 @@ local GOLD_ICON = Turbine.UI.Graphic(0x41007e7b)
 local SILVER_ICON = Turbine.UI.Graphic(0x41007e7c)
 local COPPER_ICON = Turbine.UI.Graphic(0x41007e7d)
 local INVENTORY_SPACE_ICON = Turbine.UI.Graphic(0x41008113) -- or 0x41008114 or 0x4113F1A8 or 0x41008113
+local CONFIG_SHORTCUT_ICON = Turbine.UI.Graphic(0x41004D92)
+local ASSETS_SHORTCUT_ICON = Turbine.UI.Graphic(0x41003830)
+local BESTIARY_SHORTCUT_ICON = Turbine.UI.Graphic(0x410031FB)
 local ICON_INSET = 4
 local BACKPACK_ICON_W = 24
 local BACKPACK_ICON_H = 30
+local SHORTCUT_BORDER_COLOR = Turbine.UI.Color(0.90, 0.28, 0.35, 0.45)
+local SHORTCUT_BORDER_HOVER_COLOR = Turbine.UI.Color(0.98, 0.38, 0.46, 0.56)
+
+local SHORTCUT_WIDGETS = {
+    config_icon = { shortcut_key = "config", display_mode = "icon" },
+    config_text = { shortcut_key = "config", display_mode = "text" },
+    assets_icon = { shortcut_key = "assets", display_mode = "icon" },
+    assets_text = { shortcut_key = "assets", display_mode = "text" },
+    bestiary_icon = { shortcut_key = "bestiary", display_mode = "icon" },
+    bestiary_text = { shortcut_key = "bestiary", display_mode = "text" },
+}
 
 local function _get_centered_icon_y(container_h, icon_h)
     return math.floor((container_h - icon_h) / 2)
@@ -52,7 +66,110 @@ local function _get_widget_icon(widget_key)
     return nil
 end
 
+local function _get_shortcut_icon(shortcut_key)
+    if shortcut_key == "config" then
+        return CONFIG_SHORTCUT_ICON
+    elseif shortcut_key == "assets" then
+        return ASSETS_SHORTCUT_ICON
+    elseif shortcut_key == "bestiary" then
+        return BESTIARY_SHORTCUT_ICON
+    end
+    return nil
+end
+
+local function _get_shortcut_icon_w(icon_background, icon_h)
+    if icon_background == nil or icon_h <= 0 then
+        return 0
+    end
+
+    local base_w, base_h = get_background_base_size(icon_background)
+    if type(base_w) ~= "number" or type(base_h) ~= "number" or base_w <= 0 or base_h <= 0 then
+        return icon_h
+    end
+
+    return math.floor(((icon_h * base_w) / base_h) + 0.5)
+end
+
+local function _window_is_visible(window)
+    return window ~= nil and window.IsVisible ~= nil and window:IsVisible() == true
+end
+
+local function _with_alpha(color, alpha)
+    if color == nil then
+        return Turbine.UI.Color(alpha, 1, 1, 1)
+    end
+    return Turbine.UI.Color(alpha, color.R, color.G, color.B)
+end
+
+local function _get_shortcut_label(shortcut_key)
+    if shortcut_key == "config" then
+        return TR("Config")
+    elseif shortcut_key == "assets" then
+        return TR("Assets")
+    elseif shortcut_key == "bestiary" then
+        return TR("Bestiary")
+    end
+    return ""
+end
+
+local function _get_shortcut_state(shortcut_key)
+    if shortcut_key == "config" then
+        return CONFIG_WINDOW ~= nil, _window_is_visible(CONFIG_WINDOW)
+    elseif shortcut_key == "assets" then
+        return ASSETS_WINDOW ~= nil, _window_is_visible(ASSETS_WINDOW)
+    elseif shortcut_key == "bestiary" then
+        local can_open = _G.BESTIARY_WINDOW ~= nil or (Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil)
+        return can_open, _window_is_visible(_G.BESTIARY_WINDOW)
+    end
+    return false, false
+end
+
+local function _activate_shortcut(shortcut_key)
+    if shortcut_key == "config" then
+        if _G.toggle_config_shortcut ~= nil then
+            _G.toggle_config_shortcut()
+        end
+    elseif shortcut_key == "assets" then
+        if _G.toggle_assets_shortcut ~= nil then
+            _G.toggle_assets_shortcut()
+        end
+    elseif shortcut_key == "bestiary" then
+        if _G.toggle_bestiary_shortcut ~= nil then
+            _G.toggle_bestiary_shortcut()
+        end
+    end
+end
+
+local function _clamp_shortcut_height(widget_h, bar_h)
+    local h = widget_h
+    if type(h) ~= "number" then
+        h = tonumber(h)
+    end
+    if h == nil then
+        h = bar_h
+    end
+    h = math.floor(h + 0.5)
+    if h < 1 then
+        h = 1
+    end
+    if h > bar_h then
+        h = bar_h
+    end
+    return h
+end
+
 local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg)
+    local shortcut_spec = SHORTCUT_WIDGETS[widget_key]
+    if shortcut_spec ~= nil then
+        return ShortcutButtonWidget(
+            shortcut_spec.shortcut_key,
+            shortcut_spec.display_mode,
+            widget_w,
+            _clamp_shortcut_height(widget_cfg ~= nil and widget_cfg.height or nil, bar_h),
+            font
+        )
+    end
+
     local icon_enabled = widget_cfg ~= nil and widget_cfg.icon == true
     local icon_path = nil
     if icon_enabled == true then
@@ -575,6 +692,227 @@ function MoneyWidget:_get_total_money()
     return a:GetMoney()
 end
 
+ShortcutButtonWidget = class(Turbine.UI.Control)
+
+---------------------------------------------------------------------
+-- Constructor
+---------------------------------------------------------------------
+
+function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, bar_h, font)
+    Turbine.UI.Control.Constructor(self)
+
+    self.shortcut_key = shortcut_key
+    self.display_mode = display_mode
+    self.font = font
+    self.icon_background = _get_shortcut_icon(shortcut_key)
+
+    self._hover = false
+    self._pressed = false
+    self._available = nil
+    self._active = nil
+
+    self:SetSize(widget_w, bar_h)
+    self:SetMouseVisible(true)
+    self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+
+    self.border_top = Turbine.UI.Control()
+    self.border_top:SetParent(self)
+    self.border_top:SetMouseVisible(false)
+    self.border_top:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.border_top:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.border_top:SetBackColor(SHORTCUT_BORDER_COLOR)
+
+    self.border_bottom = Turbine.UI.Control()
+    self.border_bottom:SetParent(self)
+    self.border_bottom:SetMouseVisible(false)
+    self.border_bottom:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.border_bottom:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.border_bottom:SetBackColor(SHORTCUT_BORDER_COLOR)
+
+    self.border_left = Turbine.UI.Control()
+    self.border_left:SetParent(self)
+    self.border_left:SetMouseVisible(false)
+    self.border_left:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.border_left:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.border_left:SetBackColor(SHORTCUT_BORDER_COLOR)
+
+    self.border_right = Turbine.UI.Control()
+    self.border_right:SetParent(self)
+    self.border_right:SetMouseVisible(false)
+    self.border_right:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.border_right:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.border_right:SetBackColor(SHORTCUT_BORDER_COLOR)
+
+    self.icon = Turbine.UI.Control()
+    self.icon:SetParent(self)
+    self.icon:SetMouseVisible(false)
+    self.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
+    self.icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    if self.icon_background ~= nil then
+        prepare_background_stretch_mode_1(self.icon, self.icon_background)
+    end
+
+    self.label = Turbine.UI.Label()
+    self.label:SetParent(self)
+    self.label:SetMouseVisible(false)
+    self.label:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.label:SetText(_get_shortcut_label(shortcut_key))
+
+    if font ~= nil then
+        if font.lotro ~= nil then
+            self.label:SetFont(font.lotro)
+        end
+        if font.style ~= nil then
+            self.label:SetFontStyle(LUI_TO_LOTRO.font_style[font.style] or Turbine.UI.FontStyle.None)
+        end
+        if font.outline_color ~= nil then
+            self.label:SetOutlineColor(font.outline_color)
+        end
+    end
+
+    self.SizeChanged = function()
+        self:_layout()
+    end
+
+    self.MouseEnter = function()
+        self._hover = true
+        self:_update_visual_state()
+    end
+
+    self.MouseLeave = function()
+        self._hover = false
+        self._pressed = false
+        self:_update_visual_state()
+    end
+
+    self.MouseDown = function(_, args)
+        if self._available ~= true then
+            return
+        end
+        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        self._pressed = true
+        self:_update_visual_state()
+    end
+
+    self.MouseUp = function(_, args)
+        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        self._pressed = false
+        self:_update_visual_state()
+    end
+
+    self.MouseClick = function(_, args)
+        if self._available ~= true then
+            return
+        end
+        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        _activate_shortcut(self.shortcut_key)
+        self:_refresh_state()
+    end
+
+    self:_layout()
+    self:_refresh_state()
+end
+
+---------------------------------------------------------------------
+-- Destructor
+---------------------------------------------------------------------
+
+---------------------------------------------------------------------
+-- Public functions
+---------------------------------------------------------------------
+
+function ShortcutButtonWidget:update(now)
+    self:_refresh_state()
+end
+
+function ShortcutButtonWidget:destroy()
+    if self.border_top ~= nil then self.border_top:SetParent(nil) end
+    if self.border_bottom ~= nil then self.border_bottom:SetParent(nil) end
+    if self.border_left ~= nil then self.border_left:SetParent(nil) end
+    if self.border_right ~= nil then self.border_right:SetParent(nil) end
+    if self.icon ~= nil then self.icon:SetParent(nil) end
+    if self.label ~= nil then self.label:SetParent(nil) end
+    self:SetParent(nil)
+end
+
+---------------------------------------------------------------------
+-- Private functions
+---------------------------------------------------------------------
+
+function ShortcutButtonWidget:_layout()
+    local w, h = self:GetSize()
+    local border_thickness = 1
+
+    self.border_top:SetPosition(0, 0)
+    self.border_top:SetSize(w, math.min(border_thickness, h))
+
+    self.border_bottom:SetPosition(0, math.max(0, h - border_thickness))
+    self.border_bottom:SetSize(w, math.min(border_thickness, h))
+
+    self.border_left:SetPosition(0, 0)
+    self.border_left:SetSize(math.min(border_thickness, w), h)
+
+    self.border_right:SetPosition(math.max(0, w - border_thickness), 0)
+    self.border_right:SetSize(math.min(border_thickness, w), h)
+
+    self.label:SetPosition(0, 0)
+    self.label:SetSize(w, h)
+
+    local icon_h = _get_icon_size(h)
+    local icon_w = _get_shortcut_icon_w(self.icon_background, icon_h)
+    local icon_x = math.floor((w - icon_w) / 2)
+    local icon_y = _get_centered_icon_y(h, icon_h)
+    self.icon:SetPosition(icon_x, icon_y)
+    self.icon:SetSize(icon_w, icon_h)
+    self.icon:SetVisible(self.display_mode == "icon" and self.icon_background ~= nil and icon_h > 0 and icon_w > 0)
+    self.label:SetVisible(self.display_mode ~= "icon")
+end
+
+function ShortcutButtonWidget:_refresh_state()
+    local available, active = _get_shortcut_state(self.shortcut_key)
+    if available == self._available and active == self._active then
+        return
+    end
+
+    self._available = available == true
+    self._active = active == true
+    self:_update_visual_state()
+end
+
+function ShortcutButtonWidget:_set_border_color(color)
+    self.border_top:SetBackColor(color)
+    self.border_bottom:SetBackColor(color)
+    self.border_left:SetBackColor(color)
+    self.border_right:SetBackColor(color)
+end
+
+function ShortcutButtonWidget:_update_visual_state()
+    local label_color = self.font ~= nil and self.font.color or nil
+    local border_color = SHORTCUT_BORDER_COLOR
+
+    if self._available ~= true then
+        label_color = _with_alpha(label_color, 0.45)
+    elseif self._hover or self._pressed then
+        border_color = SHORTCUT_BORDER_HOVER_COLOR
+    end
+
+    self:_set_border_color(border_color)
+
+    if label_color ~= nil then
+        self.label:SetForeColor(label_color)
+    end
+end
+
 DummyWidget = class(StatusBarWidgetBase)
 
 ---------------------------------------------------------------------
@@ -696,6 +1034,7 @@ end
 
 function StatusBarWindow:_layout_widgets(sb)
     local bar_w = self:GetWidth()
+    local bar_h = self:GetHeight()
     local pad = sb.padding
     local gap = sb.gap
 
@@ -717,7 +1056,9 @@ function StatusBarWindow:_layout_widgets(sb)
         local x = x0
         for i = 1, #list do
             local w = list[i]
-            w:SetPosition(x, 0)
+            local y = math.floor((bar_h - w:GetHeight()) / 2)
+            if y < 0 then y = 0 end
+            w:SetPosition(x, y)
             x = x + w:GetWidth() + gap
         end
     end
@@ -733,6 +1074,7 @@ function StatusBarWindow:_rebuild_widgets(sb)
     self._zone_widgets_left = {}
     self._zone_widgets_center = {}
     self._zone_widgets_right = {}
+    local has_interactive_widgets = false
 
     local zones = sb.zones
     local widgets_cfg = sb.widgets
@@ -747,6 +1089,9 @@ function StatusBarWindow:_rebuild_widgets(sb)
                 inst:SetParent(self)
                 inst:SetZOrder(1)
                 inst:SetVisible(false)
+                if SHORTCUT_WIDGETS[widget_key] ~= nil then
+                    has_interactive_widgets = true
+                end
                 table.insert(self._widgets, inst)
                 table.insert(self._update_widgets, inst)
                 table.insert(dst, inst)
@@ -757,6 +1102,7 @@ function StatusBarWindow:_rebuild_widgets(sb)
     build_zone("left", self._zone_widgets_left)
     build_zone("center", self._zone_widgets_center)
     build_zone("right", self._zone_widgets_right)
+    self:SetMouseVisible(has_interactive_widgets)
 
     self:_layout_widgets(sb)
 

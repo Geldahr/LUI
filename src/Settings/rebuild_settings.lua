@@ -327,16 +327,33 @@ function _G.rebuild_settings()
     sb.font.color = raw_sb.font.color
     sb.font.outline_color = raw_sb.font.outline_color
 
+    local STATUS_BAR_LAYOUT_TOKENS = {
+        time = "time_local",
+        inventory = "inventory_space",
+        gold = "money",
+        money = "money",
+        ["config:icon"] = "config_icon",
+        ["config:text"] = "config_text",
+        ["assets:icon"] = "assets_icon",
+        ["assets:text"] = "assets_text",
+        ["bestiary:icon"] = "bestiary_icon",
+        ["bestiary:text"] = "bestiary_text",
+    }
+    local STATUS_BAR_SHORTCUT_CONFIGS = {
+        config_icon = "shortcut_icon",
+        assets_icon = "shortcut_icon",
+        bestiary_icon = "shortcut_icon",
+        config_text = "shortcut_text",
+        assets_text = "shortcut_text",
+        bestiary_text = "shortcut_text",
+    }
+
     local function parse_layout(text)
         local list = {}
-        for token in text:gmatch("%%([%w_]+)%%") do
-            local t = string.lower(token)
-            if t == "time" then
-                table.insert(list, "time_local")
-            elseif t == "inventory" then
-                table.insert(list, "inventory_space")
-            elseif t == "gold" or t == "money" then
-                table.insert(list, "money")
+        for token in text:gmatch("%%([%w_:]+)%%") do
+            local widget_key = STATUS_BAR_LAYOUT_TOKENS[string.lower(token)]
+            if widget_key ~= nil then
+                table.insert(list, widget_key)
             end
         end
         return list
@@ -380,6 +397,22 @@ function _G.rebuild_settings()
         icon = raw_sb.widgets.money.icon,
         content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.money.text_alignment],
     }
+
+    local function build_shortcut_widget(widget_key)
+        local raw_widget = raw_sb.widgets[STATUS_BAR_SHORTCUT_CONFIGS[widget_key]]
+        return {
+            enabled = in_zones(widget_key),
+            width = scaled_int(raw_widget.width),
+            height = scaled_int(raw_widget.height),
+        }
+    end
+
+    sb.widgets.config_icon = build_shortcut_widget("config_icon")
+    sb.widgets.config_text = build_shortcut_widget("config_text")
+    sb.widgets.assets_icon = build_shortcut_widget("assets_icon")
+    sb.widgets.assets_text = build_shortcut_widget("assets_text")
+    sb.widgets.bestiary_icon = build_shortcut_widget("bestiary_icon")
+    sb.widgets.bestiary_text = build_shortcut_widget("bestiary_text")
 
     local raw_cd = raw.self.cooldowns
     local cd = _G.settings.self.cooldowns

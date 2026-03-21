@@ -27,9 +27,13 @@ function StatusBar.create_controls(window, ui)
         TR("  %time% - local time (HH:MM)"),
         TR("  %inventory% - backpack used/total"),
         TR("  %gold% / %money% - money (g/s/c)"),
+        TR("  %config:icon% / %config:text% - toggle configuration window"),
+        TR("  %bestiary:icon% / %bestiary:text% - toggle bestiary window"),
+        TR("  %assets:icon% / %assets:text% - toggle assets window"),
         "",
+        TR("Closing config via shortcut acts like Cancel."),
         TR("Order matters. Unknown tokens are ignored."),
-        TR("Example: %time% %inventory%"),
+        TR("Example: %config:icon% %time% %assets:text%"),
     }, "\n")
 
     ui.add_text("sb_layout_left", TR("Left layout"), false, layout_help, true)
@@ -50,6 +54,11 @@ function StatusBar.create_controls(window, ui)
     ui.add_text("sb_money_width", TR("Width"))
     ui.add_checkbox("sb_money_icon", TR("Icon"))
     ui.add_dropdown("sb_money_text_alignment", TR("Text alignment"), ui.text_alignment_labels, ui.text_alignment_values)
+
+    ui.add_text("sb_shortcut_icon_width", TR("Icon width"))
+    ui.add_text("sb_shortcut_icon_height", TR("Icon height"))
+    ui.add_text("sb_shortcut_text_width", TR("Text width"))
+    ui.add_text("sb_shortcut_text_height", TR("Text height"))
 end
 
 function StatusBar.register(window, ui)
@@ -108,6 +117,13 @@ function StatusBar.register(window, ui)
         window.controls.sb_money_width,
         window.controls.sb_money_icon,
         window.controls.sb_money_text_alignment,
+
+        ui.add_hr(),
+        ui.add_title(TR("Shortcut buttons")),
+        window.controls.sb_shortcut_icon_width,
+        window.controls.sb_shortcut_icon_height,
+        window.controls.sb_shortcut_text_width,
+        window.controls.sb_shortcut_text_height,
     }
 end
 
@@ -149,6 +165,11 @@ function StatusBar.load(window, s, ui)
     window.controls.sb_money_width.tb:SetText(tostring(money.width))
     window.controls.sb_money_icon.cb:SetChecked(money.icon == true)
     window.controls.sb_money_text_alignment:set_value(money.text_alignment)
+
+    window.controls.sb_shortcut_icon_width.tb:SetText(tostring(widgets.shortcut_icon.width))
+    window.controls.sb_shortcut_icon_height.tb:SetText(tostring(widgets.shortcut_icon.height))
+    window.controls.sb_shortcut_text_width.tb:SetText(tostring(widgets.shortcut_text.width))
+    window.controls.sb_shortcut_text_height.tb:SetText(tostring(widgets.shortcut_text.height))
 end
 
 function StatusBar.apply(window, s, ui)
@@ -199,4 +220,13 @@ function StatusBar.apply(window, s, ui)
     if money_w ~= nil then widgets.money.width = money_w end
     widgets.money.icon = window.controls.sb_money_icon.cb:IsChecked() == true
     widgets.money.text_alignment = window.controls.sb_money_text_alignment:get_value()
+
+    local shortcut_icon_w = tonumber(window.controls.sb_shortcut_icon_width.tb:GetText())
+    if shortcut_icon_w ~= nil then widgets.shortcut_icon.width = shortcut_icon_w end
+    local shortcut_icon_h = tonumber(window.controls.sb_shortcut_icon_height.tb:GetText())
+    if shortcut_icon_h ~= nil then widgets.shortcut_icon.height = shortcut_icon_h end
+    local shortcut_text_w = tonumber(window.controls.sb_shortcut_text_width.tb:GetText())
+    if shortcut_text_w ~= nil then widgets.shortcut_text.width = shortcut_text_w end
+    local shortcut_text_h = tonumber(window.controls.sb_shortcut_text_height.tb:GetText())
+    if shortcut_text_h ~= nil then widgets.shortcut_text.height = shortcut_text_h end
 end

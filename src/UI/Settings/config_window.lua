@@ -162,7 +162,7 @@ function Options:Constructor()
     self.help:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     self.help:SetPosition(_scaled_int(7), _scaled_int(7))
     self.help:SetSize(_scaled_int(430), _scaled_int(74))
-    self.help:SetText(TR("Use '/LUI config' to open the configuration window."))
+    self.help:SetText(TR("Use '/LUI config' to toggle the configuration window."))
 end
 
 ConfigWindow = class(Turbine.UI.Lotro.Window)
@@ -273,7 +273,7 @@ function ConfigWindow:Constructor()
     self.cancel_button:SetFont(self.settings_font)
     self.cancel_button:SetText(TR("Cancel"))
     self.cancel_button.Click = function()
-        self:SetVisible(false)
+        self:cancel()
     end
 
     self.apply_button = UI.Widgets.LuiButton()
@@ -528,6 +528,11 @@ function ConfigWindow:hide_confirmation_dialog()
     if self.confirm_overlay ~= nil then
         self.confirm_overlay:SetVisible(false)
     end
+end
+
+function ConfigWindow:cancel()
+    self:hide_confirmation_dialog()
+    self:SetVisible(false)
 end
 
 function ConfigWindow:open(main_key, preferred_sub_key)

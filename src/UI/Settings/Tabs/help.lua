@@ -121,7 +121,7 @@ function Help.create_controls(window, ui)
     }, "\n")
 
     local commands_text = table.concat({
-        TR("/lui config - Open the configuration window."),
+        TR("/lui config - Toggle the configuration window."),
         TR("/lui move - Toggle LUI move mode."),
         TR("/lui move cancel - Leave move mode without saving the current positions."),
         TR("/lui inventory - Toggle the inventory window."),

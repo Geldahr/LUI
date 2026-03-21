@@ -58,6 +58,8 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "status_bar", "widgets", "inventory_space" })
     ensure_table_at(s, { "status_bar", "widgets", "inventory_space", "color" })
     ensure_table_at(s, { "status_bar", "widgets", "money" })
+    ensure_table_at(s, { "status_bar", "widgets", "shortcut_icon" })
+    ensure_table_at(s, { "status_bar", "widgets", "shortcut_text" })
 
     ensure_table_at(s, { "self", "vitals" })
     ensure_table_at(s, { "self", "vitals", "frame" })
@@ -667,6 +669,11 @@ function _G.ensure_loaded_settings()
     if widgets.money.width == nil then widgets.money.width = 140 end
     if widgets.money.icon == nil then widgets.money.icon = true end
     if widgets.money.text_alignment == nil then widgets.money.text_alignment = LUI_ENUMS.text_alignment.LEFT end
+
+    if widgets.shortcut_icon.width == nil then widgets.shortcut_icon.width = 20 end
+    if widgets.shortcut_icon.height == nil then widgets.shortcut_icon.height = 20 end
+    if widgets.shortcut_text.width == nil then widgets.shortcut_text.width = 66 end
+    if widgets.shortcut_text.height == nil then widgets.shortcut_text.height = sb.height end
 
     local cd = s.self.cooldowns
     if cd.enabled == nil then

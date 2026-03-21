@@ -23,7 +23,7 @@ end
 
 local function display_help()
     Turbine.Shell.WriteLine(TR("Available commands:"))
-    _write_help_command("/lui config", "  /lui config     - Open configuration window")
+    _write_help_command("/lui config", "  /lui config     - Toggle configuration window")
     _write_help_command("/lui move", "  /lui move       - Toggle move mode")
     _write_help_command("/lui move cancel", "  /lui move cancel - Cancel move mode changes")
     _write_help_command("/lui inventory", "  /lui inventory  - Toggle inventory window")
@@ -61,7 +61,9 @@ function command:Execute(_, str)
             toggle_move_mode()
         end
     elseif cmd == "config" then
-        if CONFIG_WINDOW ~= nil then
+        if _G.toggle_config_shortcut ~= nil then
+            _G.toggle_config_shortcut()
+        elseif CONFIG_WINDOW ~= nil then
             CONFIG_WINDOW:open()
         end
     elseif cmd == "inventory" or cmd == "inv" then
@@ -69,19 +71,25 @@ function command:Execute(_, str)
             INVENTORY_WINDOW:toggle()
         end
     elseif cmd == "assets" or cmd == "a" then
-        if ASSETS_WINDOW ~= nil and ASSETS_WINDOW.toggle ~= nil then
+        if _G.toggle_assets_shortcut ~= nil then
+            _G.toggle_assets_shortcut()
+        elseif ASSETS_WINDOW ~= nil and ASSETS_WINDOW.toggle ~= nil then
             ASSETS_WINDOW:toggle()
         end
     elseif cmd == "bestiary" or cmd == "beast" or cmd == "b" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == nil then
-            local window = _G.BESTIARY_WINDOW
-            if window == nil and Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil then
-                window = Bestiary.BestiaryWindow()
-                _G.BESTIARY_WINDOW = window
-            end
-            if window ~= nil and window.toggle ~= nil then
-                window:toggle()
+            if _G.toggle_bestiary_shortcut ~= nil then
+                _G.toggle_bestiary_shortcut()
+            else
+                local window = _G.BESTIARY_WINDOW
+                if window == nil and Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil then
+                    window = Bestiary.BestiaryWindow()
+                    _G.BESTIARY_WINDOW = window
+                end
+                if window ~= nil and window.toggle ~= nil then
+                    window:toggle()
+                end
             end
         else
             display_help()
