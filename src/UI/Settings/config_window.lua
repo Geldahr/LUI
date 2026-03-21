@@ -41,7 +41,6 @@ local CONFIRM_DIALOG_W = 296
 local CONFIRM_DIALOG_H = 126
 local CONFIRM_DIALOG_PADDING = 12
 local CONFIRM_DIALOG_BUTTON_GAP = 7
-
 local function _scaled_size(value)
     return value * _G.settings.global.scale
 end
@@ -4315,7 +4314,7 @@ function ConfigWindow:layout()
     local min_main_remainder = _scaled_int(89)
     local min_content_w = _scaled_int(104)
     local desired_tab_width = _scaled_int(104)
-    local scroll_w = _scaled_int(12)
+    local scroll_w = math.max(0, self.scroll_bar:GetWidth())
     local content_gap = _scaled_int(7)
     local title_h = _scaled_int(22)
     local title_gap = _scaled_int(24)
@@ -4411,7 +4410,7 @@ function ConfigWindow:layout()
     self.scroll:SetSize(content_width - scroll_w - self.scroll_bar_gap, scroll_height)
 
     self.scroll_bar:SetPosition(content_left + self.scroll:GetWidth() + self.scroll_bar_gap, scroll_top)
-    self.scroll_bar:SetSize(scroll_w, scroll_height)
+    self.scroll_bar:SetHeight(scroll_height)
 
     local form_width = self.scroll:GetWidth()
     local inner_width = form_width - (2 * self.content_padding)

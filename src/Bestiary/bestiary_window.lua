@@ -27,6 +27,7 @@ local BASE_GAP = 4
 local BASE_CLEAR_W = 59
 local BASE_ORDER_LABEL_W = 41
 local BASE_SORT_W = 68
+local BASE_LEVEL_INPUT_W = 44
 local BASE_NAV_W = 22
 local BASE_PAGE_W = 74
 local BASE_GENUS_LABEL_W = 40
@@ -196,6 +197,14 @@ local function _lower_text(text)
         return ""
     end
     return string.lower(text)
+end
+
+local function _trim_text(text)
+    if type(text) ~= "string" then
+        return ""
+    end
+
+    return text:gsub("^%s+", ""):gsub("%s+$", "")
 end
 
 local function _area_compass_icon(hovered)
@@ -609,6 +618,69 @@ local function _format_percent(percent)
     text = text:gsub("(%..-)0+$", "%1")
     text = text:gsub("%.$", "")
     return text .. "%"
+end
+
+local function _parse_level_filter_value(text)
+    local trimmed = _trim_text(text)
+    if trimmed == "" then
+        return nil
+    end
+
+    local value = tonumber(trimmed)
+    if value == nil then
+        return nil
+    end
+
+    value = math.floor(value)
+    if value < 1 then
+        return nil
+    end
+
+    return value
+end
+
+local function _read_level_filter_range(window)
+    if type(window) ~= "table" then
+        return nil, nil
+    end
+
+    local filter_min = _parse_level_filter_value(window.level_min_box ~= nil and window.level_min_box:GetText() or nil)
+    local filter_max = _parse_level_filter_value(window.level_max_box ~= nil and window.level_max_box:GetText() or nil)
+    if filter_min ~= nil and filter_max ~= nil and filter_min > filter_max then
+        filter_min, filter_max = filter_max, filter_min
+    end
+
+    return filter_min, filter_max
+end
+
+local function _matches_level_range(record, filter_min, filter_max)
+    if filter_min == nil and filter_max == nil then
+        return true
+    end
+    if type(record) ~= "table" then
+        return false
+    end
+
+    local record_min = _to_number(record.level_min, 0)
+    local record_max = _to_number(record.level_max, record_min)
+    if record_min <= 0 and record_max <= 0 then
+        return false
+    end
+    if record_min <= 0 then
+        record_min = record_max
+    end
+    if record_max <= 0 then
+        record_max = record_min
+    end
+
+    if filter_min ~= nil and record_max < filter_min then
+        return false
+    end
+    if filter_max ~= nil and record_min > filter_max then
+        return false
+    end
+
+    return true
 end
 
 local function _collect_unique_record_values(records, field_name, genus_filter)
@@ -1117,11 +1189,24 @@ function BestiaryRow:bind(record, width)
     local inner_w = math.max(1, width - (2 * pad_x))
     local right_text_w = math.max(
         _estimate_text_width(record ~= nil and record.level_text or "", BASE_TAXONOMY_CHAR_W),
-        _estimate_text_width(record ~= nil and record.power_text or "", BASE_TAXONOMY_CHAR_W),
-        _estimate_text_width(location_text, BASE_TAXONOMY_CHAR_W)
+        _estimate_text_width(record ~= nil and record.power_text or "", BASE_TAXONOMY_CHAR_W)
     )
-    local right_w = math.min(_scaled_int(140), math.max(_scaled_int(72), right_text_w + (2 * _scaled_int(BASE_TAXONOMY_PAD_X))))
+    local right_w = math.min(
+        math.max(_scaled_int(72), math.floor((inner_w - column_gap_x) / 2)),
+        math.max(_scaled_int(72), right_text_w + (2 * _scaled_int(BASE_TAXONOMY_PAD_X)))
+    )
     local left_w = math.max(1, inner_w - right_w - column_gap_x)
+    local meta_left_w = inner_w
+    local meta_right_w = 0
+    local meta_right_x = pad_x
+    if taxonomy_text ~= "" and location_text ~= "" then
+        meta_left_w = math.max(1, math.floor((inner_w - column_gap_x) / 2))
+        meta_right_w = math.max(1, inner_w - meta_left_w - column_gap_x)
+        meta_right_x = pad_x + meta_left_w + column_gap_x
+    elseif location_text ~= "" then
+        meta_left_w = 0
+        meta_right_w = inner_w
+    end
 
     local drop_layout = {}
     local drop_h = _scaled_int(BASE_CHIP_H)
@@ -1139,9 +1224,9 @@ function BestiaryRow:bind(record, width)
     self.power_label:SetSize(right_w, line_h)
 
     self.taxonomy_label:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
-    self.taxonomy_label:SetSize(left_w, line_h)
-    self.location_label:SetPosition(pad_x + left_w + column_gap_x, pad_y + (2 * (line_h + row_gap_y)))
-    self.location_label:SetSize(right_w, line_h)
+    self.taxonomy_label:SetSize(meta_left_w, line_h)
+    self.location_label:SetPosition(meta_right_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.location_label:SetSize(meta_right_w, line_h)
 
     self.drop_area:SetPosition(pad_x, pad_y + (2 * line_h) + (2 * row_gap_y) + meta_line_extra)
     self.drop_area:SetSize(inner_w, drop_h)
@@ -1231,6 +1316,7 @@ function BestiaryWindow:Constructor()
     self.current_area = nil
     self.last_applied_area_query = nil
     self._suppress_area_text_changed = false
+    self._suppress_level_text_changed = false
 
     self.sort_mode = SORT_NAME_ASC
     self.filter_groups = {}
@@ -1294,6 +1380,59 @@ function BestiaryWindow:Constructor()
     self.filter_bar = Turbine.UI.Control()
     self.filter_bar:SetParent(self)
 
+    self.level_bar = Turbine.UI.Control()
+    self.level_bar:SetParent(self)
+
+    self.level_label = Turbine.UI.TextBox()
+    self.level_label:SetParent(self.level_bar)
+    self.level_label:SetMouseVisible(false)
+    self.level_label:SetReadOnly(true)
+    self.level_label:SetSelectable(false)
+    self.level_label:SetMultiline(false)
+    self.level_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.level_label:SetText(TR("Level") .. ":")
+
+    self.level_min_box = Turbine.UI.Lotro.TextBox()
+    self.level_min_box:SetParent(self.level_bar)
+    self.level_min_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+
+    self.level_dash_label = Turbine.UI.TextBox()
+    self.level_dash_label:SetParent(self.level_bar)
+    self.level_dash_label:SetMouseVisible(false)
+    self.level_dash_label:SetReadOnly(true)
+    self.level_dash_label:SetSelectable(false)
+    self.level_dash_label:SetMultiline(false)
+    self.level_dash_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.level_dash_label:SetText("-")
+
+    self.level_max_box = Turbine.UI.Lotro.TextBox()
+    self.level_max_box:SetParent(self.level_bar)
+    self.level_max_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+
+    local function on_level_filter_changed(box)
+        if self._suppress_level_text_changed == true or box == nil then
+            return
+        end
+
+        local current_text = box:GetText() or ""
+        local sanitized_text = string.gsub(current_text, "[^%d]", "")
+        if sanitized_text ~= current_text then
+            self._suppress_level_text_changed = true
+            box:SetText(sanitized_text)
+            self._suppress_level_text_changed = false
+        end
+
+        self.page_index = 1
+        self:apply_view()
+    end
+
+    self.level_min_box.TextChanged = function()
+        on_level_filter_changed(self.level_min_box)
+    end
+    self.level_max_box.TextChanged = function()
+        on_level_filter_changed(self.level_max_box)
+    end
+
     self.filter_tb = Turbine.UI.Lotro.TextBox()
     self.filter_tb:SetParent(self.filter_bar)
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -1313,6 +1452,10 @@ function BestiaryWindow:Constructor()
         self.current_area = nil
         self.last_applied_area_query = nil
         _G.bestiary_area_filter_query = nil
+        self._suppress_level_text_changed = true
+        self.level_min_box:SetText("")
+        self.level_max_box:SetText("")
+        self._suppress_level_text_changed = false
         self.filter_tb:SetText("")
         self:update_filter()
         self.filter_tb:Focus()
@@ -1508,6 +1651,10 @@ function BestiaryWindow:apply_settings()
     self.prev_button:SetFont(button_font)
     self.page_label:SetFont(button_font)
     self.next_button:SetFont(button_font)
+    self.level_label:SetFont(button_font)
+    self.level_min_box:SetFont(button_font)
+    self.level_dash_label:SetFont(button_font)
+    self.level_max_box:SetFont(button_font)
     self.filter_tb:SetFont(button_font)
     self.clear_button:SetFont(button_font)
     self:ensure_area_shortcut()
@@ -1834,16 +1981,17 @@ function BestiaryWindow:_content_metrics()
     local margin_right = _scaled_int(BASE_MARGIN_RIGHT)
     local margin_bottom = _scaled_int(BASE_MARGIN_BOTTOM)
     local bar_h = _scaled_int(BASE_BAR_H)
+    local level_h = _scaled_int(BASE_BAR_H)
     local filter_h = _scaled_int(BASE_FILTER_H)
     local gap = _scaled_int(BASE_GAP)
     local inner_w = self:GetWidth() - margin_left - margin_right
-    local content_top = margin_top + bar_h + gap + filter_h + gap
+    local content_top = margin_top + bar_h + gap + level_h + gap + filter_h + gap
     local content_h = self:GetHeight() - content_top - margin_bottom - gap - bar_h
-    return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, filter_h, gap
+    return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, level_h, filter_h, gap
 end
 
 function BestiaryWindow:layout()
-    local margin_left, margin_top, inner_w, content_top, content_h, bar_h, filter_h, gap = self:_content_metrics()
+    local margin_left, margin_top, inner_w, content_top, content_h, bar_h, level_h, filter_h, gap = self:_content_metrics()
 
     self.nav_bar:SetPosition(margin_left, margin_top)
     self.nav_bar:SetSize(inner_w, bar_h)
@@ -1908,7 +2056,29 @@ function BestiaryWindow:layout()
     self.subcategory_dropdown:SetPosition(cursor_x, 0)
     self.subcategory_dropdown:SetSize(subcategory_dropdown_w, bar_h)
 
-    self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap)
+    self.level_bar:SetPosition(margin_left, margin_top + bar_h + gap)
+    self.level_bar:SetSize(inner_w, level_h)
+
+    local level_label_w = math.max(
+        order_label_w,
+        _estimate_text_width(TR("Level") .. ":", BASE_TAXONOMY_CHAR_W) + gap
+    )
+    local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)
+    local level_dash_w = _scaled_int(10)
+    local level_min_x = level_label_w + gap
+    local level_dash_x = level_min_x + level_input_w + gap
+    local level_max_x = level_dash_x + level_dash_w + gap
+
+    self.level_label:SetPosition(0, 0)
+    self.level_label:SetSize(level_label_w, level_h)
+    self.level_min_box:SetPosition(level_min_x, 0)
+    self.level_min_box:SetSize(level_input_w, level_h)
+    self.level_dash_label:SetPosition(level_dash_x, 0)
+    self.level_dash_label:SetSize(level_dash_w, level_h)
+    self.level_max_box:SetPosition(level_max_x, 0)
+    self.level_max_box:SetSize(math.min(level_input_w, math.max(1, inner_w - level_max_x)), level_h)
+
+    self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap + level_h + gap)
     self.filter_bar:SetSize(inner_w, filter_h)
 
     local area_slot_size = filter_h
@@ -2149,11 +2319,13 @@ end
 
 function BestiaryWindow:apply_view()
     local filtered = {}
+    local filter_level_min, filter_level_max = _read_level_filter_range(self)
     for i = 1, #self.all_records do
         local record = self.all_records[i]
         local genus_ok = self.genus_filter == FILTER_ALL or record.genus == self.genus_filter
         local subcategory_ok = self.subcategory_filter == FILTER_NONE or self.subcategory_filter == FILTER_ALL or record.subcategory == self.subcategory_filter
-        if genus_ok == true and subcategory_ok == true and _matches_groups(self.filter_groups, record.haystack_lower) == true then
+        local level_ok = _matches_level_range(record, filter_level_min, filter_level_max)
+        if genus_ok == true and subcategory_ok == true and level_ok == true and _matches_groups(self.filter_groups, record.haystack_lower) == true then
             filtered[#filtered + 1] = record
         end
     end

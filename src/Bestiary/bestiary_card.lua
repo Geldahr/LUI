@@ -24,6 +24,7 @@ local BASE_TWO_COL_H = 88
 local BASE_MITIGATION_H = 104
 local BASE_NOTES_MIN_H = 76
 local BASE_DROP_MIN_H = 42
+local BASE_DROP_MAX_H = 150
 local BASE_TITLE_SIZE = 20
 local BASE_SUBTITLE_SIZE = 12
 local BASE_SECTION_TITLE_SIZE = 12
@@ -39,6 +40,8 @@ local BASE_CHIP_BORDER = 1
 local BASE_CHIP_CHAR_W = 5.8
 local BASE_TEXT_CHAR_W = 5.8
 local BASE_TEXT_LINE_H = 14
+local BASE_SCROLL_W = 10
+local BASE_SCROLL_GAP = 3
 
 local COLOR_OUTLINE = Turbine.UI.Color(1, 0, 0, 0)
 local COLOR_WINDOW_BG = Turbine.UI.Color(0.98, 0.02, 0.04, 0.08)
@@ -975,6 +978,116 @@ local function _create_text(parent, multiline, alignment)
     return text
 end
 
+local function _apply_scroll_label_style(area)
+    if area == nil or area.label == nil then
+        return
+    end
+
+    if type(area.font_name) ~= "string" or type(area.font_size) ~= "number" or area.color == nil then
+        return
+    end
+
+    area.label:SetFont(_scaled_font(area.font_name, area.font_size))
+    area.label:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    area.label:SetOutlineColor(COLOR_OUTLINE)
+    area.label:SetForeColor(area.color)
+end
+
+local function _create_scroll_label_area(parent)
+    local area = {
+        text = "-",
+        uses_scroll = false,
+        font_name = nil,
+        font_size = nil,
+        color = nil,
+    }
+
+    if parent ~= nil and parent.SetMouseVisible ~= nil then
+        parent:SetMouseVisible(true)
+    end
+
+    area.label = Turbine.UI.Label()
+    area.label:SetParent(parent)
+    area.label:SetMouseVisible(true)
+    area.label:SetSelectable(false)
+    area.label:SetMultiline(true)
+    area.label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
+    area.label:SetSelectable(true)
+
+    area.scroll = Turbine.UI.Lotro.ScrollBar()
+    area.scroll:SetParent(area.label)
+    area.scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
+    area.scroll:SetWidth(BASE_SCROLL_W)
+    area.scroll:SetPosition(area.scroll:GetWidth() - BASE_SCROLL_W, 0);
+	area.scroll:SetHeight(area.scroll:GetHeight() - 2);
+    area.scroll:SetMouseVisible(true)
+    area.label:SetVerticalScrollBar(area.scroll)
+    area.scroll:SetVisible(false)
+
+  --   area.label.SizeChanged = function(s,a)
+  --   	local width = s:GetWidth()
+		-- local height = s:GetHeight()
+	 --    area.scroll:SetPosition(width-BASE_SCROLL_W,0)
+	 --    area.scroll:SetHeight(height - 2)
+  --   end
+
+    _apply_scroll_label_style(area)
+    area.label:SetText(area.text or "-")
+
+    return area
+end
+
+local function _style_scroll_label_area(area, font_name, font_size, color)
+    if area == nil then
+        return
+    end
+
+    area.font_name = font_name
+    area.font_size = font_size
+    area.color = color
+    _apply_scroll_label_style(area)
+end
+
+local function _bind_scroll_label_area(area, values)
+    if area == nil or area.label == nil then
+        return
+    end
+
+    area.label:SetVerticalScrollBar(nil)
+    area.text = _build_list_text(values)
+    area.label:SetText(area.text)
+    area.label:SetVerticalScrollBar(area.scroll)
+end
+
+local function _measure_scroll_label_panel(panel_w, text)
+    local body_pad_x = _scaled_int(BASE_PANEL_BODY_PAD_X)
+    local body_pad_t = _scaled_int(BASE_PANEL_BODY_PAD_TOP)
+    local body_pad_b = _scaled_int(BASE_PANEL_BODY_PAD_BOTTOM)
+    local header_h = _scaled_int(BASE_PANEL_HEADER_H)
+    local min_h = _scaled_int(BASE_NOTES_MIN_H)
+    local max_h = _scaled_int(BASE_DROP_MAX_H)
+    local scroll_gap = _scaled_int(BASE_SCROLL_GAP)
+    local line_h = _scaled_int(BASE_TEXT_LINE_H)
+
+    local function build(use_scroll)
+        local reserved_w = use_scroll == true and (BASE_SCROLL_W + scroll_gap) or 0
+        local usable_w = math.max(1, panel_w - 2 - (2 * body_pad_x) - reserved_w)
+        local line_count = _estimate_wrapped_line_count(text, usable_w)
+        local text_h = math.max(line_h, line_count * line_h)
+        local frame_h = header_h + 2 + body_pad_t + body_pad_b + text_h
+        local panel_h = math.max(min_h, math.min(max_h, frame_h))
+        local viewport_h = math.max(1, panel_h - header_h - 2 - body_pad_t - body_pad_b)
+        return panel_h, text_h > viewport_h
+    end
+
+    local panel_h, uses_scroll = build(false)
+    if uses_scroll == true then
+        panel_h, uses_scroll = build(true)
+    end
+
+    return panel_h, uses_scroll
+end
+
 local function _style_text(text, font_name, font_size, color)
     text:SetFont(_scaled_font(font_name, font_size))
     text:SetFontStyle(Turbine.UI.FontStyle.Outline)
@@ -1171,6 +1284,11 @@ function BestiaryCard:Constructor()
     self.drop_chips = {}
     self.drop_panel_h = _scaled_int(BASE_DROP_MIN_H)
     self.drop_layout = {}
+    self.drop_content_h = _scaled_int(BASE_CHIP_H)
+    self.drop_uses_scroll = false
+    self.abilities_area = nil
+    self.quests_area = nil
+    self.deeds_area = nil
     self.sticky_position = false
     self._suppress_position_persist = false
 
@@ -1205,9 +1323,18 @@ function BestiaryCard:Constructor()
     self.creature_rows = _create_row_set(self.creature_panel.body, CREATURE_FIELDS)
 
     self.drop_panel = _create_panel(self.content, TR("Drops"))
-    self.drop_area = Turbine.UI.Control()
-    self.drop_area:SetParent(self.drop_panel.body)
-    self.drop_area:SetMouseVisible(false)
+    self.drop_list = Turbine.UI.ListBox()
+    self.drop_list:SetParent(self.drop_panel.body)
+    self.drop_list:SetOrientation(Turbine.UI.Orientation.Vertical)
+    self.drop_scroll = Turbine.UI.Lotro.ScrollBar()
+    self.drop_scroll:SetParent(self.drop_panel.body)
+    self.drop_scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
+    self.drop_scroll:SetWidth(BASE_SCROLL_W)
+    self.drop_list:SetVerticalScrollBar(self.drop_scroll)
+    self.drop_scroll:SetVisible(false)
+    self.drop_content = Turbine.UI.Control()
+    self.drop_content:SetMouseVisible(false)
+    self.drop_list:AddItem(self.drop_content)
 
     self.combat_panel = _create_panel(self.content, TR("Combat Effectiveness"))
     self.combat_rows = _create_row_set(self.combat_panel.body, COMBAT_FIELDS)
@@ -1223,13 +1350,13 @@ function BestiaryCard:Constructor()
     self.mitigation_divider:SetMouseVisible(false)
 
     self.abilities_panel = _create_panel(self.content, TR("Abilities"))
-    self.abilities_text = _create_text(self.abilities_panel.body, true, Turbine.UI.ContentAlignment.TopLeft)
+    self.abilities_area = _create_scroll_label_area(self.abilities_panel.body)
 
     self.quests_panel = _create_panel(self.content, TR("Quests"))
-    self.quests_text = _create_text(self.quests_panel.body, true, Turbine.UI.ContentAlignment.TopLeft)
+    self.quests_area = _create_scroll_label_area(self.quests_panel.body)
 
     self.deeds_panel = _create_panel(self.content, TR("Deeds"))
-    self.deeds_text = _create_text(self.deeds_panel.body, true, Turbine.UI.ContentAlignment.TopLeft)
+    self.deeds_area = _create_scroll_label_area(self.deeds_panel.body)
 
     self.VisibleChanged = function()
         if self:IsVisible() == true then
@@ -1253,7 +1380,7 @@ end
 function BestiaryCard:_ensure_drop_chip_count(count)
     while #self.drop_chips < count do
         local chip = DropChip()
-        chip:SetParent(self.drop_area)
+        chip:SetParent(self.drop_content)
         chip:SetVisible(false)
         self.drop_chips[#self.drop_chips + 1] = chip
     end
@@ -1279,33 +1406,59 @@ function BestiaryCard:_measure_viewport_width()
     return math.max(1, self:GetWidth() - margin_l - margin_r)
 end
 
-function BestiaryCard:_measure_list_panel_height(panel_w, text)
-    local body_pad_x = _scaled_int(BASE_PANEL_BODY_PAD_X)
-    local body_pad_t = _scaled_int(BASE_PANEL_BODY_PAD_TOP)
-    local body_pad_b = _scaled_int(BASE_PANEL_BODY_PAD_BOTTOM)
-    local header_h = _scaled_int(BASE_PANEL_HEADER_H)
-    local min_h = _scaled_int(BASE_NOTES_MIN_H)
-    local usable_w = math.max(1, panel_w - 2 - (2 * body_pad_x))
-    local line_h = _scaled_int(BASE_TEXT_LINE_H)
-    local line_count = _estimate_wrapped_line_count(text, usable_w)
-    local text_h = math.max(line_h, line_count * line_h)
-    local frame_h = header_h + 2 + body_pad_t + body_pad_b + text_h
-
-    return math.max(min_h, frame_h)
-end
-
 function BestiaryCard:_measure_bottom_height()
     local content_w = self:_measure_viewport_width()
     local gap = _scaled_int(BASE_SECTION_GAP)
-    local stat_w = math.max(1, math.floor((content_w - (2 * gap)) / 3))
-    local stat_x3 = (stat_w * 2) + (gap * 2)
-    local last_w = math.max(1, content_w - stat_x3)
-    local record = self.current_record or {}
-    local abilities_h = self:_measure_list_panel_height(stat_w, _build_list_text(record.abilities))
-    local quests_h = self:_measure_list_panel_height(stat_w, _build_list_text(record.quest_involvement))
-    local deeds_h = self:_measure_list_panel_height(last_w, _build_list_text(record.deed_involvement))
+    local col_w = math.max(1, math.floor((content_w - (2 * gap)) / 3))
+    local col_x3 = (col_w * 2) + (gap * 2)
+    local last_w = math.max(1, content_w - col_x3)
+
+    local abilities_h, abilities_scroll = _measure_scroll_label_panel(
+        col_w,
+        self.abilities_area ~= nil and self.abilities_area.text or "-"
+    )
+    local quests_h, quests_scroll = _measure_scroll_label_panel(
+        col_w,
+        self.quests_area ~= nil and self.quests_area.text or "-"
+    )
+    local deeds_h, deeds_scroll = _measure_scroll_label_panel(
+        last_w,
+        self.deeds_area ~= nil and self.deeds_area.text or "-"
+    )
+
+    if self.abilities_area ~= nil then
+        self.abilities_area.uses_scroll = abilities_scroll == true
+    end
+    if self.quests_area ~= nil then
+        self.quests_area.uses_scroll = quests_scroll == true
+    end
+    if self.deeds_area ~= nil then
+        self.deeds_area.uses_scroll = deeds_scroll == true
+    end
 
     return math.max(_scaled_int(BASE_NOTES_MIN_H), abilities_h, quests_h, deeds_h)
+end
+
+function BestiaryCard:_layout_scroll_label_panel(panel, area)
+    if panel == nil or area == nil then
+        return
+    end
+
+    local body_pad_x = _scaled_int(BASE_PANEL_BODY_PAD_X)
+    local body_pad_t = _scaled_int(BASE_PANEL_BODY_PAD_TOP)
+    local body_pad_b = _scaled_int(BASE_PANEL_BODY_PAD_BOTTOM)
+    local scroll_gap = area.uses_scroll == true and _scaled_int(BASE_SCROLL_GAP) or 0
+    local scroll_w = area.uses_scroll == true and BASE_SCROLL_W or 0
+    local label_w = math.max(1, panel.body:GetWidth() - (2 * body_pad_x) - scroll_gap - scroll_w)
+    local label_h = math.max(1, panel.body:GetHeight() - body_pad_t - body_pad_b)
+
+    area.label:SetPosition(body_pad_x, body_pad_t)
+    area.label:SetSize(label_w, label_h)
+
+    area.scroll:SetPosition(body_pad_x + label_w + scroll_gap, body_pad_t)
+    area.scroll:SetWidth(BASE_SCROLL_W)
+    area.scroll:SetHeight(label_h)
+    area.scroll:SetVisible(area.uses_scroll == true)
 end
 
 function BestiaryCard:_measure_content_height()
@@ -1317,6 +1470,36 @@ function BestiaryCard:_measure_content_height()
     local bottom_h = self:_measure_bottom_height()
 
     return stat_h + gap + profile_h + gap + self.drop_panel_h + gap + pair_h + gap + mitigation_h + gap + bottom_h
+end
+
+function BestiaryCard:_measure_drop_layout(drop_texts)
+    local body_pad_x = _scaled_int(BASE_PANEL_BODY_PAD_X)
+    local body_pad_t = _scaled_int(BASE_PANEL_BODY_PAD_TOP)
+    local body_pad_b = _scaled_int(BASE_PANEL_BODY_PAD_BOTTOM)
+    local header_h = _scaled_int(BASE_PANEL_HEADER_H)
+    local min_h = _scaled_int(BASE_DROP_MIN_H)
+    local max_h = _scaled_int(BASE_DROP_MAX_H)
+    local scroll_gap = _scaled_int(BASE_SCROLL_GAP)
+    local scroll_w = BASE_SCROLL_W
+    local panel_body_w = math.max(1, self:_measure_viewport_width() - 2 - (2 * body_pad_x))
+
+    local function build(use_scroll)
+        local reserved_w = use_scroll == true and (scroll_w + scroll_gap) or 0
+        local usable_w = math.max(1, panel_body_w - reserved_w)
+        local layout, chip_content_h = _build_chip_layout(drop_texts, usable_w)
+        local frame_h = header_h + 2 + body_pad_t + body_pad_b + chip_content_h
+        local panel_h = math.max(min_h, math.min(max_h, frame_h))
+        local viewport_h = math.max(1, panel_h - header_h - 2 - body_pad_t - body_pad_b)
+        return layout, chip_content_h, panel_h, viewport_h
+    end
+
+    local layout, chip_content_h, panel_h, viewport_h = build(false)
+    local use_scroll = chip_content_h > viewport_h
+    if use_scroll == true then
+        layout, chip_content_h, panel_h, viewport_h = build(true)
+    end
+
+    return layout, chip_content_h, panel_h, viewport_h, use_scroll
 end
 
 function BestiaryCard:_clamp_to_display()
@@ -1441,9 +1624,18 @@ function BestiaryCard:_layout_content()
     y = y + profile_h + gap
     self:_layout_panel(self.drop_panel, 0, y, content_w, self.drop_panel_h)
 
-    self.drop_area:SetPosition(body_pad_x, body_pad_t)
-    self.drop_area:SetSize(math.max(1, self.drop_panel.body:GetWidth() - (2 * body_pad_x)),
-        math.max(1, self.drop_panel.body:GetHeight() - body_pad_t - body_pad_b))
+    local drop_scroll_gap = self.drop_uses_scroll == true and _scaled_int(BASE_SCROLL_GAP) or 0
+    local drop_scroll_w = self.drop_uses_scroll == true and BASE_SCROLL_W or 0
+    local drop_list_w = math.max(1, self.drop_panel.body:GetWidth() - (2 * body_pad_x) - drop_scroll_gap - drop_scroll_w)
+    local drop_list_h = math.max(1, self.drop_panel.body:GetHeight() - body_pad_t - body_pad_b)
+
+    self.drop_list:SetPosition(body_pad_x, body_pad_t)
+    self.drop_list:SetSize(drop_list_w, drop_list_h)
+
+    self.drop_scroll:SetPosition(body_pad_x + drop_list_w + drop_scroll_gap, body_pad_t)
+    self.drop_scroll:SetWidth(BASE_SCROLL_W)
+    self.drop_scroll:SetHeight(drop_list_h)
+    self.drop_scroll:SetVisible(self.drop_uses_scroll == true)
 
     y = y + self.drop_panel_h + gap
     self:_layout_panel(self.combat_panel, 0, y, half_w, pair_h)
@@ -1540,34 +1732,28 @@ function BestiaryCard:_layout_content()
         0.56
     )
 
-    self.abilities_text:SetPosition(body_pad_x, body_pad_t)
-    self.abilities_text:SetSize(math.max(1, self.abilities_panel.body:GetWidth() - (2 * body_pad_x)),
-        math.max(1, self.abilities_panel.body:GetHeight() - body_pad_t - body_pad_b))
-    self.quests_text:SetPosition(body_pad_x, body_pad_t)
-    self.quests_text:SetSize(math.max(1, self.quests_panel.body:GetWidth() - (2 * body_pad_x)),
-        math.max(1, self.quests_panel.body:GetHeight() - body_pad_t - body_pad_b))
-    self.deeds_text:SetPosition(body_pad_x, body_pad_t)
-    self.deeds_text:SetSize(math.max(1, self.deeds_panel.body:GetWidth() - (2 * body_pad_x)),
-        math.max(1, self.deeds_panel.body:GetHeight() - body_pad_t - body_pad_b))
+    self:_layout_scroll_label_panel(self.abilities_panel, self.abilities_area)
+    self:_layout_scroll_label_panel(self.quests_panel, self.quests_area)
+    self:_layout_scroll_label_panel(self.deeds_panel, self.deeds_area)
 end
 
 function BestiaryCard:_apply_drop_layout(drop_texts)
-    local body_pad_x = _scaled_int(BASE_PANEL_BODY_PAD_X)
-    local body_pad_t = _scaled_int(BASE_PANEL_BODY_PAD_TOP)
-    local body_pad_b = _scaled_int(BASE_PANEL_BODY_PAD_BOTTOM)
-    local usable_w = math.max(1, self:_measure_viewport_width() - (2 * body_pad_x) - 2)
-    local layout, chip_content_h = _build_chip_layout(drop_texts, usable_w)
-    local min_h = _scaled_int(BASE_DROP_MIN_H)
-    local frame_h = _scaled_int(BASE_PANEL_HEADER_H) + body_pad_t + body_pad_b + chip_content_h + 2
-    self.drop_panel_h = math.max(min_h, frame_h)
+    local layout, chip_content_h, panel_h, _, use_scroll = self:_measure_drop_layout(drop_texts)
+    self.drop_panel_h = panel_h
     self.drop_layout = layout
+    self.drop_content_h = chip_content_h
+    self.drop_uses_scroll = use_scroll == true
 
     self:_fit_window_height()
     self:_layout_content()
     self:_ensure_drop_chip_count(#layout)
 
     local chip_h = _scaled_int(BASE_CHIP_H)
-    self.drop_area:SetSize(math.max(1, self.drop_panel.body:GetWidth() - (2 * body_pad_x)), chip_content_h)
+    self.drop_content:SetSize(self.drop_list:GetWidth(), math.max(self.drop_list:GetHeight(), chip_content_h))
+    if self.drop_list ~= nil and self.drop_list.ClearItems ~= nil and self.drop_list.AddItem ~= nil then
+        self.drop_list:ClearItems()
+        self.drop_list:AddItem(self.drop_content)
+    end
 
     for i = 1, #layout do
         local chip_info = layout[i]
@@ -1599,9 +1785,9 @@ function BestiaryCard:_apply_record(record)
     _bind_row_set(self.mitigation_left_rows, record.mitigation)
     _bind_row_set(self.mitigation_right_rows, record.mitigation)
 
-    self.abilities_text:SetText(_build_list_text(record.abilities))
-    self.quests_text:SetText(_build_list_text(record.quest_involvement))
-    self.deeds_text:SetText(_build_list_text(record.deed_involvement))
+    _bind_scroll_label_area(self.abilities_area, record.abilities)
+    _bind_scroll_label_area(self.quests_area, record.quest_involvement)
+    _bind_scroll_label_area(self.deeds_area, record.deed_involvement)
 
     self:_apply_drop_layout(_build_drop_texts(record))
 end
@@ -1633,9 +1819,13 @@ function BestiaryCard:apply_settings()
     _style_row_set(self.mitigation_left_rows, COLOR_VALUE_CYAN)
     _style_row_set(self.mitigation_right_rows, COLOR_VALUE_CYAN)
 
-    _style_text(self.abilities_text, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
-    _style_text(self.quests_text, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
-    _style_text(self.deeds_text, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
+    _style_scroll_label_area(self.abilities_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
+    _style_scroll_label_area(self.quests_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
+    _style_scroll_label_area(self.deeds_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
+
+    _bind_scroll_label_area(self.abilities_area, self.current_record ~= nil and self.current_record.abilities or nil)
+    _bind_scroll_label_area(self.quests_area, self.current_record ~= nil and self.current_record.quest_involvement or nil)
+    _bind_scroll_label_area(self.deeds_area, self.current_record ~= nil and self.current_record.deed_involvement or nil)
 
     self:_layout_content()
 

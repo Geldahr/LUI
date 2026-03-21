@@ -13,7 +13,6 @@ local BASE_ARROW_W = 13
 local BASE_DROPDOWN_W = 119
 local BASE_DROPDOWN_H = 21
 local BASE_OPEN_GAP = 1
-local BASE_SCROLL_W = 12
 local BASE_EDGE_PAD = 4
 local BASE_FLIP_GAP = 4
 
@@ -300,7 +299,7 @@ function LuiDropdown:Open()
     local list_width = width
 
     local border = self._popup_border
-    local scroll_w = _scaled_int(self._scale, BASE_SCROLL_W)
+    local scroll_w = math.max(0, self.popup_scroll:GetWidth())
     local use_scroll = item_count > visible_count
 
     self.popup:SetSize(list_width + (2 * border), list_height + (2 * border))
@@ -310,7 +309,7 @@ function LuiDropdown:Open()
     self.popup_list:SetSize(list_width - (use_scroll and scroll_w or 0), list_height)
 
     self.popup_scroll:SetPosition(self.popup_list:GetWidth(), 0)
-    self.popup_scroll:SetSize(use_scroll and scroll_w or 0, list_height)
+    self.popup_scroll:SetHeight(list_height)
     self.popup_scroll:SetVisible(use_scroll)
 
     for i = 1, item_count do
