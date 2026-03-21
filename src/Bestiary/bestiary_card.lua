@@ -1024,12 +1024,9 @@ local function _create_scroll_label_area(parent)
     area.label:SetVerticalScrollBar(area.scroll)
     area.scroll:SetVisible(false)
 
-  --   area.label.SizeChanged = function(s,a)
-  --   	local width = s:GetWidth()
-		-- local height = s:GetHeight()
-	 --    area.scroll:SetPosition(width-BASE_SCROLL_W,0)
-	 --    area.scroll:SetHeight(height - 2)
-  --   end
+    area.label.FocusGained = function(s, a)
+        parent:Focus()
+    end
 
     _apply_scroll_label_style(area)
     area.label:SetText(area.text or "-")
@@ -1447,17 +1444,15 @@ function BestiaryCard:_layout_scroll_label_panel(panel, area)
     local body_pad_x = _scaled_int(BASE_PANEL_BODY_PAD_X)
     local body_pad_t = _scaled_int(BASE_PANEL_BODY_PAD_TOP)
     local body_pad_b = _scaled_int(BASE_PANEL_BODY_PAD_BOTTOM)
-    local scroll_gap = area.uses_scroll == true and _scaled_int(BASE_SCROLL_GAP) or 0
-    local scroll_w = area.uses_scroll == true and BASE_SCROLL_W or 0
-    local label_w = math.max(1, panel.body:GetWidth() - (2 * body_pad_x) - scroll_gap - scroll_w)
+    local label_w = math.max(1, panel.body:GetWidth() - (2 * body_pad_x))
     local label_h = math.max(1, panel.body:GetHeight() - body_pad_t - body_pad_b)
 
     area.label:SetPosition(body_pad_x, body_pad_t)
     area.label:SetSize(label_w, label_h)
 
-    area.scroll:SetPosition(body_pad_x + label_w + scroll_gap, body_pad_t)
+    area.scroll:SetPosition(math.max(0, label_w - BASE_SCROLL_W), 0)
     area.scroll:SetWidth(BASE_SCROLL_W)
-    area.scroll:SetHeight(label_h)
+    area.scroll:SetHeight(math.max(1, label_h - 2))
     area.scroll:SetVisible(area.uses_scroll == true)
 end
 
