@@ -818,6 +818,15 @@ function VitalsBase:set_entity(entity)
         self.morale_label:SetText(self.entity:GetName())
         self.power_label:SetText("")
         self.power_border:SetVisible(false)
+
+        if self.show_effects then
+            if self.buffs ~= nil then self.buffs:clear_effects() end
+            if self.debuffs ~= nil then self.debuffs:clear_effects() end
+            self:_layout_effect_windows()
+        end
+
+        self:_reset_effect_state()
+
         self:on_target_changed()
         return
     end
