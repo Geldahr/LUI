@@ -19,6 +19,17 @@ local function _target_is_player(target)
     return target:IsPlayer() == true
 end
 
+local function _target_is_local_player(target)
+    local lp = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if target == nil or lp == nil then
+        return false
+    end
+    if target.GetName == nil or lp.GetName == nil then
+        return false
+    end
+    return target:GetName() == lp:GetName()
+end
+
 local _gradient_morale_color = lui_gradient_morale_color
 
 ---@class TargetVitals : VitalsBase
@@ -424,6 +435,11 @@ function TargetVitals:_setup_effect_tracking()
 
     if self.entity == nil or self.entity.GetEffects == nil then
         self:SetWantsUpdates(false)
+        return
+    end
+
+    if _target_is_local_player(self.entity) == true then
+        self:_setup_effect_tracking_default()
         return
     end
 
