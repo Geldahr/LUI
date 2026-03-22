@@ -19,6 +19,17 @@ local function _target_is_player(target)
     return target:IsPlayer() == true
 end
 
+local function _target_is_local_player(target)
+    local lp = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if target == nil or lp == nil then
+        return false
+    end
+    if target.GetName == nil or lp.GetName == nil then
+        return false
+    end
+    return target:GetName() == lp:GetName()
+end
+
 local _gradient_morale_color = lui_gradient_morale_color
 
 ---@class TargetVitals : VitalsBase
@@ -32,6 +43,8 @@ function TargetVitals:Constructor(entity)
     self.tt = nil
     self.targets_events = { mmc = nil, mc = nil, mtmc = nil, tmc = nil }
     self.em = nil
+    self.em_added_event = nil
+    self.em_removed_event = nil
 
     VitalsBase.Constructor(self, "target", entity, TR("Target Vitals"))
 
@@ -51,15 +64,13 @@ end
 
 function TargetVitals:set_entity(entity)
     if self.em ~= nil and self.entity ~= entity then
-        self.em:delete()
-        self.em = nil
+        self:_detach_effect_manager()
     end
 
     VitalsBase.set_entity(self, entity)
 
     if entity == nil and self.em ~= nil then
-        self.em:delete()
-        self.em = nil
+        self:_detach_effect_manager()
     end
 end
 
@@ -408,8 +419,7 @@ function TargetVitals:_setup_effect_tracking()
     end
 
     if self.em ~= nil then
-        self.em:delete()
-        self.em = nil
+        self:_detach_effect_manager()
     end
 
     if self.debuffs ~= nil then self.debuffs:clear_effects() end
@@ -428,22 +438,47 @@ function TargetVitals:_setup_effect_tracking()
         return
     end
 
+    if _target_is_local_player(self.entity) == true then
+        self:_setup_effect_tracking_default()
+        return
+    end
+
     if self.entity:GetEffects() == nil then
         self:SetWantsUpdates(false)
         return
     end
 
-    self.em = TargetEffectManager(Turbine.Gameplay.LocalPlayer.GetInstance())
-    self.em:register_added_event(function(effect)
+    self.em = TargetEffectManager.acquire(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    self.em_added_event = self.em:register_added_event(function(effect)
         self:_upsert_effect(effect)
         -- self:_request_effects_resync(0.05, 6)
     end)
-    self.em.removed_event = function(effect)
+    self.em_removed_event = self.em:register_removed_event(function(effect)
         self:_remove_effect(effect)
         self:_request_effects_resync(0.05, 6)
-    end
+    end)
 
     self:SetWantsUpdates(true)
+end
+
+function TargetVitals:_detach_effect_manager()
+    if self.em == nil then
+        self.em_added_event = nil
+        self.em_removed_event = nil
+        return
+    end
+
+    if self.em_added_event ~= nil and self.em.unregister_added_event ~= nil then
+        self.em:unregister_added_event(self.em_added_event)
+        self.em_added_event = nil
+    end
+    if self.em_removed_event ~= nil and self.em.unregister_removed_event ~= nil then
+        self.em:unregister_removed_event(self.em_removed_event)
+        self.em_removed_event = nil
+    end
+
+    self.em:delete()
+    self.em = nil
 end
 
 function TargetVitals:_build_extra_controls()
