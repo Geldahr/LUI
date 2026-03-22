@@ -330,6 +330,7 @@ function _G.rebuild_settings()
     local STATUS_BAR_LAYOUT_TOKENS = {
         time = "time_local",
         inventory = "inventory_space",
+        durability = "equipment_wear",
         gold = "money",
         money = "money",
         ["config:icon"] = "config_icon",
@@ -390,6 +391,14 @@ function _G.rebuild_settings()
         icon = raw_sb.widgets.inventory_space.icon,
         color = raw_sb.widgets.inventory_space.color,
         content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.inventory_space.text_alignment],
+    }
+    sb.widgets.equipment_wear = {
+        enabled = in_zones("equipment_wear"),
+        width = scaled_int(raw_sb.widgets.equipment_wear.width),
+        icon = raw_sb.widgets.equipment_wear.icon,
+        coloring = raw_sb.widgets.equipment_wear.coloring == true,
+        color = raw_sb.widgets.equipment_wear.color,
+        content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.equipment_wear.text_alignment],
     }
     sb.widgets.money = {
         enabled = in_zones("money"),

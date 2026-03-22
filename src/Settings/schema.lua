@@ -57,6 +57,8 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "status_bar", "widgets", "time_local" })
     ensure_table_at(s, { "status_bar", "widgets", "inventory_space" })
     ensure_table_at(s, { "status_bar", "widgets", "inventory_space", "color" })
+    ensure_table_at(s, { "status_bar", "widgets", "equipment_wear" })
+    ensure_table_at(s, { "status_bar", "widgets", "equipment_wear", "color" })
     ensure_table_at(s, { "status_bar", "widgets", "money" })
     ensure_table_at(s, { "status_bar", "widgets", "shortcut_icon" })
     ensure_table_at(s, { "status_bar", "widgets", "shortcut_text" })
@@ -665,6 +667,18 @@ function _G.ensure_loaded_settings()
     invc.yellow = invc.yellow or Turbine.UI.Color(1, 0.913725, 0.870588, 0.019608)
     invc.orange = invc.orange or Turbine.UI.Color(1, 0.949020, 0.600000, 0.000000)
     invc.red = invc.red or Turbine.UI.Color(1, 0.905882, 0.113725, 0.000000)
+
+    if widgets.equipment_wear.width == nil then widgets.equipment_wear.width = 96 end
+    if widgets.equipment_wear.icon == nil then widgets.equipment_wear.icon = true end
+    if widgets.equipment_wear.text_alignment == nil then
+        widgets.equipment_wear.text_alignment = LUI_ENUMS.text_alignment.LEFT
+    end
+    if widgets.equipment_wear.coloring == nil then widgets.equipment_wear.coloring = true end
+    local wearc = widgets.equipment_wear.color
+    wearc.pristine = wearc.pristine or Turbine.UI.Color(1, 0.411765, 0.741176, 0.372549)
+    wearc.worn = wearc.worn or Turbine.UI.Color(1, 0.913725, 0.870588, 0.019608)
+    wearc.damaged = wearc.damaged or Turbine.UI.Color(1, 0.949020, 0.600000, 0.000000)
+    wearc.broken = wearc.broken or Turbine.UI.Color(1, 0.905882, 0.113725, 0.000000)
 
     if widgets.money.width == nil then widgets.money.width = 140 end
     if widgets.money.icon == nil then widgets.money.icon = true end

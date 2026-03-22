@@ -377,4 +377,11 @@ return {
     ["Various"] = "Various", -- NOTE: new!
     ["Westernesse"] = "Westernesse", -- NOTE: new!
     ["When enabled, this bypasses the step colors and blends between Full, Mid and Low."] = "When enabled, this bypasses the step colors and blends between Full, Mid and Low.", -- NOTE: new!
+    ["  %durability% - equipped wear average% (weakest%)"] = "  %durability% - Ausrüstungszustand Durchschnitt% (schwächstes%)", -- NOTE: new!
+    ["Broken color"] = "Farbe kaputt", -- NOTE: new!
+    ["Damaged color"] = "Farbe beschädigt", -- NOTE: new!
+    ["Enable rich-text coloring"] = "Rich-Text-Färbung aktivieren", -- NOTE: new!
+    ["Equipment wear"] = "Ausrüstungsverschleiß", -- NOTE: new!
+    ["Pristine color"] = "Farbe makellos", -- NOTE: new!
+    ["Worn color"] = "Farbe abgenutzt", -- NOTE: new!
 }
