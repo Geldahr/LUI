@@ -3,6 +3,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.Vitals.vitals_base"
+import "LUI.src.Vitals.target_effect_manager"
 import "LUI.src.UI.moveable"
 import "LUI.src.Utils.icons"
 import "LUI.src.Utils.stretch"
@@ -30,6 +31,17 @@ local function _apply_scaled_icon(control, background, width, height, left, top)
     return true
 end
 
+local function _is_local_player(entity)
+    local lp = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if entity == nil or lp == nil then
+        return false
+    end
+    if entity.GetName == nil or lp.GetName == nil then
+        return false
+    end
+    return entity:GetName() == lp:GetName()
+end
+
 ---@class PartyMemberVitals : VitalsBase
 PartyMemberVitals = class(VitalsBase)
 
@@ -39,6 +51,8 @@ PartyMemberVitals = class(VitalsBase)
 
 function PartyMemberVitals:Constructor(entity)
     self.is_leader = false
+    self.em = nil
+    self.em_added_event = nil
     VitalsBase.Constructor(self, "party", entity, "Party Member", {
         show_effects = false,
         show_moveable = false,
@@ -60,9 +74,20 @@ function PartyMemberVitals:set_is_leader(is_leader)
 end
 
 function PartyMemberVitals:set_entity(entity)
+    if self.entity ~= entity then
+        self:_detach_silent_effect_manager()
+    end
+
     VitalsBase.set_entity(self, entity)
     self:_update_class_icon()
     self:_update_leader_icon()
+    self:_setup_silent_effect_manager()
+end
+
+function PartyMemberVitals:Update()
+    if self.em ~= nil then
+        self.em:poll()
+    end
 end
 
 function PartyMemberVitals:get_lower_bars_height()
@@ -73,6 +98,45 @@ end
 ---------------------------------------------------------------------
 -- Private functions
 ---------------------------------------------------------------------
+
+function PartyMemberVitals:_setup_silent_effect_manager()
+    if self.em ~= nil then
+        self:SetWantsUpdates(true)
+        return
+    end
+
+    if self.entity == nil or _is_local_player(self.entity) == true then
+        self:SetWantsUpdates(false)
+        return
+    end
+
+    if self.entity.GetEffects == nil or self.entity:GetEffects() == nil then
+        self:SetWantsUpdates(false)
+        return
+    end
+
+    self.em = TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    self.em_added_event = self.em:register_added_event(function()
+    end)
+    self:SetWantsUpdates(true)
+end
+
+function PartyMemberVitals:_detach_silent_effect_manager()
+    if self.em == nil then
+        self.em_added_event = nil
+        self:SetWantsUpdates(false)
+        return
+    end
+
+    if self.em_added_event ~= nil and self.em.unregister_added_event ~= nil then
+        self.em:unregister_added_event(self.em_added_event)
+        self.em_added_event = nil
+    end
+
+    self.em:delete()
+    self.em = nil
+    self:SetWantsUpdates(false)
+end
 
 function PartyMemberVitals:_update_class_icon()
     local v = self:get_vitals_settings()

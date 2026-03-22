@@ -11,13 +11,22 @@ import "Turbine.Gameplay"
 ---@field cleared_event table<function>
 ---@field call_in_s number|nil
 ---@field player Turbine.Gameplay.Actor|nil
+---@field source_target Turbine.Gameplay.Actor|nil
 ---@field effects table<number, TargetEffectManagerEffectEntry>
 TargetEffectManager = class(Turbine.Object)
 
 local _manager_cache = setmetatable({}, { __mode = "v" })
 
 ---@return Turbine.Gameplay.EffectList|nil
-local function _get_target_effects(player)
+local function _get_target_effects(player, source_target)
+    if source_target ~= nil then
+        if source_target.GetEffects == nil then
+            return nil
+        end
+
+        return source_target:GetEffects()
+    end
+
     if player == nil or player.GetTarget == nil then
         return nil
     end
@@ -31,45 +40,47 @@ local function _get_target_effects(player)
 end
 
 local function _target_cache_key(target)
-    if target == nil then
+    if target == nil or target.GetName == nil then
         return nil
     end
 
-    if target.GetID ~= nil then
-        local id = target:GetID()
-        if type(id) == "number" and id > 0 then
-            return "id|" .. tostring(id)
-        end
-        if type(id) == "string" and id ~= "" then
-            return "id|" .. id
-        end
-        local n = tonumber(id)
-        if type(n) == "number" and n > 0 then
-            return "id|" .. tostring(n)
-        end
+    local name = target:GetName()
+    if name == "" then
+        return nil
     end
 
-    if target.IsPlayer ~= nil and target:IsPlayer() == true and target.GetName ~= nil then
-        local name = tostring(target:GetName() or "")
-        if name ~= "" then
-            return "player|" .. name
-        end
-    end
-
-    return tostring(target)
+    return name
 end
 
-function TargetEffectManager.acquire(player, target)
+-- local function _log_cache_acquire(target, key, cached)
+--     Turbine.Shell.WriteLine(string.format(
+--         "[TargetEffectManager] acquire name=%s key=%s cache_hit=%s",
+--         target ~= nil and target.GetName ~= nil and tostring(target:GetName() or "") or "<nil>",
+--         tostring(key),
+--         cached ~= nil and "true" or "false"
+--     ))
+-- end
+
+local function _acquire_manager(player, target, source_target)
     local key = _target_cache_key(target)
+    local cached = nil
     if key ~= nil then
-        local cached = _manager_cache[key]
+        cached = _manager_cache[key]
         if cached ~= nil then
             cached.ref_count = (cached.ref_count or 0) + 1
-            return cached
+            if source_target ~= nil and cached.set_source_target ~= nil then
+                cached:set_source_target(source_target)
+            end
         end
     end
 
-    local manager = TargetEffectManager(player)
+    -- _log_cache_acquire(target, key, cached)
+
+    if cached ~= nil then
+        return cached
+    end
+
+    local manager = TargetEffectManager(player, source_target)
     manager.cache_key = key
     manager.ref_count = 1
     if key ~= nil then
@@ -78,16 +89,26 @@ function TargetEffectManager.acquire(player, target)
     return manager
 end
 
+function TargetEffectManager.acquire(player, target)
+    return _acquire_manager(player, target, nil)
+end
+
+function TargetEffectManager.acquire_silent(player, target)
+    return _acquire_manager(player, target, target)
+end
+
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 ---@param player Turbine.Gameplay.Actor
-function TargetEffectManager:Constructor(player)
+---@param source_target Turbine.Gameplay.Actor|nil
+function TargetEffectManager:Constructor(player, source_target)
     Turbine.Object.Constructor(self)
     self.effects = {}
     self.player = player
+    self.source_target = source_target
     self.ref_count = 1
     self.cache_key = nil
 
@@ -96,7 +117,7 @@ function TargetEffectManager:Constructor(player)
     -- /!\ IMPORTANT /!\
     -- DO NOT COPY THE INSTANCE OF THAT VARIABLE IN ANOTHER PLACE
     -- THAT WILL BREAK THE WHOLE MANAGER
-    self.instance_effects = _get_target_effects(self.player)
+    self.instance_effects = _get_target_effects(self.player, self.source_target)
 
     self.added_event = {}
     self.removed_event = {}
@@ -133,6 +154,7 @@ function TargetEffectManager:delete()
     self:detach_callbacks()
     self.instance_effects = nil
     self.player = nil
+    self.source_target = nil
     self.cache_key = nil
 end
 
@@ -226,6 +248,17 @@ function TargetEffectManager:unregister_cleared_event(callback)
     end
 end
 
+function TargetEffectManager:set_source_target(source_target)
+    if self.source_target == source_target then
+        return
+    end
+
+    self:detach_callbacks()
+    self.source_target = source_target
+    self.instance_effects = _get_target_effects(self.player, self.source_target)
+    self:attach_callbacks()
+end
+
 function TargetEffectManager:attach_callbacks()
     if self.instance_effects == nil then
         return
@@ -301,7 +334,7 @@ function TargetEffectManager:effect_removed(sender, args)
 
     -- Cleanup and get fresh effects instance
     self:detach_callbacks()
-    self.instance_effects = _get_target_effects(self.player)
+    self.instance_effects = _get_target_effects(self.player, self.source_target)
     self:attach_callbacks()
 end
 
@@ -316,7 +349,7 @@ function TargetEffectManager:effect_cleared(sender, args)
         self.cleared_event[i]()
     end
     self:detach_callbacks()
-    self.instance_effects = _get_target_effects(self.player)
+    self.instance_effects = _get_target_effects(self.player, self.source_target)
     self:attach_callbacks()
     self.call_in_s = Turbine.Engine.GetGameTime() + 0.001 -- call in 1ms
 end
@@ -346,7 +379,7 @@ end
 -- If no refresh is scheduled then this function does nothing.
 function TargetEffectManager:poll()
     if self.instance_effects == nil then
-        self.instance_effects = _get_target_effects(self.player)
+        self.instance_effects = _get_target_effects(self.player, self.source_target)
         if self.instance_effects ~= nil then
             self:attach_callbacks()
             if #self.added_event > 0 then
