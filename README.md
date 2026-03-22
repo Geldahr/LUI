@@ -87,9 +87,12 @@ LUI uses pixel-based scaling instead of LotRO UI scaling. That keeps borders and
 
 ## Known Issues
 
-- Targeting a player in your fellowship may not show effects immediately. The callback is not triggered and the event list stays empty until a buff or debuff changes.
 - Target effect tracking can behave incorrectly when the target is the local player. This has not been seen since February 26, 2026.
 - If you use labels that include level, they may not refresh when the target or a party member levels up unless morale or power also changes.
+
+## Recent fixes to verify
+
+- A recent fix addressed an edge case where targeting another player in your fellowship did not immediately populate the target effect list. In the broken state, buffs and debuffs could remain empty, fail to appear, disappear, or update only after that player gained or lost an effect. If you still see delayed or inconsistent effect initialization when switching to a fellowship target, please report it.
 
 ## Repository Notes
 
