@@ -6,13 +6,15 @@ import "Turbine.Gameplay"
 
 ---@class TargetEffectManager : Turbine.Object
 ---@field instance_effects Turbine.Gameplay.EffectList|nil
----@field added_event function|nil
----@field removed_event function|nil
----@field cleared_event function|nil
+---@field added_event table<function>
+---@field removed_event table<function>
+---@field cleared_event table<function>
 ---@field call_in_s number|nil
 ---@field player Turbine.Gameplay.Actor|nil
 ---@field effects table<number, TargetEffectManagerEffectEntry>
 TargetEffectManager = class(Turbine.Object)
+
+local _manager_cache = setmetatable({}, { __mode = "v" })
 
 ---@return Turbine.Gameplay.EffectList|nil
 local function _get_target_effects(player)
@@ -28,6 +30,54 @@ local function _get_target_effects(player)
     return target:GetEffects()
 end
 
+local function _target_cache_key(target)
+    if target == nil then
+        return nil
+    end
+
+    if target.GetID ~= nil then
+        local id = target:GetID()
+        if type(id) == "number" and id > 0 then
+            return "id|" .. tostring(id)
+        end
+        if type(id) == "string" and id ~= "" then
+            return "id|" .. id
+        end
+        local n = tonumber(id)
+        if type(n) == "number" and n > 0 then
+            return "id|" .. tostring(n)
+        end
+    end
+
+    if target.IsPlayer ~= nil and target:IsPlayer() == true and target.GetName ~= nil then
+        local name = tostring(target:GetName() or "")
+        if name ~= "" then
+            return "player|" .. name
+        end
+    end
+
+    return tostring(target)
+end
+
+function TargetEffectManager.acquire(player, target)
+    local key = _target_cache_key(target)
+    if key ~= nil then
+        local cached = _manager_cache[key]
+        if cached ~= nil then
+            cached.ref_count = (cached.ref_count or 0) + 1
+            return cached
+        end
+    end
+
+    local manager = TargetEffectManager(player)
+    manager.cache_key = key
+    manager.ref_count = 1
+    if key ~= nil then
+        _manager_cache[key] = manager
+    end
+    return manager
+end
+
 
 ---------------------------------------------------------------------
 -- Constructor
@@ -38,6 +88,8 @@ function TargetEffectManager:Constructor(player)
     Turbine.Object.Constructor(self)
     self.effects = {}
     self.player = player
+    self.ref_count = 1
+    self.cache_key = nil
 
     self.call_in_s = nil
 
@@ -46,9 +98,9 @@ function TargetEffectManager:Constructor(player)
     -- THAT WILL BREAK THE WHOLE MANAGER
     self.instance_effects = _get_target_effects(self.player)
 
-    self.added_event = nil
-    self.removed_event = nil
-    self.cleared_event = nil
+    self.added_event = {}
+    self.removed_event = {}
+    self.cleared_event = {}
 
     self:attach_callbacks()
 end
@@ -60,13 +112,28 @@ end
 -- Function to be called before deleting the TargetEffectManager instance
 -- It MUST be called for safety reasons
 function TargetEffectManager:delete()
+    local count = self.ref_count
+    if type(count) ~= "number" then
+        count = 1
+    end
+    if count > 1 then
+        self.ref_count = count - 1
+        return
+    end
+
+    self.ref_count = 0
+    if self.cache_key ~= nil and _manager_cache[self.cache_key] == self then
+        _manager_cache[self.cache_key] = nil
+    end
+
     self.effects = nil
-    self.added_event = nil
-    self.removed_event = nil
-    self.cleared_event = nil
+    self.added_event = {}
+    self.removed_event = {}
+    self.cleared_event = {}
     self:detach_callbacks()
     self.instance_effects = nil
     self.player = nil
+    self.cache_key = nil
 end
 
 ---------------------------------------------------------------------
@@ -75,21 +142,86 @@ end
 
 ---@param callback function|nil
 function TargetEffectManager:register_added_event(callback)
-    local fire_events = (self.added_event == nil)
-
-    self.added_event = callback
-
-    if self.added_event == nil or self.instance_effects == nil then
+    if callback == nil then
         return
     end
 
-    if fire_events then
-        for i = 1, self.instance_effects:GetCount() do
-            local effect = self.instance_effects:Get(i)
-            -- Add events to our own list and fire the event added callback
-            -- Turbine.Shell.WriteLine("Added: "..effect:GetName() .. " #"..effect:GetID())
-            self.effects[effect:GetID()] = { is_refreshed = true, effect = effect }
-            self.added_event(effect)
+    table.insert(self.added_event, callback)
+
+    if self.instance_effects == nil then
+        return
+    end
+
+    for i = 1, self.instance_effects:GetCount() do
+        local effect = self.instance_effects:Get(i)
+        -- Add events to our own list and fire the event added callback
+        -- Turbine.Shell.WriteLine("Added: "..effect:GetName() .. " #"..effect:GetID())
+        self.effects[effect:GetID()] = { is_refreshed = true, effect = effect }
+    end
+    for _, e in pairs(self.effects) do
+        if callback ~= nil then
+            callback(e.effect)
+        end
+    end
+
+    return callback
+end
+
+function TargetEffectManager:register_removed_event(callback)
+    if callback == nil then
+        return
+    end
+
+    table.insert(self.removed_event, callback)
+
+    return callback
+end
+
+function TargetEffectManager:register_cleared_event(callback)
+    if callback == nil then
+        return
+    end
+
+    table.insert(self.cleared_event, callback)
+
+    return callback
+end
+
+function TargetEffectManager:unregister_added_event(callback)
+    if callback == nil then
+        return
+    end
+
+    for i = 1, #self.added_event do
+        if self.added_event[i] == callback then
+            table.remove(self.added_event, i)
+            return
+        end
+    end
+end
+
+function TargetEffectManager:unregister_removed_event(callback)
+    if callback == nil then
+        return
+    end
+
+    for i = 1, #self.removed_event do
+        if self.removed_event[i] == callback then
+            table.remove(self.removed_event, i)
+            return
+        end
+    end
+end
+
+function TargetEffectManager:unregister_cleared_event(callback)
+    if callback == nil then
+        return
+    end
+
+    for i = 1, #self.cleared_event do
+        if self.cleared_event[i] == callback then
+            table.remove(self.cleared_event, i)
+            return
         end
     end
 end
@@ -137,9 +269,9 @@ function TargetEffectManager:effect_added(sender, args)
         self.effects[id] = { is_refreshed = true, effect = effect }
     end
 
-    if self.added_event ~= nil then
+    for i = 1, #self.added_event do
         -- Turbine.Shell.WriteLine("Added: "..effect:GetName() .. " #"..effect:GetID())
-        self.added_event(effect)
+        self.added_event[i](effect)
     end
 
     self.call_in_s = Turbine.Engine.GetGameTime() + 0.001 -- call in 1ms
@@ -159,8 +291,10 @@ function TargetEffectManager:effect_removed(sender, args)
     if count == 1 then
         local _, effect = next(self.effects)
         -- Turbine.Shell.WriteLine("Last Removed: "..effect.effect:GetName() .. " #"..effect.effect:GetID())
-        if self.removed_event ~= nil and effect ~= nil then
-            self.removed_event(effect.effect)
+        if effect ~= nil then
+            for i = 1, #self.removed_event do
+                self.removed_event[i](effect.effect)
+            end
         end
         self.effects = {}
     end
@@ -178,8 +312,8 @@ function TargetEffectManager:effect_cleared(sender, args)
     for id, _ in pairs(self.effects) do
         self.effects[id].is_refreshed = false
     end
-    if self.cleared_event ~= nil then
-        self.cleared_event()
+    for i = 1, #self.cleared_event do
+        self.cleared_event[i]()
     end
     self:detach_callbacks()
     self.instance_effects = _get_target_effects(self.player)
@@ -200,9 +334,8 @@ function TargetEffectManager:refresh()
         local effect = self.effects[id]
         if effect ~= nil then
             effect.is_refreshed = true
-            if self.removed_event ~= nil then
-                -- Turbine.Shell.WriteLine("Removed: "..effect.effect:GetName() .. " #"..effect.effect:GetID())
-                self.removed_event(effect.effect)
+            for j = 1, #self.removed_event do
+                self.removed_event[j](effect.effect)
             end
             self.effects[id] = nil
         end
@@ -216,12 +349,14 @@ function TargetEffectManager:poll()
         self.instance_effects = _get_target_effects(self.player)
         if self.instance_effects ~= nil then
             self:attach_callbacks()
-            if self.added_event ~= nil then
+            if #self.added_event > 0 then
                 for i = 1, self.instance_effects:GetCount() do
                     local effect = self.instance_effects:Get(i)
                     if effect ~= nil then
                         self.effects[effect:GetID()] = { is_refreshed = true, effect = effect }
-                        self.added_event(effect)
+                        for j = 1, #self.added_event do
+                            self.added_event[j](effect)
+                        end
                     end
                 end
             end

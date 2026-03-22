@@ -15,6 +15,8 @@ BossVitals = class(VitalsBase)
 
 function BossVitals:Constructor(entity)
     self.em = nil
+    self.em_added_event = nil
+    self.em_removed_event = nil
     self._layout_busy = false
     self._power_fill_width = 0
 
@@ -49,15 +51,13 @@ end
 
 function BossVitals:set_entity(entity)
     if self.em ~= nil and self.entity ~= entity then
-        self.em:delete()
-        self.em = nil
+        self:_detach_effect_manager()
     end
 
     VitalsBase.set_entity(self, entity)
 
     if entity == nil and self.em ~= nil then
-        self.em:delete()
-        self.em = nil
+        self:_detach_effect_manager()
     end
 
     if entity == nil then
@@ -343,8 +343,7 @@ function BossVitals:_setup_effect_tracking()
     end
 
     if self.em ~= nil then
-        self.em:delete()
-        self.em = nil
+        self:_detach_effect_manager()
     end
 
     if self.debuffs ~= nil then self.debuffs:clear_effects() end
@@ -363,16 +362,36 @@ function BossVitals:_setup_effect_tracking()
         return
     end
 
-    self.em = TargetEffectManager(Turbine.Gameplay.LocalPlayer.GetInstance())
-    self.em:register_added_event(function(effect)
+    self.em = TargetEffectManager.acquire(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    self.em_added_event = self.em:register_added_event(function(effect)
         self:_upsert_effect(effect)
     end)
-    self.em.removed_event = function(effect)
+    self.em_removed_event = self.em:register_removed_event(function(effect)
         self:_remove_effect(effect)
         self:_request_effects_resync(0.05, 6)
-    end
+    end)
 
     self:SetWantsUpdates(true)
+end
+
+function BossVitals:_detach_effect_manager()
+    if self.em == nil then
+        self.em_added_event = nil
+        self.em_removed_event = nil
+        return
+    end
+
+    if self.em_added_event ~= nil and self.em.unregister_added_event ~= nil then
+        self.em:unregister_added_event(self.em_added_event)
+        self.em_added_event = nil
+    end
+    if self.em_removed_event ~= nil and self.em.unregister_removed_event ~= nil then
+        self.em:unregister_removed_event(self.em_removed_event)
+        self.em_removed_event = nil
+    end
+
+    self.em:delete()
+    self.em = nil
 end
 
 function BossVitals:_layout_effect_windows()
