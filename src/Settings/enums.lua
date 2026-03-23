@@ -35,6 +35,11 @@ e.text_alignment = {
     RIGHT = 3,
 }
 
+e.time_format = {
+    H24 = 1,
+    AMPM = 2,
+}
+
 e.font_style = {
     NONE = 1,
     OUTLINE = 2,

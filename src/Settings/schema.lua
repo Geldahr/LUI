@@ -1,5 +1,6 @@
 import "Turbine.UI"
 import "LUI.src.Settings.enums"
+import "LUI.src.StatusBar.common"
 
 function _G.ensure_loaded_settings()
     if type(_G.loaded_settings) ~= "table" then
@@ -60,6 +61,8 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "status_bar", "widgets", "equipment_wear" })
     ensure_table_at(s, { "status_bar", "widgets", "equipment_wear", "color" })
     ensure_table_at(s, { "status_bar", "widgets", "money" })
+    ensure_table_at(s, { "status_bar", "widgets", "wallet" })
+    ensure_table_at(s, { "status_bar", "widgets", "wallet", "items" })
     ensure_table_at(s, { "status_bar", "widgets", "shortcut_icon" })
     ensure_table_at(s, { "status_bar", "widgets", "shortcut_text" })
 
@@ -653,9 +656,15 @@ function _G.ensure_loaded_settings()
     end
 
     local widgets = sb.widgets
-    if widgets.time_local.width == nil then widgets.time_local.width = 40 end
-    if widgets.time_local.icon == nil then widgets.time_local.icon = false end
-    if widgets.time_local.text_alignment == nil then widgets.time_local.text_alignment = LUI_ENUMS.text_alignment.CENTER end
+    local time_local = widgets.time_local
+    if time_local.width == nil then time_local.width = 40 end
+    if time_local.text_alignment == nil then time_local.text_alignment = LUI_ENUMS.text_alignment.CENTER end
+    if time_local.time_format == nil then time_local.time_format = LUI_ENUMS.time_format.H24 end
+    widgets.time_local = {
+        width = time_local.width,
+        text_alignment = time_local.text_alignment,
+        time_format = time_local.time_format,
+    }
 
     if widgets.inventory_space.width == nil then widgets.inventory_space.width = 70 end
     if widgets.inventory_space.icon == nil then widgets.inventory_space.icon = true end
@@ -683,6 +692,19 @@ function _G.ensure_loaded_settings()
     if widgets.money.width == nil then widgets.money.width = 140 end
     if widgets.money.icon == nil then widgets.money.icon = true end
     if widgets.money.text_alignment == nil then widgets.money.text_alignment = LUI_ENUMS.text_alignment.LEFT end
+
+    local wallet = widgets.wallet
+    local wallet_was_unset = wallet.width == nil and wallet.text_alignment == nil and #wallet.items == 0
+    if wallet.width == nil then wallet.width = 220 end
+    if wallet.text_alignment == nil then wallet.text_alignment = LUI_ENUMS.text_alignment.LEFT end
+    wallet.items = _G.STATUS_BAR_COMMON.parse_wallet_item_list(wallet.items)
+    if wallet_was_unset == true then
+        wallet.items = {
+            "Ancient Script",
+            "Motes of Enchantment",
+            "Embers of Enchantment",
+        }
+    end
 
     if widgets.shortcut_icon.width == nil then widgets.shortcut_icon.width = 20 end
     if widgets.shortcut_icon.height == nil then widgets.shortcut_icon.height = 20 end

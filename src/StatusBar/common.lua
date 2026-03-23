@@ -14,14 +14,14 @@ S.ICON_INSET = 4
 S.BACKPACK_ICON_W = 24
 S.BACKPACK_ICON_H = 30
 
-S.GOLD_ICON = Turbine.UI.Graphic(0x41007e7b)
-S.SILVER_ICON = Turbine.UI.Graphic(0x41007e7c)
-S.COPPER_ICON = Turbine.UI.Graphic(0x41007e7d)
-S.INVENTORY_SPACE_ICON = Turbine.UI.Graphic(0x41008113)
-S.DURABILITY_ICON = Turbine.UI.Graphic(0x41003061)
-S.CONFIG_SHORTCUT_ICON = Turbine.UI.Graphic(0x41004D92)
-S.ASSETS_SHORTCUT_ICON = Turbine.UI.Graphic(0x41003830)
-S.BESTIARY_SHORTCUT_ICON = Turbine.UI.Graphic(0x410031FB)
+S.GOLD_ICON = 0x41007e7b
+S.SILVER_ICON = 0x41007e7c
+S.COPPER_ICON = 0x41007e7d
+S.INVENTORY_SPACE_ICON = 0x41008113
+S.DURABILITY_ICON = 0x41003061
+S.CONFIG_SHORTCUT_ICON = 0x41004D92
+S.ASSETS_SHORTCUT_ICON = 0x41003830
+S.BESTIARY_SHORTCUT_ICON = 0x410031FB
 
 S.SHORTCUT_BORDER_COLOR = Turbine.UI.Color(0.90, 0.28, 0.35, 0.45)
 S.SHORTCUT_BORDER_HOVER_COLOR = Turbine.UI.Color(0.98, 0.38, 0.46, 0.56)
@@ -56,12 +56,392 @@ S.WEAR_STATE_TO_PERCENT = {
     [S.ITEM_WEAR_STATE.Broken or 3] = 0,
 }
 
-function S.format_hhmm(date)
+local function _trim(text)
+    local v = tostring(text or "")
+    v = v:gsub("^%s+", "")
+    v = v:gsub("%s+$", "")
+    return v
+end
+
+local WALLET_ITEM_NAMES = {
+    TR("Destiny Points"),
+    TR("Mithril Coin"),
+    TR("Adorned Dragon-helm"),
+    TR("Adorned Royal Crown"),
+    TR("'Battle of Dagorlad' Tapestry"),
+    TR("'Battle of Five Armies' Tapestry"),
+    TR("Beryl Pendant"),
+    TR("Black-wood Bow"),
+    TR("Ceremonial Dwarf-axe"),
+    TR("Chronicle of Cirion and Eorl"),
+    TR("Dragon-helm"),
+    TR("Dúnedain Star"),
+    TR("Elaborate Dúnedain Star"),
+    TR("Elaborate Royal Circlet"),
+    TR("Elderslade Supply Pack"),
+    TR("Embroidered 'Battle of Five Armies' Tapestry"),
+    TR("Embroidered 'Battle of Dagorlad' Tapestry"),
+    TR("Engraved Elf-blade"),
+    TR("Engraved Red Arrow"),
+    TR("Engraved Statue of Elendil"),
+    TR("Feast of Ethuilwereth"),
+    TR("Feast of Harvestmath"),
+    TR("Feast of Lithe"),
+    TR("Flawless Ceremonial Dwarf-axe"),
+    TR("Flawless Númenórean Sceptre"),
+    TR("Grand Feast of Ethuilwereth"),
+    TR("Grand Feast of Lithe"),
+    TR("Illuminated Record of the Elf-lords"),
+    TR("Illuminated Record of the Race of Man"),
+    TR("Iron Garrison Resource Token"),
+    TR("Númenórean Sceptre"),
+    TR("Record of Durin"),
+    TR("Record of the Elf-lords"),
+    TR("Record of the Race of Man"),
+    TR("Red Arrow"),
+    TR("Royal Circlet"),
+    TR("Royal Crown"),
+    TR("'Siege of Barad-dûr' Tapestry"),
+    TR("Silver Basin"),
+    TR("Statue of Elendil"),
+    TR("Token of Effort"),
+    TR("Universal Ingredient Pack"),
+    TR("Motes of Enchantment"),
+    TR("Embers of Enchantment"),
+    TR("Figments of Splendour"),
+    TR("Amberjack"),
+    TR("Anniversary Token"),
+    TR("Bad Fish"),
+    TR("Badge of Dishonour"),
+    TR("Badge of Taste"),
+    TR("Big Fish"),
+    TR("Bottle of Ale"),
+    TR("Buried Treasure Token"),
+    TR("Drum"),
+    TR("Easy Fish"),
+    TR("Fall Festival Token"),
+    TR("Farmers Faire Token"),
+    TR("Festival Token"),
+    TR("Festivity Token"),
+    TR("Fragment of a Shadow Essence"),
+    TR("Golden Festival Token"),
+    TR("Keg of Cram"),
+    TR("Luillim"),
+    TR("Marigold (Barter)"),
+    TR("Midsummer Token"),
+    TR("Possible Fish"),
+    TR("Primrose (Barter)"),
+    TR("Puny Fish"),
+    TR("Scrap of an Essence Reclamation Scroll"),
+    TR("Simple Fish"),
+    TR("Small Fish"),
+    TR("Spring Leaf"),
+    TR("Steel Token"),
+    TR("Summer Festival Token"),
+    TR("Tricky Fish"),
+    TR("Unlikely Fish"),
+    TR("Violet (Barter)"),
+    TR("Yule Festival Token"),
+    TR("Ancient Script"),
+    TR("Bright Emblem of Nimrodel"),
+    TR("Khuzdul Tablets"),
+    TR("Rusted Dwarf Tools"),
+    TR("Shard"),
+    TR("Ancient Ithil-coin"),
+    TR("Arnorian Armour Fragment"),
+    TR("Mark"),
+    TR("Blade of Dúnachar"),
+    TR("Breastplate of Gruglok"),
+    TR("Broken Signet"),
+    TR("Cloven Helm of Lagmas"),
+    TR("Coin of Grárik"),
+    TR("Dark Emblem of Courage"),
+    TR("Dark Emblem of Strength"),
+    TR("Dazzling Emerald"),
+    TR("Eglain Token"),
+    TR("Fiery Quartz"),
+    TR("Glinting Amethyst"),
+    TR("Glowing Red Ruby"),
+    TR("Greater Elf-stone of Courage"),
+    TR("Greater Elf-stone of Hand"),
+    TR("Greater Elf-stone of Heart"),
+    TR("Greater Elf-stone of Resolve"),
+    TR("Greater Elf-stone of Spirit"),
+    TR("Greater Elf-stone of Strength"),
+    TR("Helchgam's Beak"),
+    TR("Long-lost Coin"),
+    TR("Mark of Aughaire Victory"),
+    TR("Mark of Rammas Deluon Victory"),
+    TR("Mark of Rhunendin Victory"),
+    TR("Mark of Triumph"),
+    TR("Mark of Victory"),
+    TR("Masterwork Helmet of the Pelennor Fields"),
+    TR("Medallion"),
+    TR("Medallion of Dol Guldur"),
+    TR("Medallion of Lothlórien"),
+    TR("Medallion of Moria"),
+    TR("Medallion of the North-men"),
+    TR("Morgul Crest"),
+    TR("Near Perfect Sapphire"),
+    TR("Newfound Coin"),
+    TR("Obsidian Rock-shard"),
+    TR("Officer's Bracelet of the Pelennor Fields"),
+    TR("Orthanc Sigil-fragment"),
+    TR("Platinum Coin of Spirit"),
+    TR("Pristine Bracelet of the Pelennor Fields"),
+    TR("Pristine Ring of the Pelennor Fields"),
+    TR("Pristine Opal"),
+    TR("Rift-iron Coin"),
+    TR("Scorched Helm Token"),
+    TR("Scorched Shoulder-guard Token"),
+    TR("Scrap of Rift-iron Ore"),
+    TR("Scrap of Wisdán's Cloak"),
+    TR("Seal"),
+    TR("Sparkling Diamond"),
+    TR("Star of Merit"),
+    TR("Tarnished Ring of the Pelennor Fields"),
+    TR("Tarnished Sigil of Gondor"),
+    TR("Thrâng's Vault Token"),
+    TR("Token of Ill Omens"),
+    TR("Token of Resolution"),
+    TR("Udúnion's Horn"),
+    TR("Unhatched Spider Egg"),
+    TR("Vile Bronze Coin"),
+    TR("Vile Silver Coin"),
+    TR("Western Heroes' Steel Boots Medallion"),
+    TR("Western Heroes' Steel Breastplate Medallion"),
+    TR("Western Heroes' Steel Gauntlets Medallion"),
+    TR("Western Heroes' Steel Helmet Medallion"),
+    TR("Western Heroes' Steel Leg-guards Medallion"),
+    TR("Western Heroes' Steel Shoulder-guards Medallion"),
+    TR("Worn Helmet of the Pelennor Fields"),
+    TR("Amroth Silver Piece"),
+    TR("Bingo Badge"),
+    TR("Bree-land Wood-mark"),
+    TR("Bronze Arnorian Coin"),
+    TR("Central Gondor Silver Piece"),
+    TR("Copper Bounder's Coin"),
+    TR("Copper Coin of Gundabad"),
+    TR("Eagle Bit"),
+    TR("East Gondor Silver Piece"),
+    TR("Fangorn Leaf"),
+    TR("Gabil'akkâ War-mark"),
+    TR("Geode - Agate"),
+    TR("Geode - Amethyst"),
+    TR("Geode - Gypsum"),
+    TR("Geode - Jasper"),
+    TR("Geode - Quartz"),
+    TR("Gift-giver's Brand"),
+    TR("Gold Token of Wildermore"),
+    TR("Golden Token of the Anduin"),
+    TR("Golden Token of the Riddermark"),
+    TR("Golden Token of the Wilds"),
+    TR("Greyflood Mark"),
+    TR("Gundabad Mountain-mark"),
+    TR("Gulmark"),
+    TR("Host of the West Silver Piece"),
+    TR("Ithilien Essence Fragment"),
+    TR("Lothlórien Gold Leaf"),
+    TR("Lothlórien Silver Branch"),
+    TR("Malledhrim Bronze Feather"),
+    TR("Malledhrim Gold Star Emblem"),
+    TR("Mark of the Angle"),
+    TR("Mark of the Longbeards"),
+    TR("Mark of the Wilds"),
+    TR("Minas Tirith - Builders' Token"),
+    TR("Minas Tirith - Burgsmen's Token"),
+    TR("Minas Tirith - Smiths' Token"),
+    TR("Minas Tirith Silver Piece"),
+    TR("Northern Gulmark"),
+    TR("Phial of Amber Extract"),
+    TR("Phial of Crimson Extract"),
+    TR("Phial of Golden Extract"),
+    TR("Phial of Sapphire Extract"),
+    TR("Phial of Umber Extract"),
+    TR("Phial of Verdant Extract"),
+    TR("Phial of Violet Extract"),
+    TR("Rhosgobel Oak Leaf"),
+    TR("Sigil of Imlad Ithil"),
+    TR("Silver Arnorian Coin"),
+    TR("Silver Coin of Gundabad"),
+    TR("Silver Signet of the Thandrim"),
+    TR("Silver Token of the Anduin"),
+    TR("Silver Token of the Riddermark"),
+    TR("Silver Token of the Wilds"),
+    TR("Sliver of Black Steel"),
+    TR("Token of Further Adventure"),
+    TR("Token of Hytbold"),
+    TR("Token of the Kharum-ubnâr"),
+    TR("Token of the Lake and Rivers"),
+    TR("Token of Salutation"),
+    TR("Token of Service"),
+    TR("Token of the Zhélruka"),
+    TR("Vales - Beorning Token"),
+    TR("Vales - Elf Token"),
+    TR("Vales - Woodmen Token"),
+    TR("Warband Token of Wildermore"),
+    TR("Westemnet Iron Coin"),
+    TR("Wildermore Coin"),
+    TR("Zakaf-beshêk"),
+    TR("Brilliant Spirit Stone"),
+    TR("Commendation"),
+    TR("Chieftain's Brooch"),
+    TR("Dull Spirit Stone"),
+    TR("Glimmering Spirit Stone"),
+    TR("Tyrant's Crest"),
+    TR("2-pound Salmon"),
+    TR("4-pound Salmon"),
+    TR("6-pound Salmon"),
+    TR("10-pound Salmon"),
+    TR("15-pound Salmon"),
+    TR("20-pound Salmon"),
+    TR("30-pound Salmon"),
+    TR("40-pound Salmon"),
+    TR("50-pound Salmon"),
+    TR("Arm of Lagmas (Barter)"),
+    TR("Barbarous Barbel"),
+    TR("The Beast's Drum"),
+    TR("Big Mouth Bass"),
+    TR("Brawny Bullhead"),
+    TR("Bright Bitterling"),
+    TR("Caerlug's Arm"),
+    TR("Colourful Charr"),
+    TR("Courageous Carp"),
+    TR("Cunning Catfish"),
+    TR("Delightful Dace"),
+    TR("Fantastic Flounder"),
+    TR("Ferndur's Skull (Barter)"),
+    TR("Flagit's Head"),
+    TR("Fungal Mushroom (Barter)"),
+    TR("General Talug's Armour"),
+    TR("Giant Goldfish"),
+    TR("Gleaming Grayling"),
+    TR("Glothrok's Token"),
+    TR("Gothghaash's Symbol"),
+    TR("Great Golden Mullet"),
+    TR("Grimreaver (Barter)"),
+    TR("Gurvand's Head"),
+    TR("Head of Bogbereth (Barter)"),
+    TR("Huge Houting"),
+    TR("Igash's Trinket"),
+    TR("Ivar's Banner (Barter)"),
+    TR("Krankluk's Hammer (Barter)"),
+    TR("Magnificent Minnow"),
+    TR("The Mirror of Mordirith (Barter)"),
+    TR("Morhûn's Gemstone (Barter)"),
+    TR("Naruhel's Dress (Barter)"),
+    TR("Nasty Nine-spined Stickleback"),
+    TR("Nornúan's Head (Barter)"),
+    TR("Perfect Perch"),
+    TR("Perfect Pike"),
+    TR("Remmenaeg's Armour (Barter)"),
+    TR("Ruthless Rudd"),
+    TR("The Skull of Thorog (Barter)"),
+    TR("Small Turtle Shell"),
+    TR("Stinger of Brúmbereth (Barter)"),
+    TR("Superb Smelt"),
+    TR("Tentacle of Helchgam (Barter)"),
+    TR("Thaurlach's Blade (Barter)"),
+    TR("Tricky Three-spined Stickleback"),
+    TR("Udunion's Swords (Barter)"),
+    TR("Undamaged Barghest Corpse"),
+    TR("Undamaged Brown-bear Corpse"),
+    TR("Undamaged Frost-antler Head"),
+    TR("Undamaged Sabre-tooth Corpse"),
+    TR("Undamaged Tundra Bear Corpse"),
+    TR("Undamaged Warg Corpse"),
+    TR("Undamaged White-wolf Corpse"),
+    TR("Undamaged Winter-worm Corpse"),
+    TR("Watcher's Token"),
+    TR("Zholuga's Head"),
+    TR("Steed Halter"),
+}
+
+S.WALLET_ITEMS = WALLET_ITEM_NAMES
+
+function S.get_wallet_item_spec(value)
+    if value == nil then
+        return nil
+    end
+
+    local name = _trim(value)
+    if name == "" then
+        return nil
+    end
+
+    for i = 1, #S.WALLET_ITEMS do
+        if S.WALLET_ITEMS[i] == name then
+            return name
+        end
+    end
+
+    return nil
+end
+
+function S.parse_wallet_item_list(value)
+    local out = {}
+    local seen = {}
+
+    local function add_item(token)
+        local name = S.get_wallet_item_spec(token)
+        if name == nil then
+            return
+        end
+
+        if name == "" or seen[name] == true then
+            return
+        end
+
+        seen[name] = true
+        out[#out + 1] = name
+    end
+
+    if type(value) == "table" then
+        for i = 1, #value do
+            add_item(value[i])
+        end
+    elseif type(value) == "string" then
+        for token in value:gmatch("[^,\n\r;]+") do
+            add_item(token)
+        end
+    else
+        add_item(value)
+    end
+
+    return out
+end
+
+function S.resolve_wallet_item_selection(value)
+    return S.get_wallet_item_spec(value)
+end
+
+function S.get_wallet_selection_entries(values)
+    return S.parse_wallet_item_list(values)
+end
+
+function S.wallet_item_matches(entry, wallet_name)
+    if entry == nil or wallet_name == nil then
+        return false
+    end
+    return entry == wallet_name
+end
+
+function S.format_hhmm(date, time_format)
     if date == nil then
         return "--:--"
     end
     local h = date.Hour or 0
     local m = date.Minute or 0
+
+    if time_format == LUI_ENUMS.time_format.AMPM then
+        local suffix = h >= 12 and "PM" or "AM"
+        local h12 = h % 12
+        if h12 == 0 then
+            h12 = 12
+        end
+        return string.format("%d:%02d %s", h12, m, suffix)
+    end
+
     return string.format("%02d:%02d", h, m)
 end
 
@@ -104,17 +484,21 @@ function S.get_shortcut_icon(shortcut_key)
     return nil
 end
 
-function S.get_shortcut_icon_w(icon_background, icon_h)
-    if icon_background == nil or icon_h <= 0 then
+function S.get_background_icon_w(background, icon_h)
+    if background == nil or icon_h <= 0 then
         return 0
     end
 
-    local base_w, base_h = get_background_base_size(icon_background)
+    local base_w, base_h = get_background_base_size(background)
     if type(base_w) ~= "number" or type(base_h) ~= "number" or base_w <= 0 or base_h <= 0 then
         return icon_h
     end
 
     return math.floor(((icon_h * base_w) / base_h) + 0.5)
+end
+
+function S.get_shortcut_icon_w(icon_background, icon_h)
+    return S.get_background_icon_w(icon_background, icon_h)
 end
 
 function S.window_is_visible(window)
@@ -227,6 +611,17 @@ end
 
 function S.format_gold_compact(gold)
     return lui_abbrev_gold(gold)
+end
+
+function S.format_wallet_quantity(value)
+    local n = value
+    if type(n) ~= "number" then
+        n = tonumber(n)
+    end
+    if n == nil then
+        return "--"
+    end
+    return lui_abbrev_number(n)
 end
 
 function S.round_nearest(value)

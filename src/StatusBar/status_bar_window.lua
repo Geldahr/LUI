@@ -47,23 +47,18 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg)
         )
     end
 
-    local icon_enabled = widget_cfg ~= nil and widget_cfg.icon == true
-    local icon_path = nil
-    if icon_enabled == true then
-        icon_path = S.get_widget_icon(widget_key)
-    end
-
     if widget_key == "time_local" then
         local ctor = _widget_ctor("TimeLocalWidget")
         if ctor == nil then
             error("Missing StatusBar widget constructor: TimeLocalWidget")
         end
-        return ctor(widget_w, bar_h, font, icon_path, widget_cfg.content_alignment)
+        return ctor(widget_w, bar_h, font, widget_cfg.content_alignment, widget_cfg.time_format)
     elseif widget_key == "inventory_space" then
         local ctor = _widget_ctor("InventorySpaceWidget")
         if ctor == nil then
             error("Missing StatusBar widget constructor: InventorySpaceWidget")
         end
+        local icon_path = widget_cfg ~= nil and widget_cfg.icon == true and S.get_widget_icon(widget_key) or nil
         return ctor(widget_w, bar_h, font, icon_path, widget_cfg.color,
             widget_cfg.content_alignment)
     elseif widget_key == "equipment_wear" then
@@ -71,6 +66,7 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg)
         if ctor == nil then
             error("Missing StatusBar widget constructor: EquipmentWearWidget")
         end
+        local icon_path = widget_cfg ~= nil and widget_cfg.icon == true and S.get_widget_icon(widget_key) or nil
         return ctor(widget_w, bar_h, font, icon_path, widget_cfg.color, widget_cfg.coloring,
             widget_cfg.content_alignment)
     elseif widget_key == "money" then
@@ -78,7 +74,13 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg)
         if ctor == nil then
             error("Missing StatusBar widget constructor: MoneyWidget")
         end
-        return ctor(widget_w, bar_h, font, icon_enabled, widget_cfg.content_alignment)
+        return ctor(widget_w, bar_h, font, widget_cfg ~= nil and widget_cfg.icon == true, widget_cfg.content_alignment)
+    elseif widget_key == "wallet" then
+        local ctor = _widget_ctor("WalletWidget")
+        if ctor == nil then
+            error("Missing StatusBar widget constructor: WalletWidget")
+        end
+        return ctor(widget_w, bar_h, font, widget_cfg.content_alignment, widget_cfg.items)
     end
 
     local alignment = Turbine.UI.ContentAlignment.MiddleLeft
@@ -86,6 +88,7 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg)
     if ctor == nil then
         error("Missing StatusBar widget constructor: DummyWidget")
     end
+    local icon_path = widget_cfg ~= nil and widget_cfg.icon == true and S.get_widget_icon(widget_key) or nil
     return ctor(widget_key, widget_w, bar_h, font, widget_cfg.content_alignment or alignment, icon_path)
 end
 

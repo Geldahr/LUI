@@ -4,11 +4,12 @@ local WidgetBase = _G.StatusBarWidgetBase
 local TimeLocalWidget = class(WidgetBase)
 _G.TimeLocalWidget = TimeLocalWidget
 
-function TimeLocalWidget:Constructor(widget_w, bar_h, font, icon_path, content_alignment)
+function TimeLocalWidget:Constructor(widget_w, bar_h, font, content_alignment, time_format)
     WidgetBase.Constructor(self, "time_local", widget_w, bar_h, font,
-        content_alignment or Turbine.UI.ContentAlignment.MiddleCenter, icon_path)
+        content_alignment or Turbine.UI.ContentAlignment.MiddleCenter, nil)
+    self._time_format = time_format or LUI_ENUMS.time_format.H24
 end
 
 function TimeLocalWidget:update(now)
-    self:set_text(S.format_hhmm(Turbine.Engine.GetDate()))
+    self:set_text(S.format_hhmm(Turbine.Engine.GetDate(), self._time_format))
 end

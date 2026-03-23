@@ -1340,7 +1340,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			},
 			["time_local"] =
 			{
-				["icon"] = false,
+				["time_format"] = 1.000000,
 				["text_alignment"] = 2.000000,
 				["width"] = 40.000000
 			},

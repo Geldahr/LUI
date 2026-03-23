@@ -1,6 +1,7 @@
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.token_format"
 import "LUI.src.Settings.enums"
+import "LUI.src.StatusBar.common"
 
 function _G.rebuild_settings()
     local raw = _G.loaded_settings
@@ -333,6 +334,7 @@ function _G.rebuild_settings()
         durability = "equipment_wear",
         gold = "money",
         money = "money",
+        wallet = "wallet",
         ["config:icon"] = "config_icon",
         ["config:text"] = "config_text",
         ["assets:icon"] = "assets_icon",
@@ -382,8 +384,8 @@ function _G.rebuild_settings()
     sb.widgets.time_local = {
         enabled = in_zones("time_local"),
         width = scaled_int(raw_sb.widgets.time_local.width),
-        icon = raw_sb.widgets.time_local.icon,
         content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.time_local.text_alignment],
+        time_format = raw_sb.widgets.time_local.time_format,
     }
     sb.widgets.inventory_space = {
         enabled = in_zones("inventory_space"),
@@ -405,6 +407,12 @@ function _G.rebuild_settings()
         width = scaled_int(raw_sb.widgets.money.width),
         icon = raw_sb.widgets.money.icon,
         content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.money.text_alignment],
+    }
+    sb.widgets.wallet = {
+        enabled = in_zones("wallet"),
+        width = scaled_int(raw_sb.widgets.wallet.width),
+        items = _G.STATUS_BAR_COMMON.parse_wallet_item_list(raw_sb.widgets.wallet.items),
+        content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.wallet.text_alignment],
     }
 
     local function build_shortcut_widget(widget_key)
