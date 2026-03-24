@@ -51,7 +51,7 @@ S.EQUIPMENT_SLOTS = {
 }
 S.WEAR_STATE_TO_PERCENT = {
     [S.ITEM_WEAR_STATE.Pristine or 2] = 100,
-    [S.ITEM_WEAR_STATE.Worn or 4] = 75,
+    [S.ITEM_WEAR_STATE.Worn or 4] = 80,
     [S.ITEM_WEAR_STATE.Damaged or 1] = 20,
     [S.ITEM_WEAR_STATE.Broken or 3] = 0,
 }
