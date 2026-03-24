@@ -104,6 +104,84 @@ local function _insert_layout_token_at_visible_index(text, token, insert_index)
     return table.concat(tokens, " ")
 end
 
+local function _remove_visible_layout_token_at_index(text, remove_index)
+    local tokens = _extract_layout_tokens(text)
+    local wanted_index = remove_index
+    if type(wanted_index) ~= "number" then
+        wanted_index = tonumber(wanted_index)
+    end
+    if wanted_index == nil or wanted_index < 1 then
+        return tostring(text or ""), nil
+    end
+
+    local visible_index = 0
+    for i = 1, #tokens do
+        if _layout_token_is_visible(tokens[i]) == true then
+            visible_index = visible_index + 1
+            if visible_index == wanted_index then
+                local removed_token = tokens[i]
+                table.remove(tokens, i)
+                return table.concat(tokens, " "), removed_token
+            end
+        end
+    end
+
+    return table.concat(tokens, " "), nil
+end
+
+local function _get_widget_menu_title(widget_key, widget_entry)
+    if S.is_status_bar_item_entry(widget_entry) == true then
+        return widget_entry.name or ""
+    end
+
+    if widget_key == "time_local" then
+        return TR("Time (local)")
+    elseif widget_key == "inventory_space" then
+        return TR("Inventory space")
+    elseif widget_key == "equipment_wear" then
+        return TR("Equipment wear")
+    elseif widget_key == "money" then
+        return TR("Money")
+    elseif widget_key == "wallet" then
+        return TR("Wallet")
+    elseif widget_key == "config_icon" or widget_key == "config_text" then
+        return S.get_shortcut_label("config")
+    elseif widget_key == "assets_icon" or widget_key == "assets_text" then
+        return S.get_shortcut_label("assets")
+    elseif widget_key == "bestiary_icon" or widget_key == "bestiary_text" then
+        return S.get_shortcut_label("bestiary")
+    end
+
+    return tostring(widget_key or "")
+end
+
+local function _bind_widget_interactions(owner, widget, menu_title)
+    if owner == nil or widget == nil then
+        return
+    end
+
+    widget._status_bar_menu_title = tostring(menu_title or "")
+    widget:SetMouseVisible(true)
+    if widget.SetAllowDrop ~= nil then
+        widget:SetAllowDrop(true)
+    end
+
+    local prior_mouse_click = widget.MouseClick
+    widget.MouseClick = function(sender, args)
+        if args ~= nil and args.Button == Turbine.UI.MouseButton.Right then
+            owner:_show_widget_menu(widget)
+            return
+        end
+        if prior_mouse_click ~= nil then
+            prior_mouse_click(sender, args)
+        end
+    end
+
+    widget.DragDrop = function(_, args)
+        owner:_handle_drag_drop(args)
+    end
+end
+
 local function _zone_widgets_contains_x(widgets, mouse_x)
     if widgets == nil or #widgets == 0 or type(mouse_x) ~= "number" then
         return false
@@ -374,9 +452,12 @@ function StatusBarWindow:_rebuild_widgets(sb)
 
             if cfg ~= nil and (widget_key == "item" or cfg.enabled == true) then
                 local inst = _widget_factory(widget_key, cfg.width, sb.height, sb.font, cfg, entry)
+                inst._status_bar_zone_key = zone_key
+                inst._status_bar_visible_index = i
                 inst:SetParent(self)
                 inst:SetZOrder(1)
                 inst:SetVisible(false)
+                _bind_widget_interactions(self, inst, _get_widget_menu_title(widget_key, entry))
                 table.insert(self._widgets, inst)
                 table.insert(self._update_widgets, inst)
                 table.insert(dst, inst)
@@ -464,6 +545,66 @@ function StatusBarWindow:_handle_drag_drop(args)
 
     _sync_status_bar_after_raw_edit()
     _write_status_bar_message(string.format("Added %s to the %s status bar zone.", token, zone_key))
+end
+
+function StatusBarWindow:_show_widget_menu(widget)
+    if widget == nil then
+        return
+    end
+
+    local menu = Turbine.UI.ContextMenu()
+    local items = menu:GetItems()
+
+    items:Add(Turbine.UI.MenuItem(widget._status_bar_menu_title or "", false))
+
+    local remove = Turbine.UI.MenuItem(TR("Remove"))
+    remove.Click = function()
+        self:_remove_widget_instance(widget)
+    end
+    items:Add(remove)
+
+    self._widget_context_menu = menu
+    menu:ShowMenu()
+end
+
+function StatusBarWindow:_remove_widget_instance(widget)
+    local zone_key = widget ~= nil and widget._status_bar_zone_key or nil
+    local visible_index = widget ~= nil and widget._status_bar_visible_index or nil
+    local raw = _G.loaded_settings
+    local raw_sb = raw ~= nil and raw.status_bar or nil
+    if raw_sb == nil or zone_key == nil then
+        return
+    end
+
+    raw_sb.layout = raw_sb.layout or {}
+    raw_sb.layout.left = raw_sb.layout.left or ""
+    raw_sb.layout.center = raw_sb.layout.center or ""
+    raw_sb.layout.right = raw_sb.layout.right or ""
+
+    local updated, removed_token = _remove_visible_layout_token_at_index(raw_sb.layout[zone_key], visible_index)
+    if removed_token == nil then
+        return
+    end
+    raw_sb.layout[zone_key] = updated
+
+    local inner = tostring(removed_token):match("^%%([^%%]+)%%$")
+    local item_name = inner ~= nil and S.parse_status_bar_item_name(inner) or nil
+    if item_name ~= nil and type(raw_sb.item_registry) == "table" then
+        local combined_layout = table.concat({
+            tostring(raw_sb.layout.left or ""),
+            tostring(raw_sb.layout.center or ""),
+            tostring(raw_sb.layout.right or ""),
+        }, " ")
+        if S.status_bar_layout_has_item(combined_layout, item_name) ~= true then
+            local key = S.make_status_bar_item_registry_key(item_name)
+            if key ~= nil then
+                raw_sb.item_registry[key] = nil
+            end
+        end
+    end
+
+    _sync_status_bar_after_raw_edit()
+    _write_status_bar_message(string.format("Removed %s from the status bar.", widget._status_bar_menu_title or "widget"))
 end
 
 function StatusBarWindow:_sync_display_width(sb)
