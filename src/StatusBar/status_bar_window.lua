@@ -13,6 +13,10 @@ local SHORTCUT_WIDGETS = {
     bestiary_text = { shortcut_key = "bestiary", display_mode = "text" },
 }
 
+local DRAG_PREVIEW_FILL_COLOR = Turbine.UI.Color(0.28, 1.00, 1.00, 1.00)
+local DRAG_PREVIEW_EDGE_COLOR = Turbine.UI.Color(0.95, 1.00, 1.00, 1.00)
+local DRAG_PREVIEW_EDGE_W = 2
+
 local function _write_status_bar_message(text)
     if Turbine ~= nil and Turbine.Shell ~= nil and Turbine.Shell.WriteLine ~= nil then
         Turbine.Shell.WriteLine("<rgb=#3399FA>LUI</rgb>: " .. tostring(text or ""))
@@ -178,8 +182,33 @@ local function _bind_widget_interactions(owner, widget, menu_title)
     end
 
     widget.DragDrop = function(_, args)
-        owner:_handle_drag_drop(args)
+        owner:_handle_drag_drop(widget, args)
     end
+    widget.DragEnter = function(_, args)
+        owner:_handle_drag_enter(widget, args)
+    end
+    widget.DragLeave = function(_, args)
+        owner:_handle_drag_leave(widget, args)
+    end
+
+    local prior_mouse_move = widget.MouseMove
+    widget.MouseMove = function(sender, args)
+        owner:_handle_drag_move(widget, args)
+        if prior_mouse_move ~= nil then
+            prior_mouse_move(sender, args)
+        end
+    end
+end
+
+local function _sum_zone_width_with_preview(widgets, gap, preview_width)
+    local total = S.sum_widget_width(widgets, gap)
+    if type(preview_width) == "number" and preview_width > 0 then
+        if widgets ~= nil and #widgets > 0 then
+            total = total + gap
+        end
+        total = total + preview_width
+    end
+    return total
 end
 
 local function _zone_widgets_contains_x(widgets, mouse_x)
@@ -323,6 +352,42 @@ function StatusBarWindow:Constructor()
     self._zone_widgets_left = {}
     self._zone_widgets_center = {}
     self._zone_widgets_right = {}
+    self._drag_preview_details = nil
+    self._drag_preview_next_at = 0
+    self._drag_preview_zone_key = nil
+    self._drag_preview_insert_index = nil
+    self._drag_preview_window = Turbine.UI.Window()
+    self._drag_preview_window:SetMouseVisible(false)
+    self._drag_preview_window:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self._drag_preview_window:SetVisible(true)
+    self._drag_preview_window:SetZOrder(200)
+
+    self._drag_preview_fill = Turbine.UI.Control()
+    self._drag_preview_fill:SetParent(self._drag_preview_window)
+    self._drag_preview_fill:SetMouseVisible(false)
+    self._drag_preview_fill:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self._drag_preview_fill:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self._drag_preview_fill:SetBackColor(DRAG_PREVIEW_FILL_COLOR)
+    self._drag_preview_fill:SetVisible(false)
+    self._drag_preview_fill:SetZOrder(100)
+
+    self._drag_preview_edge = Turbine.UI.Control()
+    self._drag_preview_edge:SetParent(self._drag_preview_window)
+    self._drag_preview_edge:SetMouseVisible(false)
+    self._drag_preview_edge:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self._drag_preview_edge:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self._drag_preview_edge:SetBackColor(DRAG_PREVIEW_EDGE_COLOR)
+    self._drag_preview_edge:SetVisible(false)
+    self._drag_preview_edge:SetZOrder(101)
+
+    self._drag_preview_trailing_edge = Turbine.UI.Control()
+    self._drag_preview_trailing_edge:SetParent(self._drag_preview_window)
+    self._drag_preview_trailing_edge:SetMouseVisible(false)
+    self._drag_preview_trailing_edge:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self._drag_preview_trailing_edge:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self._drag_preview_trailing_edge:SetBackColor(DRAG_PREVIEW_EDGE_COLOR)
+    self._drag_preview_trailing_edge:SetVisible(false)
+    self._drag_preview_trailing_edge:SetZOrder(101)
 
     self:SetMouseVisible(false)
     self:SetVisible(true)
@@ -331,8 +396,17 @@ function StatusBarWindow:Constructor()
     if self.SetAllowDrop ~= nil then
         self:SetAllowDrop(true)
     end
+    self.DragEnter = function(_, args)
+        self:_handle_drag_enter(self, args)
+    end
+    self.DragLeave = function(_, args)
+        self:_handle_drag_leave(self, args)
+    end
     self.DragDrop = function(_, args)
-        self:_handle_drag_drop(args)
+        self:_handle_drag_drop(self, args)
+    end
+    self.MouseMove = function(_, args)
+        self:_handle_drag_move(self, args)
     end
 
     self:apply_settings()
@@ -354,6 +428,11 @@ end
 
 function StatusBarWindow:Update()
     local now = Turbine.Engine.GetGameTime()
+
+    if self._drag_preview_details ~= nil and now >= (self._drag_preview_next_at or 0) then
+        self:_refresh_drag_preview_target_from_mouse()
+        self:_update_drag_preview(now, false)
+    end
 
     if now >= (self._display_check_due_at or 0) then
         self._display_check_due_at = now + 0.5
@@ -377,6 +456,12 @@ function StatusBarWindow:destroy()
     self:SetWantsUpdates(false)
     self:SetVisible(false)
     self:_clear_widgets()
+    if self._drag_preview_fill ~= nil then self._drag_preview_fill:SetParent(nil) end
+    if self._drag_preview_edge ~= nil then self._drag_preview_edge:SetParent(nil) end
+    if self._drag_preview_trailing_edge ~= nil then self._drag_preview_trailing_edge:SetParent(nil) end
+    if self._drag_preview_window ~= nil then
+        self._drag_preview_window:SetVisible(false)
+    end
 end
 
 function StatusBarWindow:_clear_widgets()
@@ -400,9 +485,17 @@ function StatusBarWindow:_layout_widgets(sb)
     local center_widgets = self._zone_widgets_center
     local right_widgets = self._zone_widgets_right
 
-    local left_w = S.sum_widget_width(left_widgets, gap)
-    local center_w = S.sum_widget_width(center_widgets, gap)
-    local right_w = S.sum_widget_width(right_widgets, gap)
+    local preview_zone_key = self._drag_preview_zone_key
+    local preview_insert_index = self._drag_preview_insert_index
+    local preview_width = self._drag_preview_details ~= nil and self:_get_drag_preview_width() or nil
+
+    local left_preview_w = preview_zone_key == "left" and preview_width or nil
+    local center_preview_w = preview_zone_key == "center" and preview_width or nil
+    local right_preview_w = preview_zone_key == "right" and preview_width or nil
+
+    local left_w = _sum_zone_width_with_preview(left_widgets, gap, left_preview_w)
+    local center_w = _sum_zone_width_with_preview(center_widgets, gap, center_preview_w)
+    local right_w = _sum_zone_width_with_preview(right_widgets, gap, right_preview_w)
 
     local x_left = pad
     local x_center = math.floor((bar_w - center_w) / 2)
@@ -410,9 +503,14 @@ function StatusBarWindow:_layout_widgets(sb)
     if x_center < pad then x_center = pad end
     if x_right < pad then x_right = pad end
 
-    local function place(list, x0)
+    local function place(zone_key, list, x0)
         local x = x0
+        local zone_preview_w = zone_key == preview_zone_key and preview_width or nil
+        local zone_preview_index = zone_key == preview_zone_key and preview_insert_index or nil
         for i = 1, #list do
+            if zone_preview_w ~= nil and zone_preview_index == i then
+                x = x + zone_preview_w + gap
+            end
             local w = list[i]
             local y = math.floor((bar_h - w:GetHeight()) / 2)
             if y < 0 then y = 0 end
@@ -421,9 +519,13 @@ function StatusBarWindow:_layout_widgets(sb)
         end
     end
 
-    place(left_widgets, x_left)
-    place(center_widgets, x_center)
-    place(right_widgets, x_right)
+    place("left", left_widgets, x_left)
+    place("center", center_widgets, x_center)
+    place("right", right_widgets, x_right)
+
+    if self._drag_preview_details ~= nil then
+        self:_update_drag_preview(Turbine.Engine.GetGameTime(), true)
+    end
 end
 
 function StatusBarWindow:_rebuild_widgets(sb)
@@ -481,17 +583,22 @@ function StatusBarWindow:_rebuild_widgets(sb)
 end
 
 function StatusBarWindow:_get_drop_target()
-    local mouse_x = nil
-    if self.GetMousePosition ~= nil then
-        mouse_x = select(1, self:GetMousePosition())
+    local mouse_x = select(1, self:_get_mouse_position_in_bar())
+    return self:_get_drop_target_from_mouse_x(mouse_x)
+end
+
+function StatusBarWindow:_get_drop_target_from_mouse_x(mouse_x)
+    local x = mouse_x
+    if type(x) ~= "number" then
+        x = tonumber(x)
     end
 
-    local zone_key = _resolve_drop_zone_key(self:GetWidth(), mouse_x)
-    if _zone_widgets_contains_x(self._zone_widgets_left, mouse_x) == true then
+    local zone_key = _resolve_drop_zone_key(self:GetWidth(), x)
+    if _zone_widgets_contains_x(self._zone_widgets_left, x) == true then
         zone_key = "left"
-    elseif _zone_widgets_contains_x(self._zone_widgets_center, mouse_x) == true then
+    elseif _zone_widgets_contains_x(self._zone_widgets_center, x) == true then
         zone_key = "center"
-    elseif _zone_widgets_contains_x(self._zone_widgets_right, mouse_x) == true then
+    elseif _zone_widgets_contains_x(self._zone_widgets_right, x) == true then
         zone_key = "right"
     end
 
@@ -502,10 +609,278 @@ function StatusBarWindow:_get_drop_target()
         widgets = self._zone_widgets_right
     end
 
-    return zone_key, _zone_insertion_index(widgets, mouse_x)
+    return zone_key, _zone_insertion_index(widgets, x)
 end
 
-function StatusBarWindow:_handle_drag_drop(args)
+function StatusBarWindow:_get_drag_preview_refresh_interval()
+    local fps = _G.settings ~= nil and _G.settings.global ~= nil and _G.settings.global.refresh_rate or nil
+    if type(fps) ~= "number" then
+        fps = tonumber(fps)
+    end
+    if fps == nil or fps <= 0 then
+        fps = 30
+    end
+    return 1 / fps
+end
+
+function StatusBarWindow:_hide_drag_preview()
+    local had_preview = self._drag_preview_details ~= nil or self._drag_preview_zone_key ~= nil or
+        self._drag_preview_insert_index ~= nil
+    self._drag_preview_details = nil
+    self._drag_preview_next_at = 0
+    self._drag_preview_zone_key = nil
+    self._drag_preview_insert_index = nil
+    self._drag_preview_fill:SetVisible(false)
+    self._drag_preview_edge:SetVisible(false)
+    self._drag_preview_trailing_edge:SetVisible(false)
+    if had_preview == true then
+        self:_relayout_after_drag_preview_change()
+    end
+end
+
+function StatusBarWindow:_can_preview_drag_item()
+    local raw = _G.loaded_settings
+    local raw_sb = raw ~= nil and raw.status_bar or nil
+    return raw_sb ~= nil
+end
+
+function StatusBarWindow:_relayout_after_drag_preview_change()
+    local sb = _G.settings ~= nil and _G.settings.status_bar or nil
+    if sb ~= nil then
+        self:_layout_widgets(sb)
+    end
+end
+
+function StatusBarWindow:_resolve_drag_target(source, args)
+    if source ~= nil and source ~= self and source._status_bar_zone_key ~= nil and
+        source._status_bar_visible_index ~= nil then
+        local insert_index = source._status_bar_visible_index
+        local x = args ~= nil and args.X or nil
+        if type(x) ~= "number" then
+            x = tonumber(x)
+        end
+        if type(x) == "number" and x >= (source:GetWidth() / 2) then
+            insert_index = insert_index + 1
+        end
+        return source._status_bar_zone_key, insert_index
+    end
+
+    local x = args ~= nil and args.X or nil
+    if type(x) ~= "number" then
+        x = tonumber(x)
+    end
+    if x == nil then
+        return self:_get_drop_target()
+    end
+    return self:_get_drop_target_from_mouse_x(x)
+end
+
+function StatusBarWindow:_handle_drag_enter(source, args)
+    local drag_drop_info = args ~= nil and args.DragDropInfo or nil
+    local details = S.extract_item_details_from_drag_drop_info(drag_drop_info)
+    if drag_drop_info ~= nil and details == nil then
+        self:_hide_drag_preview()
+        return
+    end
+    if details == nil then
+        details = { name = "" }
+    end
+    if self:_can_preview_drag_item() ~= true then
+        self:_hide_drag_preview()
+        return
+    end
+
+    local zone_key, insert_index = self:_resolve_drag_target(source, args)
+    if zone_key == nil or insert_index == nil then
+        self:_hide_drag_preview()
+        return
+    end
+
+    self._drag_preview_details = details
+    self._drag_preview_zone_key = zone_key
+    self._drag_preview_insert_index = insert_index
+    self:_relayout_after_drag_preview_change()
+end
+
+function StatusBarWindow:_handle_drag_leave(source, _)
+    if source == self then
+        self:_hide_drag_preview()
+    end
+end
+
+function StatusBarWindow:_handle_drag_move(source, args)
+    if self._drag_preview_details == nil then
+        return
+    end
+
+    local zone_key, insert_index = self:_resolve_drag_target(source, args)
+    if zone_key == nil or insert_index == nil then
+        return
+    end
+
+    if zone_key == self._drag_preview_zone_key and insert_index == self._drag_preview_insert_index then
+        return
+    end
+
+    self._drag_preview_zone_key = zone_key
+    self._drag_preview_insert_index = insert_index
+
+    local now = Turbine.Engine.GetGameTime()
+    if now >= (self._drag_preview_next_at or 0) then
+        self._drag_preview_next_at = now + self:_get_drag_preview_refresh_interval()
+        self:_relayout_after_drag_preview_change()
+    end
+end
+
+function StatusBarWindow:_refresh_drag_preview_target_from_mouse()
+    if self._drag_preview_details == nil then
+        return
+    end
+
+    local x, y = self:_get_mouse_position_in_bar()
+    local bar_w, bar_h = self:GetSize()
+    if type(x) ~= "number" or type(y) ~= "number" then
+        return
+    end
+    if x < 0 or x > bar_w or y < 0 or y > bar_h then
+        return
+    end
+
+    local zone_key, insert_index = self:_get_drop_target_from_mouse_x(x)
+    if zone_key == nil or insert_index == nil then
+        return
+    end
+
+    if zone_key == self._drag_preview_zone_key and insert_index == self._drag_preview_insert_index then
+        return
+    end
+
+    self._drag_preview_zone_key = zone_key
+    self._drag_preview_insert_index = insert_index
+    self:_relayout_after_drag_preview_change()
+end
+
+function StatusBarWindow:_get_mouse_position_in_bar()
+    if Turbine ~= nil and Turbine.UI ~= nil and Turbine.UI.Display ~= nil and
+        Turbine.UI.Display.GetMousePosition ~= nil and self.PointToClient ~= nil then
+        local sx, sy = Turbine.UI.Display.GetMousePosition()
+        if type(sx) == "number" and type(sy) == "number" then
+            return self:PointToClient(sx, sy)
+        end
+    end
+
+    if self.GetMousePosition ~= nil then
+        return self:GetMousePosition()
+    end
+
+    return nil, nil
+end
+
+function StatusBarWindow:_get_drag_preview_width()
+    local item_cfg = _G.settings ~= nil and _G.settings.status_bar ~= nil and _G.settings.status_bar.widgets ~= nil and
+        _G.settings.status_bar.widgets.item or nil
+    local width = item_cfg ~= nil and item_cfg.width or nil
+    if type(width) ~= "number" then
+        width = tonumber(width)
+    end
+    if width == nil or width < 1 then
+        width = math.max(24, self:GetHeight())
+    end
+    return width
+end
+
+function StatusBarWindow:_get_drag_preview_x(zone_key, insert_index, preview_width)
+    local sb = _G.settings.status_bar
+    local gap = sb.gap
+    local pad = sb.padding
+    local bar_w = self:GetWidth()
+
+    local left_preview_w = zone_key == "left" and preview_width or nil
+    local center_preview_w = zone_key == "center" and preview_width or nil
+    local right_preview_w = zone_key == "right" and preview_width or nil
+
+    local left_w = _sum_zone_width_with_preview(self._zone_widgets_left, gap, left_preview_w)
+    local center_w = _sum_zone_width_with_preview(self._zone_widgets_center, gap, center_preview_w)
+    local right_w = _sum_zone_width_with_preview(self._zone_widgets_right, gap, right_preview_w)
+
+    local x_left = pad
+    local x_center = math.floor((bar_w - center_w) / 2)
+    local x_right = bar_w - pad - right_w
+    if x_center < pad then x_center = pad end
+    if x_right < pad then x_right = pad end
+
+    local widgets = self._zone_widgets_left
+    local x = x_left
+    if zone_key == "center" then
+        widgets = self._zone_widgets_center
+        x = x_center
+    elseif zone_key == "right" then
+        widgets = self._zone_widgets_right
+        x = x_right
+    end
+
+    local wanted_index = insert_index
+    if type(wanted_index) ~= "number" then
+        wanted_index = tonumber(wanted_index)
+    end
+    if wanted_index == nil or wanted_index < 1 then
+        wanted_index = 1
+    end
+
+    for i = 1, #widgets + 1 do
+        if i == wanted_index then
+            return x
+        end
+        local widget = widgets[i]
+        if widget == nil then
+            return x
+        end
+        x = x + widget:GetWidth() + gap
+    end
+
+    return x
+end
+
+function StatusBarWindow:_update_drag_preview(now, force)
+    if self._drag_preview_details == nil then
+        self._drag_preview_fill:SetVisible(false)
+        self._drag_preview_edge:SetVisible(false)
+        self._drag_preview_trailing_edge:SetVisible(false)
+        return
+    end
+
+    local zone_key = self._drag_preview_zone_key
+    local insert_index = self._drag_preview_insert_index
+    if zone_key == nil or insert_index == nil then
+        self:_hide_drag_preview()
+        return
+    end
+
+    if force ~= true then
+        self._drag_preview_next_at = now + self:_get_drag_preview_refresh_interval()
+    end
+
+    local preview_width = self:_get_drag_preview_width()
+    local preview_x = self:_get_drag_preview_x(zone_key, insert_index, preview_width)
+    local preview_y = self:GetHeight() > 2 and 1 or 0
+    local preview_h = math.max(1, self:GetHeight() - (preview_y * 2))
+
+    self._drag_preview_fill:SetPosition(preview_x, preview_y)
+    self._drag_preview_fill:SetSize(preview_width, preview_h)
+    self._drag_preview_fill:SetVisible(true)
+
+    self._drag_preview_edge:SetPosition(preview_x, 0)
+    self._drag_preview_edge:SetSize(DRAG_PREVIEW_EDGE_W, self:GetHeight())
+    self._drag_preview_edge:SetVisible(true)
+
+    self._drag_preview_trailing_edge:SetPosition(preview_x + preview_width - DRAG_PREVIEW_EDGE_W, 0)
+    self._drag_preview_trailing_edge:SetSize(DRAG_PREVIEW_EDGE_W, self:GetHeight())
+    self._drag_preview_trailing_edge:SetVisible(true)
+end
+
+function StatusBarWindow:_handle_drag_drop(source, args)
+    self:_hide_drag_preview()
+
     local drag_drop_info = args ~= nil and args.DragDropInfo or nil
     local details = S.extract_item_details_from_drag_drop_info(drag_drop_info)
     if details == nil or details.name == nil then
@@ -539,7 +914,7 @@ function StatusBarWindow:_handle_drag_drop(args)
         return
     end
 
-    local zone_key, insert_index = self:_get_drop_target()
+    local zone_key, insert_index = self:_resolve_drag_target(source, args)
     raw_sb.layout[zone_key] = _insert_layout_token_at_visible_index(raw_sb.layout[zone_key], token, insert_index)
     S.set_status_bar_item_registry_icon(raw_sb.item_registry, details.name, details.icon_image_id)
 
@@ -616,5 +991,9 @@ function StatusBarWindow:_sync_display_width(sb)
     self._last_display_w = display_w
     self:SetPosition(0, 0)
     self:SetSize(display_w, sb.height)
+    if self._drag_preview_window ~= nil then
+        self._drag_preview_window:SetPosition(0, 0)
+        self._drag_preview_window:SetSize(display_w, sb.height)
+    end
     self:_layout_widgets(sb)
 end
