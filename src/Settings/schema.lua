@@ -655,6 +655,8 @@ function _G.ensure_loaded_settings()
         sb.layout.right = "%inventory% %gold%"
     end
 
+    sb.item_registry = sb.item_registry or {}
+
     local widgets = sb.widgets
     local time_local = widgets.time_local
     if time_local.width == nil then time_local.width = 40 end
@@ -705,6 +707,12 @@ function _G.ensure_loaded_settings()
             "Embers of Enchantment",
         }
     end
+
+    local item_widget = widgets.item or {}
+    if item_widget.width == nil then item_widget.width = 56 end
+    widgets.item = {
+        width = item_widget.width,
+    }
 
     if widgets.shortcut_icon.width == nil then widgets.shortcut_icon.width = 20 end
     if widgets.shortcut_icon.height == nil then widgets.shortcut_icon.height = 20 end

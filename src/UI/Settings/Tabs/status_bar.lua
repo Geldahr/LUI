@@ -574,13 +574,15 @@ function StatusBar.create_controls(window, ui)
         TR("  %durability% - equipped wear average% (weakest%)"),
         TR("  %gold% / %money% - money (g/s/c)"),
         TR("  %wallet% - selected wallet items"),
+        TR("  %item:[Simple Fish]% - tracked total for one inventory item"),
         TR("  %config:icon% / %config:text% - toggle configuration window"),
         TR("  %bestiary:icon% / %bestiary:text% - toggle bestiary window"),
         TR("  %assets:icon% / %assets:text% - toggle assets window"),
         "",
+        TR("Drag an item from the inventory window onto the status bar to add it."),
         TR("Closing config via shortcut acts like Cancel."),
         TR("Order matters. Unknown tokens are ignored."),
-        TR("Example: %config:icon% %time% %assets:text%"),
+        TR("Example: %config:icon% %time% %item:[Simple Fish]% %assets:text%"),
     }, "\n")
 
     ui.add_text("sb_layout_left", TR("Left layout"), false, layout_help, true)
@@ -614,6 +616,8 @@ function StatusBar.create_controls(window, ui)
     ui.add_text("sb_wallet_width", TR("Width"))
     ui.add_dropdown("sb_wallet_text_alignment", TR("Text alignment"), ui.text_alignment_labels, ui.text_alignment_values)
     _create_wallet_selector(window, ui, "sb_wallet_items")
+
+    ui.add_text("sb_item_width", TR("Width"))
 
     ui.add_text("sb_shortcut_icon_width", TR("Icon width"))
     ui.add_text("sb_shortcut_icon_height", TR("Icon height"))
@@ -696,6 +700,10 @@ function StatusBar.register(window, ui)
         window.controls.sb_wallet_items,
 
         ui.add_hr(),
+        ui.add_title(TR("Tracked item")),
+        window.controls.sb_item_width,
+
+        ui.add_hr(),
         ui.add_title(TR("Shortcut buttons")),
         window.controls.sb_shortcut_icon_width,
         window.controls.sb_shortcut_icon_height,
@@ -757,6 +765,8 @@ function StatusBar.load(window, s, ui)
     window.controls.sb_wallet_width.tb:SetText(tostring(wallet.width))
     window.controls.sb_wallet_text_alignment:set_value(wallet.text_alignment)
     window.controls.sb_wallet_items:set_items(wallet.items)
+
+    window.controls.sb_item_width.tb:SetText(tostring(widgets.item.width))
 
     window.controls.sb_shortcut_icon_width.tb:SetText(tostring(widgets.shortcut_icon.width))
     window.controls.sb_shortcut_icon_height.tb:SetText(tostring(widgets.shortcut_icon.height))
@@ -831,6 +841,9 @@ function StatusBar.apply(window, s, ui)
     if wallet_w ~= nil then widgets.wallet.width = wallet_w end
     widgets.wallet.text_alignment = window.controls.sb_wallet_text_alignment:get_value()
     widgets.wallet.items = window.controls.sb_wallet_items:get_items()
+
+    local item_w = tonumber(window.controls.sb_item_width.tb:GetText())
+    if item_w ~= nil then widgets.item.width = item_w end
 
     local shortcut_icon_w = tonumber(window.controls.sb_shortcut_icon_width.tb:GetText())
     if shortcut_icon_w ~= nil then widgets.shortcut_icon.width = shortcut_icon_w end

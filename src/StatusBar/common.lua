@@ -25,6 +25,20 @@ S.BESTIARY_SHORTCUT_ICON = 0x410031FB
 
 S.SHORTCUT_BORDER_COLOR = Turbine.UI.Color(0.90, 0.28, 0.35, 0.45)
 S.SHORTCUT_BORDER_HOVER_COLOR = Turbine.UI.Color(0.98, 0.38, 0.46, 0.56)
+S.STATUS_BAR_LAYOUT_TOKENS = {
+    time = "time_local",
+    inventory = "inventory_space",
+    durability = "equipment_wear",
+    gold = "money",
+    money = "money",
+    wallet = "wallet",
+    ["config:icon"] = "config_icon",
+    ["config:text"] = "config_text",
+    ["assets:icon"] = "assets_icon",
+    ["assets:text"] = "assets_text",
+    ["bestiary:icon"] = "bestiary_icon",
+    ["bestiary:text"] = "bestiary_text",
+}
 
 S.ITEM_WEAR_STATE = Turbine.Gameplay.ItemWearState or {}
 S.EQUIPMENT_SLOTS = {
@@ -424,6 +438,194 @@ function S.wallet_item_matches(entry, wallet_name)
         return false
     end
     return entry == wallet_name
+end
+
+function S.normalize_status_bar_item_name(value)
+    local name = _trim(value)
+    if name == "" then
+        return nil
+    end
+    return name
+end
+
+function S.make_status_bar_item_registry_key(item_name)
+    local name = S.normalize_status_bar_item_name(item_name)
+    if name == nil then
+        return nil
+    end
+    return string.lower(name)
+end
+
+function S.parse_status_bar_item_name(token)
+    local text = _trim(token)
+    local inner = text:match("^item:%[(.*)%]$")
+    if inner == nil then
+        return nil
+    end
+    return S.normalize_status_bar_item_name(inner)
+end
+
+function S.make_status_bar_item_token(item_name)
+    local name = S.normalize_status_bar_item_name(item_name)
+    if name == nil then
+        return nil
+    end
+    return "%item:[" .. name .. "]%"
+end
+
+function S.get_status_bar_item_registry_icon(registry, item_name)
+    if type(registry) ~= "table" then
+        return nil
+    end
+
+    local key = S.make_status_bar_item_registry_key(item_name)
+    if key == nil then
+        return nil
+    end
+
+    local value = registry[key]
+    if type(value) == "table" then
+        value = value.icon_image_id or value.icon
+    end
+
+    if type(value) ~= "number" then
+        value = tonumber(value)
+    end
+    return value
+end
+
+function S.set_status_bar_item_registry_icon(registry, item_name, icon_image_id)
+    if type(registry) ~= "table" then
+        return
+    end
+
+    local key = S.make_status_bar_item_registry_key(item_name)
+    if key == nil then
+        return
+    end
+
+    local icon = icon_image_id
+    if type(icon) ~= "number" then
+        icon = tonumber(icon)
+    end
+    if icon == nil then
+        return
+    end
+
+    registry[key] = icon
+end
+
+function S.is_status_bar_item_entry(entry)
+    return type(entry) == "table" and entry.kind == "item" and entry.name ~= nil
+end
+
+function S.parse_status_bar_layout(text, item_registry)
+    local list = {}
+    local source = tostring(text or "")
+
+    for token in source:gmatch("%%([^%%]+)%%") do
+        local item_name = S.parse_status_bar_item_name(token)
+        if item_name ~= nil then
+            list[#list + 1] = {
+                kind = "item",
+                name = item_name,
+                token = S.make_status_bar_item_token(item_name),
+                icon_image_id = S.get_status_bar_item_registry_icon(item_registry, item_name),
+            }
+        else
+            local widget_key = S.STATUS_BAR_LAYOUT_TOKENS[string.lower(_trim(token))]
+            if widget_key ~= nil then
+                list[#list + 1] = widget_key
+            end
+        end
+    end
+
+    return list
+end
+
+function S.status_bar_layout_has_item(text, item_name)
+    local wanted_key = S.make_status_bar_item_registry_key(item_name)
+    if wanted_key == nil then
+        return false
+    end
+
+    local source = tostring(text or "")
+    for token in source:gmatch("%%([^%%]+)%%") do
+        local name = S.parse_status_bar_item_name(token)
+        if name ~= nil and S.make_status_bar_item_registry_key(name) == wanted_key then
+            return true
+        end
+    end
+
+    return false
+end
+
+function S.append_status_bar_layout_token(text, token)
+    local suffix = _trim(token)
+    if suffix == "" then
+        return tostring(text or "")
+    end
+
+    local prefix = _trim(text)
+    if prefix == "" then
+        return suffix
+    end
+
+    return prefix .. " " .. suffix
+end
+
+function S.extract_item_details_from_shortcut(shortcut)
+    if shortcut == nil then
+        return nil
+    end
+
+    if shortcut.GetType ~= nil and Turbine ~= nil and Turbine.UI ~= nil and Turbine.UI.Lotro ~= nil and
+        Turbine.UI.Lotro.ShortcutType ~= nil then
+        local shortcut_type = shortcut:GetType()
+        if shortcut_type ~= nil and shortcut_type ~= Turbine.UI.Lotro.ShortcutType.Item then
+            return nil
+        end
+    end
+
+    local item = shortcut.GetItem ~= nil and shortcut:GetItem() or nil
+    if item == nil then
+        return nil
+    end
+
+    local item_info = item.GetItemInfo ~= nil and item:GetItemInfo() or nil
+    local name = item.GetName ~= nil and item:GetName() or nil
+    if (name == nil or name == "") and item_info ~= nil and item_info.GetName ~= nil then
+        name = item_info:GetName()
+    end
+    name = S.normalize_status_bar_item_name(name)
+    if name == nil then
+        return nil
+    end
+
+    local icon_image_id = nil
+    if item_info ~= nil and item_info.GetIconImageID ~= nil then
+        icon_image_id = item_info:GetIconImageID()
+    end
+    if icon_image_id == nil and item_info ~= nil and item_info.GetBackgroundImageID ~= nil then
+        icon_image_id = item_info:GetBackgroundImageID()
+    end
+    if type(icon_image_id) ~= "number" then
+        icon_image_id = tonumber(icon_image_id)
+    end
+
+    return {
+        name = name,
+        item = item,
+        item_info = item_info,
+        icon_image_id = icon_image_id,
+    }
+end
+
+function S.extract_item_details_from_drag_drop_info(drag_drop_info)
+    if drag_drop_info == nil or drag_drop_info.GetShortcut == nil then
+        return nil
+    end
+    return S.extract_item_details_from_shortcut(drag_drop_info:GetShortcut())
 end
 
 function S.format_hhmm(date, time_format)

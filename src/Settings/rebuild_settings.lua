@@ -3,6 +3,8 @@ import "LUI.src.Utils.token_format"
 import "LUI.src.Settings.enums"
 import "LUI.src.StatusBar.common"
 
+local S = _G.STATUS_BAR_COMMON
+
 function _G.rebuild_settings()
     local raw = _G.loaded_settings
     local scaling = raw.global.scale
@@ -39,6 +41,7 @@ function _G.rebuild_settings()
             bg = {},
             font = {},
             zones = { left = {}, center = {}, right = {} },
+            item_registry = {},
             widgets = {},
         },
         self = {
@@ -328,20 +331,6 @@ function _G.rebuild_settings()
     sb.font.color = raw_sb.font.color
     sb.font.outline_color = raw_sb.font.outline_color
 
-    local STATUS_BAR_LAYOUT_TOKENS = {
-        time = "time_local",
-        inventory = "inventory_space",
-        durability = "equipment_wear",
-        gold = "money",
-        money = "money",
-        wallet = "wallet",
-        ["config:icon"] = "config_icon",
-        ["config:text"] = "config_text",
-        ["assets:icon"] = "assets_icon",
-        ["assets:text"] = "assets_text",
-        ["bestiary:icon"] = "bestiary_icon",
-        ["bestiary:text"] = "bestiary_text",
-    }
     local STATUS_BAR_SHORTCUT_CONFIGS = {
         config_icon = "shortcut_icon",
         assets_icon = "shortcut_icon",
@@ -351,21 +340,11 @@ function _G.rebuild_settings()
         bestiary_text = "shortcut_text",
     }
 
-    local function parse_layout(text)
-        local list = {}
-        for token in text:gmatch("%%([%w_:]+)%%") do
-            local widget_key = STATUS_BAR_LAYOUT_TOKENS[string.lower(token)]
-            if widget_key ~= nil then
-                table.insert(list, widget_key)
-            end
-        end
-        return list
-    end
-
     sb.layout = raw_sb.layout
-    sb.zones.left = parse_layout(raw_sb.layout.left)
-    sb.zones.center = parse_layout(raw_sb.layout.center)
-    sb.zones.right = parse_layout(raw_sb.layout.right)
+    sb.item_registry = raw_sb.item_registry or {}
+    sb.zones.left = S.parse_status_bar_layout(raw_sb.layout.left, sb.item_registry)
+    sb.zones.center = S.parse_status_bar_layout(raw_sb.layout.center, sb.item_registry)
+    sb.zones.right = S.parse_status_bar_layout(raw_sb.layout.right, sb.item_registry)
 
     local function list_has(list, value)
         for i = 1, #list do
@@ -413,6 +392,9 @@ function _G.rebuild_settings()
         width = scaled_int(raw_sb.widgets.wallet.width),
         items = _G.STATUS_BAR_COMMON.parse_wallet_item_list(raw_sb.widgets.wallet.items),
         content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.wallet.text_alignment],
+    }
+    sb.widgets.item = {
+        width = scaled_int(raw_sb.widgets.item.width),
     }
 
     local function build_shortcut_widget(widget_key)
