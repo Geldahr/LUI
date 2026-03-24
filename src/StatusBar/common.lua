@@ -834,19 +834,6 @@ function S.wear_state_to_percent(wear_state)
     return S.WEAR_STATE_TO_PERCENT[wear_state]
 end
 
-function S.wear_percent_to_color_key(percent)
-    if percent == nil or percent <= 0 then
-        return "broken"
-    end
-    if percent < 50 then
-        return "damaged"
-    end
-    if percent < 90 then
-        return "worn"
-    end
-    return "pristine"
-end
-
 function S.color_markup(text, color)
     if color == nil then
         return tostring(text or "")

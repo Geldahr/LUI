@@ -604,10 +604,9 @@ function StatusBar.create_controls(window, ui)
     ui.add_checkbox("sb_durability_icon", TR("Icon"))
     ui.add_dropdown("sb_durability_text_alignment", TR("Text alignment"), ui.text_alignment_labels, ui.text_alignment_values)
     ui.add_checkbox("sb_durability_coloring", TR("Enable rich-text coloring"), true)
-    ui.add_text("sb_durability_pristine", TR("Pristine color"), true)
-    ui.add_text("sb_durability_worn", TR("Worn color"), true)
-    ui.add_text("sb_durability_damaged", TR("Damaged color"), true)
-    ui.add_text("sb_durability_broken", TR("Broken color"), true)
+    ui.add_text("sb_durability_green", TR("Green color"), true)
+    ui.add_text("sb_durability_yellow", TR("Yellow color"), true)
+    ui.add_text("sb_durability_red", TR("Red color"), true)
 
     ui.add_text("sb_money_width", TR("Width"))
     ui.add_checkbox("sb_money_icon", TR("Icon"))
@@ -682,10 +681,9 @@ function StatusBar.register(window, ui)
         window.controls.sb_durability_icon,
         window.controls.sb_durability_text_alignment,
         window.controls.sb_durability_coloring,
-        window.controls.sb_durability_pristine,
-        window.controls.sb_durability_worn,
-        window.controls.sb_durability_damaged,
-        window.controls.sb_durability_broken,
+        window.controls.sb_durability_green,
+        window.controls.sb_durability_yellow,
+        window.controls.sb_durability_red,
 
         ui.add_hr(),
         ui.add_title(TR("Money")),
@@ -751,10 +749,9 @@ function StatusBar.load(window, s, ui)
     window.controls.sb_durability_icon.cb:SetChecked(wear.icon == true)
     window.controls.sb_durability_text_alignment:set_value(wear.text_alignment)
     window.controls.sb_durability_coloring.cb:SetChecked(wear.coloring == true)
-    window.controls.sb_durability_pristine.tb:SetText(ui.color_to_hex(wear.color.pristine))
-    window.controls.sb_durability_worn.tb:SetText(ui.color_to_hex(wear.color.worn))
-    window.controls.sb_durability_damaged.tb:SetText(ui.color_to_hex(wear.color.damaged))
-    window.controls.sb_durability_broken.tb:SetText(ui.color_to_hex(wear.color.broken))
+    window.controls.sb_durability_green.tb:SetText(ui.color_to_hex(wear.color.green))
+    window.controls.sb_durability_yellow.tb:SetText(ui.color_to_hex(wear.color.yellow))
+    window.controls.sb_durability_red.tb:SetText(ui.color_to_hex(wear.color.red))
 
     local money = widgets.money
     window.controls.sb_money_width.tb:SetText(tostring(money.width))
@@ -823,14 +820,12 @@ function StatusBar.apply(window, s, ui)
     widgets.equipment_wear.icon = window.controls.sb_durability_icon.cb:IsChecked() == true
     widgets.equipment_wear.text_alignment = window.controls.sb_durability_text_alignment:get_value()
     widgets.equipment_wear.coloring = window.controls.sb_durability_coloring.cb:IsChecked() == true
-    local wear_pristine = ui.hex_to_color(window.controls.sb_durability_pristine.tb:GetText())
-    if wear_pristine ~= nil then widgets.equipment_wear.color.pristine = wear_pristine end
-    local wear_worn = ui.hex_to_color(window.controls.sb_durability_worn.tb:GetText())
-    if wear_worn ~= nil then widgets.equipment_wear.color.worn = wear_worn end
-    local wear_damaged = ui.hex_to_color(window.controls.sb_durability_damaged.tb:GetText())
-    if wear_damaged ~= nil then widgets.equipment_wear.color.damaged = wear_damaged end
-    local wear_broken = ui.hex_to_color(window.controls.sb_durability_broken.tb:GetText())
-    if wear_broken ~= nil then widgets.equipment_wear.color.broken = wear_broken end
+    local wear_green = ui.hex_to_color(window.controls.sb_durability_green.tb:GetText())
+    if wear_green ~= nil then widgets.equipment_wear.color.green = wear_green end
+    local wear_yellow = ui.hex_to_color(window.controls.sb_durability_yellow.tb:GetText())
+    if wear_yellow ~= nil then widgets.equipment_wear.color.yellow = wear_yellow end
+    local wear_red = ui.hex_to_color(window.controls.sb_durability_red.tb:GetText())
+    if wear_red ~= nil then widgets.equipment_wear.color.red = wear_red end
 
     local money_w = tonumber(window.controls.sb_money_width.tb:GetText())
     if money_w ~= nil then widgets.money.width = money_w end

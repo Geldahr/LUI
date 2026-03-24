@@ -110,10 +110,9 @@ function _G.fix_colors()
         end
         if sb.widgets ~= nil and sb.widgets.equipment_wear ~= nil and sb.widgets.equipment_wear.color ~= nil then
             local c = sb.widgets.equipment_wear.color
-            c.pristine = to_color(c.pristine)
-            c.worn = to_color(c.worn)
-            c.damaged = to_color(c.damaged)
-            c.broken = to_color(c.broken)
+            c.green = to_color(c.green)
+            c.yellow = to_color(c.yellow)
+            c.red = to_color(c.red)
         end
     end
 

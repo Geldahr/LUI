@@ -686,10 +686,9 @@ function _G.ensure_loaded_settings()
     end
     if widgets.equipment_wear.coloring == nil then widgets.equipment_wear.coloring = true end
     local wearc = widgets.equipment_wear.color
-    wearc.pristine = wearc.pristine or Turbine.UI.Color(1, 0.411765, 0.741176, 0.372549)
-    wearc.worn = wearc.worn or Turbine.UI.Color(1, 0.913725, 0.870588, 0.019608)
-    wearc.damaged = wearc.damaged or Turbine.UI.Color(1, 0.949020, 0.600000, 0.000000)
-    wearc.broken = wearc.broken or Turbine.UI.Color(1, 0.905882, 0.113725, 0.000000)
+    wearc.green = wearc.green or Turbine.UI.Color(1, 0.411765, 0.741176, 0.372549)
+    wearc.yellow = wearc.yellow or Turbine.UI.Color(1, 0.913725, 0.870588, 0.019608)
+    wearc.red = wearc.red or Turbine.UI.Color(1, 0.905882, 0.113725, 0.000000)
 
     if widgets.money.width == nil then widgets.money.width = 140 end
     if widgets.money.icon == nil then widgets.money.icon = true end

@@ -1,5 +1,6 @@
 local S = _G.STATUS_BAR_COMMON
 local WidgetBase = _G.StatusBarWidgetBase
+local _gradient_morale_color = lui_gradient_morale_color
 
 local EquipmentWearWidget = class(WidgetBase)
 _G.EquipmentWearWidget = EquipmentWearWidget
@@ -168,8 +169,10 @@ function EquipmentWearWidget:_scan(now)
 
     local average = S.round_nearest(sum / count)
     if self.coloring == true then
-        local average_color = self.wear_color[S.wear_percent_to_color_key(average)]
-        local weakest_color = self.wear_color[S.wear_percent_to_color_key(weakest)]
+        local average_color = _gradient_morale_color(average / 100, self.wear_color.green, self.wear_color.yellow,
+            self.wear_color.red)
+        local weakest_color = _gradient_morale_color(weakest / 100, self.wear_color.green, self.wear_color.yellow,
+            self.wear_color.red)
         self:set_text(
             S.color_markup(string.format("%d%%", average), average_color) ..
             " (" .. S.color_markup(string.format("%d%%", weakest), weakest_color) .. ")",
