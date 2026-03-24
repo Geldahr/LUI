@@ -304,11 +304,14 @@ local function _parse_kill_name(message)
 end
 
 local function _parse_drop_name(message)
-    if type(message) ~= "string" or string.find(message, "You have acquired:", 1, true) ~= 1 then
-        return nil
+    local bracketed = nil
+    if string.find(message, "You have acquired:", 1, true) == 1 then
+        bracketed = message:match("%b[]")
+    elseif string.find(message, "Gathered ", 1, true) == 1
+        and string.find(message, " into the ", 1, true) ~= nil then
+        bracketed = message:match("%b[]")
     end
 
-    local bracketed = message:match("%b[]")
     if bracketed == nil then
         return nil
     end
@@ -589,30 +592,23 @@ function Bestiary.Collector:_on_target_changed()
 end
 
 function Bestiary.Collector:_on_chat_received(args)
-    if type(args) ~= "table" then
+    if args.ChatType ~= Turbine.ChatType.Standard and
+        args.ChatType ~= Turbine.ChatType.Death and
+        args.ChatType ~= Turbine.ChatType.SelfLoot then
         return
     end
 
-    local message = args.Message
-    if type(message) ~= "string" then
-        if message ~= nil and message.ToString ~= nil then
-            message = message:ToString()
-        elseif message ~= nil then
-            message = tostring(message)
-        else
-            return
-        end
-    end
-
-    message = _strip_timestamp(message)
+    local message = _strip_timestamp(args.Message)
     if message == "" then
         return
     end
 
-    if _is_bestiary_open() == true then
-        local location = Coords.resolve_location_from_chat(message)
-        if location ~= nil then
-            _apply_location_filter(location)
+    if args.ChatType == Turbine.ChatType.Standard then
+        if _is_bestiary_open() == true then
+            local location = Coords.resolve_location_from_chat(message)
+            if location ~= nil then
+                _apply_location_filter(location)
+            end
         end
     end
 
@@ -620,21 +616,24 @@ function Bestiary.Collector:_on_chat_received(args)
         return
     end
 
-    self:_flush_pending_kills(false)
-
-    local kill_name = _parse_kill_name(message)
-    if kill_name ~= nil then
-        self._pending_kills[#self._pending_kills + 1] = {
-            at = Turbine.Engine.GetGameTime(),
-            name = kill_name,
-            drops = {},
-        }
-        return
+    if args.ChatType == Turbine.ChatType.Death then
+        self:_flush_pending_kills(false)
+        local kill_name = _parse_kill_name(message)
+        if kill_name ~= nil then
+            self._pending_kills[#self._pending_kills + 1] = {
+                at = Turbine.Engine.GetGameTime(),
+                name = kill_name,
+                drops = {},
+            }
+            return
+        end
     end
 
-    local drop_name = _parse_drop_name(message)
-    if drop_name ~= nil and #self._pending_kills > 0 then
-        local record = self._pending_kills[1]
-        record.drops[drop_name] = _to_number(record.drops[drop_name], 0) + 1
+    if args.ChatType == Turbine.ChatType.SelfLoot then
+        local drop_name = _parse_drop_name(message)
+        if drop_name ~= nil and #self._pending_kills > 0 then
+            local record = self._pending_kills[1]
+            record.drops[drop_name] = _to_number(record.drops[drop_name], 0) + 1
+        end
     end
 end
