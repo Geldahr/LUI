@@ -5,17 +5,22 @@ import "LUI.src.StatusBar.Widgets"
 local S = _G.STATUS_BAR_COMMON
 
 local SHORTCUT_WIDGETS = {
-    config_icon = { shortcut_key = "config", display_mode = "icon" },
-    config_text = { shortcut_key = "config", display_mode = "text" },
-    assets_icon = { shortcut_key = "assets", display_mode = "icon" },
-    assets_text = { shortcut_key = "assets", display_mode = "text" },
-    bestiary_icon = { shortcut_key = "bestiary", display_mode = "icon" },
-    bestiary_text = { shortcut_key = "bestiary", display_mode = "text" },
+    config = { shortcut_key = "config", display_mode = "icon" },
+    assets = { shortcut_key = "assets", display_mode = "icon" },
+    bestiary = { shortcut_key = "bestiary", display_mode = "icon" },
 }
 
 local DRAG_PREVIEW_FILL_COLOR = Turbine.UI.Color(0.28, 1.00, 1.00, 1.00)
 local DRAG_PREVIEW_EDGE_COLOR = Turbine.UI.Color(0.95, 1.00, 1.00, 1.00)
 local DRAG_PREVIEW_EDGE_W = 2
+local EDIT_DRAG_GHOST_BACK = Turbine.UI.Color(0.92, 0.09, 0.09, 0.09)
+local EDIT_DRAG_GHOST_BORDER = Turbine.UI.Color(1.00, 0.35, 0.40, 0.50)
+local EDIT_DRAG_GHOST_TEXT = Turbine.UI.Color(1.00, 1.00, 1.00, 1.00)
+local EDIT_DRAG_START_DISTANCE = 4
+
+local function _widget_participates_in_layout(widget)
+    return widget ~= nil and widget._status_bar_drag_hidden ~= true
+end
 
 local function _write_status_bar_message(text)
     if Turbine ~= nil and Turbine.Shell ~= nil and Turbine.Shell.WriteLine ~= nil then
@@ -45,12 +50,38 @@ local function _resolve_drop_zone_key(bar_w, mouse_x)
     return "right"
 end
 
-local function _sync_status_bar_after_raw_edit()
+local function _sync_status_bar_after_raw_edit(edit_window_state_override)
+    local edit_window_state = edit_window_state_override
+    if edit_window_state == nil and _G.STATUS_BAR ~= nil and _G.STATUS_BAR.capture_edit_window_state ~= nil then
+        edit_window_state = _G.STATUS_BAR:capture_edit_window_state()
+    end
+
     if _G.rebuild_settings ~= nil then
         _G.rebuild_settings()
     end
-    if apply_status_bar_settings ~= nil then
+    if _G.STATUS_BAR ~= nil and _G.STATUS_BAR.apply_settings ~= nil then
+        _G.STATUS_BAR:apply_settings()
+    elseif apply_status_bar_settings ~= nil then
         apply_status_bar_settings()
+    end
+    if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil and
+        _G.STATUS_BAR.restore_edit_window_state ~= nil then
+        _G.STATUS_BAR:restore_edit_window_state(edit_window_state)
+    end
+    if _G.CONFIG_WINDOW ~= nil and _G.CONFIG_WINDOW.IsVisible ~= nil and _G.CONFIG_WINDOW:IsVisible() == true then
+        local controls = _G.CONFIG_WINDOW.controls or nil
+        local raw_sb = _G.loaded_settings ~= nil and _G.loaded_settings.status_bar or nil
+        if controls ~= nil and raw_sb ~= nil then
+            local function sync_layout_box(key, value)
+                local control = controls[key]
+                if control ~= nil and control.tb ~= nil and control.tb.SetText ~= nil then
+                    control.tb:SetText(tostring(value or ""))
+                end
+            end
+            sync_layout_box("sb_layout_left", raw_sb.layout ~= nil and raw_sb.layout.left or "")
+            sync_layout_box("sb_layout_center", raw_sb.layout ~= nil and raw_sb.layout.center or "")
+            sync_layout_box("sb_layout_right", raw_sb.layout ~= nil and raw_sb.layout.right or "")
+        end
     end
     if _G.save_settings ~= nil then
         _G.save_settings()
@@ -133,30 +164,58 @@ local function _remove_visible_layout_token_at_index(text, remove_index)
     return table.concat(tokens, " "), nil
 end
 
+local function _get_raw_status_bar_settings()
+    local raw = _G.loaded_settings
+    local raw_sb = raw ~= nil and raw.status_bar or nil
+    if raw_sb == nil then
+        return nil
+    end
+
+    raw_sb.layout = raw_sb.layout or {}
+    raw_sb.layout.left = raw_sb.layout.left or ""
+    raw_sb.layout.center = raw_sb.layout.center or ""
+    raw_sb.layout.right = raw_sb.layout.right or ""
+    raw_sb.item_registry = raw_sb.item_registry or {}
+    return raw_sb
+end
+
+local function _get_combined_layout_text(raw_sb)
+    if raw_sb == nil or raw_sb.layout == nil then
+        return ""
+    end
+    return table.concat({
+        tostring(raw_sb.layout.left or ""),
+        tostring(raw_sb.layout.center or ""),
+        tostring(raw_sb.layout.right or ""),
+    }, " ")
+end
+
+local function _cleanup_removed_item_registry_entry(raw_sb, removed_token)
+    if raw_sb == nil or type(raw_sb.item_registry) ~= "table" then
+        return
+    end
+
+    local inner = tostring(removed_token or ""):match("^%%([^%%]+)%%$")
+    local item_name = inner ~= nil and S.parse_status_bar_item_name(inner) or nil
+    if item_name == nil then
+        return
+    end
+
+    if S.status_bar_layout_has_item(_get_combined_layout_text(raw_sb), item_name) == true then
+        return
+    end
+
+    local key = S.make_status_bar_item_registry_key(item_name)
+    if key ~= nil then
+        raw_sb.item_registry[key] = nil
+    end
+end
+
 local function _get_widget_menu_title(widget_key, widget_entry)
     if S.is_status_bar_item_entry(widget_entry) == true then
         return widget_entry.name or ""
     end
-
-    if widget_key == "time_local" then
-        return TR("Time (local)")
-    elseif widget_key == "inventory_space" then
-        return TR("Inventory space")
-    elseif widget_key == "equipment_wear" then
-        return TR("Equipment wear")
-    elseif widget_key == "money" then
-        return TR("Money")
-    elseif widget_key == "wallet" then
-        return TR("Wallet")
-    elseif widget_key == "config_icon" or widget_key == "config_text" then
-        return S.get_shortcut_label("config")
-    elseif widget_key == "assets_icon" or widget_key == "assets_text" then
-        return S.get_shortcut_label("assets")
-    elseif widget_key == "bestiary_icon" or widget_key == "bestiary_text" then
-        return S.get_shortcut_label("bestiary")
-    end
-
-    return tostring(widget_key or "")
+    return S.get_status_bar_widget_display_name(widget_key)
 end
 
 local function _bind_widget_interactions(owner, widget, menu_title)
@@ -176,8 +235,21 @@ local function _bind_widget_interactions(owner, widget, menu_title)
             owner:_show_widget_menu(widget)
             return
         end
+        if owner:_is_edit_mode_active() == true then
+            return
+        end
         if prior_mouse_click ~= nil then
             prior_mouse_click(sender, args)
+        end
+    end
+
+    local prior_mouse_down = widget.MouseDown
+    widget.MouseDown = function(sender, args)
+        if owner:_handle_widget_mouse_down(widget, args) == true then
+            return
+        end
+        if prior_mouse_down ~= nil then
+            prior_mouse_down(sender, args)
         end
     end
 
@@ -193,17 +265,41 @@ local function _bind_widget_interactions(owner, widget, menu_title)
 
     local prior_mouse_move = widget.MouseMove
     widget.MouseMove = function(sender, args)
+        if owner:_handle_widget_mouse_move(widget, args) == true then
+            return
+        end
         owner:_handle_drag_move(widget, args)
         if prior_mouse_move ~= nil then
             prior_mouse_move(sender, args)
         end
     end
+
+    local prior_mouse_up = widget.MouseUp
+    widget.MouseUp = function(sender, args)
+        if owner:_handle_widget_mouse_up(widget, args) == true then
+            return
+        end
+        if prior_mouse_up ~= nil then
+            prior_mouse_up(sender, args)
+        end
+    end
 end
 
 local function _sum_zone_width_with_preview(widgets, gap, preview_width)
-    local total = S.sum_widget_width(widgets, gap)
+    local total = 0
+    local visible_count = 0
+    for i = 1, #(widgets or {}) do
+        local widget = widgets[i]
+        if _widget_participates_in_layout(widget) == true then
+            if visible_count > 0 then
+                total = total + gap
+            end
+            total = total + widget:GetWidth()
+            visible_count = visible_count + 1
+        end
+    end
     if type(preview_width) == "number" and preview_width > 0 then
-        if widgets ~= nil and #widgets > 0 then
+        if visible_count > 0 then
             total = total + gap
         end
         total = total + preview_width
@@ -216,8 +312,17 @@ local function _zone_widgets_contains_x(widgets, mouse_x)
         return false
     end
 
-    local first = widgets[1]
-    local last = widgets[#widgets]
+    local first = nil
+    local last = nil
+    for i = 1, #widgets do
+        local widget = widgets[i]
+        if _widget_participates_in_layout(widget) == true then
+            if first == nil then
+                first = widget
+            end
+            last = widget
+        end
+    end
     if first == nil or last == nil then
         return false
     end
@@ -237,18 +342,28 @@ local function _zone_insertion_index(widgets, mouse_x)
         x = tonumber(x)
     end
     if x == nil then
-        return #widgets + 1
+        local visible_count = 0
+        for i = 1, #widgets do
+            if _widget_participates_in_layout(widgets[i]) == true then
+                visible_count = visible_count + 1
+            end
+        end
+        return visible_count + 1
     end
 
+    local visible_index = 0
     for i = 1, #widgets do
         local widget = widgets[i]
-        local midpoint = widget:GetLeft() + (widget:GetWidth() / 2)
-        if x < midpoint then
-            return i
+        if _widget_participates_in_layout(widget) == true then
+            visible_index = visible_index + 1
+            local midpoint = widget:GetLeft() + (widget:GetWidth() / 2)
+            if x < midpoint then
+                return visible_index
+            end
         end
     end
 
-    return #widgets + 1
+    return visible_index + 1
 end
 
 local function _widgets_pkg()
@@ -339,6 +454,21 @@ end
 
 StatusBarWindow = class(Turbine.UI.Window)
 
+function StatusBarWindow:_ensure_edit_window()
+    local edit_window = self._edit_window or _G.STATUS_BAR_EDIT_WINDOW
+    if edit_window == nil or edit_window._destroying == true or edit_window.done_button == nil then
+        edit_window = StatusBarEditWindow(self)
+        _G.STATUS_BAR_EDIT_WINDOW = edit_window
+    elseif edit_window.set_owner ~= nil then
+        edit_window:set_owner(self)
+    else
+        edit_window.owner = self
+    end
+
+    self._edit_window = edit_window
+    return edit_window
+end
+
 function StatusBarWindow:Constructor()
     Turbine.UI.Window.Constructor(self)
 
@@ -356,6 +486,7 @@ function StatusBarWindow:Constructor()
     self._drag_preview_next_at = 0
     self._drag_preview_zone_key = nil
     self._drag_preview_insert_index = nil
+    self._edit_drag_session = nil
     self._drag_preview_window = Turbine.UI.Window()
     self._drag_preview_window:SetMouseVisible(false)
     self._drag_preview_window:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
@@ -389,6 +520,55 @@ function StatusBarWindow:Constructor()
     self._drag_preview_trailing_edge:SetVisible(false)
     self._drag_preview_trailing_edge:SetZOrder(101)
 
+    self:_ensure_edit_window()
+
+    self._edit_drag_overlay = Turbine.UI.Window()
+    self._edit_drag_overlay:SetVisible(false)
+    self._edit_drag_overlay:SetMouseVisible(false)
+    self._edit_drag_overlay:SetZOrder(3500)
+    self._edit_drag_overlay:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self._edit_drag_overlay.MouseMove = function(_, args)
+        self:_handle_edit_drag_overlay_mouse_move(args)
+    end
+    self._edit_drag_overlay.MouseUp = function(_, args)
+        self:_handle_edit_drag_overlay_mouse_up(args)
+    end
+
+    self._edit_drag_ghost = Turbine.UI.Control()
+    self._edit_drag_ghost:SetParent(self._edit_drag_overlay)
+    self._edit_drag_ghost:SetVisible(false)
+    self._edit_drag_ghost:SetMouseVisible(false)
+    self._edit_drag_ghost:SetBackColor(EDIT_DRAG_GHOST_BACK)
+    self._edit_drag_ghost:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self._edit_drag_ghost:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+
+    self._edit_drag_ghost_top = Turbine.UI.Control()
+    self._edit_drag_ghost_top:SetParent(self._edit_drag_ghost)
+    self._edit_drag_ghost_top:SetMouseVisible(false)
+    self._edit_drag_ghost_top:SetBackColor(EDIT_DRAG_GHOST_BORDER)
+
+    self._edit_drag_ghost_bottom = Turbine.UI.Control()
+    self._edit_drag_ghost_bottom:SetParent(self._edit_drag_ghost)
+    self._edit_drag_ghost_bottom:SetMouseVisible(false)
+    self._edit_drag_ghost_bottom:SetBackColor(EDIT_DRAG_GHOST_BORDER)
+
+    self._edit_drag_ghost_left = Turbine.UI.Control()
+    self._edit_drag_ghost_left:SetParent(self._edit_drag_ghost)
+    self._edit_drag_ghost_left:SetMouseVisible(false)
+    self._edit_drag_ghost_left:SetBackColor(EDIT_DRAG_GHOST_BORDER)
+
+    self._edit_drag_ghost_right = Turbine.UI.Control()
+    self._edit_drag_ghost_right:SetParent(self._edit_drag_ghost)
+    self._edit_drag_ghost_right:SetMouseVisible(false)
+    self._edit_drag_ghost_right:SetBackColor(EDIT_DRAG_GHOST_BORDER)
+
+    self._edit_drag_ghost_label = Turbine.UI.Label()
+    self._edit_drag_ghost_label:SetParent(self._edit_drag_ghost)
+    self._edit_drag_ghost_label:SetMouseVisible(false)
+    self._edit_drag_ghost_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self._edit_drag_ghost_label:SetForeColor(EDIT_DRAG_GHOST_TEXT)
+    self._edit_drag_ghost_label:SetFont(FONT_TO_LOTRO("Verdana", 11 * _G.settings.global.scale))
+
     self:SetMouseVisible(false)
     self:SetVisible(true)
     self:SetWantsUpdates(true)
@@ -404,6 +584,11 @@ function StatusBarWindow:Constructor()
     end
     self.DragDrop = function(_, args)
         self:_handle_drag_drop(self, args)
+    end
+    self.MouseClick = function(_, args)
+        if args ~= nil and args.Button == Turbine.UI.MouseButton.Right then
+            self:_show_bar_menu()
+        end
     end
     self.MouseMove = function(_, args)
         self:_handle_drag_move(self, args)
@@ -423,6 +608,11 @@ function StatusBarWindow:apply_settings()
     self:_sync_display_width(sb)
 
     self:_rebuild_widgets(sb)
+    local edit_window = self:_ensure_edit_window()
+    if edit_window ~= nil then
+        self._edit_window:apply_scale()
+        self._edit_window:refresh_state()
+    end
     self.last_update_at = 0
 end
 
@@ -455,12 +645,30 @@ end
 function StatusBarWindow:destroy()
     self:SetWantsUpdates(false)
     self:SetVisible(false)
+    self:_cancel_edit_drag()
     self:_clear_widgets()
+    if self._edit_window ~= nil and self._edit_window.owner == self then
+        if self._edit_window.set_owner ~= nil then
+            self._edit_window:set_owner(nil)
+        else
+            self._edit_window.owner = nil
+        end
+    end
+    self._edit_window = nil
     if self._drag_preview_fill ~= nil then self._drag_preview_fill:SetParent(nil) end
     if self._drag_preview_edge ~= nil then self._drag_preview_edge:SetParent(nil) end
     if self._drag_preview_trailing_edge ~= nil then self._drag_preview_trailing_edge:SetParent(nil) end
     if self._drag_preview_window ~= nil then
         self._drag_preview_window:SetVisible(false)
+    end
+    if self._edit_drag_ghost_label ~= nil then self._edit_drag_ghost_label:SetParent(nil) end
+    if self._edit_drag_ghost_top ~= nil then self._edit_drag_ghost_top:SetParent(nil) end
+    if self._edit_drag_ghost_bottom ~= nil then self._edit_drag_ghost_bottom:SetParent(nil) end
+    if self._edit_drag_ghost_left ~= nil then self._edit_drag_ghost_left:SetParent(nil) end
+    if self._edit_drag_ghost_right ~= nil then self._edit_drag_ghost_right:SetParent(nil) end
+    if self._edit_drag_ghost ~= nil then self._edit_drag_ghost:SetParent(nil) end
+    if self._edit_drag_overlay ~= nil then
+        self._edit_drag_overlay:SetVisible(false)
     end
 end
 
@@ -474,6 +682,558 @@ function StatusBarWindow:_clear_widgets()
     self._widgets = {}
     self._update_widgets = {}
 end
+
+function StatusBarWindow:_is_edit_mode_active()
+    return self._edit_window ~= nil and self._edit_window.IsVisible ~= nil and self._edit_window:IsVisible() == true
+end
+
+function StatusBarWindow:open_edit_window()
+    local edit_window = self:_ensure_edit_window()
+    if edit_window == nil then
+        return
+    end
+    edit_window:open()
+end
+
+function StatusBarWindow:capture_edit_window_state()
+    local edit_window = self:_ensure_edit_window()
+    if edit_window == nil or edit_window.IsVisible == nil then
+        return { visible = false }
+    end
+
+    local state = {
+        visible = edit_window:IsVisible() == true,
+    }
+    if state.visible == true and edit_window.GetPosition ~= nil then
+        state.left, state.top = edit_window:GetPosition()
+    end
+    return state
+end
+
+function StatusBarWindow:restore_edit_window_state(state)
+    local edit_window = self:_ensure_edit_window()
+    if edit_window == nil or type(state) ~= "table" or state.visible ~= true then
+        return
+    end
+
+    edit_window:refresh_state()
+    edit_window:SetVisible(true)
+    if type(state.left) == "number" and type(state.top) == "number" then
+        edit_window:SetPosition(state.left, state.top)
+    else
+        edit_window:position_near_bar()
+    end
+    if edit_window.Activate ~= nil then
+        edit_window:Activate()
+    end
+end
+
+function StatusBarWindow:is_palette_widget_available(widget_key)
+    local raw_sb = _get_raw_status_bar_settings()
+    if raw_sb == nil then
+        return false
+    end
+    return S.status_bar_layout_has_widget(_get_combined_layout_text(raw_sb), widget_key) ~= true
+end
+
+function StatusBarWindow:_get_drag_preview_details_from_session(session)
+    if session == nil then
+        return nil
+    end
+    return {
+        name = session.menu_title or "",
+        preview_width = session.preview_width,
+    }
+end
+
+function StatusBarWindow:_set_drag_preview(details, zone_key, insert_index)
+    if details == nil or zone_key == nil or insert_index == nil then
+        self:_hide_drag_preview()
+        return
+    end
+
+    local preview_width = details.preview_width
+    if type(preview_width) ~= "number" then
+        preview_width = tonumber(preview_width)
+    end
+    if preview_width == nil or preview_width < 1 then
+        preview_width = self:_get_drag_preview_width_from_details(details)
+    end
+    details.preview_width = preview_width
+
+    local changed = self._drag_preview_details ~= details or zone_key ~= self._drag_preview_zone_key or
+        insert_index ~= self._drag_preview_insert_index
+
+    self._drag_preview_details = details
+    self._drag_preview_zone_key = zone_key
+    self._drag_preview_insert_index = insert_index
+    if changed == true then
+        self:_relayout_after_drag_preview_change()
+    end
+end
+
+function StatusBarWindow:_mouse_is_over_bar()
+    local x, y = self:_get_mouse_position_in_bar()
+    local w, h = self:GetSize()
+    if type(x) ~= "number" or type(y) ~= "number" then
+        return false, nil, nil
+    end
+    return x >= 0 and x <= w and y >= 0 and y <= h, x, y
+end
+
+function StatusBarWindow:_update_edit_drag_overlay_bounds()
+    if self._edit_drag_overlay == nil then
+        return
+    end
+    local display_w, display_h = Turbine.UI.Display.GetSize()
+    self._edit_drag_overlay:SetPosition(0, 0)
+    self._edit_drag_overlay:SetSize(display_w, display_h)
+end
+
+function StatusBarWindow:_layout_edit_drag_ghost(ghost_w, ghost_h)
+    if self._edit_drag_ghost == nil then
+        return
+    end
+    local border = 1
+    self._edit_drag_ghost:SetSize(ghost_w, ghost_h)
+    self._edit_drag_ghost_top:SetPosition(0, 0)
+    self._edit_drag_ghost_top:SetSize(ghost_w, border)
+    self._edit_drag_ghost_bottom:SetPosition(0, math.max(0, ghost_h - border))
+    self._edit_drag_ghost_bottom:SetSize(ghost_w, border)
+    self._edit_drag_ghost_left:SetPosition(0, 0)
+    self._edit_drag_ghost_left:SetSize(border, ghost_h)
+    self._edit_drag_ghost_right:SetPosition(math.max(0, ghost_w - border), 0)
+    self._edit_drag_ghost_right:SetSize(border, ghost_h)
+    self._edit_drag_ghost_label:SetPosition(8, 0)
+    self._edit_drag_ghost_label:SetSize(math.max(0, ghost_w - 16), ghost_h)
+end
+
+function StatusBarWindow:_refresh_edit_drag_ghost_text(text)
+    if self._edit_drag_ghost_label == nil or self._edit_drag_ghost == nil then
+        return
+    end
+
+    local title = tostring(text or "")
+    local ghost_w = math.max(140, math.min(300, 28 + (string.len(title) * 7)))
+    local ghost_h = math.max(22, math.floor(self:GetHeight() + 6))
+
+    self._edit_drag_ghost_label:SetText(title)
+    self._edit_drag_ghost_label:SetFont(FONT_TO_LOTRO("Verdana", 11 * _G.settings.global.scale))
+    self:_layout_edit_drag_ghost(ghost_w, ghost_h)
+end
+
+function StatusBarWindow:_get_event_screen_position(source, args)
+    if source ~= nil and source.PointToScreen ~= nil and args ~= nil then
+        local x = args.X
+        local y = args.Y
+        if type(x) ~= "number" then
+            x = tonumber(x)
+        end
+        if type(y) ~= "number" then
+            y = tonumber(y)
+        end
+        if type(x) == "number" and type(y) == "number" then
+            local sx, sy = source:PointToScreen(x, y)
+            if type(sx) == "number" and type(sy) == "number" then
+                return sx, sy
+            end
+        end
+    end
+
+    if Turbine ~= nil and Turbine.UI ~= nil and Turbine.UI.Display ~= nil and Turbine.UI.Display.GetMousePosition ~= nil then
+        return Turbine.UI.Display.GetMousePosition()
+    end
+
+    return nil, nil
+end
+
+function StatusBarWindow:_update_edit_drag_ghost_position()
+    if self._edit_drag_ghost == nil or self._edit_drag_session == nil then
+        return
+    end
+
+    local sx, sy = Turbine.UI.Display.GetMousePosition()
+    if type(sx) ~= "number" or type(sy) ~= "number" then
+        return
+    end
+
+    local display_w, display_h = Turbine.UI.Display.GetSize()
+    local ghost_w, ghost_h = self._edit_drag_ghost:GetSize()
+    local left = sx + 16
+    local top = sy + 18
+
+    if left + ghost_w > display_w then
+        left = math.max(0, display_w - ghost_w - 4)
+    end
+    if top + ghost_h > display_h then
+        top = math.max(0, display_h - ghost_h - 4)
+    end
+
+    self._edit_drag_ghost:SetPosition(left, top)
+    self._edit_drag_ghost:SetVisible(true)
+end
+
+function StatusBarWindow:_set_widget_drag_hidden(widget, hidden)
+    if widget == nil then
+        return false
+    end
+
+    local wanted_hidden = hidden == true
+    if widget._status_bar_drag_hidden == wanted_hidden then
+        return false
+    end
+
+    widget._status_bar_drag_hidden = wanted_hidden
+    widget:SetVisible(wanted_hidden ~= true)
+    return true
+end
+
+function StatusBarWindow:_restore_edit_drag_source_widget(session)
+    if session == nil or session.kind ~= "widget" then
+        return false
+    end
+    return self:_set_widget_drag_hidden(session.source, false)
+end
+
+function StatusBarWindow:_restore_widget_after_failed_edit_drag(session)
+    if self:_restore_edit_drag_source_widget(session) == true then
+        self:_relayout_after_drag_preview_change()
+    end
+end
+
+function StatusBarWindow:_cancel_edit_drag(restore_source_widget)
+    local session = self._edit_drag_session
+    local relayout_source = false
+    if restore_source_widget ~= false then
+        relayout_source = self:_restore_edit_drag_source_widget(session) == true
+    end
+
+    self._edit_drag_session = nil
+    if self._edit_drag_overlay ~= nil then
+        self._edit_drag_overlay:SetMouseVisible(false)
+        self._edit_drag_overlay:SetVisible(false)
+    end
+    if self._edit_drag_ghost ~= nil then
+        self._edit_drag_ghost:SetVisible(false)
+    end
+    self:_hide_drag_preview()
+    if relayout_source == true then
+        self:_relayout_after_drag_preview_change()
+    end
+end
+
+function StatusBarWindow:_arm_edit_drag(session, source, args)
+    if session == nil or source == nil then
+        return
+    end
+
+    self:_cancel_edit_drag()
+    local start_sx, start_sy = self:_get_event_screen_position(source, args)
+    session.source = source
+    session.dragging = false
+    session.start_screen_x = start_sx
+    session.start_screen_y = start_sy
+    self._edit_drag_session = session
+end
+
+function StatusBarWindow:_ensure_edit_drag_started(source, args)
+    local session = self._edit_drag_session
+    if session == nil or session.source ~= source then
+        return false
+    end
+    if session.dragging == true then
+        return true
+    end
+
+    local sx, sy = self:_get_event_screen_position(source, args)
+    if type(sx) ~= "number" or type(sy) ~= "number" or type(session.start_screen_x) ~= "number" or
+        type(session.start_screen_y) ~= "number" then
+        return false
+    end
+
+    if math.abs(sx - session.start_screen_x) < EDIT_DRAG_START_DISTANCE and
+        math.abs(sy - session.start_screen_y) < EDIT_DRAG_START_DISTANCE then
+        return false
+    end
+
+    session.dragging = true
+    if session.kind == "widget" then
+        self:_set_widget_drag_hidden(session.source, true)
+    end
+    self:_update_edit_drag_overlay_bounds()
+    self:_refresh_edit_drag_ghost_text(session.menu_title or "")
+    self:_update_edit_drag_ghost_position()
+    if self._edit_drag_overlay ~= nil then
+        self._edit_drag_overlay:SetMouseVisible(true)
+        self._edit_drag_overlay:SetVisible(true)
+    end
+    self:_update_edit_drag_preview_from_mouse()
+    return true
+end
+
+function StatusBarWindow:_make_widget_drag_session(widget)
+    if widget == nil then
+        return nil
+    end
+
+    local token = widget._status_bar_layout_token
+    if type(token) ~= "string" or token == "" then
+        return nil
+    end
+
+    return {
+        kind = "widget",
+        widget_key = widget._status_bar_widget_key,
+        source_zone_key = widget._status_bar_zone_key,
+        source_visible_index = widget._status_bar_visible_index,
+        layout_token = token,
+        menu_title = widget._status_bar_menu_title or "",
+        preview_width = widget:GetWidth(),
+    }
+end
+
+function StatusBarWindow:arm_palette_drag(widget_key, source, args)
+    if self:is_palette_widget_available(widget_key) ~= true then
+        return
+    end
+
+    local token = S.make_status_bar_layout_token(widget_key)
+    if token == nil then
+        return
+    end
+
+    self:_arm_edit_drag({
+        kind = "palette",
+        widget_key = widget_key,
+        layout_token = token,
+        menu_title = S.get_status_bar_widget_display_name(widget_key),
+        preview_width = self:_get_widget_preview_width(widget_key),
+    }, source, args)
+end
+
+function StatusBarWindow:handle_palette_drag_move(_, source, args)
+    local session = self._edit_drag_session
+    if session == nil or session.source ~= source then
+        return false
+    end
+
+    if self:_ensure_edit_drag_started(source, args) == true then
+        self:_update_edit_drag_ghost_position()
+        self:_update_edit_drag_preview_from_mouse()
+    end
+    return true
+end
+
+function StatusBarWindow:handle_palette_drag_release(_, source, args)
+    local session = self._edit_drag_session
+    if session == nil or session.source ~= source then
+        return false
+    end
+    if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+        return false
+    end
+
+    local was_dragging = session.dragging == true
+    if was_dragging ~= true then
+        self:_cancel_edit_drag()
+        return true
+    end
+
+    self:_finish_edit_drag_release(session)
+    return true
+end
+
+function StatusBarWindow:_handle_widget_mouse_down(widget, args)
+    if self:_is_edit_mode_active() ~= true then
+        return false
+    end
+    if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+        return false
+    end
+
+    local session = self:_make_widget_drag_session(widget)
+    if session == nil then
+        return false
+    end
+
+    self:_arm_edit_drag(session, widget, args)
+    return true
+end
+
+function StatusBarWindow:_handle_widget_mouse_move(widget, args)
+    local session = self._edit_drag_session
+    if session == nil or session.source ~= widget then
+        return false
+    end
+
+    if self:_ensure_edit_drag_started(widget, args) == true then
+        self:_update_edit_drag_ghost_position()
+        self:_update_edit_drag_preview_from_mouse()
+    end
+    return true
+end
+
+function StatusBarWindow:_handle_widget_mouse_up(widget, args)
+    local session = self._edit_drag_session
+    if session == nil or session.source ~= widget then
+        return false
+    end
+    if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+        return false
+    end
+
+    local was_dragging = session.dragging == true
+    if was_dragging ~= true then
+        self:_cancel_edit_drag()
+        return true
+    end
+
+    self:_finish_edit_drag_release(session)
+    return true
+end
+
+function StatusBarWindow:_handle_edit_drag_overlay_mouse_move(_)
+    local session = self._edit_drag_session
+    if session == nil or session.dragging ~= true then
+        return
+    end
+
+    self:_update_edit_drag_ghost_position()
+    self:_update_edit_drag_preview_from_mouse()
+end
+
+function StatusBarWindow:_finish_edit_drag_release(session)
+    if session == nil then
+        return
+    end
+
+    local inside_bar, x = self:_mouse_is_over_bar()
+    local zone_key = nil
+    local insert_index = nil
+    if inside_bar == true then
+        zone_key, insert_index = self:_get_drop_target_from_mouse_x(x)
+    end
+
+    self:_cancel_edit_drag(session.kind ~= "widget")
+    if session.kind == "palette" then
+        if zone_key ~= nil and insert_index ~= nil then
+            self:_apply_palette_drop(session, zone_key, insert_index)
+        end
+        return
+    end
+
+    if zone_key ~= nil and insert_index ~= nil then
+        self:_apply_widget_move(session, zone_key, insert_index)
+    else
+        self:_apply_widget_remove(session)
+    end
+end
+
+function StatusBarWindow:_handle_edit_drag_overlay_mouse_up(args)
+    local session = self._edit_drag_session
+    if session == nil or session.dragging ~= true then
+        return
+    end
+    if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+        return
+    end
+
+    self:_finish_edit_drag_release(session)
+end
+
+function StatusBarWindow:_update_edit_drag_preview_from_mouse()
+    local session = self._edit_drag_session
+    if session == nil then
+        return
+    end
+
+    local inside_bar, x = self:_mouse_is_over_bar()
+    if inside_bar ~= true then
+        self:_hide_drag_preview()
+        return
+    end
+
+    local zone_key, insert_index = self:_get_drop_target_from_mouse_x(x)
+    self:_set_drag_preview(self:_get_drag_preview_details_from_session(session), zone_key, insert_index)
+end
+
+function StatusBarWindow:_remove_token_from_zone(raw_sb, zone_key, visible_index)
+    if raw_sb == nil or raw_sb.layout == nil or zone_key == nil then
+        return nil
+    end
+
+    local updated, removed_token = _remove_visible_layout_token_at_index(raw_sb.layout[zone_key], visible_index)
+    if removed_token == nil then
+        return nil
+    end
+
+    raw_sb.layout[zone_key] = updated
+    return removed_token
+end
+
+function StatusBarWindow:_apply_palette_drop(session, zone_key, insert_index)
+    local raw_sb = _get_raw_status_bar_settings()
+    if raw_sb == nil or zone_key == nil or insert_index == nil then
+        return
+    end
+
+    if S.status_bar_layout_has_widget(_get_combined_layout_text(raw_sb), session.widget_key) == true then
+        _write_status_bar_message(string.format("%s is already on the status bar.", session.menu_title or "Widget"))
+        return
+    end
+
+    raw_sb.layout[zone_key] = _insert_layout_token_at_visible_index(raw_sb.layout[zone_key], session.layout_token, insert_index)
+    _sync_status_bar_after_raw_edit()
+    _write_status_bar_message(string.format("Added %s to the %s status bar zone.", session.menu_title or "widget", zone_key))
+end
+
+function StatusBarWindow:_apply_widget_move(session, zone_key, insert_index)
+    local raw_sb = _get_raw_status_bar_settings()
+    if raw_sb == nil or session == nil or session.source_zone_key == nil or session.source_visible_index == nil then
+        self:_restore_widget_after_failed_edit_drag(session)
+        return
+    end
+
+    local before_left = tostring(raw_sb.layout.left or "")
+    local before_center = tostring(raw_sb.layout.center or "")
+    local before_right = tostring(raw_sb.layout.right or "")
+    local removed_token = self:_remove_token_from_zone(raw_sb, session.source_zone_key, session.source_visible_index)
+    if removed_token == nil then
+        self:_restore_widget_after_failed_edit_drag(session)
+        return
+    end
+
+    local target_index = insert_index
+    raw_sb.layout[zone_key] = _insert_layout_token_at_visible_index(raw_sb.layout[zone_key], removed_token, target_index)
+
+    if before_left == tostring(raw_sb.layout.left or "") and before_center == tostring(raw_sb.layout.center or "") and
+        before_right == tostring(raw_sb.layout.right or "") then
+        self:_restore_widget_after_failed_edit_drag(session)
+        return
+    end
+
+    _sync_status_bar_after_raw_edit()
+    _write_status_bar_message(string.format("Moved %s on the status bar.", session.menu_title or "widget"))
+end
+
+function StatusBarWindow:_apply_widget_remove(session)
+    local raw_sb = _get_raw_status_bar_settings()
+    if raw_sb == nil or session == nil or session.source_zone_key == nil or session.source_visible_index == nil then
+        self:_restore_widget_after_failed_edit_drag(session)
+        return
+    end
+
+    local removed_token = self:_remove_token_from_zone(raw_sb, session.source_zone_key, session.source_visible_index)
+    if removed_token == nil then
+        self:_restore_widget_after_failed_edit_drag(session)
+        return
+    end
+
+    _cleanup_removed_item_registry_entry(raw_sb, removed_token)
+    _sync_status_bar_after_raw_edit()
+    _write_status_bar_message(string.format("Removed %s from the status bar.", session.menu_title or "widget"))
+end
+
 
 function StatusBarWindow:_layout_widgets(sb)
     local bar_w = self:GetWidth()
@@ -507,15 +1267,19 @@ function StatusBarWindow:_layout_widgets(sb)
         local x = x0
         local zone_preview_w = zone_key == preview_zone_key and preview_width or nil
         local zone_preview_index = zone_key == preview_zone_key and preview_insert_index or nil
+        local visible_index = 0
         for i = 1, #list do
-            if zone_preview_w ~= nil and zone_preview_index == i then
-                x = x + zone_preview_w + gap
-            end
             local w = list[i]
-            local y = math.floor((bar_h - w:GetHeight()) / 2)
-            if y < 0 then y = 0 end
-            w:SetPosition(x, y)
-            x = x + w:GetWidth() + gap
+            if _widget_participates_in_layout(w) == true then
+                visible_index = visible_index + 1
+                if zone_preview_w ~= nil and zone_preview_index == visible_index then
+                    x = x + zone_preview_w + gap
+                end
+                local y = math.floor((bar_h - w:GetHeight()) / 2)
+                if y < 0 then y = 0 end
+                w:SetPosition(x, y)
+                x = x + w:GetWidth() + gap
+            end
         end
     end
 
@@ -556,6 +1320,13 @@ function StatusBarWindow:_rebuild_widgets(sb)
                 local inst = _widget_factory(widget_key, cfg.width, sb.height, sb.font, cfg, entry)
                 inst._status_bar_zone_key = zone_key
                 inst._status_bar_visible_index = i
+                inst._status_bar_widget_key = widget_key
+                inst._status_bar_entry = entry
+                if S.is_status_bar_item_entry(entry) == true then
+                    inst._status_bar_layout_token = entry.token or S.make_status_bar_item_token(entry.name)
+                else
+                    inst._status_bar_layout_token = S.make_status_bar_layout_token(widget_key)
+                end
                 inst:SetParent(self)
                 inst:SetZOrder(1)
                 inst:SetVisible(false)
@@ -573,6 +1344,9 @@ function StatusBarWindow:_rebuild_widgets(sb)
     self:SetMouseVisible(true)
 
     self:_layout_widgets(sb)
+    if self._edit_window ~= nil then
+        self._edit_window:refresh_state()
+    end
 
     for i = 1, #self._widgets do
         local w = self._widgets[i]
@@ -685,6 +1459,7 @@ function StatusBarWindow:_handle_drag_enter(source, args)
     if details == nil then
         details = { name = "" }
     end
+    details.preview_width = self:_get_widget_preview_width("item")
     if self:_can_preview_drag_item() ~= true then
         self:_hide_drag_preview()
         return
@@ -696,10 +1471,7 @@ function StatusBarWindow:_handle_drag_enter(source, args)
         return
     end
 
-    self._drag_preview_details = details
-    self._drag_preview_zone_key = zone_key
-    self._drag_preview_insert_index = insert_index
-    self:_relayout_after_drag_preview_change()
+    self:_set_drag_preview(details, zone_key, insert_index)
 end
 
 function StatusBarWindow:_handle_drag_leave(source, _)
@@ -776,10 +1548,10 @@ function StatusBarWindow:_get_mouse_position_in_bar()
     return nil, nil
 end
 
-function StatusBarWindow:_get_drag_preview_width()
-    local item_cfg = _G.settings ~= nil and _G.settings.status_bar ~= nil and _G.settings.status_bar.widgets ~= nil and
-        _G.settings.status_bar.widgets.item or nil
-    local width = item_cfg ~= nil and item_cfg.width or nil
+function StatusBarWindow:_get_widget_preview_width(widget_key)
+    local widgets = _G.settings ~= nil and _G.settings.status_bar ~= nil and _G.settings.status_bar.widgets or nil
+    local widget_cfg = widgets ~= nil and widgets[widget_key] or nil
+    local width = widget_cfg ~= nil and widget_cfg.width or nil
     if type(width) ~= "number" then
         width = tonumber(width)
     end
@@ -787,6 +1559,21 @@ function StatusBarWindow:_get_drag_preview_width()
         width = math.max(24, self:GetHeight())
     end
     return width
+end
+
+function StatusBarWindow:_get_drag_preview_width_from_details(details)
+    local preview_width = details ~= nil and details.preview_width or nil
+    if type(preview_width) ~= "number" then
+        preview_width = tonumber(preview_width)
+    end
+    if preview_width ~= nil and preview_width > 0 then
+        return preview_width
+    end
+    return self:_get_widget_preview_width("item")
+end
+
+function StatusBarWindow:_get_drag_preview_width()
+    return self:_get_drag_preview_width_from_details(self._drag_preview_details)
 end
 
 function StatusBarWindow:_get_drag_preview_x(zone_key, insert_index, preview_width)
@@ -827,15 +1614,15 @@ function StatusBarWindow:_get_drag_preview_x(zone_key, insert_index, preview_wid
         wanted_index = 1
     end
 
-    for i = 1, #widgets + 1 do
-        if i == wanted_index then
-            return x
-        end
+    for i = 1, #widgets do
         local widget = widgets[i]
-        if widget == nil then
-            return x
+        if _widget_participates_in_layout(widget) == true then
+            if wanted_index == 1 then
+                return x
+            end
+            x = x + widget:GetWidth() + gap
+            wanted_index = wanted_index - 1
         end
-        x = x + widget:GetWidth() + gap
     end
 
     return x
@@ -880,6 +1667,10 @@ end
 
 function StatusBarWindow:_handle_drag_drop(source, args)
     self:_hide_drag_preview()
+    local edit_window_state = nil
+    if self:_is_edit_mode_active() == true then
+        edit_window_state = self:capture_edit_window_state()
+    end
 
     local drag_drop_info = args ~= nil and args.DragDropInfo or nil
     local details = S.extract_item_details_from_drag_drop_info(drag_drop_info)
@@ -887,29 +1678,17 @@ function StatusBarWindow:_handle_drag_drop(source, args)
         return
     end
 
-    local raw = _G.loaded_settings
-    local raw_sb = raw ~= nil and raw.status_bar or nil
+    local raw_sb = _get_raw_status_bar_settings()
     if raw_sb == nil then
         return
     end
-
-    raw_sb.layout = raw_sb.layout or {}
-    raw_sb.layout.left = raw_sb.layout.left or ""
-    raw_sb.layout.center = raw_sb.layout.center or ""
-    raw_sb.layout.right = raw_sb.layout.right or ""
-    raw_sb.item_registry = raw_sb.item_registry or {}
 
     local token = S.make_status_bar_item_token(details.name)
     if token == nil then
         return
     end
 
-    local combined_layout = table.concat({
-        tostring(raw_sb.layout.left or ""),
-        tostring(raw_sb.layout.center or ""),
-        tostring(raw_sb.layout.right or ""),
-    }, " ")
-    if S.status_bar_layout_has_item(combined_layout, details.name) == true then
+    if S.status_bar_layout_has_item(_get_combined_layout_text(raw_sb), details.name) == true then
         _write_status_bar_message(string.format("%s is already on the status bar.", token))
         return
     end
@@ -918,8 +1697,24 @@ function StatusBarWindow:_handle_drag_drop(source, args)
     raw_sb.layout[zone_key] = _insert_layout_token_at_visible_index(raw_sb.layout[zone_key], token, insert_index)
     S.set_status_bar_item_registry_icon(raw_sb.item_registry, details.name, details.icon_image_id)
 
-    _sync_status_bar_after_raw_edit()
+    _sync_status_bar_after_raw_edit(edit_window_state)
     _write_status_bar_message(string.format("Added %s to the %s status bar zone.", token, zone_key))
+end
+
+function StatusBarWindow:_show_bar_menu()
+    local menu = Turbine.UI.ContextMenu()
+    local items = menu:GetItems()
+
+    items:Add(Turbine.UI.MenuItem(TR("Status Bar"), false))
+
+    local edit = Turbine.UI.MenuItem(TR("Edit Bar"))
+    edit.Click = function()
+        self:open_edit_window()
+    end
+    items:Add(edit)
+
+    self._widget_context_menu = menu
+    menu:ShowMenu()
 end
 
 function StatusBarWindow:_show_widget_menu(widget)
@@ -931,6 +1726,12 @@ function StatusBarWindow:_show_widget_menu(widget)
     local items = menu:GetItems()
 
     items:Add(Turbine.UI.MenuItem(widget._status_bar_menu_title or "", false))
+
+    local edit = Turbine.UI.MenuItem(TR("Edit Bar"))
+    edit.Click = function()
+        self:open_edit_window()
+    end
+    items:Add(edit)
 
     local remove = Turbine.UI.MenuItem(TR("Remove"))
     remove.Click = function()
@@ -945,45 +1746,22 @@ end
 function StatusBarWindow:_remove_widget_instance(widget)
     local zone_key = widget ~= nil and widget._status_bar_zone_key or nil
     local visible_index = widget ~= nil and widget._status_bar_visible_index or nil
-    local raw = _G.loaded_settings
-    local raw_sb = raw ~= nil and raw.status_bar or nil
+    local raw_sb = _get_raw_status_bar_settings()
     if raw_sb == nil or zone_key == nil then
         return
     end
-
-    raw_sb.layout = raw_sb.layout or {}
-    raw_sb.layout.left = raw_sb.layout.left or ""
-    raw_sb.layout.center = raw_sb.layout.center or ""
-    raw_sb.layout.right = raw_sb.layout.right or ""
-
-    local updated, removed_token = _remove_visible_layout_token_at_index(raw_sb.layout[zone_key], visible_index)
+    local removed_token = self:_remove_token_from_zone(raw_sb, zone_key, visible_index)
     if removed_token == nil then
         return
     end
-    raw_sb.layout[zone_key] = updated
 
-    local inner = tostring(removed_token):match("^%%([^%%]+)%%$")
-    local item_name = inner ~= nil and S.parse_status_bar_item_name(inner) or nil
-    if item_name ~= nil and type(raw_sb.item_registry) == "table" then
-        local combined_layout = table.concat({
-            tostring(raw_sb.layout.left or ""),
-            tostring(raw_sb.layout.center or ""),
-            tostring(raw_sb.layout.right or ""),
-        }, " ")
-        if S.status_bar_layout_has_item(combined_layout, item_name) ~= true then
-            local key = S.make_status_bar_item_registry_key(item_name)
-            if key ~= nil then
-                raw_sb.item_registry[key] = nil
-            end
-        end
-    end
-
+    _cleanup_removed_item_registry_entry(raw_sb, removed_token)
     _sync_status_bar_after_raw_edit()
     _write_status_bar_message(string.format("Removed %s from the status bar.", widget._status_bar_menu_title or "widget"))
 end
 
 function StatusBarWindow:_sync_display_width(sb)
-    local display_w, _ = Turbine.UI.Display.GetSize()
+    local display_w, display_h = Turbine.UI.Display.GetSize()
     if display_w == self._last_display_w then
         return
     end
@@ -994,6 +1772,13 @@ function StatusBarWindow:_sync_display_width(sb)
     if self._drag_preview_window ~= nil then
         self._drag_preview_window:SetPosition(0, 0)
         self._drag_preview_window:SetSize(display_w, sb.height)
+    end
+    if self._edit_drag_overlay ~= nil then
+        self._edit_drag_overlay:SetPosition(0, 0)
+        self._edit_drag_overlay:SetSize(display_w, display_h)
+    end
+    if self._edit_window ~= nil and self._edit_window.IsVisible ~= nil and self._edit_window:IsVisible() == true then
+        self._edit_window:position_near_bar()
     end
     self:_layout_widgets(sb)
 end

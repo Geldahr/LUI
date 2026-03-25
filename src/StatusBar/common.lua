@@ -32,12 +32,29 @@ S.STATUS_BAR_LAYOUT_TOKENS = {
     gold = "money",
     money = "money",
     wallet = "wallet",
-    ["config:icon"] = "config_icon",
-    ["config:text"] = "config_text",
-    ["assets:icon"] = "assets_icon",
-    ["assets:text"] = "assets_text",
-    ["bestiary:icon"] = "bestiary_icon",
-    ["bestiary:text"] = "bestiary_text",
+    config = "config",
+    assets = "assets",
+    bestiary = "bestiary",
+}
+S.STATUS_BAR_WIDGET_LAYOUT_TOKENS = {
+    time_local = "%time%",
+    inventory_space = "%inventory%",
+    equipment_wear = "%durability%",
+    money = "%gold%",
+    wallet = "%wallet%",
+    config = "%config%",
+    assets = "%assets%",
+    bestiary = "%bestiary%",
+}
+S.STATUS_BAR_EDITABLE_WIDGET_KEYS = {
+    "time_local",
+    "inventory_space",
+    "equipment_wear",
+    "money",
+    "wallet",
+    "config",
+    "assets",
+    "bestiary",
 }
 
 S.ITEM_WEAR_STATE = Turbine.Gameplay.ItemWearState or {}
@@ -473,6 +490,35 @@ function S.make_status_bar_item_token(item_name)
     return "%item:[" .. name .. "]%"
 end
 
+function S.make_status_bar_layout_token(widget_key)
+    if type(widget_key) ~= "string" then
+        return nil
+    end
+    return S.STATUS_BAR_WIDGET_LAYOUT_TOKENS[widget_key]
+end
+
+function S.get_status_bar_widget_display_name(widget_key)
+    if widget_key == "time_local" then
+        return TR("Time (local)")
+    elseif widget_key == "inventory_space" then
+        return TR("Inventory space")
+    elseif widget_key == "equipment_wear" then
+        return TR("Equipment wear")
+    elseif widget_key == "money" then
+        return TR("Money")
+    elseif widget_key == "wallet" then
+        return TR("Wallet")
+    elseif widget_key == "config" then
+        return S.get_shortcut_label("config")
+    elseif widget_key == "assets" then
+        return S.get_shortcut_label("assets")
+    elseif widget_key == "bestiary" then
+        return S.get_shortcut_label("bestiary")
+    end
+
+    return tostring(widget_key or "")
+end
+
 function S.get_status_bar_item_registry_icon(registry, item_name)
     if type(registry) ~= "table" then
         return nil
@@ -553,6 +599,22 @@ function S.status_bar_layout_has_item(text, item_name)
     for token in source:gmatch("%%([^%%]+)%%") do
         local name = S.parse_status_bar_item_name(token)
         if name ~= nil and S.make_status_bar_item_registry_key(name) == wanted_key then
+            return true
+        end
+    end
+
+    return false
+end
+
+function S.status_bar_layout_has_widget(text, widget_key)
+    if type(widget_key) ~= "string" or widget_key == "" then
+        return false
+    end
+
+    local source = tostring(text or "")
+    for token in source:gmatch("%%([^%%]+)%%") do
+        local current_widget_key = S.STATUS_BAR_LAYOUT_TOKENS[string.lower(_trim(token))]
+        if current_widget_key == widget_key then
             return true
         end
     end

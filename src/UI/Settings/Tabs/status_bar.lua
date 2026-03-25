@@ -575,14 +575,14 @@ function StatusBar.create_controls(window, ui)
         TR("  %gold% / %money% - money (g/s/c)"),
         TR("  %wallet% - selected wallet items"),
         TR("  %item:[Simple Fish]% - tracked total for one inventory item"),
-        TR("  %config:icon% / %config:text% - toggle configuration window"),
-        TR("  %bestiary:icon% / %bestiary:text% - toggle bestiary window"),
-        TR("  %assets:icon% / %assets:text% - toggle assets window"),
+        TR("  %config% - toggle configuration window"),
+        TR("  %bestiary% - toggle bestiary window"),
+        TR("  %assets% - toggle assets window"),
         "",
         TR("Drag an item from the inventory window onto the status bar to add it."),
         TR("Closing config via shortcut acts like Cancel."),
         TR("Order matters. Unknown tokens are ignored."),
-        TR("Example: %config:icon% %time% %item:[Simple Fish]% %assets:text%"),
+        TR("Example: %config% %time% %item:[Simple Fish]% %assets%"),
     }, "\n")
 
     ui.add_text("sb_layout_left", TR("Left layout"), false, layout_help, true)
@@ -618,10 +618,8 @@ function StatusBar.create_controls(window, ui)
 
     ui.add_text("sb_item_width", TR("Width"))
 
-    ui.add_text("sb_shortcut_icon_width", TR("Icon width"))
-    ui.add_text("sb_shortcut_icon_height", TR("Icon height"))
-    ui.add_text("sb_shortcut_text_width", TR("Text width"))
-    ui.add_text("sb_shortcut_text_height", TR("Text height"))
+    ui.add_text("sb_shortcut_width", TR("Width"))
+    ui.add_text("sb_shortcut_height", TR("Height"))
 end
 
 function StatusBar.register(window, ui)
@@ -703,10 +701,8 @@ function StatusBar.register(window, ui)
 
         ui.add_hr(),
         ui.add_title(TR("Shortcut buttons")),
-        window.controls.sb_shortcut_icon_width,
-        window.controls.sb_shortcut_icon_height,
-        window.controls.sb_shortcut_text_width,
-        window.controls.sb_shortcut_text_height,
+        window.controls.sb_shortcut_width,
+        window.controls.sb_shortcut_height,
     }
 end
 
@@ -765,10 +761,8 @@ function StatusBar.load(window, s, ui)
 
     window.controls.sb_item_width.tb:SetText(tostring(widgets.item.width))
 
-    window.controls.sb_shortcut_icon_width.tb:SetText(tostring(widgets.shortcut_icon.width))
-    window.controls.sb_shortcut_icon_height.tb:SetText(tostring(widgets.shortcut_icon.height))
-    window.controls.sb_shortcut_text_width.tb:SetText(tostring(widgets.shortcut_text.width))
-    window.controls.sb_shortcut_text_height.tb:SetText(tostring(widgets.shortcut_text.height))
+    window.controls.sb_shortcut_width.tb:SetText(tostring(widgets.shortcut.width))
+    window.controls.sb_shortcut_height.tb:SetText(tostring(widgets.shortcut.height))
 end
 
 function StatusBar.apply(window, s, ui)
@@ -840,12 +834,8 @@ function StatusBar.apply(window, s, ui)
     local item_w = tonumber(window.controls.sb_item_width.tb:GetText())
     if item_w ~= nil then widgets.item.width = item_w end
 
-    local shortcut_icon_w = tonumber(window.controls.sb_shortcut_icon_width.tb:GetText())
-    if shortcut_icon_w ~= nil then widgets.shortcut_icon.width = shortcut_icon_w end
-    local shortcut_icon_h = tonumber(window.controls.sb_shortcut_icon_height.tb:GetText())
-    if shortcut_icon_h ~= nil then widgets.shortcut_icon.height = shortcut_icon_h end
-    local shortcut_text_w = tonumber(window.controls.sb_shortcut_text_width.tb:GetText())
-    if shortcut_text_w ~= nil then widgets.shortcut_text.width = shortcut_text_w end
-    local shortcut_text_h = tonumber(window.controls.sb_shortcut_text_height.tb:GetText())
-    if shortcut_text_h ~= nil then widgets.shortcut_text.height = shortcut_text_h end
+    local shortcut_w = tonumber(window.controls.sb_shortcut_width.tb:GetText())
+    if shortcut_w ~= nil then widgets.shortcut.width = shortcut_w end
+    local shortcut_h = tonumber(window.controls.sb_shortcut_height.tb:GetText())
+    if shortcut_h ~= nil then widgets.shortcut.height = shortcut_h end
 end

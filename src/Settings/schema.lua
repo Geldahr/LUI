@@ -63,8 +63,7 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "status_bar", "widgets", "money" })
     ensure_table_at(s, { "status_bar", "widgets", "wallet" })
     ensure_table_at(s, { "status_bar", "widgets", "wallet", "items" })
-    ensure_table_at(s, { "status_bar", "widgets", "shortcut_icon" })
-    ensure_table_at(s, { "status_bar", "widgets", "shortcut_text" })
+    ensure_table_at(s, { "status_bar", "widgets", "shortcut" })
 
     ensure_table_at(s, { "self", "vitals" })
     ensure_table_at(s, { "self", "vitals", "frame" })
@@ -713,10 +712,8 @@ function _G.ensure_loaded_settings()
         width = item_widget.width,
     }
 
-    if widgets.shortcut_icon.width == nil then widgets.shortcut_icon.width = 20 end
-    if widgets.shortcut_icon.height == nil then widgets.shortcut_icon.height = 20 end
-    if widgets.shortcut_text.width == nil then widgets.shortcut_text.width = 66 end
-    if widgets.shortcut_text.height == nil then widgets.shortcut_text.height = sb.height end
+    if widgets.shortcut.width == nil then widgets.shortcut.width = 20 end
+    if widgets.shortcut.height == nil then widgets.shortcut.height = 20 end
 
     local cd = s.self.cooldowns
     if cd.enabled == nil then

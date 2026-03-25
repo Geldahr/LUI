@@ -331,15 +331,6 @@ function _G.rebuild_settings()
     sb.font.color = raw_sb.font.color
     sb.font.outline_color = raw_sb.font.outline_color
 
-    local STATUS_BAR_SHORTCUT_CONFIGS = {
-        config_icon = "shortcut_icon",
-        assets_icon = "shortcut_icon",
-        bestiary_icon = "shortcut_icon",
-        config_text = "shortcut_text",
-        assets_text = "shortcut_text",
-        bestiary_text = "shortcut_text",
-    }
-
     sb.layout = raw_sb.layout
     sb.item_registry = raw_sb.item_registry or {}
     sb.zones.left = S.parse_status_bar_layout(raw_sb.layout.left, sb.item_registry)
@@ -398,7 +389,7 @@ function _G.rebuild_settings()
     }
 
     local function build_shortcut_widget(widget_key)
-        local raw_widget = raw_sb.widgets[STATUS_BAR_SHORTCUT_CONFIGS[widget_key]]
+        local raw_widget = raw_sb.widgets.shortcut
         return {
             enabled = in_zones(widget_key),
             width = scaled_int(raw_widget.width),
@@ -406,12 +397,9 @@ function _G.rebuild_settings()
         }
     end
 
-    sb.widgets.config_icon = build_shortcut_widget("config_icon")
-    sb.widgets.config_text = build_shortcut_widget("config_text")
-    sb.widgets.assets_icon = build_shortcut_widget("assets_icon")
-    sb.widgets.assets_text = build_shortcut_widget("assets_text")
-    sb.widgets.bestiary_icon = build_shortcut_widget("bestiary_icon")
-    sb.widgets.bestiary_text = build_shortcut_widget("bestiary_text")
+    sb.widgets.config = build_shortcut_widget("config")
+    sb.widgets.assets = build_shortcut_widget("assets")
+    sb.widgets.bestiary = build_shortcut_widget("bestiary")
 
     local raw_cd = raw.self.cooldowns
     local cd = _G.settings.self.cooldowns
