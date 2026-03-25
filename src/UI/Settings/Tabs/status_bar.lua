@@ -1,6 +1,7 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.Widgets"
 import "LUI.src.StatusBar.common"
 
 local S = _G.STATUS_BAR_COMMON
@@ -392,7 +393,7 @@ local function _create_wallet_selector(window, ui, key)
     entry.available_index = nil
     entry.selected_index = nil
 
-    entry.available_label = Turbine.UI.Label()
+    entry.available_label = UI.Widgets.LuiLabel()
     entry.available_label:SetParent(entry.control)
     entry.available_label:SetFont(window.field_label_font)
     entry.available_label:SetMultiline(true)
@@ -400,7 +401,7 @@ local function _create_wallet_selector(window, ui, key)
     entry.available_label:SetText(TR("All wallet items"))
     entry.available_label:SetZOrder(1)
 
-    entry.selected_label = Turbine.UI.Label()
+    entry.selected_label = UI.Widgets.LuiLabel()
     entry.selected_label:SetParent(entry.control)
     entry.selected_label:SetFont(window.field_label_font)
     entry.selected_label:SetMultiline(true)

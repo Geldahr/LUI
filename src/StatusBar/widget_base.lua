@@ -1,3 +1,5 @@
+import "LUI.src.UI.Widgets"
+
 local S = _G.STATUS_BAR_COMMON
 
 local StatusBarWidgetBase = class(Turbine.UI.Control)
@@ -31,7 +33,7 @@ function StatusBarWidgetBase:Constructor(widget_key, widget_w, bar_h, font, cont
     self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self.icon:SetVisible(false)
 
-    self.label = Turbine.UI.Label()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     self.label:SetMouseVisible(false)
     self.label:SetText("")

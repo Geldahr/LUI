@@ -1,3 +1,5 @@
+import "LUI.src.UI.Widgets"
+
 local S = _G.STATUS_BAR_COMMON
 
 local MoneyWidget = class(Turbine.UI.Control)
@@ -18,7 +20,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, icon_enabled, content_al
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self:SetSize(widget_w, bar_h)
 
-    self.text = Turbine.UI.Label()
+    self.text = UI.Widgets.LuiLabel()
     self.text:SetParent(self)
     self.text:SetMouseVisible(false)
     self.text:SetTextAlignment(self._content_alignment)
@@ -66,7 +68,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, icon_enabled, content_al
     self.c_icon:SetVisible(false)
 
     local function make_label()
-        local l = Turbine.UI.Label()
+        local l = UI.Widgets.LuiLabel()
         l:SetParent(self)
         l:SetMouseVisible(false)
         l:SetTextAlignment(self._content_alignment)

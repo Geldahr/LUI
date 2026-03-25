@@ -1,6 +1,7 @@
 import "LUI.src.StatusBar.common"
 import "LUI.src.StatusBar.widget_base"
 import "LUI.src.StatusBar.Widgets"
+import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
 
@@ -562,7 +563,7 @@ function StatusBarWindow:Constructor()
     self._edit_drag_ghost_right:SetMouseVisible(false)
     self._edit_drag_ghost_right:SetBackColor(EDIT_DRAG_GHOST_BORDER)
 
-    self._edit_drag_ghost_label = Turbine.UI.Label()
+    self._edit_drag_ghost_label = UI.Widgets.LuiLabel()
     self._edit_drag_ghost_label:SetParent(self._edit_drag_ghost)
     self._edit_drag_ghost_label:SetMouseVisible(false)
     self._edit_drag_ghost_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)

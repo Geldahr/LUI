@@ -1,3 +1,5 @@
+import "LUI.src.UI.Widgets"
+
 local S = _G.STATUS_BAR_COMMON
 
 local WalletWidget = class(Turbine.UI.Control)
@@ -64,7 +66,7 @@ function WalletWidget:Constructor(widget_w, bar_h, font, content_alignment, item
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self:SetSize(widget_w, bar_h)
 
-    self.placeholder = Turbine.UI.Label()
+    self.placeholder = UI.Widgets.LuiLabel()
     self.placeholder:SetParent(self)
     _apply_font(self.placeholder, font, self._content_alignment)
 
@@ -75,7 +77,7 @@ function WalletWidget:Constructor(widget_w, bar_h, font, content_alignment, item
             icon = nil,
             icon_background = nil,
             icon_from_wallet = false,
-            label = Turbine.UI.Label(),
+            label = UI.Widgets.LuiLabel(),
         }
 
         item.label:SetParent(self)

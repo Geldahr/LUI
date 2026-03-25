@@ -1,3 +1,5 @@
+import "LUI.src.UI.Widgets"
+
 local S = _G.STATUS_BAR_COMMON
 
 local ShortcutButtonWidget = class(Turbine.UI.Control)
@@ -60,7 +62,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
         prepare_background_stretch_mode_1(self.icon, self.icon_background)
     end
 
-    self.label = Turbine.UI.Label()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     self.label:SetMouseVisible(false)
     self.label:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)

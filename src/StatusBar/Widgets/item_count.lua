@@ -1,3 +1,5 @@
+import "LUI.src.UI.Widgets"
+
 local S = _G.STATUS_BAR_COMMON
 
 local ItemCountWidget = class(Turbine.UI.Control)
@@ -73,7 +75,7 @@ function ItemCountWidget:Constructor(item_name, widget_w, bar_h, font, icon_imag
     self.icon_fallback:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self.icon_fallback:SetVisible(false)
 
-    self.label = Turbine.UI.Label()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     _apply_font(self.label, font)
 
