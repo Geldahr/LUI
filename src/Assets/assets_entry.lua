@@ -2,6 +2,7 @@ import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
 
@@ -256,7 +257,7 @@ function AssetsEntry:Constructor(on_hover)
         self.icon_item_control:SetStretchMode(1)
     end
 
-    self.qty_label = Turbine.UI.Label()
+    self.qty_label = UI.Widgets.LuiLabel()
     self.qty_label:SetParent(self.icon_fallback)
     self.qty_label:SetMouseVisible(false)
     self.qty_label:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
@@ -265,26 +266,23 @@ function AssetsEntry:Constructor(on_hover)
     self.qty_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.qty_label:SetZOrder(3)
 
-    self.name_label = Turbine.UI.TextBox()
+    self.name_label = UI.Widgets.LuiLabel()
     self.name_label:SetParent(self.inner)
     self.name_label:SetMouseVisible(false)
-    self.name_label:SetReadOnly(true)
     self.name_label:SetSelectable(false)
     self.name_label:SetMultiline(true)
     self.name_label:SetForeColor(_quality_name_color(nil))
 
-    self.owner_label = Turbine.UI.TextBox()
+    self.owner_label = UI.Widgets.LuiLabel()
     self.owner_label:SetParent(self.inner)
     self.owner_label:SetMouseVisible(false)
-    self.owner_label:SetReadOnly(true)
     self.owner_label:SetSelectable(false)
     self.owner_label:SetMultiline(false)
     self.owner_label:SetForeColor(BASE_META_COLOR)
 
-    self.source_label = Turbine.UI.TextBox()
+    self.source_label = UI.Widgets.LuiLabel()
     self.source_label:SetParent(self.inner)
     self.source_label:SetMouseVisible(false)
-    self.source_label:SetReadOnly(true)
     self.source_label:SetSelectable(false)
     self.source_label:SetMultiline(false)
     self.source_label:SetForeColor(BASE_META_COLOR)

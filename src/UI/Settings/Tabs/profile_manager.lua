@@ -1,4 +1,5 @@
 import "Turbine.UI"
+import "LUI.src.UI.Widgets"
 
 ProfileManager = {
     key = "profile_manager",
@@ -146,12 +147,12 @@ end
 
 function ProfileManager.create_controls(window, ui)
     local info_entry = ui.add_custom("profile_manager_info", INFO_HEIGHT)
-    info_entry.body = Turbine.UI.TextBox()
+    info_entry.body = UI.Widgets.LuiLabel()
     info_entry.body:SetParent(info_entry.control)
     info_entry.body:SetMouseVisible(false)
-    info_entry.body:SetReadOnly(true)
     info_entry.body:SetSelectable(false)
     info_entry.body:SetMultiline(true)
+    info_entry.body:SetFont(_scaled_profile_info_font())
     info_entry.body:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     info_entry.body:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
     info_entry.body:SetText(table.concat({

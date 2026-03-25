@@ -201,7 +201,7 @@ function InventoryWindow:Constructor()
     self.c_icon:SetStretchMode(2)
 
     local function make_money_label()
-        local l = Turbine.UI.Label()
+        local l = UI.Widgets.LuiLabel()
         l:SetParent(self.header)
         l:SetMouseVisible(false)
         l:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -232,7 +232,7 @@ function InventoryWindow:Constructor()
 
     -- Lock mode + whitelist/blacklist actions are intentionally disabled for now.
     -- Keep the old UI construction commented for future re-enable.
-    -- self.lock_cb = Turbine.UI.Lotro.CheckBox()
+    -- self.lock_cb = UI.Widgets.LuiCheckBox()
     -- self.lock_cb:SetParent(self.header)
     -- self.lock_cb:SetFont(LABEL_FONT)
     -- self.lock_cb:SetText(" " .. TR("Lock mode"))
@@ -270,17 +270,16 @@ function InventoryWindow:Constructor()
     self.list:SetParent(self)
     self.list:SetOrientation(Turbine.UI.Orientation.Vertical)
 
-    self.hint_label = Turbine.UI.TextBox()
+    self.hint_label = UI.Widgets.LuiLabel()
     self.hint_label:SetParent(self)
     self.hint_label:SetMouseVisible(false)
-    self.hint_label:SetReadOnly(true)
     self.hint_label:SetSelectable(false)
     self.hint_label:SetForeColor(Turbine.UI.Color(0.65, 0.65, 0.65))
     self.hint_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     self.hint_label:SetMultiline(true)
+    self.hint_label:SetFont(_scaled_font("Verdana", BASE_HINT_FONT_SIZE))
     self.hint_label:SetText(TR(
         "Hint: to lock/unlock an item you can select it using Alt+Left click and then press Ctrl+T to toggle the lock."))
-    self.hint_label:SetFont(_scaled_font("Verdana", BASE_HINT_FONT_SIZE))
 
     self.rows = {}
     self.slots = {}

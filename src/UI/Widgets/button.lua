@@ -1,5 +1,6 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
+import "LUI.src.UI.Widgets.label"
 
 local BASE_BUTTON_W = 89
 local BASE_BUTTON_H = 21
@@ -70,13 +71,13 @@ function LuiButton:Constructor()
         math.max(0, self:GetHeight() - (2 * self._border_thickness))
     )
 
-    self._label = Turbine.UI.Label()
+    self._label = LuiLabel()
     self._label:SetParent(self._inner)
     self._label:SetMouseVisible(false)
     self._label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self._label:SetSize(self._inner:GetSize())
 
-    self._right_label = Turbine.UI.Label()
+    self._right_label = LuiLabel()
     self._right_label:SetParent(self._inner)
     self._right_label:SetMouseVisible(false)
     self._right_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)

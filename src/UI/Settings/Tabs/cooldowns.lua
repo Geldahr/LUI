@@ -1,6 +1,8 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.Widgets"
+
 Cooldowns = {
     key = "cooldowns",
     text = TR("Cooldowns"),
@@ -25,7 +27,7 @@ end
 local function _create_text_area(window, ui, key, label_text, help_text)
     local entry = ui.add_custom(key, 89)
 
-    entry.label = Turbine.UI.Label()
+    entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(entry.control)
     entry.label:SetFont(window.field_label_font)
     entry.label:SetMultiline(false)

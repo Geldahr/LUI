@@ -156,7 +156,7 @@ function Options:Constructor()
 
     self:SetSize(_scaled_int(444), _scaled_int(89))
 
-    self.help = Turbine.UI.Label()
+    self.help = UI.Widgets.LuiLabel()
     self.help:SetParent(self)
     self.help:SetFont(_scaled_font(SETTINGS_FONT_NAME, SETTINGS_FONT_SIZE))
     self.help:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
@@ -215,7 +215,7 @@ function ConfigWindow:Constructor()
     self.hint:SetZOrder(2000)
     self.hint:SetBackColor(Turbine.UI.Color(0.92, 0.05, 0.05, 0.05))
 
-    self.hint_label = Turbine.UI.Label()
+    self.hint_label = UI.Widgets.LuiLabel()
     self.hint_label:SetParent(self.hint)
     self.hint_label:SetPosition(_scaled_int(6), _scaled_int(4))
     self.hint_label:SetSize(_scaled_int(267), _scaled_int(148))
@@ -241,7 +241,7 @@ function ConfigWindow:Constructor()
     self.confirm_dialog:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.confirm_dialog:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
-    self.confirm_dialog_label = Turbine.UI.Label()
+    self.confirm_dialog_label = UI.Widgets.LuiLabel()
     self.confirm_dialog_label:SetParent(self.confirm_dialog)
     self.confirm_dialog_label:SetMultiline(true)
     self.confirm_dialog_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
@@ -451,6 +451,9 @@ function ConfigWindow:apply_ui_scale()
                     field:apply_ui_scale()
                 end
             elseif field.kind == "checkbox" and field.cb ~= nil then
+                if field.cb.SetScale ~= nil then
+                    field.cb:SetScale(scale)
+                end
                 field.cb:SetFont(self.field_label_font)
             end
         end
@@ -984,7 +987,7 @@ function ConfigWindow:build_controls_v2()
         local entry = {}
         entry.kind = "title"
 
-        entry.label = Turbine.UI.Label()
+        entry.label = UI.Widgets.LuiLabel()
         entry.label:SetParent(self.form)
         entry.label:SetFont(self.title_font)
         entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -1000,7 +1003,7 @@ function ConfigWindow:build_controls_v2()
         entry.base_height = height or 34
         entry.height = _scaled_int(entry.base_height)
 
-        entry.label = Turbine.UI.Label()
+        entry.label = UI.Widgets.LuiLabel()
         entry.label:SetParent(self.form)
         entry.label:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
         entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -1067,7 +1070,7 @@ function ConfigWindow:build_controls_v2()
         entry.help_text = help_text
         entry.full_width = full_width == true
 
-        entry.label = Turbine.UI.Label()
+        entry.label = UI.Widgets.LuiLabel()
         entry.label:SetParent(self.form)
         entry.label:SetFont(self.field_label_font)
         entry.label:SetMultiline(true)
@@ -1182,7 +1185,7 @@ function ConfigWindow:build_controls_v2()
         entry.full_width = full_width == true
         entry.value = nil
 
-        entry.label = Turbine.UI.Label()
+        entry.label = UI.Widgets.LuiLabel()
         entry.label:SetParent(self.form)
         entry.label:SetFont(self.field_label_font)
         entry.label:SetMultiline(true)
@@ -1274,10 +1277,10 @@ function ConfigWindow:build_controls_v2()
         entry.label_text = label_text
         entry.full_width = full_width == true
 
-        entry.cb = Turbine.UI.Lotro.CheckBox()
+        entry.cb = UI.Widgets.LuiCheckBox()
         entry.cb:SetParent(self.form)
         entry.cb:SetFont(self.field_label_font)
-        entry.cb:SetText(" " .. tostring(label_text or ""))
+        entry.cb:SetText(tostring(label_text or ""))
         entry.cb:SetZOrder(2)
         entry.cb.CheckedChanged = function()
             if entry.on_changed ~= nil then
@@ -1513,7 +1516,7 @@ function ConfigWindow:init_expiring_effects_preview()
         row.bar_fill:SetParent(row.bar_background)
         row.bar_fill:SetMouseVisible(false)
 
-        row.label = Turbine.UI.Label()
+        row.label = UI.Widgets.LuiLabel()
         row.label:SetParent(row.bar_background)
         row.label:SetMouseVisible(false)
         row.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -1891,7 +1894,7 @@ function ConfigWindow:init_cooldowns_preview()
         row.bar_fill:SetParent(row.bar_background)
         row.bar_fill:SetMouseVisible(false)
 
-        row.label = Turbine.UI.Label()
+        row.label = UI.Widgets.LuiLabel()
         row.label:SetParent(row.bar_background)
         row.label:SetMouseVisible(false)
         row.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
@@ -2328,7 +2331,7 @@ function ConfigWindow:init_expiring_target_effects_preview()
         row.bar_fill:SetParent(row.bar_background)
         row.bar_fill:SetMouseVisible(false)
 
-        row.label = Turbine.UI.Label()
+        row.label = UI.Widgets.LuiLabel()
         row.label:SetParent(row.bar_background)
         row.label:SetMouseVisible(false)
         row.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -2757,11 +2760,11 @@ function ConfigWindow:init_target_boss_vitals_preview()
         morale_back = Turbine.UI.Control(),
         morale_fill = Turbine.UI.Control(),
         morale_bubble = Turbine.UI.Control(),
-        morale_label = Turbine.UI.Label(),
+        morale_label = UI.Widgets.LuiLabel(),
         power_border = Turbine.UI.Control(),
         power_back = Turbine.UI.Control(),
         power_fill = Turbine.UI.Control(),
-        power_label = Turbine.UI.Label(),
+        power_label = UI.Widgets.LuiLabel(),
         buffs = {},
         debuffs = {},
     }
@@ -2797,7 +2800,7 @@ function ConfigWindow:init_target_boss_vitals_preview()
         local icon = Turbine.UI.Control()
         icon:SetParent(holder.control)
         icon:SetMouseVisible(false)
-        local label = Turbine.UI.Label()
+        local label = UI.Widgets.LuiLabel()
         label:SetParent(icon)
         label:SetMouseVisible(false)
         label:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
@@ -2808,7 +2811,7 @@ function ConfigWindow:init_target_boss_vitals_preview()
         local icon = Turbine.UI.Control()
         icon:SetParent(holder.control)
         icon:SetMouseVisible(false)
-        local label = Turbine.UI.Label()
+        local label = UI.Widgets.LuiLabel()
         label:SetParent(icon)
         label:SetMouseVisible(false)
         label:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
@@ -3300,7 +3303,7 @@ function ConfigWindow:init_target_targets_target_preview()
     p.bubble:SetZOrder(2)
     p.bubble:SetVisible(false)
 
-    p.label = Turbine.UI.Label()
+    p.label = UI.Widgets.LuiLabel()
     p.label:SetParent(p.root)
     p.label:SetMouseVisible(false)
     p.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
@@ -3623,7 +3626,7 @@ function ConfigWindow:init_party_vitals_preview()
         m.bubble_bar:SetMouseVisible(false)
         m.bubble_bar:SetZOrder(2)
 
-        m.morale_label = Turbine.UI.Label()
+        m.morale_label = UI.Widgets.LuiLabel()
         m.morale_label:SetParent(m.morale_border)
         m.morale_label:SetMouseVisible(false)
         m.morale_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
@@ -3641,7 +3644,7 @@ function ConfigWindow:init_party_vitals_preview()
         m.power_bar:SetParent(m.power_background)
         m.power_bar:SetMouseVisible(false)
 
-        m.power_label = Turbine.UI.Label()
+        m.power_label = UI.Widgets.LuiLabel()
         m.power_label:SetParent(m.power_border)
         m.power_label:SetMouseVisible(false)
         m.power_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
@@ -4928,7 +4931,7 @@ function ConfigWindow:_init_vitals_preview(holder_key, include_targets_target)
     p.outer:SetParent(p.container)
     p.outer:SetMouseVisible(false)
 
-    p.info_label = Turbine.UI.Label()
+    p.info_label = UI.Widgets.LuiLabel()
     p.info_label:SetParent(p.container)
     p.info_label:SetMouseVisible(false)
     p.info_label:SetMultiline(true)
@@ -4968,7 +4971,7 @@ function ConfigWindow:_init_vitals_preview(holder_key, include_targets_target)
     -- Pale red background for debuffs area.
     p.effects_debuffs:SetBackColor(Turbine.UI.Color(0.32, 0.14, 0.14))
 
-    p.effects_debuffs_label = Turbine.UI.Label()
+    p.effects_debuffs_label = UI.Widgets.LuiLabel()
     p.effects_debuffs_label:SetParent(p.effects_debuffs)
     p.effects_debuffs_label:SetMouseVisible(false)
     p.effects_debuffs_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
@@ -4987,7 +4990,7 @@ function ConfigWindow:_init_vitals_preview(holder_key, include_targets_target)
         icon.inner:SetMouseVisible(false)
         icon.inner:SetBackColor(Turbine.UI.Color(1, 0.65, 0.65, 0.65))
 
-        icon.timer = Turbine.UI.Label()
+        icon.timer = UI.Widgets.LuiLabel()
         icon.timer:SetParent(icon.root)
         icon.timer:SetMouseVisible(false)
         icon.timer:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
@@ -5004,7 +5007,7 @@ function ConfigWindow:_init_vitals_preview(holder_key, include_targets_target)
     -- Pale blue background for buffs area.
     p.effects_buffs:SetBackColor(Turbine.UI.Color(0.14, 0.18, 0.32))
 
-    p.effects_buffs_label = Turbine.UI.Label()
+    p.effects_buffs_label = UI.Widgets.LuiLabel()
     p.effects_buffs_label:SetParent(p.effects_buffs)
     p.effects_buffs_label:SetMouseVisible(false)
     p.effects_buffs_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
@@ -5023,7 +5026,7 @@ function ConfigWindow:_init_vitals_preview(holder_key, include_targets_target)
         icon.inner:SetMouseVisible(false)
         icon.inner:SetBackColor(Turbine.UI.Color(1, 0.65, 0.65, 0.65))
 
-        icon.timer = Turbine.UI.Label()
+        icon.timer = UI.Widgets.LuiLabel()
         icon.timer:SetParent(icon.root)
         icon.timer:SetMouseVisible(false)
         icon.timer:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
@@ -5052,7 +5055,7 @@ function ConfigWindow:_init_vitals_preview(holder_key, include_targets_target)
     p.bubble_bar:SetMouseVisible(false)
     p.bubble_bar:SetZOrder(2)
 
-    p.morale_label = Turbine.UI.Label()
+    p.morale_label = UI.Widgets.LuiLabel()
     p.morale_label:SetParent(p.morale_border)
     p.morale_label:SetMouseVisible(false)
     p.morale_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
@@ -5070,7 +5073,7 @@ function ConfigWindow:_init_vitals_preview(holder_key, include_targets_target)
     p.power_bar:SetParent(p.power_background)
     p.power_bar:SetMouseVisible(false)
 
-    p.power_label = Turbine.UI.Label()
+    p.power_label = UI.Widgets.LuiLabel()
     p.power_label:SetParent(p.power_border)
     p.power_label:SetMouseVisible(false)
     p.power_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
@@ -5092,7 +5095,7 @@ function ConfigWindow:_init_vitals_preview(holder_key, include_targets_target)
         p.targets_target_bubble:SetZOrder(2)
         p.targets_target_bubble:SetVisible(false)
 
-        p.targets_target_label = Turbine.UI.Label()
+        p.targets_target_label = UI.Widgets.LuiLabel()
         p.targets_target_label:SetParent(p.targets_target_background)
         p.targets_target_label:SetMouseVisible(false)
         p.targets_target_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)

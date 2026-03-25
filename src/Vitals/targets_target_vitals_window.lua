@@ -1,6 +1,7 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.Widgets"
 import "LUI.src.UI.moveable"
 
 TargetsTargetVitalsWindow = class(Turbine.UI.Window)
@@ -37,7 +38,7 @@ function TargetsTargetVitalsWindow:Constructor(owner)
     self.targets_target_bubble:SetZOrder(3)
     self.targets_target_bubble:SetVisible(false)
 
-    self.targets_target_label = Turbine.UI.Label()
+    self.targets_target_label = UI.Widgets.LuiLabel()
     self.targets_target_label:SetParent(self.targets_target_border)
     self.targets_target_label:SetMouseVisible(false)
     self.targets_target_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)

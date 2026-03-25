@@ -2,6 +2,7 @@ import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.Widgets"
 import "LUI.src.Vitals.effect_icon"
 import "LUI.src.Vitals.buff_area"
 import "LUI.src.Vitals.debuff_area"
@@ -230,14 +231,14 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     ---------------------------------------------------------------------
     -- LABELS
     ---------------------------------------------------------------------
-    self.morale_label = Turbine.UI.Label()
+    self.morale_label = UI.Widgets.LuiLabel()
     self.morale_label:SetParent(self.morale_frame)
     self.morale_label:SetSize(self.morale_frame:GetSize())
     self.morale_label:SetPosition(0, 0)
     self.morale_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.morale_label:SetZOrder(50)
 
-    self.power_label = Turbine.UI.Label()
+    self.power_label = UI.Widgets.LuiLabel()
     self.power_label:SetParent(self.power_frame)
     self.power_label:SetSize(self.power_frame:GetSize())
     self.power_label:SetPosition(0, 0)

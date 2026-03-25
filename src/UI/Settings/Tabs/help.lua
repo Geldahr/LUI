@@ -1,4 +1,5 @@
 import "Turbine.UI"
+import "LUI.src.UI.Widgets"
 
 Help = {
     key = "help",
@@ -45,7 +46,7 @@ end
 local function _create_help_text(window, ui, key, text, height)
     local entry = ui.add_custom(key, height)
 
-    entry.body = Turbine.UI.Label()
+    entry.body = UI.Widgets.LuiLabel()
     entry.body:SetParent(entry.control)
     entry.body:SetFont(_scaled_help_font())
     entry.body:SetMultiline(true)
@@ -81,7 +82,7 @@ end
 local function _create_link_box(window, ui, key, label_text, link_text, height)
     local entry = ui.add_custom(key, height)
 
-    entry.label = Turbine.UI.Label()
+    entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(entry.control)
     entry.label:SetFont(_scaled_help_font())
     entry.label:SetMultiline(true)

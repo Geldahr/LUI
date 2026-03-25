@@ -2,6 +2,7 @@ import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Utils.stretch"
 import "LUI.src.Settings.enums"
@@ -259,7 +260,7 @@ function StatusBarWidgetBase:Constructor(widget_key, widget_w, bar_h, font, cont
     self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self.icon:SetVisible(false)
 
-    self.label = Turbine.UI.Label()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     self.label:SetMouseVisible(false)
     -- self.label:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
@@ -485,7 +486,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, icon_enabled, content_al
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self:SetSize(widget_w, bar_h)
 
-    self.text = Turbine.UI.Label()
+    self.text = UI.Widgets.LuiLabel()
     self.text:SetParent(self)
     self.text:SetMouseVisible(false)
     self.text:SetTextAlignment(self._content_alignment)
@@ -533,7 +534,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, icon_enabled, content_al
     self.c_icon:SetVisible(false)
 
     local function make_label()
-        local l = Turbine.UI.Label()
+        local l = UI.Widgets.LuiLabel()
         l:SetParent(self)
         l:SetMouseVisible(false)
         l:SetTextAlignment(self._content_alignment)
@@ -755,7 +756,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
         prepare_background_stretch_mode_1(self.icon, self.icon_background)
     end
 
-    self.label = Turbine.UI.Label()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     self.label:SetMouseVisible(false)
     self.label:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)

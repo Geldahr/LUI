@@ -1,5 +1,6 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
+import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.time_format"
 
 EffectIcon = class(Turbine.UI.Window)
@@ -31,7 +32,7 @@ function EffectIcon:Constructor(effect, size, font, font_style, font_color, outl
     self.label_back:SetMouseVisible(false)
     self.label_back:SetZOrder(5)
 
-    self.timer = Turbine.UI.Label()
+    self.timer = UI.Widgets.LuiLabel()
     self.timer:SetParent(self.label_back)
     self.timer:SetSize(size, size)
     self.timer:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)

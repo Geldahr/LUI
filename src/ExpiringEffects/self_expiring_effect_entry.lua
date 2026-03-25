@@ -1,5 +1,6 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
+import "LUI.src.UI.Widgets"
 import "LUI.src.Settings.enums"
 import "LUI.src.Utils.time_format"
 import "LUI.src.Utils.token_format"
@@ -75,7 +76,7 @@ function SelfExpiringEffectEntry:Constructor()
     self.bar_fill:SetParent(self.bar_background)
     self.bar_fill:SetMouseVisible(false)
 
-    self.label = Turbine.UI.Label()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self.bar_background)
     self.label:SetMouseVisible(false)
     self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)

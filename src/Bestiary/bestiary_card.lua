@@ -968,12 +968,12 @@ local function _build_chip_layout(texts, max_width)
 end
 
 local function _create_text(parent, multiline, alignment)
-    local text = Turbine.UI.TextBox()
+    local text = UI.Widgets.LuiLabel()
     text:SetParent(parent)
     text:SetMouseVisible(false)
-    text:SetReadOnly(true)
     text:SetSelectable(false)
     text:SetMultiline(multiline == true)
+    text:SetFont(_scaled_font("Verdana", BASE_TEXT_SIZE))
     text:SetTextAlignment(alignment or Turbine.UI.ContentAlignment.TopLeft)
     return text
 end
@@ -1006,7 +1006,7 @@ local function _create_scroll_label_area(parent)
         parent:SetMouseVisible(true)
     end
 
-    area.label = Turbine.UI.Label()
+    area.label = UI.Widgets.LuiLabel()
     area.label:SetParent(parent)
     area.label:SetMouseVisible(true)
     area.label:SetSelectable(false)
@@ -1212,12 +1212,12 @@ function DropChip:Constructor()
     self.inner:SetMouseVisible(false)
     self.inner:SetBackColor(COLOR_DROP_CHIP_BG)
 
-    self.label = Turbine.UI.TextBox()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self.inner)
     self.label:SetMouseVisible(false)
-    self.label:SetReadOnly(true)
     self.label:SetSelectable(false)
     self.label:SetMultiline(false)
+    self.label:SetFont(_scaled_font("Verdana", BASE_TEXT_SIZE))
     self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 end
 
