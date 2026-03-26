@@ -1,6 +1,8 @@
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
+local BUTTON_FILL_COLOR = Turbine.UI.Color(1.00, 0.08, 0.10, 0.12)
+local BUTTON_FILL_HOVER_COLOR = Turbine.UI.Color(1.00, 0.12, 0.15, 0.18)
 
 local ShortcutButtonWidget = class(Turbine.UI.Control)
 _G.ShortcutButtonWidget = ShortcutButtonWidget
@@ -30,6 +32,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.border_top:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_top:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_top:SetBackColor(S.SHORTCUT_BORDER_COLOR)
+    self.border_top:SetZOrder(3)
 
     self.border_bottom = Turbine.UI.Control()
     self.border_bottom:SetParent(self)
@@ -37,6 +40,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.border_bottom:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_bottom:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_bottom:SetBackColor(S.SHORTCUT_BORDER_COLOR)
+    self.border_bottom:SetZOrder(3)
 
     self.border_left = Turbine.UI.Control()
     self.border_left:SetParent(self)
@@ -44,6 +48,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.border_left:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_left:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_left:SetBackColor(S.SHORTCUT_BORDER_COLOR)
+    self.border_left:SetZOrder(3)
 
     self.border_right = Turbine.UI.Control()
     self.border_right:SetParent(self)
@@ -51,6 +56,15 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.border_right:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_right:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_right:SetBackColor(S.SHORTCUT_BORDER_COLOR)
+    self.border_right:SetZOrder(3)
+
+    self.background = Turbine.UI.Control()
+    self.background:SetParent(self)
+    self.background:SetMouseVisible(false)
+    self.background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.background:SetBackColor(BUTTON_FILL_COLOR)
+    self.background:SetZOrder(1)
 
     self.icon = Turbine.UI.Control()
     self.icon:SetParent(self)
@@ -58,6 +72,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self.icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self.icon:SetZOrder(2)
     if self.icon_background ~= nil then
         prepare_background_stretch_mode_1(self.icon, self.icon_background)
     end
@@ -68,6 +83,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.label:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.label:SetText(S.get_shortcut_label(shortcut_key))
+    self.label:SetZOrder(2)
 
     if font ~= nil then
         if font.lotro ~= nil then
@@ -139,6 +155,7 @@ function ShortcutButtonWidget:destroy()
     if self.border_bottom ~= nil then self.border_bottom:SetParent(nil) end
     if self.border_left ~= nil then self.border_left:SetParent(nil) end
     if self.border_right ~= nil then self.border_right:SetParent(nil) end
+    if self.background ~= nil then self.background:SetParent(nil) end
     if self.icon ~= nil then self.icon:SetParent(nil) end
     if self.label ~= nil then self.label:SetParent(nil) end
     self:SetParent(nil)
@@ -159,6 +176,10 @@ function ShortcutButtonWidget:_layout()
 
     self.border_right:SetPosition(math.max(0, w - border_thickness), 0)
     self.border_right:SetSize(math.min(border_thickness, w), h)
+
+    self.background:SetPosition(border_thickness, border_thickness)
+    self.background:SetSize(math.max(0, w - (border_thickness * 2)), math.max(0, h - (border_thickness * 2)))
+    self.background:SetVisible(w > (border_thickness * 2) and h > (border_thickness * 2))
 
     self.label:SetPosition(0, 0)
     self.label:SetSize(w, h)
@@ -194,14 +215,19 @@ end
 function ShortcutButtonWidget:_update_visual_state()
     local label_color = self.font ~= nil and self.font.color or nil
     local border_color = S.SHORTCUT_BORDER_COLOR
+    local fill_color = BUTTON_FILL_COLOR
 
     if self._available ~= true then
         label_color = S.with_alpha(label_color, 0.45)
     elseif self._hover or self._pressed then
         border_color = S.SHORTCUT_BORDER_HOVER_COLOR
+        fill_color = BUTTON_FILL_HOVER_COLOR
     end
 
     self:_set_border_color(border_color)
+    if self.background ~= nil then
+        self.background:SetBackColor(fill_color)
+    end
 
     if label_color ~= nil then
         self.label:SetForeColor(label_color)
