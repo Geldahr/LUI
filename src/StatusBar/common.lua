@@ -497,6 +497,77 @@ function S.make_status_bar_layout_token(widget_key)
     return S.STATUS_BAR_WIDGET_LAYOUT_TOKENS[widget_key]
 end
 
+local function _normalize_status_bar_button_icon(value)
+    local text = _trim(value)
+    if text == nil or text == "" then
+        return nil
+    end
+
+    if text:match("^0[xX][%da-fA-F]+$") ~= nil then
+        return tonumber(text:sub(3), 16)
+    end
+
+    local numeric = tonumber(text)
+    if numeric ~= nil then
+        return numeric
+    end
+
+    return text
+end
+
+local function _format_status_bar_button_icon(value)
+    if type(value) == "number" then
+        return string.format("0x%X", value)
+    end
+
+    local text = _trim(value)
+    if text == nil or text == "" then
+        return nil
+    end
+
+    return text
+end
+
+function S.parse_status_bar_button_token(token)
+    local text = _trim(token)
+    if text == nil or text == "" then
+        return nil
+    end
+
+    local wrapped = text:match("^%%(.*)%%$")
+    if wrapped ~= nil then
+        text = _trim(wrapped)
+    end
+
+    local icon_text, command = text:match("^button:([^:]+):(.*)$")
+    if icon_text == nil then
+        return nil
+    end
+
+    local icon_background = _normalize_status_bar_button_icon(icon_text)
+    local alias_command = _trim(command)
+    if icon_background == nil or alias_command == nil or alias_command == "" then
+        return nil
+    end
+
+    return {
+        kind = "button",
+        command = alias_command,
+        icon_background = icon_background,
+        token = "%" .. text .. "%",
+    }
+end
+
+function S.make_status_bar_button_token(icon_background, command)
+    local icon_text = _format_status_bar_button_icon(icon_background)
+    local alias_command = _trim(command)
+    if icon_text == nil or alias_command == nil or alias_command == "" then
+        return nil
+    end
+
+    return "%button:" .. icon_text .. ":" .. alias_command .. "%"
+end
+
 function S.get_status_bar_widget_display_name(widget_key)
     if widget_key == "time_local" then
         return TR("Time (local)")
@@ -565,23 +636,32 @@ function S.is_status_bar_item_entry(entry)
     return type(entry) == "table" and entry.kind == "item" and entry.name ~= nil
 end
 
+function S.is_status_bar_button_entry(entry)
+    return type(entry) == "table" and entry.kind == "button" and entry.command ~= nil
+end
+
 function S.parse_status_bar_layout(text, item_registry)
     local list = {}
     local source = tostring(text or "")
 
     for token in source:gmatch("%%([^%%]+)%%") do
-        local item_name = S.parse_status_bar_item_name(token)
-        if item_name ~= nil then
-            list[#list + 1] = {
-                kind = "item",
-                name = item_name,
-                token = S.make_status_bar_item_token(item_name),
-                icon_image_id = S.get_status_bar_item_registry_icon(item_registry, item_name),
-            }
+        local button_entry = S.parse_status_bar_button_token(token)
+        if button_entry ~= nil then
+            list[#list + 1] = button_entry
         else
-            local widget_key = S.STATUS_BAR_LAYOUT_TOKENS[string.lower(_trim(token))]
-            if widget_key ~= nil then
-                list[#list + 1] = widget_key
+            local item_name = S.parse_status_bar_item_name(token)
+            if item_name ~= nil then
+                list[#list + 1] = {
+                    kind = "item",
+                    name = item_name,
+                    token = S.make_status_bar_item_token(item_name),
+                    icon_image_id = S.get_status_bar_item_registry_icon(item_registry, item_name),
+                }
+            else
+                local widget_key = S.STATUS_BAR_LAYOUT_TOKENS[string.lower(_trim(token))]
+                if widget_key ~= nil then
+                    list[#list + 1] = widget_key
+                end
             end
         end
     end

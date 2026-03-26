@@ -104,6 +104,10 @@ local function _layout_token_is_visible(token)
         return false
     end
 
+    if S.parse_status_bar_button_token(inner) ~= nil then
+        return true
+    end
+
     if S.parse_status_bar_item_name(inner) ~= nil then
         return true
     end
@@ -215,6 +219,8 @@ end
 local function _get_widget_menu_title(widget_key, widget_entry)
     if S.is_status_bar_item_entry(widget_entry) == true then
         return widget_entry.name or ""
+    elseif S.is_status_bar_button_entry(widget_entry) == true then
+        return widget_entry.command or "button"
     end
     return S.get_status_bar_widget_display_name(widget_key)
 end
@@ -442,6 +448,17 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
         end
         return ctor(widget_entry ~= nil and widget_entry.name or nil, widget_w, bar_h, font,
             widget_entry ~= nil and widget_entry.icon_image_id or nil)
+    elseif widget_key == "button" then
+        local ctor = _widget_ctor("AliasButtonWidget")
+        if ctor == nil then
+            error("Missing StatusBar widget constructor: AliasButtonWidget")
+        end
+        return ctor(
+            widget_entry ~= nil and widget_entry.command or nil,
+            widget_entry ~= nil and widget_entry.icon_background or nil,
+            widget_w,
+            S.clamp_shortcut_height(widget_cfg ~= nil and widget_cfg.height or nil, bar_h)
+        )
     end
 
     local alignment = Turbine.UI.ContentAlignment.MiddleLeft
@@ -609,6 +626,8 @@ function StatusBarWindow:apply_settings()
     self:_sync_display_width(sb)
 
     self:_rebuild_widgets(sb)
+    self._widgets_interaction_enabled = nil
+    self:_sync_widget_interaction_modes(self:_is_edit_mode_active() ~= true)
     local edit_window = self:_ensure_edit_window()
     if edit_window ~= nil then
         self._edit_window:apply_scale()
@@ -619,6 +638,10 @@ end
 
 function StatusBarWindow:Update()
     local now = Turbine.Engine.GetGameTime()
+    local interactions_enabled = self:_is_edit_mode_active() ~= true
+    if self._widgets_interaction_enabled ~= interactions_enabled then
+        self:_sync_widget_interaction_modes(interactions_enabled)
+    end
 
     if self._drag_preview_details ~= nil and now >= (self._drag_preview_next_at or 0) then
         self:_refresh_drag_preview_target_from_mouse()
@@ -686,6 +709,16 @@ end
 
 function StatusBarWindow:_is_edit_mode_active()
     return self._edit_window ~= nil and self._edit_window.IsVisible ~= nil and self._edit_window:IsVisible() == true
+end
+
+function StatusBarWindow:_sync_widget_interaction_modes(enabled)
+    self._widgets_interaction_enabled = enabled == true
+    for i = 1, #self._widgets do
+        local widget = self._widgets[i]
+        if widget ~= nil and widget.set_interaction_enabled ~= nil then
+            widget:set_interaction_enabled(self._widgets_interaction_enabled)
+        end
+    end
 end
 
 function StatusBarWindow:open_edit_window()
@@ -1313,11 +1346,14 @@ function StatusBarWindow:_rebuild_widgets(sb)
             if S.is_status_bar_item_entry(entry) == true then
                 widget_key = "item"
                 cfg = widgets_cfg.item
+            elseif S.is_status_bar_button_entry(entry) == true then
+                widget_key = "button"
+                cfg = widgets_cfg.button
             else
                 cfg = widgets_cfg[widget_key]
             end
 
-            if cfg ~= nil and (widget_key == "item" or cfg.enabled == true) then
+            if cfg ~= nil and (widget_key == "item" or widget_key == "button" or cfg.enabled == true) then
                 local inst = _widget_factory(widget_key, cfg.width, sb.height, sb.font, cfg, entry)
                 inst._status_bar_zone_key = zone_key
                 inst._status_bar_visible_index = i
@@ -1325,6 +1361,9 @@ function StatusBarWindow:_rebuild_widgets(sb)
                 inst._status_bar_entry = entry
                 if S.is_status_bar_item_entry(entry) == true then
                     inst._status_bar_layout_token = entry.token or S.make_status_bar_item_token(entry.name)
+                elseif S.is_status_bar_button_entry(entry) == true then
+                    inst._status_bar_layout_token = entry.token or
+                        S.make_status_bar_button_token(entry.icon_background, entry.command)
                 else
                     inst._status_bar_layout_token = S.make_status_bar_layout_token(widget_key)
                 end

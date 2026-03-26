@@ -6,6 +6,7 @@ import "LUI.src.StatusBar.Widgets.money"
 import "LUI.src.StatusBar.Widgets.wallet"
 import "LUI.src.StatusBar.Widgets.item_count"
 import "LUI.src.StatusBar.Widgets.shortcut_button"
+import "LUI.src.StatusBar.Widgets.alias_button"
 import "LUI.src.StatusBar.Widgets.dummy"
 
 local widgets_pkg = nil
@@ -24,5 +25,6 @@ if widgets_pkg ~= nil then
     widgets_pkg.WalletWidget = _G.WalletWidget
     widgets_pkg.ItemCountWidget = _G.ItemCountWidget
     widgets_pkg.ShortcutButtonWidget = _G.ShortcutButtonWidget
+    widgets_pkg.AliasButtonWidget = _G.AliasButtonWidget
     widgets_pkg.DummyWidget = _G.DummyWidget
 end

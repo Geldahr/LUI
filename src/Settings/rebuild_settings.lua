@@ -388,12 +388,21 @@ function _G.rebuild_settings()
         width = scaled_int(raw_sb.widgets.item.width),
     }
 
+    sb.widgets.shortcut = {
+        width = scaled_int(raw_sb.widgets.shortcut.width),
+        height = scaled_int(raw_sb.widgets.shortcut.height),
+    }
+
+    sb.widgets.button = {
+        width = sb.widgets.shortcut.width,
+        height = sb.widgets.shortcut.height,
+    }
+
     local function build_shortcut_widget(widget_key)
-        local raw_widget = raw_sb.widgets.shortcut
         return {
             enabled = in_zones(widget_key),
-            width = scaled_int(raw_widget.width),
-            height = scaled_int(raw_widget.height),
+            width = sb.widgets.shortcut.width,
+            height = sb.widgets.shortcut.height,
         }
     end
 
