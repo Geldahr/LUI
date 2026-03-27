@@ -1266,7 +1266,6 @@ function StatusBarWindow:_apply_palette_drop(session, zone_key, insert_index)
 
     raw_sb.layout[zone_key] = _insert_layout_token_at_visible_index(raw_sb.layout[zone_key], session.layout_token, insert_index)
     _sync_status_bar_after_raw_edit()
-    _write_status_bar_message(string.format("Added %s to the %s status bar zone.", session.menu_title or "widget", zone_key))
 end
 
 function StatusBarWindow:_apply_widget_move(session, zone_key, insert_index)
@@ -1295,7 +1294,6 @@ function StatusBarWindow:_apply_widget_move(session, zone_key, insert_index)
     end
 
     _sync_status_bar_after_raw_edit()
-    _write_status_bar_message(string.format("Moved %s on the status bar.", session.menu_title or "widget"))
 end
 
 function StatusBarWindow:_apply_widget_remove(session)
@@ -1313,7 +1311,6 @@ function StatusBarWindow:_apply_widget_remove(session)
 
     _cleanup_removed_item_registry_entry(raw_sb, removed_token)
     _sync_status_bar_after_raw_edit()
-    _write_status_bar_message(string.format("Removed %s from the status bar.", session.menu_title or "widget"))
 end
 
 
@@ -1791,7 +1788,6 @@ function StatusBarWindow:_handle_drag_drop(source, args)
     S.set_status_bar_item_registry_icon(raw_sb.item_registry, details.name, details.icon_image_id)
 
     _sync_status_bar_after_raw_edit(edit_window_state)
-    _write_status_bar_message(string.format("Added %s to the %s status bar zone.", token, zone_key))
 end
 
 function StatusBarWindow:_show_bar_menu()
@@ -1850,7 +1846,6 @@ function StatusBarWindow:_remove_widget_instance(widget)
 
     _cleanup_removed_item_registry_entry(raw_sb, removed_token)
     _sync_status_bar_after_raw_edit()
-    _write_status_bar_message(string.format("Removed %s from the status bar.", widget._status_bar_menu_title or "widget"))
 end
 
 function StatusBarWindow:_sync_display_width(sb)
