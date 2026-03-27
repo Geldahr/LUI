@@ -1,5 +1,6 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
+import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
 local BUTTON_FILL_COLOR = Turbine.UI.Color(1.00, 0.08, 0.10, 0.12)
@@ -8,11 +9,36 @@ local BUTTON_FILL_HOVER_COLOR = Turbine.UI.Color(1.00, 0.12, 0.15, 0.18)
 local AliasButtonWidget = class(Turbine.UI.Control)
 _G.AliasButtonWidget = AliasButtonWidget
 
-function AliasButtonWidget:Constructor(command, icon_background, widget_w, bar_h)
+local function _apply_font(label, font)
+    if label == nil or font == nil then
+        return
+    end
+    if font.lotro ~= nil then
+        label:SetFont(font.lotro)
+    end
+    if font.style ~= nil then
+        label:SetFontStyle(LUI_TO_LOTRO.font_style[font.style] or Turbine.UI.FontStyle.None)
+    end
+    if font.outline_color ~= nil then
+        label:SetOutlineColor(font.outline_color)
+    end
+    if font.color ~= nil then
+        label:SetForeColor(font.color)
+    end
+end
+
+function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     Turbine.UI.Control.Constructor(self)
 
-    self.command = tostring(command or "")
-    self.icon_background = icon_background
+    local entry = type(spec) == "table" and spec or {}
+
+    self.command = type(entry.command) == "string" and entry.command or nil
+    self.icon_background = nil
+    if type(entry.icon_background) == "number" or type(entry.icon_background) == "string" then
+        self.icon_background = entry.icon_background
+    end
+    self.icon_label = type(entry.icon_label) == "string" and entry.icon_label or nil
+    self.font = font
     self._hover = false
     self._pressed = false
 
@@ -54,17 +80,6 @@ function AliasButtonWidget:Constructor(command, icon_background, widget_w, bar_h
     self.border_right:SetBackColor(S.SHORTCUT_BORDER_COLOR)
     self.border_right:SetZOrder(3)
 
-    self.shortcut = Turbine.UI.Lotro.Shortcut(Turbine.UI.Lotro.ShortcutType.Alias, "")
-    self.shortcut:SetData(self.command)
-
-    self.slot = Turbine.UI.Lotro.Quickslot()
-    self.slot:SetParent(self)
-    self.slot:SetAllowDrop(false)
-    self.slot:SetUseOnRightClick(false)
-    self.slot:SetShortcut(self.shortcut)
-    self.slot:SetVisible(true)
-
-    -- This fill sits above the raw quickslot art so the button matches the built-in shortcut buttons.
     self.background = Turbine.UI.Control()
     self.background:SetParent(self)
     self.background:SetMouseVisible(false)
@@ -84,30 +99,51 @@ function AliasButtonWidget:Constructor(command, icon_background, widget_w, bar_h
         prepare_background_stretch_mode_1(self.icon, self.icon_background)
     end
 
-    local function _forward(name, args)
-        local handler = self[name]
-        if type(handler) == "function" then
-            handler(self, args)
-        end
-    end
+    self.label = UI.Widgets.LuiLabel()
+    self.label:SetParent(self)
+    self.label:SetMouseVisible(false)
+    self.label:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.label:SetText(self.icon_label or "")
+    self.label:SetZOrder(2)
+    _apply_font(self.label, self.font)
 
-    self.slot.MouseClick = function(_, args)
-        _forward("MouseClick", args)
-    end
-    self.slot.MouseEnter = function(_, args)
-        _forward("MouseEnter", args)
-    end
-    self.slot.MouseLeave = function(_, args)
-        _forward("MouseLeave", args)
-    end
-    self.slot.MouseDown = function(_, args)
-        _forward("MouseDown", args)
-    end
-    self.slot.MouseMove = function(_, args)
-        _forward("MouseMove", args)
-    end
-    self.slot.MouseUp = function(_, args)
-        _forward("MouseUp", args)
+    if self.command ~= nil then
+        self.shortcut = Turbine.UI.Lotro.Shortcut(Turbine.UI.Lotro.ShortcutType.Alias, "")
+        self.shortcut:SetData(self.command)
+
+        self.slot = Turbine.UI.Lotro.Quickslot()
+        self.slot:SetParent(self)
+        self.slot:SetAllowDrop(false)
+        self.slot:SetUseOnRightClick(false)
+        self.slot:SetShortcut(self.shortcut)
+        self.slot:SetVisible(true)
+
+        local function _forward(name, args)
+            local handler = self[name]
+            if type(handler) == "function" then
+                handler(self, args)
+            end
+        end
+
+        self.slot.MouseClick = function(_, args)
+            _forward("MouseClick", args)
+        end
+        self.slot.MouseEnter = function(_, args)
+            _forward("MouseEnter", args)
+        end
+        self.slot.MouseLeave = function(_, args)
+            _forward("MouseLeave", args)
+        end
+        self.slot.MouseDown = function(_, args)
+            _forward("MouseDown", args)
+        end
+        self.slot.MouseMove = function(_, args)
+            _forward("MouseMove", args)
+        end
+        self.slot.MouseUp = function(_, args)
+            _forward("MouseUp", args)
+        end
     end
 
     self.SizeChanged = function()
@@ -163,6 +199,7 @@ function AliasButtonWidget:destroy()
     if self.slot ~= nil then self.slot:SetParent(nil) end
     if self.background ~= nil then self.background:SetParent(nil) end
     if self.icon ~= nil then self.icon:SetParent(nil) end
+    if self.label ~= nil then self.label:SetParent(nil) end
     self:SetParent(nil)
 end
 
@@ -172,9 +209,6 @@ function AliasButtonWidget:_layout()
     local inner_w = math.max(0, w - (border_thickness * 2))
     local inner_h = math.max(0, h - (border_thickness * 2))
     local slot_size = math.min(inner_w, inner_h)
-    if slot_size < 0 then
-        slot_size = 0
-    end
 
     self.border_top:SetPosition(0, 0)
     self.border_top:SetSize(w, math.min(border_thickness, h))
@@ -192,11 +226,12 @@ function AliasButtonWidget:_layout()
     self.background:SetSize(inner_w, inner_h)
     self.background:SetVisible(inner_w > 0 and inner_h > 0)
 
-    local slot_x = math.floor((w - slot_size) / 2)
-    local slot_y = math.floor((h - slot_size) / 2)
-
-    self.slot:SetPosition(slot_x, slot_y)
-    self.slot:SetSize(slot_size, slot_size)
+    if self.slot ~= nil then
+        local slot_x = math.floor((w - slot_size) / 2)
+        local slot_y = math.floor((h - slot_size) / 2)
+        self.slot:SetPosition(slot_x, slot_y)
+        self.slot:SetSize(slot_size, slot_size)
+    end
 
     local icon_h = S.get_icon_size(slot_size)
     local icon_w = S.get_shortcut_icon_w(self.icon_background, icon_h)
@@ -205,6 +240,10 @@ function AliasButtonWidget:_layout()
     self.icon:SetPosition(icon_x, icon_y)
     self.icon:SetSize(icon_w, icon_h)
     self.icon:SetVisible(self.icon_background ~= nil and icon_h > 0 and icon_w > 0)
+
+    self.label:SetPosition(0, 0)
+    self.label:SetSize(w, h)
+    self.label:SetVisible(self.icon_label ~= nil and self.icon_label ~= "")
 end
 
 function AliasButtonWidget:_set_border_color(color)
@@ -226,5 +265,8 @@ function AliasButtonWidget:_update_visual_state()
     self:_set_border_color(border_color)
     if self.background ~= nil then
         self.background:SetBackColor(fill_color)
+    end
+    if self.label ~= nil and self.font ~= nil and self.font.color ~= nil then
+        self.label:SetForeColor(self.font.color)
     end
 end

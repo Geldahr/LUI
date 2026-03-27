@@ -12,6 +12,13 @@ import "LUI.src.ExpiringEffects"
 import "LUI.src.Cooldowns"
 import "LUI.src.Assets"
 import "LUI.src.Bestiary"
+import "LUI.src.StatusBar.api_chat_bridge"
+
+local StatusBarApiChat = _G.LUI_STATUS_BAR_API_CHAT
+
+if StatusBarApiChat ~= nil and StatusBarApiChat.install_callback ~= nil then
+    StatusBarApiChat.install_callback()
+end
 
 local function set_backpacks_enabled(enabled)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Backpack1, enabled == true)
@@ -148,10 +155,15 @@ function apply_status_bar_settings()
             STATUS_BAR:SetVisible(false)
         end
         STATUS_BAR = nil
+        _G.STATUS_BAR = nil
     end
 
     if sb.enabled == true then
         STATUS_BAR = UI.StatusBarWindow()
+        _G.STATUS_BAR = STATUS_BAR
+        if StatusBarApiChat ~= nil and StatusBarApiChat.flush_pending_items ~= nil then
+            StatusBarApiChat.flush_pending_items()
+        end
     end
 end
 
@@ -196,6 +208,7 @@ INVENTORY_WINDOW = nil
 ASSETS_STORE = nil
 ASSETS_WINDOW = nil
 STATUS_BAR = nil
+_G.STATUS_BAR = nil
 COOLDOWNS_WINDOW = nil
 BESTIARY_WINDOW = nil
 BESTIARY_TRACKER = Bestiary.Collector()
@@ -225,6 +238,10 @@ Turbine.Shell.WriteLine(string.format(
 
 Plugins["LUI"].Unload = function()
     save_settings()
+    if StatusBarApiChat ~= nil and StatusBarApiChat.uninstall_callback ~= nil then
+        StatusBarApiChat.uninstall_callback()
+    end
+    _G.STATUS_BAR = nil
     if BESTIARY_WINDOW ~= nil then
         if BESTIARY_WINDOW.SetVisible ~= nil then
             BESTIARY_WINDOW:SetVisible(false)

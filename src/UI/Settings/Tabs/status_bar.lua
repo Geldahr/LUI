@@ -551,6 +551,43 @@ local function _is_outline(control)
     return v == LUI_ENUMS.font_style.OUTLINE
 end
 
+local function _build_layout_help()
+    local lines = {
+        TR("Tokens:"),
+        TR("  %time% - local time (HH:MM)"),
+        TR("  %inventory% - backpack used/total"),
+        TR("  %durability% - equipped wear average% (weakest%)"),
+        TR("  %gold% / %money% - money (g/s/c)"),
+        TR("  %wallet% - selected wallet items"),
+        TR("  %item:[Simple Fish]% - tracked total for one inventory item"),
+        TR("  %config% - toggle configuration window"),
+        TR("  %bestiary% - toggle bestiary window"),
+        TR("  %assets% - toggle assets window"),
+    }
+
+    local external_lines = S.get_status_bar_api_hint_lines()
+    for i = 1, #external_lines do
+        lines[#lines + 1] = external_lines[i]
+    end
+
+    return table.concat(lines, "\n")
+end
+
+function StatusBar.refresh_layout_help(window)
+    if window == nil or window.controls == nil then
+        return
+    end
+
+    local help_text = _build_layout_help()
+    local keys = { "sb_layout_left", "sb_layout_center", "sb_layout_right" }
+    for i = 1, #keys do
+        local entry = window.controls[keys[i]]
+        if entry ~= nil then
+            entry.help_text = help_text
+        end
+    end
+end
+
 function StatusBar.create_controls(window, ui)
     local time_format_labels = { TR("24-hour"), TR("AM/PM") }
     local time_format_values = { LUI_ENUMS.time_format.H24, LUI_ENUMS.time_format.AMPM }
@@ -568,23 +605,7 @@ function StatusBar.create_controls(window, ui)
 
     ui.add_text("sb_height", TR("Height"))
 
-    local layout_help = table.concat({
-        TR("Tokens:"),
-        TR("  %time% - local time (HH:MM)"),
-        TR("  %inventory% - backpack used/total"),
-        TR("  %durability% - equipped wear average% (weakest%)"),
-        TR("  %gold% / %money% - money (g/s/c)"),
-        TR("  %wallet% - selected wallet items"),
-        TR("  %item:[Simple Fish]% - tracked total for one inventory item"),
-        TR("  %config% - toggle configuration window"),
-        TR("  %bestiary% - toggle bestiary window"),
-        TR("  %assets% - toggle assets window"),
-        "",
-        TR("Drag an item from the inventory window onto the status bar to add it."),
-        TR("Closing config via shortcut acts like Cancel."),
-        TR("Order matters. Unknown tokens are ignored."),
-        TR("Example: %config% %time% %item:[Simple Fish]% %assets%"),
-    }, "\n")
+    local layout_help = _build_layout_help()
 
     ui.add_text("sb_layout_left", TR("Left layout"), false, layout_help, true)
     ui.add_text("sb_layout_center", TR("Center layout"), false, layout_help, true)
@@ -621,6 +642,8 @@ function StatusBar.create_controls(window, ui)
 
     ui.add_text("sb_shortcut_width", TR("Width"))
     ui.add_text("sb_shortcut_height", TR("Height"))
+
+    StatusBar.refresh_layout_help(window)
 end
 
 function StatusBar.register(window, ui)
@@ -709,6 +732,8 @@ end
 
 function StatusBar.load(window, s, ui)
     local sb = s.status_bar
+
+    StatusBar.refresh_layout_help(window)
 
     window.controls.sb_enabled.cb:SetChecked(sb.enabled == true)
     window.controls.sb_bg_opacity.tb:SetText(tostring(sb.bg.opacity))
@@ -839,4 +864,10 @@ function StatusBar.apply(window, s, ui)
     if shortcut_w ~= nil then widgets.shortcut.width = shortcut_w end
     local shortcut_h = tonumber(window.controls.sb_shortcut_height.tb:GetText())
     if shortcut_h ~= nil then widgets.shortcut.height = shortcut_h end
+end
+
+_G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP = function()
+    if _G.CONFIG_WINDOW ~= nil then
+        StatusBar.refresh_layout_help(_G.CONFIG_WINDOW)
+    end
 end

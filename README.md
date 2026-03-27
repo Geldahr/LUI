@@ -2,6 +2,21 @@
 
 LUI is a custom user interface plugin for The Lord of the Rings Online. It focuses on cleaner combat frames, sharper text and borders, and precise control over layout, colors, fonts, thresholds, and scaling.
 
+## Table of Contents
+
+- [Features](#features)
+- [What LUI Replaces](#what-lui-replaces)
+- [Installation](#installation)
+- [Commands](#commands)
+- [Status Bar API](#status-bar-api)
+- [Configuration Notes](#configuration-notes)
+- [Scaling Notes](#scaling-notes)
+- [Limitations](#limitations)
+- [Known Issues](#known-issues)
+- [Recent fixes to verify](#recent-fixes-to-verify)
+- [Repository Notes](#repository-notes)
+- [Support](#support)
+
 ## Features
 
 - Self, target, boss, fellowship, and raid vitals
@@ -62,6 +77,35 @@ git clone https://github.com/Geldahr/LUI.git
 - `/lui assets` or `/lui a` - Toggle the assets window
 - `/lui bestiary`, `/lui beast`, or `/lui b` - Toggle the bestiary window
 - `/lui card [monster name]` - Open the bestiary card for a monster
+- `/lui api.sb --add -k "key" -t "Title" [-d "Description"] -i "0x11223344|path/to/icon.tga" -c "/command args"` - Register a status bar API button
+
+## Status Bar API
+
+Other plugins can register status bar buttons through `import "LUI.api"` and `LUI.api.StatusBar.add({...})`.
+
+```lua
+import "LUI.api"
+
+local request, err = LUI.api.StatusBar.add({
+    key = "reloader",
+    title = "Reloader",
+    description = "Reload LUI plugin",
+    image = 0x411BBF59,
+    command = "/luireloader reload",
+})
+```
+
+- `key` is required and becomes the layout token name, for example `%reloader%`.
+- `title` is required, used in the status bar edit palette, and is limited to 20 characters.
+- `description` is optional, used in layout help, and is limited to 40 characters.
+- `image` is required and accepts an integer image id, a hex id such as `0x411BBF59`, or a `.tga` path.
+- `command` is required and must be a full slash command, including any arguments.
+- Duplicate registrations using the same `key` are ignored.
+
+When an item is registered, it becomes available in two places:
+
+- The status bar layout help as `%key% - description` or `%key% - title` when no description is provided.
+- The status bar edit window palette using the short `title`.
 
 ## Configuration Notes
 

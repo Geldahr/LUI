@@ -8,6 +8,23 @@ import "LUI.src.Settings.enums"
 
 _G.STATUS_BAR_COMMON = _G.STATUS_BAR_COMMON or {}
 local S = _G.STATUS_BAR_COMMON
+_G.LUI_STATUS_BAR_API_ITEMS = _G.LUI_STATUS_BAR_API_ITEMS or {
+    by_key = {},
+    by_token = {},
+    order = {},
+}
+local STATUS_BAR_API_ITEMS = _G.LUI_STATUS_BAR_API_ITEMS
+STATUS_BAR_API_ITEMS.by_key = STATUS_BAR_API_ITEMS.by_key or {}
+STATUS_BAR_API_ITEMS.by_token = STATUS_BAR_API_ITEMS.by_token or {}
+STATUS_BAR_API_ITEMS.order = STATUS_BAR_API_ITEMS.order or {}
+local MAX_STATUS_BAR_API_TITLE_LEN = 20
+local MAX_STATUS_BAR_API_DESCRIPTION_LEN = 40
+
+local function _log_status_bar_api(message)
+    if Turbine ~= nil and Turbine.Shell ~= nil and Turbine.Shell.WriteLine ~= nil then
+        Turbine.Shell.WriteLine("<rgb=#33C1FF>LUI StatusBar</rgb>: " .. tostring(message or ""))
+    end
+end
 
 S.ICON_GAP = 4
 S.ICON_INSET = 4
@@ -92,6 +109,77 @@ local function _trim(text)
     v = v:gsub("^%s+", "")
     v = v:gsub("%s+$", "")
     return v
+end
+
+local function _refresh_status_bar_after_api_change()
+    local edit_window_state = nil
+    if _G.STATUS_BAR ~= nil and _G.STATUS_BAR.capture_edit_window_state ~= nil then
+        edit_window_state = _G.STATUS_BAR:capture_edit_window_state()
+    end
+
+    if _G.rebuild_settings ~= nil then
+        _G.rebuild_settings()
+    end
+    if _G.STATUS_BAR ~= nil and _G.STATUS_BAR.apply_settings ~= nil then
+        local ok, err = pcall(function()
+            _G.STATUS_BAR:apply_settings()
+        end)
+        if ok ~= true then
+            _log_status_bar_api("Live status bar apply failed: " .. tostring(err))
+        end
+    elseif _G.apply_status_bar_settings ~= nil then
+        local ok, err = pcall(_G.apply_status_bar_settings)
+        if ok ~= true then
+            _log_status_bar_api("Status bar rebuild failed: " .. tostring(err))
+        end
+    end
+    if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil and
+        _G.STATUS_BAR.restore_edit_window_state ~= nil then
+        _G.STATUS_BAR:restore_edit_window_state(edit_window_state)
+    end
+    if _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP ~= nil then
+        _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP()
+    end
+end
+
+local function _replace_status_bar_layout_token(text, old_token, new_token)
+    local source = tostring(text or "")
+    if source == "" or old_token == nil or new_token == nil or old_token == new_token then
+        return source, false
+    end
+
+    local tokens = {}
+    local changed = false
+    for token in source:gmatch("%%[^%%]+%%") do
+        if token == old_token then
+            token = new_token
+            changed = true
+        end
+        tokens[#tokens + 1] = token
+    end
+
+    if changed ~= true then
+        return source, false
+    end
+
+    return table.concat(tokens, " "), true
+end
+
+local function _migrate_status_bar_api_layout_token(old_token, new_token)
+    local raw_sb = _G.loaded_settings ~= nil and _G.loaded_settings.status_bar or nil
+    local layout = raw_sb ~= nil and raw_sb.layout or nil
+    if layout == nil then
+        return
+    end
+
+    local zone_keys = { "left", "center", "right" }
+    for i = 1, #zone_keys do
+        local zone_key = zone_keys[i]
+        local updated, changed = _replace_status_bar_layout_token(layout[zone_key], old_token, new_token)
+        if changed == true then
+            layout[zone_key] = updated
+        end
+    end
 end
 
 local WALLET_ITEM_NAMES = {
@@ -497,9 +585,13 @@ function S.make_status_bar_layout_token(widget_key)
     return S.STATUS_BAR_WIDGET_LAYOUT_TOKENS[widget_key]
 end
 
-local function _normalize_status_bar_button_icon(value)
+local function _normalize_status_bar_button_image(value)
+    if type(value) == "number" then
+        return value
+    end
+
     local text = _trim(value)
-    if text == nil or text == "" then
+    if text == "" then
         return nil
     end
 
@@ -512,6 +604,24 @@ local function _normalize_status_bar_button_icon(value)
         return numeric
     end
 
+    if text:lower():match("%.tga$") ~= nil then
+        return text
+    end
+
+    return nil
+end
+
+local function _normalize_status_bar_button_icon(value)
+    local image = _normalize_status_bar_button_image(value)
+    if image ~= nil then
+        return image
+    end
+
+    local text = _trim(value)
+    if text == "" then
+        return nil
+    end
+
     return text
 end
 
@@ -521,16 +631,80 @@ local function _format_status_bar_button_icon(value)
     end
 
     local text = _trim(value)
-    if text == nil or text == "" then
+    if text == "" then
         return nil
     end
 
     return text
 end
 
+local function _normalize_status_bar_api_key(value)
+    local key = _trim(value)
+    if key == "" then
+        return nil
+    end
+    if key:find("%s") ~= nil or key:find("%%", 1, true) ~= nil or key:match("^[%w_%-%.]+$") == nil then
+        return nil
+    end
+    return string.lower(key)
+end
+
+local function _normalize_status_bar_api_title(value)
+    local title = _trim(value)
+    if title == "" then
+        return nil
+    end
+    if string.len(title) > MAX_STATUS_BAR_API_TITLE_LEN then
+        return nil
+    end
+    return title
+end
+
+local function _normalize_status_bar_api_description(value)
+    if value == nil then
+        return nil
+    end
+
+    local description = _trim(value)
+    if description == "" then
+        return nil
+    end
+    if string.len(description) > MAX_STATUS_BAR_API_DESCRIPTION_LEN then
+        return nil
+    end
+    return description
+end
+
+local function _make_status_bar_api_layout_token(value)
+    local key = _normalize_status_bar_api_key(value)
+    if key == nil then
+        return nil
+    end
+    return "%" .. key .. "%"
+end
+
+function S.normalize_status_bar_api_command(value)
+    local command = _trim(value)
+    if command == "" then
+        return nil
+    end
+    if command:sub(1, 1) ~= "/" then
+        return nil
+    end
+    return command
+end
+
+function S.make_status_bar_api_registry_key(command)
+    local normalized = S.normalize_status_bar_api_command(command)
+    if normalized == nil then
+        return nil
+    end
+    return string.lower(normalized)
+end
+
 function S.parse_status_bar_button_token(token)
     local text = _trim(token)
-    if text == nil or text == "" then
+    if text == "" then
         return nil
     end
 
@@ -544,28 +718,223 @@ function S.parse_status_bar_button_token(token)
         return nil
     end
 
-    local icon_background = _normalize_status_bar_button_icon(icon_text)
-    local alias_command = _trim(command)
-    if icon_background == nil or alias_command == nil or alias_command == "" then
+    local icon_value = _normalize_status_bar_button_icon(icon_text)
+    local alias_command = S.normalize_status_bar_api_command(command)
+    if icon_value == nil or alias_command == nil then
         return nil
+    end
+
+    local icon_background = nil
+    local icon_label = nil
+    if _normalize_status_bar_button_image(icon_value) ~= nil then
+        icon_background = icon_value
+    else
+        icon_label = icon_value
     end
 
     return {
         kind = "button",
         command = alias_command,
         icon_background = icon_background,
+        icon_label = icon_label,
         token = "%" .. text .. "%",
     }
 end
 
 function S.make_status_bar_button_token(icon_background, command)
     local icon_text = _format_status_bar_button_icon(icon_background)
-    local alias_command = _trim(command)
-    if icon_text == nil or alias_command == nil or alias_command == "" then
+    local alias_command = S.normalize_status_bar_api_command(command)
+    if icon_text == nil or alias_command == nil then
         return nil
     end
 
     return "%button:" .. icon_text .. ":" .. alias_command .. "%"
+end
+
+function S.get_status_bar_api_item(value)
+    local text = _trim(value)
+    if text == "" then
+        return nil
+    end
+
+    local button_entry = S.parse_status_bar_button_token(text)
+    if button_entry ~= nil then
+        local command_key = S.make_status_bar_api_registry_key(button_entry.command)
+        if command_key ~= nil then
+            return STATUS_BAR_API_ITEMS.by_key[command_key]
+        end
+        return nil
+    end
+
+    local wrapped = text:match("^%%(.*)%%$")
+    if wrapped ~= nil then
+        text = _trim(wrapped)
+    end
+
+    local token_key = _normalize_status_bar_api_key(text)
+    if token_key ~= nil then
+        local entry = STATUS_BAR_API_ITEMS.by_token[token_key]
+        if entry ~= nil then
+            return entry
+        end
+    end
+
+    local key = S.make_status_bar_api_registry_key(text)
+    if key == nil then
+        return nil
+    end
+
+    return STATUS_BAR_API_ITEMS.by_key[key]
+end
+
+function S.register_status_bar_api_item(spec)
+    if type(spec) ~= "table" then
+        return nil, "StatusBar.add expects a table."
+    end
+
+    local key_name = _normalize_status_bar_api_key(spec.key)
+    if key_name == nil then
+        return nil, "StatusBar.add requires a key using letters, numbers, _, -, or ."
+    end
+
+    local title = _normalize_status_bar_api_title(spec.title)
+    if title == nil then
+        return nil, "StatusBar.add requires a title up to " .. tostring(MAX_STATUS_BAR_API_TITLE_LEN) .. " characters."
+    end
+
+    local description = _normalize_status_bar_api_description(spec.description)
+    if spec.description ~= nil and description == nil then
+        return nil, "StatusBar.add description must be at most " .. tostring(MAX_STATUS_BAR_API_DESCRIPTION_LEN) ..
+            " characters."
+    end
+
+    local image = _normalize_status_bar_button_image(spec.image)
+    if image == nil then
+        return nil, "StatusBar.add requires an image id or .tga path."
+    end
+
+    local command = S.normalize_status_bar_api_command(spec.command)
+    if command == nil then
+        return nil, "StatusBar.add requires a slash command."
+    end
+
+    local key = S.make_status_bar_api_registry_key(command)
+    if key == nil then
+        return nil, "Invalid status bar command."
+    end
+
+    local existing_token_entry = STATUS_BAR_API_ITEMS.by_token[key_name]
+    if existing_token_entry ~= nil then
+        _log_status_bar_api("Ignoring duplicate status bar API key=" .. tostring(key_name))
+        return existing_token_entry
+    end
+
+    local entry = STATUS_BAR_API_ITEMS.by_key[key]
+
+    local is_new = entry == nil
+    if entry == nil then
+        entry = {}
+        STATUS_BAR_API_ITEMS.by_key[key] = entry
+    end
+
+    local previous_token = entry.token
+    local previous_token_key = entry.token_key
+
+    entry.kind = "api_item"
+    entry.key = key_name
+    entry.title = title
+    entry.description = description
+    entry.command = command
+    entry.icon_background = image
+    entry.icon_label = nil
+    entry.token_key = key_name
+    entry.token = _make_status_bar_api_layout_token(key_name)
+
+    if entry.token == nil then
+        return nil, "Failed to build the status bar button token."
+    end
+
+    if previous_token ~= nil and previous_token ~= entry.token then
+        _migrate_status_bar_api_layout_token(previous_token, entry.token)
+    end
+
+    if is_new == true then
+        STATUS_BAR_API_ITEMS.order[#STATUS_BAR_API_ITEMS.order + 1] = key
+    end
+
+    if previous_token_key ~= nil and previous_token_key ~= key_name and STATUS_BAR_API_ITEMS.by_token[previous_token_key] == entry then
+        STATUS_BAR_API_ITEMS.by_token[previous_token_key] = nil
+    end
+    STATUS_BAR_API_ITEMS.by_token[key_name] = entry
+
+    _refresh_status_bar_after_api_change()
+    return entry
+end
+
+function S.is_status_bar_api_entry(entry)
+    return type(entry) == "table" and entry.kind == "api_item" and entry.key ~= nil and entry.title ~= nil and
+        entry.command ~= nil and
+        entry.token ~= nil
+end
+
+function S.get_status_bar_api_entries()
+    local out = {}
+    for i = 1, #STATUS_BAR_API_ITEMS.order do
+        local key = STATUS_BAR_API_ITEMS.order[i]
+        local entry = STATUS_BAR_API_ITEMS.by_key[key]
+        if entry ~= nil then
+            out[#out + 1] = entry
+        end
+    end
+    return out
+end
+
+function S.get_status_bar_api_hint_lines()
+    if #STATUS_BAR_API_ITEMS.order == 0 then
+        return {}
+    end
+
+    local lines = {}
+    for i = 1, #STATUS_BAR_API_ITEMS.order do
+        local key = STATUS_BAR_API_ITEMS.order[i]
+        local entry = STATUS_BAR_API_ITEMS.by_key[key]
+        if entry ~= nil then
+            local line = "  " .. tostring(entry.token or "")
+            local label = entry.description or entry.title
+            if label ~= nil then
+                line = line .. " - " .. label
+            end
+            lines[#lines + 1] = line
+        end
+    end
+    return lines
+end
+
+function S.get_status_bar_edit_palette_entries()
+    local entries = {}
+    for i = 1, #S.STATUS_BAR_EDITABLE_WIDGET_KEYS do
+        local widget_key = S.STATUS_BAR_EDITABLE_WIDGET_KEYS[i]
+        entries[#entries + 1] = {
+            kind = "widget",
+            widget_key = widget_key,
+            title = S.get_status_bar_widget_display_name(widget_key),
+            token = S.make_status_bar_layout_token(widget_key),
+        }
+    end
+    for i = 1, #STATUS_BAR_API_ITEMS.order do
+        local key = STATUS_BAR_API_ITEMS.order[i]
+        local entry = STATUS_BAR_API_ITEMS.by_key[key]
+        if entry ~= nil then
+            entries[#entries + 1] = {
+                kind = "api_item",
+                widget_key = "button",
+                title = entry.title or "",
+                token = entry.token,
+                api_entry = entry,
+            }
+        end
+    end
+    return entries
 end
 
 function S.get_status_bar_widget_display_name(widget_key)
@@ -658,9 +1027,14 @@ function S.parse_status_bar_layout(text, item_registry)
                     icon_image_id = S.get_status_bar_item_registry_icon(item_registry, item_name),
                 }
             else
-                local widget_key = S.STATUS_BAR_LAYOUT_TOKENS[string.lower(_trim(token))]
-                if widget_key ~= nil then
-                    list[#list + 1] = widget_key
+                local api_entry = S.get_status_bar_api_item(token)
+                if api_entry ~= nil then
+                    list[#list + 1] = api_entry
+                else
+                    local widget_key = S.STATUS_BAR_LAYOUT_TOKENS[string.lower(_trim(token))]
+                    if widget_key ~= nil then
+                        list[#list + 1] = widget_key
+                    end
                 end
             end
         end
@@ -695,6 +1069,23 @@ function S.status_bar_layout_has_widget(text, widget_key)
     for token in source:gmatch("%%([^%%]+)%%") do
         local current_widget_key = S.STATUS_BAR_LAYOUT_TOKENS[string.lower(_trim(token))]
         if current_widget_key == widget_key then
+            return true
+        end
+    end
+
+    return false
+end
+
+function S.status_bar_layout_has_api_item(text, command)
+    local wanted_key = S.make_status_bar_api_registry_key(command)
+    if wanted_key == nil then
+        return false
+    end
+
+    local source = tostring(text or "")
+    for token in source:gmatch("%%([^%%]+)%%") do
+        local entry = S.get_status_bar_api_item(token)
+        if entry ~= nil and S.make_status_bar_api_registry_key(entry.command) == wanted_key then
             return true
         end
     end

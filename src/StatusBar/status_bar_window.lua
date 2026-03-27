@@ -112,6 +112,10 @@ local function _layout_token_is_visible(token)
         return true
     end
 
+    if S.get_status_bar_api_item(inner) ~= nil then
+        return true
+    end
+
     return S.STATUS_BAR_LAYOUT_TOKENS[string.lower(inner)] ~= nil
 end
 
@@ -219,7 +223,13 @@ end
 local function _get_widget_menu_title(widget_key, widget_entry)
     if S.is_status_bar_item_entry(widget_entry) == true then
         return widget_entry.name or ""
+    elseif S.is_status_bar_api_entry(widget_entry) == true then
+        return widget_entry.title or widget_entry.description or ""
     elseif S.is_status_bar_button_entry(widget_entry) == true then
+        local api_entry = S.get_status_bar_api_item(widget_entry.command)
+        if api_entry ~= nil then
+            return api_entry.title or api_entry.description or widget_entry.command or "button"
+        end
         return widget_entry.command or "button"
     end
     return S.get_status_bar_widget_display_name(widget_key)
@@ -454,10 +464,10 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
             error("Missing StatusBar widget constructor: AliasButtonWidget")
         end
         return ctor(
-            widget_entry ~= nil and widget_entry.command or nil,
-            widget_entry ~= nil and widget_entry.icon_background or nil,
+            widget_entry,
             widget_w,
-            S.clamp_shortcut_height(widget_cfg ~= nil and widget_cfg.height or nil, bar_h)
+            S.clamp_shortcut_height(widget_cfg ~= nil and widget_cfg.height or nil, bar_h),
+            font
         )
     end
 
@@ -770,6 +780,24 @@ function StatusBarWindow:is_palette_widget_available(widget_key)
     return S.status_bar_layout_has_widget(_get_combined_layout_text(raw_sb), widget_key) ~= true
 end
 
+function StatusBarWindow:is_palette_entry_available(palette_entry)
+    if type(palette_entry) ~= "table" then
+        return self:is_palette_widget_available(palette_entry)
+    end
+
+    local raw_sb = _get_raw_status_bar_settings()
+    if raw_sb == nil then
+        return false
+    end
+
+    if palette_entry.kind == "api_item" then
+        local api_entry = palette_entry.api_entry
+        return S.status_bar_layout_has_api_item(_get_combined_layout_text(raw_sb), api_entry ~= nil and api_entry.command or nil) ~= true
+    end
+
+    return self:is_palette_widget_available(palette_entry.widget_key)
+end
+
 function StatusBarWindow:_get_drag_preview_details_from_session(session)
     if session == nil then
         return nil
@@ -1026,21 +1054,34 @@ function StatusBarWindow:_make_widget_drag_session(widget)
     }
 end
 
-function StatusBarWindow:arm_palette_drag(widget_key, source, args)
-    if self:is_palette_widget_available(widget_key) ~= true then
+function StatusBarWindow:arm_palette_drag(palette_entry, source, args)
+    local entry = palette_entry
+    if type(entry) ~= "table" then
+        entry = {
+            kind = "widget",
+            widget_key = palette_entry,
+            title = S.get_status_bar_widget_display_name(palette_entry),
+            token = S.make_status_bar_layout_token(palette_entry),
+        }
+    end
+
+    if self:is_palette_entry_available(entry) ~= true then
         return
     end
 
-    local token = S.make_status_bar_layout_token(widget_key)
+    local token = entry.token
     if token == nil then
         return
     end
 
+    local widget_key = entry.kind == "api_item" and "button" or entry.widget_key
+
     self:_arm_edit_drag({
         kind = "palette",
+        palette_entry = entry,
         widget_key = widget_key,
         layout_token = token,
-        menu_title = S.get_status_bar_widget_display_name(widget_key),
+        menu_title = entry.title or S.get_status_bar_widget_display_name(widget_key),
         preview_width = self:_get_widget_preview_width(widget_key),
     }, source, args)
 end
@@ -1211,7 +1252,14 @@ function StatusBarWindow:_apply_palette_drop(session, zone_key, insert_index)
         return
     end
 
-    if S.status_bar_layout_has_widget(_get_combined_layout_text(raw_sb), session.widget_key) == true then
+    local layout_text = _get_combined_layout_text(raw_sb)
+    if session.palette_entry ~= nil and session.palette_entry.kind == "api_item" then
+        local api_entry = session.palette_entry.api_entry
+        if S.status_bar_layout_has_api_item(layout_text, api_entry ~= nil and api_entry.command or nil) == true then
+            _write_status_bar_message(string.format("%s is already on the status bar.", session.menu_title or "Widget"))
+            return
+        end
+    elseif S.status_bar_layout_has_widget(layout_text, session.widget_key) == true then
         _write_status_bar_message(string.format("%s is already on the status bar.", session.menu_title or "Widget"))
         return
     end
@@ -1335,7 +1383,6 @@ function StatusBarWindow:_rebuild_widgets(sb)
 
     local zones = sb.zones
     local widgets_cfg = sb.widgets
-
     local function build_zone(zone_key, dst)
         local list = zones[zone_key]
         for i = 1, #list do
@@ -1346,6 +1393,9 @@ function StatusBarWindow:_rebuild_widgets(sb)
             if S.is_status_bar_item_entry(entry) == true then
                 widget_key = "item"
                 cfg = widgets_cfg.item
+            elseif S.is_status_bar_api_entry(entry) == true then
+                widget_key = "button"
+                cfg = widgets_cfg.button
             elseif S.is_status_bar_button_entry(entry) == true then
                 widget_key = "button"
                 cfg = widgets_cfg.button
@@ -1361,6 +1411,8 @@ function StatusBarWindow:_rebuild_widgets(sb)
                 inst._status_bar_entry = entry
                 if S.is_status_bar_item_entry(entry) == true then
                     inst._status_bar_layout_token = entry.token or S.make_status_bar_item_token(entry.name)
+                elseif S.is_status_bar_api_entry(entry) == true then
+                    inst._status_bar_layout_token = entry.token
                 elseif S.is_status_bar_button_entry(entry) == true then
                     inst._status_bar_layout_token = entry.token or
                         S.make_status_bar_button_token(entry.icon_background, entry.command)
@@ -1381,6 +1433,7 @@ function StatusBarWindow:_rebuild_widgets(sb)
     build_zone("left", self._zone_widgets_left)
     build_zone("center", self._zone_widgets_center)
     build_zone("right", self._zone_widgets_right)
+
     self:SetMouseVisible(true)
 
     self:_layout_widgets(sb)
