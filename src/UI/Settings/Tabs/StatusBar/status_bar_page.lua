@@ -833,3 +833,17 @@ end
 function StatusBarPage:apply_to_settings(s)
     self:apply(s.status_bar)
 end
+
+_G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP = function()
+    local window = _G.CONFIG_WINDOW
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "status_bar"
+    end)
+    if page ~= nil and page.refresh_layout_help ~= nil then
+        page:refresh_layout_help()
+    end
+end

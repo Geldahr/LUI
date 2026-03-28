@@ -11,16 +11,6 @@ import "LUI.src.Utils.time_format"
 import "LUI.src.Utils.token_format"
 import "LUI.src.Settings.enums"
 
-import "LUI.src.UI.Settings.Tabs.Global.global"
-import "LUI.src.UI.Settings.Tabs.Self.self"
-import "LUI.src.UI.Settings.Tabs.Target.target"
-import "LUI.src.UI.Settings.Tabs.Party.party"
-import "LUI.src.UI.Settings.Tabs.ProfileManager.profile_manager"
-import "LUI.src.UI.Settings.Tabs.Inventory.inventory"
-import "LUI.src.UI.Settings.Tabs.Assets.assets"
-import "LUI.src.UI.Settings.Tabs.StatusBar.status_bar"
-import "LUI.src.UI.Settings.Tabs.Help.help"
-
 local SETTINGS_FONT_NAME = "Verdana"
 local SETTINGS_FONT_SIZE = 13
 local TAB_FONT_NAME = "Verdana"

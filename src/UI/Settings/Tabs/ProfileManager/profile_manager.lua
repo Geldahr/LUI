@@ -10,15 +10,27 @@ function ProfileManager.create_page(window)
 end
 
 function ProfileManager.load(window)
-    local page = window._tab_pages ~= nil and window._tab_pages.profile_manager or nil
-    if page ~= nil and page.load ~= nil then
-        page:load()
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "profile_manager"
+    end)
+    if page ~= nil and page.load_from_settings ~= nil then
+        page:load_from_settings()
     end
 end
 
 function ProfileManager.apply(window)
-    local page = window._tab_pages ~= nil and window._tab_pages.profile_manager or nil
-    if page ~= nil and page.apply ~= nil then
-        page:apply()
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "profile_manager"
+    end)
+    if page ~= nil and page.apply_to_settings ~= nil then
+        page:apply_to_settings()
     end
 end

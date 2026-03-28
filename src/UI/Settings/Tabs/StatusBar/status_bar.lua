@@ -5,12 +5,14 @@ StatusBar = {
     text = TR("Status Bar"),
 }
 
-local function _status_bar_page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.status_bar or nil
-end
-
 function StatusBar.refresh_layout_help(window)
-    local page = _status_bar_page(window)
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "status_bar"
+    end)
     if page ~= nil and page.refresh_layout_help ~= nil then
         page:refresh_layout_help()
     end
@@ -21,21 +23,27 @@ function StatusBar.create_page(window)
 end
 
 function StatusBar.load(window, s)
-    local page = _status_bar_page(window)
-    if page ~= nil and page.load ~= nil then
-        page:load(s.status_bar)
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "status_bar"
+    end)
+    if page ~= nil and page.load_from_settings ~= nil then
+        page:load_from_settings(s)
     end
 end
 
 function StatusBar.apply(window, s)
-    local page = _status_bar_page(window)
-    if page ~= nil and page.apply ~= nil then
-        page:apply(s.status_bar)
+    if window == nil or window.main_tab_bar == nil then
+        return
     end
-end
 
-_G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP = function()
-    if _G.CONFIG_WINDOW ~= nil then
-        StatusBar.refresh_layout_help(_G.CONFIG_WINDOW)
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "status_bar"
+    end)
+    if page ~= nil and page.apply_to_settings ~= nil then
+        page:apply_to_settings(s)
     end
 end

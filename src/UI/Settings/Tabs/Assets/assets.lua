@@ -10,15 +10,27 @@ function AssetsTab.create_page(window)
 end
 
 function AssetsTab.load(window, s)
-    local page = window._tab_pages ~= nil and window._tab_pages.assets or nil
-    if page ~= nil and page.load ~= nil then
-        page:load(s.assets)
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "assets"
+    end)
+    if page ~= nil and page.load_from_settings ~= nil then
+        page:load_from_settings(s)
     end
 end
 
 function AssetsTab.apply(window, s)
-    local page = window._tab_pages ~= nil and window._tab_pages.assets or nil
-    if page ~= nil and page.apply ~= nil then
-        page:apply(s.assets)
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "assets"
+    end)
+    if page ~= nil and page.apply_to_settings ~= nil then
+        page:apply_to_settings(s)
     end
 end

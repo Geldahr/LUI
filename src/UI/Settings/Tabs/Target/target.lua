@@ -10,15 +10,27 @@ function TargetTab.create_page(window)
 end
 
 function TargetTab.load(window, s, ui)
-    local page = window._tab_pages ~= nil and window._tab_pages.target or nil
-    if page ~= nil and page.load_pages ~= nil then
-        page:load_pages(s, ui)
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "target"
+    end)
+    if page ~= nil and page.load_from_settings ~= nil then
+        page:load_from_settings(s, ui)
     end
 end
 
 function TargetTab.apply(window, s, ui)
-    local page = window._tab_pages ~= nil and window._tab_pages.target or nil
-    if page ~= nil and page.apply_pages ~= nil then
-        page:apply_pages(s, ui)
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    local _, page = window.main_tab_bar:find_index(function(_, candidate)
+        return candidate ~= nil and candidate._tab_key == "target"
+    end)
+    if page ~= nil and page.apply_to_settings ~= nil then
+        page:apply_to_settings(s, ui)
     end
 end
