@@ -1751,8 +1751,17 @@ function ConfigWindow:apply_changes(close_after)
     end
 end
 
+function ConfigWindow:_controls_for_tab(key)
+    local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
+    if page ~= nil and page.controls ~= nil then
+        return page.controls
+    end
+    return self.controls
+end
+
 function ConfigWindow:use_selected_profile()
-    local profile_control = self.controls.profile_manager_profile
+    local controls = self:_controls_for_tab("profile_manager")
+    local profile_control = controls ~= nil and controls.profile_manager_profile or nil
     if profile_control == nil or profile_control.get_value == nil then
         return
     end
@@ -1779,8 +1788,9 @@ function ConfigWindow:use_selected_profile()
 end
 
 function ConfigWindow:rename_selected_profile()
-    local profile_control = self.controls.profile_manager_profile
-    local name_control = self.controls.profile_manager_name
+    local controls = self:_controls_for_tab("profile_manager")
+    local profile_control = controls ~= nil and controls.profile_manager_profile or nil
+    local name_control = controls ~= nil and controls.profile_manager_name or nil
     if profile_control == nil or name_control == nil or profile_control.get_value == nil then
         return
     end
@@ -1801,7 +1811,8 @@ function ConfigWindow:rename_selected_profile()
 end
 
 function ConfigWindow:confirm_delete_selected_profile()
-    local profile_control = self.controls.profile_manager_profile
+    local controls = self:_controls_for_tab("profile_manager")
+    local profile_control = controls ~= nil and controls.profile_manager_profile or nil
     if profile_control == nil or profile_control.get_value == nil then
         return
     end
