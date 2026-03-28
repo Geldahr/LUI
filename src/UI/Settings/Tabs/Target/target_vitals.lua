@@ -5,10 +5,6 @@ TargetVitals = {
     text = TR("Target Vitals"),
 }
 
-local function _page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.target_vitals or nil
-end
-
 local function _apply_color(ui, dest, hex)
     local c = ui.hex_to_color(hex)
     if c ~= nil then
@@ -20,8 +16,7 @@ function TargetVitals.create_page(window)
     return TargetVitalsPage(window)
 end
 
-function TargetVitals.load(window, s, ui)
-    local page = _page(window)
+function TargetVitals.load(page, s, ui)
     if page == nil then
         return
     end
@@ -96,8 +91,7 @@ function TargetVitals.load(window, s, ui)
     page:layout()
 end
 
-function TargetVitals.apply(window, s, ui)
-    local page = _page(window)
+function TargetVitals.apply(page, s, ui)
     if page == nil then
         return
     end

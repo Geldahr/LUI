@@ -5,10 +5,6 @@ TargetBossVitals = {
     text = TR("Boss vitals"),
 }
 
-local function _page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.target_boss_vitals or nil
-end
-
 local function _apply_color(ui, dest, hex)
     local c = ui.hex_to_color(hex)
     if c ~= nil then
@@ -20,8 +16,7 @@ function TargetBossVitals.create_page(window)
     return TargetBossVitalsPage(window)
 end
 
-function TargetBossVitals.load(window, s, ui)
-    local page = _page(window)
+function TargetBossVitals.load(page, s, ui)
     if page == nil then
         return
     end
@@ -96,8 +91,7 @@ function TargetBossVitals.load(window, s, ui)
     page:layout()
 end
 
-function TargetBossVitals.apply(window, s, ui)
-    local page = _page(window)
+function TargetBossVitals.apply(page, s, ui)
     if page == nil then
         return
     end

@@ -5,10 +5,6 @@ PartyVitals = {
     text = TR("Party Vitals"),
 }
 
-local function _page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.party_vitals or nil
-end
-
 local function _apply_color(ui, dest, hex)
     local c = ui.hex_to_color(hex)
     if c ~= nil then
@@ -20,8 +16,7 @@ function PartyVitals.create_page(window)
     return PartyVitalsPage(window)
 end
 
-function PartyVitals.load(window, s, ui)
-    local page = _page(window)
+function PartyVitals.load(page, s, ui)
     if page == nil then
         return
     end
@@ -86,8 +81,7 @@ function PartyVitals.load(window, s, ui)
     page:layout()
 end
 
-function PartyVitals.apply(window, s, ui)
-    local page = _page(window)
+function PartyVitals.apply(page, s, ui)
     if page == nil then
         return
     end

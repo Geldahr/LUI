@@ -5,10 +5,6 @@ SelfVitals = {
     text = TR("Self Vitals"),
 }
 
-local function _page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.self_vitals or nil
-end
-
 local function _apply_color(ui, dest, hex)
     local c = ui.hex_to_color(hex)
     if c ~= nil then
@@ -20,8 +16,7 @@ function SelfVitals.create_page(window)
     return SelfVitalsPage(window)
 end
 
-function SelfVitals.load(window, s, ui)
-    local page = _page(window)
+function SelfVitals.load(page, s, ui)
     if page == nil then
         return
     end
@@ -96,8 +91,7 @@ function SelfVitals.load(window, s, ui)
     page:layout()
 end
 
-function SelfVitals.apply(window, s, ui)
-    local page = _page(window)
+function SelfVitals.apply(page, s, ui)
     if page == nil then
         return
     end

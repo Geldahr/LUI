@@ -24,9 +24,6 @@ function ConfigWindow:_controls_for_tab(key)
             return candidate ~= nil and candidate._tab_key == key
         end)
     end
-    if page == nil and self._tab_pages ~= nil then
-        page = self._tab_pages[key]
-    end
     if page ~= nil and page.controls ~= nil then
         return page.controls
     end

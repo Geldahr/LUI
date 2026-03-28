@@ -5,16 +5,11 @@ PartyLayout = {
     text = TR("Layout"),
 }
 
-local function _page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.party_layout or nil
-end
-
 function PartyLayout.create_page(window)
     return PartyLayoutPage(window)
 end
 
-function PartyLayout.load(window, s)
-    local page = _page(window)
+function PartyLayout.load(page, s)
     if page == nil then
         return
     end
@@ -28,8 +23,7 @@ function PartyLayout.load(window, s)
     page.loading = false
 end
 
-function PartyLayout.apply(window, s)
-    local page = _page(window)
+function PartyLayout.apply(page, s)
     if page == nil then
         return
     end

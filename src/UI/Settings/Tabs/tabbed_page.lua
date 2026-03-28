@@ -70,12 +70,8 @@ function SettingsTabbedPage:add_sub_page(text, module)
     page._tab_key = module.key
     self._sub_pages[module.key] = page
     self._sub_page_order[#self._sub_page_order + 1] = module.key
-    self._sub_page_modules[#self._sub_page_modules + 1] = module
+    self._sub_page_modules[module.key] = module
     self.sub_tab_bar:add_tab(text, page)
-
-    if self.window ~= nil and self.window._tab_pages ~= nil then
-        self.window._tab_pages[module.key] = page
-    end
 
     self:_merge_page_controls(page)
 
@@ -165,19 +161,23 @@ function SettingsTabbedPage:close_all_dropdowns()
 end
 
 function SettingsTabbedPage:load_pages(s, ui)
-    for i = 1, #self._sub_page_modules do
-        local module = self._sub_page_modules[i]
+    for i = 1, #self._sub_page_order do
+        local key = self._sub_page_order[i]
+        local module = key ~= nil and self._sub_page_modules[key] or nil
+        local page = key ~= nil and self._sub_pages[key] or nil
         if module ~= nil and module.load ~= nil then
-            module.load(self.window, s, ui)
+            module.load(page, s, ui)
         end
     end
 end
 
 function SettingsTabbedPage:apply_pages(s, ui)
-    for i = 1, #self._sub_page_modules do
-        local module = self._sub_page_modules[i]
+    for i = 1, #self._sub_page_order do
+        local key = self._sub_page_order[i]
+        local module = key ~= nil and self._sub_page_modules[key] or nil
+        local page = key ~= nil and self._sub_pages[key] or nil
         if module ~= nil and module.apply ~= nil then
-            module.apply(self.window, s, ui)
+            module.apply(page, s, ui)
         end
     end
 end

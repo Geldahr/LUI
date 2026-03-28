@@ -5,10 +5,6 @@ TargetTargetsTarget = {
     text = TR("Target's Target"),
 }
 
-local function _page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.target_targets_target or nil
-end
-
 local function _apply_color(ui, dest, hex)
     local c = ui.hex_to_color(hex)
     if c ~= nil then
@@ -20,8 +16,7 @@ function TargetTargetsTarget.create_page(window)
     return TargetTargetsTargetPage(window)
 end
 
-function TargetTargetsTarget.load(window, s, ui)
-    local page = _page(window)
+function TargetTargetsTarget.load(page, s, ui)
     if page == nil then
         return
     end
@@ -62,8 +57,7 @@ function TargetTargetsTarget.load(window, s, ui)
     page:layout()
 end
 
-function TargetTargetsTarget.apply(window, s, ui)
-    local page = _page(window)
+function TargetTargetsTarget.apply(page, s, ui)
     if page == nil then
         return
     end

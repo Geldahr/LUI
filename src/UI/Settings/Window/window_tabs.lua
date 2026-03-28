@@ -92,7 +92,6 @@ function ConfigWindow:_activate_active_page()
 end
 
 function ConfigWindow:build_tabs()
-    self._tab_pages = {}
     local global_page = GlobalPage(self)
     global_page._tab_key = "global"
     self.main_tab_bar:add_tab(TR("Global"), global_page)

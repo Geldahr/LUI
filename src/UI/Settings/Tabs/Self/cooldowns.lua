@@ -5,16 +5,11 @@ Cooldowns = {
     text = TR("Cooldowns"),
 }
 
-local function _page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.cooldowns or nil
-end
-
 function Cooldowns.create_page(window)
     return CooldownsPage(window)
 end
 
-function Cooldowns.load(window, s, ui)
-    local page = _page(window)
+function Cooldowns.load(page, s, ui)
     if page == nil then
         return
     end
@@ -57,8 +52,7 @@ function Cooldowns.load(window, s, ui)
     page:layout()
 end
 
-function Cooldowns.apply(window, s, ui)
-    local page = _page(window)
+function Cooldowns.apply(page, s, ui)
     if page == nil then
         return
     end

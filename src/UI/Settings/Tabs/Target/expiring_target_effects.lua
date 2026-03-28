@@ -5,10 +5,6 @@ ExpiringTargetEffects = {
     text = TR("Expiring Effects (Target)"),
 }
 
-local function _page(window)
-    return window ~= nil and window._tab_pages ~= nil and window._tab_pages.expiring_target_effects or nil
-end
-
 local function _apply_color(ui, dest, hex)
     local c = ui.hex_to_color(hex)
     if c ~= nil then
@@ -20,8 +16,7 @@ function ExpiringTargetEffects.create_page(window)
     return ExpiringTargetEffectsPage(window)
 end
 
-function ExpiringTargetEffects.load(window, s, ui)
-    local page = _page(window)
+function ExpiringTargetEffects.load(page, s, ui)
     if page == nil then
         return
     end
@@ -66,8 +61,7 @@ function ExpiringTargetEffects.load(window, s, ui)
     page:layout()
 end
 
-function ExpiringTargetEffects.apply(window, s, ui)
-    local page = _page(window)
+function ExpiringTargetEffects.apply(page, s, ui)
     if page == nil then
         return
     end
