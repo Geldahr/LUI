@@ -178,7 +178,6 @@ function ConfigWindow:Constructor()
     self:build_controls()
     self:build_tabs()
     self:_rebuild_control_registry()
-    self:_init_previews()
 
     self.move_ui_button = UI.Widgets.LuiButton()
     self.move_ui_button:SetParent(self.button_bar)

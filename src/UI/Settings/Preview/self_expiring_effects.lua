@@ -88,10 +88,9 @@ end
 
 function ConfigWindow:update_expiring_effects_preview()
     if self.expiring_effects_preview == nil then
-        return
+        self:init_expiring_effects_preview()
     end
-
-    if self.active_tab ~= "expiring_effects" then
+    if self.expiring_effects_preview == nil then
         return
     end
 

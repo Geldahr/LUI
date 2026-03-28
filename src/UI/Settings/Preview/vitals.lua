@@ -228,10 +228,6 @@ end
 
 function ConfigWindow:_update_vitals_preview(kind)
     local is_target = kind == "target"
-    local active_key = is_target and "target_vitals" or "self_vitals"
-    if self.active_tab ~= active_key then
-        return
-    end
 
     local p = is_target and self.target_vitals_preview or self.self_vitals_preview
     if p == nil then

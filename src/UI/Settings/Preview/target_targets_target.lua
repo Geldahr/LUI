@@ -75,10 +75,6 @@ function ConfigWindow:init_target_targets_target_preview()
 end
 
 function ConfigWindow:update_target_targets_target_preview()
-    if self.active_tab ~= "target_targets_target" then
-        return
-    end
-
     local p = self.target_targets_target_preview
     if p == nil then
         self:init_target_targets_target_preview()

@@ -122,10 +122,9 @@ end
 
 function ConfigWindow:update_party_vitals_preview()
     if self.party_vitals_preview == nil then
-        return
+        self:init_party_vitals_preview()
     end
-
-    if self.active_tab ~= "party_vitals" then
+    if self.party_vitals_preview == nil then
         return
     end
 

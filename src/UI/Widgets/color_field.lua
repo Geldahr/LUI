@@ -217,6 +217,14 @@ function LuiColorField:SetText(value)
     if self.tb ~= nil then
         self.tb:SetText(value or "")
     end
+    self:update_swatch()
+    local c = _hex_to_color(self:GetText())
+    if c ~= nil then
+        self._picker_h, self._picker_s, self._picker_v = _rgb_to_hsv(c.R, c.G, c.B)
+    end
+    if self.TextChanged ~= nil then
+        self.TextChanged(self.tb, nil)
+    end
 end
 
 function LuiColorField:update_swatch()

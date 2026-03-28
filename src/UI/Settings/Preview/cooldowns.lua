@@ -112,12 +112,11 @@ end
 
 function ConfigWindow:update_cooldowns_preview()
     if self.cooldowns_preview == nil then
+        self:init_cooldowns_preview()
+    end
+    if self.cooldowns_preview == nil then
         return
     end
-    if self.active_tab ~= "cooldowns" then
-        return
-    end
-
     local s = _G.loaded_settings
 
     local raw_scale = tonumber(self.controls.scale.tb:GetText()) or s.global.scale or 1

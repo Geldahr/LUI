@@ -89,10 +89,6 @@ function ConfigWindow:init_target_boss_vitals_preview()
 end
 
 function ConfigWindow:update_target_boss_vitals_preview()
-    if self.active_tab ~= "target_boss_vitals" then
-        return
-    end
-
     local p = self.target_boss_vitals_preview
     if p == nil then
         self:init_target_boss_vitals_preview()
