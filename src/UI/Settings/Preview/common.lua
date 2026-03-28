@@ -1,0 +1,192 @@
+SettingsPreviewCommon = SettingsPreviewCommon or {}
+
+local Common = SettingsPreviewCommon
+
+function Common.scaled_size(value)
+    return value * _G.settings.global.scale
+end
+
+function Common.scaled_int(value)
+    return math.floor(Common.scaled_size(value) + 0.5)
+end
+
+function Common.scaled_font(name, size)
+    local font = FONT_TO_LOTRO(name, Common.scaled_size(size))
+    if font == nil then
+        error("Missing scaled font: " .. tostring(name) .. " " .. tostring(Common.scaled_size(size)))
+    end
+    return font
+end
+
+function Common.require_font(name, size)
+    local font = FONT_TO_LOTRO(name, size)
+    if font == nil then
+        error("Missing font: " .. tostring(name) .. " " .. tostring(size))
+    end
+    return font
+end
+
+function Common.hex_to_color(value)
+    return lui_hex_to_color(value)
+end
+
+function Common.dim_color(color, amount)
+    return lui_dim_color(color, amount)
+end
+
+Common.default_gradient_mid_color = Turbine.UI.Color(1, 0.847059, 0.776471, 0.235294)
+
+function Common.morale_color_preview(percent, gradient_enabled, gradient_full_color, gradient_mid_color,
+                                     gradient_low_color, high_color, medium_color, low_color, critical_color)
+    if gradient_enabled == true then
+        return lui_gradient_morale_color(percent, gradient_full_color, gradient_mid_color, gradient_low_color)
+    end
+    if percent > 0.75 then
+        return high_color
+    elseif percent > 0.5 then
+        return medium_color
+    elseif percent > 0.25 then
+        return low_color
+    end
+    return critical_color
+end
+
+function Common.preview_number_abbrev_settings(window)
+    local raw = _G.loaded_settings.global.number_abbrev
+    local controls = window.controls
+
+    return {
+        enabled = controls.abbrev_enabled.cb:IsChecked(),
+        digits = controls.abbrev_digits:get_value(),
+        width = controls.abbrev_width:get_value(),
+        method = controls.abbrev_method:get_value(),
+    }
+end
+
+function Common.apply_preview_border(p, w, h, x, y)
+    if p == nil then
+        return
+    end
+    if p.border_top == nil or p.border_bottom == nil or p.border_left == nil or p.border_right == nil then
+        return
+    end
+
+    local bw = 1
+    local ww = tonumber(w) or 0
+    local hh = tonumber(h) or 0
+    local xx = tonumber(x) or 0
+    local yy = tonumber(y) or 0
+    if ww < 1 then ww = 1 end
+    if hh < 1 then hh = 1 end
+
+    p.border_top:SetVisible(true)
+    p.border_top:SetZOrder(999)
+    p.border_top:SetPosition(xx, yy)
+    p.border_top:SetSize(ww, bw)
+
+    p.border_bottom:SetVisible(true)
+    p.border_bottom:SetZOrder(999)
+    p.border_bottom:SetPosition(xx, yy + hh - bw)
+    p.border_bottom:SetSize(ww, bw)
+
+    p.border_left:SetVisible(true)
+    p.border_left:SetZOrder(999)
+    p.border_left:SetPosition(xx, yy)
+    p.border_left:SetSize(bw, hh)
+
+    p.border_right:SetVisible(true)
+    p.border_right:SetZOrder(999)
+    p.border_right:SetPosition(xx + ww - bw, yy)
+    p.border_right:SetSize(bw, hh)
+end
+
+function Common.ensure_gradient_preview(window, control_key)
+    local holder = window.controls[control_key]
+    if holder == nil or holder.control == nil then
+        return nil
+    end
+    if holder.gradient_preview ~= nil then
+        return holder.gradient_preview
+    end
+
+    local p = {}
+    p.border = Turbine.UI.Control()
+    p.border:SetParent(holder.control)
+    p.border:SetMouseVisible(false)
+
+    p.inner = Turbine.UI.Control()
+    p.inner:SetParent(p.border)
+    p.inner:SetMouseVisible(false)
+    p.inner:SetBackColor(Turbine.UI.Color(1, 0, 0, 0))
+
+    p.segments = {}
+    for i = 1, 21 do
+        local seg = Turbine.UI.Control()
+        seg:SetParent(p.inner)
+        seg:SetMouseVisible(false)
+        p.segments[i] = seg
+    end
+
+    holder.gradient_preview = p
+    return p
+end
+
+function Common.update_gradient_preview(window, control_key, full_color, mid_color, low_color)
+    local holder = window.controls[control_key]
+    if holder == nil or holder.control == nil then
+        return
+    end
+
+    local p = Common.ensure_gradient_preview(window, control_key)
+    if p == nil then
+        return
+    end
+
+    local w, h = holder.control:GetSize()
+    if w == nil or h == nil or w < 1 or h < 1 then
+        return
+    end
+
+    local strip_w = math.floor((w * 0.5) + 0.5)
+    local min_strip_w = Common.scaled_int(111)
+    if strip_w < min_strip_w then strip_w = min_strip_w end
+    if strip_w > w then strip_w = w end
+
+    local strip_h = window.input_height
+    local min_strip_h = Common.scaled_int(11)
+    if strip_h < min_strip_h then strip_h = min_strip_h end
+    if strip_h > h then strip_h = h end
+
+    local border = 1
+    local x = math.floor((w - strip_w) / 2)
+    local y = math.floor((h - strip_h) / 2)
+
+    p.border:SetPosition(x, y)
+    p.border:SetSize(strip_w, strip_h)
+    p.border:SetBackColor(Turbine.UI.Color(1, 0.15, 0.15, 0.15))
+
+    local inner_w = strip_w - (2 * border)
+    local inner_h = strip_h - (2 * border)
+    if inner_w < 1 then inner_w = 1 end
+    if inner_h < 1 then inner_h = 1 end
+
+    p.inner:SetPosition(border, border)
+    p.inner:SetSize(inner_w, inner_h)
+
+    local total_units = 20
+    local current_units = 0
+    for i = 0, 20 do
+        local weight = (i == 0 or i == 20) and 0.5 or 1
+        local x0 = math.floor((current_units / total_units) * inner_w)
+        current_units = current_units + weight
+        local x1 = math.floor((current_units / total_units) * inner_w)
+
+        local seg = p.segments[i + 1]
+        local seg_w = x1 - x0
+        if seg_w < 1 then seg_w = 1 end
+
+        seg:SetPosition(x0, 0)
+        seg:SetSize(seg_w, inner_h)
+        seg:SetBackColor(lui_gradient_morale_color(i * 0.05, full_color, mid_color, low_color))
+    end
+end
