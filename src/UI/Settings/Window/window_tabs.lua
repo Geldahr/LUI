@@ -44,6 +44,23 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
     return main_key, preferred_sub_key
 end
 
+local MAIN_TABS_WITH_CONTENT_BORDER = {
+    global = true,
+    inventory = true,
+    assets = true,
+    status_bar = true,
+    profile_manager = true,
+    help = true,
+}
+
+local function _apply_main_tab_content_border(window, main_key)
+    if window == nil or window.main_tab_bar == nil then
+        return
+    end
+
+    window.main_tab_bar:set_show_content_border(MAIN_TABS_WITH_CONTENT_BORDER[main_key] == true)
+end
+
 function ConfigWindow:_activate_active_page()
     local key = self.active_main_tab
     local page = key ~= nil and self._tab_pages ~= nil and self._tab_pages[key] or nil
@@ -98,6 +115,7 @@ function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
     end
 
     self.active_main_tab = main_key
+    _apply_main_tab_content_border(self, main_key)
 
     self._syncing_tab_widgets = true
     if self.main_tab_bar ~= nil then
