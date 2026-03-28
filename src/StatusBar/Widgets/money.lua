@@ -66,6 +66,50 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
         end
     end
 
+    self.s_label = UI.Widgets.LuiLabel()
+    self.s_label:SetParent(self)
+    self.s_label:SetMouseVisible(false)
+    self.s_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.s_label:SetVisible(true)
+    if font ~= nil then
+        if font.lotro ~= nil then
+            self.s_label:SetFont(font.lotro)
+        end
+        if font.style ~= nil then
+            self.s_label:SetFontStyle(LUI_TO_LOTRO.font_style[font.style] or Turbine.UI.FontStyle.None)
+        end
+        if font.color ~= nil then
+            self.s_label:SetForeColor(font.color)
+        end
+        if font.outline_color ~= nil then
+            self.s_label:SetOutlineColor(font.outline_color)
+        end
+    end
+
+    self.c_label = UI.Widgets.LuiLabel()
+    self.c_label:SetParent(self)
+    self.c_label:SetMouseVisible(false)
+    self.c_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.c_label:SetVisible(true)
+    if font ~= nil then
+        if font.lotro ~= nil then
+            self.c_label:SetFont(font.lotro)
+        end
+        if font.style ~= nil then
+            self.c_label:SetFontStyle(LUI_TO_LOTRO.font_style[font.style] or Turbine.UI.FontStyle.None)
+        end
+        if font.color ~= nil then
+            self.c_label:SetForeColor(font.color)
+        end
+        if font.outline_color ~= nil then
+            self.c_label:SetOutlineColor(font.outline_color)
+        end
+    end
+
+    self.SizeChanged = function()
+        self:_layout()
+    end
+
     self:_layout()
 end
 
@@ -79,11 +123,15 @@ function MoneyWidget:update(now)
     local gold, silver, copper = S.split_money_copper(total)
     if gold == nil then
         self.g_label:SetText("--")
+        self.s_label:SetText("--")
+        self.c_label:SetText("--")
         self:_layout()
         return
     end
 
     self.g_label:SetText(S.format_gold_compact(gold))
+    self.s_label:SetText(tostring(silver))
+    self.c_label:SetText(tostring(copper))
     self:_layout()
 end
 
@@ -92,6 +140,8 @@ function MoneyWidget:destroy()
     if self.s_icon ~= nil then self.s_icon:SetParent(nil) end
     if self.c_icon ~= nil then self.c_icon:SetParent(nil) end
     if self.g_label ~= nil then self.g_label:SetParent(nil) end
+    if self.s_label ~= nil then self.s_label:SetParent(nil) end
+    if self.c_label ~= nil then self.c_label:SetParent(nil) end
     self:SetParent(nil)
 end
 
@@ -103,50 +153,61 @@ function MoneyWidget:_layout()
         self.s_icon:SetVisible(false)
         self.c_icon:SetVisible(false)
         self.g_label:SetVisible(false)
+        self.s_label:SetVisible(false)
+        self.c_label:SetVisible(false)
         return
     end
 
     local gap = 4
-    local gold_text_w = math.ceil(self.g_label:GetTextLength() or 0)
-    if gold_text_w < 0 then
-        gold_text_w = 0
+    local fixed = (size * 3) + (gap * 5)
+    local remaining = w - fixed
+    if remaining < 0 then
+        remaining = 0
     end
-    local gold_label_gap = gold_text_w > 0 and gap or 0
-    local gold_group_w = size + gold_label_gap + gold_text_w
-    local group_w = gold_group_w + gap + size + gap + size
+    local field_w = math.floor(remaining / 3)
+    local extra = remaining - (field_w * 3)
+    local g_w = field_w
+    local s_w = field_w
+    if extra > 0 then
+        g_w = g_w + 1
+        extra = extra - 1
+    end
+    if extra > 0 then
+        s_w = s_w + 1
+        extra = extra - 1
+    end
+    local c_w = field_w + extra
     local x = 0
-    if self._content_alignment == Turbine.UI.ContentAlignment.MiddleCenter then
-        x = math.floor((w - group_w) / 2)
-    elseif self._content_alignment == Turbine.UI.ContentAlignment.MiddleRight then
-        x = w - group_w
-    end
-    if x < 0 then
-        x = 0
-    end
     local y = S.get_centered_icon_y(h, size)
 
     self.g_icon:SetPosition(x, y)
     self.g_icon:SetSize(size, size)
     self.g_icon:SetVisible(true)
+    x = x + size + gap
 
-    if gold_text_w > 0 then
-        self.g_label:SetPosition(x + size + gold_label_gap, 0)
-        self.g_label:SetSize(gold_text_w, h)
-        self.g_label:SetVisible(true)
-    else
-        self.g_label:SetVisible(false)
-    end
-
-    x = x + gold_group_w + gap
+    self.g_label:SetPosition(x, 0)
+    self.g_label:SetSize(g_w, h)
+    self.g_label:SetVisible(g_w > 0)
+    x = x + g_w + gap
 
     self.s_icon:SetPosition(x, y)
     self.s_icon:SetSize(size, size)
     self.s_icon:SetVisible(true)
     x = x + size + gap
 
+    self.s_label:SetPosition(x, 0)
+    self.s_label:SetSize(s_w, h)
+    self.s_label:SetVisible(s_w > 0)
+    x = x + s_w + gap
+
     self.c_icon:SetPosition(x, y)
     self.c_icon:SetSize(size, size)
     self.c_icon:SetVisible(true)
+    x = x + size + gap
+
+    self.c_label:SetPosition(x, 0)
+    self.c_label:SetSize(c_w, h)
+    self.c_label:SetVisible(c_w > 0)
 end
 
 function MoneyWidget:_get_total_money()
