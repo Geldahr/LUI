@@ -83,6 +83,7 @@ end
 
 ConfigWindow = class(Turbine.UI.Lotro.Window)
 
+import "LUI.src.UI.Settings.Window.window_geometry"
 import "LUI.src.UI.Settings.Preview.common"
 import "LUI.src.UI.Settings.Preview.self_expiring_effects"
 import "LUI.src.UI.Settings.Preview.cooldowns"
@@ -374,6 +375,12 @@ function ConfigWindow:apply_ui_scale()
             end
         end
     end
+
+    for _, page in pairs(self._tab_pages or {}) do
+        if page ~= nil and page.apply_ui_scale ~= nil then
+            page:apply_ui_scale()
+        end
+    end
 end
 
 function ConfigWindow:close_all_dropdowns()
@@ -382,6 +389,12 @@ function ConfigWindow:close_all_dropdowns()
         local field = fields[i]
         if field ~= nil and field.kind == "dropdown" then
             field.button:Close()
+        end
+    end
+
+    for _, page in pairs(self._tab_pages or {}) do
+        if page ~= nil and page.close_all_dropdowns ~= nil then
+            page:close_all_dropdowns()
         end
     end
 end
@@ -471,6 +484,24 @@ function ConfigWindow:bring_to_front()
 end
 
 function ConfigWindow:build_tabs()
+    self._tab_pages = {}
+
+    local function _tab_widget(key)
+        local module = self._tab_modules_by_key ~= nil and self._tab_modules_by_key[key] or nil
+        if module ~= nil and module.create_page ~= nil then
+            local page = module.create_page(self)
+            if page ~= nil then
+                page._tab_key = key
+                self._tab_pages[key] = page
+                return page
+            end
+        end
+
+        local host = Turbine.UI.Control()
+        host._tab_key = key
+        return host
+    end
+
     self.main_tabs = {
         { key = "global",     text = TR("Global") },
         { key = "self",       text = TR("Self") },
@@ -523,10 +554,11 @@ function ConfigWindow:build_tabs()
     self.main_tab_hosts = {}
     for i = 1, #self.main_tabs do
         local t = self.main_tabs[i]
-        local host = Turbine.UI.Control()
-        host._tab_key = t.key
-        self.main_tab_hosts[t.key] = host
-        self.main_tab_index_by_key[t.key] = self.main_tab_bar:add_tab(t.text, host)
+        local widget = _tab_widget(t.key)
+        if self._tab_pages[t.key] == nil then
+            self.main_tab_hosts[t.key] = widget
+        end
+        self.main_tab_index_by_key[t.key] = self.main_tab_bar:add_tab(t.text, widget)
     end
 
     self.sub_tab_bars = {}
@@ -551,10 +583,11 @@ function ConfigWindow:build_tabs()
 
         for i = 1, #list do
             local t = list[i]
-            local host = Turbine.UI.Control()
-            host._tab_key = t.key
-            self.sub_tab_hosts_by_main[main_key][t.key] = host
-            self.sub_tab_index_by_key[main_key][t.key] = bar:add_tab(t.text, host)
+            local widget = _tab_widget(t.key)
+            if self._tab_pages[t.key] == nil then
+                self.sub_tab_hosts_by_main[main_key][t.key] = widget
+            end
+            self.sub_tab_index_by_key[main_key][t.key] = bar:add_tab(t.text, widget)
         end
     end
 end
@@ -582,6 +615,10 @@ function ConfigWindow:_main_tab_has_sub_tabs(main_key)
 end
 
 function ConfigWindow:_active_scroll_host()
+    if self._tab_pages ~= nil and self._tab_pages[self.active_tab] ~= nil then
+        return nil
+    end
+
     local main_key = self.active_main_tab
     if type(main_key) ~= "string" then
         return nil
@@ -730,7 +767,8 @@ function ConfigWindow:show_fields(fields)
 end
 
 function ConfigWindow:select_tab(key)
-    if self.tab_fields[key] == nil then
+    local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
+    if self.tab_fields[key] == nil and page == nil then
         return
     end
 
@@ -739,8 +777,15 @@ function ConfigWindow:select_tab(key)
     self:hide_all_fields()
     self.active_tab = key
     self.fields = self.tab_fields[key] or {}
-    self:show_fields(self.fields)
+    if page == nil then
+        self:show_fields(self.fields)
+    end
     self:layout()
+
+    if page ~= nil and page.on_selected ~= nil then
+        page:on_selected()
+        return
+    end
 
     if key == "expiring_effects" then
         self:update_expiring_effects_preview()
@@ -761,94 +806,7 @@ function ConfigWindow:select_tab(key)
     end
 end
 
-function ConfigWindow:get_geometry_state()
-    if _G.loaded_settings == nil then
-        return nil
-    end
-
-    if _G.loaded_settings.global == nil then
-        _G.loaded_settings.global = {}
-    end
-
-    if _G.loaded_settings.global.config_window == nil then
-        _G.loaded_settings.global.config_window = {}
-    end
-
-    return _G.loaded_settings.global.config_window
-end
-
-function ConfigWindow:update_saved_geometry()
-    local state = self:get_geometry_state()
-    if state == nil then
-        return
-    end
-
-    local left, top = self:GetPosition()
-    local width, height = self:GetSize()
-
-    state.left = left
-    state.top = top
-    state.width = width
-    state.height = height
-end
-
-function ConfigWindow:persist_geometry()
-    self:update_saved_geometry()
-end
-
-function ConfigWindow:apply_saved_geometry()
-    local default_width = _scaled_int(459)
-    local default_height = _scaled_int(385)
-
-    local display_width, display_height = Turbine.UI.Display.GetSize()
-
-    local state = nil
-    if _G.loaded_settings ~= nil then
-        if _G.loaded_settings.global ~= nil then
-            state = _G.loaded_settings.global.config_window
-        end
-    end
-
-    local width = default_width
-    local height = default_height
-    if state ~= nil and type(state.width) == "number" and type(state.height) == "number" then
-        width = state.width
-        height = state.height
-    end
-
-    if width > display_width then width = display_width end
-    if height > display_height then height = display_height end
-    if width < _scaled_int(222) then width = _scaled_int(222) end
-    if height < _scaled_int(185) then height = _scaled_int(185) end
-
-    self:SetSize(width, height)
-
-    local left = math.floor((display_width - width) / 2)
-    local top = math.floor((display_height - height) / 2)
-    if state ~= nil and type(state.left) == "number" and type(state.top) == "number" then
-        left = state.left
-        top = state.top
-    end
-
-    if left < 0 then left = 0 end
-    if top < 0 then top = 0 end
-    if left > (display_width - _scaled_int(37)) then
-        left = display_width - _scaled_int(37)
-    end
-    if top > (display_height - _scaled_int(37)) then
-        top = display_height - _scaled_int(37)
-    end
-
-    self:SetPosition(left, top)
-
-    self:update_saved_geometry()
-end
-
 function ConfigWindow:build_controls()
-    self:build_controls_v2()
-end
-
-function ConfigWindow:build_controls_v2()
     local hr_color = Turbine.UI.Color(0.35, 0.35, 0.35)
     local font_name_labels = {
         "Verdana",
@@ -1294,71 +1252,42 @@ function ConfigWindow:build_controls_v2()
     }
 
     local tabs = Tabs
-    local tab_global = tabs.Global
-    local tab_profile_manager = tabs.ProfileManager
-    local tab_self_vitals = tabs.SelfVitals
-    local tab_target_vitals = tabs.TargetVitals
-    local tab_target_boss_vitals = tabs.TargetBossVitals
-    local tab_target_targets_target = tabs.TargetTargetsTarget
-    local tab_expiring_target_effects = tabs.ExpiringTargetEffects
-    local tab_party_layout = tabs.PartyLayout
-    local tab_party_vitals = tabs.PartyVitals
-    local tab_expiring_effects = tabs.SelfExpiringEffects
-    local tab_inventory = tabs.Inventory
-    local tab_assets = tabs.AssetsTab
-    local tab_status_bar = tabs.StatusBar
-    local tab_cooldowns = tabs.Cooldowns
-    local tab_help = tabs.Help
-
-    tab_global.create_controls(self, ui)
-    tab_profile_manager.create_controls(self, ui)
-    tab_self_vitals.create_controls(self, ui)
-    tab_target_vitals.create_controls(self, ui)
-    tab_target_boss_vitals.create_controls(self, ui)
-    tab_target_targets_target.create_controls(self, ui)
-    tab_expiring_target_effects.create_controls(self, ui)
-    tab_party_layout.create_controls(self, ui)
-    tab_party_vitals.create_controls(self, ui)
-    tab_expiring_effects.create_controls(self, ui)
-    tab_inventory.create_controls(self, ui)
-    tab_assets.create_controls(self, ui)
-    tab_status_bar.create_controls(self, ui)
-    tab_cooldowns.create_controls(self, ui)
-    tab_help.create_controls(self, ui)
-
-    self.tab_fields.global = tab_global.register(self, ui)
-    self.tab_fields.profile_manager = tab_profile_manager.register(self, ui)
-    self.tab_fields.self_vitals = tab_self_vitals.register(self, ui)
-    self.tab_fields.target_vitals = tab_target_vitals.register(self, ui)
-    self.tab_fields.target_boss_vitals = tab_target_boss_vitals.register(self, ui)
-    self.tab_fields.target_targets_target = tab_target_targets_target.register(self, ui)
-    self.tab_fields.expiring_target_effects = tab_expiring_target_effects.register(self, ui)
-    self.tab_fields.party_layout = tab_party_layout.register(self, ui)
-    self.tab_fields.party_vitals = tab_party_vitals.register(self, ui)
-    self.tab_fields.expiring_effects = tab_expiring_effects.register(self, ui)
-    self.tab_fields.inventory = tab_inventory.register(self, ui)
-    self.tab_fields.assets = tab_assets.register(self, ui)
-    self.tab_fields.status_bar = tab_status_bar.register(self, ui)
-    self.tab_fields.cooldowns = tab_cooldowns.register(self, ui)
-    self.tab_fields.help = tab_help.register(self, ui)
-
     self._tab_modules = {
-        tab_global,
-        tab_profile_manager,
-        tab_self_vitals,
-        tab_target_vitals,
-        tab_target_boss_vitals,
-        tab_target_targets_target,
-        tab_expiring_target_effects,
-        tab_party_layout,
-        tab_party_vitals,
-        tab_expiring_effects,
-        tab_inventory,
-        tab_assets,
-        tab_status_bar,
-        tab_cooldowns,
-        tab_help,
+        tabs.Global,
+        tabs.ProfileManager,
+        tabs.SelfVitals,
+        tabs.TargetVitals,
+        tabs.TargetBossVitals,
+        tabs.TargetTargetsTarget,
+        tabs.ExpiringTargetEffects,
+        tabs.PartyLayout,
+        tabs.PartyVitals,
+        tabs.SelfExpiringEffects,
+        tabs.Inventory,
+        tabs.AssetsTab,
+        tabs.StatusBar,
+        tabs.Cooldowns,
+        tabs.Help,
     }
+
+    self._tab_modules_by_key = {}
+    for i = 1, #self._tab_modules do
+        local module = self._tab_modules[i]
+        if module ~= nil and module.key ~= nil then
+            self._tab_modules_by_key[module.key] = module
+        end
+        if module ~= nil and module.create_controls ~= nil and module.create_page == nil then
+            module.create_controls(self, ui)
+        end
+    end
+
+    for i = 1, #self._tab_modules do
+        local module = self._tab_modules[i]
+        if module ~= nil and module.register ~= nil and module.create_page == nil then
+            self.tab_fields[module.key] = module.register(self, ui)
+        end
+    end
+
     self._ui = ui
 
     self:init_expiring_effects_preview()
@@ -1451,27 +1380,33 @@ function ConfigWindow:layout()
     end
 
     local scroll_host = self:_active_scroll_host()
-    if scroll_host == nil then
-        scroll_host = self.main_tab_bar
-    end
-    self:_attach_scroll_to_host(scroll_host)
+    local form_width = 0
+    local inner_width = 0
+    if scroll_host ~= nil then
+        self:_attach_scroll_to_host(scroll_host)
 
-    local scroll_width = scroll_host:GetWidth()
-    local scroll_height = scroll_host:GetHeight()
-    if scroll_height < _scaled_int(30) then
-        scroll_height = _scaled_int(30)
-    end
+        local scroll_width = scroll_host:GetWidth()
+        local scroll_height = scroll_host:GetHeight()
+        if scroll_height < _scaled_int(30) then
+            scroll_height = _scaled_int(30)
+        end
 
-    self.scroll:SetPosition(0, 0)
-    self.scroll:SetSize(math.max(0, scroll_width - scroll_w - self.scroll_bar_gap), scroll_height)
+        self.scroll:SetVisible(true)
+        self.scroll_bar:SetVisible(true)
+        self.scroll:SetPosition(0, 0)
+        self.scroll:SetSize(math.max(0, scroll_width - scroll_w - self.scroll_bar_gap), scroll_height)
 
-    self.scroll_bar:SetPosition(self.scroll:GetWidth() + self.scroll_bar_gap, 0)
-    self.scroll_bar:SetHeight(scroll_height)
+        self.scroll_bar:SetPosition(self.scroll:GetWidth() + self.scroll_bar_gap, 0)
+        self.scroll_bar:SetHeight(scroll_height)
 
-    local form_width = self.scroll:GetWidth()
-    local inner_width = form_width - (2 * self.content_padding)
-    if inner_width < _scaled_int(74) then
-        inner_width = _scaled_int(74)
+        form_width = self.scroll:GetWidth()
+        inner_width = form_width - (2 * self.content_padding)
+        if inner_width < _scaled_int(74) then
+            inner_width = _scaled_int(74)
+        end
+    else
+        self.scroll:SetVisible(false)
+        self.scroll_bar:SetVisible(false)
     end
 
     local col_width = math.floor((inner_width - self.col_gap) / 2)
@@ -1696,10 +1631,6 @@ function ConfigWindow:layout()
 end
 
 function ConfigWindow:load_from_settings()
-    self:load_from_settings_v2()
-end
-
-function ConfigWindow:load_from_settings_v2()
     if _G.loaded_settings == nil then
         return
     end
@@ -1721,10 +1652,6 @@ function ConfigWindow:load_from_settings_v2()
 
     self.loading = false
     self:update_expiring_effects_preview()
-end
-
-function ConfigWindow:apply_changes(close_after)
-    self:apply_changes_v2(close_after)
 end
 
 function ConfigWindow:refresh_runtime_settings()
@@ -1794,7 +1721,7 @@ function ConfigWindow:refresh_runtime_settings()
     end
 end
 
-function ConfigWindow:apply_changes_v2(close_after)
+function ConfigWindow:apply_changes(close_after)
     if _G.loaded_settings == nil then
         return
     end
@@ -1951,4 +1878,3 @@ function ConfigWindow:start_new_profile_quick_setup()
     })
     FIRST_RUN_QUICK_SETUP_WINDOW:open()
 end
-
