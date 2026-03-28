@@ -180,16 +180,16 @@ function ConfigWindow:Constructor()
 
     self:_update_ui_scale_metrics()
 
-    self.tab_bar = Turbine.UI.Control()
-    self.tab_bar:SetParent(self)
-
-    self.main_tab_bar = Turbine.UI.Control()
+    self.main_tab_bar = UI.Widgets.LuiTabBar()
     self.main_tab_bar:SetParent(self)
-
-    self.main_tab_separator = Turbine.UI.Control()
-    self.main_tab_separator:SetParent(self)
-    self.main_tab_separator:SetMouseVisible(false)
-    self.main_tab_separator:SetBackColor(Turbine.UI.Color(0.55, 0.55, 0.55))
+    self.main_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.left)
+    self.main_tab_bar:set_show_content_border(false)
+    self.main_tab_bar.selection_changed = function(_, _, _, host)
+        if self._syncing_tab_widgets == true or host == nil then
+            return
+        end
+        self:select_main_tab(host._tab_key)
+    end
 
     self.scroll = Turbine.UI.ListBox()
     self.scroll:SetParent(self)
@@ -344,13 +344,6 @@ function ConfigWindow:_update_ui_scale_metrics()
     self.margin_right = _scaled_int(15)
     self.margin_bottom = _scaled_int(15)
 
-    self.tab_bar_height = _scaled_int(24)
-    self.tab_bar_gap = _scaled_int(4)
-    self.main_tab_bar_width = _scaled_int(111)
-    self.main_tab_bar_gap = _scaled_int(9)
-    self.main_tab_button_height = _scaled_int(24)
-    self.main_tab_button_gap = _scaled_int(4)
-
     self.button_bar_height = _scaled_int(30)
     self.row_height = _scaled_int(34)
     self.col_gap = _scaled_int(22)
@@ -398,17 +391,15 @@ function ConfigWindow:apply_ui_scale()
         self.confirm_confirm_button:SetFont(self.settings_font)
     end
 
-    if self.main_tab_buttons ~= nil then
-        for _, b in pairs(self.main_tab_buttons) do
-            if b ~= nil then
-                b:SetFont(self.tab_font)
-            end
-        end
+    if self.main_tab_bar ~= nil then
+        self.main_tab_bar:set_scale(scale)
+        self.main_tab_bar:set_font(self.tab_font)
     end
-    if self.sub_tab_buttons ~= nil then
-        for _, b in pairs(self.sub_tab_buttons) do
-            if b ~= nil then
-                b:SetFont(self.tab_font)
+    if self.sub_tab_bars ~= nil then
+        for _, bar in pairs(self.sub_tab_bars) do
+            if bar ~= nil then
+                bar:set_scale(scale)
+                bar:set_font(self.tab_font)
             end
         end
     end
@@ -603,80 +594,92 @@ function ConfigWindow:build_tabs()
         help = "help",
     }
 
-    self.main_tab_buttons = {}
+    self.main_tab_index_by_key = {}
+    self.main_tab_hosts = {}
     for i = 1, #self.main_tabs do
         local t = self.main_tabs[i]
-        local b = UI.Widgets.LuiButton()
-        b:SetParent(self.main_tab_bar)
-        b:SetFont(self.tab_font)
-        b:SetText(t.text)
-        b.Click = function()
-            if self.active_main_tab == t.key then
-                return
-            end
-            self:select_main_tab(t.key)
-        end
-        self.main_tab_buttons[t.key] = b
+        local host = Turbine.UI.Control()
+        host._tab_key = t.key
+        self.main_tab_hosts[t.key] = host
+        self.main_tab_index_by_key[t.key] = self.main_tab_bar:add_tab(t.text, host)
     end
 
-    self.sub_tab_buttons = {}
-    for _, list in pairs(self.sub_tabs_by_main) do
+    self.sub_tab_bars = {}
+    self.sub_tab_hosts_by_main = {}
+    self.sub_tab_index_by_key = {}
+    for main_key, list in pairs(self.sub_tabs_by_main) do
+        local bar = UI.Widgets.LuiTabBar()
+        bar:SetParent(self.main_tab_hosts[main_key])
+        bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
+        bar:set_content_padding(4)
+        bar:set_show_border_left(false)
+        bar.selection_changed = function(_, _, _, host)
+            if self._syncing_tab_widgets == true or host == nil then
+                return
+            end
+            self:select_sub_tab(host._tab_key)
+        end
+
+        self.sub_tab_bars[main_key] = bar
+        self.sub_tab_hosts_by_main[main_key] = {}
+        self.sub_tab_index_by_key[main_key] = {}
+
         for i = 1, #list do
             local t = list[i]
-            if self.sub_tab_buttons[t.key] == nil then
-                local b = UI.Widgets.LuiButton()
-                b:SetParent(self.tab_bar)
-                b:SetFont(self.tab_font)
-                b:SetText(t.text)
-                b.Click = function()
-                    if self.active_tab == t.key then
-                        return
-                    end
-                    self:select_sub_tab(t.key)
-                end
-                b:SetVisible(false)
-                self.sub_tab_buttons[t.key] = b
-            end
+            local host = Turbine.UI.Control()
+            host._tab_key = t.key
+            self.sub_tab_hosts_by_main[main_key][t.key] = host
+            self.sub_tab_index_by_key[main_key][t.key] = bar:add_tab(t.text, host)
         end
     end
 end
 
-function ConfigWindow:update_tab_buttons()
-    local main_key = self.active_main_tab or "global"
+function ConfigWindow:_main_tab_default_key(main_key)
+    if main_key == "global" then
+        return "global"
+    elseif main_key == "inventory" then
+        return "inventory"
+    elseif main_key == "assets" then
+        return "assets"
+    elseif main_key == "status_bar" then
+        return "status_bar"
+    elseif main_key == "profile_manager" then
+        return "profile_manager"
+    elseif main_key == "help" then
+        return "help"
+    end
+    return nil
+end
 
-    -- Main
-    for i = 1, #self.main_tabs do
-        local t = self.main_tabs[i]
-        local b = self.main_tab_buttons[t.key]
-        if b ~= nil then
-            b:set_active(t.key == main_key)
-            b:SetEnabled(true)
-        end
+function ConfigWindow:_main_tab_has_sub_tabs(main_key)
+    local sub_list = self.sub_tabs_by_main ~= nil and self.sub_tabs_by_main[main_key] or nil
+    return sub_list ~= nil and #sub_list > 1
+end
+
+function ConfigWindow:_active_scroll_host()
+    local main_key = self.active_main_tab
+    if type(main_key) ~= "string" then
+        return nil
     end
 
-    -- Sub
-    local sub_list = self.sub_tabs_by_main[main_key]
-    local show_sub = sub_list ~= nil and #sub_list > 1
-    self._visible_sub_tabs = show_sub and sub_list or nil
-    self.tab_bar:SetVisible(show_sub)
-
-    for key, b in pairs(self.sub_tab_buttons) do
-        if b ~= nil then
-            b:SetVisible(false)
+    if self:_main_tab_has_sub_tabs(main_key) == true then
+        local sub_hosts = self.sub_tab_hosts_by_main ~= nil and self.sub_tab_hosts_by_main[main_key] or nil
+        if sub_hosts ~= nil then
+            return sub_hosts[self.active_tab]
         end
+        return nil
     end
 
-    if show_sub then
-        for i = 1, #sub_list do
-            local t = sub_list[i]
-            local b = self.sub_tab_buttons[t.key]
-            if b ~= nil then
-                b:SetVisible(true)
-                b:set_active(t.key == self.active_tab)
-                b:SetEnabled(true)
-            end
-        end
+    return self.main_tab_hosts ~= nil and self.main_tab_hosts[main_key] or nil
+end
+
+function ConfigWindow:_attach_scroll_to_host(host)
+    if host == nil then
+        return
     end
+
+    self.scroll:SetParent(host)
+    self.scroll_bar:SetParent(host)
 end
 
 function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
@@ -687,23 +690,13 @@ function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
         main_key = "self"
         preferred_sub_key = "cooldowns"
     end
-    self.active_main_tab = main_key
-    self:update_tab_buttons()
 
-    local tab_key = nil
-    if main_key == "global" then
-        tab_key = "global"
-    elseif main_key == "inventory" then
-        tab_key = "inventory"
-    elseif main_key == "assets" then
-        tab_key = "assets"
-    elseif main_key == "status_bar" then
-        tab_key = "status_bar"
-    elseif main_key == "profile_manager" then
-        tab_key = "profile_manager"
-    elseif main_key == "help" then
-        tab_key = "help"
-    else
+    if self.main_tab_index_by_key ~= nil and self.main_tab_index_by_key[main_key] == nil then
+        main_key = "global"
+    end
+
+    local tab_key = self:_main_tab_default_key(main_key)
+    if tab_key == nil then
         local sub_list = self.sub_tabs_by_main[main_key] or {}
         if type(preferred_sub_key) == "string" then
             for i = 1, #sub_list do
@@ -728,10 +721,26 @@ function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
 
     if tab_key == nil then
         tab_key = "global"
+        main_key = "global"
     end
 
+    self.active_main_tab = main_key
+
+    self._syncing_tab_widgets = true
+    if self.main_tab_bar ~= nil then
+        self.main_tab_bar:set_selected_index(self.main_tab_index_by_key[main_key], false)
+    end
+    if self:_main_tab_has_sub_tabs(main_key) == true then
+        local bar = self.sub_tab_bars ~= nil and self.sub_tab_bars[main_key] or nil
+        local index = self.sub_tab_index_by_key ~= nil and self.sub_tab_index_by_key[main_key] ~= nil and
+            self.sub_tab_index_by_key[main_key][tab_key] or nil
+        if bar ~= nil and index ~= nil then
+            bar:set_selected_index(index, false)
+        end
+    end
+    self._syncing_tab_widgets = false
+
     self:select_tab(tab_key)
-    self:update_tab_buttons()
 end
 
 function ConfigWindow:select_sub_tab(key)
@@ -4320,10 +4329,6 @@ function ConfigWindow:layout()
     local window_width, window_height = self:GetSize()
     local button_gap = _scaled_int(7)
     local min_content_h = _scaled_int(59)
-    local min_left_w = _scaled_int(67)
-    local min_main_remainder = _scaled_int(89)
-    local min_content_w = _scaled_int(104)
-    local desired_tab_width = _scaled_int(104)
     local scroll_w = BASE_SCROLL_W
     local content_gap = _scaled_int(7)
     local title_h = _scaled_int(22)
@@ -4355,71 +4360,44 @@ function ConfigWindow:layout()
     local content_height = window_height - self.margin_top - self.margin_bottom - self.button_bar_height - content_gap
     if content_height < min_content_h then content_height = min_content_h end
 
-    local left_w = self.main_tab_bar_width
-    if left_w < min_left_w then left_w = min_left_w end
-    if left_w > (button_bar_width - min_main_remainder) then
-        left_w = math.max(min_left_w, button_bar_width - min_main_remainder)
-    end
-
     self.main_tab_bar:SetPosition(self.margin_left, self.margin_top)
-    self.main_tab_bar:SetSize(left_w, content_height)
+    self.main_tab_bar:SetSize(button_bar_width, content_height)
+    self.main_tab_bar:refresh_layout()
 
-    local sep_x = self.margin_left + left_w + math.floor(self.main_tab_bar_gap / 2)
-    self.main_tab_separator:SetPosition(sep_x, self.margin_top)
-    self.main_tab_separator:SetSize(_scaled_int(1), content_height)
-
-    local main_count = #self.main_tabs
-    for i = 1, main_count do
-        local t = self.main_tabs[i]
-        local b = self.main_tab_buttons[t.key]
-        if b ~= nil then
-            b:SetPosition(0, (i - 1) * (self.main_tab_button_height + self.main_tab_button_gap))
-            b:SetSize(left_w, self.main_tab_button_height)
-        end
-    end
-
-    local content_left = self.margin_left + left_w + self.main_tab_bar_gap
-    local content_width = window_width - content_left - self.margin_right
-    if content_width < min_content_w then content_width = min_content_w end
-
-    local sub_list = self._visible_sub_tabs
-    local show_sub = sub_list ~= nil and #sub_list > 1
-    local sub_height = show_sub and self.tab_bar_height or 0
-
-    self.tab_bar:SetPosition(content_left, self.margin_top)
-    self.tab_bar:SetSize(content_width, self.tab_bar_height)
-    self.tab_bar:SetVisible(show_sub)
-
-    if show_sub and sub_list ~= nil then
-        local tab_count = #sub_list
-        local tab_width = desired_tab_width
-        if (tab_width * tab_count) + ((tab_count - 1) * self.tab_bar_gap) > content_width then
-            tab_width = math.floor((content_width - ((tab_count - 1) * self.tab_bar_gap)) / tab_count)
-        end
-        for i = 1, tab_count do
-            local t = sub_list[i]
-            local b = self.sub_tab_buttons[t.key]
-            if b ~= nil and b:IsVisible() then
-                b:SetPosition((i - 1) * (tab_width + self.tab_bar_gap), 0)
-                b:SetSize(tab_width, self.tab_bar_height)
+    local active_main_key = self.active_main_tab or "global"
+    if self.sub_tab_bars ~= nil then
+        for key, bar in pairs(self.sub_tab_bars) do
+            if bar ~= nil then
+                local show_bar = key == active_main_key and self:_main_tab_has_sub_tabs(key) == true
+                bar:SetVisible(show_bar)
+                if show_bar == true then
+                    local host = self.main_tab_hosts ~= nil and self.main_tab_hosts[key] or nil
+                    if host ~= nil then
+                        bar:SetPosition(0, 0)
+                        bar:SetSize(host:GetWidth(), host:GetHeight())
+                        bar:refresh_layout()
+                    end
+                end
             end
         end
     end
 
-    local scroll_top = self.margin_top + sub_height
-    if show_sub then
-        scroll_top = scroll_top + content_gap
+    local scroll_host = self:_active_scroll_host()
+    if scroll_host == nil then
+        scroll_host = self.main_tab_bar
     end
+    self:_attach_scroll_to_host(scroll_host)
 
-    local scroll_height = window_height - scroll_top - self.margin_bottom - self.button_bar_height - content_gap
+    local scroll_width = scroll_host:GetWidth()
+    local scroll_height = scroll_host:GetHeight()
     if scroll_height < _scaled_int(30) then
         scroll_height = _scaled_int(30)
     end
 
-    self.scroll:SetPosition(content_left, scroll_top)
-    self.scroll:SetSize(content_width - scroll_w - self.scroll_bar_gap, scroll_height)
+    self.scroll:SetPosition(0, 0)
+    self.scroll:SetSize(math.max(0, scroll_width - scroll_w - self.scroll_bar_gap), scroll_height)
 
-    self.scroll_bar:SetPosition(content_left + self.scroll:GetWidth() + self.scroll_bar_gap, scroll_top)
+    self.scroll_bar:SetPosition(self.scroll:GetWidth() + self.scroll_bar_gap, 0)
     self.scroll_bar:SetHeight(scroll_height)
 
     local form_width = self.scroll:GetWidth()
