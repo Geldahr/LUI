@@ -34,6 +34,75 @@ function Common.dim_color(color, amount)
     return lui_dim_color(color, amount)
 end
 
+function Common.preview_scaled_int(raw_scale, raw_value, fallback)
+    local n = raw_value
+    if type(n) ~= "number" then
+        n = tonumber(n)
+    end
+    if n == nil then
+        n = fallback or 0
+    end
+    return math.floor((n * raw_scale) + 0.5)
+end
+
+function Common.preview_scaled_border(raw_scale, raw_value, fallback)
+    local n = raw_value
+    if type(n) ~= "number" then
+        n = tonumber(n)
+    end
+    if n == nil then
+        n = fallback or 0
+    end
+    if n <= 0 then
+        return 0
+    end
+    local out = math.floor(n * raw_scale)
+    if out < 1 then
+        out = 1
+    end
+    return out
+end
+
+function Common.preview_scaled_number(raw_scale, raw_value, fallback)
+    local n = raw_value
+    if type(n) ~= "number" then
+        n = tonumber(n)
+    end
+    if n == nil then
+        n = fallback or 0
+    end
+    return n * raw_scale
+end
+
+function Common.preview_text_align(value)
+    return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
+end
+
+function Common.preview_resource_background(matches_missing, dimming, background, fill_color)
+    if matches_missing == true then
+        return Common.dim_color(fill_color, dimming)
+    end
+    return background
+end
+
+function Common.apply_preview_label_bounds(label, align, margin, width, height)
+    if label == nil then
+        return
+    end
+
+    local content_w = math.max(0, width - margin)
+    if align == LUI_ENUMS.text_alignment.LEFT then
+        label:SetPosition(margin, 0)
+        label:SetSize(content_w, height)
+    elseif align == LUI_ENUMS.text_alignment.RIGHT then
+        label:SetPosition(0, 0)
+        label:SetSize(content_w, height)
+    else
+        label:SetPosition(0, 0)
+        label:SetSize(width, height)
+    end
+end
+
 Common.default_gradient_mid_color = Turbine.UI.Color(1, 0.847059, 0.776471, 0.235294)
 
 function Common.morale_color_preview(percent, gradient_enabled, gradient_full_color, gradient_mid_color,

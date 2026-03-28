@@ -444,7 +444,7 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
         if ctor == nil then
             error("Missing StatusBar widget constructor: MoneyWidget")
         end
-        return ctor(widget_w, bar_h, font, widget_cfg ~= nil and widget_cfg.icon == true, widget_cfg.content_alignment)
+        return ctor(widget_w, bar_h, font, widget_cfg.content_alignment)
     elseif widget_key == "wallet" then
         local ctor = _widget_ctor("WalletWidget")
         if ctor == nil then

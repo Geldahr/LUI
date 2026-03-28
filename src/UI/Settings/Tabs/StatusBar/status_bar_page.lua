@@ -79,7 +79,6 @@ function StatusBarPage:Constructor(window)
     self:add_hr()
     self:add_title(TR("Money"))
     self:add_text("sb_money_width", TR("Width"))
-    self:add_checkbox("sb_money_icon", TR("Icon"))
     self:add_dropdown("sb_money_text_alignment", TR("Text alignment"), self.text_alignment_labels, self.text_alignment_values)
 
     self:add_hr()
@@ -165,7 +164,6 @@ function StatusBarPage:load(sb)
 
     local money = widgets.money
     self.controls.sb_money_width.tb:SetText(tostring(money.width))
-    self.controls.sb_money_icon.cb:SetChecked(money.icon == true)
     self.controls.sb_money_text_alignment:set_value(money.text_alignment)
 
     local wallet = widgets.wallet
@@ -242,7 +240,6 @@ function StatusBarPage:apply(sb)
 
     local money_w = tonumber(self.controls.sb_money_width.tb:GetText())
     if money_w ~= nil then widgets.money.width = money_w end
-    widgets.money.icon = self.controls.sb_money_icon.cb:IsChecked() == true
     widgets.money.text_alignment = self.controls.sb_money_text_alignment:get_value()
 
     local wallet_w = tonumber(self.controls.sb_wallet_width.tb:GetText())

@@ -1,12 +1,17 @@
 local Common = SettingsPreviewCommon
 local _hex_to_color = Common.hex_to_color
-local _dim_color = Common.dim_color
 local _require_font = Common.require_font
 local _scaled_int = Common.scaled_int
 local _scaled_font = Common.scaled_font
 local _apply_preview_border = Common.apply_preview_border
 local _preview_number_abbrev_settings = Common.preview_number_abbrev_settings
 local _morale_color_preview = Common.morale_color_preview
+local _preview_scaled_int = Common.preview_scaled_int
+local _preview_scaled_border = Common.preview_scaled_border
+local _preview_scaled_number = Common.preview_scaled_number
+local _preview_text_align = Common.preview_text_align
+local _preview_resource_background = Common.preview_resource_background
+local _apply_preview_label_bounds = Common.apply_preview_label_bounds
 local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
 
 function ConfigWindow:init_self_vitals_preview()
@@ -246,39 +251,12 @@ function ConfigWindow:_update_vitals_preview(kind)
     local raw_scale = tonumber(self.controls.scale.tb:GetText()) or 1
     if raw_scale <= 0 then raw_scale = 1 end
 
-    local function scaled_int(raw_value, fallback)
-        local n = tonumber(raw_value)
-        if n == nil then n = fallback or 0 end
-        return math.floor((n * raw_scale) + 0.5)
-    end
-
-    local function scaled_border(raw_value, fallback)
-        local n = tonumber(raw_value)
-        if n == nil then n = fallback or 0 end
-        if n <= 0 then
-            return 0
-        end
-        local out = math.floor(n * raw_scale)
-        if out < 1 then out = 1 end
-        return out
-    end
-
-    local function scaled_number(raw_value, fallback)
-        local n = tonumber(raw_value)
-        if n == nil then n = fallback or 0 end
-        return n * raw_scale
-    end
-
-    local function text_align(value)
-        return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
-    end
-
     local prefix = is_target and "target" or "self"
 
     local raw_frame_w = tonumber(self.controls[prefix .. "_width"].tb:GetText()) or 250
     local raw_border = tonumber(self.controls[prefix .. "_border_width"].tb:GetText()) or 1
-    local frame_w = scaled_int(raw_frame_w, 250)
-    local border = scaled_border(raw_border, 1)
+    local frame_w = _preview_scaled_int(raw_scale, raw_frame_w, 250)
+    local border = _preview_scaled_border(raw_scale, raw_border, 1)
     if frame_w < 40 then frame_w = 40 end
     if border < 0 then border = 0 end
     if border > math.floor(frame_w / 4) then
@@ -287,13 +265,13 @@ function ConfigWindow:_update_vitals_preview(kind)
 
     local raw_morale_h = tonumber(self.controls[prefix .. "_morale_height"].tb:GetText()) or 50
     local raw_power_h = tonumber(self.controls[prefix .. "_power_height"].tb:GetText()) or 26
-    local morale_h = scaled_int(raw_morale_h, 50)
-    local power_h = scaled_int(raw_power_h, 26)
+    local morale_h = _preview_scaled_int(raw_scale, raw_morale_h, 50)
+    local power_h = _preview_scaled_int(raw_scale, raw_power_h, 26)
     if morale_h < 10 then morale_h = 10 end
     if power_h < 10 then power_h = 10 end
 
     local raw_effects_h = tonumber(self.controls[prefix .. "_effects_height"].tb:GetText()) or 200
-    local effects_height = scaled_int(raw_effects_h, 200)
+    local effects_height = _preview_scaled_int(raw_scale, raw_effects_h, 200)
     local effects_half = effects_height / 2
 
     local raw_effects_position = self.controls[prefix .. "_effects_position"]:get_value()
@@ -302,8 +280,8 @@ function ConfigWindow:_update_vitals_preview(kind)
 
     local raw_buff_size = tonumber(self.controls[prefix .. "_buff_size"].tb:GetText()) or 32
     local raw_debuff_size = tonumber(self.controls[prefix .. "_debuff_size"].tb:GetText()) or 36
-    local buff_icon = scaled_int(raw_buff_size, 32)
-    local debuff_icon = scaled_int(raw_debuff_size, 36)
+    local buff_icon = _preview_scaled_int(raw_scale, raw_buff_size, 32)
+    local debuff_icon = _preview_scaled_int(raw_scale, raw_debuff_size, 36)
     if buff_icon < 1 then buff_icon = 1 end
     if debuff_icon < 1 then debuff_icon = 1 end
 
@@ -430,7 +408,7 @@ function ConfigWindow:_update_vitals_preview(kind)
     local buff_timer_font_name = self.controls[prefix .. "_buff_timer_font_name"]:get_value() or
         LUI_ENUMS.font_name.VERDANA
     local raw_buff_timer_font_size = tonumber(self.controls[prefix .. "_buff_timer_font_size"].tb:GetText()) or 12
-    local buff_timer_font_size = scaled_number(raw_buff_timer_font_size, 12)
+    local buff_timer_font_size = _preview_scaled_number(raw_scale, raw_buff_timer_font_size, 12)
     local buff_timer_font = _require_font(buff_timer_font_name, buff_timer_font_size)
     local buff_timer_style_enum = self.controls[prefix .. "_buff_timer_font_style"]:get_value() or
         LUI_ENUMS.font_style.OUTLINE
@@ -443,7 +421,7 @@ function ConfigWindow:_update_vitals_preview(kind)
     local debuff_timer_font_name = self.controls[prefix .. "_debuff_timer_font_name"]:get_value() or
         LUI_ENUMS.font_name.VERDANA
     local raw_debuff_timer_font_size = tonumber(self.controls[prefix .. "_debuff_timer_font_size"].tb:GetText()) or 25
-    local debuff_timer_font_size = scaled_number(raw_debuff_timer_font_size, 25)
+    local debuff_timer_font_size = _preview_scaled_number(raw_scale, raw_debuff_timer_font_size, 25)
     local debuff_timer_font = _require_font(debuff_timer_font_name, debuff_timer_font_size)
     local debuff_timer_style_enum = self.controls[prefix .. "_debuff_timer_font_style"]:get_value() or
         LUI_ENUMS.font_style.OUTLINE
@@ -545,13 +523,6 @@ function ConfigWindow:_update_vitals_preview(kind)
     local gradient_low = _hex_to_color(self.controls[prefix .. "_morale_gradient_low"].tb:GetText()) or crit_color
     self:_update_gradient_preview(prefix .. "_morale_gradient_preview", gradient_full, gradient_mid, gradient_low)
 
-    local function resource_background(fill_color)
-        if ressource_bg_matches_missing == true then
-            return _dim_color(fill_color, ressource_bg_dimming)
-        end
-        return morale_bg
-    end
-
     local inner_w = frame_w - (2 * border)
     local inner_morale_h = morale_h - (2 * border)
     local inner_power_h = power_h - (2 * border)
@@ -571,7 +542,8 @@ function ConfigWindow:_update_vitals_preview(kind)
     p.morale_background:SetSize(inner_w, inner_morale_h)
     local morale_fill_color = _morale_color_preview(morale_percent, morale_gradient, gradient_full, gradient_mid,
         gradient_low, high_color, med_color, low_color, crit_color)
-    p.morale_background:SetBackColor(resource_background(morale_fill_color))
+    p.morale_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing, ressource_bg_dimming,
+        morale_bg, morale_fill_color))
 
     local morale_fill_w = math.floor(inner_w * morale_percent + 0.5)
     if morale_fill_w < 0 then morale_fill_w = 0 end
@@ -603,7 +575,7 @@ function ConfigWindow:_update_vitals_preview(kind)
 
     local morale_font_name = self.controls[prefix .. "_morale_font_name"]:get_value() or LUI_ENUMS.font_name.VERDANA
     local raw_morale_font_size = tonumber(self.controls[prefix .. "_morale_font_size"].tb:GetText()) or 16
-    local morale_font_size = scaled_number(raw_morale_font_size, 16)
+    local morale_font_size = _preview_scaled_number(raw_scale, raw_morale_font_size, 16)
     local morale_font = _require_font(morale_font_name, morale_font_size)
     local morale_style_enum = self.controls[prefix .. "_morale_font_style"]:get_value() or LUI_ENUMS.font_style.OUTLINE
     local morale_font_style = LUI_TO_LOTRO.font_style[morale_style_enum] or Turbine.UI.FontStyle.None
@@ -636,26 +608,16 @@ function ConfigWindow:_update_vitals_preview(kind)
         bubble_formatted = lui_format_tokenized(bubble_fmt_tokens, { b = bubble_text })
     end
 
-    p.morale_label:SetPosition(0, 0)
     do
         local raw_margin = tonumber(self.controls[prefix .. "_morale_text_margin"].tb:GetText()) or 4
-        local m = border + scaled_int(raw_margin, 4)
-        if morale_align_text == LUI_ENUMS.text_alignment.LEFT then
-            p.morale_label:SetPosition(m, 0)
-            p.morale_label:SetSize(frame_w - m, morale_h)
-        elseif morale_align_text == LUI_ENUMS.text_alignment.RIGHT then
-            p.morale_label:SetPosition(0, 0)
-            p.morale_label:SetSize(frame_w - m, morale_h)
-        else
-            p.morale_label:SetPosition(0, 0)
-            p.morale_label:SetSize(frame_w, morale_h)
-        end
+        local m = border + _preview_scaled_int(raw_scale, raw_margin, 4)
+        _apply_preview_label_bounds(p.morale_label, morale_align_text, m, frame_w, morale_h)
     end
     p.morale_label:SetFont(morale_font)
     p.morale_label:SetFontStyle(morale_font_style)
     p.morale_label:SetForeColor(morale_font_color)
     p.morale_label:SetOutlineColor(morale_outline_color)
-    p.morale_label:SetTextAlignment(text_align(morale_align_text))
+    p.morale_label:SetTextAlignment(_preview_text_align(morale_align_text))
     p.morale_label:SetText(lui_format_tokenized(morale_fmt_tokens, {
         name = name,
         level = level,
@@ -674,14 +636,15 @@ function ConfigWindow:_update_vitals_preview(kind)
     p.power_background:SetSize(inner_w, inner_power_h)
     local power_color = _hex_to_color(self.controls[prefix .. "_power_color"].tb:GetText()) or
         Turbine.UI.Color(0.2, 0.6, 0.98)
-    p.power_background:SetBackColor(resource_background(power_color))
+    p.power_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing, ressource_bg_dimming,
+        morale_bg, power_color))
     p.power_bar:SetPosition(0, 0)
     p.power_bar:SetSize(math.floor(inner_w * power_percent + 0.5), inner_power_h)
     p.power_bar:SetBackColor(power_color)
 
     local power_font_name = self.controls[prefix .. "_power_font_name"]:get_value() or LUI_ENUMS.font_name.VERDANA
     local raw_power_font_size = tonumber(self.controls[prefix .. "_power_font_size"].tb:GetText()) or 14
-    local power_font_size = scaled_number(raw_power_font_size, 14)
+    local power_font_size = _preview_scaled_number(raw_scale, raw_power_font_size, 14)
     local power_font = _require_font(power_font_name, power_font_size)
     local power_style_enum = self.controls[prefix .. "_power_font_style"]:get_value() or LUI_ENUMS.font_style.OUTLINE
     local power_font_style = LUI_TO_LOTRO.font_style[power_style_enum] or Turbine.UI.FontStyle.None
@@ -698,26 +661,16 @@ function ConfigWindow:_update_vitals_preview(kind)
     local power_cur = math.floor(power_max * power_percent + 0.5)
     local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
 
-    p.power_label:SetPosition(0, 0)
     do
         local raw_margin = tonumber(self.controls[prefix .. "_power_text_margin"].tb:GetText()) or 4
-        local m = border + scaled_int(raw_margin, 4)
-        if power_align_text == LUI_ENUMS.text_alignment.LEFT then
-            p.power_label:SetPosition(m, 0)
-            p.power_label:SetSize(frame_w - m, power_h)
-        elseif power_align_text == LUI_ENUMS.text_alignment.RIGHT then
-            p.power_label:SetPosition(0, 0)
-            p.power_label:SetSize(frame_w - m, power_h)
-        else
-            p.power_label:SetPosition(0, 0)
-            p.power_label:SetSize(frame_w, power_h)
-        end
+        local m = border + _preview_scaled_int(raw_scale, raw_margin, 4)
+        _apply_preview_label_bounds(p.power_label, power_align_text, m, frame_w, power_h)
     end
     p.power_label:SetFont(power_font)
     p.power_label:SetFontStyle(power_font_style)
     p.power_label:SetForeColor(power_font_color)
     p.power_label:SetOutlineColor(power_outline_color)
-    p.power_label:SetTextAlignment(text_align(power_align_text))
+    p.power_label:SetTextAlignment(_preview_text_align(power_align_text))
     p.power_label:SetText(lui_format_tokenized(power_fmt_tokens, {
         name = name,
         level = level,

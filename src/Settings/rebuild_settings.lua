@@ -375,7 +375,6 @@ function _G.rebuild_settings()
     sb.widgets.money = {
         enabled = in_zones("money"),
         width = scaled_int(raw_sb.widgets.money.width),
-        icon = raw_sb.widgets.money.icon,
         content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.money.text_alignment],
     }
     sb.widgets.wallet = {

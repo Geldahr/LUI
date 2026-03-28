@@ -1,10 +1,15 @@
 local Common = SettingsPreviewCommon
 local _hex_to_color = Common.hex_to_color
-local _dim_color = Common.dim_color
 local _require_font = Common.require_font
 local _apply_preview_border = Common.apply_preview_border
 local _preview_number_abbrev_settings = Common.preview_number_abbrev_settings
 local _morale_color_preview = Common.morale_color_preview
+local _preview_scaled_int = Common.preview_scaled_int
+local _preview_scaled_border = Common.preview_scaled_border
+local _preview_scaled_number = Common.preview_scaled_number
+local _preview_text_align = Common.preview_text_align
+local _preview_resource_background = Common.preview_resource_background
+local _apply_preview_label_bounds = Common.apply_preview_label_bounds
 local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
 
 function ConfigWindow:init_party_vitals_preview()
@@ -133,45 +138,6 @@ function ConfigWindow:update_party_vitals_preview()
     local raw_scale = tonumber(self.controls.scale.tb:GetText()) or s.global.scale or 1
     if raw_scale <= 0 then raw_scale = 1 end
 
-    local function scaled_int(raw_value, fallback)
-        local n = raw_value
-        if type(n) ~= "number" then
-            n = tonumber(n)
-        end
-        if n == nil then
-            n = fallback or 0
-        end
-        return math.floor((n * raw_scale) + 0.5)
-    end
-
-    local function scaled_border(raw_value, fallback)
-        local n = tonumber(raw_value)
-        if n == nil then
-            n = fallback or 0
-        end
-        if n <= 0 then
-            return 0
-        end
-        local out = math.floor(n * raw_scale)
-        if out < 1 then out = 1 end
-        return out
-    end
-
-    local function scaled_number(raw_value, fallback)
-        local n = raw_value
-        if type(n) ~= "number" then
-            n = tonumber(n)
-        end
-        if n == nil then
-            n = fallback or 0
-        end
-        return n * raw_scale
-    end
-
-    local function text_align(value)
-        return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
-    end
-
     lui_set_number_abbrev_preview_settings(_preview_number_abbrev_settings(self))
 
     local raw_rows = tonumber(self.controls.party_rows.tb:GetText()) or s.party.layout.rows or 6
@@ -180,15 +146,15 @@ function ConfigWindow:update_party_vitals_preview()
 
     local raw_spacing_x = tonumber(self.controls.party_spacing_x.tb:GetText()) or s.party.layout.spacing_x or 6
     local raw_spacing_y = tonumber(self.controls.party_spacing_y.tb:GetText()) or s.party.layout.spacing_y or 6
-    local spacing_x = scaled_int(raw_spacing_x, 6)
-    local spacing_y = scaled_int(raw_spacing_y, 6)
+    local spacing_x = _preview_scaled_int(raw_scale, raw_spacing_x, 6)
+    local spacing_y = _preview_scaled_int(raw_scale, raw_spacing_y, 6)
     if spacing_x < 0 then spacing_x = 0 end
     if spacing_y < 0 then spacing_y = 0 end
 
     local raw_frame_w = tonumber(self.controls.party_width.tb:GetText()) or s.party.frame.width or 250
     local raw_border = tonumber(self.controls.party_border_width.tb:GetText()) or s.party.frame.border_width or 1
-    local frame_w = scaled_int(raw_frame_w, 250)
-    local border = scaled_border(raw_border, 1)
+    local frame_w = _preview_scaled_int(raw_scale, raw_frame_w, 250)
+    local border = _preview_scaled_border(raw_scale, raw_border, 1)
     if frame_w < 40 then frame_w = 40 end
     if border < 0 then border = 0 end
     if border > math.floor(frame_w / 4) then
@@ -197,8 +163,8 @@ function ConfigWindow:update_party_vitals_preview()
 
     local raw_morale_h = tonumber(self.controls.party_morale_height.tb:GetText()) or s.party.morale.height or 50
     local raw_power_h = tonumber(self.controls.party_power_height.tb:GetText()) or s.party.power.height or 26
-    local morale_h = scaled_int(raw_morale_h, 50)
-    local power_h = scaled_int(raw_power_h, 26)
+    local morale_h = _preview_scaled_int(raw_scale, raw_morale_h, 50)
+    local power_h = _preview_scaled_int(raw_scale, raw_power_h, 26)
     if morale_h < 10 then morale_h = 10 end
     if power_h < 10 then power_h = 10 end
 
@@ -212,9 +178,9 @@ function ConfigWindow:update_party_vitals_preview()
     local raw_icon_size = tonumber(self.controls.party_class_icon_size.tb:GetText()) or s.party.class_icon.size or 24
     local raw_icon_x = tonumber(self.controls.party_class_icon_x.tb:GetText()) or s.party.class_icon.x or 2
     local raw_icon_y = tonumber(self.controls.party_class_icon_y.tb:GetText()) or s.party.class_icon.y or 2
-    local icon_size = scaled_int(raw_icon_size, 24)
-    local icon_x = scaled_int(raw_icon_x, 2)
-    local icon_y = scaled_int(raw_icon_y, 2)
+    local icon_size = _preview_scaled_int(raw_scale, raw_icon_size, 24)
+    local icon_x = _preview_scaled_int(raw_scale, raw_icon_x, 2)
+    local icon_y = _preview_scaled_int(raw_scale, raw_icon_y, 2)
     if icon_size < 16 then icon_size = 16 end
     if icon_size > 50 then icon_size = 50 end
 
@@ -228,9 +194,9 @@ function ConfigWindow:update_party_vitals_preview()
     local raw_leader_size = tonumber(self.controls.party_leader_icon_size.tb:GetText()) or s.party.leader_icon.size or 24
     local raw_leader_x = tonumber(self.controls.party_leader_icon_x.tb:GetText()) or s.party.leader_icon.x or 0
     local raw_leader_y = tonumber(self.controls.party_leader_icon_y.tb:GetText()) or s.party.leader_icon.y or 2
-    local leader_size = scaled_int(raw_leader_size, 24)
-    local leader_x = scaled_int(raw_leader_x, 0)
-    local leader_y = scaled_int(raw_leader_y, 2)
+    local leader_size = _preview_scaled_int(raw_scale, raw_leader_size, 24)
+    local leader_x = _preview_scaled_int(raw_scale, raw_leader_x, 0)
+    local leader_y = _preview_scaled_int(raw_scale, raw_leader_y, 2)
     if leader_size < 16 then leader_size = 16 end
     if leader_size > 50 then leader_size = 50 end
 
@@ -270,7 +236,7 @@ function ConfigWindow:update_party_vitals_preview()
         morale_font_name = (s.party and s.party.morale and s.party.morale.font and s.party.morale.font.name) or
             LUI_ENUMS.font_name.VERDANA
     end
-    local morale_font_size = scaled_number(
+    local morale_font_size = _preview_scaled_number(raw_scale,
         tonumber(self.controls.party_morale_font_size.tb:GetText()) or s.party.morale.font.size or 16, 16)
     local morale_font = _require_font(morale_font_name, morale_font_size)
     local morale_style_enum = self.controls.party_morale_font_style:get_value()
@@ -287,7 +253,7 @@ function ConfigWindow:update_party_vitals_preview()
         power_font_name = (s.party and s.party.power and s.party.power.font and s.party.power.font.name) or
             LUI_ENUMS.font_name.VERDANA
     end
-    local power_font_size = scaled_number(
+    local power_font_size = _preview_scaled_number(raw_scale,
         tonumber(self.controls.party_power_font_size.tb:GetText()) or s.party.power.font.size or 14, 14)
     local power_font = _require_font(power_font_name, power_font_size)
     local power_style_enum = self.controls.party_power_font_style:get_value()
@@ -326,20 +292,13 @@ function ConfigWindow:update_party_vitals_preview()
     end
 
     local morale_margin = border +
-        scaled_int(
+        _preview_scaled_int(raw_scale,
             tonumber(self.controls.party_morale_text_margin.tb:GetText()) or
             (s.party and s.party.morale and s.party.morale.text_margin) or 4, 4)
     local power_margin = border +
-        scaled_int(
+        _preview_scaled_int(raw_scale,
             tonumber(self.controls.party_power_text_margin.tb:GetText()) or
             (s.party and s.party.power and s.party.power.text_margin) or 4, 4)
-
-    local function resource_background(fill_color)
-        if ressource_bg_matches_missing == true then
-            return _dim_color(fill_color, ressource_bg_dimming)
-        end
-        return morale_bg
-    end
 
     local preview_count = 24
     local columns = math.ceil(preview_count / rows)
@@ -483,7 +442,8 @@ function ConfigWindow:update_party_vitals_preview()
             if morale_fill_w > inner_w then morale_fill_w = inner_w end
             local fill_color = _morale_color_preview(morale_percent, morale_gradient, gradient_full, gradient_mid,
                 gradient_low, high_color, med_color, low_color, crit_color)
-            m.morale_background:SetBackColor(resource_background(fill_color))
+            m.morale_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing,
+                ressource_bg_dimming, morale_bg, fill_color))
             m.morale_bar:SetBackColor(fill_color)
             m.morale_bar:SetWidth(morale_fill_w)
 
@@ -511,21 +471,12 @@ function ConfigWindow:update_party_vitals_preview()
                 m.bubble_bar:SetVisible(false)
             end
 
-            if morale_align_text == LUI_ENUMS.text_alignment.LEFT then
-                m.morale_label:SetPosition(morale_margin, 0)
-                m.morale_label:SetSize(frame_w - morale_margin, morale_h)
-            elseif morale_align_text == LUI_ENUMS.text_alignment.RIGHT then
-                m.morale_label:SetPosition(0, 0)
-                m.morale_label:SetSize(frame_w - morale_margin, morale_h)
-            else
-                m.morale_label:SetPosition(0, 0)
-                m.morale_label:SetSize(frame_w, morale_h)
-            end
+            _apply_preview_label_bounds(m.morale_label, morale_align_text, morale_margin, frame_w, morale_h)
             m.morale_label:SetFont(morale_font)
             m.morale_label:SetFontStyle(morale_font_style)
             m.morale_label:SetForeColor(morale_font_color)
             m.morale_label:SetOutlineColor(morale_outline_color)
-            m.morale_label:SetTextAlignment(text_align(morale_align_text))
+            m.morale_label:SetTextAlignment(_preview_text_align(morale_align_text))
 
             local bubble_text = ""
             if bubble_cur > 0 then
@@ -573,23 +524,15 @@ function ConfigWindow:update_party_vitals_preview()
             m.power_bar:SetWidth(power_fill_w)
             local power_fill_color = (i % 3) == 0 and wrath_color or power_color
             m.power_bar:SetBackColor(power_fill_color)
-            m.power_background:SetBackColor(resource_background(power_fill_color))
+            m.power_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing,
+                ressource_bg_dimming, morale_bg, power_fill_color))
 
-            if power_align_text == LUI_ENUMS.text_alignment.LEFT then
-                m.power_label:SetPosition(power_margin, 0)
-                m.power_label:SetSize(frame_w - power_margin, power_h)
-            elseif power_align_text == LUI_ENUMS.text_alignment.RIGHT then
-                m.power_label:SetPosition(0, 0)
-                m.power_label:SetSize(frame_w - power_margin, power_h)
-            else
-                m.power_label:SetPosition(0, 0)
-                m.power_label:SetSize(frame_w, power_h)
-            end
+            _apply_preview_label_bounds(m.power_label, power_align_text, power_margin, frame_w, power_h)
             m.power_label:SetFont(power_font)
             m.power_label:SetFontStyle(power_font_style)
             m.power_label:SetForeColor(power_font_color)
             m.power_label:SetOutlineColor(power_outline_color)
-            m.power_label:SetTextAlignment(text_align(power_align_text))
+            m.power_label:SetTextAlignment(_preview_text_align(power_align_text))
 
             local power_max = 30000
             local power_cur = math.floor(power_max * power_percent + 0.5)
