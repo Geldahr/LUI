@@ -136,6 +136,13 @@ function MoneyWidget:update(now)
 end
 
 function MoneyWidget:destroy()
+    self:SetVisible(false)
+    if self.g_icon ~= nil then self.g_icon:SetVisible(false) end
+    if self.s_icon ~= nil then self.s_icon:SetVisible(false) end
+    if self.c_icon ~= nil then self.c_icon:SetVisible(false) end
+    if self.g_label ~= nil then self.g_label:SetVisible(false) end
+    if self.s_label ~= nil then self.s_label:SetVisible(false) end
+    if self.c_label ~= nil then self.c_label:SetVisible(false) end
     if self.g_icon ~= nil then self.g_icon:SetParent(nil) end
     if self.s_icon ~= nil then self.s_icon:SetParent(nil) end
     if self.c_icon ~= nil then self.c_icon:SetParent(nil) end

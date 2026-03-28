@@ -119,13 +119,21 @@ end
 
 function WalletWidget:destroy()
     if self.placeholder ~= nil then
+        self.placeholder:SetVisible(false)
         self.placeholder:SetParent(nil)
     end
+    self:SetVisible(false)
     for i = 1, #self._item_controls do
         local item = self._item_controls[i]
         if item ~= nil then
-            if item.icon ~= nil then item.icon:SetParent(nil) end
-            if item.label ~= nil then item.label:SetParent(nil) end
+            if item.icon ~= nil then
+                item.icon:SetVisible(false)
+                item.icon:SetParent(nil)
+            end
+            if item.label ~= nil then
+                item.label:SetVisible(false)
+                item.label:SetParent(nil)
+            end
         end
     end
     self:SetParent(nil)
