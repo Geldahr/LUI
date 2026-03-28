@@ -16,6 +16,7 @@ local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_FLIP_GAP = 4
 local BASE_SCROLL_W = 10
+local BASE_BORDER_THICKNESS = 1.5
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -46,7 +47,7 @@ function LuiDropdown:Constructor()
     self._labels = {}
     self._values = {}
 
-    self._popup_border = 2
+    self._popup_border = BASE_BORDER_THICKNESS
     self._popup_border_color = Turbine.UI.Color(1, 0.55, 0.65, 0.85)
     self._popup_back_color = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
 
@@ -91,7 +92,8 @@ function LuiDropdown:Constructor()
 
     self.popup_inner = Turbine.UI.Control()
     self.popup_inner:SetParent(self.popup)
-    self.popup_inner:SetPosition(self._popup_border, self._popup_border)
+    local initial_border = self:_popup_border_size()
+    self.popup_inner:SetPosition(initial_border, initial_border)
     self.popup_inner:SetBackColor(self._popup_back_color)
 
     self.popup_list = Turbine.UI.ListBox()
@@ -112,6 +114,10 @@ function LuiDropdown:Constructor()
 
     Turbine.UI.Control.SetSize(self, _scaled_int(self._scale, BASE_DROPDOWN_W), _scaled_int(self._scale, BASE_DROPDOWN_H))
     self.button:SetSize(self:GetSize())
+end
+
+function LuiDropdown:_popup_border_size()
+    return math.max(1, _scaled_int(self._scale, self._popup_border or BASE_BORDER_THICKNESS))
 end
 
 ---------------------------------------------------------------------
@@ -300,7 +306,7 @@ function LuiDropdown:Open()
     local list_height = (visible_count * self._item_height)
     local list_width = width
 
-    local border = self._popup_border
+    local border = self:_popup_border_size()
     local scroll_w = BASE_SCROLL_W
     local use_scroll = item_count > visible_count
 

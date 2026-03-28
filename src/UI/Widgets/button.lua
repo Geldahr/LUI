@@ -6,6 +6,7 @@ local BASE_BUTTON_W = 89
 local BASE_BUTTON_H = 21
 local BASE_FONT_SIZE = 12
 local BASE_ICON_SIZE = 12
+local BASE_BORDER_THICKNESS = 1.5
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -44,7 +45,7 @@ function LuiButton:Constructor()
     self._hover = false
     self._pressed = false
 
-    self._border_thickness = 2
+    self._border_thickness = BASE_BORDER_THICKNESS
     self._border_color = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
 
     self._back_normal = Turbine.UI.Color(1, 0.15, 0.15, 0.15)
@@ -62,13 +63,15 @@ function LuiButton:Constructor()
     Turbine.UI.Control.SetSize(self, _scaled_int(self._scale, BASE_BUTTON_W), _scaled_int(self._scale, BASE_BUTTON_H))
     self:SetMouseVisible(true)
 
+    local initial_border = math.max(0, _scaled_int(self._scale, self._border_thickness))
+
     self._inner = Turbine.UI.Control()
     self._inner:SetParent(self)
     self._inner:SetMouseVisible(false)
-    self._inner:SetPosition(self._border_thickness, self._border_thickness)
+    self._inner:SetPosition(initial_border, initial_border)
     self._inner:SetSize(
-        math.max(0, self:GetWidth() - (2 * self._border_thickness)),
-        math.max(0, self:GetHeight() - (2 * self._border_thickness))
+        math.max(0, self:GetWidth() - (2 * initial_border)),
+        math.max(0, self:GetHeight() - (2 * initial_border))
     )
 
     self._label = LuiLabel()
@@ -156,7 +159,6 @@ function LuiButton:set_border_thickness(px)
         return
     end
     if px < 0 then px = 0 end
-    px = math.floor(px + 0.5)
     self._border_thickness = px
     self:_layout()
 end
@@ -427,7 +429,7 @@ end
 
 function LuiButton:_layout()
     local w, h = self:GetSize()
-    local t = self._border_thickness or 2
+    local t = math.max(0, _scaled_int(self._scale, self._border_thickness or BASE_BORDER_THICKNESS))
     if t < 0 then t = 0 end
 
     if self._inner ~= nil then
