@@ -1,0 +1,177 @@
+import "Turbine.UI"
+
+import "LUI.src.UI.Widgets"
+
+SettingsTabbedPage = class(Turbine.UI.Control)
+_G.SettingsTabbedPage = SettingsTabbedPage
+_G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
+_G.LUI_SETTINGS_SHARED.tabbed_page = SettingsTabbedPage
+
+function SettingsTabbedPage:Constructor(window)
+    Turbine.UI.Control.Constructor(self)
+
+    self.window = window
+    self.controls = {}
+    self._color_fields = {}
+    self._sub_pages = {}
+    self._sub_page_order = {}
+    self._sub_page_modules = {}
+    self._sub_tab_index_by_key = {}
+
+    self:SetMouseVisible(false)
+
+    self.sub_tab_bar = UI.Widgets.LuiTabBar()
+    self.sub_tab_bar:SetParent(self)
+    self.sub_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
+    self.sub_tab_bar:set_content_padding(4)
+    self.sub_tab_bar:set_show_border_left(false)
+    self.sub_tab_bar.selection_changed = function(_, _, _, host)
+        if self._syncing_sub_tabs == true or host == nil then
+            return
+        end
+        self:select_tab(host._tab_key)
+    end
+
+    self.SizeChanged = function()
+        self:layout()
+    end
+end
+
+function SettingsTabbedPage:_merge_page_controls(page)
+    if page == nil then
+        return
+    end
+
+    if page.controls ~= nil then
+        for key, entry in pairs(page.controls) do
+            self.controls[key] = entry
+        end
+    end
+
+    if page._color_fields ~= nil then
+        for i = 1, #page._color_fields do
+            self._color_fields[#self._color_fields + 1] = page._color_fields[i]
+        end
+    end
+end
+
+function SettingsTabbedPage:add_sub_page(text, module)
+    if type(module) ~= "table" then
+        error("Invalid settings sub-page module")
+    end
+    if type(module.create_page) ~= "function" then
+        error("Settings sub-page module is missing create_page: " .. tostring(module.key))
+    end
+
+    local page = module.create_page(self.window)
+    if page == nil then
+        error("Settings sub-page create_page returned nil: " .. tostring(module.key))
+    end
+
+    page._tab_key = module.key
+    self._sub_pages[module.key] = page
+    self._sub_page_order[#self._sub_page_order + 1] = module.key
+    self._sub_page_modules[#self._sub_page_modules + 1] = module
+    self._sub_tab_index_by_key[module.key] = self.sub_tab_bar:add_tab(text, page)
+
+    if self.window ~= nil and self.window._tab_pages ~= nil then
+        self.window._tab_pages[module.key] = page
+    end
+
+    self:_merge_page_controls(page)
+
+    if self.active_sub_key == nil then
+        self.active_sub_key = module.key
+    end
+
+    return page
+end
+
+function SettingsTabbedPage:get_active_tab_key()
+    return self.active_sub_key
+end
+
+function SettingsTabbedPage:select_tab(key)
+    if type(key) ~= "string" or self._sub_pages[key] == nil then
+        key = self.active_sub_key or self._sub_page_order[1]
+    end
+
+    local page = key ~= nil and self._sub_pages[key] or nil
+    if page == nil then
+        return
+    end
+
+    self.active_sub_key = key
+    if self.window ~= nil then
+        self.window.active_tab = key
+    end
+
+    local index = self._sub_tab_index_by_key[key]
+    self._syncing_sub_tabs = true
+    if index ~= nil then
+        self.sub_tab_bar:set_selected_index(index, false)
+    end
+    self._syncing_sub_tabs = false
+
+    if page.on_selected ~= nil then
+        page:on_selected()
+    elseif page.layout ~= nil then
+        page:layout()
+    end
+end
+
+function SettingsTabbedPage:on_selected(preferred_key)
+    self:layout()
+    self:select_tab(preferred_key)
+end
+
+function SettingsTabbedPage:apply_ui_scale()
+    local scale = _G.settings.global.scale
+    self.sub_tab_bar:set_scale(scale)
+    self.sub_tab_bar:set_font(self.window.tab_font)
+
+    for _, page in pairs(self._sub_pages) do
+        if page ~= nil and page.apply_ui_scale ~= nil then
+            page:apply_ui_scale()
+        end
+    end
+
+    self:layout()
+end
+
+function SettingsTabbedPage:close_all_dropdowns()
+    for _, page in pairs(self._sub_pages) do
+        if page ~= nil and page.close_all_dropdowns ~= nil then
+            page:close_all_dropdowns()
+        end
+    end
+end
+
+function SettingsTabbedPage:load_pages(s, ui)
+    for i = 1, #self._sub_page_modules do
+        local module = self._sub_page_modules[i]
+        if module ~= nil and module.load ~= nil then
+            module.load(self.window, s, ui)
+        end
+    end
+end
+
+function SettingsTabbedPage:apply_pages(s, ui)
+    for i = 1, #self._sub_page_modules do
+        local module = self._sub_page_modules[i]
+        if module ~= nil and module.apply ~= nil then
+            module.apply(self.window, s, ui)
+        end
+    end
+end
+
+function SettingsTabbedPage:layout()
+    local width, height = self:GetSize()
+    if width == nil or height == nil or width < 1 or height < 1 then
+        return
+    end
+
+    self.sub_tab_bar:SetPosition(0, 0)
+    self.sub_tab_bar:SetSize(width, height)
+    self.sub_tab_bar:refresh_layout()
+end

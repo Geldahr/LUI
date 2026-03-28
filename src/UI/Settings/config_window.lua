@@ -11,21 +11,15 @@ import "LUI.src.Utils.time_format"
 import "LUI.src.Utils.token_format"
 import "LUI.src.Settings.enums"
 
-import "LUI.src.UI.Settings.Tabs.global"
-import "LUI.src.UI.Settings.Tabs.profile_manager"
-import "LUI.src.UI.Settings.Tabs.self_vitals"
-import "LUI.src.UI.Settings.Tabs.target_vitals"
-import "LUI.src.UI.Settings.Tabs.target_boss_vitals"
-import "LUI.src.UI.Settings.Tabs.target_targets_target"
-import "LUI.src.UI.Settings.Tabs.expiring_target_effects"
-import "LUI.src.UI.Settings.Tabs.party_layout"
-import "LUI.src.UI.Settings.Tabs.party_vitals"
-import "LUI.src.UI.Settings.Tabs.self_expiring_effects"
-import "LUI.src.UI.Settings.Tabs.inventory"
-import "LUI.src.UI.Settings.Tabs.assets"
-import "LUI.src.UI.Settings.Tabs.status_bar"
-import "LUI.src.UI.Settings.Tabs.cooldowns"
-import "LUI.src.UI.Settings.Tabs.help"
+import "LUI.src.UI.Settings.Tabs.Global.global"
+import "LUI.src.UI.Settings.Tabs.Self.self"
+import "LUI.src.UI.Settings.Tabs.Target.target"
+import "LUI.src.UI.Settings.Tabs.Party.party"
+import "LUI.src.UI.Settings.Tabs.ProfileManager.profile_manager"
+import "LUI.src.UI.Settings.Tabs.Inventory.inventory"
+import "LUI.src.UI.Settings.Tabs.Assets.assets"
+import "LUI.src.UI.Settings.Tabs.StatusBar.status_bar"
+import "LUI.src.UI.Settings.Tabs.Help.help"
 
 local SETTINGS_FONT_NAME = "Verdana"
 local SETTINGS_FONT_SIZE = 13
@@ -37,10 +31,6 @@ local FIELD_FONT_NAME = "Verdana"
 local FIELD_FONT_SIZE = 12
 local HINT_FONT_NAME = "Verdana"
 local HINT_FONT_SIZE = 10
-local CONFIRM_DIALOG_W = 296
-local CONFIRM_DIALOG_H = 126
-local CONFIRM_DIALOG_PADDING = 12
-local CONFIRM_DIALOG_BUTTON_GAP = 7
 local function _scaled_size(value)
     return value * _G.settings.global.scale
 end
@@ -83,6 +73,8 @@ end
 ConfigWindow = class(Turbine.UI.Lotro.Window)
 
 import "LUI.src.UI.Settings.Window.window_geometry"
+import "LUI.src.UI.Settings.Window.window_tabs"
+import "LUI.src.UI.Settings.Window.window_layout"
 import "LUI.src.UI.Settings.Preview.common"
 import "LUI.src.UI.Settings.Preview.self_expiring_effects"
 import "LUI.src.UI.Settings.Preview.cooldowns"
@@ -305,26 +297,24 @@ function ConfigWindow:apply_ui_scale()
         self.main_tab_bar:set_scale(scale)
         self.main_tab_bar:set_font(self.tab_font)
     end
-    if self.sub_tab_bars ~= nil then
-        for _, bar in pairs(self.sub_tab_bars) do
-            if bar ~= nil then
-                bar:set_scale(scale)
-                bar:set_font(self.tab_font)
-            end
-        end
-    end
 
-    for _, page in pairs(self._tab_pages or {}) do
-        if page ~= nil and page.apply_ui_scale ~= nil then
-            page:apply_ui_scale()
+    if self.main_tab_index_by_key ~= nil then
+        for key, _ in pairs(self.main_tab_index_by_key) do
+            local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
+            if page ~= nil and page.apply_ui_scale ~= nil then
+                page:apply_ui_scale()
+            end
         end
     end
 end
 
 function ConfigWindow:close_all_dropdowns()
-    for _, page in pairs(self._tab_pages or {}) do
-        if page ~= nil and page.close_all_dropdowns ~= nil then
-            page:close_all_dropdowns()
+    if self.main_tab_index_by_key ~= nil then
+        for key, _ in pairs(self.main_tab_index_by_key) do
+            local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
+            if page ~= nil and page.close_all_dropdowns ~= nil then
+                page:close_all_dropdowns()
+            end
         end
     end
 end
@@ -397,20 +387,6 @@ function ConfigWindow:cancel()
     self:SetVisible(false)
 end
 
-function ConfigWindow:_activate_active_page()
-    local key = self.active_tab
-    local page = key ~= nil and self._tab_pages ~= nil and self._tab_pages[key] or nil
-    if page == nil then
-        return
-    end
-
-    if page.on_selected ~= nil then
-        page:on_selected()
-    elseif page.layout ~= nil then
-        page:layout()
-    end
-end
-
 function ConfigWindow:open(main_key, preferred_sub_key)
     self:apply_saved_geometry()
     self:load_from_settings()
@@ -429,30 +405,19 @@ function ConfigWindow:bring_to_front()
     end
 end
 
-function ConfigWindow:_create_tab_page(key)
-    local module = self._tab_modules_by_key ~= nil and self._tab_modules_by_key[key] or nil
-    if module == nil or module.create_page == nil then
-        error("Settings tab is missing create_page: " .. tostring(key))
-    end
-
-    local page = module.create_page(self)
-    if page == nil then
-        error("Settings tab create_page returned nil: " .. tostring(key))
-    end
-
-    page._tab_key = key
-    self._tab_pages[key] = page
-    return page
-end
-
 function ConfigWindow:_rebuild_control_registry()
     self.controls = {}
     self._color_fields = {}
 
-    for _, page in pairs(self._tab_pages or {}) do
+    if self.main_tab_index_by_key == nil then
+        return
+    end
+
+    for key, _ in pairs(self.main_tab_index_by_key) do
+        local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
         if page ~= nil and page.controls ~= nil then
-            for key, entry in pairs(page.controls) do
-                self.controls[key] = entry
+            for control_key, entry in pairs(page.controls) do
+                self.controls[control_key] = entry
             end
         end
         if page ~= nil and page._color_fields ~= nil then
@@ -493,204 +458,6 @@ function ConfigWindow:_refresh_active_preview()
     elseif key == "target_targets_target" then
         self:update_target_targets_target_preview()
     end
-end
-
-function ConfigWindow:build_tabs()
-    self._tab_pages = {}
-
-    self.main_tabs = {
-        { key = "global",     text = TR("Global") },
-        { key = "self",       text = TR("Self") },
-        { key = "target",     text = TR("Target") },
-        { key = "party",      text = TR("Party") },
-        { key = "inventory",  text = TR("Inventory") },
-        { key = "assets",      text = TR("Assets") },
-        { key = "status_bar", text = TR("Status Bar") },
-        { key = "profile_manager", text = TR("Profiles") },
-        { key = "help",       text = TR("Help") },
-    }
-
-    self.sub_tabs_by_main = {
-        self = {
-            { key = "self_vitals",      text = TR("Vitals") },
-            { key = "expiring_effects", text = TR("Expiring Effects") },
-            { key = "cooldowns",        text = TR("Cooldowns") },
-        },
-        target = {
-            { key = "target_vitals",           text = TR("Vitals") },
-            { key = "target_boss_vitals",      text = TR("Boss vitals") },
-            { key = "target_targets_target",   text = TR("Target's Target") },
-            { key = "expiring_target_effects", text = TR("Expiring Effects") },
-        },
-        party = {
-            { key = "party_layout", text = TR("Layout") },
-            { key = "party_vitals", text = TR("Vitals") },
-        },
-    }
-
-    self._main_for_sub = {
-        self_vitals = "self",
-        expiring_effects = "self",
-        cooldowns = "self",
-        target_vitals = "target",
-        target_boss_vitals = "target",
-        target_targets_target = "target",
-        expiring_target_effects = "target",
-        party_layout = "party",
-        party_vitals = "party",
-        global = "global",
-        inventory = "inventory",
-        assets = "assets",
-        status_bar = "status_bar",
-        profile_manager = "profile_manager",
-        help = "help",
-    }
-
-    self.main_tab_index_by_key = {}
-    self.main_tab_hosts = {}
-    for i = 1, #self.main_tabs do
-        local t = self.main_tabs[i]
-        local widget = nil
-        if self.sub_tabs_by_main[t.key] ~= nil then
-            widget = Turbine.UI.Control()
-            widget._tab_key = t.key
-            self.main_tab_hosts[t.key] = widget
-        else
-            widget = self:_create_tab_page(t.key)
-        end
-        self.main_tab_index_by_key[t.key] = self.main_tab_bar:add_tab(t.text, widget)
-    end
-
-    self.sub_tab_bars = {}
-    self.sub_tab_hosts_by_main = {}
-    self.sub_tab_index_by_key = {}
-    for main_key, list in pairs(self.sub_tabs_by_main) do
-        local bar = UI.Widgets.LuiTabBar()
-        bar:SetParent(self.main_tab_hosts[main_key])
-        bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
-        bar:set_content_padding(4)
-        bar:set_show_border_left(false)
-        bar.selection_changed = function(_, _, _, host)
-            if self._syncing_tab_widgets == true or host == nil then
-                return
-            end
-            self:select_sub_tab(host._tab_key)
-        end
-
-        self.sub_tab_bars[main_key] = bar
-        self.sub_tab_hosts_by_main[main_key] = {}
-        self.sub_tab_index_by_key[main_key] = {}
-
-        for i = 1, #list do
-            local t = list[i]
-            local widget = self:_create_tab_page(t.key)
-            self.sub_tab_hosts_by_main[main_key][t.key] = widget
-            self.sub_tab_index_by_key[main_key][t.key] = bar:add_tab(t.text, widget)
-        end
-    end
-end
-
-function ConfigWindow:_main_tab_default_key(main_key)
-    if main_key == "global" then
-        return "global"
-    elseif main_key == "inventory" then
-        return "inventory"
-    elseif main_key == "assets" then
-        return "assets"
-    elseif main_key == "status_bar" then
-        return "status_bar"
-    elseif main_key == "profile_manager" then
-        return "profile_manager"
-    elseif main_key == "help" then
-        return "help"
-    end
-    return nil
-end
-
-function ConfigWindow:_main_tab_has_sub_tabs(main_key)
-    local sub_list = self.sub_tabs_by_main ~= nil and self.sub_tabs_by_main[main_key] or nil
-    return sub_list ~= nil and #sub_list > 1
-end
-
-function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
-    if type(main_key) ~= "string" then
-        main_key = "global"
-    end
-    if main_key == "cooldowns" then
-        main_key = "self"
-        preferred_sub_key = "cooldowns"
-    end
-
-    if self.main_tab_index_by_key ~= nil and self.main_tab_index_by_key[main_key] == nil then
-        main_key = "global"
-    end
-
-    local tab_key = self:_main_tab_default_key(main_key)
-    if tab_key == nil then
-        local sub_list = self.sub_tabs_by_main[main_key] or {}
-        if type(preferred_sub_key) == "string" then
-            for i = 1, #sub_list do
-                if sub_list[i].key == preferred_sub_key then
-                    tab_key = preferred_sub_key
-                    break
-                end
-            end
-        end
-        if tab_key == nil and type(self.active_tab) == "string" then
-            for i = 1, #sub_list do
-                if sub_list[i].key == self.active_tab then
-                    tab_key = self.active_tab
-                    break
-                end
-            end
-        end
-        if tab_key == nil and #sub_list > 0 then
-            tab_key = sub_list[1].key
-        end
-    end
-
-    if tab_key == nil then
-        tab_key = "global"
-        main_key = "global"
-    end
-
-    self.active_main_tab = main_key
-
-    self._syncing_tab_widgets = true
-    if self.main_tab_bar ~= nil then
-        self.main_tab_bar:set_selected_index(self.main_tab_index_by_key[main_key], false)
-    end
-    if self:_main_tab_has_sub_tabs(main_key) == true then
-        local bar = self.sub_tab_bars ~= nil and self.sub_tab_bars[main_key] or nil
-        local index = self.sub_tab_index_by_key ~= nil and self.sub_tab_index_by_key[main_key] ~= nil and
-            self.sub_tab_index_by_key[main_key][tab_key] or nil
-        if bar ~= nil and index ~= nil then
-            bar:set_selected_index(index, false)
-        end
-    end
-    self._syncing_tab_widgets = false
-
-    self:select_tab(tab_key)
-end
-
-function ConfigWindow:select_sub_tab(key)
-    local main_key = self._main_for_sub ~= nil and self._main_for_sub[key] or nil
-    if main_key == nil then
-        main_key = self.active_main_tab or "global"
-    end
-    self:select_main_tab(main_key, key)
-end
-
-function ConfigWindow:select_tab(key)
-    local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
-    if page == nil then
-        return
-    end
-
-    self:hide_hint()
-    self.active_tab = key
-    self:layout()
-    self:_activate_active_page()
 end
 
 function ConfigWindow:build_controls()
@@ -802,30 +569,23 @@ function ConfigWindow:build_controls()
         hex_to_color = _hex_to_color,
     }
 
-    local tabs = Tabs
+    local tabs = _G.LUI_SETTINGS_TABS or {}
     self._tab_modules = {
-        tabs.Global,
-        tabs.ProfileManager,
-        tabs.SelfVitals,
-        tabs.TargetVitals,
-        tabs.TargetBossVitals,
-        tabs.TargetTargetsTarget,
-        tabs.ExpiringTargetEffects,
-        tabs.PartyLayout,
-        tabs.PartyVitals,
-        tabs.SelfExpiringEffects,
-        tabs.Inventory,
-        tabs.AssetsTab,
-        tabs.StatusBar,
-        tabs.Cooldowns,
-        tabs.Help,
+        tabs.global,
+        tabs.self,
+        tabs.target,
+        tabs.party,
+        tabs.inventory,
+        tabs.assets,
+        tabs.status_bar,
+        tabs.profile_manager,
+        tabs.help,
     }
 
-    self._tab_modules_by_key = {}
     for i = 1, #self._tab_modules do
         local module = self._tab_modules[i]
-        if module ~= nil and module.key ~= nil then
-            self._tab_modules_by_key[module.key] = module
+        if module == nil then
+            error("Settings tab module is nil while building controls")
         end
     end
 end
@@ -845,104 +605,6 @@ function ConfigWindow:update_all_swatches()
     end
     for i = 1, #self._color_fields do
         self:update_swatch(self._color_fields[i])
-    end
-end
-
-function ConfigWindow:layout()
-    local window_width, window_height = self:GetSize()
-    local button_gap = _scaled_int(7)
-    local min_content_h = _scaled_int(59)
-    local content_gap = _scaled_int(7)
-
-    local button_bar_width = window_width - self.margin_left - self.margin_right
-    self.button_bar:SetPosition(self.margin_left, window_height - self.margin_bottom - self.button_bar_height)
-    self.button_bar:SetSize(button_bar_width, self.button_bar_height)
-
-    local button_width = _scaled_int(81)
-    local button_height = self.button_bar_height
-
-    self.cancel_button:SetSize(button_width, button_height)
-    self.apply_button:SetSize(button_width, button_height)
-    self.save_button:SetSize(button_width, button_height)
-    self.move_ui_button:SetSize(button_width, button_height)
-
-    self.save_button:SetPosition(button_bar_width - button_width, 0)
-    self.apply_button:SetPosition(button_bar_width - (2 * button_width) - button_gap, 0)
-    self.cancel_button:SetPosition(0, 0)
-    self.move_ui_button:SetPosition(button_width + button_gap, 0)
-
-    local content_height = window_height - self.margin_top - self.margin_bottom - self.button_bar_height - content_gap
-    if content_height < min_content_h then
-        content_height = min_content_h
-    end
-
-    self.main_tab_bar:SetPosition(self.margin_left, self.margin_top)
-    self.main_tab_bar:SetSize(button_bar_width, content_height)
-    self.main_tab_bar:refresh_layout()
-
-    local active_main_key = self.active_main_tab or "global"
-    if self.sub_tab_bars ~= nil then
-        for key, bar in pairs(self.sub_tab_bars) do
-            if bar ~= nil then
-                local show_bar = key == active_main_key and self:_main_tab_has_sub_tabs(key) == true
-                bar:SetVisible(show_bar)
-                if show_bar == true then
-                    local host = self.main_tab_hosts ~= nil and self.main_tab_hosts[key] or nil
-                    if host ~= nil then
-                        bar:SetPosition(0, 0)
-                        bar:SetSize(host:GetWidth(), host:GetHeight())
-                        bar:refresh_layout()
-                    end
-                end
-            end
-        end
-    end
-
-    if self.confirm_overlay ~= nil then
-        self.confirm_overlay:SetPosition(0, 0)
-        self.confirm_overlay:SetSize(window_width, window_height)
-
-        local dialog_width = _scaled_int(CONFIRM_DIALOG_W)
-        local dialog_height = _scaled_int(CONFIRM_DIALOG_H)
-        if dialog_width > window_width - (2 * self.margin_left) then
-            dialog_width = window_width - (2 * self.margin_left)
-        end
-        if dialog_height > window_height - (2 * self.margin_top) then
-            dialog_height = window_height - (2 * self.margin_top)
-        end
-        if dialog_width < _scaled_int(148) then
-            dialog_width = _scaled_int(148)
-        end
-        if dialog_height < _scaled_int(89) then
-            dialog_height = _scaled_int(89)
-        end
-
-        self.confirm_dialog:SetSize(dialog_width, dialog_height)
-        self.confirm_dialog:SetPosition(
-            math.floor((window_width - dialog_width) / 2),
-            math.floor((window_height - dialog_height) / 2)
-        )
-
-        local padding = _scaled_int(CONFIRM_DIALOG_PADDING)
-        local confirm_button_gap = _scaled_int(CONFIRM_DIALOG_BUTTON_GAP)
-        local confirm_button_width = _scaled_int(81)
-        local confirm_button_height = _scaled_int(22)
-        local label_height = dialog_height - (padding * 2) - confirm_button_height - confirm_button_gap
-        if label_height < _scaled_int(30) then
-            label_height = _scaled_int(30)
-        end
-
-        self.confirm_dialog_label:SetPosition(padding, padding)
-        self.confirm_dialog_label:SetSize(dialog_width - (padding * 2), label_height)
-
-        self.confirm_cancel_button:SetSize(confirm_button_width, confirm_button_height)
-        self.confirm_confirm_button:SetSize(confirm_button_width, confirm_button_height)
-        self.confirm_confirm_button:SetPosition(dialog_width - padding - confirm_button_width,
-            dialog_height - padding - confirm_button_height)
-        self.confirm_cancel_button:SetPosition(
-            self.confirm_confirm_button:GetLeft() - confirm_button_gap - confirm_button_width,
-            self.confirm_confirm_button:GetTop()
-        )
     end
 end
 

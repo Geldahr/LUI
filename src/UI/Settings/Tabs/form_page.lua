@@ -31,6 +31,9 @@ local function _refresh_text_control(control)
 end
 
 SettingsFormPage = class(Turbine.UI.Control)
+_G.SettingsFormPage = SettingsFormPage
+_G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
+_G.LUI_SETTINGS_SHARED.form_page = SettingsFormPage
 
 function SettingsFormPage:Constructor(window)
     Turbine.UI.Control.Constructor(self)
