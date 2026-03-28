@@ -63,7 +63,7 @@ function Common.preview_number_abbrev_settings(window)
     }
 end
 
-function Common.apply_preview_border(p, w, h)
+function Common.apply_preview_border(p, w, h, x, y)
     if p == nil then
         return
     end
@@ -74,27 +74,29 @@ function Common.apply_preview_border(p, w, h)
     local bw = 1
     local ww = tonumber(w) or 0
     local hh = tonumber(h) or 0
+    local xx = tonumber(x) or 0
+    local yy = tonumber(y) or 0
     if ww < 1 then ww = 1 end
     if hh < 1 then hh = 1 end
 
     p.border_top:SetVisible(true)
     p.border_top:SetZOrder(999)
-    p.border_top:SetPosition(0, 0)
+    p.border_top:SetPosition(xx, yy)
     p.border_top:SetSize(ww, bw)
 
     p.border_bottom:SetVisible(true)
     p.border_bottom:SetZOrder(999)
-    p.border_bottom:SetPosition(0, hh - bw)
+    p.border_bottom:SetPosition(xx, yy + hh - bw)
     p.border_bottom:SetSize(ww, bw)
 
     p.border_left:SetVisible(true)
     p.border_left:SetZOrder(999)
-    p.border_left:SetPosition(0, 0)
+    p.border_left:SetPosition(xx, yy)
     p.border_left:SetSize(bw, hh)
 
     p.border_right:SetVisible(true)
     p.border_right:SetZOrder(999)
-    p.border_right:SetPosition(ww - bw, 0)
+    p.border_right:SetPosition(xx + ww - bw, yy)
     p.border_right:SetSize(bw, hh)
 end
 

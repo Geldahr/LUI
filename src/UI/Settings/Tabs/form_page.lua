@@ -65,12 +65,26 @@ function SettingsFormPage:Constructor(window)
     self.scroll_bar:SetOrientation(Turbine.UI.Orientation.Vertical)
     self.scroll_bar:SetWidth(BASE_SCROLL_W)
     self.scroll:SetVerticalScrollBar(self.scroll_bar)
+    self.scroll_bar.ValueChanged = function()
+        if self.on_scroll_changed ~= nil then
+            self:on_scroll_changed()
+        end
+    end
 
     self.form = Turbine.UI.Control()
     self.scroll:AddItem(self.form)
 
     self.SizeChanged = function()
         self:layout()
+    end
+end
+
+function SettingsFormPage:_refresh_preview()
+    if self.loading == true then
+        return
+    end
+    if self.refresh_preview ~= nil then
+        self:refresh_preview()
     end
 end
 
@@ -247,6 +261,7 @@ function SettingsFormPage:add_text(key, label_text, is_color, help_text, full_wi
         if entry.on_changed ~= nil then
             entry.on_changed(entry.tb:GetText())
         end
+        self:_refresh_preview()
     end
 
     entry.get_value = function()
@@ -298,6 +313,7 @@ function SettingsFormPage:add_dropdown(key, label_text, option_labels, option_va
         if entry.on_changed ~= nil then
             entry.on_changed(value)
         end
+        self:_refresh_preview()
     end
 
     self:_bind_hint(entry.button.button or entry.button, function()
@@ -348,6 +364,7 @@ function SettingsFormPage:add_checkbox(key, label_text, full_width)
         if entry.on_changed ~= nil then
             entry.on_changed(entry.cb:IsChecked())
         end
+        self:_refresh_preview()
     end
 
     self.controls[key] = entry
@@ -430,6 +447,11 @@ function SettingsFormPage:close_all_dropdowns()
             field.button:Close()
         end
     end
+end
+
+function SettingsFormPage:on_selected()
+    self:layout()
+    self:_refresh_preview()
 end
 
 function SettingsFormPage:layout()

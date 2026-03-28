@@ -365,12 +365,15 @@ function ConfigWindow:update_party_vitals_preview()
     local p = self.party_vitals_preview
     local outer_w = total_w + (2 * preview_border)
     local outer_h = total_h + (2 * preview_border)
-    p.container:SetSize(outer_w, outer_h)
+    local container_w = p.container:GetWidth() or outer_w
+    local container_h = p.container:GetHeight() or outer_h
+    local off_x = math.max(0, math.floor((container_w - outer_w) / 2))
+    local off_y = math.max(0, math.floor((container_h - outer_h) / 2))
     if p.root ~= nil then
-        p.root:SetPosition(preview_border, preview_border)
+        p.root:SetPosition(off_x + preview_border, off_y + preview_border)
         p.root:SetSize(total_w, total_h)
     end
-    _apply_preview_border(p, outer_w, outer_h)
+    _apply_preview_border(p, outer_w, outer_h, off_x, off_y)
 
     local icon_classes = _G.CLASS_ICON_CLASSES
 

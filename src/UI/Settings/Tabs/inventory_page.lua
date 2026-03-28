@@ -123,6 +123,10 @@ function InventoryPage:close_all_dropdowns()
     end
 end
 
+function InventoryPage:on_selected()
+    self:layout()
+end
+
 function InventoryPage:load(inv)
     if inv == nil then
         return

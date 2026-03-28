@@ -41,7 +41,6 @@ local CONFIRM_DIALOG_W = 296
 local CONFIRM_DIALOG_H = 126
 local CONFIRM_DIALOG_PADDING = 12
 local CONFIRM_DIALOG_BUTTON_GAP = 7
-local BASE_SCROLL_W = 10
 local function _scaled_size(value)
     return value * _G.settings.global.scale
 end
@@ -116,24 +115,6 @@ function ConfigWindow:Constructor()
         end
         self:select_main_tab(host._tab_key)
     end
-
-    self.scroll = Turbine.UI.ListBox()
-    self.scroll:SetParent(self)
-    self.scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
-
-    self.scroll_bar = Turbine.UI.Lotro.ScrollBar()
-    self.scroll_bar:SetParent(self)
-    self.scroll_bar:SetOrientation(Turbine.UI.Orientation.Vertical)
-    self.scroll_bar:SetWidth(BASE_SCROLL_W)
-    self.scroll:SetVerticalScrollBar(self.scroll_bar)
-    self.scroll_bar.ValueChanged = function()
-        if self.active_tab == "party_vitals" then
-            self:update_party_vitals_preview()
-        end
-    end
-
-    self.form = Turbine.UI.Control()
-    self.scroll:AddItem(self.form)
 
     self.hint = Turbine.UI.Window()
     self.hint:SetVisible(false)
@@ -218,11 +199,10 @@ function ConfigWindow:Constructor()
         self:apply_changes(true)
     end
 
-    self.controls = {}
-    self.all_fields = {}
-    self.tab_fields = {}
     self:build_controls()
     self:build_tabs()
+    self:_rebuild_control_registry()
+    self:_init_previews()
 
     self.move_ui_button = UI.Widgets.LuiButton()
     self.move_ui_button:SetParent(self.button_bar)
@@ -245,7 +225,11 @@ function ConfigWindow:Constructor()
             self:hide_hint()
             self:hide_confirmation_dialog()
             self:close_all_dropdowns()
+            return
         end
+
+        self:layout()
+        self:_activate_active_page()
     end
 
     self:apply_saved_geometry()
@@ -330,52 +314,6 @@ function ConfigWindow:apply_ui_scale()
         end
     end
 
-    for i = 1, #(self.all_fields or {}) do
-        local field = self.all_fields[i]
-        if field ~= nil then
-            if field.kind == "title" and field.label ~= nil then
-                field.label:SetFont(self.title_font)
-            elseif field.kind == "info" then
-                if field.label ~= nil then
-                    field.label:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
-                end
-                if field.base_height ~= nil then
-                    field.height = _scaled_int(field.base_height)
-                end
-            elseif field.kind == "text" then
-                if field.label ~= nil then
-                    field.label:SetFont(self.field_label_font)
-                end
-                if field.tb ~= nil and field.tb.SetScale ~= nil then
-                    field.tb:SetScale(scale)
-                end
-                if field.tb ~= nil and field.tb.SetFont ~= nil then
-                    field.tb:SetFont(self.input_font)
-                end
-            elseif field.kind == "dropdown" then
-                if field.label ~= nil then
-                    field.label:SetFont(self.field_label_font)
-                end
-                if field.button ~= nil and field.button.SetScale ~= nil then
-                    field.button:SetScale(scale)
-                end
-                if field.button ~= nil and field.button.SetFont ~= nil then
-                    field.button:SetFont(self.input_font)
-                end
-            elseif (field.kind == "break" or field.kind == "custom") and field.base_height ~= nil then
-                field.height = _scaled_int(field.base_height)
-                if field.kind == "custom" and field.apply_ui_scale ~= nil then
-                    field:apply_ui_scale()
-                end
-            elseif field.kind == "checkbox" and field.cb ~= nil then
-                if field.cb.SetScale ~= nil then
-                    field.cb:SetScale(scale)
-                end
-                field.cb:SetFont(self.field_label_font)
-            end
-        end
-    end
-
     for _, page in pairs(self._tab_pages or {}) do
         if page ~= nil and page.apply_ui_scale ~= nil then
             page:apply_ui_scale()
@@ -384,14 +322,6 @@ function ConfigWindow:apply_ui_scale()
 end
 
 function ConfigWindow:close_all_dropdowns()
-    local fields = self.all_fields or {}
-    for i = 1, #fields do
-        local field = fields[i]
-        if field ~= nil and field.kind == "dropdown" then
-            field.button:Close()
-        end
-    end
-
     for _, page in pairs(self._tab_pages or {}) do
         if page ~= nil and page.close_all_dropdowns ~= nil then
             page:close_all_dropdowns()
@@ -467,6 +397,20 @@ function ConfigWindow:cancel()
     self:SetVisible(false)
 end
 
+function ConfigWindow:_activate_active_page()
+    local key = self.active_tab
+    local page = key ~= nil and self._tab_pages ~= nil and self._tab_pages[key] or nil
+    if page == nil then
+        return
+    end
+
+    if page.on_selected ~= nil then
+        page:on_selected()
+    elseif page.layout ~= nil then
+        page:layout()
+    end
+end
+
 function ConfigWindow:open(main_key, preferred_sub_key)
     self:apply_saved_geometry()
     self:load_from_settings()
@@ -474,6 +418,8 @@ function ConfigWindow:open(main_key, preferred_sub_key)
         self:select_main_tab(main_key, preferred_sub_key)
     end
     self:SetVisible(true)
+    self:layout()
+    self:_activate_active_page()
     self:bring_to_front()
 end
 
@@ -483,24 +429,74 @@ function ConfigWindow:bring_to_front()
     end
 end
 
-function ConfigWindow:build_tabs()
-    self._tab_pages = {}
+function ConfigWindow:_create_tab_page(key)
+    local module = self._tab_modules_by_key ~= nil and self._tab_modules_by_key[key] or nil
+    if module == nil or module.create_page == nil then
+        error("Settings tab is missing create_page: " .. tostring(key))
+    end
 
-    local function _tab_widget(key)
-        local module = self._tab_modules_by_key ~= nil and self._tab_modules_by_key[key] or nil
-        if module ~= nil and module.create_page ~= nil then
-            local page = module.create_page(self)
-            if page ~= nil then
-                page._tab_key = key
-                self._tab_pages[key] = page
-                return page
+    local page = module.create_page(self)
+    if page == nil then
+        error("Settings tab create_page returned nil: " .. tostring(key))
+    end
+
+    page._tab_key = key
+    self._tab_pages[key] = page
+    return page
+end
+
+function ConfigWindow:_rebuild_control_registry()
+    self.controls = {}
+    self._color_fields = {}
+
+    for _, page in pairs(self._tab_pages or {}) do
+        if page ~= nil and page.controls ~= nil then
+            for key, entry in pairs(page.controls) do
+                self.controls[key] = entry
             end
         end
-
-        local host = Turbine.UI.Control()
-        host._tab_key = key
-        return host
+        if page ~= nil and page._color_fields ~= nil then
+            for i = 1, #page._color_fields do
+                self._color_fields[#self._color_fields + 1] = page._color_fields[i]
+            end
+        end
     end
+end
+
+function ConfigWindow:_init_previews()
+    self:init_expiring_effects_preview()
+    self:init_expiring_target_effects_preview()
+    self:init_cooldowns_preview()
+    self:init_self_vitals_preview()
+    self:init_target_vitals_preview()
+    self:init_target_boss_vitals_preview()
+    self:init_target_targets_target_preview()
+    self:init_party_vitals_preview()
+end
+
+function ConfigWindow:_refresh_active_preview()
+    local key = self.active_tab
+    if key == "expiring_effects" then
+        self:update_expiring_effects_preview()
+    elseif key == "expiring_target_effects" then
+        self:update_expiring_target_effects_preview()
+    elseif key == "cooldowns" then
+        self:update_cooldowns_preview()
+    elseif key == "party_vitals" then
+        self:update_party_vitals_preview()
+    elseif key == "self_vitals" then
+        self:update_self_vitals_preview()
+    elseif key == "target_vitals" then
+        self:update_target_vitals_preview()
+    elseif key == "target_boss_vitals" then
+        self:update_target_boss_vitals_preview()
+    elseif key == "target_targets_target" then
+        self:update_target_targets_target_preview()
+    end
+end
+
+function ConfigWindow:build_tabs()
+    self._tab_pages = {}
 
     self.main_tabs = {
         { key = "global",     text = TR("Global") },
@@ -554,9 +550,13 @@ function ConfigWindow:build_tabs()
     self.main_tab_hosts = {}
     for i = 1, #self.main_tabs do
         local t = self.main_tabs[i]
-        local widget = _tab_widget(t.key)
-        if self._tab_pages[t.key] == nil then
+        local widget = nil
+        if self.sub_tabs_by_main[t.key] ~= nil then
+            widget = Turbine.UI.Control()
+            widget._tab_key = t.key
             self.main_tab_hosts[t.key] = widget
+        else
+            widget = self:_create_tab_page(t.key)
         end
         self.main_tab_index_by_key[t.key] = self.main_tab_bar:add_tab(t.text, widget)
     end
@@ -583,10 +583,8 @@ function ConfigWindow:build_tabs()
 
         for i = 1, #list do
             local t = list[i]
-            local widget = _tab_widget(t.key)
-            if self._tab_pages[t.key] == nil then
-                self.sub_tab_hosts_by_main[main_key][t.key] = widget
-            end
+            local widget = self:_create_tab_page(t.key)
+            self.sub_tab_hosts_by_main[main_key][t.key] = widget
             self.sub_tab_index_by_key[main_key][t.key] = bar:add_tab(t.text, widget)
         end
     end
@@ -612,36 +610,6 @@ end
 function ConfigWindow:_main_tab_has_sub_tabs(main_key)
     local sub_list = self.sub_tabs_by_main ~= nil and self.sub_tabs_by_main[main_key] or nil
     return sub_list ~= nil and #sub_list > 1
-end
-
-function ConfigWindow:_active_scroll_host()
-    if self._tab_pages ~= nil and self._tab_pages[self.active_tab] ~= nil then
-        return nil
-    end
-
-    local main_key = self.active_main_tab
-    if type(main_key) ~= "string" then
-        return nil
-    end
-
-    if self:_main_tab_has_sub_tabs(main_key) == true then
-        local sub_hosts = self.sub_tab_hosts_by_main ~= nil and self.sub_tab_hosts_by_main[main_key] or nil
-        if sub_hosts ~= nil then
-            return sub_hosts[self.active_tab]
-        end
-        return nil
-    end
-
-    return self.main_tab_hosts ~= nil and self.main_tab_hosts[main_key] or nil
-end
-
-function ConfigWindow:_attach_scroll_to_host(host)
-    if host == nil then
-        return
-    end
-
-    self.scroll:SetParent(host)
-    self.scroll_bar:SetParent(host)
 end
 
 function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
@@ -713,101 +681,19 @@ function ConfigWindow:select_sub_tab(key)
     self:select_main_tab(main_key, key)
 end
 
-function ConfigWindow:hide_all_fields()
-    for i = 1, #self.all_fields do
-        local field = self.all_fields[i]
-        if field.kind == "title" then
-            field.label:SetVisible(false)
-        elseif field.kind == "info" then
-            field.label:SetVisible(false)
-        elseif field.kind == "hr" then
-            field.line:SetVisible(false)
-        elseif field.kind == "break" then
-            field.spacer:SetVisible(false)
-        elseif field.kind == "custom" then
-            field.control:SetVisible(false)
-        elseif field.kind == "text" then
-            field.label:SetVisible(false)
-            field.tb:SetVisible(false)
-        elseif field.kind == "dropdown" then
-            field.label:SetVisible(false)
-            field.button:SetVisible(false)
-            if field.popup ~= nil then
-                field.popup:SetVisible(false)
-            end
-        elseif field.kind == "checkbox" then
-            field.cb:SetVisible(false)
-        end
-    end
-end
-
-function ConfigWindow:show_fields(fields)
-    for i = 1, #fields do
-        local field = fields[i]
-        if field.kind == "title" then
-            field.label:SetVisible(true)
-        elseif field.kind == "info" then
-            field.label:SetVisible(true)
-        elseif field.kind == "hr" then
-            field.line:SetVisible(true)
-        elseif field.kind == "break" then
-            field.spacer:SetVisible(true)
-        elseif field.kind == "custom" then
-            field.control:SetVisible(true)
-        elseif field.kind == "text" then
-            field.label:SetVisible(true)
-            field.tb:SetVisible(true)
-        elseif field.kind == "dropdown" then
-            field.label:SetVisible(true)
-            field.button:SetVisible(true)
-        elseif field.kind == "checkbox" then
-            field.cb:SetVisible(true)
-        end
-    end
-end
-
 function ConfigWindow:select_tab(key)
     local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
-    if self.tab_fields[key] == nil and page == nil then
+    if page == nil then
         return
     end
 
     self:hide_hint()
-
-    self:hide_all_fields()
     self.active_tab = key
-    self.fields = self.tab_fields[key] or {}
-    if page == nil then
-        self:show_fields(self.fields)
-    end
     self:layout()
-
-    if page ~= nil and page.on_selected ~= nil then
-        page:on_selected()
-        return
-    end
-
-    if key == "expiring_effects" then
-        self:update_expiring_effects_preview()
-    elseif key == "expiring_target_effects" then
-        self:update_expiring_target_effects_preview()
-    elseif key == "cooldowns" then
-        self:update_cooldowns_preview()
-    elseif key == "party_vitals" then
-        self:update_party_vitals_preview()
-    elseif key == "self_vitals" then
-        self:update_self_vitals_preview()
-    elseif key == "target_vitals" then
-        self:update_target_vitals_preview()
-    elseif key == "target_boss_vitals" then
-        self:update_target_boss_vitals_preview()
-    elseif key == "target_targets_target" then
-        self:update_target_targets_target_preview()
-    end
+    self:_activate_active_page()
 end
 
 function ConfigWindow:build_controls()
-    local hr_color = Turbine.UI.Color(0.35, 0.35, 0.35)
     local font_name_labels = {
         "Verdana",
         "BookAntiqua",
@@ -870,335 +756,6 @@ function ConfigWindow:build_controls()
         LUI_ENUMS.vitals_effects_position.BELOW,
     }
 
-    self.controls = {}
-    self.all_fields = {}
-    self.tab_fields = {}
-    self._color_fields = {}
-
-    local function add_title(text)
-        local entry = {}
-        entry.kind = "title"
-
-        entry.label = UI.Widgets.LuiLabel()
-        entry.label:SetParent(self.form)
-        entry.label:SetFont(self.title_font)
-        entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        entry.label:SetText(text)
-
-        table.insert(self.all_fields, entry)
-        return entry
-    end
-
-    local function add_info(text, height)
-        local entry = {}
-        entry.kind = "info"
-        entry.base_height = height or 34
-        entry.height = _scaled_int(entry.base_height)
-
-        entry.label = UI.Widgets.LuiLabel()
-        entry.label:SetParent(self.form)
-        entry.label:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
-        entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        entry.label:SetMultiline(true)
-        entry.label:SetForeColor(Turbine.UI.Color(0.85, 0.85, 0.85))
-        entry.label:SetText(text or "")
-        entry.label:SetMouseVisible(false)
-
-        table.insert(self.all_fields, entry)
-        return entry
-    end
-
-    local function add_hr()
-        local entry = {}
-        entry.kind = "hr"
-
-        entry.line = Turbine.UI.Control()
-        entry.line:SetParent(self.form)
-        entry.line:SetMouseVisible(false)
-        entry.line:SetBackColor(hr_color)
-
-        table.insert(self.all_fields, entry)
-        return entry
-    end
-
-    local function add_break(height)
-        local entry = {}
-        entry.kind = "break"
-        entry.base_height = height or 4
-        entry.height = _scaled_int(entry.base_height)
-
-        entry.spacer = Turbine.UI.Control()
-        entry.spacer:SetParent(self.form)
-        entry.spacer:SetMouseVisible(false)
-        entry.spacer:SetVisible(true)
-
-        table.insert(self.all_fields, entry)
-        return entry
-    end
-
-    local function add_custom(key, height)
-        local entry = {}
-        entry.kind = "custom"
-        entry.key = key
-        entry.base_height = height or 44
-        entry.height = _scaled_int(entry.base_height)
-
-        entry.control = Turbine.UI.Control()
-        entry.control:SetParent(self.form)
-        entry.control:SetMouseVisible(false)
-        entry.control:SetVisible(true)
-
-        self.controls[key] = entry
-        table.insert(self.all_fields, entry)
-        return entry
-    end
-
-    local function add_text(key, label_text, is_color, help_text, full_width)
-        local entry = {}
-        entry.kind = "text"
-        entry.key = key
-        entry.label_text = label_text
-        entry.is_color = is_color == true
-        entry.help_text = help_text
-        entry.full_width = full_width == true
-
-        entry.label = UI.Widgets.LuiLabel()
-        entry.label:SetParent(self.form)
-        entry.label:SetFont(self.field_label_font)
-        entry.label:SetMultiline(true)
-        entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        entry.label:SetText(label_text)
-        entry.label:SetZOrder(1)
-
-        if entry.is_color then
-            entry.tb = UI.Widgets.LuiColorField()
-            ---@diagnostic disable-next-line: undefined-field
-            entry.tb:SetScale(_G.settings.global.scale)
-            ---@diagnostic disable-next-line: undefined-field
-            entry.tb:SetPickerHost(self)
-            entry.tb:SetParent(self.form)
-            entry.tb:SetFont(self.input_font)
-            entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-            entry.tb:SetZOrder(2)
-        else
-            entry.tb = Turbine.UI.Lotro.TextBox()
-            entry.tb:SetParent(self.form)
-            entry.tb:SetFont(self.input_font)
-            entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-            entry.tb:SetZOrder(2)
-        end
-
-        if type(entry.help_text) == "string" and string.len(entry.help_text) > 0 then
-            local function bind_hint(target)
-                if target == nil then
-                    return
-                end
-                local prev_enter = target.MouseEnter
-                target.MouseEnter = function(sender, args)
-                    if prev_enter ~= nil then
-                        prev_enter(sender, args)
-                    end
-                    self:show_hint_for(target, entry.help_text)
-                end
-                local prev_leave = target.MouseLeave
-                target.MouseLeave = function(sender, args)
-                    if prev_leave ~= nil then
-                        prev_leave(sender, args)
-                    end
-                    self:hide_hint()
-                end
-            end
-
-            bind_hint(entry.tb)
-            ---@diagnostic disable-next-line: undefined-field
-            if entry.is_color == true and entry.tb.tb ~= nil then
-                ---@diagnostic disable-next-line: undefined-field
-                bind_hint(entry.tb.tb)
-            end
-            ---@diagnostic disable-next-line: undefined-field
-            if entry.is_color == true and entry.tb.swatch_border ~= nil then
-                ---@diagnostic disable-next-line: undefined-field
-                bind_hint(entry.tb.swatch_border)
-            end
-        end
-
-        if entry.is_color then
-            table.insert(self._color_fields, entry)
-        end
-
-        entry.tb.TextChanged = function()
-            if self.loading == true then
-                return
-            end
-            if entry.is_color then
-                self:update_swatch(entry)
-            end
-            if entry.on_changed ~= nil then
-                entry.on_changed(entry.tb:GetText())
-            end
-            if self.active_tab == "expiring_effects" then
-                self:update_expiring_effects_preview()
-            elseif self.active_tab == "expiring_target_effects" then
-                self:update_expiring_target_effects_preview()
-            elseif self.active_tab == "party_vitals" then
-                self:update_party_vitals_preview()
-            elseif self.active_tab == "self_vitals" then
-                self:update_self_vitals_preview()
-            elseif self.active_tab == "target_vitals" then
-                self:update_target_vitals_preview()
-            elseif self.active_tab == "target_boss_vitals" then
-                self:update_target_boss_vitals_preview()
-            elseif self.active_tab == "target_targets_target" then
-                self:update_target_targets_target_preview()
-            end
-        end
-
-        entry.get_value = function()
-            return entry.tb:GetText()
-        end
-
-        entry.set_value = function(value)
-            entry.tb:SetText(value or "")
-        end
-
-        self.controls[key] = entry
-        table.insert(self.all_fields, entry)
-        return entry
-    end
-
-    local function add_dropdown(key, label_text, option_labels, option_values, help_text, full_width)
-        local entry = {}
-        entry.kind = "dropdown"
-        entry.key = key
-        entry.label_text = label_text
-        entry.option_labels = option_labels or {}
-        entry.option_values = option_values or {}
-        entry.help_text = help_text
-        entry.full_width = full_width == true
-        entry.value = nil
-
-        entry.label = UI.Widgets.LuiLabel()
-        entry.label:SetParent(self.form)
-        entry.label:SetFont(self.field_label_font)
-        entry.label:SetMultiline(true)
-        entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        entry.label:SetText(label_text)
-        entry.label:SetZOrder(1)
-
-        entry.button = UI.Widgets.LuiDropdown()
-        entry.button:SetParent(self.form)
-        entry.button:SetScale(_G.settings.global.scale)
-        entry.button:SetFont(self.input_font)
-        entry.button:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-        entry.button:SetPopupHost(self)
-        entry.button:SetMappedOptions(entry.option_labels, entry.option_values)
-        entry.button:SetZOrder(2)
-        entry.value = entry.button:GetValue()
-        entry.button.ValueChanged = function(_, value)
-            entry.value = value
-            if entry.on_changed ~= nil then
-                entry.on_changed(value)
-            end
-            if self.loading == true then
-                return
-            end
-            if self.active_tab == "expiring_effects" then
-                self:update_expiring_effects_preview()
-            elseif self.active_tab == "expiring_target_effects" then
-                self:update_expiring_target_effects_preview()
-            elseif self.active_tab == "party_vitals" then
-                self:update_party_vitals_preview()
-            elseif self.active_tab == "self_vitals" then
-                self:update_self_vitals_preview()
-            elseif self.active_tab == "target_vitals" then
-                self:update_target_vitals_preview()
-            elseif self.active_tab == "target_boss_vitals" then
-                self:update_target_boss_vitals_preview()
-            elseif self.active_tab == "target_targets_target" then
-                self:update_target_targets_target_preview()
-            end
-        end
-
-        if type(entry.help_text) == "string" and string.len(entry.help_text) > 0 then
-            local target = entry.button.button or entry.button
-            local prev_enter = target.MouseEnter
-            target.MouseEnter = function(sender, args)
-                if prev_enter ~= nil then
-                    prev_enter(sender, args)
-                end
-                self:show_hint_for(target, entry.help_text)
-            end
-            local prev_leave = target.MouseLeave
-            target.MouseLeave = function(sender, args)
-                if prev_leave ~= nil then
-                    prev_leave(sender, args)
-                end
-                self:hide_hint()
-            end
-        end
-
-        function entry:get_value()
-            return entry.button:GetValue()
-        end
-
-        function entry:set_value(value)
-            local chosen = nil
-            for i = 1, #entry.option_values do
-                if entry.option_values[i] == value then
-                    chosen = value
-                    break
-                end
-            end
-            if chosen == nil then
-                chosen = entry.option_values[1]
-            end
-
-            entry.value = chosen
-            entry.button:SetValue(chosen)
-        end
-
-        self.controls[key] = entry
-        table.insert(self.all_fields, entry)
-        return entry
-    end
-
-    local function add_checkbox(key, label_text, full_width)
-        local entry = {}
-        entry.kind = "checkbox"
-        entry.key = key
-        entry.label_text = label_text
-        entry.full_width = full_width == true
-
-        entry.cb = UI.Widgets.LuiCheckBox()
-        entry.cb:SetParent(self.form)
-        entry.cb:SetFont(self.field_label_font)
-        entry.cb:SetText(tostring(label_text or ""))
-        entry.cb:SetZOrder(2)
-        entry.cb.CheckedChanged = function()
-            if entry.on_changed ~= nil then
-                entry.on_changed(entry.cb:IsChecked())
-            end
-            if self.loading == true then
-                return
-            end
-            if self.active_tab == "party_vitals" then
-                self:update_party_vitals_preview()
-            elseif self.active_tab == "self_vitals" then
-                self:update_self_vitals_preview()
-            elseif self.active_tab == "target_vitals" then
-                self:update_target_vitals_preview()
-            elseif self.active_tab == "target_boss_vitals" then
-                self:update_target_boss_vitals_preview()
-            elseif self.active_tab == "target_targets_target" then
-                self:update_target_targets_target_preview()
-            end
-        end
-
-        self.controls[key] = entry
-        table.insert(self.all_fields, entry)
-        return entry
-    end
-
     local vital_format_help = table.concat({
         TR("Text template tokens:"),
         TR("  %c = current value"),
@@ -1220,15 +777,9 @@ function ConfigWindow:build_controls()
         TR("Example:  - %b"),
     }, "\n")
 
-    local ui = {
-        add_title = add_title,
-        add_info = add_info,
-        add_hr = add_hr,
-        add_break = add_break,
-        add_custom = add_custom,
-        add_text = add_text,
-        add_dropdown = add_dropdown,
-        add_checkbox = add_checkbox,
+    self.controls = {}
+    self._color_fields = {}
+    self._ui = {
         font_name_labels = font_name_labels,
         font_name_values = font_name_values,
         font_style_labels = font_style_labels,
@@ -1276,33 +827,8 @@ function ConfigWindow:build_controls()
         if module ~= nil and module.key ~= nil then
             self._tab_modules_by_key[module.key] = module
         end
-        if module ~= nil and module.create_controls ~= nil and module.create_page == nil then
-            module.create_controls(self, ui)
-        end
     end
-
-    for i = 1, #self._tab_modules do
-        local module = self._tab_modules[i]
-        if module ~= nil and module.register ~= nil and module.create_page == nil then
-            self.tab_fields[module.key] = module.register(self, ui)
-        end
-    end
-
-    self._ui = ui
-
-    self:init_expiring_effects_preview()
-    self:hook_expiring_effects_preview_events()
-    self:init_expiring_target_effects_preview()
-    self:hook_expiring_target_effects_preview_events()
-    self:init_cooldowns_preview()
-    self:hook_cooldowns_preview_events()
-    self:init_self_vitals_preview()
-    self:init_target_vitals_preview()
-    self:init_target_boss_vitals_preview()
-    self:init_target_targets_target_preview()
-    self:init_party_vitals_preview()
 end
-
 function ConfigWindow:update_swatch(entry)
     if entry == nil or entry.is_color ~= true or entry.tb == nil then
         return
@@ -1326,16 +852,7 @@ function ConfigWindow:layout()
     local window_width, window_height = self:GetSize()
     local button_gap = _scaled_int(7)
     local min_content_h = _scaled_int(59)
-    local scroll_w = BASE_SCROLL_W
     local content_gap = _scaled_int(7)
-    local title_h = _scaled_int(22)
-    local title_gap = _scaled_int(24)
-    local hr_top = _scaled_int(3)
-    local hr_gap = _scaled_int(6)
-    local custom_default_h = _scaled_int(44)
-    local custom_min_h = _scaled_int(7)
-    local custom_gap = _scaled_int(4)
-    local form_pad = _scaled_int(4)
 
     local button_bar_width = window_width - self.margin_left - self.margin_right
     self.button_bar:SetPosition(self.margin_left, window_height - self.margin_bottom - self.button_bar_height)
@@ -1355,7 +872,9 @@ function ConfigWindow:layout()
     self.move_ui_button:SetPosition(button_width + button_gap, 0)
 
     local content_height = window_height - self.margin_top - self.margin_bottom - self.button_bar_height - content_gap
-    if content_height < min_content_h then content_height = min_content_h end
+    if content_height < min_content_h then
+        content_height = min_content_h
+    end
 
     self.main_tab_bar:SetPosition(self.margin_left, self.margin_top)
     self.main_tab_bar:SetSize(button_bar_width, content_height)
@@ -1378,209 +897,6 @@ function ConfigWindow:layout()
             end
         end
     end
-
-    local scroll_host = self:_active_scroll_host()
-    local form_width = 0
-    local inner_width = 0
-    if scroll_host ~= nil then
-        self:_attach_scroll_to_host(scroll_host)
-
-        local scroll_width = scroll_host:GetWidth()
-        local scroll_height = scroll_host:GetHeight()
-        if scroll_height < _scaled_int(30) then
-            scroll_height = _scaled_int(30)
-        end
-
-        self.scroll:SetVisible(true)
-        self.scroll_bar:SetVisible(true)
-        self.scroll:SetPosition(0, 0)
-        self.scroll:SetSize(math.max(0, scroll_width - scroll_w - self.scroll_bar_gap), scroll_height)
-
-        self.scroll_bar:SetPosition(self.scroll:GetWidth() + self.scroll_bar_gap, 0)
-        self.scroll_bar:SetHeight(scroll_height)
-
-        form_width = self.scroll:GetWidth()
-        inner_width = form_width - (2 * self.content_padding)
-        if inner_width < _scaled_int(74) then
-            inner_width = _scaled_int(74)
-        end
-    else
-        self.scroll:SetVisible(false)
-        self.scroll_bar:SetVisible(false)
-    end
-
-    local col_width = math.floor((inner_width - self.col_gap) / 2)
-    local label_width = math.floor(col_width * 0.55)
-    local base_input_width = col_width - label_width - self.inner_gap
-    local input_width = base_input_width
-
-    local y = form_pad
-    local col = 0
-
-    local fields = self.fields or {}
-    for i = 1, #fields do
-        local field = fields[i]
-        local is_visible = true
-        if field.visible_if ~= nil and field.visible_if() == false then
-            is_visible = false
-        end
-
-        if field.kind == "title" then
-            field.label:SetVisible(is_visible)
-        elseif field.kind == "info" then
-            field.label:SetVisible(is_visible)
-        elseif field.kind == "hr" then
-            field.line:SetVisible(is_visible)
-        elseif field.kind == "break" then
-            field.spacer:SetVisible(is_visible)
-        elseif field.kind == "custom" then
-            field.control:SetVisible(is_visible)
-        elseif field.kind == "text" then
-            field.label:SetVisible(is_visible)
-            field.tb:SetVisible(is_visible)
-        elseif field.kind == "dropdown" then
-            field.label:SetVisible(is_visible)
-            field.button:SetVisible(is_visible)
-        elseif field.kind == "checkbox" then
-            field.cb:SetVisible(is_visible)
-        end
-
-        if is_visible and field.kind == "title" then
-            if col == 1 then
-                y = y + self.row_height
-                col = 0
-            end
-
-            field.label:SetPosition(self.content_padding, y)
-            field.label:SetSize(inner_width, title_h)
-            y = y + title_gap
-            col = 0
-        elseif is_visible and field.kind == "info" then
-            if col == 1 then
-                y = y + self.row_height
-                col = 0
-            end
-
-            local h = field.height or self.row_height
-            field.label:SetPosition(self.content_padding, y)
-            field.label:SetSize(inner_width, h)
-            y = y + h
-            col = 0
-        elseif is_visible and field.kind == "hr" then
-            if col == 1 then
-                y = y + self.row_height
-                col = 0
-            end
-
-            field.line:SetPosition(self.content_padding, y + hr_top)
-            field.line:SetSize(inner_width, 1)
-            y = y + hr_gap
-            col = 0
-        elseif is_visible and field.kind == "break" then
-            if col == 1 then
-                y = y + self.row_height
-                col = 0
-            end
-
-            field.spacer:SetPosition(self.content_padding, y)
-            field.spacer:SetSize(inner_width, field.height)
-            y = y + field.height
-            col = 0
-        elseif is_visible and field.kind == "custom" then
-            if col == 1 then
-                y = y + self.row_height
-                col = 0
-            end
-
-            local h = field.height or custom_default_h
-            if type(h) ~= "number" then
-                h = custom_default_h
-            end
-            if h < custom_min_h then
-                h = custom_min_h
-            end
-
-            field.control:SetPosition(self.content_padding, y)
-            field.control:SetSize(inner_width, h)
-            y = y + h + custom_gap
-            col = 0
-        elseif is_visible then
-            if field.kind == "checkbox" and field.full_width == true then
-                if col == 1 then
-                    y = y + self.row_height
-                    col = 0
-                end
-
-                field.cb:SetPosition(self.content_padding, y)
-                field.cb:SetSize(inner_width, self.field_label_height)
-                y = y + self.row_height
-                col = 0
-            elseif (field.kind == "text" or field.kind == "dropdown") and field.full_width == true then
-                if col == 1 then
-                    y = y + self.row_height
-                    col = 0
-                end
-
-                local label_width_full = label_width
-                local input_start_x = self.content_padding + label_width_full + self.inner_gap
-                local input_right_x = self.content_padding + (col_width + self.col_gap) + label_width + self.inner_gap +
-                    input_width
-                local input_width_full = input_right_x - input_start_x
-                if input_width_full < _scaled_int(59) then
-                    input_width_full = _scaled_int(59)
-                end
-
-                field.label:SetPosition(self.content_padding, y)
-                field.label:SetSize(label_width_full, self.field_label_height)
-
-                local input_y = y + math.floor((self.field_label_height - self.input_height) / 2)
-                if field.kind == "text" then
-                    field.tb:SetPosition(input_start_x, input_y)
-                    field.tb:SetSize(input_width_full, self.input_height)
-                else
-                    field.button:SetPosition(input_start_x, input_y + self.dropdown_y_offset)
-                    field.button:SetSize(input_width_full, self.input_height)
-                end
-
-                y = y + self.row_height
-                col = 0
-            else
-                local x = self.content_padding + (col * (col_width + self.col_gap))
-
-                if field.kind == "text" then
-                    field.label:SetPosition(x, y)
-                    field.label:SetSize(label_width, self.field_label_height)
-
-                    local input_y = y + math.floor((self.field_label_height - self.input_height) / 2)
-                    field.tb:SetPosition(x + label_width + self.inner_gap, input_y)
-                    field.tb:SetSize(input_width, self.input_height)
-                elseif field.kind == "dropdown" then
-                    field.label:SetPosition(x, y)
-                    field.label:SetSize(label_width, self.field_label_height)
-
-                    local input_y = y + math.floor((self.field_label_height - self.input_height) / 2)
-                    field.button:SetPosition(x + label_width + self.inner_gap, input_y + self.dropdown_y_offset)
-                    field.button:SetSize(input_width, self.input_height)
-                else
-                    field.cb:SetPosition(x, y)
-                    field.cb:SetSize(col_width, self.field_label_height)
-                end
-
-                if col == 0 then
-                    col = 1
-                else
-                    y = y + self.row_height
-                    col = 0
-                end
-            end
-        end
-    end
-
-    if col == 1 then
-        y = y + self.row_height
-    end
-
-    self.form:SetSize(form_width, y + form_pad)
 
     if self.confirm_overlay ~= nil then
         self.confirm_overlay:SetPosition(0, 0)
@@ -1651,7 +967,7 @@ function ConfigWindow:load_from_settings()
     self:update_all_swatches()
 
     self.loading = false
-    self:update_expiring_effects_preview()
+    self:_refresh_active_preview()
 end
 
 function ConfigWindow:refresh_runtime_settings()
@@ -1702,23 +1018,7 @@ function ConfigWindow:refresh_runtime_settings()
         PLAYER_VITAL:on_target_changed()
     end
 
-    if self.active_tab == "expiring_effects" then
-        self:update_expiring_effects_preview()
-    elseif self.active_tab == "expiring_target_effects" then
-        self:update_expiring_target_effects_preview()
-    elseif self.active_tab == "party_vitals" then
-        self:update_party_vitals_preview()
-    elseif self.active_tab == "self_vitals" then
-        self:update_self_vitals_preview()
-    elseif self.active_tab == "target_vitals" then
-        self:update_target_vitals_preview()
-    elseif self.active_tab == "target_boss_vitals" then
-        self:update_target_boss_vitals_preview()
-    elseif self.active_tab == "target_targets_target" then
-        self:update_target_targets_target_preview()
-    elseif self.active_tab == "cooldowns" then
-        self:update_cooldowns_preview()
-    end
+    self:_refresh_active_preview()
 end
 
 function ConfigWindow:apply_changes(close_after)

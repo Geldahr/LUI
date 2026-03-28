@@ -28,6 +28,8 @@ ReloaderWindow=class(Turbine.UI.Window);
 function ReloaderWindow:Constructor()
 	Turbine.UI.Window.Constructor(self);
     self:SetVisible(false)
+    self:SetSize(1, 1)
+    self:SetZOrder(0)
 
     -- Async reload
     self.Update=function()
