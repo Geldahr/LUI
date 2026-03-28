@@ -5,9 +5,6 @@ PartyTab = {
     text = TR("Party"),
 }
 
-_G.LUI_SETTINGS_TABS = _G.LUI_SETTINGS_TABS or {}
-_G.LUI_SETTINGS_TABS.party = PartyTab
-
 function PartyTab.create_page(window)
     return PartyPage(window)
 end

@@ -5,9 +5,6 @@ StatusBar = {
     text = TR("Status Bar"),
 }
 
-_G.LUI_SETTINGS_TABS = _G.LUI_SETTINGS_TABS or {}
-_G.LUI_SETTINGS_TABS.status_bar = StatusBar
-
 local function _status_bar_page(window)
     return window ~= nil and window._tab_pages ~= nil and window._tab_pages.status_bar or nil
 end

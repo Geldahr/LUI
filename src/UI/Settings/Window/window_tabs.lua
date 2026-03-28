@@ -1,29 +1,22 @@
-local function _require_module(module)
-    if type(module) ~= "table" then
-        error("Invalid settings tab module")
-    end
-    if module.key == nil then
-        error("Settings tab module is missing key")
-    end
-    if type(module.create_page) ~= "function" then
-        error("Settings tab module is missing create_page: " .. tostring(module.key))
-    end
-    return module
-end
+import "LUI.src.UI.Settings.Tabs.Global.global_page"
+import "LUI.src.UI.Settings.Tabs.Self.self_page"
+import "LUI.src.UI.Settings.Tabs.Target.target_page"
+import "LUI.src.UI.Settings.Tabs.Party.party_page"
+import "LUI.src.UI.Settings.Tabs.Inventory.inventory_page"
+import "LUI.src.UI.Settings.Tabs.Assets.assets_page"
+import "LUI.src.UI.Settings.Tabs.StatusBar.status_bar_page"
+import "LUI.src.UI.Settings.Tabs.ProfileManager.profile_manager_page"
+import "LUI.src.UI.Settings.Tabs.Help.help_page"
 
-local function _add_main_tab(window, module)
-    module = _require_module(module)
-
-    local page = module.create_page(window)
-    if page == nil then
-        error("Settings tab create_page returned nil: " .. tostring(module.key))
-    end
-
-    page._tab_key = module.key
-    window._tab_pages[module.key] = page
-    window.main_tab_bar:add_tab(module.text, page)
-    return page
-end
+local GlobalPage = LUI.src.UI.Settings.Tabs.Global.GlobalPage
+local SelfPage = LUI.src.UI.Settings.Tabs.Self.SelfPage
+local TargetPage = LUI.src.UI.Settings.Tabs.Target.TargetPage
+local PartyPage = LUI.src.UI.Settings.Tabs.Party.PartyPage
+local InventoryPage = LUI.src.UI.Settings.Tabs.Inventory.InventoryPage
+local AssetsPage = LUI.src.UI.Settings.Tabs.Assets.AssetsPage
+local StatusBarPage = LUI.src.UI.Settings.Tabs.StatusBar.StatusBarPage
+local ProfileManagerPage = LUI.src.UI.Settings.Tabs.ProfileManager.ProfileManagerPage
+local HelpPage = LUI.src.UI.Settings.Tabs.Help.HelpPage
 
 local function _normalize_main_tab_request(main_key, preferred_sub_key)
     if type(main_key) ~= "string" then
@@ -108,19 +101,36 @@ function ConfigWindow:_activate_active_page()
 end
 
 function ConfigWindow:build_tabs()
-    local tabs = _G.LUI_SETTINGS_TABS or {}
-
     self._tab_pages = {}
+    self._tab_pages.global = GlobalPage(self)
+    self._tab_pages.self = SelfPage(self)
+    self._tab_pages.target = TargetPage(self)
+    self._tab_pages.party = PartyPage(self)
+    self._tab_pages.inventory = InventoryPage(self)
+    self._tab_pages.assets = AssetsPage(self)
+    self._tab_pages.status_bar = StatusBarPage(self)
+    self._tab_pages.profile_manager = ProfileManagerPage(self)
+    self._tab_pages.help = HelpPage(self)
 
-    _add_main_tab(self, tabs.global)
-    _add_main_tab(self, tabs.self)
-    _add_main_tab(self, tabs.target)
-    _add_main_tab(self, tabs.party)
-    _add_main_tab(self, tabs.inventory)
-    _add_main_tab(self, tabs.assets)
-    _add_main_tab(self, tabs.status_bar)
-    _add_main_tab(self, tabs.profile_manager)
-    _add_main_tab(self, tabs.help)
+    self._tab_pages.global._tab_key = "global"
+    self._tab_pages.self._tab_key = "self"
+    self._tab_pages.target._tab_key = "target"
+    self._tab_pages.party._tab_key = "party"
+    self._tab_pages.inventory._tab_key = "inventory"
+    self._tab_pages.assets._tab_key = "assets"
+    self._tab_pages.status_bar._tab_key = "status_bar"
+    self._tab_pages.profile_manager._tab_key = "profile_manager"
+    self._tab_pages.help._tab_key = "help"
+
+    self.main_tab_bar:add_tab(TR("Global"), self._tab_pages.global)
+    self.main_tab_bar:add_tab(TR("Self"), self._tab_pages.self)
+    self.main_tab_bar:add_tab(TR("Target"), self._tab_pages.target)
+    self.main_tab_bar:add_tab(TR("Party"), self._tab_pages.party)
+    self.main_tab_bar:add_tab(TR("Inventory"), self._tab_pages.inventory)
+    self.main_tab_bar:add_tab(TR("Assets"), self._tab_pages.assets)
+    self.main_tab_bar:add_tab(TR("Status Bar"), self._tab_pages.status_bar)
+    self.main_tab_bar:add_tab(TR("Profiles"), self._tab_pages.profile_manager)
+    self.main_tab_bar:add_tab(TR("Help"), self._tab_pages.help)
 end
 
 function ConfigWindow:select_main_tab(main_key, preferred_sub_key)

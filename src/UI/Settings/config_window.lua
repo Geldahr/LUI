@@ -528,25 +528,6 @@ function ConfigWindow:build_controls()
         hex_to_color = _hex_to_color,
     }
 
-    local tabs = _G.LUI_SETTINGS_TABS or {}
-    self._tab_modules = {
-        tabs.global,
-        tabs.self,
-        tabs.target,
-        tabs.party,
-        tabs.inventory,
-        tabs.assets,
-        tabs.status_bar,
-        tabs.profile_manager,
-        tabs.help,
-    }
-
-    for i = 1, #self._tab_modules do
-        local module = self._tab_modules[i]
-        if module == nil then
-            error("Settings tab module is nil while building controls")
-        end
-    end
 end
 function ConfigWindow:update_swatch(entry)
     if entry == nil or entry.is_color ~= true or entry.tb == nil then
@@ -576,14 +557,14 @@ function ConfigWindow:load_from_settings()
 
     local s = _G.loaded_settings
 
-    if self._tab_modules ~= nil then
-        for i = 1, #self._tab_modules do
-            local m = self._tab_modules[i]
-            if m ~= nil and m.load ~= nil then
-                m.load(self, s, self._ui)
-            end
-        end
-    end
+    self._tab_pages.global:load(s)
+    self._tab_pages.self:load_pages(s, self._ui)
+    self._tab_pages.target:load_pages(s, self._ui)
+    self._tab_pages.party:load_pages(s, self._ui)
+    self._tab_pages.inventory:load(s.inventory)
+    self._tab_pages.assets:load(s.assets)
+    self._tab_pages.status_bar:load(s.status_bar)
+    self._tab_pages.profile_manager:load()
 
     self:update_all_swatches()
 
@@ -649,14 +630,14 @@ function ConfigWindow:apply_changes(close_after)
 
     local s = _G.loaded_settings
 
-    if self._tab_modules ~= nil then
-        for i = 1, #self._tab_modules do
-            local m = self._tab_modules[i]
-            if m ~= nil and m.apply ~= nil then
-                m.apply(self, s, self._ui)
-            end
-        end
-    end
+    self._tab_pages.global:apply(s)
+    self._tab_pages.self:apply_pages(s, self._ui)
+    self._tab_pages.target:apply_pages(s, self._ui)
+    self._tab_pages.party:apply_pages(s, self._ui)
+    self._tab_pages.inventory:apply(s.inventory)
+    self._tab_pages.assets:apply(s.assets)
+    self._tab_pages.status_bar:apply(s.status_bar)
+    self._tab_pages.profile_manager:apply()
 
     if _G.capture_runtime_geometry ~= nil then
         _G.capture_runtime_geometry()

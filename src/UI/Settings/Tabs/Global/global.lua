@@ -5,9 +5,6 @@ Global = {
     text = TR("Global"),
 }
 
-_G.LUI_SETTINGS_TABS = _G.LUI_SETTINGS_TABS or {}
-_G.LUI_SETTINGS_TABS.global = Global
-
 local function _page(window)
     return window ~= nil and window._tab_pages ~= nil and window._tab_pages.global or nil
 end

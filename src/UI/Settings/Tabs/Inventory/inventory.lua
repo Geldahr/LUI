@@ -5,9 +5,6 @@ Inventory = {
     text = TR("Inventory"),
 }
 
-_G.LUI_SETTINGS_TABS = _G.LUI_SETTINGS_TABS or {}
-_G.LUI_SETTINGS_TABS.inventory = Inventory
-
 function Inventory.create_page(window)
     return InventoryPage(window)
 end

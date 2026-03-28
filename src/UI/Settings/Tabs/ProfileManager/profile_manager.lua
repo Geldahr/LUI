@@ -5,9 +5,6 @@ ProfileManager = {
     text = TR("Profiles"),
 }
 
-_G.LUI_SETTINGS_TABS = _G.LUI_SETTINGS_TABS or {}
-_G.LUI_SETTINGS_TABS.profile_manager = ProfileManager
-
 function ProfileManager.create_page(window)
     return ProfileManagerPage(window)
 end

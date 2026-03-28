@@ -5,9 +5,6 @@ TargetTab = {
     text = TR("Target"),
 }
 
-_G.LUI_SETTINGS_TABS = _G.LUI_SETTINGS_TABS or {}
-_G.LUI_SETTINGS_TABS.target = TargetTab
-
 function TargetTab.create_page(window)
     return TargetPage(window)
 end

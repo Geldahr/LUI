@@ -5,9 +5,6 @@ SelfTab = {
     text = TR("Self"),
 }
 
-_G.LUI_SETTINGS_TABS = _G.LUI_SETTINGS_TABS or {}
-_G.LUI_SETTINGS_TABS.self = SelfTab
-
 function SelfTab.create_page(window)
     return SelfPage(window)
 end

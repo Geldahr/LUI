@@ -5,9 +5,6 @@ AssetsTab = {
     text = TR("Assets"),
 }
 
-_G.LUI_SETTINGS_TABS = _G.LUI_SETTINGS_TABS or {}
-_G.LUI_SETTINGS_TABS.assets = AssetsTab
-
 function AssetsTab.create_page(window)
     return AssetsPage(window)
 end
