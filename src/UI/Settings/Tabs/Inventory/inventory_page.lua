@@ -157,6 +157,14 @@ function InventoryPage:apply(inv)
     inv.tile_size = self.tile_size:get_value()
 end
 
+function InventoryPage:load_from_settings(s)
+    self:load(s.inventory)
+end
+
+function InventoryPage:apply_to_settings(s)
+    self:apply(s.inventory)
+end
+
 function InventoryPage:layout()
     local w, h = self:GetSize()
     if w == nil or h == nil or w < 1 or h < 1 then

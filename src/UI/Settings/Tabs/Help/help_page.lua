@@ -155,3 +155,9 @@ function HelpPage:Constructor(window)
     self:add_title(TR("Commands"))
     _create_help_text(self, "help_commands", commands_text, COMMANDS_HEIGHT)
 end
+
+function HelpPage:load_from_settings()
+end
+
+function HelpPage:apply_to_settings()
+end

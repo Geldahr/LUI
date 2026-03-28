@@ -102,35 +102,41 @@ end
 
 function ConfigWindow:build_tabs()
     self._tab_pages = {}
-    self._tab_pages.global = GlobalPage(self)
-    self._tab_pages.self = SelfPage(self)
-    self._tab_pages.target = TargetPage(self)
-    self._tab_pages.party = PartyPage(self)
-    self._tab_pages.inventory = InventoryPage(self)
-    self._tab_pages.assets = AssetsPage(self)
-    self._tab_pages.status_bar = StatusBarPage(self)
-    self._tab_pages.profile_manager = ProfileManagerPage(self)
-    self._tab_pages.help = HelpPage(self)
+    local global_page = GlobalPage(self)
+    global_page._tab_key = "global"
+    self.main_tab_bar:add_tab(TR("Global"), global_page)
 
-    self._tab_pages.global._tab_key = "global"
-    self._tab_pages.self._tab_key = "self"
-    self._tab_pages.target._tab_key = "target"
-    self._tab_pages.party._tab_key = "party"
-    self._tab_pages.inventory._tab_key = "inventory"
-    self._tab_pages.assets._tab_key = "assets"
-    self._tab_pages.status_bar._tab_key = "status_bar"
-    self._tab_pages.profile_manager._tab_key = "profile_manager"
-    self._tab_pages.help._tab_key = "help"
+    local self_page = SelfPage(self)
+    self_page._tab_key = "self"
+    self.main_tab_bar:add_tab(TR("Self"), self_page)
 
-    self.main_tab_bar:add_tab(TR("Global"), self._tab_pages.global)
-    self.main_tab_bar:add_tab(TR("Self"), self._tab_pages.self)
-    self.main_tab_bar:add_tab(TR("Target"), self._tab_pages.target)
-    self.main_tab_bar:add_tab(TR("Party"), self._tab_pages.party)
-    self.main_tab_bar:add_tab(TR("Inventory"), self._tab_pages.inventory)
-    self.main_tab_bar:add_tab(TR("Assets"), self._tab_pages.assets)
-    self.main_tab_bar:add_tab(TR("Status Bar"), self._tab_pages.status_bar)
-    self.main_tab_bar:add_tab(TR("Profiles"), self._tab_pages.profile_manager)
-    self.main_tab_bar:add_tab(TR("Help"), self._tab_pages.help)
+    local target_page = TargetPage(self)
+    target_page._tab_key = "target"
+    self.main_tab_bar:add_tab(TR("Target"), target_page)
+
+    local party_page = PartyPage(self)
+    party_page._tab_key = "party"
+    self.main_tab_bar:add_tab(TR("Party"), party_page)
+
+    local inventory_page = InventoryPage(self)
+    inventory_page._tab_key = "inventory"
+    self.main_tab_bar:add_tab(TR("Inventory"), inventory_page)
+
+    local assets_page = AssetsPage(self)
+    assets_page._tab_key = "assets"
+    self.main_tab_bar:add_tab(TR("Assets"), assets_page)
+
+    local status_bar_page = StatusBarPage(self)
+    status_bar_page._tab_key = "status_bar"
+    self.main_tab_bar:add_tab(TR("Status Bar"), status_bar_page)
+
+    local profile_manager_page = ProfileManagerPage(self)
+    profile_manager_page._tab_key = "profile_manager"
+    self.main_tab_bar:add_tab(TR("Profiles"), profile_manager_page)
+
+    local help_page = HelpPage(self)
+    help_page._tab_key = "help"
+    self.main_tab_bar:add_tab(TR("Help"), help_page)
 end
 
 function ConfigWindow:select_main_tab(main_key, preferred_sub_key)

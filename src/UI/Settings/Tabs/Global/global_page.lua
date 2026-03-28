@@ -87,3 +87,11 @@ function GlobalPage:apply(s)
     s.global.number_abbrev.width = controls.abbrev_width:get_value()
     s.global.number_abbrev.method = controls.abbrev_method:get_value()
 end
+
+function GlobalPage:load_from_settings(s)
+    self:load(s)
+end
+
+function GlobalPage:apply_to_settings(s)
+    self:apply(s)
+end

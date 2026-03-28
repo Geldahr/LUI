@@ -62,3 +62,11 @@ function AssetsPage:apply(assets)
     assets.tile.icons = self.controls.assets_tile_icons:get_value()
     assets.tile.details = self.controls.assets_tile_details:get_value()
 end
+
+function AssetsPage:load_from_settings(s)
+    self:load(s.assets)
+end
+
+function AssetsPage:apply_to_settings(s)
+    self:apply(s.assets)
+end

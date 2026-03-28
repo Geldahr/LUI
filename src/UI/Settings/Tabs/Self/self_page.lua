@@ -15,3 +15,11 @@ function SelfPage:Constructor(window)
     self:add_sub_page(TR("Expiring Effects"), SelfExpiringEffects)
     self:add_sub_page(TR("Cooldowns"), Cooldowns)
 end
+
+function SelfPage:load_from_settings(s, ui)
+    self:load_pages(s, ui)
+end
+
+function SelfPage:apply_to_settings(s, ui)
+    self:apply_pages(s, ui)
+end

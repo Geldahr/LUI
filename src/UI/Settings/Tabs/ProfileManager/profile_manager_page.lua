@@ -262,3 +262,11 @@ end
 
 function ProfileManagerPage:apply()
 end
+
+function ProfileManagerPage:load_from_settings()
+    self:load()
+end
+
+function ProfileManagerPage:apply_to_settings()
+    self:apply()
+end

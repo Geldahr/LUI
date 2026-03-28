@@ -18,7 +18,15 @@ local function _refresh_runtime_after_profile_change(window, selected_profile_id
 end
 
 function ConfigWindow:_controls_for_tab(key)
-    local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
+    local page = nil
+    if self.main_tab_bar ~= nil then
+        _, page = self.main_tab_bar:find_index(function(_, candidate)
+            return candidate ~= nil and candidate._tab_key == key
+        end)
+    end
+    if page == nil and self._tab_pages ~= nil then
+        page = self._tab_pages[key]
+    end
     if page ~= nil and page.controls ~= nil then
         return page.controls
     end

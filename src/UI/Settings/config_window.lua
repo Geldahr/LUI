@@ -557,14 +557,13 @@ function ConfigWindow:load_from_settings()
 
     local s = _G.loaded_settings
 
-    self._tab_pages.global:load(s)
-    self._tab_pages.self:load_pages(s, self._ui)
-    self._tab_pages.target:load_pages(s, self._ui)
-    self._tab_pages.party:load_pages(s, self._ui)
-    self._tab_pages.inventory:load(s.inventory)
-    self._tab_pages.assets:load(s.assets)
-    self._tab_pages.status_bar:load(s.status_bar)
-    self._tab_pages.profile_manager:load()
+    if self.main_tab_bar ~= nil then
+        self.main_tab_bar:each_widget(function(_, page)
+            if page ~= nil and page.load_from_settings ~= nil then
+                page:load_from_settings(s, self._ui)
+            end
+        end)
+    end
 
     self:update_all_swatches()
 
@@ -630,14 +629,13 @@ function ConfigWindow:apply_changes(close_after)
 
     local s = _G.loaded_settings
 
-    self._tab_pages.global:apply(s)
-    self._tab_pages.self:apply_pages(s, self._ui)
-    self._tab_pages.target:apply_pages(s, self._ui)
-    self._tab_pages.party:apply_pages(s, self._ui)
-    self._tab_pages.inventory:apply(s.inventory)
-    self._tab_pages.assets:apply(s.assets)
-    self._tab_pages.status_bar:apply(s.status_bar)
-    self._tab_pages.profile_manager:apply()
+    if self.main_tab_bar ~= nil then
+        self.main_tab_bar:each_widget(function(_, page)
+            if page ~= nil and page.apply_to_settings ~= nil then
+                page:apply_to_settings(s, self._ui)
+            end
+        end)
+    end
 
     if _G.capture_runtime_geometry ~= nil then
         _G.capture_runtime_geometry()

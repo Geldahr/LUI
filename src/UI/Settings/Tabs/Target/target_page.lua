@@ -17,3 +17,11 @@ function TargetPage:Constructor(window)
     self:add_sub_page(TR("Target's Target"), TargetTargetsTarget)
     self:add_sub_page(TR("Expiring Effects"), ExpiringTargetEffects)
 end
+
+function TargetPage:load_from_settings(s, ui)
+    self:load_pages(s, ui)
+end
+
+function TargetPage:apply_to_settings(s, ui)
+    self:apply_pages(s, ui)
+end

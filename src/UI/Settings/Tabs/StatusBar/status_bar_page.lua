@@ -824,3 +824,11 @@ function StatusBarPage:apply(sb)
     local shortcut_h = tonumber(self.controls.sb_shortcut_height.tb:GetText())
     if shortcut_h ~= nil then widgets.shortcut.height = shortcut_h end
 end
+
+function StatusBarPage:load_from_settings(s)
+    self:load(s.status_bar)
+end
+
+function StatusBarPage:apply_to_settings(s)
+    self:apply(s.status_bar)
+end
