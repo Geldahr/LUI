@@ -6,7 +6,6 @@ local WalletWidget = class(Turbine.UI.Control)
 _G.WalletWidget = WalletWidget
 
 local ITEM_GAP = 6
-local MIN_FIELD_W = 20
 
 local function _apply_font(label, font, alignment)
     label:SetMouseVisible(false)
@@ -201,80 +200,74 @@ function WalletWidget:_scan()
 end
 
 function WalletWidget:_layout()
-    local count = #self._item_controls
     local w, h = self:GetSize()
 
     self.placeholder:SetPosition(0, 0)
     self.placeholder:SetSize(w, h)
+    self.placeholder:SetVisible(false)
 
-    if count == 0 then
+    if #self._item_controls == 0 then
         self._render_use_icons = false
         for i = 1, #self._item_controls do
             local item = self._item_controls[i]
             if item.icon ~= nil then item.icon:SetVisible(false) end
             item.label:SetVisible(false)
         end
-        if self._last_values ~= nil then
-            self:_apply_values(self._last_values)
-        end
         return
     end
 
     local icon_h = S.get_icon_size(h)
     local use_icons = self._icon_requested == true and icon_h > 0
-    local icon_total = 0
-    local icon_gap_total = 0
+    local visible_indexes = {}
     local icon_widths = {}
 
     if use_icons == true then
-        for i = 1, count do
+        for i = 1, #self._item_controls do
             local item = self._item_controls[i]
             local icon_w = 0
             if item.icon ~= nil and item.icon_background ~= nil then
                 icon_w = S.get_background_icon_w(item.icon_background, icon_h)
-                if icon_w > 0 then
-                    icon_total = icon_total + icon_w
-                    icon_gap_total = icon_gap_total + S.ICON_GAP
-                end
             end
-            icon_widths[i] = icon_w
+            if icon_w > 0 then
+                visible_indexes[#visible_indexes + 1] = i
+                icon_widths[i] = icon_w
+            else
+                icon_widths[i] = 0
+            end
         end
     end
 
+    self._render_use_icons = use_icons == true and #visible_indexes > 0
+
+    if self._render_use_icons ~= true then
+        for i = 1, #self._item_controls do
+            local item = self._item_controls[i]
+            if item.icon ~= nil then item.icon:SetVisible(false) end
+            item.label:SetVisible(false)
+        end
+        return
+    end
+
+    local count = #visible_indexes
     local gap_total = ITEM_GAP * math.max(0, count - 1)
-    local label_total = w - gap_total - icon_total - icon_gap_total
-    if use_icons == true and label_total < (count * MIN_FIELD_W) then
-        use_icons = false
-        icon_total = 0
-        icon_gap_total = 0
-        label_total = w - gap_total
-    end
-
-    if label_total < 0 then
-        label_total = 0
-    end
-
-    self._render_use_icons = use_icons
-
-    local field_w = count > 0 and math.floor(label_total / count) or 0
-    local extra = count > 0 and (label_total - (field_w * count)) or 0
+    local slot_total = math.max(0, w - gap_total)
+    local field_w = count > 0 and math.floor(slot_total / count) or 0
+    local extra = count > 0 and (slot_total - (field_w * count)) or 0
     local x = 0
     local icon_y = S.get_centered_icon_y(h, icon_h)
 
-    for i = 1, count do
+    for i = 1, #self._item_controls do
         local item = self._item_controls[i]
-        local icon_w = use_icons == true and (icon_widths[i] or 0) or 0
-
+        item.label:SetVisible(false)
         if item.icon ~= nil then
-            if icon_w > 0 then
-                item.icon:SetPosition(x, icon_y)
-                item.icon:SetSize(icon_w, icon_h)
-                item.icon:SetVisible(true)
-                x = x + icon_w + S.ICON_GAP
-            else
-                item.icon:SetVisible(false)
-            end
+            item.icon:SetVisible(false)
         end
+    end
+
+    for visible_i = 1, count do
+        local item_index = visible_indexes[visible_i]
+        local item = self._item_controls[item_index]
+        local icon_w = icon_widths[item_index] or 0
 
         local current_w = field_w
         if extra > 0 then
@@ -282,39 +275,28 @@ function WalletWidget:_layout()
             extra = extra - 1
         end
 
-        item.label:SetPosition(x, 0)
-        item.label:SetSize(math.max(0, current_w), h)
-        item.label:SetVisible(true)
-        x = x + current_w
+        local slot_x = x
+        local group_x = slot_x + math.floor((current_w - icon_w) / 2)
+        if group_x < slot_x then
+            group_x = slot_x
+        end
 
-        if i < count then
+        if item.icon ~= nil then
+            item.icon:SetPosition(group_x, icon_y)
+            item.icon:SetSize(icon_w, icon_h)
+            item.icon:SetVisible(true)
+        end
+
+        x = slot_x + current_w
+
+        if visible_i < count then
             x = x + ITEM_GAP
         end
-    end
-
-    if self._last_values ~= nil then
-        self:_apply_values(self._last_values)
     end
 end
 
 function WalletWidget:_apply_values(values)
     self._last_values = values
 
-    local count = #self._item_controls
-    if count == 0 then
-        self.placeholder:SetVisible(true)
-        self.placeholder:SetText(values == nil and "--" or "")
-        return
-    end
-
-    self.placeholder:SetVisible(false)
-
-    for i = 1, count do
-        local item = self._item_controls[i]
-        local text = values ~= nil and S.format_wallet_quantity(values[i]) or "--"
-        if self._render_use_icons ~= true or item.icon_background == nil then
-            text = item.name .. " " .. text
-        end
-        item.label:SetText(text)
-    end
+    self:_layout()
 end
