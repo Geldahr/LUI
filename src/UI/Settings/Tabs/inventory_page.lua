@@ -125,6 +125,9 @@ end
 
 function InventoryPage:on_selected()
     self:layout()
+    if self.cols_tb ~= nil then
+        self.cols_tb:SetText(self.cols_tb:GetText() or "")
+    end
 end
 
 function InventoryPage:load(inv)

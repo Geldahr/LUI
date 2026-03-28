@@ -493,6 +493,10 @@ local function _create_wallet_selector(page, key)
         _wallet_selector_layout(entry)
     end
 
+    function entry:refresh_text()
+        entry.available_filter:SetText(entry.available_filter:GetText() or "")
+    end
+
     entry.apply_ui_scale = function()
         entry.available_label:SetFont(page.window.field_label_font)
         entry.selected_label:SetFont(page.window.field_label_font)

@@ -23,6 +23,13 @@ local function _scaled_font(name, size)
     return font
 end
 
+local function _refresh_text_control(control)
+    if control == nil or control.GetText == nil or control.SetText == nil then
+        return
+    end
+    control:SetText(control:GetText() or "")
+end
+
 SettingsFormPage = class(Turbine.UI.Control)
 
 function SettingsFormPage:Constructor(window)
@@ -449,8 +456,25 @@ function SettingsFormPage:close_all_dropdowns()
     end
 end
 
+function SettingsFormPage:refresh_text_inputs()
+    for i = 1, #self.fields do
+        local field = self.fields[i]
+        if field ~= nil then
+            if field.kind == "text" then
+                _refresh_text_control(field.tb)
+            elseif field.kind == "custom" and field.refresh_text ~= nil then
+                field:refresh_text()
+            end
+        end
+    end
+end
+
 function SettingsFormPage:on_selected()
     self:layout()
+    local was_loading = self.loading == true
+    self.loading = true
+    self:refresh_text_inputs()
+    self.loading = was_loading
     self:_refresh_preview()
 end
 

@@ -82,6 +82,10 @@ local function _create_text_area(page, key, label_text, help_text)
         _layout_text_area(entry)
     end
 
+    function entry:refresh_text()
+        self.tb:SetText(self.tb:GetText() or "")
+    end
+
     entry.control.SizeChanged = function()
         _layout_text_area(entry)
     end
