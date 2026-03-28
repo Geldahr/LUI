@@ -21,7 +21,7 @@ local function _add_main_tab(window, module)
 
     page._tab_key = module.key
     window._tab_pages[module.key] = page
-    window.main_tab_index_by_key[module.key] = window.main_tab_bar:add_tab(module.text, page)
+    window.main_tab_bar:add_tab(module.text, page)
     return page
 end
 
@@ -61,67 +61,25 @@ local function _apply_main_tab_content_border(window, main_key)
     window.main_tab_bar:set_show_content_border(MAIN_TABS_WITH_CONTENT_BORDER[main_key] == true)
 end
 
-function ConfigWindow:_activate_active_page()
-    local key = self.active_main_tab
-    local page = key ~= nil and self._tab_pages ~= nil and self._tab_pages[key] or nil
-    if page == nil and self.main_tab_bar ~= nil then
-        page = self.main_tab_bar:get_selected_widget()
+local function _find_main_tab(window, main_key)
+    if window == nil or window.main_tab_bar == nil then
+        return nil, nil
     end
+
+    return window.main_tab_bar:find_index(function(_, page)
+        return page ~= nil and page._tab_key == main_key
+    end)
+end
+
+function ConfigWindow:_on_main_tab_changed(index, page, _, preferred_sub_key)
     if page == nil then
         return
     end
 
-    if page.on_selected ~= nil then
-        page:on_selected()
-    elseif page.layout ~= nil then
-        page:layout()
-    end
-
-    if page.get_active_tab_key ~= nil then
-        self.active_tab = page:get_active_tab_key() or key
-    elseif key ~= nil then
-        self.active_tab = key
-    end
-end
-
-function ConfigWindow:build_tabs()
-    local tabs = _G.LUI_SETTINGS_TABS or {}
-
-    self._tab_pages = {}
-    self.main_tab_index_by_key = {}
-
-    _add_main_tab(self, tabs.global)
-    _add_main_tab(self, tabs.self)
-    _add_main_tab(self, tabs.target)
-    _add_main_tab(self, tabs.party)
-    _add_main_tab(self, tabs.inventory)
-    _add_main_tab(self, tabs.assets)
-    _add_main_tab(self, tabs.status_bar)
-    _add_main_tab(self, tabs.profile_manager)
-    _add_main_tab(self, tabs.help)
-end
-
-function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
-    main_key, preferred_sub_key = _normalize_main_tab_request(main_key, preferred_sub_key)
-
-    if self.main_tab_index_by_key ~= nil and self.main_tab_index_by_key[main_key] == nil then
-        main_key = "global"
-        preferred_sub_key = nil
-    end
-
-    local page = self._tab_pages ~= nil and self._tab_pages[main_key] or nil
-    if page == nil then
-        return
-    end
-
+    local main_key = page._tab_key
     self.active_main_tab = main_key
     _apply_main_tab_content_border(self, main_key)
-
-    self._syncing_tab_widgets = true
-    if self.main_tab_bar ~= nil then
-        self.main_tab_bar:set_selected_index(self.main_tab_index_by_key[main_key], false)
-    end
-    self._syncing_tab_widgets = false
+    self._pending_main_tab_sub_key = nil
 
     self:hide_hint()
     self:layout()
@@ -137,4 +95,52 @@ function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
     else
         self.active_tab = main_key
     end
+end
+
+function ConfigWindow:_activate_active_page()
+    local index = self.main_tab_bar ~= nil and self.main_tab_bar:get_selected_index() or nil
+    local page = self.main_tab_bar ~= nil and self.main_tab_bar:get_selected_widget() or nil
+    if page == nil then
+        return
+    end
+
+    self:_on_main_tab_changed(index, page, self.main_tab_bar:get_selected_text(), nil)
+end
+
+function ConfigWindow:build_tabs()
+    local tabs = _G.LUI_SETTINGS_TABS or {}
+
+    self._tab_pages = {}
+
+    _add_main_tab(self, tabs.global)
+    _add_main_tab(self, tabs.self)
+    _add_main_tab(self, tabs.target)
+    _add_main_tab(self, tabs.party)
+    _add_main_tab(self, tabs.inventory)
+    _add_main_tab(self, tabs.assets)
+    _add_main_tab(self, tabs.status_bar)
+    _add_main_tab(self, tabs.profile_manager)
+    _add_main_tab(self, tabs.help)
+end
+
+function ConfigWindow:select_main_tab(main_key, preferred_sub_key)
+    main_key, preferred_sub_key = _normalize_main_tab_request(main_key, preferred_sub_key)
+
+    local index, page = _find_main_tab(self, main_key)
+    if index == nil or page == nil then
+        main_key = "global"
+        preferred_sub_key = nil
+        index, page = _find_main_tab(self, main_key)
+    end
+    if index == nil or page == nil then
+        return
+    end
+
+    if self.main_tab_bar ~= nil and self.main_tab_bar:get_selected_index() == index then
+        self:_on_main_tab_changed(index, page, self.main_tab_bar:get_selected_text(), preferred_sub_key)
+        return
+    end
+
+    self._pending_main_tab_sub_key = preferred_sub_key
+    self.main_tab_bar:select_tab(index)
 end

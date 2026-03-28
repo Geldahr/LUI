@@ -95,11 +95,11 @@ function ConfigWindow:Constructor()
     self.main_tab_bar:SetParent(self)
     self.main_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.left)
     self.main_tab_bar:set_show_content_border(false)
-    self.main_tab_bar.selection_changed = function(_, _, _, host)
-        if self._syncing_tab_widgets == true or host == nil then
+    self.main_tab_bar.on_tab_changed = function(index, page, text)
+        if page == nil then
             return
         end
-        self:select_main_tab(host._tab_key)
+        self:_on_main_tab_changed(index, page, text, self._pending_main_tab_sub_key)
     end
 
     self.hint = Turbine.UI.Window()
@@ -292,24 +292,22 @@ function ConfigWindow:apply_ui_scale()
         self.main_tab_bar:set_font(self.tab_font)
     end
 
-    if self.main_tab_index_by_key ~= nil then
-        for key, _ in pairs(self.main_tab_index_by_key) do
-            local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
+    if self.main_tab_bar ~= nil then
+        self.main_tab_bar:each_widget(function(_, page)
             if page ~= nil and page.apply_ui_scale ~= nil then
                 page:apply_ui_scale()
             end
-        end
+        end)
     end
 end
 
 function ConfigWindow:close_all_dropdowns()
-    if self.main_tab_index_by_key ~= nil then
-        for key, _ in pairs(self.main_tab_index_by_key) do
-            local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
+    if self.main_tab_bar ~= nil then
+        self.main_tab_bar:each_widget(function(_, page)
             if page ~= nil and page.close_all_dropdowns ~= nil then
                 page:close_all_dropdowns()
             end
-        end
+        end)
     end
 end
 
@@ -403,12 +401,11 @@ function ConfigWindow:_rebuild_control_registry()
     self.controls = {}
     self._color_fields = {}
 
-    if self.main_tab_index_by_key == nil then
+    if self.main_tab_bar == nil then
         return
     end
 
-    for key, _ in pairs(self.main_tab_index_by_key) do
-        local page = self._tab_pages ~= nil and self._tab_pages[key] or nil
+    self.main_tab_bar:each_widget(function(_, page)
         if page ~= nil and page.controls ~= nil then
             for control_key, entry in pairs(page.controls) do
                 self.controls[control_key] = entry
@@ -419,7 +416,7 @@ function ConfigWindow:_rebuild_control_registry()
                 self._color_fields[#self._color_fields + 1] = page._color_fields[i]
             end
         end
-    end
+    end)
 end
 
 function ConfigWindow:build_controls()

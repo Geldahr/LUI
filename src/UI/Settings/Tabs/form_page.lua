@@ -479,6 +479,7 @@ function SettingsFormPage:on_selected()
     self:refresh_text_inputs()
     self.loading = was_loading
     self:_refresh_preview()
+    self:layout()
 end
 
 function SettingsFormPage:layout()

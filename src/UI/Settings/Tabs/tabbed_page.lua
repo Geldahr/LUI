@@ -16,7 +16,6 @@ function SettingsTabbedPage:Constructor(window)
     self._sub_pages = {}
     self._sub_page_order = {}
     self._sub_page_modules = {}
-    self._sub_tab_index_by_key = {}
 
     self:SetMouseVisible(false)
 
@@ -25,11 +24,11 @@ function SettingsTabbedPage:Constructor(window)
     self.sub_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
     self.sub_tab_bar:set_content_padding(4)
     self.sub_tab_bar:set_show_border_left(false)
-    self.sub_tab_bar.selection_changed = function(_, _, _, host)
-        if self._syncing_sub_tabs == true or host == nil then
+    self.sub_tab_bar.on_tab_changed = function(index, page, text)
+        if page == nil then
             return
         end
-        self:select_tab(host._tab_key)
+        self:_on_sub_tab_changed(index, page, text)
     end
 
     self.SizeChanged = function()
@@ -72,7 +71,7 @@ function SettingsTabbedPage:add_sub_page(text, module)
     self._sub_pages[module.key] = page
     self._sub_page_order[#self._sub_page_order + 1] = module.key
     self._sub_page_modules[#self._sub_page_modules + 1] = module
-    self._sub_tab_index_by_key[module.key] = self.sub_tab_bar:add_tab(text, page)
+    self.sub_tab_bar:add_tab(text, page)
 
     if self.window ~= nil and self.window._tab_pages ~= nil then
         self.window._tab_pages[module.key] = page
@@ -91,6 +90,24 @@ function SettingsTabbedPage:get_active_tab_key()
     return self.active_sub_key
 end
 
+function SettingsTabbedPage:_on_sub_tab_changed(_, page)
+    if page == nil then
+        return
+    end
+
+    local key = page._tab_key
+    self.active_sub_key = key
+    if self.window ~= nil then
+        self.window.active_tab = key
+    end
+
+    if page.on_selected ~= nil then
+        page:on_selected()
+    elseif page.layout ~= nil then
+        page:layout()
+    end
+end
+
 function SettingsTabbedPage:select_tab(key)
     if type(key) ~= "string" or self._sub_pages[key] == nil then
         key = self.active_sub_key or self._sub_page_order[1]
@@ -101,23 +118,23 @@ function SettingsTabbedPage:select_tab(key)
         return
     end
 
-    self.active_sub_key = key
-    if self.window ~= nil then
-        self.window.active_tab = key
+    local index = nil
+    if self.sub_tab_bar ~= nil then
+        index = self.sub_tab_bar:find_index(function(_, candidate)
+            return candidate == page
+        end)
+    end
+    if index == nil then
+        self:_on_sub_tab_changed(nil, page)
+        return
     end
 
-    local index = self._sub_tab_index_by_key[key]
-    self._syncing_sub_tabs = true
-    if index ~= nil then
-        self.sub_tab_bar:set_selected_index(index, false)
+    if self.sub_tab_bar:get_selected_index() == index then
+        self:_on_sub_tab_changed(index, page)
+        return
     end
-    self._syncing_sub_tabs = false
 
-    if page.on_selected ~= nil then
-        page:on_selected()
-    elseif page.layout ~= nil then
-        page:layout()
-    end
+    self.sub_tab_bar:select_tab(index)
 end
 
 function SettingsTabbedPage:on_selected(preferred_key)
@@ -130,21 +147,21 @@ function SettingsTabbedPage:apply_ui_scale()
     self.sub_tab_bar:set_scale(scale)
     self.sub_tab_bar:set_font(self.window.tab_font)
 
-    for _, page in pairs(self._sub_pages) do
+    self.sub_tab_bar:each_widget(function(_, page)
         if page ~= nil and page.apply_ui_scale ~= nil then
             page:apply_ui_scale()
         end
-    end
+    end)
 
     self:layout()
 end
 
 function SettingsTabbedPage:close_all_dropdowns()
-    for _, page in pairs(self._sub_pages) do
+    self.sub_tab_bar:each_widget(function(_, page)
         if page ~= nil and page.close_all_dropdowns ~= nil then
             page:close_all_dropdowns()
         end
-    end
+    end)
 end
 
 function SettingsTabbedPage:load_pages(s, ui)
