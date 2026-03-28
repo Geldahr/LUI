@@ -10,6 +10,7 @@ SelfPage = class(SettingsTabbedPage)
 
 function SelfPage:Constructor(window)
     SettingsTabbedPage.Constructor(self, window)
+    self.show_main_content_border = false
 
     self:add_sub_page(TR("Vitals"), SelfVitals)
     self:add_sub_page(TR("Expiring Effects"), SelfExpiringEffects)

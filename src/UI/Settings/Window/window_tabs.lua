@@ -37,21 +37,12 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
     return main_key, preferred_sub_key
 end
 
-local MAIN_TABS_WITH_CONTENT_BORDER = {
-    global = true,
-    inventory = true,
-    assets = true,
-    status_bar = true,
-    profile_manager = true,
-    help = true,
-}
-
-local function _apply_main_tab_content_border(window, main_key)
+local function _apply_main_tab_content_border(window, page)
     if window == nil or window.main_tab_bar == nil then
         return
     end
 
-    window.main_tab_bar:set_show_content_border(MAIN_TABS_WITH_CONTENT_BORDER[main_key] == true)
+    window.main_tab_bar:set_show_content_border(page ~= nil and page.show_main_content_border == true)
 end
 
 local function _find_main_tab(window, main_key)
@@ -71,7 +62,7 @@ function ConfigWindow:_on_main_tab_changed(index, page, _, preferred_sub_key)
 
     local main_key = page._tab_key
     self.active_main_tab = main_key
-    _apply_main_tab_content_border(self, main_key)
+    _apply_main_tab_content_border(self, page)
     self._pending_main_tab_sub_key = nil
 
     self:hide_hint()

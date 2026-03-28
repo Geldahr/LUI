@@ -121,6 +121,7 @@ HelpPage = class(SettingsFormPage)
 
 function HelpPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
+    self.show_main_content_border = true
 
     local about_text = table.concat({
         TR("LUI replaces and extends key LotRO UI elements with a cleaner and more configurable layout."),

@@ -25,6 +25,7 @@ AssetsPage = class(SettingsFormPage)
 
 function AssetsPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
+    self.show_main_content_border = true
 
     self:add_title(TR("Assets"))
 

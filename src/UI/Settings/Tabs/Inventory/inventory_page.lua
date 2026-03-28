@@ -21,6 +21,7 @@ function InventoryPage:Constructor(window)
     Turbine.UI.Control.Constructor(self)
 
     self.window = window
+    self.show_main_content_border = true
     self:SetMouseVisible(false)
 
     self.title = UI.Widgets.LuiLabel()

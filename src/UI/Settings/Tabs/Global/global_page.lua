@@ -7,6 +7,7 @@ GlobalPage = class(SettingsFormPage)
 
 function GlobalPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
+    self.show_main_content_border = true
 
     local digits_help = table.concat({
         TR("How many digits are shown before shortening."),

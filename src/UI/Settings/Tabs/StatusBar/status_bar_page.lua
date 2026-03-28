@@ -580,6 +580,7 @@ StatusBarPage = class(SettingsFormPage)
 
 function StatusBarPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
+    self.show_main_content_border = true
 
     local time_format_labels = { TR("24-hour"), TR("AM/PM") }
     local time_format_values = { LUI_ENUMS.time_format.H24, LUI_ENUMS.time_format.AMPM }
