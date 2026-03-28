@@ -53,10 +53,11 @@ end
 
 local EditBarPaletteEntry = class(Turbine.UI.Control)
 
-function EditBarPaletteEntry:Constructor(widget_key, on_mouse_down, on_mouse_move, on_mouse_up)
+function EditBarPaletteEntry:Constructor(palette_entry, on_mouse_down, on_mouse_move, on_mouse_up)
     Turbine.UI.Control.Constructor(self)
 
-    self.widget_key = widget_key
+    self.palette_entry = palette_entry or {}
+    self.widget_key = self.palette_entry.widget_key
     self._available = true
     self._hover = false
     self._on_mouse_down = on_mouse_down
@@ -71,7 +72,7 @@ function EditBarPaletteEntry:Constructor(widget_key, on_mouse_down, on_mouse_mov
     self.title:SetMouseVisible(false)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.title:SetForeColor(TEXT_COLOR)
-    self.title:SetText(S.get_status_bar_widget_display_name(widget_key))
+    self.title:SetText(self.palette_entry.title or S.get_status_bar_widget_display_name(self.widget_key))
 
     self.status = UI.Widgets.LuiLabel()
     self.status:SetParent(self)
@@ -122,7 +123,7 @@ function EditBarPaletteEntry:Constructor(widget_key, on_mouse_down, on_mouse_mov
             return
         end
         if type(self._on_mouse_down) == "function" then
-            self._on_mouse_down(self.widget_key, self, args)
+            self._on_mouse_down(self.palette_entry, self, args)
         end
     end
 
@@ -131,7 +132,7 @@ function EditBarPaletteEntry:Constructor(widget_key, on_mouse_down, on_mouse_mov
             return
         end
         if type(self._on_mouse_move) == "function" then
-            self._on_mouse_move(self.widget_key, self, args)
+            self._on_mouse_move(self.palette_entry, self, args)
         end
     end
 
@@ -143,7 +144,7 @@ function EditBarPaletteEntry:Constructor(widget_key, on_mouse_down, on_mouse_mov
             return
         end
         if type(self._on_mouse_up) == "function" then
-            self._on_mouse_up(self.widget_key, self, args)
+            self._on_mouse_up(self.palette_entry, self, args)
         end
     end
 
@@ -300,28 +301,6 @@ function StatusBarEditWindow:Constructor(owner)
     self.rows_content:SetMouseVisible(false)
     self.rows_list:AddItem(self.rows_content)
 
-    for i = 1, #S.STATUS_BAR_EDITABLE_WIDGET_KEYS do
-        local widget_key = S.STATUS_BAR_EDITABLE_WIDGET_KEYS[i]
-        local row = EditBarPaletteEntry(widget_key,
-        function(key, sender, args)
-            if self.owner ~= nil and self.owner.arm_palette_drag ~= nil then
-                self.owner:arm_palette_drag(key, sender, args)
-            end
-        end,
-        function(key, sender, args)
-            if self.owner ~= nil and self.owner.handle_palette_drag_move ~= nil then
-                self.owner:handle_palette_drag_move(key, sender, args)
-            end
-        end,
-        function(key, sender, args)
-            if self.owner ~= nil and self.owner.handle_palette_drag_release ~= nil then
-                self.owner:handle_palette_drag_release(key, sender, args)
-            end
-        end)
-        row:SetParent(self.rows_content)
-        self.entries[#self.entries + 1] = row
-    end
-
     self.done_button = UI.Widgets.LuiButton()
     self.done_button:SetParent(self)
     self.done_button:SetText(TR("Done"))
@@ -375,7 +354,44 @@ function StatusBarEditWindow:Constructor(owner)
         end_drag(args)
     end
 
+    self:_rebuild_entries()
     self:apply_scale()
+end
+
+function StatusBarEditWindow:_create_palette_entry_row(palette_entry)
+    local row = EditBarPaletteEntry(palette_entry,
+    function(entry, sender, args)
+        if self.owner ~= nil and self.owner.arm_palette_drag ~= nil then
+            self.owner:arm_palette_drag(entry, sender, args)
+        end
+    end,
+    function(entry, sender, args)
+        if self.owner ~= nil and self.owner.handle_palette_drag_move ~= nil then
+            self.owner:handle_palette_drag_move(entry, sender, args)
+        end
+    end,
+    function(entry, sender, args)
+        if self.owner ~= nil and self.owner.handle_palette_drag_release ~= nil then
+            self.owner:handle_palette_drag_release(entry, sender, args)
+        end
+    end)
+    row:SetParent(self.rows_content)
+    return row
+end
+
+function StatusBarEditWindow:_rebuild_entries()
+    for i = 1, #self.entries do
+        local row = self.entries[i]
+        if row ~= nil then
+            row:SetParent(nil)
+        end
+    end
+    self.entries = {}
+
+    local palette_entries = S.get_status_bar_edit_palette_entries()
+    for i = 1, #palette_entries do
+        self.entries[#self.entries + 1] = self:_create_palette_entry_row(palette_entries[i])
+    end
 end
 
 function StatusBarEditWindow:apply_scale()
@@ -469,15 +485,19 @@ function StatusBarEditWindow:layout()
 end
 
 function StatusBarEditWindow:refresh_state()
+    self:_rebuild_entries()
     local owner = self.owner
     for i = 1, #self.entries do
         local row = self.entries[i]
         local available = true
-        if owner ~= nil and owner.is_palette_widget_available ~= nil then
+        if owner ~= nil and owner.is_palette_entry_available ~= nil then
+            available = owner:is_palette_entry_available(row.palette_entry)
+        elseif owner ~= nil and owner.is_palette_widget_available ~= nil then
             available = owner:is_palette_widget_available(row.widget_key)
         end
         row:set_available(available)
     end
+    self:apply_scale()
 end
 
 function StatusBarEditWindow:open()

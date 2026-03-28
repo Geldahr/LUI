@@ -1,4 +1,7 @@
+import "LUI.src.StatusBar.api_command_parser"
+
 command = Turbine.ShellCommand()
+local StatusBarApiCommandParser = _G.STATUS_BAR_API_COMMAND_PARSER
 
 local HELP_COMMAND_COLOR = "#33C7FF"
 
@@ -34,19 +37,33 @@ local function display_help()
     _write_help_command("/lui card [monster name]", "  /lui card [monster name] - Open the bestiary card for a monster")
 end
 
+local function _write_error(message)
+    Turbine.Shell.WriteLine("<rgb=#3399FA>LUI</rgb>: " .. tostring(message or ""))
+end
+
+local function _handle_status_bar_api_command(list, index)
+    local spec, err = StatusBarApiCommandParser.parse_status_bar_api_spec(list, index)
+    if spec == nil then
+        return nil, err
+    end
+
+    if _G.STATUS_BAR_COMMON == nil or _G.STATUS_BAR_COMMON.register_status_bar_api_item == nil then
+        return nil, "Status bar API is not available yet."
+    end
+
+    return _G.STATUS_BAR_COMMON.register_status_bar_api_item(spec)
+end
+
 function command:Execute(_, str)
     if str == nil or string.len(str) == 0 then
         Turbine.Shell.WriteLine(TR("Missing Argument for more information type /lui help."))
         return
     end
 
-    local list  = {}
-    local index = 1
-
-    -- Tokenize by whitespace (supports underscores/dots/etc in arguments).
-    for word in str:gmatch("%S+") do
-        list[index] = word
-        index = index + 1
+    local list = StatusBarApiCommandParser.tokenize_command_arguments(str)
+    if #list == 0 then
+        Turbine.Shell.WriteLine(TR("Missing Argument for more information type /lui help."))
+        return
     end
 
     local cmd = string.lower(list[1])
@@ -103,6 +120,17 @@ function command:Execute(_, str)
 
         if BESTIARY_CARD:show_for_name(monster_name, nil) ~= true then
             Turbine.Shell.WriteLine(TR("Monster not found in bestiary: ") .. monster_name)
+        end
+    elseif cmd == "api.sb" or (cmd == "api" and list[2] ~= nil and string.lower(list[2]) == "sb") then
+        local start_index = cmd == "api.sb" and 2 or 3
+        local _, err = _handle_status_bar_api_command(list, start_index)
+        if err ~= nil then
+            _write_error(err)
+            Turbine.Shell.WriteLine("  " .. STATUS_BAR_API_USAGE)
+        end
+    else
+        if cmd == "api" then
+            display_help()
         end
     end
 end

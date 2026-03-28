@@ -1,5 +1,6 @@
 import "Turbine.UI"
 import "LUI.src.Settings.enums"
+import "LUI.src.StatusBar.common"
 
 function _G.ensure_loaded_settings()
     if type(_G.loaded_settings) ~= "table" then
@@ -57,9 +58,12 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "status_bar", "widgets", "time_local" })
     ensure_table_at(s, { "status_bar", "widgets", "inventory_space" })
     ensure_table_at(s, { "status_bar", "widgets", "inventory_space", "color" })
+    ensure_table_at(s, { "status_bar", "widgets", "equipment_wear" })
+    ensure_table_at(s, { "status_bar", "widgets", "equipment_wear", "color" })
     ensure_table_at(s, { "status_bar", "widgets", "money" })
-    ensure_table_at(s, { "status_bar", "widgets", "shortcut_icon" })
-    ensure_table_at(s, { "status_bar", "widgets", "shortcut_text" })
+    ensure_table_at(s, { "status_bar", "widgets", "wallet" })
+    ensure_table_at(s, { "status_bar", "widgets", "wallet", "items" })
+    ensure_table_at(s, { "status_bar", "widgets", "shortcut" })
 
     ensure_table_at(s, { "self", "vitals" })
     ensure_table_at(s, { "self", "vitals", "frame" })
@@ -650,10 +654,18 @@ function _G.ensure_loaded_settings()
         sb.layout.right = "%inventory% %gold%"
     end
 
+    sb.item_registry = sb.item_registry or {}
+
     local widgets = sb.widgets
-    if widgets.time_local.width == nil then widgets.time_local.width = 40 end
-    if widgets.time_local.icon == nil then widgets.time_local.icon = false end
-    if widgets.time_local.text_alignment == nil then widgets.time_local.text_alignment = LUI_ENUMS.text_alignment.CENTER end
+    local time_local = widgets.time_local
+    if time_local.width == nil then time_local.width = 40 end
+    if time_local.text_alignment == nil then time_local.text_alignment = LUI_ENUMS.text_alignment.CENTER end
+    if time_local.time_format == nil then time_local.time_format = LUI_ENUMS.time_format.H24 end
+    widgets.time_local = {
+        width = time_local.width,
+        text_alignment = time_local.text_alignment,
+        time_format = time_local.time_format,
+    }
 
     if widgets.inventory_space.width == nil then widgets.inventory_space.width = 70 end
     if widgets.inventory_space.icon == nil then widgets.inventory_space.icon = true end
@@ -666,14 +678,42 @@ function _G.ensure_loaded_settings()
     invc.orange = invc.orange or Turbine.UI.Color(1, 0.949020, 0.600000, 0.000000)
     invc.red = invc.red or Turbine.UI.Color(1, 0.905882, 0.113725, 0.000000)
 
+    if widgets.equipment_wear.width == nil then widgets.equipment_wear.width = 96 end
+    if widgets.equipment_wear.icon == nil then widgets.equipment_wear.icon = true end
+    if widgets.equipment_wear.text_alignment == nil then
+        widgets.equipment_wear.text_alignment = LUI_ENUMS.text_alignment.LEFT
+    end
+    if widgets.equipment_wear.coloring == nil then widgets.equipment_wear.coloring = true end
+    local wearc = widgets.equipment_wear.color
+    wearc.green = wearc.green or Turbine.UI.Color(1, 0.411765, 0.741176, 0.372549)
+    wearc.yellow = wearc.yellow or Turbine.UI.Color(1, 0.913725, 0.870588, 0.019608)
+    wearc.red = wearc.red or Turbine.UI.Color(1, 0.905882, 0.113725, 0.000000)
+
     if widgets.money.width == nil then widgets.money.width = 140 end
     if widgets.money.icon == nil then widgets.money.icon = true end
     if widgets.money.text_alignment == nil then widgets.money.text_alignment = LUI_ENUMS.text_alignment.LEFT end
 
-    if widgets.shortcut_icon.width == nil then widgets.shortcut_icon.width = 20 end
-    if widgets.shortcut_icon.height == nil then widgets.shortcut_icon.height = 20 end
-    if widgets.shortcut_text.width == nil then widgets.shortcut_text.width = 66 end
-    if widgets.shortcut_text.height == nil then widgets.shortcut_text.height = sb.height end
+    local wallet = widgets.wallet
+    local wallet_was_unset = wallet.width == nil and wallet.text_alignment == nil and #wallet.items == 0
+    if wallet.width == nil then wallet.width = 220 end
+    if wallet.text_alignment == nil then wallet.text_alignment = LUI_ENUMS.text_alignment.LEFT end
+    wallet.items = _G.STATUS_BAR_COMMON.parse_wallet_item_list(wallet.items)
+    if wallet_was_unset == true then
+        wallet.items = {
+            "Ancient Script",
+            "Motes of Enchantment",
+            "Embers of Enchantment",
+        }
+    end
+
+    local item_widget = widgets.item or {}
+    if item_widget.width == nil then item_widget.width = 56 end
+    widgets.item = {
+        width = item_widget.width,
+    }
+
+    if widgets.shortcut.width == nil then widgets.shortcut.width = 20 end
+    if widgets.shortcut.height == nil then widgets.shortcut.height = 20 end
 
     local cd = s.self.cooldowns
     if cd.enabled == nil then

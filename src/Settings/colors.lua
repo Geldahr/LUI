@@ -108,6 +108,12 @@ function _G.fix_colors()
             c.orange = to_color(c.orange)
             c.red = to_color(c.red)
         end
+        if sb.widgets ~= nil and sb.widgets.equipment_wear ~= nil and sb.widgets.equipment_wear.color ~= nil then
+            local c = sb.widgets.equipment_wear.color
+            c.green = to_color(c.green)
+            c.yellow = to_color(c.yellow)
+            c.red = to_color(c.red)
+        end
     end
 
     local cd = s.self.cooldowns
