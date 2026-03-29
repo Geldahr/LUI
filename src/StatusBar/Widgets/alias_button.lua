@@ -192,6 +192,15 @@ function AliasButtonWidget:update(now)
 end
 
 function AliasButtonWidget:destroy()
+    self:SetVisible(false)
+    if self.border_top ~= nil then self.border_top:SetVisible(false) end
+    if self.border_bottom ~= nil then self.border_bottom:SetVisible(false) end
+    if self.border_left ~= nil then self.border_left:SetVisible(false) end
+    if self.border_right ~= nil then self.border_right:SetVisible(false) end
+    if self.slot ~= nil then self.slot:SetVisible(false) end
+    if self.background ~= nil then self.background:SetVisible(false) end
+    if self.icon ~= nil then self.icon:SetVisible(false) end
+    if self.label ~= nil then self.label:SetVisible(false) end
     if self.border_top ~= nil then self.border_top:SetParent(nil) end
     if self.border_bottom ~= nil then self.border_bottom:SetParent(nil) end
     if self.border_left ~= nil then self.border_left:SetParent(nil) end

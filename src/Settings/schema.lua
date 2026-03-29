@@ -690,7 +690,6 @@ function _G.ensure_loaded_settings()
     wearc.red = wearc.red or Turbine.UI.Color(1, 0.905882, 0.113725, 0.000000)
 
     if widgets.money.width == nil then widgets.money.width = 140 end
-    if widgets.money.icon == nil then widgets.money.icon = true end
     if widgets.money.text_alignment == nil then widgets.money.text_alignment = LUI_ENUMS.text_alignment.LEFT end
 
     local wallet = widgets.wallet

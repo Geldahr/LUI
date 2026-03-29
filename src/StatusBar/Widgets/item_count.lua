@@ -106,6 +106,10 @@ function ItemCountWidget:update(now)
 end
 
 function ItemCountWidget:destroy()
+    self:SetVisible(false)
+    if self.icon_fallback ~= nil then self.icon_fallback:SetVisible(false) end
+    if self.icon_back ~= nil then self.icon_back:SetVisible(false) end
+    if self.label ~= nil then self.label:SetVisible(false) end
     if self.icon_fallback ~= nil then self.icon_fallback:SetParent(nil) end
     if self.icon_back ~= nil then self.icon_back:SetParent(nil) end
     if self.label ~= nil then self.label:SetParent(nil) end

@@ -1,0 +1,551 @@
+local Common = SettingsPreviewCommon
+local _hex_to_color = Common.hex_to_color
+local _require_font = Common.require_font
+local _apply_preview_border = Common.apply_preview_border
+local _preview_number_abbrev_settings = Common.preview_number_abbrev_settings
+local _morale_color_preview = Common.morale_color_preview
+local _preview_scaled_int = Common.preview_scaled_int
+local _preview_scaled_border = Common.preview_scaled_border
+local _preview_scaled_number = Common.preview_scaled_number
+local _preview_text_align = Common.preview_text_align
+local _preview_resource_background = Common.preview_resource_background
+local _apply_preview_label_bounds = Common.apply_preview_label_bounds
+local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
+
+function ConfigWindow:init_party_vitals_preview()
+    local holder = self.controls.party_vitals_preview
+    if holder == nil or holder.control == nil then
+        return
+    end
+
+    if self.party_vitals_preview ~= nil then
+        return
+    end
+
+    self.party_vitals_preview = {
+        container = holder.control,
+        members = {},
+        max_members = 24,
+    }
+
+    local p = self.party_vitals_preview
+    p.container:SetMouseVisible(false)
+
+    p.border_top = Turbine.UI.Control()
+    p.border_top:SetParent(p.container)
+    p.border_top:SetMouseVisible(false)
+    p.border_top:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+
+    p.border_bottom = Turbine.UI.Control()
+    p.border_bottom:SetParent(p.container)
+    p.border_bottom:SetMouseVisible(false)
+    p.border_bottom:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+
+    p.border_left = Turbine.UI.Control()
+    p.border_left:SetParent(p.container)
+    p.border_left:SetMouseVisible(false)
+    p.border_left:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+
+    p.border_right = Turbine.UI.Control()
+    p.border_right:SetParent(p.container)
+    p.border_right:SetMouseVisible(false)
+    p.border_right:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+
+    p.root = Turbine.UI.Control()
+    p.root:SetParent(p.container)
+    p.root:SetMouseVisible(false)
+
+    for i = 1, p.max_members do
+        local m = {}
+
+        m.root = Turbine.UI.Control()
+        m.root:SetParent(p.root)
+        m.root:SetMouseVisible(false)
+
+        m.class_icon = Turbine.UI.Control()
+        m.class_icon:SetParent(m.root)
+        m.class_icon:SetMouseVisible(false)
+        m.class_icon:SetZOrder(9)
+        m.class_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+        m.class_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
+        m.class_icon:SetVisible(false)
+
+        m.leader_icon = Turbine.UI.Control()
+        m.leader_icon:SetParent(m.root)
+        m.leader_icon:SetMouseVisible(false)
+        m.leader_icon:SetZOrder(10)
+        m.leader_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+        m.leader_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
+        m.leader_icon:SetVisible(false)
+
+        m.morale_border = Turbine.UI.Control()
+        m.morale_border:SetParent(m.root)
+        m.morale_border:SetMouseVisible(false)
+
+        m.morale_background = Turbine.UI.Control()
+        m.morale_background:SetParent(m.morale_border)
+        m.morale_background:SetMouseVisible(false)
+
+        m.morale_bar = Turbine.UI.Control()
+        m.morale_bar:SetParent(m.morale_background)
+        m.morale_bar:SetMouseVisible(false)
+        m.morale_bar:SetZOrder(1)
+
+        m.bubble_bar = Turbine.UI.Control()
+        m.bubble_bar:SetParent(m.morale_background)
+        m.bubble_bar:SetMouseVisible(false)
+        m.bubble_bar:SetZOrder(2)
+
+        m.morale_label = UI.Widgets.LuiLabel()
+        m.morale_label:SetParent(m.morale_border)
+        m.morale_label:SetMouseVisible(false)
+        m.morale_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        m.morale_label:SetZOrder(10)
+
+        m.power_border = Turbine.UI.Control()
+        m.power_border:SetParent(m.root)
+        m.power_border:SetMouseVisible(false)
+
+        m.power_background = Turbine.UI.Control()
+        m.power_background:SetParent(m.power_border)
+        m.power_background:SetMouseVisible(false)
+
+        m.power_bar = Turbine.UI.Control()
+        m.power_bar:SetParent(m.power_background)
+        m.power_bar:SetMouseVisible(false)
+
+        m.power_label = UI.Widgets.LuiLabel()
+        m.power_label:SetParent(m.power_border)
+        m.power_label:SetMouseVisible(false)
+        m.power_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+
+        table.insert(p.members, m)
+    end
+
+    self:update_party_vitals_preview()
+end
+
+function ConfigWindow:update_party_vitals_preview()
+    if self.party_vitals_preview == nil then
+        self:init_party_vitals_preview()
+    end
+    if self.party_vitals_preview == nil then
+        return
+    end
+
+    local s = _G.loaded_settings
+
+    local raw_scale = tonumber(self.controls.scale.tb:GetText()) or s.global.scale or 1
+    if raw_scale <= 0 then raw_scale = 1 end
+
+    lui_set_number_abbrev_preview_settings(_preview_number_abbrev_settings(self))
+
+    local raw_rows = tonumber(self.controls.party_rows.tb:GetText()) or s.party.layout.rows or 6
+    local rows = raw_rows
+    if rows < 1 then rows = 1 end
+
+    local raw_spacing_x = tonumber(self.controls.party_spacing_x.tb:GetText()) or s.party.layout.spacing_x or 6
+    local raw_spacing_y = tonumber(self.controls.party_spacing_y.tb:GetText()) or s.party.layout.spacing_y or 6
+    local spacing_x = _preview_scaled_int(raw_scale, raw_spacing_x, 6)
+    local spacing_y = _preview_scaled_int(raw_scale, raw_spacing_y, 6)
+    if spacing_x < 0 then spacing_x = 0 end
+    if spacing_y < 0 then spacing_y = 0 end
+
+    local raw_frame_w = tonumber(self.controls.party_width.tb:GetText()) or s.party.frame.width or 250
+    local raw_border = tonumber(self.controls.party_border_width.tb:GetText()) or s.party.frame.border_width or 1
+    local frame_w = _preview_scaled_int(raw_scale, raw_frame_w, 250)
+    local border = _preview_scaled_border(raw_scale, raw_border, 1)
+    if frame_w < 40 then frame_w = 40 end
+    if border < 0 then border = 0 end
+    if border > math.floor(frame_w / 4) then
+        border = math.floor(frame_w / 4)
+    end
+
+    local raw_morale_h = tonumber(self.controls.party_morale_height.tb:GetText()) or s.party.morale.height or 50
+    local raw_power_h = tonumber(self.controls.party_power_height.tb:GetText()) or s.party.power.height or 26
+    local morale_h = _preview_scaled_int(raw_scale, raw_morale_h, 50)
+    local power_h = _preview_scaled_int(raw_scale, raw_power_h, 26)
+    if morale_h < 10 then morale_h = 10 end
+    if power_h < 10 then power_h = 10 end
+
+    local icon_enabled = true
+    if self.controls.party_class_icon_enabled ~= nil then
+        icon_enabled = self.controls.party_class_icon_enabled.cb:IsChecked()
+    else
+        icon_enabled = s.party.class_icon.enabled ~= false
+    end
+
+    local raw_icon_size = tonumber(self.controls.party_class_icon_size.tb:GetText()) or s.party.class_icon.size or 24
+    local raw_icon_x = tonumber(self.controls.party_class_icon_x.tb:GetText()) or s.party.class_icon.x or 2
+    local raw_icon_y = tonumber(self.controls.party_class_icon_y.tb:GetText()) or s.party.class_icon.y or 2
+    local icon_size = _preview_scaled_int(raw_scale, raw_icon_size, 24)
+    local icon_x = _preview_scaled_int(raw_scale, raw_icon_x, 2)
+    local icon_y = _preview_scaled_int(raw_scale, raw_icon_y, 2)
+    if icon_size < 16 then icon_size = 16 end
+    if icon_size > 50 then icon_size = 50 end
+
+    local leader_enabled = true
+    if self.controls.party_leader_icon_enabled ~= nil then
+        leader_enabled = self.controls.party_leader_icon_enabled.cb:IsChecked()
+    else
+        leader_enabled = s.party.leader_icon.enabled ~= false
+    end
+
+    local raw_leader_size = tonumber(self.controls.party_leader_icon_size.tb:GetText()) or s.party.leader_icon.size or 24
+    local raw_leader_x = tonumber(self.controls.party_leader_icon_x.tb:GetText()) or s.party.leader_icon.x or 0
+    local raw_leader_y = tonumber(self.controls.party_leader_icon_y.tb:GetText()) or s.party.leader_icon.y or 2
+    local leader_size = _preview_scaled_int(raw_scale, raw_leader_size, 24)
+    local leader_x = _preview_scaled_int(raw_scale, raw_leader_x, 0)
+    local leader_y = _preview_scaled_int(raw_scale, raw_leader_y, 2)
+    if leader_size < 16 then leader_size = 16 end
+    if leader_size > 50 then leader_size = 50 end
+
+    local power_y = morale_h - border
+    local member_h = morale_h + power_h - border
+    if member_h < 1 then member_h = 1 end
+
+    local morale_bg = _hex_to_color(self.controls.party_morale_background_color.tb:GetText()) or
+        Turbine.UI.Color(0, 0, 0)
+    local border_color = _hex_to_color(self.controls.party_border_color.tb:GetText()) or morale_bg
+    local bubble_color = _hex_to_color(self.controls.party_morale_bubble_color.tb:GetText()) or
+        Turbine.UI.Color(0.53, 0.8, 0.98)
+    local neutral_color = _hex_to_color(self.controls.party_morale_color_neutral.tb:GetText()) or
+        Turbine.UI.Color(0.5, 0.6, 0.5)
+    local high_color = _hex_to_color(self.controls.party_morale_color_high.tb:GetText()) or
+        Turbine.UI.Color(0.290196, 0.639216, 0.286275)
+    local med_color = _hex_to_color(self.controls.party_morale_color_medium.tb:GetText()) or
+        Turbine.UI.Color(0.650980, 0.803922, 0.196078)
+    local low_color = _hex_to_color(self.controls.party_morale_color_low.tb:GetText()) or
+        Turbine.UI.Color(0.87, 0.55, 0.0)
+    local crit_color = _hex_to_color(self.controls.party_morale_color_critical.tb:GetText()) or
+        Turbine.UI.Color(0.87, 0.11, 0.0)
+    local morale_gradient = self.controls.party_morale_gradient.cb:IsChecked() == true
+    local gradient_full = _hex_to_color(self.controls.party_morale_gradient_full.tb:GetText()) or high_color
+    local gradient_mid = _hex_to_color(self.controls.party_morale_gradient_mid.tb:GetText()) or
+        DEFAULT_GRADIENT_MID_COLOR
+    local gradient_low = _hex_to_color(self.controls.party_morale_gradient_low.tb:GetText()) or crit_color
+    Common.update_gradient_preview(self, "party_morale_gradient_preview", gradient_full, gradient_mid, gradient_low)
+    local ressource_bg_matches_missing = self.controls.party_ressource_background_matches_missing.cb:IsChecked() == true
+    local ressource_bg_dimming = tonumber(self.controls.party_ressource_background_dimming.tb:GetText()) or 0.75
+
+    local power_color = _hex_to_color(self.controls.party_power_color.tb:GetText()) or Turbine.UI.Color(0.2, 0.6, 0.98)
+    local wrath_color = _hex_to_color(self.controls.party_wrath_color.tb:GetText()) or Turbine.UI.Color(1, 0.33, 0.13)
+
+    local morale_font_name = self.controls.party_morale_font_name:get_value()
+    if type(morale_font_name) ~= "number" then
+        morale_font_name = (s.party and s.party.morale and s.party.morale.font and s.party.morale.font.name) or
+            LUI_ENUMS.font_name.VERDANA
+    end
+    local morale_font_size = _preview_scaled_number(raw_scale,
+        tonumber(self.controls.party_morale_font_size.tb:GetText()) or s.party.morale.font.size or 16, 16)
+    local morale_font = _require_font(morale_font_name, morale_font_size)
+    local morale_style_enum = self.controls.party_morale_font_style:get_value()
+        or (s.party and s.party.morale and s.party.morale.font and s.party.morale.font.style)
+        or LUI_ENUMS.font_style.OUTLINE
+    local morale_font_style = LUI_TO_LOTRO.font_style[morale_style_enum] or Turbine.UI.FontStyle.None
+    local morale_font_color = _hex_to_color(self.controls.party_morale_font_color.tb:GetText()) or
+        Turbine.UI.Color(1, 1, 1)
+    local morale_outline_color = _hex_to_color(self.controls.party_morale_font_outline_color.tb:GetText()) or
+        Turbine.UI.Color(0, 0, 0)
+
+    local power_font_name = self.controls.party_power_font_name:get_value()
+    if type(power_font_name) ~= "number" then
+        power_font_name = (s.party and s.party.power and s.party.power.font and s.party.power.font.name) or
+            LUI_ENUMS.font_name.VERDANA
+    end
+    local power_font_size = _preview_scaled_number(raw_scale,
+        tonumber(self.controls.party_power_font_size.tb:GetText()) or s.party.power.font.size or 14, 14)
+    local power_font = _require_font(power_font_name, power_font_size)
+    local power_style_enum = self.controls.party_power_font_style:get_value()
+        or (s.party and s.party.power and s.party.power.font and s.party.power.font.style)
+        or LUI_ENUMS.font_style.OUTLINE
+    local power_font_style = LUI_TO_LOTRO.font_style[power_style_enum] or Turbine.UI.FontStyle.None
+    local power_font_color = _hex_to_color(self.controls.party_power_font_color.tb:GetText()) or
+        Turbine.UI.Color(1, 1, 1)
+    local power_outline_color = _hex_to_color(self.controls.party_power_font_outline_color.tb:GetText()) or
+        Turbine.UI.Color(0, 0, 0)
+
+    local morale_fmt = self.controls.party_morale_text.tb:GetText()
+    if type(morale_fmt) ~= "string" then morale_fmt = "" end
+    local bubble_fmt = self.controls.party_morale_bubble_text.tb:GetText()
+    if type(bubble_fmt) ~= "string" then bubble_fmt = "" end
+    local power_fmt = self.controls.party_power_text.tb:GetText()
+    if type(power_fmt) ~= "string" then power_fmt = "" end
+    local morale_fmt_tokens = lui_tokenize_format(morale_fmt)
+    local bubble_fmt_tokens = lui_tokenize_format(bubble_fmt)
+    local power_fmt_tokens = lui_tokenize_format(power_fmt)
+    local morale_align_text = nil
+    if self.controls.party_morale_text_alignment ~= nil and self.controls.party_morale_text_alignment.get_value ~= nil then
+        morale_align_text = self.controls.party_morale_text_alignment:get_value()
+    end
+    if type(morale_align_text) ~= "number" then
+        morale_align_text = (s.party and s.party.morale and s.party.morale.text_alignment) or
+            LUI_ENUMS.text_alignment.CENTER
+    end
+    local power_align_text = nil
+    if self.controls.party_power_text_alignment ~= nil and self.controls.party_power_text_alignment.get_value ~= nil then
+        power_align_text = self.controls.party_power_text_alignment:get_value()
+    end
+    if type(power_align_text) ~= "number" then
+        power_align_text = (s.party and s.party.power and s.party.power.text_alignment) or
+            LUI_ENUMS.text_alignment.CENTER
+    end
+
+    local morale_margin = border +
+        _preview_scaled_int(raw_scale,
+            tonumber(self.controls.party_morale_text_margin.tb:GetText()) or
+            (s.party and s.party.morale and s.party.morale.text_margin) or 4, 4)
+    local power_margin = border +
+        _preview_scaled_int(raw_scale,
+            tonumber(self.controls.party_power_text_margin.tb:GetText()) or
+            (s.party and s.party.power and s.party.power.text_margin) or 4, 4)
+
+    local preview_count = 24
+    local columns = math.ceil(preview_count / rows)
+    if columns < 1 then columns = 1 end
+
+    local used_rows = preview_count
+    if used_rows > rows then used_rows = rows end
+    if used_rows < 1 then used_rows = 1 end
+
+    local total_w = (columns * frame_w) + ((columns - 1) * spacing_x)
+    local total_h = (used_rows * member_h) + ((used_rows - 1) * spacing_y)
+
+    local holder = self.controls.party_vitals_preview
+    local preview_border = 1
+    local desired_height = total_h + 12 + (2 * preview_border)
+    if desired_height < 80 then desired_height = 80 end
+    if holder.height ~= desired_height then
+        holder.height = desired_height
+        self:layout()
+    end
+
+    local p = self.party_vitals_preview
+    local outer_w = total_w + (2 * preview_border)
+    local outer_h = total_h + (2 * preview_border)
+    local container_w = p.container:GetWidth() or outer_w
+    local container_h = p.container:GetHeight() or outer_h
+    local off_x = math.max(0, math.floor((container_w - outer_w) / 2))
+    local off_y = math.max(0, math.floor((container_h - outer_h) / 2))
+    if p.root ~= nil then
+        p.root:SetPosition(off_x + preview_border, off_y + preview_border)
+        p.root:SetSize(total_w, total_h)
+    end
+    _apply_preview_border(p, outer_w, outer_h, off_x, off_y)
+
+    local icon_classes = _G.CLASS_ICON_CLASSES
+
+    for i = 1, #p.members do
+        local m = p.members[i]
+        if m == nil then
+            -- skip
+        elseif i > preview_count then
+            m.root:SetVisible(false)
+        else
+            m.root:SetVisible(true)
+
+            local idx = i - 1
+            local col = math.floor(idx / rows)
+            local row = idx - (col * rows)
+            local x = col * (frame_w + spacing_x)
+            local y = row * (member_h + spacing_y)
+            m.root:SetPosition(x, y)
+            m.root:SetSize(frame_w, member_h)
+
+            if icon_enabled == true and icon_size > 0 then
+                m.class_icon:SetVisible(true)
+                local icon = _G.get_class_icon(icon_classes[((i - 1) % #icon_classes) + 1], icon_size)
+                if icon ~= nil then
+                    if prepare_background_stretch_mode_1 ~= nil then
+                        prepare_background_stretch_mode_1(m.class_icon, icon)
+                    else
+                        m.class_icon:SetBackground(icon)
+                    end
+                    m.class_icon:SetPosition(icon_x, icon_y)
+                    m.class_icon:SetSize(icon_size, icon_size)
+                else
+                    m.class_icon:SetVisible(false)
+                end
+            else
+                m.class_icon:SetVisible(false)
+            end
+
+            if leader_enabled == true and leader_size > 0 and i == 1 then
+                m.leader_icon:SetVisible(true)
+                local icon = _G.get_party_leader_icon ~= nil and _G.get_party_leader_icon() or nil
+                if icon ~= nil then
+                    if prepare_background_stretch_mode_1 ~= nil then
+                        prepare_background_stretch_mode_1(m.leader_icon, icon)
+                    else
+                        m.leader_icon:SetBackground(icon)
+                    end
+                    m.leader_icon:SetPosition(leader_x, leader_y)
+                    m.leader_icon:SetSize(leader_size, leader_size)
+                else
+                    m.leader_icon:SetVisible(false)
+                end
+            else
+                m.leader_icon:SetVisible(false)
+            end
+
+            m.morale_border:SetPosition(0, 0)
+            m.morale_border:SetSize(frame_w, morale_h)
+            m.morale_border:SetBackColor(border_color)
+
+            local inner_w = frame_w - (2 * border)
+            local inner_morale_h = morale_h - (2 * border)
+            if inner_w < 1 then inner_w = 1 end
+            if inner_morale_h < 1 then inner_morale_h = 1 end
+
+            m.morale_background:SetPosition(border, border)
+            m.morale_background:SetSize(inner_w, inner_morale_h)
+            m.morale_background:SetBackColor(morale_bg)
+
+            m.morale_bar:SetPosition(0, 0)
+            m.morale_bar:SetSize(inner_w, inner_morale_h)
+
+            local morale_samples = {
+                { max = 9999, cur = 9999, bubble = 0 },
+                { max = 200000, cur = 101234, bubble = 0 },
+                { max = 150000, cur = 120345, bubble = 25000 },
+                { max = 120000, cur = 120000, bubble = 15000 },
+                { max = 250000, cur = 123456, bubble = 40000 },
+                { max = 999, cur = 875, bubble = 0 },
+                { max = 12345, cur = 9876, bubble = 0 },
+                { max = 54321, cur = 23456, bubble = 0 },
+                { max = 100000, cur = 99999, bubble = 0 },
+                { max = 250000, cur = 123456, bubble = 0 },
+                { max = 999999, cur = 888888, bubble = 0 },
+                { max = 10000, cur = 4321, bubble = 0 },
+                { max = 99999, cur = 54321, bubble = 0 },
+                { max = 600000, cur = 499999, bubble = 0 },
+                { max = 45000, cur = 12345, bubble = 0 },
+            }
+
+            local sample = morale_samples[((i - 1) % #morale_samples) + 1] or {}
+            local morale_max = tonumber(sample.max) or 1
+            local morale_cur = tonumber(sample.cur) or 0
+            local bubble_cur = tonumber(sample.bubble) or 0
+
+            if morale_max <= 0 then morale_max = 1 end
+            if morale_cur < 0 then morale_cur = 0 end
+            if bubble_cur < 0 then bubble_cur = 0 end
+            if morale_cur > morale_max then
+                morale_cur = morale_max
+            end
+
+            local morale_percent = morale_cur / morale_max
+            if morale_percent < 0 then morale_percent = 0 end
+            if morale_percent > 1 then morale_percent = 1 end
+            local morale_fill_w = math.floor((inner_w * morale_percent) + 0.5)
+            if morale_fill_w < 0 then morale_fill_w = 0 end
+            if morale_fill_w > inner_w then morale_fill_w = inner_w end
+            local fill_color = _morale_color_preview(morale_percent, morale_gradient, gradient_full, gradient_mid,
+                gradient_low, high_color, med_color, low_color, crit_color)
+            m.morale_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing,
+                ressource_bg_dimming, morale_bg, fill_color))
+            m.morale_bar:SetBackColor(fill_color)
+            m.morale_bar:SetWidth(morale_fill_w)
+
+            local bubble_percent = 0.0
+            if bubble_cur > 0 then
+                bubble_percent = bubble_cur / morale_max
+                if bubble_percent < 0 then bubble_percent = 0 end
+                if bubble_percent > 1 then bubble_percent = 1 end
+            end
+            local bubble_w = math.floor((inner_w * bubble_percent) + 0.5)
+            if bubble_w < 0 then bubble_w = 0 end
+            if bubble_w > inner_w then bubble_w = inner_w end
+            if bubble_w > 0 then
+                m.bubble_bar:SetVisible(true)
+                m.bubble_bar:SetTop(0)
+                m.bubble_bar:SetHeight(inner_morale_h)
+                m.bubble_bar:SetWidth(bubble_w)
+                local max_left = inner_w - bubble_w
+                if max_left < 0 then max_left = 0 end
+                local left_inner = morale_fill_w
+                if left_inner > max_left then left_inner = max_left end
+                m.bubble_bar:SetLeft(left_inner)
+                m.bubble_bar:SetBackColor(bubble_color)
+            else
+                m.bubble_bar:SetVisible(false)
+            end
+
+            _apply_preview_label_bounds(m.morale_label, morale_align_text, morale_margin, frame_w, morale_h)
+            m.morale_label:SetFont(morale_font)
+            m.morale_label:SetFontStyle(morale_font_style)
+            m.morale_label:SetForeColor(morale_font_color)
+            m.morale_label:SetOutlineColor(morale_outline_color)
+            m.morale_label:SetTextAlignment(_preview_text_align(morale_align_text))
+
+            local bubble_text = ""
+            if bubble_cur > 0 then
+                bubble_text = lui_abbrev_number(bubble_cur)
+            end
+            local morale_pct_text = tostring(math.floor(morale_percent * 100 + 0.5)) .. "%"
+            local ctx = {
+                c = lui_abbrev_number(morale_cur),
+                t = lui_abbrev_number(morale_max),
+                p = morale_pct_text,
+                b = bubble_text,
+                B = "",
+                name = TR("Player ") .. tostring(i),
+                level = "150",
+            }
+
+            if bubble_cur > 0 and string.len(bubble_fmt) > 0 then
+                ctx.B = lui_format_tokenized(bubble_fmt_tokens, { b = ctx.b })
+            end
+
+            m.morale_label:SetText(lui_format_tokenized(morale_fmt_tokens, ctx))
+
+            m.power_border:SetPosition(0, power_y)
+            m.power_border:SetSize(frame_w, power_h)
+            m.power_border:SetBackColor(border_color)
+
+            local inner_power_h = power_h - (2 * border)
+            if inner_power_h < 1 then inner_power_h = 1 end
+
+            m.power_background:SetPosition(border, border)
+            m.power_background:SetSize(inner_w, inner_power_h)
+
+            m.power_bar:SetPosition(0, 0)
+            m.power_bar:SetSize(inner_w, inner_power_h)
+
+            local power_percent = 0.66 - ((i - 1) * 0.08)
+            if power_percent < 0.08 then power_percent = 0.08 end
+            if i == 1 then
+                power_percent = 1.0
+            end
+            local power_fill_w = math.floor((inner_w * power_percent) + 0.5)
+            if power_fill_w < 0 then power_fill_w = 0 end
+            if power_fill_w > inner_w then power_fill_w = inner_w end
+
+            m.power_bar:SetWidth(power_fill_w)
+            local power_fill_color = (i % 3) == 0 and wrath_color or power_color
+            m.power_bar:SetBackColor(power_fill_color)
+            m.power_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing,
+                ressource_bg_dimming, morale_bg, power_fill_color))
+
+            _apply_preview_label_bounds(m.power_label, power_align_text, power_margin, frame_w, power_h)
+            m.power_label:SetFont(power_font)
+            m.power_label:SetFontStyle(power_font_style)
+            m.power_label:SetForeColor(power_font_color)
+            m.power_label:SetOutlineColor(power_outline_color)
+            m.power_label:SetTextAlignment(_preview_text_align(power_align_text))
+
+            local power_max = 30000
+            local power_cur = math.floor(power_max * power_percent + 0.5)
+            local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
+            m.power_label:SetText(lui_format_tokenized(power_fmt_tokens, {
+                c = lui_abbrev_number(power_cur),
+                t = lui_abbrev_number(power_max),
+                p = power_pct_text,
+                name = TR("Player ") .. tostring(i),
+                level = "150",
+            }))
+        end
+    end
+
+    lui_clear_number_abbrev_preview_settings()
+end

@@ -444,7 +444,7 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
         if ctor == nil then
             error("Missing StatusBar widget constructor: MoneyWidget")
         end
-        return ctor(widget_w, bar_h, font, widget_cfg ~= nil and widget_cfg.icon == true, widget_cfg.content_alignment)
+        return ctor(widget_w, bar_h, font, widget_cfg.content_alignment)
     elseif widget_key == "wallet" then
         local ctor = _widget_ctor("WalletWidget")
         if ctor == nil then
@@ -709,8 +709,15 @@ end
 function StatusBarWindow:_clear_widgets()
     for i = 1, #self._widgets do
         local w = self._widgets[i]
-        if w ~= nil and w.destroy ~= nil then
-            w:destroy()
+        if w ~= nil then
+            if w.SetVisible ~= nil then
+                w:SetVisible(false)
+            end
+            if w.destroy ~= nil then
+                w:destroy()
+            elseif w.SetParent ~= nil then
+                w:SetParent(nil)
+            end
         end
     end
     self._widgets = {}
@@ -1839,8 +1846,12 @@ function StatusBarWindow:_remove_widget_instance(widget)
     if raw_sb == nil or zone_key == nil then
         return
     end
+    local hid_widget = self:_set_widget_drag_hidden(widget, true)
     local removed_token = self:_remove_token_from_zone(raw_sb, zone_key, visible_index)
     if removed_token == nil then
+        if hid_widget == true then
+            self:_set_widget_drag_hidden(widget, false)
+        end
         return
     end
 

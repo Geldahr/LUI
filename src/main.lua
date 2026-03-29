@@ -224,10 +224,10 @@ Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Vitals, fals
 Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Target, false)
 Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Party, false)
 
-CONFIG_WINDOW = UI.Settings.ConfigWindow()
+CONFIG_WINDOW = Settings.ConfigWindow()
 FIRST_RUN_QUICK_SETUP_WINDOW = nil
 if _G.loaded_settings_was_new == true then
-    FIRST_RUN_QUICK_SETUP_WINDOW = UI.Settings.FirstRunQuickSetup()
+    FIRST_RUN_QUICK_SETUP_WINDOW = Settings.FirstRunQuickSetup()
     FIRST_RUN_QUICK_SETUP_WINDOW:open()
 end
 

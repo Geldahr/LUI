@@ -238,7 +238,7 @@ function LuiDropdown:set_value(value)
             break
         end
     end
-    self:_set_index(found)
+    self:_set_index(found, true)
 end
 
 function LuiDropdown:set_mapped_options(labels, values)
@@ -386,7 +386,10 @@ end
 -- Private functions
 ---------------------------------------------------------------------
 
-function LuiDropdown:_set_index(index)
+function LuiDropdown:_set_index(index, fire_event)
+    local previous_index = self._index
+    local previous_value = self._value
+
     if type(index) ~= "number" then
         index = nil
     else
@@ -405,6 +408,13 @@ function LuiDropdown:_set_index(index)
     end
     self.button:SetText(t)
     self:_sync_active_items()
+
+    if fire_event == true and previous_index == self._index and previous_value == self._value then
+        return
+    end
+    if fire_event == true and type(self.ValueChanged) == "function" then
+        self:ValueChanged(self._value)
+    end
 end
 
 function LuiDropdown:_rebuild_items()
@@ -422,11 +432,8 @@ function LuiDropdown:_rebuild_items()
             b:SetFont(self._item_font)
         end
         b.Click = function()
-            self:_set_index(i)
+            self:_set_index(i, true)
             self:Close()
-            if type(self.ValueChanged) == "function" then
-                self:ValueChanged(self._value)
-            end
         end
         self.popup_list:AddItem(b)
         table.insert(self._items, b)

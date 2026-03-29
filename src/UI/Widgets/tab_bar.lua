@@ -249,6 +249,7 @@ LuiTabBar.position = {
 function LuiTabBar:Constructor()
     Turbine.UI.Control.Constructor(self)
 
+    self.on_tab_changed = nil
     self.selection_changed = nil
 
     self._scale = 1
@@ -550,6 +551,78 @@ function LuiTabBar:add_tab(text, widget)
     return #self._tabs
 end
 
+function LuiTabBar:widget_at(index)
+    if type(index) ~= "number" then
+        index = tonumber(index)
+    end
+    if index == nil then
+        return nil
+    end
+
+    index = _round(index)
+    local entry = self._tabs[index]
+    return entry ~= nil and entry.widget or nil
+end
+
+function LuiTabBar:text_at(index)
+    if type(index) ~= "number" then
+        index = tonumber(index)
+    end
+    if index == nil then
+        return nil
+    end
+
+    index = _round(index)
+    local entry = self._tabs[index]
+    return entry ~= nil and entry.text or nil
+end
+
+function LuiTabBar:each_widget(fn)
+    if type(fn) ~= "function" then
+        return
+    end
+
+    for i = 1, #self._tabs do
+        local entry = self._tabs[i]
+        fn(i, entry ~= nil and entry.widget or nil, entry ~= nil and entry.text or nil)
+    end
+end
+
+function LuiTabBar:find_index(fn)
+    if type(fn) ~= "function" then
+        return nil
+    end
+
+    for i = 1, #self._tabs do
+        local entry = self._tabs[i]
+        local widget = entry ~= nil and entry.widget or nil
+        local text = entry ~= nil and entry.text or nil
+        if fn(i, widget, text) == true then
+            return i, widget, text
+        end
+    end
+
+    return nil
+end
+
+function LuiTabBar:get_selected_text()
+    return self:text_at(self._selected_index)
+end
+
+function LuiTabBar:_emit_tab_changed(index)
+    local entry = self._tabs[index]
+    local widget = entry ~= nil and entry.widget or nil
+    local text = entry ~= nil and entry.text or nil
+
+    if type(self.on_tab_changed) == "function" then
+        self.on_tab_changed(index, widget, text)
+    end
+
+    if type(self.selection_changed) == "function" then
+        self:selection_changed(index, text, widget)
+    end
+end
+
 function LuiTabBar:set_selected_index(index, fire_event)
     if type(index) ~= "number" then
         index = tonumber(index)
@@ -583,9 +656,8 @@ function LuiTabBar:set_selected_index(index, fire_event)
 
     self:_layout()
 
-    if fire_event ~= false and type(self.selection_changed) == "function" then
-        local entry = self._tabs[index]
-        self:selection_changed(index, entry ~= nil and entry.text or nil, entry ~= nil and entry.widget or nil)
+    if fire_event ~= false then
+        self:_emit_tab_changed(index)
     end
 end
 
