@@ -26,6 +26,10 @@ local BASE_PICKER_PAD = 7
 local BASE_PICKER_OFFSET = 4
 local BASE_PICKER_CURSOR = 7
 
+local PICKER_DRAG_NONE = 0
+local PICKER_DRAG_HS = 1
+local PICKER_DRAG_VALUE = 2
+
 local function _scaled_size(scale, value)
     return value * scale
 end
@@ -359,6 +363,7 @@ function LuiColorField:open_picker()
 
     local picker = {}
     picker.panel = panel
+    picker._drag_target = PICKER_DRAG_NONE
 
     picker.hs = Turbine.UI.Control()
     picker.hs:SetParent(panel)
@@ -469,14 +474,71 @@ function LuiColorField:open_picker()
         self:_close_picker(true)
     end
 
-    picker.hs.MouseUp = function(sender, args)
-        self:_picker_set_hs_from_mouse(args, sender)
+    local function _picker_mouse_to_local(args, source, control)
+        if args == nil or source == nil or control == nil then
+            return nil
+        end
+
+        local sx, sy = source:PointToScreen(args.X or 0, args.Y or 0)
+        local cx, cy = control:PointToScreen(0, 0)
+        return {
+            X = sx - cx,
+            Y = sy - cy,
+        }
+    end
+
+    local function _update_hs(args, source)
+        self:_picker_set_hs_from_mouse(_picker_mouse_to_local(args, source, picker.hs), picker.hs)
         self:_picker_sync_ui(picker)
     end
 
-    picker.value_base.MouseUp = function(sender, args)
-        self:_picker_set_v_from_mouse(args, sender)
+    local function _update_v(args, source)
+        self:_picker_set_v_from_mouse(_picker_mouse_to_local(args, source, picker.value_base), picker.value_base)
         self:_picker_sync_ui(picker)
+    end
+
+    picker.hs.MouseDown = function(sender, args)
+        picker._drag_target = PICKER_DRAG_HS
+        _update_hs(args, sender)
+    end
+
+    picker.hs.MouseMove = function(sender, args)
+        if picker._drag_target == PICKER_DRAG_HS then
+            _update_hs(args, sender)
+        end
+    end
+
+    picker.hs.MouseUp = function(sender, args)
+        _update_hs(args, sender)
+        picker._drag_target = PICKER_DRAG_NONE
+    end
+
+    picker.value_base.MouseDown = function(sender, args)
+        picker._drag_target = PICKER_DRAG_VALUE
+        _update_v(args, sender)
+    end
+
+    picker.value_base.MouseMove = function(sender, args)
+        if picker._drag_target == PICKER_DRAG_VALUE then
+            _update_v(args, sender)
+        end
+    end
+
+    picker.value_base.MouseUp = function(sender, args)
+        _update_v(args, sender)
+        picker._drag_target = PICKER_DRAG_NONE
+    end
+
+    overlay.MouseMove = function(sender, args)
+        if picker._drag_target == PICKER_DRAG_HS then
+            _update_hs(args, sender)
+        elseif picker._drag_target == PICKER_DRAG_VALUE then
+            _update_v(args, sender)
+        end
+    end
+
+    overlay.MouseUp = function()
+        picker._drag_target = PICKER_DRAG_NONE
     end
 
     overlay.MouseDown = function(sender, args)
