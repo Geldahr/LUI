@@ -11,6 +11,7 @@ function EquipmentWearWidget:Constructor(widget_w, bar_h, font, icon_path, wear_
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.equipment = nil
     self._dirty = true
+    self._item_callbacks_dirty = true
     self._last_scan_at = 0
     self._scan_every = 2.0
     self._equipment_callbacks = {}
@@ -51,6 +52,11 @@ function EquipmentWearWidget:_mark_dirty()
     self._dirty = true
 end
 
+function EquipmentWearWidget:_mark_item_callbacks_dirty()
+    self._item_callbacks_dirty = true
+    self._dirty = true
+end
+
 function EquipmentWearWidget:_ensure_equipment()
     if self.equipment ~= nil then
         return
@@ -73,6 +79,7 @@ function EquipmentWearWidget:_ensure_equipment()
 
     self.equipment = equipment
     self:_attach_equipment_callbacks()
+    self._item_callbacks_dirty = true
     self._dirty = true
 end
 
@@ -85,10 +92,10 @@ function EquipmentWearWidget:_attach_equipment_callbacks()
     self:_detach_equipment_callbacks()
 
     local equipped_cb = add_callback(equipment, "ItemEquipped", function()
-        self:_mark_dirty()
+        self:_mark_item_callbacks_dirty()
     end)
     local unequipped_cb = add_callback(equipment, "ItemUnequipped", function()
-        self:_mark_dirty()
+        self:_mark_item_callbacks_dirty()
     end)
 
     self._equipment_callbacks = {
@@ -135,7 +142,11 @@ end
 function EquipmentWearWidget:_scan(now)
     self._dirty = false
     self._last_scan_at = now
-    self:_detach_item_callbacks()
+    local rebind_item_callbacks = self._item_callbacks_dirty == true
+    if rebind_item_callbacks then
+        self:_detach_item_callbacks()
+        self._item_callbacks_dirty = false
+    end
 
     local equipment = self.equipment
     if equipment == nil or equipment.GetItem == nil then
@@ -157,7 +168,9 @@ function EquipmentWearWidget:_scan(now)
                 if weakest == nil or percent < weakest then
                     weakest = percent
                 end
-                self:_attach_item_callback(item)
+                if rebind_item_callbacks then
+                    self:_attach_item_callback(item)
+                end
             end
         end
     end

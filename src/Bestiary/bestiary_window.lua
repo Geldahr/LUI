@@ -57,8 +57,8 @@ local BASE_TAXONOMY_START_RATIO = 0.40
 local BASE_RESIZE_REFRESH_DELAY = 0.10
 local BASE_COLUMN_W = 600
 
-local AREA_COMPASS_ICON = "LUI/src/PluginAssets/ui/compass_64.tga"
-local AREA_COMPASS_HOVER_ICON = "LUI/src/PluginAssets/ui/compass_hover_64.tga"
+local AREA_COMPASS_ICON = "LUI/assets/ui/compass_64.tga"
+local AREA_COMPASS_HOVER_ICON = "LUI/assets/ui/compass_hover_64.tga"
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
