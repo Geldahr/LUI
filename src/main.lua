@@ -14,10 +14,8 @@ import "LUI.src.Assets"
 import "LUI.src.Bestiary"
 import "LUI.src.StatusBar.api_chat_bridge"
 
-local StatusBarApiChat = _G.LUI_STATUS_BAR_API_CHAT
-
-if StatusBarApiChat ~= nil and StatusBarApiChat.install_callback ~= nil then
-    StatusBarApiChat.install_callback()
+if _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK ~= nil then
+    _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
 end
 
 local function set_backpacks_enabled(enabled)
@@ -161,8 +159,8 @@ function apply_status_bar_settings()
     if sb.enabled == true then
         STATUS_BAR = UI.StatusBarWindow()
         _G.STATUS_BAR = STATUS_BAR
-        if StatusBarApiChat ~= nil and StatusBarApiChat.flush_pending_items ~= nil then
-            StatusBarApiChat.flush_pending_items()
+        if _G.LUI_STATUS_BAR_API_FLUSH_PENDING_ITEMS ~= nil then
+            _G.LUI_STATUS_BAR_API_FLUSH_PENDING_ITEMS()
         end
     end
 end
@@ -238,8 +236,8 @@ Turbine.Shell.WriteLine(string.format(
 
 Plugins["LUI"].Unload = function()
     save_settings()
-    if StatusBarApiChat ~= nil and StatusBarApiChat.uninstall_callback ~= nil then
-        StatusBarApiChat.uninstall_callback()
+    if _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK ~= nil then
+        _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
     end
     _G.STATUS_BAR = nil
     if BESTIARY_WINDOW ~= nil then

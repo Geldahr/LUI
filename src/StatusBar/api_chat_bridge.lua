@@ -1,11 +1,8 @@
 import "LUI.src.StatusBar.api_command_parser"
 
-_G.LUI_PENDING_STATUS_BAR_API_ITEMS = _G.LUI_PENDING_STATUS_BAR_API_ITEMS or {}
-_G.LUI_STATUS_BAR_API_CHAT = _G.LUI_STATUS_BAR_API_CHAT or {}
-
-local Chat = _G.LUI_STATUS_BAR_API_CHAT
 local Parser = _G.STATUS_BAR_API_COMMAND_PARSER
-local PENDING_STATUS_BAR_API_ITEMS = _G.LUI_PENDING_STATUS_BAR_API_ITEMS
+local PENDING_STATUS_BAR_API_ITEMS = {}
+local status_bar_api_chat_callback = nil
 
 local function _log_status_bar_api_chat(message)
     if Turbine ~= nil and Turbine.Shell ~= nil and Turbine.Shell.WriteLine ~= nil then
@@ -21,7 +18,7 @@ local function _register_status_bar_api_item(spec)
     return _G.STATUS_BAR_COMMON.register_status_bar_api_item(spec)
 end
 
-function Chat.flush_pending_items()
+local function flush_pending_items()
     if _G.STATUS_BAR == nil or _G.STATUS_BAR_COMMON == nil or _G.STATUS_BAR_COMMON.register_status_bar_api_item == nil then
         return
     end
@@ -38,7 +35,7 @@ function Chat.flush_pending_items()
     end
 end
 
-function Chat.push_item(spec)
+local function push_item(spec)
     if _G.STATUS_BAR ~= nil and _G.STATUS_BAR_COMMON ~= nil and _G.STATUS_BAR_COMMON.register_status_bar_api_item ~= nil then
         local _, err = _register_status_bar_api_item(spec)
         if err ~= nil then
@@ -48,10 +45,10 @@ function Chat.push_item(spec)
     end
 
     PENDING_STATUS_BAR_API_ITEMS[#PENDING_STATUS_BAR_API_ITEMS + 1] = spec
-    Chat.flush_pending_items()
+    flush_pending_items()
 end
 
-function Chat.handle_chat_message(args)
+local function handle_chat_message(args)
     if args.ChatType ~= Turbine.ChatType.Standard then
         return
     end
@@ -74,24 +71,28 @@ function Chat.handle_chat_message(args)
         return
     end
 
-    Chat.push_item(spec)
+    push_item(spec)
 end
 
-function Chat.install_callback()
-    if _G.LUI_STATUS_BAR_API_CHAT_CALLBACK ~= nil then
+function _G.LUI_STATUS_BAR_API_FLUSH_PENDING_ITEMS()
+    flush_pending_items()
+end
+
+function _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
+    if status_bar_api_chat_callback ~= nil then
         return
     end
 
-    _G.LUI_STATUS_BAR_API_CHAT_CALLBACK = add_callback(Turbine.Chat, "Received", function(_, args)
-        Chat.handle_chat_message(args)
+    status_bar_api_chat_callback = add_callback(Turbine.Chat, "Received", function(_, args)
+        handle_chat_message(args)
     end)
 end
 
-function Chat.uninstall_callback()
-    if _G.LUI_STATUS_BAR_API_CHAT_CALLBACK == nil then
+function _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
+    if status_bar_api_chat_callback == nil then
         return
     end
 
-    remove_callback(Turbine.Chat, "Received", _G.LUI_STATUS_BAR_API_CHAT_CALLBACK)
-    _G.LUI_STATUS_BAR_API_CHAT_CALLBACK = nil
+    remove_callback(Turbine.Chat, "Received", status_bar_api_chat_callback)
+    status_bar_api_chat_callback = nil
 end
