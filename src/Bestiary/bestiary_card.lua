@@ -65,6 +65,7 @@ local COLOR_LABEL = Turbine.UI.Color(1, 0.92, 0.82, 0.56)
 local COLOR_VALUE = Turbine.UI.Color(1, 0.93, 0.90, 0.84)
 local COLOR_VALUE_CYAN = Turbine.UI.Color(1, 0.30, 0.92, 1.00)
 local COLOR_VALUE_GREEN = Turbine.UI.Color(1, 0.34, 0.82, 0.30)
+local COLOR_VALUE_GREY = Turbine.UI.Color(1, 0.56, 0.59, 0.61)
 local COLOR_HINT = Turbine.UI.Color(1, 0.55, 0.60, 0.63)
 local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
@@ -78,6 +79,18 @@ local COLOR_VARIANT_TAB_BG_HOVER = Turbine.UI.Color(1, 0.08, 0.14, 0.22)
 local COLOR_VARIANT_TAB_BG_SELECTED = Turbine.UI.Color(1, 0.10, 0.18, 0.28)
 local COLOR_VARIANT_TAB_TEXT = Turbine.UI.Color(1, 0.83, 0.78, 0.69)
 local COLOR_VARIANT_TAB_TEXT_SELECTED = Turbine.UI.Color(1, 0.94, 0.82, 0.55)
+
+local COMBAT_SCALE_COLORS = {
+    feeble = Turbine.UI.Color(1, 0.26, 0.77, 0.42),
+    poor = Turbine.UI.Color(1, 0.49, 0.81, 0.31),
+    fair = Turbine.UI.Color(1, 0.79, 0.84, 0.29),
+    average = Turbine.UI.Color(1, 0.88, 0.71, 0.30),
+    good = Turbine.UI.Color(1, 0.88, 0.54, 0.29),
+    superior = Turbine.UI.Color(1, 0.85, 0.35, 0.27),
+    remarkable = Turbine.UI.Color(1, 0.79, 0.26, 0.26),
+    incredible = Turbine.UI.Color(1, 0.67, 0.20, 0.23),
+    extraordinary = Turbine.UI.Color(1, 0.59, 0.16, 0.20),
+}
 
 local function _scaled_size(value)
     return value * _G.settings.global.scale
@@ -123,6 +136,56 @@ local function _lower_text(text)
         return ""
     end
     return string.lower(text)
+end
+
+local function _is_numeric_text(text)
+    return type(text) == "string" and string.match(text, "^%d+$") ~= nil
+end
+
+local function _rating_key(value)
+    local text = _trim(value)
+    if text == nil then
+        return nil
+    end
+    return string.lower(text)
+end
+
+local function _resolve_scale_color(scale, value)
+    local key = _rating_key(value)
+    if key == nil then
+        return nil
+    end
+    if key == "unknown" or key == "false" or _is_numeric_text(key) == true then
+        return COLOR_VALUE_GREY
+    end
+    return scale[key] or COLOR_VALUE_GREY
+end
+
+local function _combat_value_color(row_key, value)
+    local key = _rating_key(value)
+    if key == nil then
+        return nil
+    end
+
+    if row_key == "fm" or row_key == "sm" or row_key == "rt" then
+        if key == "false" or key == "no" then
+            return COMBAT_SCALE_COLORS.feeble
+        end
+        if key == "true" or key == "yes" then
+            return COMBAT_SCALE_COLORS.incredible
+        end
+        return COLOR_VALUE_GREY
+    end
+
+    return _resolve_scale_color(COMBAT_SCALE_COLORS, value)
+end
+
+local function _resistance_value_color(_, value)
+    return _resolve_scale_color(COMBAT_SCALE_COLORS, value)
+end
+
+local function _mitigation_value_color(_, value)
+    return _resolve_scale_color(COMBAT_SCALE_COLORS, value)
 end
 
 local function _normalize_bestiary_name(name)
@@ -1379,13 +1442,21 @@ local function _layout_parallel_row_sets(left_rows, right_rows, x_left, x_right,
     layout_rows(right_rows, x_right, w_right, right_label_ratio)
 end
 
-local function _bind_row_set(rows, values)
+local function _bind_row_set(rows, values, color_resolver, default_value_color)
+    default_value_color = default_value_color or COLOR_VALUE
     for i = 1, #rows do
+        local raw_value = nil
         local value = "-"
         if type(values) == "table" then
-            value = _display_text(values[rows[i].key])
+            raw_value = values[rows[i].key]
+            value = _display_text(raw_value)
         end
         rows[i].value:SetText(value)
+        if type(color_resolver) == "function" then
+            rows[i].value:SetForeColor(color_resolver(rows[i].key, raw_value) or default_value_color)
+        else
+            rows[i].value:SetForeColor(default_value_color)
+        end
     end
 end
 
@@ -2192,16 +2263,16 @@ function BestiaryCard:_apply_record(record)
     self.morale_value:SetText(_format_morale_text(record))
     self.power_value:SetText(_format_power_text(record))
 
-    _bind_row_set(self.location_rows, record)
+    _bind_row_set(self.location_rows, record, nil, COLOR_VALUE)
     _bind_row_set(self.creature_rows, {
         type = record.type,
         genus = record.genus,
         species = record.species or record.subcategory,
-    })
-    _bind_row_set(self.combat_rows, record.combat_effectiveness)
-    _bind_row_set(self.resistance_rows, record.resistances)
-    _bind_row_set(self.mitigation_left_rows, record.mitigation)
-    _bind_row_set(self.mitigation_right_rows, record.mitigation)
+    }, nil, COLOR_VALUE)
+    _bind_row_set(self.combat_rows, record.combat_effectiveness, _combat_value_color, COLOR_VALUE)
+    _bind_row_set(self.resistance_rows, record.resistances, _resistance_value_color, COLOR_VALUE)
+    _bind_row_set(self.mitigation_left_rows, record.mitigation, _mitigation_value_color, COLOR_VALUE)
+    _bind_row_set(self.mitigation_right_rows, record.mitigation, _mitigation_value_color, COLOR_VALUE)
 
     _bind_scroll_label_area(self.abilities_area, record.abilities)
     _bind_scroll_label_area(self.quests_area, record.quest_involvement)
@@ -2233,9 +2304,9 @@ function BestiaryCard:apply_settings()
     _style_row_set(self.location_rows, COLOR_VALUE)
     _style_row_set(self.creature_rows, COLOR_VALUE)
     _style_row_set(self.combat_rows, COLOR_VALUE)
-    _style_row_set(self.resistance_rows, COLOR_VALUE_GREEN)
-    _style_row_set(self.mitigation_left_rows, COLOR_VALUE_CYAN)
-    _style_row_set(self.mitigation_right_rows, COLOR_VALUE_CYAN)
+    _style_row_set(self.resistance_rows, COLOR_VALUE)
+    _style_row_set(self.mitigation_left_rows, COLOR_VALUE)
+    _style_row_set(self.mitigation_right_rows, COLOR_VALUE)
 
     _style_scroll_label_area(self.abilities_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
     _style_scroll_label_area(self.quests_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
