@@ -6,6 +6,7 @@ import "LUI.src.UI.Widgets"
 Bestiary = Bestiary or {}
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
+local DATA_ACCESS = Bestiary.DataAccess
 
 local BASE_WIDTH = 550
 local BASE_HEIGHT = 570
@@ -345,6 +346,9 @@ local function _merge_entry(dst, src, name)
     elseif type(dst.base_name) ~= "string" or dst.base_name == "" then
         dst.base_name = name
     end
+    if type(src.tl) == "string" and src.tl ~= "" then
+        dst.variant_tab_label = src.tl
+    end
     if type(src.v) == "string" and src.v ~= "" then
         dst.variant_label = src.v
     end
@@ -454,6 +458,7 @@ local function _merged_entry_for_name(name)
 
     local merged = {
         base_name = nil,
+        variant_tab_label = nil,
         variant_label = nil,
         display_name = normalized,
         genus = nil,
@@ -480,7 +485,12 @@ local function _merged_entry_for_name(name)
     }
 
     local resolved_name = normalized
-    local builtin_name, builtin = _lookup_named_entry(BUILTIN_BESTIARY, normalized)
+    local builtin_name, builtin = nil, nil
+    if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_entry ~= nil and DATA_ACCESS.get_builtin_index ~= nil then
+        builtin_name, builtin = DATA_ACCESS.resolve_entry(BUILTIN_BESTIARY, DATA_ACCESS.get_builtin_index(), normalized)
+    else
+        builtin_name, builtin = _lookup_named_entry(BUILTIN_BESTIARY, normalized)
+    end
     if type(builtin) ~= "table" then
         return nil
     end
@@ -490,7 +500,12 @@ local function _merged_entry_for_name(name)
 
     local cache = _G.bestiary_cache
     if type(cache) == "table" then
-        local cached_name, cached = _lookup_named_entry(cache, normalized)
+        local cached_name, cached = nil, nil
+        if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_entry ~= nil and DATA_ACCESS.get_cache_index ~= nil then
+            cached_name, cached = DATA_ACCESS.resolve_entry(cache, DATA_ACCESS.get_cache_index(), normalized)
+        else
+            cached_name, cached = _lookup_named_entry(cache, normalized)
+        end
         if type(cached) == "table" then
             resolved_name = cached_name or resolved_name
             _merge_entry(merged, cached, resolved_name)
@@ -674,6 +689,7 @@ local function _build_record_from_entry(resolved_name, entry, exact_level, exact
         name = type(entry.display_name) == "string" and entry.display_name or resolved_name,
         base_name = type(entry.base_name) == "string" and entry.base_name ~= "" and entry.base_name or
             (type(entry.display_name) == "string" and entry.display_name or resolved_name),
+        variant_tab_label = type(entry.variant_tab_label) == "string" and entry.variant_tab_label or nil,
         variant_label = type(entry.variant_label) == "string" and entry.variant_label or nil,
         genus = entry.genus,
         subcategory = entry.subcategory,
@@ -747,6 +763,9 @@ local function _record_primary_variant_label(record)
     if type(record) ~= "table" then
         return TR("Variant")
     end
+    if type(record.variant_tab_label) == "string" and record.variant_tab_label ~= "" then
+        return record.variant_tab_label
+    end
     if type(record.variant_label) == "string" and record.variant_label ~= "" then
         return record.variant_label
     end
@@ -772,6 +791,9 @@ local function _record_fallback_variant_label(record)
     if type(record) ~= "table" then
         return primary
     end
+    if type(record.variant_label) == "string" and record.variant_label ~= "" and _lower_text(record.variant_label) ~= primary_lower then
+        return record.variant_label
+    end
     if type(record.instance) == "string" and record.instance ~= "" and _lower_text(record.instance) ~= primary_lower then
         return record.instance
     end
@@ -782,6 +804,22 @@ local function _record_fallback_variant_label(record)
         return record.region
     end
     return primary
+end
+
+local function _record_disambiguated_variant_label(record)
+    local primary = _record_primary_variant_label(record)
+    local suffix = _record_fallback_variant_label(record)
+    if _lower_text(suffix) == _lower_text(primary) then
+        local variant = type(record) == "table" and record.variant_label or nil
+        if type(variant) == "string" and variant ~= "" and _lower_text(variant) ~= _lower_text(primary) then
+            suffix = variant
+        end
+    end
+    if _lower_text(suffix) == _lower_text(primary) then
+        return primary
+    end
+
+    return primary .. " · " .. suffix
 end
 
 local function _assign_variant_tab_labels(records)
@@ -796,13 +834,17 @@ local function _assign_variant_tab_labels(records)
 
     for _, count in pairs(counts) do
         if count > 1 then
-            counts = {}
+            local disambiguated_counts = {}
             for i = 1, #records do
-                local label = _record_fallback_variant_label(records[i])
-                records[i].tab_label = label
-                local key = _lower_text(label)
-                counts[key] = _to_number(counts[key], 0) + 1
+                local primary = _record_primary_variant_label(records[i])
+                local primary_key = _lower_text(primary)
+                if _to_number(counts[primary_key], 0) > 1 then
+                    records[i].tab_label = _record_disambiguated_variant_label(records[i])
+                end
+                local key = _lower_text(records[i].tab_label)
+                disambiguated_counts[key] = _to_number(disambiguated_counts[key], 0) + 1
             end
+            counts = disambiguated_counts
             break
         end
     end
@@ -811,6 +853,19 @@ local function _assign_variant_tab_labels(records)
         if count > 1 then
             for i = 1, #records do
                 records[i].tab_label = records[i].name or records[i].key or TR("Variant")
+            end
+
+            local keyed_counts = {}
+            for i = 1, #records do
+                local key = _lower_text(records[i].tab_label)
+                keyed_counts[key] = _to_number(keyed_counts[key], 0) + 1
+            end
+
+            for i = 1, #records do
+                local key = _lower_text(records[i].tab_label)
+                if _to_number(keyed_counts[key], 0) > 1 then
+                    records[i].tab_label = records[i].tab_label .. " #" .. tostring(i)
+                end
             end
             return
         end
@@ -882,9 +937,20 @@ local function _collect_variant_group(selected_record)
 
     append_record(selected_record)
 
-    local function collect_from_source(source)
+    local function collect_from_source(source, index_getter)
         if type(source) ~= "table" then
             return
+        end
+
+        if DATA_ACCESS ~= nil and DATA_ACCESS.get_group_keys ~= nil then
+            local index = type(index_getter) == "function" and index_getter() or nil
+            local group_keys = DATA_ACCESS.get_group_keys(source, index, base_name)
+            if type(group_keys) == "table" then
+                for i = 1, #group_keys do
+                    append_record(_build_record_for_name(group_keys[i]))
+                end
+                return
+            end
         end
 
         for entry_name, entry in pairs(source) do
@@ -897,8 +963,8 @@ local function _collect_variant_group(selected_record)
         end
     end
 
-    collect_from_source(BUILTIN_BESTIARY)
-    collect_from_source(_G.bestiary_cache)
+    collect_from_source(BUILTIN_BESTIARY, DATA_ACCESS ~= nil and DATA_ACCESS.get_builtin_index or nil)
+    collect_from_source(_G.bestiary_cache, DATA_ACCESS ~= nil and DATA_ACCESS.get_cache_index or nil)
 
     table.sort(records, _compare_variant_records)
     _assign_variant_tab_labels(records)

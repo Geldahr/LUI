@@ -8,6 +8,7 @@ import "LUI.src.Utils.font"
 Bestiary = Bestiary or {}
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
+local DATA_ACCESS = Bestiary.DataAccess
 
 -- Bestiary icon for shortcut button: 0x410E0435
 -- Parchment icon: 0x410E9288
@@ -505,34 +506,36 @@ local function _merged_bestiary()
 
         for name, entry in pairs(source) do
             if type(name) == "string" and type(entry) == "table" then
-                if type(merged[name]) ~= "table" then
-                    merged[name] = {
-                        display_name = name,
-                        genus = nil,
-                        subcategory = nil,
-                        species = nil,
-                        region = nil,
-                        area = nil,
-                        instance = nil,
-                        monster_type = nil,
-                        static_levels = nil,
-                        static_morale = nil,
-                        static_power = nil,
-                        combat_effectiveness = {},
-                        resistances = {},
-                        mitigation = {},
-                        abilities = {},
-                        quest_involvement = {},
-                        deed_involvement = {},
-                        w = {},
-                        cw = {},
-                        levels = {},
-                        k = 0,
-                        d = {},
-                    }
-                end
+                if DATA_ACCESS == nil or DATA_ACCESS.is_alias_entry == nil or DATA_ACCESS.is_alias_entry(entry) ~= true then
+                    if type(merged[name]) ~= "table" then
+                        merged[name] = {
+                            display_name = name,
+                            genus = nil,
+                            subcategory = nil,
+                            species = nil,
+                            region = nil,
+                            area = nil,
+                            instance = nil,
+                            monster_type = nil,
+                            static_levels = nil,
+                            static_morale = nil,
+                            static_power = nil,
+                            combat_effectiveness = {},
+                            resistances = {},
+                            mitigation = {},
+                            abilities = {},
+                            quest_involvement = {},
+                            deed_involvement = {},
+                            w = {},
+                            cw = {},
+                            levels = {},
+                            k = 0,
+                            d = {},
+                        }
+                    end
 
-                _merge_entry(merged[name], entry, name)
+                    _merge_entry(merged[name], entry, name)
+                end
             end
         end
     end

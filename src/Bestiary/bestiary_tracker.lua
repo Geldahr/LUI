@@ -7,6 +7,8 @@ Bestiary = Bestiary or {}
 Bestiary.Collector = class()
 Bestiary.current_location = Bestiary.current_location or nil
 
+local DATA_ACCESS = Bestiary.DataAccess
+
 local DROP_GRACE_SECONDS = 1.0
 
 local function _is_english_client()
@@ -255,6 +257,9 @@ end
 
 local function _ensure_entry(name)
     name = _normalize_bestiary_name(name) or name
+    if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_builtin_name ~= nil then
+        name = DATA_ACCESS.resolve_builtin_name(name) or name
+    end
     local cache = _ensure_bestiary_cache()
     if type(cache[name]) ~= "table" then
         cache[name] = {
