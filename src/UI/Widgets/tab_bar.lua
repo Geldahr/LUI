@@ -447,11 +447,14 @@ function LuiTabBar:Constructor()
     self._tab_natural_rects = {}
     self._horizontal_first_visible_index = 1
     self._horizontal_last_visible_index = 0
+    self._horizontal_first_drawn_index = 1
+    self._horizontal_last_fully_visible_index = 0
     self._horizontal_viewport_width = 0
     self._horizontal_viewport_offset_x = 0
     self._horizontal_scrollable = false
     self._horizontal_scroll_button_size = 0
     self._horizontal_scroll_button_gap = 0
+    self._horizontal_follow_selected_once = false
 
     self._border_color = THEME_BORDER_COLOR
     self._strip_back = THEME_STRIP_BACK
@@ -855,6 +858,7 @@ function LuiTabBar:set_selected_index(index, fire_event)
     end
 
     self._selected_index = index
+    self._horizontal_follow_selected_once = true
 
     for i = 1, #self._tabs do
         local entry = self._tabs[i]
@@ -1029,6 +1033,8 @@ function LuiTabBar:_sync_horizontal_visible_range(widths, viewport_width, gap)
     if count < 1 then
         self._horizontal_first_visible_index = 1
         self._horizontal_last_visible_index = 0
+        self._horizontal_first_drawn_index = 1
+        self._horizontal_last_fully_visible_index = 0
         return
     end
 
@@ -1042,8 +1048,10 @@ function LuiTabBar:_sync_horizontal_visible_range(widths, viewport_width, gap)
 
     local last_index = self:_last_visible_horizontal_index(widths, first_index, viewport_width, gap)
     local selected_index = self._selected_index
+    local follow_selected = self._horizontal_follow_selected_once == true
+    self._horizontal_follow_selected_once = false
 
-    if type(selected_index) == "number" then
+    if follow_selected == true and type(selected_index) == "number" then
         selected_index = _round(selected_index)
         if selected_index < first_index then
             first_index = selected_index
@@ -1068,6 +1076,8 @@ function LuiTabBar:_sync_horizontal_visible_range(widths, viewport_width, gap)
 
     self._horizontal_first_visible_index = first_index
     self._horizontal_last_visible_index = last_index
+    self._horizontal_first_drawn_index = first_index
+    self._horizontal_last_fully_visible_index = last_index
 end
 
 function LuiTabBar:_scroll_to_previous_hidden_tab()
@@ -1091,7 +1101,7 @@ function LuiTabBar:_scroll_to_next_hidden_tab()
 
     local count = #self._tabs
     local first_index = tonumber(self._horizontal_first_visible_index) or 1
-    local last_index = tonumber(self._horizontal_last_visible_index) or 0
+    local last_index = tonumber(self._horizontal_last_fully_visible_index) or 0
     if last_index >= count then
         return
     end
@@ -1110,6 +1120,8 @@ function LuiTabBar:_layout_tabs_horizontal(width, height)
         self._horizontal_first_visible_index = _round(self._horizontal_first_visible_index)
     end
     self._horizontal_last_visible_index = 0
+    self._horizontal_first_drawn_index = 1
+    self._horizontal_last_fully_visible_index = 0
     self._horizontal_viewport_width = width
     self._horizontal_viewport_offset_x = 0
     self._horizontal_scrollable = false
@@ -1169,15 +1181,53 @@ function LuiTabBar:_layout_tabs_horizontal(width, height)
     else
         self._horizontal_first_visible_index = 1
         self._horizontal_last_visible_index = count
+        self._horizontal_first_drawn_index = 1
+        self._horizontal_last_fully_visible_index = count
     end
 
     local first_visible = self._horizontal_first_visible_index
-    local last_visible = self._horizontal_last_visible_index
+    local first_drawn = first_visible
+    local last_drawn = 0
+    local last_fully_visible = 0
     local x = 0
+
+    if self._horizontal_scrollable == true then
+        local remaining_total = 0
+        for i = first_visible, count do
+            if i > first_visible then
+                remaining_total = remaining_total + gap
+            end
+            remaining_total = remaining_total + widths[i]
+        end
+
+        if remaining_total < self._horizontal_viewport_width and first_visible > 1 then
+            local missing = self._horizontal_viewport_width - remaining_total
+            local probe = first_visible - 1
+
+            while probe >= 1 do
+                local extra = widths[probe] + gap
+                if extra <= missing then
+                    first_visible = probe
+                    first_drawn = probe
+                    missing = missing - extra
+                    probe = probe - 1
+                else
+                    first_drawn = probe
+                    x = -(extra - missing)
+                    break
+                end
+            end
+        end
+    end
 
     for i = 1, count do
         local button = self._tabs[i].button
-        local visible = i >= first_visible and i <= last_visible
+        local visible = false
+        if i >= first_drawn then
+            if x < self._horizontal_viewport_width then
+                visible = true
+            end
+        end
         if visible == true then
             local tab_w = widths[i]
             self._tab_rects[i] = { x = x, y = 0, w = tab_w, h = height }
@@ -1185,6 +1235,10 @@ function LuiTabBar:_layout_tabs_horizontal(width, height)
                 button:SetVisible(true)
                 _set_rect(button, x, 0, tab_w, height)
             end
+            if x >= 0 and (x + tab_w) <= self._horizontal_viewport_width then
+                last_fully_visible = i
+            end
+            last_drawn = i
             x = x + tab_w + gap
         else
             self._tab_rects[i] = nil
@@ -1194,6 +1248,11 @@ function LuiTabBar:_layout_tabs_horizontal(width, height)
             end
         end
     end
+
+    self._horizontal_first_visible_index = first_visible
+    self._horizontal_first_drawn_index = first_drawn
+    self._horizontal_last_visible_index = last_drawn
+    self._horizontal_last_fully_visible_index = last_fully_visible
 end
 
 function LuiTabBar:_layout_tabs_vertical(width, height)
@@ -1248,7 +1307,7 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
     local show_tab_cap_right = self._show_tab_cap_right == true
     local show_tab_cap_bottom = self._show_tab_cap_bottom == true
     local show_tab_cap_left = self._show_tab_cap_left == true
-    local visible_first_index = self._horizontal_scrollable == true and self._horizontal_first_visible_index or 1
+    local visible_first_index = self._horizontal_scrollable == true and self._horizontal_first_drawn_index or 1
     local visible_last_index = self._horizontal_scrollable == true and self._horizontal_last_visible_index or count
     self:_ensure_divider_count(divider_count)
 
@@ -1543,7 +1602,7 @@ function LuiTabBar:_layout()
         _set_rect(self._scroll_left_button, strip_x, left_y, button_size, button_size)
         _set_rect(self._scroll_right_button, right_x, left_y, button_size, button_size)
         self._scroll_left_button:set_enabled((self._horizontal_first_visible_index or 1) > 1)
-        self._scroll_right_button:set_enabled((self._horizontal_last_visible_index or 0) < #self._tabs)
+        self._scroll_right_button:set_enabled((self._horizontal_last_fully_visible_index or 0) < #self._tabs)
         self._scroll_left_button:SetVisible(true)
         self._scroll_right_button:SetVisible(true)
     else
