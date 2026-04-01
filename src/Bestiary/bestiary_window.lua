@@ -56,6 +56,7 @@ local BASE_TAXONOMY_PAD_X = 5
 local BASE_TAXONOMY_ARROW_W = 14
 local BASE_TAXONOMY_START_RATIO = 0.40
 local BASE_RESIZE_REFRESH_DELAY = 0.10
+local BASE_RESIZE_REFLOW_MIN_INTERVAL = 0.50
 local BASE_COLUMN_W = 600
 
 local AREA_COMPASS_ICON = "LUI/assets/ui/compass_64.tga"
@@ -1777,7 +1778,9 @@ function BestiaryWindow:Update()
     local generation = _G.bestiary_cache_generation or 0
     if self._last_generation ~= generation then
         self:refresh_from_store(true)
-    elseif self._resize_dirty == true and (now - self._last_resize_at) >= BASE_RESIZE_REFRESH_DELAY then
+    elseif self._resize_dirty == true
+        and (now - self._last_resize_at) >= BASE_RESIZE_REFRESH_DELAY
+        and (now - self._last_resize_reflow_at) >= BASE_RESIZE_REFLOW_MIN_INTERVAL then
         self._resize_dirty = false
         self._last_resize_reflow_at = now
         self:refresh_layout_view(true)
@@ -1801,14 +1804,9 @@ function BestiaryWindow:handle_user_resize()
     end
 
     self:layout()
+    self:refresh_visible_page_layout()
     self._resize_dirty = true
     self._last_resize_at = Turbine.Engine.GetGameTime()
-
-    if (self._last_resize_at - self._last_resize_reflow_at) >= BASE_RESIZE_REFRESH_DELAY then
-        self._resize_dirty = false
-        self._last_resize_reflow_at = self._last_resize_at
-        self:refresh_layout_view(true)
-    end
 end
 
 function BestiaryWindow:update_filter()
@@ -2279,16 +2277,20 @@ function BestiaryWindow:_build_pages(records)
         return best_slot
     end
 
+    local function measure_width_for_column(column_slot)
+        local column_index = column_slot - 1
+        local x = math.floor((column_index * content_w) / column_count)
+        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
+        return math.max(1, next_x - x)
+    end
+
     for record_index = 1, #records do
         if page == nil then
             begin_page()
         end
 
         local column_slot = shortest_column_slot()
-        local column_index = column_slot - 1
-        local x = math.floor((column_index * content_w) / column_count)
-        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
-        local item_w = math.max(1, next_x - x)
+        local item_w = measure_width_for_column(column_slot)
         local height = self:_measure_record_height(records[record_index], item_w)
         local y = column_heights[column_slot]
         if y > 0 then
@@ -2298,22 +2300,13 @@ function BestiaryWindow:_build_pages(records)
         if #page.items > 0 and (y + height) > content_h then
             pages[#pages + 1] = page
             begin_page()
-            column_index = 0
-            column_slot = 1
-            x = 0
-            next_x = math.floor(content_w / column_count)
-            item_w = math.max(1, next_x - x)
+            column_slot = shortest_column_slot()
+            item_w = measure_width_for_column(column_slot)
             height = self:_measure_record_height(records[record_index], item_w)
             y = 0
         end
 
-        page.items[#page.items + 1] = {
-            index = record_index,
-            c = column_slot,
-            x = x,
-            y = y,
-            w = item_w,
-        }
+        page.items[#page.items + 1] = record_index
 
         column_heights[column_slot] = y + height
     end
@@ -2347,6 +2340,95 @@ function BestiaryWindow:apply_view()
     self._prepared_content_h = 0
     self._prepared_record_key = 0
     self:refresh_layout_view(true)
+end
+
+function BestiaryWindow:_apply_page_layout(page, column_count, content_w)
+    local record_indices = type(page) == "table" and page.items or nil
+    if type(record_indices) ~= "table" then
+        record_indices = {}
+    end
+    local count = #record_indices
+    self:_ensure_rows(count)
+
+    local separator_w = _scaled_int(BASE_ROW_SEPARATOR)
+    local separator_count = math.max(0, math.min(column_count, count) - 1)
+    self:_ensure_column_separators(separator_count)
+    for i = 1, separator_count do
+        local boundary_x = math.floor((i * content_w) / column_count)
+        local separator = self.column_separators[i]
+        separator:SetPosition(math.max(0, boundary_x - math.floor(separator_w / 2)), 0)
+        separator:SetSize(separator_w, self.content:GetHeight())
+        separator:SetVisible(true)
+    end
+    for i = separator_count + 1, #self.column_separators do
+        self.column_separators[i]:SetVisible(false)
+    end
+
+    local content_h = math.max(1, self.content:GetHeight())
+    local column_heights = {}
+    for i = 1, column_count do
+        column_heights[i] = 0
+    end
+
+    local function shortest_column_slot()
+        local best_slot = 1
+        local best_height = column_heights[1]
+        for ci = 2, column_count do
+            local height = column_heights[ci]
+            if height < best_height then
+                best_slot = ci
+                best_height = height
+            end
+        end
+        return best_slot
+    end
+
+    for i = 1, count do
+        local column_slot = shortest_column_slot()
+        local column_index = column_slot - 1
+        local x = math.floor((column_index * content_w) / column_count)
+        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
+        local item_w = math.max(1, next_x - x)
+        local record = self.records[record_indices[i]]
+        local row = self.entries[i]
+
+        row:bind(record, item_w)
+
+        local y = column_heights[column_slot]
+        if y > 0 then
+            y = y + _scaled_int(BASE_GAP)
+        end
+
+        if y < content_h then
+            row:SetPosition(x, y)
+            row:SetVisible(true)
+        else
+            row:SetVisible(false)
+        end
+
+        column_heights[column_slot] = y + row:GetHeight()
+    end
+
+    for i = count + 1, #self.entries do
+        self.entries[i]:SetVisible(false)
+    end
+end
+
+function BestiaryWindow:refresh_visible_page_layout()
+    if #self.records == 0 then
+        self:render_page()
+        return
+    end
+
+    local page = self.pages[self.page_index]
+    if page == nil then
+        self:render_page()
+        return
+    end
+
+    self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, #self.pages)))
+    local column_count, content_w = self:_column_metrics()
+    self:_apply_page_layout(page, column_count, content_w)
 end
 
 function BestiaryWindow:render_page()
@@ -2388,52 +2470,8 @@ function BestiaryWindow:render_page()
         return
     end
 
-    local items = page.items or {}
-    local count = #items
-    self:_ensure_rows(count)
-
     local column_count, content_w = self:_column_metrics()
-    local separator_w = _scaled_int(BASE_ROW_SEPARATOR)
-    local separator_count = math.max(0, math.min(column_count, count) - 1)
-    self:_ensure_column_separators(separator_count)
-    for i = 1, separator_count do
-        local boundary_x = math.floor((i * content_w) / column_count)
-        local separator = self.column_separators[i]
-        separator:SetPosition(math.max(0, boundary_x - math.floor(separator_w / 2)), 0)
-        separator:SetSize(separator_w, self.content:GetHeight())
-        separator:SetVisible(true)
-    end
-    for i = separator_count + 1, #self.column_separators do
-        self.column_separators[i]:SetVisible(false)
-    end
-
-    for i = 1, count do
-        local item = items[i]
-        local record = self.records[item.index]
-        local row = self.entries[i]
-        row:bind(record, item.w)
-    end
-
-    local column_heights = {}
-    for i = 1, column_count do
-        column_heights[i] = 0
-    end
-
-    for i = 1, count do
-        local item = items[i]
-        local row = self.entries[i]
-        local column_slot = item.c or 1
-        local y = column_heights[column_slot]
-        if y > 0 then
-            y = y + _scaled_int(BASE_GAP)
-        end
-        row:SetPosition(item.x, y)
-        column_heights[column_slot] = y + row:GetHeight()
-    end
-
-    for i = count + 1, #self.entries do
-        self.entries[i]:SetVisible(false)
-    end
+    self:_apply_page_layout(page, column_count, content_w)
 end
 
 Bestiary.BestiaryWindow = BestiaryWindow
