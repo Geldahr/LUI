@@ -1012,6 +1012,78 @@ local function _build_location_text(record)
     return ""
 end
 
+local function _ensure_record_drop_texts(record)
+    if type(record) ~= "table" then
+        return { { text = TR("No drops seen."), chest = false } }
+    end
+
+    local chip_texts = record._drop_texts
+    if type(chip_texts) == "table" then
+        return chip_texts
+    end
+
+    chip_texts = {}
+    for di = 1, #record.drops do
+        local drop = record.drops[di]
+        local text
+        if type(drop.rate) == "number" then
+            text = drop.name .. ": " .. _format_percent(drop.rate)
+        else
+            text = drop.name
+        end
+        chip_texts[#chip_texts + 1] = { text = text, chest = drop.chest == true }
+    end
+
+    if #chip_texts == 0 then
+        chip_texts = { { text = TR("No drops seen."), chest = false } }
+    end
+
+    record._drop_texts = chip_texts
+    return chip_texts
+end
+
+local function _ensure_record_display_texts(record)
+    if type(record) ~= "table" then
+        return
+    end
+
+    _ensure_record_drop_texts(record)
+    record.level_text = TR("Level") .. ": " .. _format_range(record.level_min, record.level_max)
+    record.taxonomy_text = _build_taxonomy_text(record)
+    record.location_text = _build_location_text(record)
+    record.morale_text = TR("Morale") .. ": " .. _format_number_range(record.morale_min, record.morale_max)
+    record.power_text = TR("Power") .. ": " .. _format_number_range(record.power_min, record.power_max)
+end
+
+local function _ensure_record_row_layout(record, width)
+    if type(record) ~= "table" then
+        return
+    end
+
+    width = math.max(1, math.floor(_to_number(width, 1) + 0.5))
+    _ensure_record_display_texts(record)
+
+    if record._layout_width == width and type(record._chip_layout) == "table"
+        and type(record._drop_height) == "number" and type(record._view_height) == "number" then
+        return
+    end
+
+    local pad_x = _scaled_int(BASE_ROW_PAD_X)
+    local pad_y = _scaled_int(BASE_ROW_PAD_Y)
+    local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
+    local line_h = _scaled_int(BASE_LINE_H)
+    local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
+    local inner_w = math.max(1, width - (2 * pad_x))
+    local chip_layout, drop_h = _build_chip_layout(_ensure_record_drop_texts(record), inner_w)
+    local has_meta_line = record.taxonomy_text ~= "" or record.location_text ~= ""
+    local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
+
+    record._layout_width = width
+    record._chip_layout = chip_layout
+    record._drop_height = drop_h
+    record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
+end
+
 local DropChip = class(Turbine.UI.Control)
 
 function DropChip:Constructor()
@@ -1185,14 +1257,28 @@ function BestiaryRow:bind(record, width)
     local line_h = _scaled_int(BASE_LINE_H)
     local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
     local column_gap_x = _scaled_int(6)
-    local taxonomy_text = record ~= nil and (record.taxonomy_text or _build_taxonomy_text(record)) or ""
-    local location_text = record ~= nil and (record.location_text or _build_location_text(record)) or ""
+
+    if record == nil then
+        self._record = nil
+        self.taxonomy_label:SetVisible(false)
+        self.location_label:SetVisible(false)
+        for i = 1, #self.drop_chips do
+            self.drop_chips[i]:SetVisible(false)
+        end
+        self:SetVisible(false)
+        return
+    end
+
+    _ensure_record_row_layout(record, width)
+
+    local taxonomy_text = record.taxonomy_text or ""
+    local location_text = record.location_text or ""
     local has_meta_line = taxonomy_text ~= "" or location_text ~= ""
 
     local inner_w = math.max(1, width - (2 * pad_x))
     local right_text_w = math.max(
-        _estimate_text_width(record ~= nil and record.level_text or "", BASE_TAXONOMY_CHAR_W),
-        _estimate_text_width(record ~= nil and record.power_text or "", BASE_TAXONOMY_CHAR_W)
+        _estimate_text_width(record.level_text or "", BASE_TAXONOMY_CHAR_W),
+        _estimate_text_width(record.power_text or "", BASE_TAXONOMY_CHAR_W)
     )
     local right_w = math.min(
         math.max(_scaled_int(72), math.floor((inner_w - column_gap_x) / 2)),
@@ -1211,42 +1297,10 @@ function BestiaryRow:bind(record, width)
         meta_right_w = inner_w
     end
 
-    local drop_layout = {}
-    local drop_h = _scaled_int(BASE_CHIP_H)
+    local drop_layout = record._chip_layout or {}
+    local drop_h = _to_number(record._drop_height, _scaled_int(BASE_CHIP_H))
     local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
-    local height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
-
-    self:SetSize(width, height)
-
-    self.level_label:SetPosition(pad_x + left_w + column_gap_x, pad_y)
-    self.level_label:SetSize(right_w, line_h)
-
-    self.morale_label:SetPosition(pad_x, pad_y + line_h + row_gap_y)
-    self.morale_label:SetSize(left_w, line_h)
-    self.power_label:SetPosition(pad_x + left_w + column_gap_x, pad_y + line_h + row_gap_y)
-    self.power_label:SetSize(right_w, line_h)
-
-    self.taxonomy_label:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
-    self.taxonomy_label:SetSize(meta_left_w, line_h)
-    self.location_label:SetPosition(meta_right_x, pad_y + (2 * (line_h + row_gap_y)))
-    self.location_label:SetSize(meta_right_w, line_h)
-
-    self.drop_area:SetPosition(pad_x, pad_y + (2 * line_h) + (2 * row_gap_y) + meta_line_extra)
-    self.drop_area:SetSize(inner_w, drop_h)
-
-    self.separator:SetPosition(0, height - separator_h)
-    self.separator:SetSize(width, separator_h)
-
-    if record == nil then
-        self._record = nil
-        self.taxonomy_label:SetVisible(false)
-        self.location_label:SetVisible(false)
-        for i = 1, #self.drop_chips do
-            self.drop_chips[i]:SetVisible(false)
-        end
-        self:SetVisible(false)
-        return
-    end
+    local height = _to_number(record._view_height, pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h)
 
     self._record = record
     self.name_label:SetText(record.name)
@@ -1254,20 +1308,23 @@ function BestiaryRow:bind(record, width)
     self.morale_label:SetText(record.morale_text)
     self.power_label:SetText(record.power_text)
 
-    local drop_texts = record._drop_texts
-    if type(drop_texts) ~= "table" then
-        drop_texts = { { text = TR("No drops seen."), chest = false } }
-    end
-    drop_layout, drop_h = _build_chip_layout(drop_texts, inner_w)
-    meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
-    height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
     self:SetSize(width, height)
-    self.drop_area:SetSize(inner_w, drop_h)
-    self.separator:SetPosition(0, height - separator_h)
-    self:_ensure_chip_count(#drop_layout)
-
     self.name_label:SetPosition(pad_x, pad_y)
     self.name_label:SetSize(left_w, line_h)
+    self.level_label:SetPosition(pad_x + left_w + column_gap_x, pad_y)
+    self.level_label:SetSize(right_w, line_h)
+    self.morale_label:SetPosition(pad_x, pad_y + line_h + row_gap_y)
+    self.morale_label:SetSize(left_w, line_h)
+    self.power_label:SetPosition(pad_x + left_w + column_gap_x, pad_y + line_h + row_gap_y)
+    self.power_label:SetSize(right_w, line_h)
+    self.taxonomy_label:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.taxonomy_label:SetSize(meta_left_w, line_h)
+    self.location_label:SetPosition(meta_right_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.location_label:SetSize(meta_right_w, line_h)
+    self.drop_area:SetPosition(pad_x, pad_y + (2 * line_h) + (2 * row_gap_y) + meta_line_extra)
+    self.drop_area:SetSize(inner_w, drop_h)
+    self.separator:SetPosition(0, height - separator_h)
+    self.separator:SetSize(width, separator_h)
 
     self.taxonomy_label:SetText(taxonomy_text)
     self.taxonomy_label:SetVisible(taxonomy_text ~= "")
@@ -1275,6 +1332,7 @@ function BestiaryRow:bind(record, width)
     self.location_label:SetText(location_text)
     self.location_label:SetVisible(location_text ~= "")
 
+    self:_ensure_chip_count(#drop_layout)
     local chip_h = _scaled_int(BASE_CHIP_H)
     for i = 1, #drop_layout do
         local chip_info = drop_layout[i]
@@ -2129,80 +2187,23 @@ function BestiaryWindow:refresh_from_store(force)
 end
 
 function BestiaryWindow:_prepare_records(records)
-    local column_count, _, bucket_content_w = self:_column_metrics()
-    local line_h = _scaled_int(BASE_LINE_H)
-    local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
-    local pad_y = _scaled_int(BASE_ROW_PAD_Y)
-    local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
-    local column_w = math.max(1, math.floor(bucket_content_w / column_count))
-    local inner_w = math.max(1, column_w - (2 * _scaled_int(BASE_ROW_PAD_X)))
-
     for i = 1, #records do
         local record = records[i]
-        local chip_texts = record._drop_texts
-        if type(chip_texts) ~= "table" then
-            chip_texts = {}
-            for di = 1, #record.drops do
-                local drop = record.drops[di]
-                local text
-                if type(drop.rate) == "number" then
-                    text = drop.name .. ": " .. _format_percent(drop.rate)
-                else
-                    text = drop.name
-                end
-                chip_texts[#chip_texts + 1] = { text = text, chest = drop.chest == true }
-            end
-
-            if #chip_texts == 0 then
-                chip_texts = { { text = TR("No drops seen."), chest = false } }
-            end
-
-            record._drop_texts = chip_texts
-        end
-
-        local chip_layout, drop_h = _build_chip_layout(chip_texts, inner_w)
-
-        local meta_parts = {}
-        if type(record.genus) == "string" and record.genus ~= "" then
-            meta_parts[#meta_parts + 1] = record.genus
-        end
-        if type(record.subcategory) == "string" and record.subcategory ~= "" then
-            meta_parts[#meta_parts + 1] = record.subcategory
-        end
-
-        record.level_text = TR("Level") .. ": " .. _format_range(record.level_min, record.level_max)
-        record.meta_text = #meta_parts > 0 and table.concat(meta_parts, " / ") or "-"
-        record.taxonomy_text = _build_taxonomy_text(record)
-        record.location_text = _build_location_text(record)
-        record.morale_text = TR("Morale") .. ": " .. _format_number_range(record.morale_min, record.morale_max)
-        record.power_text = TR("Power") .. ": " .. _format_number_range(record.power_min, record.power_max)
-        record._chip_layout = chip_layout
-        record._drop_height = drop_h
-        local has_meta_line = record.taxonomy_text ~= "" or record.location_text ~= ""
-        local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
-        record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
+        _ensure_record_display_texts(record)
+        record._layout_width = nil
+        record._chip_layout = nil
+        record._drop_height = nil
+        record._view_height = nil
     end
 end
 
 function BestiaryWindow:_measure_record_height(record, width)
-    local pad_x = _scaled_int(BASE_ROW_PAD_X)
-    local pad_y = _scaled_int(BASE_ROW_PAD_Y)
-    local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
-    local line_h = _scaled_int(BASE_LINE_H)
-    local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
-    local inner_w = math.max(1, width - (2 * pad_x))
-    local drop_texts = record ~= nil and record._drop_texts or nil
-
-    if type(drop_texts) ~= "table" then
-        drop_texts = { TR("No drops seen.") }
+    _ensure_record_row_layout(record, width)
+    if type(record) ~= "table" then
+        return 0
     end
 
-    local _, drop_h = _build_chip_layout(drop_texts, inner_w)
-    local taxonomy_text = record ~= nil and (record.taxonomy_text or _build_taxonomy_text(record)) or ""
-    local location_text = record ~= nil and (record.location_text or _build_location_text(record)) or ""
-    local has_meta_line = taxonomy_text ~= "" or location_text ~= ""
-    local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
-    return pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
+    return _to_number(record._view_height, 0)
 end
 
 function BestiaryWindow:_column_metrics()
