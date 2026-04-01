@@ -1572,6 +1572,10 @@ function BestiaryWindow:Constructor()
         local visible = self:IsVisible() == true
         self:SetWantsUpdates(visible)
         if visible == true then
+            local tracker = _G.BESTIARY_TRACKER
+            if tracker ~= nil and tracker.flush_expired ~= nil then
+                tracker:flush_expired()
+            end
             self.last_update_at = 0
             self._last_generation = nil
             self:bring_to_front()

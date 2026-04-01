@@ -8,8 +8,9 @@ Bestiary.Collector = class()
 Bestiary.current_location = Bestiary.current_location or nil
 
 local DATA_ACCESS = Bestiary.DataAccess
-
-local DROP_GRACE_SECONDS = 1.0
+-- Loot messages often arrive after the kill line and XP line, so keep a short
+-- post-kill attribution window here. Adjust if the client/chat timing shifts.
+local LOOT_POST_KILL_WINDOW_SECONDS = 0.10
 
 local function _is_english_client()
     if is_lui_english_language ~= nil then
@@ -579,7 +580,7 @@ function Bestiary.Collector:_flush_pending_kills(flush_all)
     local now = Turbine.Engine.GetGameTime()
     while #self._pending_kills > 0 do
         local record = self._pending_kills[1]
-        if flush_all ~= true and record ~= nil and (now - _to_number(record.at, now)) < DROP_GRACE_SECONDS then
+        if flush_all ~= true and record ~= nil and (now - _to_number(record.at, now)) < LOOT_POST_KILL_WINDOW_SECONDS then
             break
         end
 
@@ -635,10 +636,13 @@ function Bestiary.Collector:_on_chat_received(args)
     end
 
     if args.ChatType == Turbine.ChatType.SelfLoot then
-        local drop_name = _parse_drop_name(message)
-        if drop_name ~= nil and #self._pending_kills > 0 then
-            local record = self._pending_kills[1]
-            record.drops[drop_name] = _to_number(record.drops[drop_name], 0) + 1
+        local item_name = _parse_drop_name(message)
+        if item_name ~= nil and #self._pending_kills > 0 then
+            self:_flush_pending_kills(false)
+            local record = self._pending_kills[#self._pending_kills]
+            if type(record) == "table" then
+                record.drops[item_name] = _to_number(record.drops[item_name], 0) + 1
+            end
         end
     end
 end
