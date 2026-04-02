@@ -2,6 +2,7 @@ import "Turbine.UI"
 
 import "LUI.src.UI.assets"
 import "LUI.src.Utils.stretch"
+import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 
 local POSITION_TOP = "top"
@@ -302,12 +303,8 @@ function LuiTabScrollButton:Constructor(graphics, on_click)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
 
-    self.icon = Turbine.UI.Control()
+    self.icon = Image()
     self.icon:SetParent(self)
-    self.icon:SetMouseVisible(false)
-    self.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self.icon:SetZOrder(2)
 
     self.SizeChanged = function()
@@ -393,9 +390,7 @@ function LuiTabScrollButton:_refresh_visual_state()
     local background = self:_current_graphic()
     if background ~= self._icon_background then
         self._icon_background = background
-        if self._icon_background ~= nil then
-            prepare_background_stretch_mode_1(self.icon, self._icon_background)
-        end
+        self.icon:set_icon(self._icon_background)
     end
     self:_layout()
 end
