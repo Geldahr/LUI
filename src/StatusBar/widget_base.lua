@@ -27,10 +27,6 @@ function StatusBarWidgetBase:Constructor(widget_key, widget_w, bar_h, font, cont
 
     self.icon = Image()
     self.icon:SetParent(self)
-    self.icon:SetMouseVisible(false)
-    self.icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    self.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self.icon:SetVisible(false)
 
     self.label = LuiLabel()

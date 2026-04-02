@@ -90,10 +90,6 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
 
     self.icon = Image(self.icon_background)
     self.icon:SetParent(self)
-    self.icon:SetMouseVisible(false)
-    self.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self.icon:SetZOrder(2)
 
     self.label = LuiLabel()

@@ -86,10 +86,6 @@ function WalletWidget:Constructor(widget_w, bar_h, font, content_alignment, item
         if self._icon_requested == true then
             item.icon = Image(item.icon_background)
             item.icon:SetParent(self)
-            item.icon:SetMouseVisible(false)
-            item.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-            item.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-            item.icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
             if item.icon_background ~= nil then
                 _apply_wallet_icon_background(item, item.icon_background, false)
             end

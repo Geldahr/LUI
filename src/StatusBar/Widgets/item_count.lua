@@ -6,7 +6,7 @@ local ItemCountWidget = class(Turbine.UI.Control)
 _G.ItemCountWidget = ItemCountWidget
 
 local ITEM_ICON_GAP = 8
-local ITEM_ICON_INSET = 2
+local ITEM_ICON_MARGIN = 2
 
 local function _apply_font(label, font)
     label:SetMouseVisible(false)
@@ -50,13 +50,15 @@ function ItemCountWidget:Constructor(item_name, widget_w, bar_h, font, icon_imag
 
     self.icon_back = Image()
     self.icon_back:SetParent(self)
+    self.icon_back:SetPosition(0, ITEM_ICON_MARGIN)
     self.icon_back:SetZOrder(1)
     self.icon_back:SetVisible(false)
 
-    self.icon_fallback = Image()
-    self.icon_fallback:SetParent(self)
-    self.icon_fallback:SetZOrder(2)
-    self.icon_fallback:SetVisible(false)
+    self.icon_fore = Image()
+    self.icon_fore:SetParent(self)
+    self.icon_fore:SetPosition(0, ITEM_ICON_MARGIN)
+    self.icon_fore:SetZOrder(2)
+    self.icon_fore:SetVisible(false)
 
     self.label = LuiLabel()
     self.label:SetParent(self)
@@ -90,10 +92,10 @@ end
 
 function ItemCountWidget:destroy()
     self:SetVisible(false)
-    if self.icon_fallback ~= nil then self.icon_fallback:SetVisible(false) end
+    if self.icon_fore ~= nil then self.icon_fore:SetVisible(false) end
     if self.icon_back ~= nil then self.icon_back:SetVisible(false) end
     if self.label ~= nil then self.label:SetVisible(false) end
-    if self.icon_fallback ~= nil then self.icon_fallback:SetParent(nil) end
+    if self.icon_fore ~= nil then self.icon_fore:SetParent(nil) end
     if self.icon_back ~= nil then self.icon_back:SetParent(nil) end
     if self.label ~= nil then self.label:SetParent(nil) end
     self:SetParent(nil)
@@ -177,9 +179,7 @@ function ItemCountWidget:_set_icon(icon)
     end
 
     self._icon_image_id = icon
-    self.icon_fallback:SetVisible(true)
-    self.icon_fallback:set_icon(icon)
-
+    self.icon_fore:set_icon(icon)
     self:_layout()
 end
 
@@ -189,7 +189,6 @@ function ItemCountWidget:_set_background(background)
     end
 
     self._background_image_id = background
-    self.icon_back:SetVisible(true)
     self.icon_back:set_icon(background)
     self:_layout()
 end
@@ -204,7 +203,7 @@ end
 
 function ItemCountWidget:_layout()
     local w, h = self:GetSize()
-    local icon_size = h - ITEM_ICON_INSET
+    local icon_size = h - ITEM_ICON_MARGIN * 2
     if icon_size < 0 then
         icon_size = 0
     end
@@ -212,14 +211,11 @@ function ItemCountWidget:_layout()
     local show_icon = self._icon_image_id ~= nil and icon_size > 0
 
     if show_icon == true then
+        self.icon_fore:SetSize(icon_size, icon_size)
         self.icon_back:SetSize(icon_size, icon_size)
-
-        self.icon_fallback:SetPosition(0, S.get_centered_icon_y(h, icon_size))
-        self.icon_fallback:SetSize(icon_size, icon_size)
-        self.icon_fallback:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     else
         self.icon_back:SetVisible(false)
-        self.icon_fallback:SetVisible(false)
+        self.icon_fore:SetVisible(false)
     end
 
     local text_x = 0
