@@ -9,6 +9,7 @@ local BASE_TEXT_GAP = 6
 local BASE_BORDER_THICKNESS = 1.5
 local BASE_FILL_MARGIN = 2
 local THEME_BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
+local THEME_FILL_COLOR = Turbine.UI.Color(1, 0.68, 0.74, 0.88)
 
 local function _round(value)
     return math.floor(value + 0.5)
@@ -35,7 +36,7 @@ function LuiCheckBox:Constructor()
     self._border_color = THEME_BORDER_COLOR
     self._border_hover_color = THEME_BORDER_COLOR
     self._border_disabled_color = Turbine.UI.Color(0.45, 0.62, 0.62, 0.62)
-    self._fill_color = THEME_BORDER_COLOR
+    self._fill_color = THEME_FILL_COLOR
     self._fill_disabled_color = Turbine.UI.Color(0.50, 0.68, 0.68, 0.68)
 
     self:SetMouseVisible(true)
