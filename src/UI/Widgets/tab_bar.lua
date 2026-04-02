@@ -1,8 +1,7 @@
 import "Turbine.UI"
 
 import "LUI.src.UI.assets"
-import "LUI.src.Utils.stretch"
-import "LUI.src.UI.Widgets.image"
+import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.label"
 
 local POSITION_TOP = "top"
@@ -25,7 +24,6 @@ local BASE_MIN_TAB_WIDTH = 56
 local BASE_APPROX_CHAR_WIDTH = 7
 local BASE_SCROLL_BUTTON_SIZE = 18
 local BASE_SCROLL_BUTTON_GAP = 2
-local BASE_SCROLL_ICON_INSET = 4
 
 local THEME_BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
 local THEME_STRIP_BACK = Turbine.UI.Color(1, 0.06, 0.06, 0.06)
@@ -87,50 +85,6 @@ local function _approx_text_width(scale, text)
     end
 
     return _scaled_int(scale, BASE_TAB_PADDING_X * 2) + _scaled_int(scale, BASE_APPROX_CHAR_WIDTH * len)
-end
-
-local function _graphic_from_id(asset_id)
-    if asset_id == nil then
-        return nil
-    end
-    return Turbine.UI.Graphic(asset_id)
-end
-
-local function _graphics_from_id_set(asset_ids)
-    if type(asset_ids) ~= "table" then
-        return {}
-    end
-    return {
-        normal = _graphic_from_id(asset_ids.normal),
-        hover = _graphic_from_id(asset_ids.hover),
-        pressed = _graphic_from_id(asset_ids.pressed),
-        disabled = _graphic_from_id(asset_ids.disabled),
-    }
-end
-
-local function _centered_icon_y(container_h, icon_h)
-    return math.floor((container_h - icon_h) / 2)
-end
-
-local function _scroll_icon_size(container_h)
-    local size = container_h - BASE_SCROLL_ICON_INSET
-    if size < 0 then
-        return 0
-    end
-    return size
-end
-
-local function _background_icon_w(background, icon_h)
-    if background == nil or icon_h <= 0 then
-        return 0
-    end
-
-    local base_w, base_h = get_background_base_size(background)
-    if type(base_w) ~= "number" or type(base_h) ~= "number" or base_w <= 0 or base_h <= 0 then
-        return icon_h
-    end
-
-    return math.floor(((icon_h * base_w) / base_h) + 0.5)
 end
 
 local LuiTabButton = class(Turbine.UI.Control)
@@ -286,127 +240,6 @@ function LuiTabButton:_layout()
     self:_update_visual_state()
 end
 
-local LuiTabScrollButton = class(Turbine.UI.Control)
-
-function LuiTabScrollButton:Constructor(graphics, on_click)
-    Turbine.UI.Control.Constructor(self)
-
-    self._graphics = graphics or {}
-    self._on_click = on_click
-    self._enabled = true
-    self._hover = false
-    self._pressed = false
-    self._icon_background = nil
-
-    self:SetMouseVisible(true)
-    self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-
-    self.icon = Image()
-    self.icon:SetParent(self)
-    self.icon:SetZOrder(2)
-
-    self.SizeChanged = function()
-        self:_layout()
-    end
-
-    self.MouseEnter = function()
-        if self._enabled ~= true then
-            return
-        end
-        self._hover = true
-        self:_refresh_visual_state()
-    end
-
-    self.MouseLeave = function()
-        self._hover = false
-        self._pressed = false
-        self:_refresh_visual_state()
-    end
-
-    self.MouseDown = function(_, args)
-        if self._enabled ~= true then
-            return
-        end
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        self._pressed = true
-        self:_refresh_visual_state()
-    end
-
-    self.MouseUp = function(_, args)
-        if self._enabled ~= true then
-            return
-        end
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        self._pressed = false
-        self:_refresh_visual_state()
-    end
-
-    self.MouseClick = function(_, args)
-        if self._enabled ~= true then
-            return
-        end
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        if type(self._on_click) == "function" then
-            self._on_click()
-        end
-    end
-
-    self:_refresh_visual_state()
-    self:_layout()
-end
-
-function LuiTabScrollButton:set_enabled(enabled)
-    self._enabled = enabled == true
-    if self._enabled ~= true then
-        self._hover = false
-        self._pressed = false
-    end
-    Turbine.UI.Control.SetEnabled(self, self._enabled)
-    self:_refresh_visual_state()
-end
-
-function LuiTabScrollButton:_current_graphic()
-    if self._enabled ~= true then
-        return self._graphics.disabled or self._graphics.normal
-    end
-    if self._pressed == true then
-        return self._graphics.pressed or self._graphics.hover or self._graphics.normal
-    end
-    if self._hover == true then
-        return self._graphics.hover or self._graphics.normal
-    end
-    return self._graphics.normal
-end
-
-function LuiTabScrollButton:_refresh_visual_state()
-    local background = self:_current_graphic()
-    if background ~= self._icon_background then
-        self._icon_background = background
-        self.icon:set_icon(self._icon_background)
-    end
-    self:_layout()
-end
-
-function LuiTabScrollButton:_layout()
-    local w, h = self:GetSize()
-    local icon_h = _scroll_icon_size(h)
-    local icon_w = _background_icon_w(self._icon_background, icon_h)
-    local icon_x = math.floor((w - icon_w) / 2)
-    local icon_y = _centered_icon_y(h, icon_h)
-
-    self.icon:SetPosition(icon_x, icon_y)
-    self.icon:SetSize(icon_w, icon_h)
-    self.icon:SetVisible(self._icon_background ~= nil and icon_h > 0 and icon_w > 0)
-end
-
 ---@class LuiTabBar : Turbine.UI.Control
 LuiTabBar = class(Turbine.UI.Control)
 
@@ -547,23 +380,55 @@ function LuiTabBar:Constructor()
     self._selected_outline_left:SetBackColor(self._border_color)
     self._selected_outline_left:SetZOrder(11)
 
-    local horizontal_scroll_assets = UI ~= nil and UI.AssetIds ~= nil and UI.AssetIds.HorizontalScroll or nil
-    local scroll_left_graphics = horizontal_scroll_assets ~= nil and _graphics_from_id_set(horizontal_scroll_assets.left_button) or {}
-    local scroll_right_graphics = horizontal_scroll_assets ~= nil and _graphics_from_id_set(horizontal_scroll_assets.right_button) or {}
-
-    self._scroll_left_button = LuiTabScrollButton(scroll_left_graphics, function()
-        self:_scroll_to_previous_hidden_tab()
-    end)
+    self._scroll_left_button = LuiButton()
     self._scroll_left_button:SetParent(self)
     self._scroll_left_button:SetVisible(false)
     self._scroll_left_button:SetZOrder(12)
+    self._scroll_left_button:SetText("")
+    self._scroll_left_button:set_padding(2)
+    self._scroll_left_button:set_border_thickness(0)
+    self._scroll_left_button:set_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_hover_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_pressed_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:SetBorderColor(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:SetIcon(
+        UI.AssetIds.arrow_l_yellow_normal,
+        UI.AssetIds.arrow_l_yellow_inverted,
+        UI.AssetIds.arrow_l_yellow_dark,
+        UI.AssetIds.arrow_l_transparent,
+        BASE_SCROLL_BUTTON_SIZE,
+        LuiButton.icon_position.LEFT
+    )
+    self._scroll_left_button.Click = function()
+        self:_scroll_to_previous_hidden_tab()
+    end
 
-    self._scroll_right_button = LuiTabScrollButton(scroll_right_graphics, function()
-        self:_scroll_to_next_hidden_tab()
-    end)
+    self._scroll_right_button = LuiButton()
     self._scroll_right_button:SetParent(self)
     self._scroll_right_button:SetVisible(false)
     self._scroll_right_button:SetZOrder(12)
+    self._scroll_right_button:SetText("")
+    self._scroll_right_button:set_padding(2)
+    self._scroll_right_button:set_border_thickness(0)
+    self._scroll_right_button:set_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_hover_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_pressed_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:SetBorderColor(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:SetIcon(
+        UI.AssetIds.arrow_r_yellow_normal,
+        UI.AssetIds.arrow_r_yellow_inverted,
+        UI.AssetIds.arrow_r_yellow_dark,
+        UI.AssetIds.arrow_r_transparent,
+        BASE_SCROLL_BUTTON_SIZE,
+        LuiButton.icon_position.RIGHT
+    )
+    self._scroll_right_button.Click = function()
+        self:_scroll_to_next_hidden_tab()
+    end
 
     self.SizeChanged = function()
         self:_layout()

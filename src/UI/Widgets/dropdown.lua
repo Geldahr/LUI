@@ -64,7 +64,6 @@ function LuiDropdown:Constructor()
     self.button:SetIcon(
         DROP_DOWN_ARROW,
         DROP_DOWN_ARROW_HIGHLIGHT,
-        DROP_DOWN_ARROW_PRESSED,
         DROP_DOWN_ARROW_PRESSED_HIGHLIGHT,
         DROP_DOWN_ARROW,
         BASE_ARROW_W,
@@ -166,7 +165,6 @@ function LuiDropdown:set_scale(scale)
         self.button:SetIcon(
             DROP_DOWN_ARROW,
             DROP_DOWN_ARROW_HIGHLIGHT,
-            DROP_DOWN_ARROW_PRESSED,
             DROP_DOWN_ARROW_PRESSED_HIGHLIGHT,
             DROP_DOWN_ARROW,
             BASE_ARROW_W,

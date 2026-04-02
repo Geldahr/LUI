@@ -557,7 +557,16 @@ function AssetsWindow:Constructor()
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
-    self.prev_button:SetText("<")
+    self.prev_button:SetText("")
+    self.prev_button:set_padding(2)
+    self.prev_button:SetIcon(
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_transparent,
+        BASE_NAV_W,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
     self.prev_button.Click = function()
         self:set_page(self.page_index - 1)
     end
@@ -569,7 +578,16 @@ function AssetsWindow:Constructor()
 
     self.next_button = UI.Widgets.LuiButton()
     self.next_button:SetParent(self.page_bar)
-    self.next_button:SetText(">")
+    self.next_button:SetText("")
+    self.next_button:set_padding(2)
+    self.next_button:SetIcon(
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_transparent,
+        BASE_NAV_W,
+        UI.Widgets.LuiButton.icon_position.RIGHT
+    )
     self.next_button.Click = function()
         self:set_page(self.page_index + 1)
     end
