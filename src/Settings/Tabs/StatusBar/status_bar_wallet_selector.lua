@@ -111,16 +111,16 @@ local function _wallet_selector_sync_active(entry)
     end
 
     if entry.add_button ~= nil then
-        entry.add_button:SetEnabled(type(available_index) == "number")
+        entry.add_button:set_enabled(type(available_index) == "number")
     end
     if entry.remove_button ~= nil then
-        entry.remove_button:SetEnabled(type(selected_index) == "number")
+        entry.remove_button:set_enabled(type(selected_index) == "number")
     end
     if entry.up_button ~= nil then
-        entry.up_button:SetEnabled(type(selected_index) == "number" and selected_index > 1)
+        entry.up_button:set_enabled(type(selected_index) == "number" and selected_index > 1)
     end
     if entry.down_button ~= nil then
-        entry.down_button:SetEnabled(type(selected_index) == "number" and selected_index < #entry.selected_items)
+        entry.down_button:set_enabled(type(selected_index) == "number" and selected_index < #entry.selected_items)
     end
 end
 
@@ -268,11 +268,11 @@ local function _wallet_selector_rebuild_lists(entry)
     for i = 1, #entry.available_entries do
         local spec = entry.available_entries[i]
         local button = UI.Widgets.LuiButton()
-        button:SetScale(_G.settings.global.scale)
-        button:SetFont(entry.window.input_font)
-        button:SetBorderThickness(0)
-        button:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        button:SetText(spec)
+        button:set_scale(_G.settings.global.scale)
+        button:set_font(entry.window.input_font)
+        button:set_border_thickness(0)
+        button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        button:set_text(spec)
         button.Click = function()
             _wallet_selector_select(entry, "available", i)
         end
@@ -285,11 +285,11 @@ local function _wallet_selector_rebuild_lists(entry)
     for i = 1, #entry.selected_entries do
         local resolved = entry.selected_entries[i]
         local button = UI.Widgets.LuiButton()
-        button:SetScale(_G.settings.global.scale)
-        button:SetFont(entry.window.input_font)
-        button:SetBorderThickness(0)
-        button:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        button:SetText(resolved)
+        button:set_scale(_G.settings.global.scale)
+        button:set_font(entry.window.input_font)
+        button:set_border_thickness(0)
+        button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        button:set_text(resolved)
         button.Click = function()
             _wallet_selector_select(entry, "selected", i)
         end
@@ -462,28 +462,28 @@ function CreateStatusBarWalletSelector(page, key)
 
     entry.add_button = UI.Widgets.LuiButton()
     entry.add_button:SetParent(entry.control)
-    entry.add_button:SetText(TR("Add"))
+    entry.add_button:set_text(TR("Add"))
     entry.add_button.Click = function()
         _wallet_selector_add(entry)
     end
 
     entry.remove_button = UI.Widgets.LuiButton()
     entry.remove_button:SetParent(entry.control)
-    entry.remove_button:SetText(TR("Remove"))
+    entry.remove_button:set_text(TR("Remove"))
     entry.remove_button.Click = function()
         _wallet_selector_remove(entry)
     end
 
     entry.up_button = UI.Widgets.LuiButton()
     entry.up_button:SetParent(entry.control)
-    entry.up_button:SetText(TR("Up"))
+    entry.up_button:set_text(TR("Up"))
     entry.up_button.Click = function()
         _wallet_selector_move(entry, -1)
     end
 
     entry.down_button = UI.Widgets.LuiButton()
     entry.down_button:SetParent(entry.control)
-    entry.down_button:SetText(TR("Down"))
+    entry.down_button:set_text(TR("Down"))
     entry.down_button.Click = function()
         _wallet_selector_move(entry, 1)
     end
@@ -500,28 +500,28 @@ function CreateStatusBarWalletSelector(page, key)
         entry.available_label:SetFont(page.window.field_label_font)
         entry.selected_label:SetFont(page.window.field_label_font)
         entry.available_filter:SetFont(page.window.input_font)
-        entry.add_button:SetScale(_G.settings.global.scale)
-        entry.add_button:SetFont(page.window.settings_font)
-        entry.remove_button:SetScale(_G.settings.global.scale)
-        entry.remove_button:SetFont(page.window.settings_font)
-        entry.up_button:SetScale(_G.settings.global.scale)
-        entry.up_button:SetFont(page.window.settings_font)
-        entry.down_button:SetScale(_G.settings.global.scale)
-        entry.down_button:SetFont(page.window.settings_font)
+        entry.add_button:set_scale(_G.settings.global.scale)
+        entry.add_button:set_font(page.window.settings_font)
+        entry.remove_button:set_scale(_G.settings.global.scale)
+        entry.remove_button:set_font(page.window.settings_font)
+        entry.up_button:set_scale(_G.settings.global.scale)
+        entry.up_button:set_font(page.window.settings_font)
+        entry.down_button:set_scale(_G.settings.global.scale)
+        entry.down_button:set_font(page.window.settings_font)
 
         for i = 1, #entry.available_buttons do
             local button = entry.available_buttons[i]
             if button ~= nil then
-                button:SetScale(_G.settings.global.scale)
-                button:SetFont(page.window.input_font)
+                button:set_scale(_G.settings.global.scale)
+                button:set_font(page.window.input_font)
             end
         end
 
         for i = 1, #entry.selected_buttons do
             local button = entry.selected_buttons[i]
             if button ~= nil then
-                button:SetScale(_G.settings.global.scale)
-                button:SetFont(page.window.input_font)
+                button:set_scale(_G.settings.global.scale)
+                button:set_font(page.window.input_font)
             end
         end
 

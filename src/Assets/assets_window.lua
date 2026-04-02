@@ -557,14 +557,15 @@ function AssetsWindow:Constructor()
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
-    self.prev_button:SetText("")
+    self.prev_button:set_text("")
     self.prev_button:set_padding(2)
-    self.prev_button:SetIcon(
+    self.prev_button:set_icon(
         UI.AssetIds.arrow_l_white,
         UI.AssetIds.arrow_l_white,
         UI.AssetIds.arrow_l_white,
         UI.AssetIds.arrow_l_transparent,
         BASE_NAV_W,
+        nil,
         UI.Widgets.LuiButton.icon_position.LEFT
     )
     self.prev_button.Click = function()
@@ -578,14 +579,15 @@ function AssetsWindow:Constructor()
 
     self.next_button = UI.Widgets.LuiButton()
     self.next_button:SetParent(self.page_bar)
-    self.next_button:SetText("")
+    self.next_button:set_text("")
     self.next_button:set_padding(2)
-    self.next_button:SetIcon(
+    self.next_button:set_icon(
         UI.AssetIds.arrow_r_white,
         UI.AssetIds.arrow_r_white,
         UI.AssetIds.arrow_r_white,
         UI.AssetIds.arrow_r_transparent,
         BASE_NAV_W,
+        nil,
         UI.Widgets.LuiButton.icon_position.RIGHT
     )
     self.next_button.Click = function()
@@ -622,7 +624,7 @@ function AssetsWindow:Constructor()
 
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:SetText(TR("Clear"))
+    self.clear_button:set_text(TR("Clear"))
     self.clear_button.Click = function()
         self.filter_tb:SetText("")
         self:update_filter()
@@ -978,9 +980,9 @@ function AssetsWindow:apply_settings()
     self.tile_size = self:_get_mode_tile_size(self.view_mode)
 
     local button_font = _scaled_font("Verdana", 11)
-    self.prev_button:SetFont(button_font)
-    self.next_button:SetFont(button_font)
-    self.clear_button:SetFont(button_font)
+    self.prev_button:set_font(button_font)
+    self.next_button:set_font(button_font)
+    self.clear_button:set_font(button_font)
     self.filter_tb:SetFont(button_font)
     self.stack_items_cb:SetScale(_G.settings.global.scale)
     self.stack_items_cb:SetFont(button_font)
@@ -1949,8 +1951,8 @@ function AssetsWindow:refresh_page()
 
     self.empty_label:SetVisible(#self.records == 0)
     self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(self.page_count))
-    self.prev_button:SetEnabled(self.page_index > 1)
-    self.next_button:SetEnabled(self.page_index < self.page_count)
+    self.prev_button:set_enabled(self.page_index > 1)
+    self.next_button:set_enabled(self.page_index < self.page_count)
     self:_refresh_summary(visible_count, page_start_index)
 
     self:_set_hint(nil)

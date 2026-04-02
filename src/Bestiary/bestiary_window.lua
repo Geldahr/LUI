@@ -1124,14 +1124,15 @@ function BestiaryWindow:Constructor()
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
-    self.prev_button:SetText("")
+    self.prev_button:set_text("")
     self.prev_button:set_padding(2)
-    self.prev_button:SetIcon(
+    self.prev_button:set_icon(
         UI.AssetIds.arrow_l_white,
         UI.AssetIds.arrow_l_white,
         UI.AssetIds.arrow_l_white,
         UI.AssetIds.arrow_l_transparent,
         BASE_NAV_W,
+        nil,
         UI.Widgets.LuiButton.icon_position.LEFT
     )
     self.prev_button.Click = function()
@@ -1145,14 +1146,15 @@ function BestiaryWindow:Constructor()
 
     self.next_button = UI.Widgets.LuiButton()
     self.next_button:SetParent(self.page_bar)
-    self.next_button:SetText("")
+    self.next_button:set_text("")
     self.next_button:set_padding(2)
-    self.next_button:SetIcon(
+    self.next_button:set_icon(
         UI.AssetIds.arrow_r_white,
         UI.AssetIds.arrow_r_white,
         UI.AssetIds.arrow_r_white,
         UI.AssetIds.arrow_r_transparent,
         BASE_NAV_W,
+        nil,
         UI.Widgets.LuiButton.icon_position.RIGHT
     )
     self.next_button.Click = function()
@@ -1229,7 +1231,7 @@ function BestiaryWindow:Constructor()
 
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:SetText(TR("Clear"))
+    self.clear_button:set_text(TR("Clear"))
     self.clear_button.Click = function()
         self.current_area = nil
         self.last_applied_area_query = nil
@@ -1434,15 +1436,15 @@ function BestiaryWindow:apply_settings()
     self.sort_dropdown:SetFont(button_font)
     self.sort_dropdown:SetScale(_G.settings.global.scale)
     self.sort_dropdown:SetValue(self.sort_mode)
-    self.prev_button:SetFont(button_font)
+    self.prev_button:set_font(button_font)
     self.page_label:SetFont(button_font)
-    self.next_button:SetFont(button_font)
+    self.next_button:set_font(button_font)
     self.level_label:SetFont(button_font)
     self.level_min_box:SetFont(button_font)
     self.level_dash_label:SetFont(button_font)
     self.level_max_box:SetFont(button_font)
     self.filter_tb:SetFont(button_font)
-    self.clear_button:SetFont(button_font)
+    self.clear_button:set_font(button_font)
     self.area_label:SetFont(button_font)
     self:ensure_area_shortcut()
     self.genus_label:SetFont(button_font)
@@ -2156,11 +2158,11 @@ end
 function BestiaryWindow:render_page()
     local page_count = #self.pages
     self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, page_count)))
-    if self.prev_button.SetEnabled ~= nil then
-        self.prev_button:SetEnabled(page_count > 0 and self.page_index > 1)
+    if self.prev_button.set_enabled ~= nil then
+        self.prev_button:set_enabled(page_count > 0 and self.page_index > 1)
     end
-    if self.next_button.SetEnabled ~= nil then
-        self.next_button:SetEnabled(page_count > 0 and self.page_index < page_count)
+    if self.next_button.set_enabled ~= nil then
+        self.next_button:set_enabled(page_count > 0 and self.page_index < page_count)
     end
 
     if #self.records == 0 then

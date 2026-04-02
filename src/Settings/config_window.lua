@@ -132,14 +132,14 @@ function ConfigWindow:Constructor()
 
     self.confirm_cancel_button = UI.Widgets.LuiButton()
     self.confirm_cancel_button:SetParent(self.confirm_dialog)
-    self.confirm_cancel_button:SetText(TR("Cancel"))
+    self.confirm_cancel_button:set_text(TR("Cancel"))
     self.confirm_cancel_button.Click = function()
         self:hide_confirmation_dialog()
     end
 
     self.confirm_confirm_button = UI.Widgets.LuiButton()
     self.confirm_confirm_button:SetParent(self.confirm_dialog)
-    self.confirm_confirm_button:SetText(TR("Delete"))
+    self.confirm_confirm_button:set_text(TR("Delete"))
     self.confirm_confirm_button.Click = function()
         local action = self.confirm_dialog_action
         self:hide_confirmation_dialog()
@@ -153,24 +153,24 @@ function ConfigWindow:Constructor()
 
     self.cancel_button = UI.Widgets.LuiButton()
     self.cancel_button:SetParent(self.button_bar)
-    self.cancel_button:SetFont(self.settings_font)
-    self.cancel_button:SetText(TR("Cancel"))
+    self.cancel_button:set_font(self.settings_font)
+    self.cancel_button:set_text(TR("Cancel"))
     self.cancel_button.Click = function()
         self:cancel()
     end
 
     self.apply_button = UI.Widgets.LuiButton()
     self.apply_button:SetParent(self.button_bar)
-    self.apply_button:SetFont(self.settings_font)
-    self.apply_button:SetText(TR("Apply"))
+    self.apply_button:set_font(self.settings_font)
+    self.apply_button:set_text(TR("Apply"))
     self.apply_button.Click = function()
         self:apply_changes(false)
     end
 
     self.save_button = UI.Widgets.LuiButton()
     self.save_button:SetParent(self.button_bar)
-    self.save_button:SetFont(self.settings_font)
-    self.save_button:SetText(TR("Save"))
+    self.save_button:set_font(self.settings_font)
+    self.save_button:set_text(TR("Save"))
     self.save_button.Click = function()
         self:apply_changes(true)
     end
@@ -181,8 +181,8 @@ function ConfigWindow:Constructor()
 
     self.move_ui_button = UI.Widgets.LuiButton()
     self.move_ui_button:SetParent(self.button_bar)
-    self.move_ui_button:SetFont(self.settings_font)
-    self.move_ui_button:SetText(TR("Move UI"))
+    self.move_ui_button:set_font(self.settings_font)
+    self.move_ui_button:set_text(TR("Move UI"))
     self.move_ui_button.Click = function()
         if set_move_ui_mode ~= nil then
             set_move_ui_mode(true, true)
@@ -255,25 +255,25 @@ function ConfigWindow:apply_ui_scale()
     end
 
     if self.cancel_button ~= nil then
-        self.cancel_button:SetFont(self.settings_font)
+        self.cancel_button:set_font(self.settings_font)
     end
     if self.apply_button ~= nil then
-        self.apply_button:SetFont(self.settings_font)
+        self.apply_button:set_font(self.settings_font)
     end
     if self.save_button ~= nil then
-        self.save_button:SetFont(self.settings_font)
+        self.save_button:set_font(self.settings_font)
     end
     if self.move_ui_button ~= nil then
-        self.move_ui_button:SetFont(self.settings_font)
+        self.move_ui_button:set_font(self.settings_font)
     end
     if self.confirm_dialog_label ~= nil then
         self.confirm_dialog_label:SetFont(self.field_label_font)
     end
     if self.confirm_cancel_button ~= nil then
-        self.confirm_cancel_button:SetFont(self.settings_font)
+        self.confirm_cancel_button:set_font(self.settings_font)
     end
     if self.confirm_confirm_button ~= nil then
-        self.confirm_confirm_button:SetFont(self.settings_font)
+        self.confirm_confirm_button:set_font(self.settings_font)
     end
 
     if self.main_tab_bar ~= nil then
@@ -351,7 +351,7 @@ function ConfigWindow:show_confirmation_dialog(text, confirm_text, action)
 
     self.confirm_dialog_action = action
     self.confirm_dialog_label:SetText(text or "")
-    self.confirm_confirm_button:SetText(confirm_text or TR("Confirm"))
+    self.confirm_confirm_button:set_text(confirm_text or TR("Confirm"))
     self.confirm_overlay:SetVisible(true)
     self:layout()
 end

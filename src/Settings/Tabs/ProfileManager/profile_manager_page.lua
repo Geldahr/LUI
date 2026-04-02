@@ -82,10 +82,10 @@ end
 
 local function _apply_row_scale(window, entry, left_button, right_button)
     if left_button ~= nil then
-        left_button:SetFont(window.settings_font)
+        left_button:set_font(window.settings_font)
     end
     if right_button ~= nil then
-        right_button:SetFont(window.settings_font)
+        right_button:set_font(window.settings_font)
     end
     _layout_button_row(window, entry, left_button, right_button)
 end
@@ -133,13 +133,13 @@ local function _refresh_profile_manager(page, selected_profile_id)
 
     local can_delete = active_profile_id ~= nil and get_configuration_count() > 1
     if page.profile_manager_use_button ~= nil then
-        page.profile_manager_use_button:SetEnabled(active_profile_id ~= nil and active_profile_id ~= _G.current_profile_id)
+        page.profile_manager_use_button:set_enabled(active_profile_id ~= nil and active_profile_id ~= _G.current_profile_id)
     end
     if page.profile_manager_rename_button ~= nil then
-        page.profile_manager_rename_button:SetEnabled(active_profile_id ~= nil)
+        page.profile_manager_rename_button:set_enabled(active_profile_id ~= nil)
     end
     if page.profile_manager_delete_button ~= nil then
-        page.profile_manager_delete_button:SetEnabled(can_delete)
+        page.profile_manager_delete_button:set_enabled(can_delete)
     end
 
     page.window.profile_manager_refreshing = false
@@ -185,14 +185,14 @@ function ProfileManagerPage:Constructor(window)
     local profile_actions = self:add_custom("profile_manager_profile_actions", ACTION_ROW_HEIGHT)
     profile_actions.use_button = UI.Widgets.LuiButton()
     profile_actions.use_button:SetParent(profile_actions.control)
-    profile_actions.use_button:SetText(TR("Use"))
+    profile_actions.use_button:set_text(TR("Use"))
     profile_actions.use_button.Click = function()
         window:use_selected_profile()
     end
 
     profile_actions.delete_button = UI.Widgets.LuiButton()
     profile_actions.delete_button:SetParent(profile_actions.control)
-    profile_actions.delete_button:SetText(TR("Delete"))
+    profile_actions.delete_button:set_text(TR("Delete"))
     profile_actions.delete_button.Click = function()
         window:confirm_delete_selected_profile()
     end
@@ -212,7 +212,7 @@ function ProfileManagerPage:Constructor(window)
     local rename_actions = self:add_custom("profile_manager_name_actions", ACTION_ROW_HEIGHT)
     rename_actions.rename_button = UI.Widgets.LuiButton()
     rename_actions.rename_button:SetParent(rename_actions.control)
-    rename_actions.rename_button:SetText(TR("Rename"))
+    rename_actions.rename_button:set_text(TR("Rename"))
     rename_actions.rename_button.Click = function()
         window:rename_selected_profile()
     end
@@ -231,14 +231,14 @@ function ProfileManagerPage:Constructor(window)
     local new_actions = self:add_custom("profile_manager_new_actions", ACTION_ROW_HEIGHT)
     new_actions.new_from_current_button = UI.Widgets.LuiButton()
     new_actions.new_from_current_button:SetParent(new_actions.control)
-    new_actions.new_from_current_button:SetText(TR("New from current"))
+    new_actions.new_from_current_button:set_text(TR("New from current"))
     new_actions.new_from_current_button.Click = function()
         window:create_profile_from_current()
     end
 
     new_actions.new_button = UI.Widgets.LuiButton()
     new_actions.new_button:SetParent(new_actions.control)
-    new_actions.new_button:SetText(TR("New"))
+    new_actions.new_button:set_text(TR("New"))
     new_actions.new_button.Click = function()
         window:start_new_profile_quick_setup()
     end

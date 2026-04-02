@@ -448,14 +448,14 @@ function LuiColorField:open_picker()
 
     picker.apply = LuiButton()
     picker.apply:SetParent(panel)
-    picker.apply:SetScale(self._scale)
-    picker.apply:SetText(TR("Apply"))
+    picker.apply:set_scale(self._scale)
+    picker.apply:set_text(TR("Apply"))
     picker.apply:SetZOrder(6)
 
     picker.cancel = LuiButton()
     picker.cancel:SetParent(panel)
-    picker.cancel:SetScale(self._scale)
-    picker.cancel:SetText(TR("Cancel"))
+    picker.cancel:set_scale(self._scale)
+    picker.cancel:set_text(TR("Cancel"))
     picker.cancel:SetZOrder(6)
 
     local btn_w = math.floor((panel_w - (pad * 2) - btn_gap) / 2)

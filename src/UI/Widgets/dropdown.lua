@@ -59,14 +59,15 @@ function LuiDropdown:Constructor()
 
     self.button = LuiButton()
     self.button:SetParent(self)
-    self.button:SetScale(self._scale)
-    self.button:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.button:SetIcon(
+    self.button:set_scale(self._scale)
+    self.button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.button:set_icon(
         DROP_DOWN_ARROW,
         DROP_DOWN_ARROW_HIGHLIGHT,
         DROP_DOWN_ARROW_PRESSED_HIGHLIGHT,
         DROP_DOWN_ARROW,
         BASE_ARROW_W,
+        nil,
         LuiButton.icon_position.RIGHT
     )
     self.button.Click = function()
@@ -146,12 +147,12 @@ end
 function LuiDropdown:SetFont(font)
     self._item_font = font
     if self.button ~= nil then
-        self.button:SetFont(font)
+        self.button:set_font(font)
     end
     for i = 1, #self._items do
         local b = self._items[i]
         if b ~= nil then
-            b:SetFont(font)
+            b:set_font(font)
         end
     end
 end
@@ -161,13 +162,14 @@ function LuiDropdown:set_scale(scale)
     self._item_height = _scaled_int(self._scale, BASE_ITEM_H)
 
     if self.button ~= nil then
-        self.button:SetScale(self._scale)
-        self.button:SetIcon(
+        self.button:set_scale(self._scale)
+        self.button:set_icon(
             DROP_DOWN_ARROW,
             DROP_DOWN_ARROW_HIGHLIGHT,
             DROP_DOWN_ARROW_PRESSED_HIGHLIGHT,
             DROP_DOWN_ARROW,
             BASE_ARROW_W,
+            nil,
             LuiButton.icon_position.RIGHT
         )
     end
@@ -175,7 +177,7 @@ function LuiDropdown:set_scale(scale)
     for i = 1, #self._items do
         local b = self._items[i]
         if b ~= nil then
-            b:SetScale(self._scale)
+            b:set_scale(self._scale)
         end
     end
 
@@ -194,7 +196,7 @@ end
 
 function LuiDropdown:SetTextAlignment(alignment)
     if self.button ~= nil then
-        self.button:SetTextAlignment(alignment)
+        self.button:set_text_alignment(alignment)
     end
 end
 
@@ -204,7 +206,7 @@ end
 
 function LuiDropdown:SetEnabled(enabled)
     self._enabled = enabled == true
-    self.button:SetEnabled(self._enabled)
+    self.button:set_enabled(self._enabled)
     if self._enabled ~= true then
         self:Close()
     end
@@ -406,7 +408,7 @@ function LuiDropdown:_set_index(index, fire_event)
     if string.len(t) == 0 then
         t = TR("Select")
     end
-    self.button:SetText(t)
+    self.button:set_text(t)
     self:_sync_active_items()
 
     if fire_event == true and previous_index == self._index and previous_value == self._value then
@@ -424,12 +426,12 @@ function LuiDropdown:_rebuild_items()
     for i = 1, #self._labels do
         local opt = self._labels[i]
         local b = LuiButton()
-        b:SetScale(self._scale)
-        b:SetBorderThickness(0)
-        b:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        b:SetText(tostring(opt))
+        b:set_scale(self._scale)
+        b:set_border_thickness(0)
+        b:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        b:set_text(tostring(opt))
         if self._item_font ~= nil then
-            b:SetFont(self._item_font)
+            b:set_font(self._item_font)
         end
         b.Click = function()
             self:_set_index(i, true)

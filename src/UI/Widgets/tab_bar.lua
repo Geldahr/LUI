@@ -384,7 +384,7 @@ function LuiTabBar:Constructor()
     self._scroll_left_button:SetParent(self)
     self._scroll_left_button:SetVisible(false)
     self._scroll_left_button:SetZOrder(12)
-    self._scroll_left_button:SetText("")
+    self._scroll_left_button:set_text("")
     self._scroll_left_button:set_padding(2)
     self._scroll_left_button:set_border_thickness(0)
     self._scroll_left_button:set_back_color(Turbine.UI.Color(0, 0, 0, 0))
@@ -392,13 +392,14 @@ function LuiTabBar:Constructor()
     self._scroll_left_button:set_pressed_back_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_left_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_left_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:SetBorderColor(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:SetIcon(
+    self._scroll_left_button:set_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_icon(
         UI.AssetIds.arrow_l_yellow_normal,
         UI.AssetIds.arrow_l_yellow_inverted,
         UI.AssetIds.arrow_l_yellow_dark,
         UI.AssetIds.arrow_l_transparent,
         BASE_SCROLL_BUTTON_SIZE,
+        nil,
         LuiButton.icon_position.LEFT
     )
     self._scroll_left_button.Click = function()
@@ -409,7 +410,7 @@ function LuiTabBar:Constructor()
     self._scroll_right_button:SetParent(self)
     self._scroll_right_button:SetVisible(false)
     self._scroll_right_button:SetZOrder(12)
-    self._scroll_right_button:SetText("")
+    self._scroll_right_button:set_text("")
     self._scroll_right_button:set_padding(2)
     self._scroll_right_button:set_border_thickness(0)
     self._scroll_right_button:set_back_color(Turbine.UI.Color(0, 0, 0, 0))
@@ -417,13 +418,14 @@ function LuiTabBar:Constructor()
     self._scroll_right_button:set_pressed_back_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_right_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_right_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:SetBorderColor(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:SetIcon(
+    self._scroll_right_button:set_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_icon(
         UI.AssetIds.arrow_r_yellow_normal,
         UI.AssetIds.arrow_r_yellow_inverted,
         UI.AssetIds.arrow_r_yellow_dark,
         UI.AssetIds.arrow_r_transparent,
         BASE_SCROLL_BUTTON_SIZE,
+        nil,
         LuiButton.icon_position.RIGHT
     )
     self._scroll_right_button.Click = function()

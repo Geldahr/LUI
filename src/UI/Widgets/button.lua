@@ -61,6 +61,9 @@ function LuiButton:Constructor()
 
     self._border_thickness = BASE_BORDER_THICKNESS
     self._border_color = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
+    self._border_hover_color = self._border_color
+    self._border_active_color = self._border_color
+    self._border_disabled_color = self._border_color
 
     self._back_normal = Turbine.UI.Color(1, 0.15, 0.15, 0.15)
     self._back_hover = Turbine.UI.Color(1, 0.18, 0.24, 0.34)
@@ -115,6 +118,7 @@ function LuiButton:Constructor()
     self._icon_active = nil
     self._icon_disabled = nil
     self._icon_width = 0
+    self._icon_height = nil
     self._icon_position = ICON_POSITION_RIGHT
     self._icon_render_w = nil
     self._icon_render_h = nil
@@ -182,18 +186,28 @@ function LuiButton:set_border_thickness(px)
     self:_layout()
 end
 
-function LuiButton:SetBorderThickness(px)
-    self:set_border_thickness(px)
-end
-
 function LuiButton:set_border_color(color)
     if color == nil then return end
     self._border_color = color
     self:_update_visual_state()
 end
 
-function LuiButton:SetBorderColor(color)
-    self:set_border_color(color)
+function LuiButton:set_hover_border_color(color)
+    if color == nil then return end
+    self._border_hover_color = color
+    self:_update_visual_state()
+end
+
+function LuiButton:set_active_border_color(color)
+    if color == nil then return end
+    self._border_active_color = color
+    self:_update_visual_state()
+end
+
+function LuiButton:set_disabled_border_color(color)
+    if color == nil then return end
+    self._border_disabled_color = color
+    self:_update_visual_state()
 end
 
 function LuiButton:set_padding(px)
@@ -223,11 +237,7 @@ function LuiButton:set_right_text(text, width)
     self:_layout()
 end
 
-function LuiButton:SetRightText(text, width)
-    self:set_right_text(text, width)
-end
-
-function LuiButton:set_icon(normal, hover, active, disabled, width, position)
+function LuiButton:set_icon(normal, hover, active, disabled, width, height, position)
     if type(width) ~= "number" then
         width = tonumber(width)
     end
@@ -241,13 +251,20 @@ function LuiButton:set_icon(normal, hover, active, disabled, width, position)
     self._icon_active = active
     self._icon_disabled = disabled
     self._icon_width = math.floor(width + 0.5)
+    if type(height) ~= "number" then
+        height = tonumber(height)
+    end
+    if height ~= nil and height < 0 then
+        height = 0
+    end
+    if height ~= nil then
+        self._icon_height = math.floor(height + 0.5)
+    else
+        self._icon_height = nil
+    end
     self._icon_position = _normalize_icon_position(position or self._icon_position)
     self._right_width = 0
     self:_layout()
-end
-
-function LuiButton:SetIcon(normal, hover, active, disabled, width, position)
-    self:set_icon(normal, hover, active, disabled, width, position)
 end
 
 function LuiButton:set_icon_position(position)
@@ -255,17 +272,9 @@ function LuiButton:set_icon_position(position)
     self:_layout()
 end
 
-function LuiButton:SetIconPosition(position)
-    self:set_icon_position(position)
-end
-
 function LuiButton:set_active(active)
     self._active = active == true
     self:_update_visual_state()
-end
-
-function LuiButton:SetActive(active)
-    self:set_active(active)
 end
 
 function LuiButton:is_active()
@@ -282,19 +291,11 @@ function LuiButton:set_enabled(enabled)
     self:_update_visual_state()
 end
 
-function LuiButton:SetEnabled(enabled)
-    self:set_enabled(enabled)
-end
-
 function LuiButton:set_text(text)
     if self._label ~= nil then
         self._label:SetText(text or "")
     end
     self:_layout()
-end
-
-function LuiButton:SetText(text)
-    self:set_text(text)
 end
 
 function LuiButton:GetText()
@@ -313,10 +314,6 @@ function LuiButton:set_font(font)
     end
 end
 
-function LuiButton:SetFont(font)
-    self:set_font(font)
-end
-
 function LuiButton:set_scale(scale)
     self._scale = scale
 
@@ -331,18 +328,10 @@ function LuiButton:set_scale(scale)
     self:_layout()
 end
 
-function LuiButton:SetScale(scale)
-    self:set_scale(scale)
-end
-
 function LuiButton:set_text_alignment(alignment)
     if self._label ~= nil and alignment ~= nil then
         self._label:SetTextAlignment(alignment)
     end
-end
-
-function LuiButton:SetTextAlignment(alignment)
-    self:set_text_alignment(alignment)
 end
 
 function LuiButton:set_back_color(color)
@@ -417,6 +406,13 @@ function LuiButton:_current_back_color()
     return self._back_normal
 end
 
+function LuiButton:_current_border_color()
+    if self._enabled ~= true then return self._border_disabled_color end
+    if self._pressed == true or self._active == true then return self._border_active_color end
+    if self._hover == true then return self._border_hover_color end
+    return self._border_color
+end
+
 function LuiButton:_current_text_color()
     if self._enabled ~= true then return self._text_disabled end
     if self._pressed == true then return self._text_pressed end
@@ -449,7 +445,7 @@ function LuiButton:_apply_default_font()
 end
 
 function LuiButton:_update_visual_state()
-    self:SetBackColor(self._border_color)
+    self:SetBackColor(self:_current_border_color())
     if self._inner ~= nil then
         self._inner:SetBackColor(self:_current_back_color())
     end
@@ -492,6 +488,12 @@ function LuiButton:_layout()
     local icon_slot_w = _scaled_int(self._scale, self._icon_width or 0)
     if icon_slot_w < 0 then icon_slot_w = 0 end
     if icon_slot_w > content_w then icon_slot_w = content_w end
+    local icon_slot_h = nil
+    if self._icon_height ~= nil then
+        icon_slot_h = _scaled_int(self._scale, self._icon_height)
+        if icon_slot_h < 0 then icon_slot_h = 0 end
+        if icon_slot_h > content_h then icon_slot_h = content_h end
+    end
 
     local label_text = self._label ~= nil and tostring(self._label:GetText() or "") or ""
     local has_text = label_text ~= ""
@@ -510,24 +512,52 @@ function LuiButton:_layout()
     if self._icon ~= nil then
         if use_icon == true then
             self._icon:SetVisible(true)
-            local icon_size = math.min(content_h, icon_slot_w)
-            if icon_size < 0 then
-                icon_size = 0
+            local current_icon = self:_current_icon()
+            local box_w = icon_slot_w
+            local box_h = content_h
+            local render_w = 0
+            local render_h = 0
+
+            if has_text ~= true then
+                box_w = content_w
+            end
+            if box_w < 0 then box_w = 0 end
+
+            if current_icon ~= nil then
+                self._icon:set_icon(current_icon)
             end
 
-            local py = content_y + math.floor((content_h - icon_size) / 2)
+            if icon_slot_h ~= nil then
+                render_w = math.min(icon_slot_w, box_w)
+                render_h = math.min(icon_slot_h, box_h)
+            else
+                local natural_w = tonumber(self._icon.original_w) or 0
+                local natural_h = tonumber(self._icon.original_h) or 0
+
+                if natural_w > 0 and natural_h > 0 and box_w > 0 and box_h > 0 then
+                    local scale = math.min(box_w / natural_w, box_h / natural_h)
+                    render_w = math.floor((natural_w * scale) + 0.5)
+                    render_h = math.floor((natural_h * scale) + 0.5)
+                else
+                    local icon_size = math.min(box_w, box_h)
+                    render_w = icon_size
+                    render_h = icon_size
+                end
+            end
+
+            local py = content_y + math.floor((content_h - render_h) / 2)
             local px
 
             if has_text ~= true then
-                px = content_x + math.floor((content_w - icon_size) / 2)
+                px = content_x + math.floor((content_w - render_w) / 2)
             elseif self._icon_position == ICON_POSITION_LEFT then
-                px = content_x + math.floor((icon_slot_w - icon_size) / 2)
+                px = content_x + math.floor((icon_slot_w - render_w) / 2)
             else
-                px = content_x + content_w - icon_slot_w + math.floor((icon_slot_w - icon_size) / 2)
+                px = content_x + content_w - icon_slot_w + math.floor((icon_slot_w - render_w) / 2)
             end
 
-            self._icon_render_w = icon_size
-            self._icon_render_h = icon_size
+            self._icon_render_w = render_w
+            self._icon_render_h = render_h
             self._icon:SetPosition(px, py)
             self._icon:set_icon(self:_current_icon(), self._icon_render_w, self._icon_render_h)
         else
