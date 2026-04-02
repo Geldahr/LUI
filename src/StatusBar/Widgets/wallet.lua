@@ -41,7 +41,7 @@ local function _apply_wallet_icon_background(item, background, from_wallet)
 
     item.icon_background = background
     item.icon_from_wallet = from_wallet == true
-    prepare_background_stretch_mode_1(item.icon, background)
+    item.icon:set_icon(background)
     return true
 end
 
@@ -66,7 +66,7 @@ function WalletWidget:Constructor(widget_w, bar_h, font, content_alignment, item
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self:SetSize(widget_w, bar_h)
 
-    self.placeholder = UI.Widgets.LuiLabel()
+    self.placeholder = LuiLabel()
     self.placeholder:SetParent(self)
     _apply_font(self.placeholder, font, self._content_alignment)
 
@@ -77,14 +77,14 @@ function WalletWidget:Constructor(widget_w, bar_h, font, content_alignment, item
             icon = nil,
             icon_background = nil,
             icon_from_wallet = false,
-            label = UI.Widgets.LuiLabel(),
+            label = LuiLabel(),
         }
 
         item.label:SetParent(self)
         _apply_font(item.label, font, self._content_alignment)
 
         if self._icon_requested == true then
-            item.icon = Turbine.UI.Control()
+            item.icon = Image(item.icon_background)
             item.icon:SetParent(self)
             item.icon:SetMouseVisible(false)
             item.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
