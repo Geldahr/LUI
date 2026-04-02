@@ -393,6 +393,9 @@ function LuiTabBar:Constructor()
     self._scroll_left_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_left_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_left_button:set_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_hover_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_active_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_disabled_border_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_left_button:set_icon(
         UI.AssetIds.arrow_l_yellow_normal,
         UI.AssetIds.arrow_l_yellow_inverted,
@@ -419,6 +422,9 @@ function LuiTabBar:Constructor()
     self._scroll_right_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_right_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_right_button:set_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_hover_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_active_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_disabled_border_color(Turbine.UI.Color(0, 0, 0, 0))
     self._scroll_right_button:set_icon(
         UI.AssetIds.arrow_r_yellow_normal,
         UI.AssetIds.arrow_r_yellow_inverted,

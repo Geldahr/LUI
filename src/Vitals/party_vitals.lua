@@ -5,31 +5,8 @@ import "Turbine.UI.Lotro"
 import "LUI.src.Vitals.vitals_base"
 import "LUI.src.Vitals.target_effect_manager"
 import "LUI.src.UI.moveable"
+import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.icons"
-import "LUI.src.Utils.stretch"
-
-local function _apply_scaled_icon(control, background, width, height, left, top)
-    if control == nil or background == nil then
-        return false
-    end
-
-    if prepare_background_stretch_mode_1 ~= nil then
-        prepare_background_stretch_mode_1(control, background)
-    elseif control.SetBackground ~= nil then
-        control:SetBackground(background)
-    else
-        return false
-    end
-
-    if left ~= nil and top ~= nil and control.SetPosition ~= nil then
-        control:SetPosition(left, top)
-    end
-    if width ~= nil and height ~= nil and control.SetSize ~= nil then
-        control:SetSize(width, height)
-    end
-
-    return true
-end
 
 local function _is_local_player(entity)
     local lp = Turbine.Gameplay.LocalPlayer.GetInstance()
@@ -152,12 +129,14 @@ function PartyMemberVitals:_update_class_icon()
         return
     end
 
-    local icon = _G.get_class_icon(self.entity:GetClass(), self.class_icon:GetHeight())
-    if icon == nil or _apply_scaled_icon(self.class_icon, icon, ci.size, ci.size, ci.x, ci.y) ~= true then
+    local icon = _G.get_class_icon(self.entity:GetClass(), ci.size)
+    if icon == nil then
         self.class_icon:SetVisible(false)
         return
     end
 
+    self.class_icon:SetPosition(ci.x, ci.y)
+    self.class_icon:set_icon(icon, ci.size, ci.size)
     self.class_icon:SetVisible(true)
 end
 
@@ -176,30 +155,24 @@ function PartyMemberVitals:_update_leader_icon()
     end
 
     local icon = _G.get_party_leader_icon ~= nil and _G.get_party_leader_icon() or nil
-    if icon == nil or _apply_scaled_icon(self.leader_icon, icon, li.size, li.size, li.x, li.y) ~= true then
+    if icon == nil then
         self.leader_icon:SetVisible(false)
         return
     end
 
+    self.leader_icon:SetPosition(li.x, li.y)
+    self.leader_icon:set_icon(icon, li.size, li.size)
     self.leader_icon:SetVisible(true)
 end
 
 function PartyMemberVitals:_build_extra_controls()
-    self.class_icon = Turbine.UI.Control()
+    self.class_icon = Image()
     self.class_icon:SetParent(self)
-    self.class_icon:SetMouseVisible(false)
-    self.class_icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    self.class_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.class_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self.class_icon:SetZOrder(10)
     self.class_icon:SetVisible(false)
 
-    self.leader_icon = Turbine.UI.Control()
+    self.leader_icon = Image()
     self.leader_icon:SetParent(self)
-    self.leader_icon:SetMouseVisible(false)
-    self.leader_icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    self.leader_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.leader_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self.leader_icon:SetZOrder(11)
     self.leader_icon:SetVisible(false)
 

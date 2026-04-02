@@ -106,7 +106,7 @@ function ShortcutButtonWidget:_layout()
     if self.display_mode == "icon" and self.icon_background ~= nil then
         local inner_h = math.max(0, button_h - (BUTTON_BORDER * 2))
         local icon_h = S.get_icon_size(inner_h)
-        local icon_w = S.get_shortcut_icon_w(self.icon_background, icon_h)
+        local icon_w = Image.get_size_for_height(self.icon_background, icon_h)
         self.button:set_icon(self.icon_background, nil, nil, nil, icon_w)
     end
 end

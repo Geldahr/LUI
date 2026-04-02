@@ -3,7 +3,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.Utils.number_abbrev"
-import "LUI.src.Utils.stretch"
+import "LUI.src.UI.Widgets.image"
 import "LUI.src.Settings.enums"
 
 _G.STATUS_BAR_COMMON = _G.STATUS_BAR_COMMON or {}
@@ -1217,23 +1217,6 @@ function S.get_shortcut_icon(shortcut_key)
         return S.BESTIARY_SHORTCUT_ICON
     end
     return nil
-end
-
-function S.get_background_icon_w(background, icon_h)
-    if background == nil or icon_h <= 0 then
-        return 0
-    end
-
-    local base_w, base_h = get_background_base_size(background)
-    if type(base_w) ~= "number" or type(base_h) ~= "number" or base_w <= 0 or base_h <= 0 then
-        return icon_h
-    end
-
-    return math.floor(((icon_h * base_w) / base_h) + 0.5)
-end
-
-function S.get_shortcut_icon_w(icon_background, icon_h)
-    return S.get_background_icon_w(icon_background, icon_h)
 end
 
 function S.window_is_visible(window)

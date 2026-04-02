@@ -445,7 +445,12 @@ function LuiButton:_apply_default_font()
 end
 
 function LuiButton:_update_visual_state()
-    self:SetBackColor(self:_current_border_color())
+    local border_px = math.max(0, _scaled_int(self._scale, self._border_thickness or BASE_BORDER_THICKNESS))
+    if border_px > 0 then
+        self:SetBackColor(self:_current_border_color())
+    else
+        self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    end
     if self._inner ~= nil then
         self._inner:SetBackColor(self:_current_back_color())
     end
@@ -456,7 +461,10 @@ function LuiButton:_update_visual_state()
         self._right_label:SetForeColor(self:_current_text_color())
     end
     if self._icon ~= nil and self._icon:IsVisible() then
-        self._icon:set_icon(self:_current_icon(), self._icon_render_w, self._icon_render_h)
+        self._icon:set_icon(self:_current_icon())
+        if self._icon_render_w ~= nil then
+            self._icon:set_size(self._icon_render_w, self._icon_render_h)
+        end
     end
 end
 
@@ -531,18 +539,7 @@ function LuiButton:_layout()
                 render_w = math.min(icon_slot_w, box_w)
                 render_h = math.min(icon_slot_h, box_h)
             else
-                local natural_w = tonumber(self._icon.original_w) or 0
-                local natural_h = tonumber(self._icon.original_h) or 0
-
-                if natural_w > 0 and natural_h > 0 and box_w > 0 and box_h > 0 then
-                    local scale = math.min(box_w / natural_w, box_h / natural_h)
-                    render_w = math.floor((natural_w * scale) + 0.5)
-                    render_h = math.floor((natural_h * scale) + 0.5)
-                else
-                    local icon_size = math.min(box_w, box_h)
-                    render_w = icon_size
-                    render_h = icon_size
-                end
+                render_w, render_h = self._icon:get_fitted_size(box_w, box_h)
             end
 
             local py = content_y + math.floor((content_h - render_h) / 2)
@@ -559,7 +556,8 @@ function LuiButton:_layout()
             self._icon_render_w = render_w
             self._icon_render_h = render_h
             self._icon:SetPosition(px, py)
-            self._icon:set_icon(self:_current_icon(), self._icon_render_w, self._icon_render_h)
+            self._icon:set_icon(self:_current_icon())
+            self._icon:set_size(self._icon_render_w, self._icon_render_h)
         else
             self._icon_render_w = nil
             self._icon_render_h = nil

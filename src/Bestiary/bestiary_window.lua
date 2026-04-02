@@ -240,17 +240,7 @@ local function _set_area_slot_icon_background(window, target_w, target_h)
         window._area_slot_icon_background = background
     end
 
-    if window.area_slot_icon.SetBackground ~= nil then
-        window.area_slot_icon:SetBackground(background)
-    end
-
-    _G.refresh_stretch_mode_1_from_current_content(window.area_slot_icon)
-    -- if window.area_slot_icon.SetStretchMode ~= nil then
-    --     window.area_slot_icon:SetStretchMode(1)
-    -- end
-    if window.area_slot_icon.SetSize ~= nil then
-        window.area_slot_icon:SetSize(target_w, target_h)
-    end
+    window.area_slot_icon:set_icon(background, target_w, target_h)
 end
 
 local function _to_number(value, fallback)
@@ -1281,10 +1271,9 @@ function BestiaryWindow:Constructor()
     self.area_slot_cover:SetBackColor(Turbine.UI.Color(1, 0, 0, 0))
     self.area_slot_cover:SetZOrder(2)
 
-    self.area_slot_icon = Turbine.UI.Control()
+    self.area_slot_icon = Image()
     self.area_slot_icon:SetParent(self.filter_bar)
     self.area_slot_icon:SetMouseVisible(false)
-    self.area_slot_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.area_slot_icon:SetZOrder(3)
     _set_area_slot_icon_background(self, _scaled_int(BASE_FILTER_H), _scaled_int(BASE_FILTER_H))
 

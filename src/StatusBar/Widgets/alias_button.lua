@@ -236,7 +236,7 @@ function AliasButtonWidget:_layout()
     end
 
     local icon_h = S.get_icon_size(slot_size)
-    local icon_w = S.get_shortcut_icon_w(self.icon_background, icon_h)
+    local icon_w = Image.get_size_for_height(self.icon_background, icon_h)
     local icon_x = math.floor((w - icon_w) / 2)
     local icon_y = S.get_centered_icon_y(h, icon_h)
     self.icon:SetPosition(icon_x, icon_y)

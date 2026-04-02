@@ -226,7 +226,7 @@ function AssetsEntry:Constructor(on_hover)
     self.icon_slot:SetMouseVisible(true)
     self.icon_slot:SetZOrder(1)
 
-    self.icon_back = Turbine.UI.Control()
+    self.icon_back = Image()
     self.icon_back:SetParent(self.icon_slot)
     self.icon_back:SetMouseVisible(false)
     self.icon_back:SetZOrder(1)
@@ -238,11 +238,10 @@ function AssetsEntry:Constructor(on_hover)
     self.icon_item_info_control:SetVisible(false)
     self.icon_item_info_control:SetZOrder(0)
 
-    self.icon_fallback = Turbine.UI.Control()
-    self.icon_fallback:SetParent(self.icon_back)
-    self.icon_fallback:SetMouseVisible(false)
-    self.icon_fallback:SetBlendMode(Turbine.UI.BlendMode.Overlay)
-    self.icon_fallback:SetZOrder(1)
+    self.icon_fore = Image()
+    self.icon_fore:SetParent(self.icon_back)
+    self.icon_fore:SetMouseVisible(false)
+    self.icon_fore:SetZOrder(1)
 
     self.icon_item_control = Turbine.UI.Lotro.ItemControl()
     self.icon_item_control:SetParent(self.icon_back)
@@ -258,7 +257,7 @@ function AssetsEntry:Constructor(on_hover)
     end
 
     self.qty_label = UI.Widgets.LuiLabel()
-    self.qty_label:SetParent(self.icon_fallback)
+    self.qty_label:SetParent(self.icon_fore)
     self.qty_label:SetMouseVisible(false)
     self.qty_label:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
     self.qty_label:SetForeColor(BASE_QTY_COLOR)
@@ -403,8 +402,8 @@ function AssetsEntry:bind(record)
 
     self._background_image_id = background_image_id
     self._icon_image_id = icon_id
-    self.icon_back:SetBackground(background_image_id)
-    self.icon_fallback:SetBackground(icon_id)
+    self.icon_back:set_icon(background_image_id)
+    self.icon_fore:set_icon(icon_id)
     self.icon_back:SetVisible(background_image_id ~= nil or icon_id ~= nil or record.item_info ~= nil)
 
     self.icon_item_control:SetVisible(false)
@@ -414,14 +413,9 @@ function AssetsEntry:bind(record)
     end
 
     if icon_id ~= nil then
-        self.icon_fallback:SetVisible(true)
-        if background_image_id ~= nil then
-            self.icon_fallback:SetBlendMode(Turbine.UI.BlendMode.Overlay)
-        else
-            self.icon_fallback:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-        end
+        self.icon_fore:SetVisible(true)
     else
-        self.icon_fallback:SetVisible(false)
+        self.icon_fore:SetVisible(false)
     end
 
     if record.item_info ~= nil then
@@ -475,17 +469,10 @@ function AssetsEntry:_layout_icon_controls(icon_w, icon_h)
     local visual_y = math.floor((icon_h - visual_side) / 2)
 
     self.icon_back:SetPosition(visual_x, visual_y)
-    if self.icon_back.SetStretchMode ~= nil then
-        self.icon_back:SetStretchMode(0)
-    end
-    self.icon_back:SetSize(BASE_ICON_SIZE, BASE_ICON_SIZE)
-    if self.icon_back.SetStretchMode ~= nil and visual_side ~= BASE_ICON_SIZE then
-        self.icon_back:SetStretchMode(1)
-    end
     self.icon_back:SetSize(visual_side, visual_side)
 
-    self.icon_fallback:SetPosition(0, 0)
-    self.icon_fallback:SetSize(BASE_ICON_SIZE, BASE_ICON_SIZE)
+    self.icon_fore:SetPosition(0, 0)
+    self.icon_fore:SetSize(BASE_ICON_SIZE, BASE_ICON_SIZE)
     self.icon_item_info_control:SetPosition(ITEM_CONTROL_OFFSET, ITEM_CONTROL_OFFSET)
     self.icon_item_info_control:SetSize(BASE_ICON_SIZE + ITEM_INFO_CONTROL_EXTRA, BASE_ICON_SIZE + ITEM_INFO_CONTROL_EXTRA)
     self.icon_item_control:SetPosition(ITEM_CONTROL_OFFSET, ITEM_CONTROL_OFFSET)

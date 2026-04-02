@@ -4,7 +4,6 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
-import "LUI.src.Utils.stretch"
 import "LUI.src.Assets.assets_entry"
 
 AssetsWindow = class(Turbine.UI.Lotro.Window)
@@ -295,12 +294,12 @@ local function _set_view_button_background(control, up_texture, down_texture, ac
         texture = down_texture
     end
 
-    if prepare_background_stretch_mode_1 ~= nil then
-        prepare_background_stretch_mode_1(control, texture)
-        return
+    local w, h = control:GetSize()
+    if type(w) == "number" and w > 0 and type(h) == "number" and h > 0 then
+        control:set_icon(texture, w, h)
+    else
+        control:set_icon(texture)
     end
-
-    control:SetBackground(texture)
 end
 
 local function _compare_text(left, right, descending)
@@ -594,8 +593,9 @@ function AssetsWindow:Constructor()
         self:set_page(self.page_index + 1)
     end
 
-    self.view_icons_button = Turbine.UI.Control()
+    self.view_icons_button = Image()
     self.view_icons_button:SetParent(self.nav_bar)
+    self.view_icons_button:SetMouseVisible(true)
     self.view_icons_button.MouseClick = function(_, args)
         if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
             return
@@ -603,8 +603,9 @@ function AssetsWindow:Constructor()
         self:set_view_mode(LUI_ENUMS.assets_view_mode.ICONS, true)
     end
 
-    self.view_details_button = Turbine.UI.Control()
+    self.view_details_button = Image()
     self.view_details_button:SetParent(self.nav_bar)
+    self.view_details_button:SetMouseVisible(true)
     self.view_details_button.MouseClick = function(_, args)
         if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
             return
