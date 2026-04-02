@@ -1,5 +1,6 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
+import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 
 local BASE_BUTTON_W = 89
@@ -7,6 +8,8 @@ local BASE_BUTTON_H = 21
 local BASE_FONT_SIZE = 12
 local BASE_ICON_SIZE = 12
 local BASE_BORDER_THICKNESS = 1.5
+local ICON_POSITION_LEFT = "left"
+local ICON_POSITION_RIGHT = "right"
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -26,6 +29,18 @@ end
 
 ---@class LuiButton : Turbine.UI.Control
 LuiButton = class(Turbine.UI.Control)
+
+LuiButton.icon_position = {
+    LEFT = ICON_POSITION_LEFT,
+    RIGHT = ICON_POSITION_RIGHT,
+}
+
+local function _normalize_icon_position(position)
+    if position == ICON_POSITION_LEFT or position == LuiButton.icon_position.LEFT then
+        return ICON_POSITION_LEFT
+    end
+    return ICON_POSITION_RIGHT
+end
 
 ---------------------------------------------------------------------
 -- Constructor
@@ -88,18 +103,17 @@ function LuiButton:Constructor()
     self._right_text = nil
     self._right_width = 0
 
-    self._right_icon = Turbine.UI.Control()
-    self._right_icon:SetParent(self._inner)
-    self._right_icon:SetMouseVisible(false)
-    self._right_icon:SetVisible(false)
-    self._right_icon:SetZOrder(6)
-    self._right_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self._right_icon_normal = nil
-    self._right_icon_hover = nil
-    self._right_icon_pressed = nil
-    self._right_icon_pressed_hover = nil
-    self._right_icon_disabled = nil
-    self._right_icon_width = 0
+    self._icon = Image()
+    self._icon:SetParent(self._inner)
+    self._icon:SetVisible(false)
+    self._icon:SetZOrder(6)
+    self._icon_normal = nil
+    self._icon_hover = nil
+    self._icon_pressed = nil
+    self._icon_pressed_hover = nil
+    self._icon_disabled = nil
+    self._icon_width = 0
+    self._icon_position = ICON_POSITION_RIGHT
 
     self.SizeChanged = function()
         self:_layout()
@@ -188,7 +202,7 @@ function LuiButton:set_right_text(text, width)
 
     self._right_text = text
     self._right_width = math.floor(width + 0.5)
-    self._right_icon_width = 0
+    self._icon_width = 0
     self:_layout()
 end
 
@@ -196,7 +210,7 @@ function LuiButton:SetRightText(text, width)
     self:set_right_text(text, width)
 end
 
-function LuiButton:set_right_icon(normal, hover, pressed, pressed_hover, disabled, width)
+function LuiButton:set_icon(normal, hover, pressed, pressed_hover, disabled, width, position)
     if type(width) ~= "number" then
         width = tonumber(width)
     end
@@ -205,14 +219,32 @@ function LuiButton:set_right_icon(normal, hover, pressed, pressed_hover, disable
     end
     if width < 0 then width = 0 end
 
-    self._right_icon_normal = normal
-    self._right_icon_hover = hover
-    self._right_icon_pressed = pressed
-    self._right_icon_pressed_hover = pressed_hover
-    self._right_icon_disabled = disabled
-    self._right_icon_width = math.floor(width + 0.5)
+    self._icon_normal = normal
+    self._icon_hover = hover
+    self._icon_pressed = pressed
+    self._icon_pressed_hover = pressed_hover
+    self._icon_disabled = disabled
+    self._icon_width = math.floor(width + 0.5)
+    self._icon_position = _normalize_icon_position(position or self._icon_position)
     self._right_width = 0
     self:_layout()
+end
+
+function LuiButton:SetIcon(normal, hover, pressed, pressed_hover, disabled, width, position)
+    self:set_icon(normal, hover, pressed, pressed_hover, disabled, width, position)
+end
+
+function LuiButton:set_icon_position(position)
+    self._icon_position = _normalize_icon_position(position)
+    self:_layout()
+end
+
+function LuiButton:SetIconPosition(position)
+    self:set_icon_position(position)
+end
+
+function LuiButton:set_right_icon(normal, hover, pressed, pressed_hover, disabled, width)
+    self:set_icon(normal, hover, pressed, pressed_hover, disabled, width, ICON_POSITION_RIGHT)
 end
 
 function LuiButton:SetRightIcon(normal, hover, pressed, pressed_hover, disabled, width)
@@ -250,6 +282,7 @@ function LuiButton:set_text(text)
     if self._label ~= nil then
         self._label:SetText(text or "")
     end
+    self:_layout()
 end
 
 function LuiButton:SetText(text)
@@ -384,21 +417,21 @@ function LuiButton:_current_text_color()
     return self._text_normal
 end
 
-function LuiButton:_current_right_icon()
+function LuiButton:_current_icon()
     if self._enabled ~= true then
-        return self._right_icon_disabled or self._right_icon_normal
+        return self._icon_disabled or self._icon_normal
     end
     if self._pressed == true then
         if self._hover == true then
-            return self._right_icon_pressed_hover or self._right_icon_pressed or self._right_icon_hover or
-                self._right_icon_normal
+            return self._icon_pressed_hover or self._icon_pressed or self._icon_hover or
+                self._icon_normal
         end
-        return self._right_icon_pressed or self._right_icon_normal
+        return self._icon_pressed or self._icon_normal
     end
     if self._hover == true then
-        return self._right_icon_hover or self._right_icon_normal
+        return self._icon_hover or self._icon_normal
     end
-    return self._right_icon_normal
+    return self._icon_normal
 end
 
 function LuiButton:_apply_default_font()
@@ -422,8 +455,9 @@ function LuiButton:_update_visual_state()
     if self._right_label ~= nil then
         self._right_label:SetForeColor(self:_current_text_color())
     end
-    if self._right_icon ~= nil and self._right_icon:IsVisible() then
-        self._right_icon:SetBackground(self:_current_right_icon())
+    if self._icon ~= nil and self._icon:IsVisible() then
+        local icon_w, icon_h = self._icon:GetSize()
+        self._icon:set_icon(self:_current_icon(), icon_w, icon_h)
     end
 end
 
@@ -440,43 +474,73 @@ function LuiButton:_layout()
     local inner_w = self._inner ~= nil and self._inner:GetWidth() or w
     local inner_h = self._inner ~= nil and self._inner:GetHeight() or h
 
-    local right_w = math.max(
-        _scaled_int(self._scale, self._right_width or 0),
-        _scaled_int(self._scale, self._right_icon_width or 0)
-    )
-    if right_w < 0 then right_w = 0 end
-    if right_w > inner_w then right_w = inner_w end
+    local right_text_w = _scaled_int(self._scale, self._right_width or 0)
+    if right_text_w < 0 then right_text_w = 0 end
+    if right_text_w > inner_w then right_text_w = inner_w end
 
-    local use_icon = (self._right_icon_width or 0) > 0 and self._right_icon_normal ~= nil
+    local use_icon = (self._icon_width or 0) > 0 and self._icon_normal ~= nil
+    local icon_slot_w = _scaled_int(self._scale, self._icon_width or 0)
+    if icon_slot_w < 0 then icon_slot_w = 0 end
+    if icon_slot_w > inner_w then icon_slot_w = inner_w end
+
+    local label_text = self._label ~= nil and tostring(self._label:GetText() or "") or ""
+    local has_text = label_text ~= ""
 
     if self._right_label ~= nil then
-        if right_w > 0 and use_icon ~= true then
+        if right_text_w > 0 and use_icon ~= true then
             self._right_label:SetVisible(true)
             self._right_label:SetText(tostring(self._right_text or ""))
-            self._right_label:SetPosition(inner_w - right_w, 0)
-            self._right_label:SetSize(right_w, inner_h)
+            self._right_label:SetPosition(inner_w - right_text_w, 0)
+            self._right_label:SetSize(right_text_w, inner_h)
         else
             self._right_label:SetVisible(false)
         end
     end
 
-    if self._right_icon ~= nil then
-        if right_w > 0 and use_icon == true then
-            self._right_icon:SetVisible(true)
+    if self._icon ~= nil then
+        if use_icon == true then
+            self._icon:SetVisible(true)
             local icon_size = math.min(_scaled_int(self._scale, BASE_ICON_SIZE), inner_h)
-            local px = inner_w - right_w + math.floor((right_w - icon_size) / 2)
+            if icon_slot_w > 0 then
+                icon_size = math.min(icon_size, icon_slot_w)
+            end
+
             local py = math.floor((inner_h - icon_size) / 2)
-            self._right_icon:SetPosition(px, py)
-            self._right_icon:SetSize(icon_size, icon_size)
-            self._right_icon:SetBackground(self:_current_right_icon())
+            local px
+
+            if has_text ~= true then
+                px = math.floor((inner_w - icon_size) / 2)
+            elseif self._icon_position == ICON_POSITION_LEFT then
+                px = math.floor((icon_slot_w - icon_size) / 2)
+            else
+                px = inner_w - icon_slot_w + math.floor((icon_slot_w - icon_size) / 2)
+            end
+
+            self._icon:SetPosition(px, py)
+            self._icon:set_icon(self:_current_icon(), icon_size, icon_size)
         else
-            self._right_icon:SetVisible(false)
+            self._icon:SetVisible(false)
         end
     end
 
     if self._label ~= nil then
-        self._label:SetPosition(0, 0)
-        self._label:SetSize(inner_w - right_w, inner_h)
+        local label_x = 0
+        local label_w = inner_w
+
+        if use_icon == true and has_text == true then
+            if self._icon_position == ICON_POSITION_LEFT then
+                label_x = icon_slot_w
+                label_w = inner_w - icon_slot_w
+            else
+                label_w = inner_w - icon_slot_w
+            end
+        elseif right_text_w > 0 then
+            label_w = inner_w - right_text_w
+        end
+
+        if label_w < 0 then label_w = 0 end
+        self._label:SetPosition(label_x, 0)
+        self._label:SetSize(label_w, inner_h)
     end
 
     self:_update_visual_state()

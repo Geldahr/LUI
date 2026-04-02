@@ -61,13 +61,14 @@ function LuiDropdown:Constructor()
     self.button:SetParent(self)
     self.button:SetScale(self._scale)
     self.button:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.button:SetRightIcon(
+    self.button:SetIcon(
         DROP_DOWN_ARROW,
         DROP_DOWN_ARROW_HIGHLIGHT,
         DROP_DOWN_ARROW_PRESSED,
         DROP_DOWN_ARROW_PRESSED_HIGHLIGHT,
         DROP_DOWN_ARROW,
-        BASE_ARROW_W
+        BASE_ARROW_W,
+        LuiButton.icon_position.RIGHT
     )
     self.button.Click = function()
         self:Toggle()
@@ -162,13 +163,14 @@ function LuiDropdown:set_scale(scale)
 
     if self.button ~= nil then
         self.button:SetScale(self._scale)
-        self.button:SetRightIcon(
+        self.button:SetIcon(
             DROP_DOWN_ARROW,
             DROP_DOWN_ARROW_HIGHLIGHT,
             DROP_DOWN_ARROW_PRESSED,
             DROP_DOWN_ARROW_PRESSED_HIGHLIGHT,
             DROP_DOWN_ARROW,
-            BASE_ARROW_W
+            BASE_ARROW_W,
+            LuiButton.icon_position.RIGHT
         )
     end
 
