@@ -2,6 +2,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.image"
 import "LUI.src.Utils.color"
 
 ---@class LuiColorField : Turbine.UI.Control
@@ -365,13 +366,10 @@ function LuiColorField:open_picker()
     picker.panel = panel
     picker._drag_target = PICKER_DRAG_NONE
 
-    picker.hs = Turbine.UI.Control()
+    picker.hs = Image(HS_TEXTURE, hs_size, hs_size)
     picker.hs:SetParent(panel)
     picker.hs:SetPosition(pad, pad)
-    picker.hs:SetSize(hs_size, hs_size)
     picker.hs:SetMouseVisible(true)
-    picker.hs:SetBackground(HS_TEXTURE)
-    picker.hs:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     picker.hs:SetZOrder(5)
 
     picker.hs_dark = Turbine.UI.Control()
@@ -391,14 +389,10 @@ function LuiColorField:open_picker()
     picker.value_base:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     picker.value_base:SetZOrder(5)
 
-    picker.value_grad = Turbine.UI.Control()
+    picker.value_grad = Image(VALUE_GRADIENT_TEXTURE, value_w, hs_size)
     picker.value_grad:SetParent(picker.value_base)
     picker.value_grad:SetPosition(0, 0)
-    picker.value_grad:SetSize(value_w, hs_size)
     picker.value_grad:SetMouseVisible(false)
-    picker.value_grad:SetBackground(VALUE_GRADIENT_TEXTURE)
-    picker.value_grad:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    picker.value_grad:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     picker.value_grad:SetZOrder(6)
 
     picker._cursor_size = _scaled_int(self._scale, BASE_PICKER_CURSOR)
