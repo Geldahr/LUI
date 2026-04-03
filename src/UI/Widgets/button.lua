@@ -122,6 +122,7 @@ function LuiButton:Constructor()
     self._icon_position = ICON_POSITION_RIGHT
     self._icon_render_w = nil
     self._icon_render_h = nil
+    self._icon_stretch_mode = nil
     self._padding = 0
 
     self.SizeChanged = function()
@@ -270,6 +271,13 @@ end
 function LuiButton:set_icon_position(position)
     self._icon_position = _normalize_icon_position(position)
     self:_layout()
+end
+
+function LuiButton:set_icon_stretch_mode(mode)
+    self._icon_stretch_mode = mode
+    if self._icon ~= nil and mode ~= nil then
+        self._icon:SetStretchMode(mode)
+    end
 end
 
 function LuiButton:set_active(active)
@@ -462,6 +470,9 @@ function LuiButton:_update_visual_state()
     end
     if self._icon ~= nil and self._icon:IsVisible() then
         self._icon:set_icon(self:_current_icon())
+        if self._icon_stretch_mode ~= nil then
+            self._icon:SetStretchMode(self._icon_stretch_mode)
+        end
         if self._icon_render_w ~= nil then
             self._icon:set_size(self._icon_render_w, self._icon_render_h)
         end
@@ -530,6 +541,9 @@ function LuiButton:_layout()
 
             if current_icon ~= nil then
                 self._icon:set_icon(current_icon)
+                if self._icon_stretch_mode ~= nil then
+                    self._icon:SetStretchMode(self._icon_stretch_mode)
+                end
             end
 
             if icon_slot_h ~= nil then
@@ -552,6 +566,9 @@ function LuiButton:_layout()
 
             self._icon:SetPosition(px, py)
             self._icon:set_icon(self:_current_icon())
+            if self._icon_stretch_mode ~= nil then
+                self._icon:SetStretchMode(self._icon_stretch_mode)
+            end
         else
             self._icon_render_w = nil
             self._icon_render_h = nil

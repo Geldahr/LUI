@@ -70,6 +70,7 @@ function LuiDropdown:Constructor()
         nil,
         LuiButton.icon_position.RIGHT
     )
+    self.button:set_icon_stretch_mode(0)
     self.button.Click = function()
         self:Toggle()
     end
