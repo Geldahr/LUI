@@ -3,7 +3,7 @@ import "LUI.src.UI.Widgets"
 local S = _G.STATUS_BAR_COMMON
 local BUTTON_FILL_COLOR = Turbine.UI.Color(1.00, 0.08, 0.10, 0.12)
 local BUTTON_FILL_HOVER_COLOR = Turbine.UI.Color(1.00, 0.12, 0.15, 0.18)
-local BUTTON_MARGIN = 2
+local BUTTON_MARGIN = 1
 local BUTTON_BORDER = 1
 
 local ShortcutButtonWidget = class(Turbine.UI.Control)
