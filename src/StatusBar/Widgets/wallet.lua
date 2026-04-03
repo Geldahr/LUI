@@ -235,8 +235,7 @@ function WalletWidget:_layout()
             local item = self._item_controls[i]
             local icon_w = 0
             if item.icon ~= nil and item.icon_background ~= nil then
-                item.icon:set_height(icon_h)
-                icon_w = item.icon:GetWidth()
+                icon_w, _ = item.icon:set_height(icon_h)
                 if icon_w > 0 then
                     icon_total = icon_total + icon_w
                     icon_gap_total = icon_gap_total + S.ICON_GAP

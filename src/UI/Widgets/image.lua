@@ -39,10 +39,7 @@ function Image:Constructor(icon, w, h)
     end
 end
 
-function Image:set_size(w, h)
-    if w == nil then
-        return
-    end
+function Image:_store_size_request(w, h)
     w = _round_size(w)
     h = _round_size(h)
 
@@ -50,16 +47,31 @@ function Image:set_size(w, h)
         self._requested_side = w
         self._requested_w = nil
         self._requested_h = nil
-    else
+    elseif w ~= nil or h ~= nil then
         self._requested_w = w
         self._requested_h = h
         self._requested_side = nil
     end
 
+    return w, h
+end
+
+function Image:set_size(w, h)
+    if w == nil then
+        return nil
+    end
+    w, h = self:_store_size_request(w, h)
+
+    if self.original_w == nil or self.original_h == nil then
+        return nil
+    end
+
     if w ~= nil and h ~= nil then
+        self._real_w = w
+        self._real_h = h
         self:SetSize(w, h)
         self:set_alignment(self._align)
-        return
+        return w, h
     end
 
     -- If only w is set we assume that we want to size it so it keeps
@@ -68,8 +80,8 @@ function Image:set_size(w, h)
         w = 0
     end
 
-    local new_w
-    local new_h
+    local new_w = 0
+    local new_h = 0
     if self.original_w > self.original_h then
         new_w = w
         new_h = w * self.original_h / self.original_w
@@ -77,8 +89,6 @@ function Image:set_size(w, h)
         new_h = w
         new_w = w * self.original_w / self.original_h
     end
-
-    -- Turbine.Shell.WriteLine("image - w: "..new_w .. " - h: ".. new_h)
 
     self:SetSize(new_w, new_h)
     self:set_alignment(self._align)
@@ -92,7 +102,7 @@ end
 function Image:set_width(w)
     w = _round_size(w)
     if w == nil then
-        return
+        return nil
     end
 
     self._requested_side = nil
@@ -100,7 +110,7 @@ function Image:set_width(w)
     self._requested_h = nil
 
     if self.original_w == nil or self.original_h == nil then
-        return
+        return nil
     end
 
     if w < 0 then
@@ -114,6 +124,8 @@ function Image:set_width(w)
 
     self:SetSize(w, new_h)
     self:set_alignment(self._align)
+
+    return w, new_h
 end
 
 function Image:set_height(h)
@@ -141,19 +153,27 @@ function Image:set_height(h)
 
     self:SetSize(new_w, h)
     self:set_alignment(self._align)
+
+    return new_w, h
 end
 
 function Image:_set_size(w, h)
-    if w ~= nil then
-        self:set_size(w, h)
-    elseif self._requested_side ~= nil then
-        self:set_size(self._requested_side)
+    if w ~= nil or h ~= nil then
+        self:_store_size_request(w, h)
+    end
+
+    if self.original_w == nil or self.original_h == nil then
+        return nil
+    end
+
+    if self._requested_side ~= nil then
+        return self:set_size(self._requested_side)
     elseif self._requested_w ~= nil and self._requested_h ~= nil then
-        self:set_size(self._requested_w, self._requested_h)
+        return self:set_size(self._requested_w, self._requested_h)
     elseif self._requested_w ~= nil then
-        self:set_width(self._requested_w)
+        return self:set_width(self._requested_w)
     elseif self._requested_h ~= nil then
-        self:set_height(self._requested_h)
+        return self:set_height(self._requested_h)
     end
 end
 
@@ -161,9 +181,12 @@ function Image:set_icon(icon, w, h)
     if icon == nil then
         self.original_w = nil
         self.original_h = nil
+        self._real_w = nil
+        self._real_h = nil
         self:SetBackground(nil)
-        self:_set_size(w, h)
-        self:set_alignment(self._align)
+        if w ~= nil or h ~= nil then
+            self:_store_size_request(w, h)
+        end
         return
     end
 
@@ -172,13 +195,15 @@ function Image:set_icon(icon, w, h)
     self:SetBackground(icon)
     self:SetStretchMode(2)
     self.original_w, self.original_h = self:GetSize()
+    self._real_w = self.original_w
+    self._real_h = self.original_h
 
     self:SetSize(self.original_w, self.original_h)
     self:SetStretchMode(1)
 
-    self:_set_size(w, h)
-
-    self:set_alignment(self._align)
+    if self:_set_size(w, h) == nil then
+        self:set_alignment(self._align)
+    end
 end
 
 Image.CENTER = 0x01
@@ -186,13 +211,14 @@ Image.MIDDLE = 0x02
 
 function Image:set_alignment(align)
     self._align = align
-    if align == nil or self:GetParent() == nil then
+    local parent = self:GetParent()
+    if align == nil or parent == nil or self._real_w == nil or self._real_h == nil then
         -- Keep current position
         return
     end
 
     if _has_flag(align, Image.CENTER) then
-        local pw = self:GetParent():GetWidth()
+        local pw = parent:GetWidth()
         local w = self._real_w
         self:SetLeft(math.floor((pw - w) / 2))
     else
@@ -200,7 +226,7 @@ function Image:set_alignment(align)
     end
 
     if _has_flag(align, Image.MIDDLE) then
-        local ph = self:GetParent():GetHeight()
+        local ph = parent:GetHeight()
         local h = self._real_h
         self:SetTop(math.floor((ph - h) / 2))
     else
