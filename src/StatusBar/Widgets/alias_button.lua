@@ -5,6 +5,8 @@ import "LUI.src.UI.Widgets"
 local S = _G.STATUS_BAR_COMMON
 local BUTTON_FILL_COLOR = Turbine.UI.Color(1.00, 0.08, 0.10, 0.12)
 local BUTTON_FILL_HOVER_COLOR = Turbine.UI.Color(1.00, 0.12, 0.15, 0.18)
+local BUTTON_MARGIN = 1
+local BUTTON_BORDER = 1
 
 local AliasButtonWidget = class(Turbine.UI.Control)
 _G.AliasButtonWidget = AliasButtonWidget
@@ -208,40 +210,55 @@ end
 
 function AliasButtonWidget:_layout()
     local w, h = self:GetSize()
-    local border_thickness = 1
-    local inner_w = math.max(0, w - (border_thickness * 2))
-    local inner_h = math.max(0, h - (border_thickness * 2))
+    local margin = BUTTON_MARGIN
+    if margin * 2 > w then
+        margin = math.floor(w / 2)
+    end
+    if margin * 2 > h then
+        margin = math.floor(h / 2)
+    end
+
+    local button_x = margin
+    local button_y = margin
+    local button_w = math.max(0, w - (margin * 2))
+    local button_h = math.max(0, h - (margin * 2))
+    local inner_w = math.max(0, button_w - (BUTTON_BORDER * 2))
+    local inner_h = math.max(0, button_h - (BUTTON_BORDER * 2))
     local slot_size = math.min(inner_w, inner_h)
 
-    self.border_top:SetPosition(0, 0)
-    self.border_top:SetSize(w, math.min(border_thickness, h))
+    self.border_top:SetPosition(button_x, button_y)
+    self.border_top:SetSize(button_w, math.min(BUTTON_BORDER, button_h))
 
-    self.border_bottom:SetPosition(0, math.max(0, h - border_thickness))
-    self.border_bottom:SetSize(w, math.min(border_thickness, h))
+    self.border_bottom:SetPosition(button_x, button_y + math.max(0, button_h - BUTTON_BORDER))
+    self.border_bottom:SetSize(button_w, math.min(BUTTON_BORDER, button_h))
 
-    self.border_left:SetPosition(0, 0)
-    self.border_left:SetSize(math.min(border_thickness, w), h)
+    self.border_left:SetPosition(button_x, button_y)
+    self.border_left:SetSize(math.min(BUTTON_BORDER, button_w), button_h)
 
-    self.border_right:SetPosition(math.max(0, w - border_thickness), 0)
-    self.border_right:SetSize(math.min(border_thickness, w), h)
+    self.border_right:SetPosition(button_x + math.max(0, button_w - BUTTON_BORDER), button_y)
+    self.border_right:SetSize(math.min(BUTTON_BORDER, button_w), button_h)
 
-    self.background:SetPosition(border_thickness, border_thickness)
+    self.background:SetPosition(button_x + BUTTON_BORDER, button_y + BUTTON_BORDER)
     self.background:SetSize(inner_w, inner_h)
     self.background:SetVisible(inner_w > 0 and inner_h > 0)
 
     if self.slot ~= nil then
-        local slot_x = math.floor((w - slot_size) / 2)
-        local slot_y = math.floor((h - slot_size) / 2)
+        local slot_x = button_x + BUTTON_BORDER + math.floor((inner_w - slot_size) / 2)
+        local slot_y = button_y + BUTTON_BORDER + math.floor((inner_h - slot_size) / 2)
         self.slot:SetPosition(slot_x, slot_y)
         self.slot:SetSize(slot_size, slot_size)
     end
 
-    local icon_h = S.get_icon_size(slot_size)
-    self.icon:set_height(icon_h)
-    self.icon:SetVisible(self.icon_background ~= nil and icon_h > 0)
+    if self.icon_background ~= nil then
+        local icon_h = S.get_icon_size(inner_h)
+        self.icon:set_height(icon_h)
+        self.icon:SetVisible(icon_h > 0)
+    else
+        self.icon:SetVisible(false)
+    end
 
-    self.label:SetPosition(0, 0)
-    self.label:SetSize(w, h)
+    self.label:SetPosition(button_x + BUTTON_BORDER, button_y + BUTTON_BORDER)
+    self.label:SetSize(inner_w, inner_h)
     self.label:SetVisible(self.icon_label ~= nil and self.icon_label ~= "")
 end
 
