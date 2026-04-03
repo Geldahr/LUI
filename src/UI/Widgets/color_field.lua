@@ -396,7 +396,6 @@ function LuiColorField:open_picker()
     picker.panel = panel
     picker._drag_target = PICKER_DRAG_NONE
 
-    Turbine.Shell.WriteLine("Texture s: "..hs_size)
     picker.hs = Turbine.UI.Control()
     picker.hs:SetParent(panel)
     picker.hs:SetPosition(pad, pad)
@@ -687,8 +686,6 @@ function LuiColorField:_picker_sync_cursors(picker)
     if hs ~= nil and picker.hs_cursor_h_outer ~= nil then
         local w = hs:GetWidth()
         local h = hs:GetHeight()
-        Turbine.Shell.WriteLine("w: " .. w)
-        Turbine.Shell.WriteLine("h: " .. h)
         if w > 1 and h > 1 then
             local x = math.floor((_clamp(self._picker_h or 0, 0, 360) / 360) * (w - 1) + 0.5)
             local y = math.floor((1 - _clamp(self._picker_s or 0, 0, 1)) * (h - 1) + 0.5)
