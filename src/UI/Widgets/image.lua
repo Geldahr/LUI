@@ -157,6 +157,18 @@ function Image:set_height(h)
     return new_w, h
 end
 
+function Image:get_width()
+    return self._real_w
+end
+
+function Image:get_height()
+    return self._real_h
+end
+
+function Image:get_size()
+    return self._real_w, self._real_h
+end
+
 function Image:_set_size(w, h)
     if w ~= nil or h ~= nil then
         self:_store_size_request(w, h)
@@ -221,15 +233,11 @@ function Image:set_alignment(align)
         local pw = parent:GetWidth()
         local w = self._real_w
         self:SetLeft(math.floor((pw - w) / 2))
-    else
-        self:SetLeft(0)
     end
 
     if _has_flag(align, Image.MIDDLE) then
         local ph = parent:GetHeight()
         local h = self._real_h
         self:SetTop(math.floor((ph - h) / 2))
-    else
-        self:SetTop(0)
     end
 end
