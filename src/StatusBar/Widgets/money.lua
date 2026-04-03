@@ -173,7 +173,7 @@ function MoneyWidget:_layout()
     local y = S.get_centered_icon_y(h, size)
 
     self.g_icon:SetPosition(x, y)
-    self.g_icon:SetSize(size, size)
+    self.g_icon:set_size(size, size)
     self.g_icon:SetVisible(true)
     x = x + size + gap
 
@@ -183,7 +183,7 @@ function MoneyWidget:_layout()
     x = x + g_w + gap
 
     self.s_icon:SetPosition(x, y)
-    self.s_icon:SetSize(size, size)
+    self.s_icon:set_size(size, size)
     self.s_icon:SetVisible(true)
     x = x + size + gap
 
@@ -193,7 +193,7 @@ function MoneyWidget:_layout()
     x = x + s_w + gap
 
     self.c_icon:SetPosition(x, y)
-    self.c_icon:SetSize(size, size)
+    self.c_icon:set_size(size, size)
     self.c_icon:SetVisible(true)
     x = x + size + gap
 

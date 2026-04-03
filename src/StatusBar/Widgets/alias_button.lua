@@ -91,6 +91,7 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self.icon = Image(self.icon_background)
     self.icon:SetParent(self)
     self.icon:SetZOrder(2)
+    self.icon:set_alignment(Image.CENTER + Image.MIDDLE)
 
     self.label = LuiLabel()
     self.label:SetParent(self)
@@ -236,12 +237,8 @@ function AliasButtonWidget:_layout()
     end
 
     local icon_h = S.get_icon_size(slot_size)
-    local icon_w = Image.get_size_for_height(self.icon_background, icon_h)
-    local icon_x = math.floor((w - icon_w) / 2)
-    local icon_y = S.get_centered_icon_y(h, icon_h)
-    self.icon:SetPosition(icon_x, icon_y)
-    self.icon:SetSize(icon_w, icon_h)
-    self.icon:SetVisible(self.icon_background ~= nil and icon_h > 0 and icon_w > 0)
+    self.icon:set_height(icon_h)
+    self.icon:SetVisible(self.icon_background ~= nil and icon_h > 0)
 
     self.label:SetPosition(0, 0)
     self.label:SetSize(w, h)

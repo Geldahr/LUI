@@ -526,9 +526,6 @@ function LuiButton:_layout()
             local render_w = 0
             local render_h = 0
 
-            if has_text ~= true then
-                box_w = content_w
-            end
             if box_w < 0 then box_w = 0 end
 
             if current_icon ~= nil then
@@ -536,15 +533,15 @@ function LuiButton:_layout()
             end
 
             if icon_slot_h ~= nil then
-                render_w = math.min(icon_slot_w, box_w)
-                render_h = math.min(icon_slot_h, box_h)
+                render_w, render_h = self._icon:set_size(math.min(icon_slot_w, box_w), math.min(icon_slot_h, box_h))
             else
-                render_w, render_h = self._icon:get_fitted_size(box_w, box_h)
+                render_w, render_h = self._icon:set_size(math.min(box_w, box_h))
             end
+            self._icon_render_w = render_w
+            self._icon_render_h = render_h
 
             local py = content_y + math.floor((content_h - render_h) / 2)
             local px
-
             if has_text ~= true then
                 px = content_x + math.floor((content_w - render_w) / 2)
             elseif self._icon_position == ICON_POSITION_LEFT then
@@ -553,11 +550,8 @@ function LuiButton:_layout()
                 px = content_x + content_w - icon_slot_w + math.floor((icon_slot_w - render_w) / 2)
             end
 
-            self._icon_render_w = render_w
-            self._icon_render_h = render_h
             self._icon:SetPosition(px, py)
             self._icon:set_icon(self:_current_icon())
-            self._icon:set_size(self._icon_render_w, self._icon_render_h)
         else
             self._icon_render_w = nil
             self._icon_render_h = nil

@@ -211,8 +211,8 @@ function ItemCountWidget:_layout()
     local show_icon = (self._icon_image_id ~= nil or self._background_image_id ~= nil) and icon_size > 0
 
     if show_icon == true then
-        self.icon_fore:SetSize(icon_size, icon_size)
-        self.icon_back:SetSize(icon_size, icon_size)
+        self.icon_fore:set_size(icon_size, icon_size)
+        self.icon_back:set_size(icon_size, icon_size)
         self.icon_fore:SetVisible(self._icon_image_id ~= nil)
         self.icon_back:SetVisible(self._background_image_id ~= nil)
     else

@@ -185,7 +185,7 @@ function PartyMemberVitals:_resize_extra_controls()
     local v = self:get_vitals_settings()
     local ci = v.class_icon
     if ci.enabled == true and ci.size > 0 then
-        self.class_icon:SetSize(ci.size, ci.size)
+        self.class_icon:set_size(ci.size, ci.size)
         self.class_icon:SetPosition(ci.x, ci.y)
     else
         self.class_icon:SetVisible(false)
@@ -193,7 +193,7 @@ function PartyMemberVitals:_resize_extra_controls()
 
     local li = v.leader_icon
     if li.enabled == true and li.size > 0 then
-        self.leader_icon:SetSize(li.size, li.size)
+        self.leader_icon:set_size(li.size, li.size)
         self.leader_icon:SetPosition(li.x, li.y)
     else
         self.leader_icon:SetVisible(false)

@@ -1709,12 +1709,12 @@ function AssetsWindow:layout()
         view_icon_y = 0
     end
 
-    self.view_details_button:SetSize(view_icon_w, view_icon_w)
+    self.view_details_button:set_size(view_icon_w, view_icon_w)
     nav_right_x = nav_right_x - view_icon_w
     self.view_details_button:SetPosition(nav_right_x, view_icon_y)
     nav_right_x = nav_right_x - gap
 
-    self.view_icons_button:SetSize(view_icon_w, view_icon_w)
+    self.view_icons_button:set_size(view_icon_w, view_icon_w)
     nav_right_x = nav_right_x - view_icon_w
     self.view_icons_button:SetPosition(nav_right_x, view_icon_y)
     nav_right_x = nav_right_x - gap

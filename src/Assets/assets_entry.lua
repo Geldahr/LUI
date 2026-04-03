@@ -469,10 +469,10 @@ function AssetsEntry:_layout_icon_controls(icon_w, icon_h)
     local visual_y = math.floor((icon_h - visual_side) / 2)
 
     self.icon_back:SetPosition(visual_x, visual_y)
-    self.icon_back:SetSize(visual_side, visual_side)
+    self.icon_back:set_size(visual_side, visual_side)
 
     self.icon_fore:SetPosition(0, 0)
-    self.icon_fore:SetSize(BASE_ICON_SIZE, BASE_ICON_SIZE)
+    self.icon_fore:set_size(BASE_ICON_SIZE, BASE_ICON_SIZE)
     self.icon_item_info_control:SetPosition(ITEM_CONTROL_OFFSET, ITEM_CONTROL_OFFSET)
     self.icon_item_info_control:SetSize(BASE_ICON_SIZE + ITEM_INFO_CONTROL_EXTRA, BASE_ICON_SIZE + ITEM_INFO_CONTROL_EXTRA)
     self.icon_item_control:SetPosition(ITEM_CONTROL_OFFSET, ITEM_CONTROL_OFFSET)

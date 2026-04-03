@@ -209,7 +209,7 @@ function CooldownEntry:apply_settings()
     self.label:SetForeColor(s.font.color)
 
     self.icon:SetPosition(0, 0)
-    self.icon:SetSize(icon_size, icon_size)
+    self.icon:set_size(icon_size, icon_size)
     if self.skill ~= nil and self.skill.icon ~= nil then
         self.icon:set_icon(self.skill.icon, icon_size, icon_size)
     end

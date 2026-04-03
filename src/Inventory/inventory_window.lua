@@ -393,21 +393,21 @@ function InventoryWindow:layout()
     local y = 0
 
     self.g_icon:SetPosition(x, y + 1)
-    self.g_icon:SetSize(icon_size, icon_size)
+    self.g_icon:set_size(icon_size, icon_size)
     x = x + icon_size + gap
     self.g_label:SetPosition(x, y)
     self.g_label:SetSize(field_w, money_h)
     x = x + field_w + gap
 
     self.s_icon:SetPosition(x, y + 1)
-    self.s_icon:SetSize(icon_size, icon_size)
+    self.s_icon:set_size(icon_size, icon_size)
     x = x + icon_size + gap
     self.s_label:SetPosition(x, y)
     self.s_label:SetSize(field_w, money_h)
     x = x + field_w + gap
 
     self.c_icon:SetPosition(x, y + 1)
-    self.c_icon:SetSize(icon_size, icon_size)
+    self.c_icon:set_size(icon_size, icon_size)
     x = x + icon_size + gap
     self.c_label:SetPosition(x, y)
     self.c_label:SetSize(field_w, money_h)
