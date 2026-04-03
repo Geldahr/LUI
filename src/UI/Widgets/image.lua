@@ -10,6 +10,13 @@ local function _round_size(value)
     return math.floor(value + 0.5)
 end
 
+local function _has_flag(value, flag)
+    if value == nil then
+        return false
+    end
+    return math.floor(value / flag) % 2 == 1
+end
+
 function Image:Constructor(icon, w, h)
     Turbine.UI.Control.Constructor(self)
 
@@ -19,6 +26,8 @@ function Image:Constructor(icon, w, h)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self._requested_w = nil
     self._requested_h = nil
+    self._requested_mode = nil
+    self._align = nil
 
     if icon ~= nil then
         self:set_icon(icon, w, h)
@@ -36,9 +45,11 @@ function Image:set_size(w, h)
 
     self._requested_w = w
     self._requested_h = h
+    self._requested_mode = "size"
 
     if w ~= nil and h ~= nil then
         self:SetSize(w, h)
+        self:set_alignment(self._align)
         return
     end
 
@@ -59,28 +70,55 @@ function Image:set_size(w, h)
     end
 
     self:SetSize(new_w, new_h)
+    self:set_alignment(self._align)
 end
 
 function Image:set_width(w)
+    w = _round_size(w)
+    if w == nil then
+        return
+    end
+
+    self._requested_w = w
+    self._requested_h = nil
+    self._requested_mode = "width"
+
     if self.original_w == nil or self.original_h == nil then
         return
     end
 
-    local new_w = _round_size(w) or 0
-    local new_h = new_w * self.original_h / self.original_w
+    if w < 0 then
+        w = 0
+    end
 
-    self:SetSize(new_w, new_h)
+    local new_h = w * self.original_h / self.original_w
+
+    self:SetSize(w, new_h)
+    self:set_alignment(self._align)
 end
 
 function Image:set_height(h)
+    h = _round_size(h)
+    if h == nil then
+        return
+    end
+
+    self._requested_w = nil
+    self._requested_h = h
+    self._requested_mode = "height"
+
     if self.original_h == nil or self.original_w == nil then
         return
     end
 
-    local new_h = _round_size(h) or 0
-    local new_w = new_h * self.original_w / self.original_h
+    if h < 0 then
+        h = 0
+    end
 
-    self:SetSize(new_w, new_h)
+    local new_w = h * self.original_w / self.original_h
+
+    self:SetSize(new_w, h)
+    self:set_alignment(self._align)
 end
 
 function Image:set_icon(icon, w, h)
@@ -90,9 +128,14 @@ function Image:set_icon(icon, w, h)
         self:SetBackground(nil)
         if w ~= nil then
             self:set_size(w, h)
-        elseif self._requested_w ~= nil then
+        elseif self._requested_mode == "size" and self._requested_w ~= nil then
             self:set_size(self._requested_w, self._requested_h)
+        elseif self._requested_mode == "width" and self._requested_w ~= nil then
+            self:set_width(self._requested_w)
+        elseif self._requested_mode == "height" and self._requested_h ~= nil then
+            self:set_height(self._requested_h)
         end
+        self:set_alignment(self._align)
         return
     end
 
@@ -107,7 +150,46 @@ function Image:set_icon(icon, w, h)
 
     if w ~= nil then
         self:set_size(w, h)
-    elseif self._requested_w ~= nil then
+    elseif self._requested_mode == "size" and self._requested_w ~= nil then
         self:set_size(self._requested_w, self._requested_h)
+    elseif self._requested_mode == "width" and self._requested_w ~= nil then
+        self:set_width(self._requested_w)
+    elseif self._requested_mode == "height" and self._requested_h ~= nil then
+        self:set_height(self._requested_h)
+    end
+
+    self:set_alignment(self._align)
+end
+
+Image.CENTER = 0x01
+Image.MIDDLE = 0x02
+
+function Image:set_alignment(align)
+    self._align = align
+    if align == nil or self:GetParent() == nil then
+        -- Keep current position
+        return
+    end
+
+    local parent = self:GetParent()
+    if parent == nil then
+        self:SetPosition(0, 0)
+        return
+    end
+
+    if _has_flag(align, Image.CENTER) then
+        local pw = parent:GetWidth()
+        local w = self:GetWidth()
+        self:SetLeft(math.floor((pw - w) / 2))
+    else
+        self:SetLeft(0)
+    end
+
+    if _has_flag(align, Image.MIDDLE) then
+        local ph = self:GetParent():GetHeight()
+        local h = self:GetHeight()
+        self:SetTop(math.floor((ph - h) / 2))
+    else
+        self:SetTop(0)
     end
 end
