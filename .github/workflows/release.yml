@@ -51,8 +51,12 @@ jobs:
           rm -rf dist
           mkdir -p "$payload_root"
 
+          cp -R api "$payload_root/"
+          cp -R assets "$payload_root/"
           cp -R src "$payload_root/"
+          cp -R reloader "$payload_root/"
           cp LUI.plugin "$payload_root/"
+          cp LUIReloader.plugin "$payload_root/"
           cp LICENSE "$payload_root/"
           cp README.md "$payload_root/"
 
@@ -67,7 +71,7 @@ jobs:
       - name: Build batch installer
         shell: bash
         run: |
-          bash tools/build_embedded_zip_bat.sh \
+          bash .github/scripts/build_embedded_zip_bat.sh \
             --zip-path "${{ steps.vars.outputs.zip_path }}" \
             --bat-path "${{ steps.vars.outputs.bat_path }}" \
             --target-root '%USERPROFILE%\Documents\The Lord of the Rings Online\Plugins'
