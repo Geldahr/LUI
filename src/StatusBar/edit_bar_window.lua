@@ -303,7 +303,7 @@ function StatusBarEditWindow:Constructor(owner)
 
     self.done_button = UI.Widgets.LuiButton()
     self.done_button:SetParent(self)
-    self.done_button:SetText(TR("Done"))
+    self.done_button:set_text(TR("Done"))
     self.done_button.Click = function()
         self:close_manually()
     end
@@ -400,7 +400,7 @@ function StatusBarEditWindow:apply_scale()
     self.title:SetText(TR("Edit Bar"))
     self.hint:SetFont(_scaled_font("Verdana", 11))
     self.note:SetFont(_scaled_font("Verdana", 10))
-    self.done_button:SetFont(_scaled_font("Verdana", 12))
+    self.done_button:set_font(_scaled_font("Verdana", 12))
     self.done_button:SetSize(_scaled_int(BUTTON_W), _scaled_int(BUTTON_H))
 
     for i = 1, #self.entries do

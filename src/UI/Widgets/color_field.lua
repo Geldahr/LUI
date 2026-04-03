@@ -7,8 +7,13 @@ import "LUI.src.Utils.color"
 ---@class LuiColorField : Turbine.UI.Control
 LuiColorField = class(Turbine.UI.Control)
 
-local HS_TEXTURE = "LUI/src/PluginAssets/ui/color_hs_140.tga"
-local VALUE_GRADIENT_TEXTURE = "LUI/src/PluginAssets/ui/value_gradient_140.tga"
+local HS_TEXTURE_100 = "LUI/assets/ui/color_hs_100.tga"
+local HS_TEXTURE_150 = "LUI/assets/ui/color_hs_150.tga"
+local HS_TEXTURE_200 = "LUI/assets/ui/color_hs_200.tga"
+
+local VALUE_GRADIENT_TEXTURE_100 = "LUI/assets/ui/value_gradient_100.tga"
+local VALUE_GRADIENT_TEXTURE_150 = "LUI/assets/ui/value_gradient_150.tga"
+local VALUE_GRADIENT_TEXTURE_200 = "LUI/assets/ui/value_gradient_200.tga"
 
 local BASE_SWATCH_SIZE = 13
 local BASE_SWATCH_GAP = 4
@@ -17,8 +22,8 @@ local BASE_FIELD_H = 21
 local BASE_TEXTBOX_INSET = 3
 local BASE_MIN_BORDER_H = 4
 local BASE_MIN_TEXTBOX_W = 15
-local BASE_PICKER_HS = 104
-local BASE_PICKER_VALUE_W = 13
+local BASE_PICKER_HS = 140
+local BASE_PICKER_VALUE_W = 18
 local BASE_PICKER_GAP = 6
 local BASE_PICKER_BUTTON_H = 19
 local BASE_PICKER_BUTTON_GAP = 6
@@ -42,6 +47,31 @@ local function _clamp(v, min_v, max_v)
     if v < min_v then return min_v end
     if v > max_v then return max_v end
     return v
+end
+
+local function _picker_image_set(scale)
+    if scale == nil or scale < 1.25 then
+        return {
+            hs_texture = HS_TEXTURE_100,
+            value_texture = VALUE_GRADIENT_TEXTURE_100,
+            hs_size = BASE_PICKER_HS,
+            value_w = BASE_PICKER_VALUE_W,
+        }
+    elseif scale < 1.75 then
+        return {
+            hs_texture = HS_TEXTURE_150,
+            value_texture = VALUE_GRADIENT_TEXTURE_150,
+            hs_size = 210,
+            value_w = 27,
+        }
+    end
+
+    return {
+        hs_texture = HS_TEXTURE_200,
+        value_texture = VALUE_GRADIENT_TEXTURE_200,
+        hs_size = 280,
+        value_w = 36,
+    }
 end
 
 local _hex_to_color = lui_hex_to_color
@@ -327,8 +357,9 @@ function LuiColorField:open_picker()
     inner:SetPosition(1, 1)
     inner:SetZOrder(2)
 
-    local hs_size = _scaled_int(self._scale, BASE_PICKER_HS)
-    local value_w = _scaled_int(self._scale, BASE_PICKER_VALUE_W)
+    local image_set = _picker_image_set(self._scale)
+    local hs_size = image_set.hs_size
+    local value_w = image_set.value_w
     local gap = _scaled_int(self._scale, BASE_PICKER_GAP)
     local btn_h = _scaled_int(self._scale, BASE_PICKER_BUTTON_H)
     local btn_gap = _scaled_int(self._scale, BASE_PICKER_BUTTON_GAP)
@@ -370,7 +401,7 @@ function LuiColorField:open_picker()
     picker.hs:SetPosition(pad, pad)
     picker.hs:SetSize(hs_size, hs_size)
     picker.hs:SetMouseVisible(true)
-    picker.hs:SetBackground(HS_TEXTURE)
+    picker.hs:SetBackground(image_set.hs_texture)
     picker.hs:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     picker.hs:SetZOrder(5)
 
@@ -396,7 +427,7 @@ function LuiColorField:open_picker()
     picker.value_grad:SetPosition(0, 0)
     picker.value_grad:SetSize(value_w, hs_size)
     picker.value_grad:SetMouseVisible(false)
-    picker.value_grad:SetBackground(VALUE_GRADIENT_TEXTURE)
+    picker.value_grad:SetBackground(image_set.value_texture)
     picker.value_grad:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     picker.value_grad:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     picker.value_grad:SetZOrder(6)
@@ -448,14 +479,14 @@ function LuiColorField:open_picker()
 
     picker.apply = LuiButton()
     picker.apply:SetParent(panel)
-    picker.apply:SetScale(self._scale)
-    picker.apply:SetText(TR("Apply"))
+    picker.apply:set_scale(self._scale)
+    picker.apply:set_text(TR("Apply"))
     picker.apply:SetZOrder(6)
 
     picker.cancel = LuiButton()
     picker.cancel:SetParent(panel)
-    picker.cancel:SetScale(self._scale)
-    picker.cancel:SetText(TR("Cancel"))
+    picker.cancel:set_scale(self._scale)
+    picker.cancel:set_text(TR("Cancel"))
     picker.cancel:SetZOrder(6)
 
     local btn_w = math.floor((panel_w - (pad * 2) - btn_gap) / 2)
@@ -600,7 +631,6 @@ function LuiColorField:_picker_set_hs_from_mouse(args, control)
 
     local x = _clamp(args.X or 0, 0, w - 1)
     local y = _clamp(args.Y or 0, 0, h - 1)
-
     local xn = x / (w - 1)
     local yn = y / (h - 1)
 

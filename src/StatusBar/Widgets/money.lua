@@ -19,34 +19,19 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self:SetSize(widget_w, bar_h)
 
-    self.g_icon = Turbine.UI.Control()
+    self.g_icon = Image(S.GOLD_ICON)
     self.g_icon:SetParent(self)
-    self.g_icon:SetMouseVisible(false)
-    self.g_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.g_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.g_icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    prepare_background_stretch_mode_1(self.g_icon, S.GOLD_ICON)
     self.g_icon:SetVisible(false)
 
-    self.s_icon = Turbine.UI.Control()
+    self.s_icon = Image(S.SILVER_ICON)
     self.s_icon:SetParent(self)
-    self.s_icon:SetMouseVisible(false)
-    self.s_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.s_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.s_icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    prepare_background_stretch_mode_1(self.s_icon, S.SILVER_ICON)
     self.s_icon:SetVisible(false)
 
-    self.c_icon = Turbine.UI.Control()
+    self.c_icon = Image(S.COPPER_ICON)
     self.c_icon:SetParent(self)
-    self.c_icon:SetMouseVisible(false)
-    self.c_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.c_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.c_icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    prepare_background_stretch_mode_1(self.c_icon, S.COPPER_ICON)
     self.c_icon:SetVisible(false)
 
-    self.g_label = UI.Widgets.LuiLabel()
+    self.g_label = LuiLabel()
     self.g_label:SetParent(self)
     self.g_label:SetMouseVisible(false)
     self.g_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -66,7 +51,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
         end
     end
 
-    self.s_label = UI.Widgets.LuiLabel()
+    self.s_label = LuiLabel()
     self.s_label:SetParent(self)
     self.s_label:SetMouseVisible(false)
     self.s_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -86,7 +71,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
         end
     end
 
-    self.c_label = UI.Widgets.LuiLabel()
+    self.c_label = LuiLabel()
     self.c_label:SetParent(self)
     self.c_label:SetMouseVisible(false)
     self.c_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -188,7 +173,7 @@ function MoneyWidget:_layout()
     local y = S.get_centered_icon_y(h, size)
 
     self.g_icon:SetPosition(x, y)
-    self.g_icon:SetSize(size, size)
+    self.g_icon:set_size(size, size)
     self.g_icon:SetVisible(true)
     x = x + size + gap
 
@@ -198,7 +183,7 @@ function MoneyWidget:_layout()
     x = x + g_w + gap
 
     self.s_icon:SetPosition(x, y)
-    self.s_icon:SetSize(size, size)
+    self.s_icon:set_size(size, size)
     self.s_icon:SetVisible(true)
     x = x + size + gap
 
@@ -208,7 +193,7 @@ function MoneyWidget:_layout()
     x = x + s_w + gap
 
     self.c_icon:SetPosition(x, y)
-    self.c_icon:SetSize(size, size)
+    self.c_icon:set_size(size, size)
     self.c_icon:SetVisible(true)
     x = x + size + gap
 

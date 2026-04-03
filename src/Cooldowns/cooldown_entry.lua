@@ -51,6 +51,7 @@ function CooldownEntry:Constructor()
     self._ctx = {}
     self.bar_inner_w = 0
     self.bar_anchor_right = false
+    self._icon_size = nil
 
     self:SetMouseVisible(false)
 
@@ -92,9 +93,8 @@ function CooldownEntry:Constructor()
     self.icon_background:SetParent(self)
     self.icon_background:SetMouseVisible(false)
 
-    self.icon = Turbine.UI.Control()
+    self.icon = Image()
     self.icon:SetParent(self.icon_background)
-    self.icon:SetMouseVisible(false)
     self.icon:SetVisible(false)
 end
 
@@ -158,6 +158,7 @@ function CooldownEntry:apply_settings()
     if icon_size > max_icon then
         icon_size = max_icon
     end
+    self._icon_size = icon_size
 
     local bar_width = inner_w - icon_size - sep_w
     if bar_width < 1 then bar_width = 1 end
@@ -208,7 +209,10 @@ function CooldownEntry:apply_settings()
     self.label:SetForeColor(s.font.color)
 
     self.icon:SetPosition(0, 0)
-    self.icon:SetSize(icon_size, icon_size)
+    self.icon:set_size(icon_size, icon_size)
+    if self.skill ~= nil and self.skill.icon ~= nil then
+        self.icon:set_icon(self.skill.icon, icon_size, icon_size)
+    end
 
     local towards_right = s.bar_expire_towards == LUI_ENUMS.side.RIGHT
     if s.bar_mode == LUI_ENUMS.bar_mode.LOAD then
@@ -222,6 +226,11 @@ function CooldownEntry:set_skill(skill)
     if skill == nil then
         self.skill = nil
         self._expired_sent = false
+        if self._icon_size ~= nil then
+            self.icon:set_icon(nil, self._icon_size, self._icon_size)
+        else
+            self.icon:set_icon(nil)
+        end
         self.icon:SetVisible(false)
         self.label:SetText("")
         self.bar_fill:SetWidth(0)
@@ -238,9 +247,18 @@ function CooldownEntry:set_skill(skill)
     self:SetVisible(true)
 
     if skill.icon ~= nil then
-        self.icon:SetBackground(skill.icon)
+        if self._icon_size ~= nil then
+            self.icon:set_icon(skill.icon, self._icon_size, self._icon_size)
+        else
+            self.icon:set_icon(skill.icon)
+        end
         self.icon:SetVisible(true)
     else
+        if self._icon_size ~= nil then
+            self.icon:set_icon(nil, self._icon_size, self._icon_size)
+        else
+            self.icon:set_icon(nil)
+        end
         self.icon:SetVisible(false)
     end
 end

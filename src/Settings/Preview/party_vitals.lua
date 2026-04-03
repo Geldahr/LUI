@@ -1,3 +1,5 @@
+import "LUI.src.UI.Widgets"
+
 local Common = SettingsPreviewCommon
 local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
@@ -62,20 +64,14 @@ function ConfigWindow:init_party_vitals_preview()
         m.root:SetParent(p.root)
         m.root:SetMouseVisible(false)
 
-        m.class_icon = Turbine.UI.Control()
+        m.class_icon = Image()
         m.class_icon:SetParent(m.root)
-        m.class_icon:SetMouseVisible(false)
         m.class_icon:SetZOrder(9)
-        m.class_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-        m.class_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
         m.class_icon:SetVisible(false)
 
-        m.leader_icon = Turbine.UI.Control()
+        m.leader_icon = Image()
         m.leader_icon:SetParent(m.root)
-        m.leader_icon:SetMouseVisible(false)
         m.leader_icon:SetZOrder(10)
-        m.leader_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-        m.leader_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
         m.leader_icon:SetVisible(false)
 
         m.morale_border = Turbine.UI.Control()
@@ -356,13 +352,8 @@ function ConfigWindow:update_party_vitals_preview()
                 m.class_icon:SetVisible(true)
                 local icon = _G.get_class_icon(icon_classes[((i - 1) % #icon_classes) + 1], icon_size)
                 if icon ~= nil then
-                    if prepare_background_stretch_mode_1 ~= nil then
-                        prepare_background_stretch_mode_1(m.class_icon, icon)
-                    else
-                        m.class_icon:SetBackground(icon)
-                    end
                     m.class_icon:SetPosition(icon_x, icon_y)
-                    m.class_icon:SetSize(icon_size, icon_size)
+                    m.class_icon:set_icon(icon, icon_size, icon_size)
                 else
                     m.class_icon:SetVisible(false)
                 end
@@ -374,13 +365,8 @@ function ConfigWindow:update_party_vitals_preview()
                 m.leader_icon:SetVisible(true)
                 local icon = _G.get_party_leader_icon ~= nil and _G.get_party_leader_icon() or nil
                 if icon ~= nil then
-                    if prepare_background_stretch_mode_1 ~= nil then
-                        prepare_background_stretch_mode_1(m.leader_icon, icon)
-                    else
-                        m.leader_icon:SetBackground(icon)
-                    end
                     m.leader_icon:SetPosition(leader_x, leader_y)
-                    m.leader_icon:SetSize(leader_size, leader_size)
+                    m.leader_icon:set_icon(icon, leader_size, leader_size)
                 else
                     m.leader_icon:SetVisible(false)
                 end

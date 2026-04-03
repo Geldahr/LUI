@@ -6,6 +6,7 @@ import "LUI.src.UI.Widgets"
 Bestiary = Bestiary or {}
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
+local DATA_ACCESS = Bestiary.DataAccess
 
 local BASE_WIDTH = 550
 local BASE_HEIGHT = 570
@@ -42,6 +43,11 @@ local BASE_TEXT_CHAR_W = 5.8
 local BASE_TEXT_LINE_H = 14
 local BASE_SCROLL_W = 10
 local BASE_SCROLL_GAP = 3
+local BASE_VARIANT_TAB_H = 22
+local BASE_VARIANT_TAB_GAP_X = 4
+local BASE_VARIANT_TAB_GAP_Y = 4
+local BASE_VARIANT_TAB_PAD_X = 10
+local BASE_VARIANT_TAB_MIN_W = 84
 
 local COLOR_OUTLINE = Turbine.UI.Color(1, 0, 0, 0)
 local COLOR_WINDOW_BG = Turbine.UI.Color(0.98, 0.02, 0.04, 0.08)
@@ -60,6 +66,7 @@ local COLOR_LABEL = Turbine.UI.Color(1, 0.92, 0.82, 0.56)
 local COLOR_VALUE = Turbine.UI.Color(1, 0.93, 0.90, 0.84)
 local COLOR_VALUE_CYAN = Turbine.UI.Color(1, 0.30, 0.92, 1.00)
 local COLOR_VALUE_GREEN = Turbine.UI.Color(1, 0.34, 0.82, 0.30)
+local COLOR_VALUE_GREY = Turbine.UI.Color(1, 0.56, 0.59, 0.61)
 local COLOR_HINT = Turbine.UI.Color(1, 0.55, 0.60, 0.63)
 local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
@@ -67,6 +74,24 @@ local COLOR_DROP_CHIP_TEXT = Turbine.UI.Color(1, 0.76, 0.88, 0.79)
 local COLOR_CHEST_CHIP_BORDER = Turbine.UI.Color(1, 0.45, 0.32, 0.12)
 local COLOR_CHEST_CHIP_BG = Turbine.UI.Color(1, 0.14, 0.10, 0.04)
 local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.98, 0.86, 0.52)
+local COLOR_VARIANT_TAB_BORDER = Turbine.UI.Color(1, 0.22, 0.31, 0.44)
+local COLOR_VARIANT_TAB_BG = Turbine.UI.Color(0.98, 0.04, 0.08, 0.12)
+local COLOR_VARIANT_TAB_BG_HOVER = Turbine.UI.Color(1, 0.08, 0.14, 0.22)
+local COLOR_VARIANT_TAB_BG_SELECTED = Turbine.UI.Color(1, 0.10, 0.18, 0.28)
+local COLOR_VARIANT_TAB_TEXT = Turbine.UI.Color(1, 0.83, 0.78, 0.69)
+local COLOR_VARIANT_TAB_TEXT_SELECTED = Turbine.UI.Color(1, 0.94, 0.82, 0.55)
+
+local COMBAT_SCALE_COLORS = {
+    feeble = Turbine.UI.Color(1, 0.26, 0.77, 0.42),
+    poor = Turbine.UI.Color(1, 0.49, 0.81, 0.31),
+    fair = Turbine.UI.Color(1, 0.79, 0.84, 0.29),
+    average = Turbine.UI.Color(1, 0.88, 0.71, 0.30),
+    good = Turbine.UI.Color(1, 0.88, 0.54, 0.29),
+    superior = Turbine.UI.Color(1, 0.85, 0.35, 0.27),
+    remarkable = Turbine.UI.Color(1, 0.79, 0.26, 0.26),
+    incredible = Turbine.UI.Color(1, 0.67, 0.20, 0.23),
+    extraordinary = Turbine.UI.Color(1, 0.59, 0.16, 0.20),
+}
 
 local function _scaled_size(value)
     return value * _G.settings.global.scale
@@ -107,24 +132,69 @@ local function _trim(text)
     return trimmed
 end
 
+local function _lower_text(text)
+    if type(text) ~= "string" then
+        return ""
+    end
+    return string.lower(text)
+end
+
+local function _is_numeric_text(text)
+    return type(text) == "string" and string.match(text, "^%d+$") ~= nil
+end
+
+local function _rating_key(value)
+    local text = _trim(value)
+    if text == nil then
+        return nil
+    end
+    return string.lower(text)
+end
+
+local function _resolve_scale_color(scale, value)
+    local key = _rating_key(value)
+    if key == nil then
+        return nil
+    end
+    if key == "unknown" or key == "false" or _is_numeric_text(key) == true then
+        return COLOR_VALUE_GREY
+    end
+    return scale[key] or COLOR_VALUE_GREY
+end
+
+local function _combat_value_color(row_key, value)
+    local key = _rating_key(value)
+    if key == nil then
+        return nil
+    end
+
+    if row_key == "fm" or row_key == "sm" or row_key == "rt" then
+        if key == "false" or key == "no" then
+            return COMBAT_SCALE_COLORS.feeble
+        end
+        if key == "true" or key == "yes" then
+            return COMBAT_SCALE_COLORS.incredible
+        end
+        return COLOR_VALUE_GREY
+    end
+
+    return _resolve_scale_color(COMBAT_SCALE_COLORS, value)
+end
+
+local function _resistance_value_color(_, value)
+    return _resolve_scale_color(COMBAT_SCALE_COLORS, value)
+end
+
+local function _mitigation_value_color(_, value)
+    return _resolve_scale_color(COMBAT_SCALE_COLORS, value)
+end
+
 local function _normalize_bestiary_name(name)
-    name = _trim(name)
-    if name == nil then
-        return nil
+    if DATA_ACCESS ~= nil and DATA_ACCESS.normalize_name ~= nil then
+        return DATA_ACCESS.normalize_name(name)
     end
 
-    local lowered = string.lower(name)
-    if string.sub(lowered, 1, 4) == "the " then
-        name = _trim(string.sub(name, 5))
-    end
-
-    name = name:gsub("%s*%.+$", "")
-    name = _trim(name)
-    if name == nil or name == "" then
-        return nil
-    end
-
-    return name
+    return _trim(name)
 end
 
 local function _lookup_named_entry(source, normalized)
@@ -147,261 +217,44 @@ local function _lookup_named_entry(source, normalized)
     return nil, nil
 end
 
-local function _copy_range(range_values)
-    if type(range_values) ~= "table" then
-        return nil
-    end
-
-    local min_value = _to_number(range_values[1], 0)
-    local max_value = _to_number(range_values[2], 0)
-    if min_value <= 0 and max_value <= 0 then
-        return nil
-    end
-    if min_value <= 0 then
-        min_value = max_value
-    end
-    if max_value <= 0 then
-        max_value = min_value
-    end
-
-    return { min_value, max_value }
-end
-
-local function _append_unique_name(list, value)
-    if type(list) ~= "table" or type(value) ~= "string" or value == "" then
-        return
-    end
-
-    for i = 1, #list do
-        if list[i] == value then
-            return
-        end
-    end
-
-    list[#list + 1] = value
-end
-
-local function _merge_text_values(current, next_value)
-    if type(next_value) ~= "string" or next_value == "" then
-        return current
-    end
-    if type(current) ~= "string" or current == "" then
-        return next_value
-    end
-    if string.lower(current) == string.lower(next_value) then
-        return current
-    end
-
-    local parts = {}
-    local seen = {}
-
-    local function push_parts(source)
-        if type(source) ~= "string" then
-            return
-        end
-
-        for part in string.gmatch(source, "([^/]+)") do
-            local candidate = part:gsub("^%s+", ""):gsub("%s+$", "")
-            if candidate ~= "" then
-                local key = string.lower(candidate)
-                if seen[key] ~= true then
-                    seen[key] = true
-                    parts[#parts + 1] = candidate
-                end
-            end
-        end
-    end
-
-    push_parts(current)
-    push_parts(next_value)
-    return table.concat(parts, " / ")
-end
-
-local function _merge_range(dst, field_name, src_value)
-    local src_range = _copy_range(src_value)
-    if src_range == nil then
-        return
-    end
-
-    local dst_range = dst[field_name]
-    if type(dst_range) ~= "table" then
-        dst[field_name] = src_range
-        return
-    end
-
-    if src_range[1] < dst_range[1] then
-        dst_range[1] = src_range[1]
-    end
-    if src_range[2] > dst_range[2] then
-        dst_range[2] = src_range[2]
-    end
-end
-
-local function _merge_string_map(dst, field_name, src)
-    if type(dst) ~= "table" or type(src) ~= "table" then
-        return
-    end
-
-    if type(dst[field_name]) ~= "table" then
-        dst[field_name] = {}
-    end
-
-    local dst_map = dst[field_name]
-    for key, value in pairs(src) do
-        if type(key) == "string" and type(value) == "string" and value ~= "" and dst_map[key] == nil then
-            dst_map[key] = value
-        end
-    end
-end
-
-local function _merge_entry(dst, src, name)
-    if type(dst) ~= "table" or type(src) ~= "table" or type(name) ~= "string" then
-        return
-    end
-
-    if type(src.n) == "string" and src.n ~= "" then
-        dst.display_name = src.n
-    elseif type(dst.display_name) ~= "string" or dst.display_name == "" then
-        dst.display_name = name
-    end
-
-    if type(dst.genus) ~= "string" and type(src.g) == "string" and src.g ~= "" then
-        dst.genus = src.g
-    end
-    if type(dst.subcategory) ~= "string" and type(src.s) == "string" and src.s ~= "" then
-        dst.subcategory = src.s
-    end
-    if type(src.sp) == "string" and src.sp ~= "" then
-        dst.species = _merge_text_values(dst.species, src.sp)
-    elseif type(dst.species) ~= "string" and type(src.s) == "string" and src.s ~= "" then
-        dst.species = src.s
-    end
-    if type(dst.region) ~= "string" and type(src.r) == "string" and src.r ~= "" then
-        dst.region = src.r
-    end
-    if type(dst.area) ~= "string" and type(src.a) == "string" and src.a ~= "" then
-        dst.area = src.a
-    end
-    if type(dst.instance) ~= "string" and type(src.i) == "string" and src.i ~= "" then
-        dst.instance = src.i
-    end
-    if type(src.t) == "string" and src.t ~= "" then
-        dst.monster_type = _merge_text_values(dst.monster_type, src.t)
-    end
-
-    _merge_range(dst, "static_levels", src.l)
-    _merge_range(dst, "static_morale", src.m)
-    _merge_range(dst, "static_power", src.p)
-    _merge_string_map(dst, "combat_effectiveness", src.ce)
-    _merge_string_map(dst, "resistances", src.rs)
-    _merge_string_map(dst, "mitigation", src.mi)
-
-    if type(src.w) == "table" then
-        for i = 1, #src.w do
-            _append_unique_name(dst.w, src.w[i])
-        end
-    end
-    if type(src.cw) == "table" then
-        for i = 1, #src.cw do
-            _append_unique_name(dst.cw, src.cw[i])
-        end
-    end
-    if type(src.ab) == "table" then
-        for i = 1, #src.ab do
-            _append_unique_name(dst.abilities, src.ab[i])
-        end
-    end
-    if type(src.qi) == "table" then
-        for i = 1, #src.qi do
-            _append_unique_name(dst.quest_involvement, src.qi[i])
-        end
-    end
-    if type(src.di) == "table" then
-        for i = 1, #src.di do
-            _append_unique_name(dst.deed_involvement, src.di[i])
-        end
-    end
-
-    dst.k = _to_number(dst.k, 0) + _to_number(src.k, 0)
-
-    if type(src.levels) == "table" then
-        for level, info in pairs(src.levels) do
-            if type(info) == "table" then
-                if type(dst.levels[level]) ~= "table" then
-                    dst.levels[level] = {
-                        m = _to_number(info.m, 0),
-                        p = _to_number(info.p, 0),
-                    }
-                else
-                    local level_entry = dst.levels[level]
-                    local morale = _to_number(info.m, 0)
-                    local power = _to_number(info.p, 0)
-                    if morale > _to_number(level_entry.m, 0) then
-                        level_entry.m = morale
-                    end
-                    if power > _to_number(level_entry.p, 0) then
-                        level_entry.p = power
-                    end
-                end
-            end
-        end
-    end
-
-    if type(src.d) == "table" then
-        for item_name, count in pairs(src.d) do
-            if type(item_name) == "string" then
-                dst.d[item_name] = _to_number(dst.d[item_name], 0) + _to_number(count, 0)
-            end
-        end
-    end
-end
-
 local function _merged_entry_for_name(name)
     local normalized = _normalize_bestiary_name(name)
     if normalized == nil then
         return nil
     end
 
-    local merged = {
-        display_name = normalized,
-        genus = nil,
-        subcategory = nil,
-        species = nil,
-        region = nil,
-        area = nil,
-        instance = nil,
-        monster_type = nil,
-        static_levels = nil,
-        static_morale = nil,
-        static_power = nil,
-        combat_effectiveness = {},
-        resistances = {},
-        mitigation = {},
-        abilities = {},
-        quest_involvement = {},
-        deed_involvement = {},
-        w = {},
-        cw = {},
-        levels = {},
-        k = 0,
-        d = {},
-    }
+    local merged = DATA_ACCESS.new_merged_entry(normalized)
 
     local resolved_name = normalized
-    local builtin_name, builtin = _lookup_named_entry(BUILTIN_BESTIARY, normalized)
+    local builtin_name, builtin = nil, nil
+    if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_entry ~= nil and DATA_ACCESS.get_builtin_index ~= nil then
+        builtin_name, builtin = DATA_ACCESS.resolve_entry(BUILTIN_BESTIARY, DATA_ACCESS.get_builtin_index(), normalized)
+    else
+        builtin_name, builtin = _lookup_named_entry(BUILTIN_BESTIARY, normalized)
+    end
     if type(builtin) ~= "table" then
         return nil
     end
 
     resolved_name = builtin_name or resolved_name
-    _merge_entry(merged, builtin, resolved_name)
+    DATA_ACCESS.merge_entry(merged, builtin, resolved_name)
 
-    local cache = _G.bestiary_cache
+    local cache = nil
+    if DATA_ACCESS ~= nil and DATA_ACCESS.ensure_cache ~= nil then
+        cache = DATA_ACCESS.ensure_cache()
+    else
+        cache = _G.bestiary_cache
+    end
     if type(cache) == "table" then
-        local cached_name, cached = _lookup_named_entry(cache, normalized)
+        local cached_name, cached = nil, nil
+        if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_entry ~= nil and DATA_ACCESS.get_cache_index ~= nil then
+            cached_name, cached = DATA_ACCESS.resolve_entry(cache, DATA_ACCESS.get_cache_index(), normalized)
+        else
+            cached_name, cached = _lookup_named_entry(cache, normalized)
+        end
         if type(cached) == "table" then
             resolved_name = cached_name or resolved_name
-            _merge_entry(merged, cached, resolved_name)
+            DATA_ACCESS.merge_entry(merged, cached, resolved_name)
         end
     end
 
@@ -466,71 +319,81 @@ local function _format_number_range(min_value, max_value)
     return _format_number(min_value) .. " - " .. _format_number(max_value)
 end
 
-local function _build_drop_records(entry)
-    local drops = {}
-    local kills = _to_number(entry.k, 0)
-
-    local by_name = {}
-    local function drop_key(item_name, chest)
-        return (chest == true and "c:" or "d:") .. item_name
+local function _build_record_from_entry(resolved_name, entry, exact_level, exact_morale, exact_power)
+    if type(resolved_name) ~= "string" or type(entry) ~= "table" then
+        return nil
     end
-    if type(entry.w) == "table" then
-        for i = 1, #entry.w do
-            local item_name = entry.w[i]
-            local key = type(item_name) == "string" and drop_key(item_name, false) or nil
-            if key ~= nil and item_name ~= "" and by_name[key] == nil then
-                by_name[key] = { name = item_name, count = 0, rate = nil, chest = false }
+
+    local morale_min = 0
+    local morale_max = 0
+    local power_min = 0
+    local power_max = 0
+    local level_min = 0
+    local level_max = 0
+
+    if type(entry.static_levels) == "table" then
+        level_min = _to_number(entry.static_levels[1], 0)
+        level_max = _to_number(entry.static_levels[2], level_min)
+    end
+    if type(entry.static_morale) == "table" then
+        morale_min = _to_number(entry.static_morale[1], 0)
+        morale_max = _to_number(entry.static_morale[2], morale_min)
+    end
+    if type(entry.static_power) == "table" then
+        power_min = _to_number(entry.static_power[1], 0)
+        power_max = _to_number(entry.static_power[2], power_min)
+    end
+
+    if type(entry.levels) == "table" then
+        for level, info in pairs(entry.levels) do
+            local level_n = _to_number(level, 0)
+            if level_n > 0 then
+                if level_min <= 0 or level_n < level_min then level_min = level_n end
+                if level_n > level_max then level_max = level_n end
+            end
+
+            if type(info) == "table" then
+                local morale = _to_number(info.m, 0)
+                local power = _to_number(info.p, 0)
+                if morale > 0 and (morale_min <= 0 or morale < morale_min) then morale_min = morale end
+                if morale > morale_max then morale_max = morale end
+                if power >= 0 and (power_min <= 0 or power < power_min) then power_min = power end
+                if power > power_max then power_max = power end
             end
         end
     end
-    if type(entry.cw) == "table" then
-        for i = 1, #entry.cw do
-            local item_name = entry.cw[i]
-            local key = type(item_name) == "string" and drop_key(item_name, true) or nil
-            if key ~= nil and item_name ~= "" and by_name[key] == nil then
-                by_name[key] = { name = item_name, count = 0, rate = nil, chest = true }
-            end
-        end
-    end
 
-    if type(entry.d) == "table" then
-        for item_name, count in pairs(entry.d) do
-            if type(item_name) == "string" then
-                local drop = by_name[drop_key(item_name, false)]
-                if type(drop) ~= "table" then
-                    drop = { name = item_name, count = 0, rate = nil, chest = false }
-                    by_name[drop_key(item_name, false)] = drop
-                end
-
-                local n = _to_number(count, 0)
-                drop.count = n
-                if kills > 0 and n > 0 then
-                    drop.rate = (n / kills) * 100
-                end
-            end
-        end
-    end
-
-    for _, drop in pairs(by_name) do
-        drops[#drops + 1] = drop
-    end
-
-    table.sort(drops, function(left, right)
-        if (left.chest == true) ~= (right.chest == true) then
-            return left.chest ~= true
-        end
-        local left_has_rate = type(left.rate) == "number"
-        local right_has_rate = type(right.rate) == "number"
-        if left_has_rate ~= right_has_rate then
-            return left_has_rate == true
-        end
-        if left_has_rate == true and right_has_rate == true and left.rate ~= right.rate then
-            return left.rate > right.rate
-        end
-        return string.lower(left.name) < string.lower(right.name)
-    end)
-
-    return drops
+    return {
+        key = resolved_name,
+        name = type(entry.display_name) == "string" and entry.display_name or resolved_name,
+        base_name = type(entry.base_name) == "string" and entry.base_name ~= "" and entry.base_name or
+            (type(entry.display_name) == "string" and entry.display_name or resolved_name),
+        variant_tab_label = type(entry.variant_tab_label) == "string" and entry.variant_tab_label or nil,
+        variant_label = type(entry.variant_label) == "string" and entry.variant_label or nil,
+        genus = entry.genus,
+        subcategory = entry.subcategory,
+        species = entry.species,
+        region = entry.region,
+        area = entry.area,
+        instance = entry.instance,
+        type = entry.monster_type,
+        level_min = level_min,
+        level_max = level_max,
+        morale_min = morale_min,
+        morale_max = morale_max,
+        power_min = power_min,
+        power_max = power_max,
+        current_level = _to_number(exact_level, 0),
+        current_morale = _to_number(exact_morale, 0),
+        current_power = _to_number(exact_power, 0),
+        combat_effectiveness = entry.combat_effectiveness,
+        resistances = entry.resistances,
+        mitigation = entry.mitigation,
+        abilities = entry.abilities,
+        quest_involvement = entry.quest_involvement,
+        deed_involvement = entry.deed_involvement,
+        drops = DATA_ACCESS.build_drop_records(entry),
+    }
 end
 
 local function _build_record_for_target(target)
@@ -543,76 +406,11 @@ local function _build_record_for_target(target)
         return nil
     end
 
-    local morale_min = 0
-    local morale_max = 0
-    local power_min = 0
-    local power_max = 0
-    local level_min = 0
-    local level_max = 0
+    local exact_level = target.GetLevel ~= nil and target:GetLevel() or 0
+    local exact_morale = target.GetMaxMorale ~= nil and target:GetMaxMorale() or 0
+    local exact_power = target.GetMaxPower ~= nil and target:GetMaxPower() or 0
 
-    if type(entry.static_levels) == "table" then
-        level_min = _to_number(entry.static_levels[1], 0)
-        level_max = _to_number(entry.static_levels[2], level_min)
-    end
-    if type(entry.static_morale) == "table" then
-        morale_min = _to_number(entry.static_morale[1], 0)
-        morale_max = _to_number(entry.static_morale[2], morale_min)
-    end
-    if type(entry.static_power) == "table" then
-        power_min = _to_number(entry.static_power[1], 0)
-        power_max = _to_number(entry.static_power[2], power_min)
-    end
-
-    if type(entry.levels) == "table" then
-        for level, info in pairs(entry.levels) do
-            local level_n = _to_number(level, 0)
-            if level_n > 0 then
-                if level_min <= 0 or level_n < level_min then level_min = level_n end
-                if level_n > level_max then level_max = level_n end
-            end
-
-            if type(info) == "table" then
-                local morale = _to_number(info.m, 0)
-                local power = _to_number(info.p, 0)
-                if morale > 0 and (morale_min <= 0 or morale < morale_min) then morale_min = morale end
-                if morale > morale_max then morale_max = morale end
-                if power >= 0 and (power_min <= 0 or power < power_min) then power_min = power end
-                if power > power_max then power_max = power end
-            end
-        end
-    end
-
-    local exact_level = target.GetLevel ~= nil and _to_number(target:GetLevel(), 0) or 0
-    local exact_morale = target.GetMaxMorale ~= nil and _to_number(target:GetMaxMorale(), 0) or 0
-    local exact_power = target.GetMaxPower ~= nil and _to_number(target:GetMaxPower(), 0) or 0
-
-    return {
-        key = normalized_name,
-        name = type(entry.display_name) == "string" and entry.display_name or normalized_name,
-        genus = entry.genus,
-        subcategory = entry.subcategory,
-        species = entry.species,
-        region = entry.region,
-        area = entry.area,
-        instance = entry.instance,
-        type = entry.monster_type,
-        level_min = level_min,
-        level_max = level_max,
-        morale_min = morale_min,
-        morale_max = morale_max,
-        power_min = power_min,
-        power_max = power_max,
-        current_level = exact_level,
-        current_morale = exact_morale,
-        current_power = exact_power,
-        combat_effectiveness = entry.combat_effectiveness,
-        resistances = entry.resistances,
-        mitigation = entry.mitigation,
-        abilities = entry.abilities,
-        quest_involvement = entry.quest_involvement,
-        deed_involvement = entry.deed_involvement,
-        drops = _build_drop_records(entry),
-    }
+    return _build_record_from_entry(normalized_name, entry, exact_level, exact_morale, exact_power)
 end
 
 local function _build_record_for_name(name)
@@ -621,71 +419,239 @@ local function _build_record_for_name(name)
         return nil
     end
 
-    local morale_min = 0
-    local morale_max = 0
-    local power_min = 0
-    local power_max = 0
-    local level_min = 0
-    local level_max = 0
+    return _build_record_from_entry(normalized_name, entry, 0, 0, 0)
+end
 
-    if type(entry.static_levels) == "table" then
-        level_min = _to_number(entry.static_levels[1], 0)
-        level_max = _to_number(entry.static_levels[2], level_min)
+local function _record_base_name(record)
+    if type(record) ~= "table" then
+        return nil
     end
-    if type(entry.static_morale) == "table" then
-        morale_min = _to_number(entry.static_morale[1], 0)
-        morale_max = _to_number(entry.static_morale[2], morale_min)
+    if type(record.base_name) == "string" and record.base_name ~= "" then
+        return record.base_name
     end
-    if type(entry.static_power) == "table" then
-        power_min = _to_number(entry.static_power[1], 0)
-        power_max = _to_number(entry.static_power[2], power_min)
+    if type(record.name) == "string" and record.name ~= "" then
+        return record.name
+    end
+    if type(record.key) == "string" and record.key ~= "" then
+        return record.key
+    end
+    return nil
+end
+
+local function _record_primary_variant_label(record)
+    if type(record) ~= "table" then
+        return TR("Variant")
+    end
+    if type(record.variant_tab_label) == "string" and record.variant_tab_label ~= "" then
+        return record.variant_tab_label
+    end
+    if type(record.variant_label) == "string" and record.variant_label ~= "" then
+        return record.variant_label
+    end
+    if type(record.instance) == "string" and record.instance ~= "" then
+        return record.instance
+    end
+    if type(record.area) == "string" and record.area ~= "" then
+        return record.area
+    end
+    if type(record.region) == "string" and record.region ~= "" then
+        return record.region
+    end
+    if type(record.name) == "string" and record.name ~= "" then
+        return record.name
+    end
+    return type(record.key) == "string" and record.key or TR("Variant")
+end
+
+local function _record_fallback_variant_label(record)
+    local primary = _record_primary_variant_label(record)
+    local primary_lower = _lower_text(primary)
+
+    if type(record) ~= "table" then
+        return primary
+    end
+    if type(record.variant_label) == "string" and record.variant_label ~= "" and _lower_text(record.variant_label) ~= primary_lower then
+        return record.variant_label
+    end
+    if type(record.instance) == "string" and record.instance ~= "" and _lower_text(record.instance) ~= primary_lower then
+        return record.instance
+    end
+    if type(record.area) == "string" and record.area ~= "" and _lower_text(record.area) ~= primary_lower then
+        return record.area
+    end
+    if type(record.region) == "string" and record.region ~= "" and _lower_text(record.region) ~= primary_lower then
+        return record.region
+    end
+    return primary
+end
+
+local function _record_disambiguated_variant_label(record)
+    local primary = _record_primary_variant_label(record)
+    local suffix = _record_fallback_variant_label(record)
+    if _lower_text(suffix) == _lower_text(primary) then
+        local variant = type(record) == "table" and record.variant_label or nil
+        if type(variant) == "string" and variant ~= "" and _lower_text(variant) ~= _lower_text(primary) then
+            suffix = variant
+        end
+    end
+    if _lower_text(suffix) == _lower_text(primary) then
+        return primary
     end
 
-    if type(entry.levels) == "table" then
-        for level, info in pairs(entry.levels) do
-            local level_n = _to_number(level, 0)
-            if level_n > 0 then
-                if level_min <= 0 or level_n < level_min then level_min = level_n end
-                if level_n > level_max then level_max = level_n end
+    return primary .. " · " .. suffix
+end
+
+local function _assign_variant_tab_labels(records)
+    local counts = {}
+
+    for i = 1, #records do
+        local label = _record_primary_variant_label(records[i])
+        records[i].tab_label = label
+        local key = _lower_text(label)
+        counts[key] = _to_number(counts[key], 0) + 1
+    end
+
+    for _, count in pairs(counts) do
+        if count > 1 then
+            local disambiguated_counts = {}
+            for i = 1, #records do
+                local primary = _record_primary_variant_label(records[i])
+                local primary_key = _lower_text(primary)
+                if _to_number(counts[primary_key], 0) > 1 then
+                    records[i].tab_label = _record_disambiguated_variant_label(records[i])
+                end
+                local key = _lower_text(records[i].tab_label)
+                disambiguated_counts[key] = _to_number(disambiguated_counts[key], 0) + 1
+            end
+            counts = disambiguated_counts
+            break
+        end
+    end
+
+    for _, count in pairs(counts) do
+        if count > 1 then
+            for i = 1, #records do
+                records[i].tab_label = records[i].name or records[i].key or TR("Variant")
             end
 
-            if type(info) == "table" then
-                local morale = _to_number(info.m, 0)
-                local power = _to_number(info.p, 0)
-                if morale > 0 and (morale_min <= 0 or morale < morale_min) then morale_min = morale end
-                if morale > morale_max then morale_max = morale end
-                if power >= 0 and (power_min <= 0 or power < power_min) then power_min = power end
-                if power > power_max then power_max = power end
+            local keyed_counts = {}
+            for i = 1, #records do
+                local key = _lower_text(records[i].tab_label)
+                keyed_counts[key] = _to_number(keyed_counts[key], 0) + 1
+            end
+
+            for i = 1, #records do
+                local key = _lower_text(records[i].tab_label)
+                if _to_number(keyed_counts[key], 0) > 1 then
+                    records[i].tab_label = records[i].tab_label .. " #" .. tostring(i)
+                end
+            end
+            return
+        end
+    end
+end
+
+local function _compare_variant_records(left, right)
+    local left_label = _lower_text(left ~= nil and (left.tab_label or _record_primary_variant_label(left)) or nil)
+    local right_label = _lower_text(right ~= nil and (right.tab_label or _record_primary_variant_label(right)) or nil)
+    if left_label ~= right_label then
+        return left_label < right_label
+    end
+
+    local left_name = _lower_text(left ~= nil and (left.name or left.key) or nil)
+    local right_name = _lower_text(right ~= nil and (right.name or right.key) or nil)
+    if left_name ~= right_name then
+        return left_name < right_name
+    end
+
+    return _lower_text(left ~= nil and left.key or nil) < _lower_text(right ~= nil and right.key or nil)
+end
+
+local function _find_record_index(records, key)
+    if type(records) ~= "table" or type(key) ~= "string" then
+        return nil
+    end
+
+    local wanted = _lower_text(key)
+    for i = 1, #records do
+        local record = records[i]
+        if type(record) == "table" and _lower_text(record.key) == wanted then
+            return i
+        end
+    end
+
+    return nil
+end
+
+local function _collect_variant_group(selected_record)
+    if type(selected_record) ~= "table" then
+        return nil
+    end
+
+    local base_name = _record_base_name(selected_record)
+    if type(base_name) ~= "string" or base_name == "" then
+        return {
+            base_name = selected_record.name or selected_record.key or TR("Bestiary"),
+            records = { selected_record },
+        }
+    end
+
+    local records = {}
+    local seen = {}
+    local wanted = _lower_text(base_name)
+
+    local function append_record(record)
+        if type(record) ~= "table" or type(record.key) ~= "string" then
+            return
+        end
+
+        local key = _lower_text(record.key)
+        if seen[key] == true then
+            return
+        end
+
+        seen[key] = true
+        records[#records + 1] = record
+    end
+
+    append_record(selected_record)
+
+    local function collect_from_source(source, index_getter)
+        if type(source) ~= "table" then
+            return
+        end
+
+        if DATA_ACCESS ~= nil and DATA_ACCESS.get_group_keys ~= nil then
+            local index = type(index_getter) == "function" and index_getter() or nil
+            local group_keys = DATA_ACCESS.get_group_keys(source, index, base_name)
+            if type(group_keys) == "table" then
+                for i = 1, #group_keys do
+                    append_record(_build_record_for_name(group_keys[i]))
+                end
+                return
+            end
+        end
+
+        for entry_name, entry in pairs(source) do
+            if type(entry_name) == "string" and type(entry) == "table" then
+                local entry_base_name = type(entry.bn) == "string" and entry.bn ~= "" and entry.bn or entry_name
+                if _lower_text(entry_base_name) == wanted then
+                    append_record(_build_record_for_name(entry_name))
+                end
             end
         end
     end
 
+    collect_from_source(BUILTIN_BESTIARY, DATA_ACCESS ~= nil and DATA_ACCESS.get_builtin_index or nil)
+    local cache = DATA_ACCESS ~= nil and DATA_ACCESS.ensure_cache ~= nil and DATA_ACCESS.ensure_cache() or _G.bestiary_cache
+    collect_from_source(cache, DATA_ACCESS ~= nil and DATA_ACCESS.get_cache_index or nil)
+
+    table.sort(records, _compare_variant_records)
+    _assign_variant_tab_labels(records)
+
     return {
-        key = normalized_name,
-        name = type(entry.display_name) == "string" and entry.display_name or normalized_name,
-        genus = entry.genus,
-        subcategory = entry.subcategory,
-        species = entry.species,
-        region = entry.region,
-        area = entry.area,
-        instance = entry.instance,
-        type = entry.monster_type,
-        level_min = level_min,
-        level_max = level_max,
-        morale_min = morale_min,
-        morale_max = morale_max,
-        power_min = power_min,
-        power_max = power_max,
-        current_level = 0,
-        current_morale = 0,
-        current_power = 0,
-        combat_effectiveness = entry.combat_effectiveness,
-        resistances = entry.resistances,
-        mitigation = entry.mitigation,
-        abilities = entry.abilities,
-        quest_involvement = entry.quest_involvement,
-        deed_involvement = entry.deed_involvement,
-        drops = _build_drop_records(entry),
+        base_name = base_name,
+        records = records,
     }
 end
 
@@ -1015,11 +981,11 @@ local function _create_scroll_label_area(parent)
     area.label:SetSelectable(true)
 
     area.scroll = Turbine.UI.Lotro.ScrollBar()
-    area.scroll:SetParent(area.label)
+    area.scroll:SetParent(parent)
     area.scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
     area.scroll:SetWidth(BASE_SCROLL_W)
-    area.scroll:SetPosition(area.scroll:GetWidth() - BASE_SCROLL_W, 0);
-	area.scroll:SetHeight(area.scroll:GetHeight() - 2);
+    area.scroll:SetPosition(0, 0)
+    area.scroll:SetHeight(1)
     area.scroll:SetMouseVisible(true)
     area.label:SetVerticalScrollBar(area.scroll)
     area.scroll:SetVisible(false)
@@ -1090,6 +1056,39 @@ local function _style_text(text, font_name, font_size, color)
     text:SetFontStyle(Turbine.UI.FontStyle.Outline)
     text:SetOutlineColor(COLOR_OUTLINE)
     text:SetForeColor(color)
+end
+
+local function _style_variant_tab_bar(tab_bar)
+    if tab_bar == nil then
+        return
+    end
+
+    tab_bar._border_color = COLOR_VARIANT_TAB_BORDER
+    tab_bar._strip_back = COLOR_VARIANT_TAB_BG
+    tab_bar._content_back = COLOR_VARIANT_TAB_BG_SELECTED
+    tab_bar._hover_back = COLOR_VARIANT_TAB_BG_HOVER
+    tab_bar._tab_text = COLOR_VARIANT_TAB_TEXT
+    tab_bar._tab_text_hover = COLOR_VARIANT_TAB_TEXT_SELECTED
+    tab_bar._tab_text_selected = COLOR_VARIANT_TAB_TEXT_SELECTED
+    tab_bar._tab_text_disabled = COLOR_HINT
+
+    if type(tab_bar._tabs) == "table" then
+        for i = 1, #tab_bar._tabs do
+            local entry = tab_bar._tabs[i]
+            if entry ~= nil and entry.button ~= nil and entry.button.set_theme ~= nil then
+                entry.button:set_theme(
+                    tab_bar._tab_text,
+                    tab_bar._tab_text_hover,
+                    tab_bar._tab_text_selected,
+                    tab_bar._tab_text_disabled
+                )
+            end
+        end
+    end
+
+    if tab_bar.refresh_layout ~= nil then
+        tab_bar:refresh_layout()
+    end
 end
 
 local function _create_panel(parent, title_text)
@@ -1189,13 +1188,21 @@ local function _layout_parallel_row_sets(left_rows, right_rows, x_left, x_right,
     layout_rows(right_rows, x_right, w_right, right_label_ratio)
 end
 
-local function _bind_row_set(rows, values)
+local function _bind_row_set(rows, values, color_resolver, default_value_color)
+    default_value_color = default_value_color or COLOR_VALUE
     for i = 1, #rows do
+        local raw_value = nil
         local value = "-"
         if type(values) == "table" then
-            value = _display_text(values[rows[i].key])
+            raw_value = values[rows[i].key]
+            value = _display_text(raw_value)
         end
         rows[i].value:SetText(value)
+        if type(color_resolver) == "function" then
+            rows[i].value:SetForeColor(color_resolver(rows[i].key, raw_value) or default_value_color)
+        else
+            rows[i].value:SetForeColor(default_value_color)
+        end
     end
 end
 
@@ -1247,6 +1254,89 @@ function DropChip:bind(text, width, height)
     self:SetVisible(true)
 end
 
+local BestiaryVariantTab = class(Turbine.UI.Control)
+
+function BestiaryVariantTab:Constructor(owner)
+    Turbine.UI.Control.Constructor(self)
+
+    self.owner = owner
+    self.index = 0
+    self.selected = false
+    self.hovered = false
+
+    self:SetMouseVisible(true)
+    self:SetBackColor(COLOR_VARIANT_TAB_BORDER)
+
+    self.inner = Turbine.UI.Control()
+    self.inner:SetParent(self)
+    self.inner:SetMouseVisible(false)
+    self.inner:SetBackColor(COLOR_VARIANT_TAB_BG)
+
+    self.label = UI.Widgets.LuiLabel()
+    self.label:SetParent(self.inner)
+    self.label:SetMouseVisible(false)
+    self.label:SetSelectable(false)
+    self.label:SetMultiline(false)
+    self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+
+    self.SizeChanged = function()
+        self:_layout()
+    end
+    self.MouseEnter = function()
+        self.hovered = true
+        self:_apply_style()
+    end
+    self.MouseLeave = function()
+        self.hovered = false
+        self:_apply_style()
+    end
+    self.MouseClick = function()
+        if self.owner ~= nil and self.owner.on_variant_tab_clicked ~= nil then
+            self.owner:on_variant_tab_clicked(self.index)
+        end
+    end
+
+    self:_apply_style()
+end
+
+function BestiaryVariantTab:_layout()
+    local border_w = 1
+    local pad_x = _scaled_int(BASE_VARIANT_TAB_PAD_X)
+
+    self.inner:SetPosition(border_w, border_w)
+    self.inner:SetSize(math.max(1, self:GetWidth() - (2 * border_w)), math.max(1, self:GetHeight() - (2 * border_w)))
+    self.label:SetPosition(pad_x, 0)
+    self.label:SetSize(math.max(1, self.inner:GetWidth() - (2 * pad_x)), self.inner:GetHeight())
+end
+
+function BestiaryVariantTab:_apply_style()
+    local fill = COLOR_VARIANT_TAB_BG
+    local text_color = COLOR_VARIANT_TAB_TEXT
+
+    if self.selected == true then
+        fill = COLOR_VARIANT_TAB_BG_SELECTED
+        text_color = COLOR_VARIANT_TAB_TEXT_SELECTED
+    elseif self.hovered == true then
+        fill = COLOR_VARIANT_TAB_BG_HOVER
+    end
+
+    self.inner:SetBackColor(fill)
+    _style_text(self.label, "Verdana", BASE_TEXT_SIZE, text_color)
+    self:_layout()
+end
+
+function BestiaryVariantTab:bind(text, index, selected)
+    self.index = _to_number(index, 0)
+    self.label:SetText(text or "")
+    self:set_selected(selected)
+    self:SetVisible(true)
+end
+
+function BestiaryVariantTab:set_selected(selected)
+    self.selected = selected == true
+    self:_apply_style()
+end
+
 BestiaryCard = class(Turbine.UI.Lotro.Window)
 Bestiary.BestiaryCard = BestiaryCard
 
@@ -1278,6 +1368,10 @@ function BestiaryCard:Constructor()
 
     self.current_key = nil
     self.current_record = nil
+    self.current_group_name = nil
+    self.variant_records = {}
+    self.selected_variant_index = nil
+    self._variant_bar_updating = false
     self.drop_chips = {}
     self.drop_panel_h = _scaled_int(BASE_DROP_MIN_H)
     self.drop_layout = {}
@@ -1299,6 +1393,8 @@ function BestiaryCard:Constructor()
     --         self:close()
     --     end
     -- end
+
+    self.variant_bar = self:_create_variant_bar()
 
     self.content = Turbine.UI.Control()
     self.content:SetParent(self)
@@ -1361,6 +1457,10 @@ function BestiaryCard:Constructor()
             self:_persist_current_position()
         else
             self.current_key = nil
+            self.current_record = nil
+            self.current_group_name = nil
+            self.variant_records = {}
+            self.selected_variant_index = nil
         end
     end
     self.PositionChanged = function()
@@ -1372,6 +1472,142 @@ function BestiaryCard:Constructor()
     end
 
     self:apply_settings()
+end
+
+function BestiaryCard:_variant_tabs_visible()
+    return type(self.variant_records) == "table" and #self.variant_records > 1
+end
+
+function BestiaryCard:_create_variant_bar()
+    local bar = UI.Widgets.LuiTabBar()
+    bar:SetParent(self)
+    bar:SetMouseVisible(true)
+    bar:SetVisible(false)
+    bar:set_scale(_G.settings.global.scale)
+    bar:set_font(_scaled_font("Verdana", BASE_TEXT_SIZE))
+    bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
+    bar:set_content_padding(0)
+    bar:set_show_content_border(false)
+    bar.on_tab_changed = function(index)
+        if self._variant_bar_updating == true then
+            return
+        end
+        self:_select_variant_index(index, false)
+    end
+    _style_variant_tab_bar(bar)
+    return bar
+end
+
+function BestiaryCard:_reset_variant_tabs()
+    if self.variant_bar ~= nil then
+        self.variant_bar:SetVisible(false)
+        self.variant_bar:SetParent(nil)
+    end
+
+    self.variant_bar = self:_create_variant_bar()
+    if self:_variant_tabs_visible() ~= true then
+        return
+    end
+
+    for i = 1, #self.variant_records do
+        local record = self.variant_records[i]
+        local label = type(record) == "table" and (record.tab_label or _record_primary_variant_label(record)) or TR("Variant")
+        local widget = Turbine.UI.Control()
+        widget:SetMouseVisible(false)
+        self.variant_bar:add_tab(label, widget)
+    end
+
+    if self.selected_variant_index ~= nil then
+        self._variant_bar_updating = true
+        self.variant_bar:set_selected_index(self.selected_variant_index, false)
+        self._variant_bar_updating = false
+    end
+end
+
+function BestiaryCard:_measure_variant_tabs_height()
+    if self:_variant_tabs_visible() ~= true then
+        return 0
+    end
+
+    return _scaled_int(BASE_VARIANT_TAB_H) + _scaled_int(BASE_SECTION_GAP)
+end
+
+function BestiaryCard:_layout_variant_tabs(margin_l, margin_t, content_w)
+    if self:_variant_tabs_visible() ~= true then
+        if self.variant_bar ~= nil then
+            self.variant_bar:SetVisible(false)
+        end
+        return 0
+    end
+
+    local bar_h = _scaled_int(BASE_VARIANT_TAB_H)
+    self.variant_bar:SetPosition(margin_l, margin_t)
+    self.variant_bar:SetSize(content_w, bar_h)
+    self.variant_bar:SetVisible(true)
+    _style_variant_tab_bar(self.variant_bar)
+
+    return bar_h + _scaled_int(BASE_SECTION_GAP)
+end
+
+function BestiaryCard:_apply_selected_variant()
+    local record = type(self.variant_records) == "table" and self.variant_records[self.selected_variant_index] or nil
+    if type(record) ~= "table" then
+        return
+    end
+
+    self.current_key = record.key
+    self.current_record = record
+
+    if self:_variant_tabs_visible() == true then
+        self:SetText(self.current_group_name or record.base_name or record.name or record.key or TR("Bestiary"))
+    else
+        self:SetText(record.name or record.key or TR("Bestiary"))
+    end
+
+    self:_apply_record(record)
+end
+
+function BestiaryCard:_select_variant_index(index, sync_variant_bar)
+    if type(index) ~= "number" then
+        index = tonumber(index)
+    end
+    if index == nil then
+        return
+    end
+
+    index = math.floor(index + 0.5)
+    if index < 1 or index > #self.variant_records then
+        return
+    end
+
+    self.selected_variant_index = index
+    if sync_variant_bar ~= false and self.variant_bar ~= nil and self:_variant_tabs_visible() == true then
+        local current_index = self.variant_bar.get_selected_index ~= nil and self.variant_bar:get_selected_index() or nil
+        if current_index ~= index then
+            self._variant_bar_updating = true
+            self.variant_bar:set_selected_index(index, false)
+            self._variant_bar_updating = false
+        end
+    end
+
+    self:_apply_selected_variant()
+end
+
+function BestiaryCard:_show_group(group, selected_key)
+    if type(group) ~= "table" or type(group.records) ~= "table" or #group.records == 0 then
+        return false
+    end
+
+    self.current_group_name = group.base_name
+    self.variant_records = group.records
+    self.selected_variant_index = _find_record_index(self.variant_records, selected_key) or 1
+    self:_reset_variant_tabs()
+    self:_select_variant_index(self.selected_variant_index, true)
+    return true
+end
+
+function BestiaryCard:on_variant_tab_clicked(index)
+    self:_select_variant_index(index)
 end
 
 function BestiaryCard:_ensure_drop_chip_count(count)
@@ -1444,15 +1680,17 @@ function BestiaryCard:_layout_scroll_label_panel(panel, area)
     local body_pad_x = _scaled_int(BASE_PANEL_BODY_PAD_X)
     local body_pad_t = _scaled_int(BASE_PANEL_BODY_PAD_TOP)
     local body_pad_b = _scaled_int(BASE_PANEL_BODY_PAD_BOTTOM)
-    local label_w = math.max(1, panel.body:GetWidth() - (2 * body_pad_x))
+    local scroll_gap = area.uses_scroll == true and _scaled_int(BASE_SCROLL_GAP) or 0
+    local scroll_w = area.uses_scroll == true and BASE_SCROLL_W or 0
+    local label_w = math.max(1, panel.body:GetWidth() - (2 * body_pad_x) - scroll_gap - scroll_w)
     local label_h = math.max(1, panel.body:GetHeight() - body_pad_t - body_pad_b)
 
     area.label:SetPosition(body_pad_x, body_pad_t)
     area.label:SetSize(label_w, label_h)
 
-    area.scroll:SetPosition(math.max(0, label_w - BASE_SCROLL_W), 0)
+    area.scroll:SetPosition(body_pad_x + label_w + scroll_gap, body_pad_t)
     area.scroll:SetWidth(BASE_SCROLL_W)
-    area.scroll:SetHeight(math.max(1, label_h - 2))
+    area.scroll:SetHeight(label_h)
     area.scroll:SetVisible(area.uses_scroll == true)
 end
 
@@ -1564,7 +1802,7 @@ function BestiaryCard:_fit_window_height()
     local offset = _scaled_int(BASE_OFFSET)
     local _, display_h = Turbine.UI.Display.GetSize()
     local max_h = math.max(min_h, display_h - (2 * offset))
-    local desired_h = margin_t + margin_b + self:_measure_content_height()
+    local desired_h = margin_t + margin_b + self:_measure_variant_tabs_height() + self:_measure_content_height()
     local target_h = math.max(min_h, math.min(max_h, desired_h))
 
     self:SetSize(_scaled_int(BASE_WIDTH), target_h)
@@ -1587,9 +1825,11 @@ function BestiaryCard:_layout_content()
     local bottom_h = self:_measure_bottom_height()
 
     local content_w = math.max(1, self:GetWidth() - margin_l - margin_r)
-    local content_h = math.max(1, self:GetHeight() - margin_t - margin_b)
+    local tab_offset_h = self:_layout_variant_tabs(margin_l, margin_t, content_w)
+    local content_y = margin_t + tab_offset_h
+    local content_h = math.max(1, self:GetHeight() - content_y - margin_b)
 
-    self.content:SetPosition(margin_l, margin_t)
+    self.content:SetPosition(margin_l, content_y)
     self.content:SetSize(content_w, content_h)
 
     local y = 0
@@ -1769,16 +2009,16 @@ function BestiaryCard:_apply_record(record)
     self.morale_value:SetText(_format_morale_text(record))
     self.power_value:SetText(_format_power_text(record))
 
-    _bind_row_set(self.location_rows, record)
+    _bind_row_set(self.location_rows, record, nil, COLOR_VALUE)
     _bind_row_set(self.creature_rows, {
         type = record.type,
         genus = record.genus,
         species = record.species or record.subcategory,
-    })
-    _bind_row_set(self.combat_rows, record.combat_effectiveness)
-    _bind_row_set(self.resistance_rows, record.resistances)
-    _bind_row_set(self.mitigation_left_rows, record.mitigation)
-    _bind_row_set(self.mitigation_right_rows, record.mitigation)
+    }, nil, COLOR_VALUE)
+    _bind_row_set(self.combat_rows, record.combat_effectiveness, _combat_value_color, COLOR_VALUE)
+    _bind_row_set(self.resistance_rows, record.resistances, _resistance_value_color, COLOR_VALUE)
+    _bind_row_set(self.mitigation_left_rows, record.mitigation, _mitigation_value_color, COLOR_VALUE)
+    _bind_row_set(self.mitigation_right_rows, record.mitigation, _mitigation_value_color, COLOR_VALUE)
 
     _bind_scroll_label_area(self.abilities_area, record.abilities)
     _bind_scroll_label_area(self.quests_area, record.quest_involvement)
@@ -1810,9 +2050,9 @@ function BestiaryCard:apply_settings()
     _style_row_set(self.location_rows, COLOR_VALUE)
     _style_row_set(self.creature_rows, COLOR_VALUE)
     _style_row_set(self.combat_rows, COLOR_VALUE)
-    _style_row_set(self.resistance_rows, COLOR_VALUE_GREEN)
-    _style_row_set(self.mitigation_left_rows, COLOR_VALUE_CYAN)
-    _style_row_set(self.mitigation_right_rows, COLOR_VALUE_CYAN)
+    _style_row_set(self.resistance_rows, COLOR_VALUE)
+    _style_row_set(self.mitigation_left_rows, COLOR_VALUE)
+    _style_row_set(self.mitigation_right_rows, COLOR_VALUE)
 
     _style_scroll_label_area(self.abilities_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
     _style_scroll_label_area(self.quests_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
@@ -1821,6 +2061,12 @@ function BestiaryCard:apply_settings()
     _bind_scroll_label_area(self.abilities_area, self.current_record ~= nil and self.current_record.abilities or nil)
     _bind_scroll_label_area(self.quests_area, self.current_record ~= nil and self.current_record.quest_involvement or nil)
     _bind_scroll_label_area(self.deeds_area, self.current_record ~= nil and self.current_record.deed_involvement or nil)
+
+    if self.variant_bar ~= nil then
+        self.variant_bar:set_scale(_G.settings.global.scale)
+        self.variant_bar:set_font(_scaled_font("Verdana", BASE_TEXT_SIZE))
+        _style_variant_tab_bar(self.variant_bar)
+    end
 
     self:_layout_content()
 
@@ -1839,6 +2085,10 @@ end
 
 function BestiaryCard:close()
     self.current_key = nil
+    self.current_record = nil
+    self.current_group_name = nil
+    self.variant_records = {}
+    self.selected_variant_index = nil
     self:SetVisible(false)
 end
 
@@ -1891,14 +2141,17 @@ function BestiaryCard:toggle_for_target(target, anchor)
         return false
     end
 
-    if self:IsVisible() == true and self.current_key == record.key then
+    local group = _collect_variant_group(record)
+    local selected_key = record.key
+
+    if self:IsVisible() == true and self.current_key == selected_key then
         self:close()
         return true
     end
 
-    self.current_key = record.key
-    self:SetText(record.name or record.key or TR("Bestiary"))
-    self:_apply_record(record)
+    if self:_show_group(group, selected_key) ~= true then
+        return false
+    end
     self:_prepare_position(anchor)
     self:SetVisible(true)
     self:bring_to_front()
@@ -1911,9 +2164,10 @@ function BestiaryCard:show_for_name(name, anchor)
         return false
     end
 
-    self.current_key = record.key
-    self:SetText(record.name or record.key or TR("Bestiary"))
-    self:_apply_record(record)
+    local group = _collect_variant_group(record)
+    if self:_show_group(group, record.key) ~= true then
+        return false
+    end
     self:_prepare_position(anchor)
     self:SetVisible(true)
     self:bring_to_front()

@@ -5,19 +5,8 @@ local S = _G.STATUS_BAR_COMMON
 local ItemCountWidget = class(Turbine.UI.Control)
 _G.ItemCountWidget = ItemCountWidget
 
-local BASE_ICON_SIZE = 32
 local ITEM_ICON_GAP = 8
-local ITEM_ICON_INSET = 2
-
-local function _sanitize_image_id(value)
-    if type(value) ~= "number" then
-        value = tonumber(value)
-    end
-    if value == nil or value == 0 then
-        return nil
-    end
-    return value
-end
+local ITEM_ICON_MARGIN = 2
 
 local function _apply_font(label, font)
     label:SetMouseVisible(false)
@@ -59,23 +48,19 @@ function ItemCountWidget:Constructor(item_name, widget_w, bar_h, font, icon_imag
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self:SetSize(widget_w, bar_h)
 
-    self.icon_back = Turbine.UI.Control()
+    self.icon_back = Image()
     self.icon_back:SetParent(self)
-    self.icon_back:SetMouseVisible(false)
-    self.icon_back:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.icon_back:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.icon_back:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self.icon_back:SetPosition(0, ITEM_ICON_MARGIN)
+    self.icon_back:SetZOrder(1)
     self.icon_back:SetVisible(false)
 
-    self.icon_fallback = Turbine.UI.Control()
-    self.icon_fallback:SetParent(self.icon_back)
-    self.icon_fallback:SetMouseVisible(false)
-    self.icon_fallback:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.icon_fallback:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.icon_fallback:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    self.icon_fallback:SetVisible(false)
+    self.icon_fore = Image()
+    self.icon_fore:SetParent(self)
+    self.icon_fore:SetPosition(0, ITEM_ICON_MARGIN)
+    self.icon_fore:SetZOrder(2)
+    self.icon_fore:SetVisible(false)
 
-    self.label = UI.Widgets.LuiLabel()
+    self.label = LuiLabel()
     self.label:SetParent(self)
     _apply_font(self.label, font)
 
@@ -107,10 +92,10 @@ end
 
 function ItemCountWidget:destroy()
     self:SetVisible(false)
-    if self.icon_fallback ~= nil then self.icon_fallback:SetVisible(false) end
+    if self.icon_fore ~= nil then self.icon_fore:SetVisible(false) end
     if self.icon_back ~= nil then self.icon_back:SetVisible(false) end
     if self.label ~= nil then self.label:SetVisible(false) end
-    if self.icon_fallback ~= nil then self.icon_fallback:SetParent(nil) end
+    if self.icon_fore ~= nil then self.icon_fore:SetParent(nil) end
     if self.icon_back ~= nil then self.icon_back:SetParent(nil) end
     if self.label ~= nil then self.label:SetParent(nil) end
     self:SetParent(nil)
@@ -172,13 +157,13 @@ function ItemCountWidget:_scan()
 
                 if current_item_info ~= nil then
                     if icon_image_id == nil and current_item_info.GetIconImageID ~= nil then
-                        icon_image_id = _sanitize_image_id(current_item_info:GetIconImageID())
+                        icon_image_id = current_item_info:GetIconImageID()
                     end
                     if background_image_id == nil and current_item_info.GetBackgroundImageID ~= nil then
-                        background_image_id = _sanitize_image_id(current_item_info:GetBackgroundImageID())
+                        background_image_id = current_item_info:GetBackgroundImageID()
                     end
                     if background_image_id == nil and current_item_info.GetQualityImageID ~= nil then
-                        background_image_id = _sanitize_image_id(current_item_info:GetQualityImageID())
+                        background_image_id = current_item_info:GetQualityImageID()
                     end
                 end
             end
@@ -188,25 +173,23 @@ function ItemCountWidget:_scan()
     return total, icon_image_id, background_image_id
 end
 
-function ItemCountWidget:_set_icon(icon_image_id)
-    local icon = _sanitize_image_id(icon_image_id)
+function ItemCountWidget:_set_icon(icon)
     if icon == self._icon_image_id then
         return
     end
 
     self._icon_image_id = icon
-    self.icon_fallback:SetBackground(icon)
+    self.icon_fore:set_icon(icon)
     self:_layout()
 end
 
-function ItemCountWidget:_set_background(background_image_id)
-    local background = _sanitize_image_id(background_image_id)
+function ItemCountWidget:_set_background(background)
     if background == self._background_image_id then
         return
     end
 
     self._background_image_id = background
-    self.icon_back:SetBackground(background)
+    self.icon_back:set_icon(background)
     self:_layout()
 end
 
@@ -220,7 +203,7 @@ end
 
 function ItemCountWidget:_layout()
     local w, h = self:GetSize()
-    local icon_size = h - ITEM_ICON_INSET
+    local icon_size = h - ITEM_ICON_MARGIN * 2
     if icon_size < 0 then
         icon_size = 0
     end
@@ -228,24 +211,13 @@ function ItemCountWidget:_layout()
     local show_icon = (self._icon_image_id ~= nil or self._background_image_id ~= nil) and icon_size > 0
 
     if show_icon == true then
-        self.icon_back:SetPosition(0, S.get_centered_icon_y(h, icon_size))
-        if self.icon_back.SetStretchMode ~= nil then
-            self.icon_back:SetStretchMode(0)
-        end
-        self.icon_back:SetSize(BASE_ICON_SIZE, BASE_ICON_SIZE)
-        if self.icon_back.SetStretchMode ~= nil and icon_size ~= BASE_ICON_SIZE then
-            self.icon_back:SetStretchMode(1)
-        end
-        self.icon_back:SetSize(icon_size, icon_size)
-        self.icon_back:SetVisible(true)
-
-        self.icon_fallback:SetPosition(0, 0)
-        self.icon_fallback:SetSize(BASE_ICON_SIZE, BASE_ICON_SIZE)
-        self.icon_fallback:SetBlendMode(self._background_image_id ~= nil and Turbine.UI.BlendMode.Overlay or Turbine.UI.BlendMode.AlphaBlend)
-        self.icon_fallback:SetVisible(self._icon_image_id ~= nil)
+        self.icon_fore:set_size(icon_size, icon_size)
+        self.icon_back:set_size(icon_size, icon_size)
+        self.icon_fore:SetVisible(self._icon_image_id ~= nil)
+        self.icon_back:SetVisible(self._background_image_id ~= nil)
     else
         self.icon_back:SetVisible(false)
-        self.icon_fallback:SetVisible(false)
+        self.icon_fore:SetVisible(false)
     end
 
     local text_x = 0

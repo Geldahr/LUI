@@ -88,18 +88,12 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self.background:SetBackColor(BUTTON_FILL_COLOR)
     self.background:SetZOrder(1)
 
-    self.icon = Turbine.UI.Control()
+    self.icon = Image(self.icon_background)
     self.icon:SetParent(self)
-    self.icon:SetMouseVisible(false)
-    self.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self.icon:SetZOrder(2)
-    if self.icon_background ~= nil then
-        prepare_background_stretch_mode_1(self.icon, self.icon_background)
-    end
+    self.icon:set_alignment(Image.CENTER + Image.MIDDLE)
 
-    self.label = UI.Widgets.LuiLabel()
+    self.label = LuiLabel()
     self.label:SetParent(self)
     self.label:SetMouseVisible(false)
     self.label:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
@@ -243,12 +237,8 @@ function AliasButtonWidget:_layout()
     end
 
     local icon_h = S.get_icon_size(slot_size)
-    local icon_w = S.get_shortcut_icon_w(self.icon_background, icon_h)
-    local icon_x = math.floor((w - icon_w) / 2)
-    local icon_y = S.get_centered_icon_y(h, icon_h)
-    self.icon:SetPosition(icon_x, icon_y)
-    self.icon:SetSize(icon_w, icon_h)
-    self.icon:SetVisible(self.icon_background ~= nil and icon_h > 0 and icon_w > 0)
+    self.icon:set_height(icon_h)
+    self.icon:SetVisible(self.icon_background ~= nil and icon_h > 0)
 
     self.label:SetPosition(0, 0)
     self.label:SetSize(w, h)

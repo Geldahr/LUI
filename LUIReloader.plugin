@@ -5,7 +5,7 @@
 		<Author>Geldahr</Author>
 		<Version>0.1.0</Version>
 		<Description>LUI helper plugin</Description>
-		<Image>LUI/src/PluginAssets/logo2.tga</Image>
+		<Image>LUI/assets/logo2.tga</Image>
 	</Information>
 	<Package>LUI.reloader.main</Package>
 	<Configuration Apartment="LUIReloader" />

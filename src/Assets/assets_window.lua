@@ -4,7 +4,6 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
-import "LUI.src.Utils.stretch"
 import "LUI.src.Assets.assets_entry"
 
 AssetsWindow = class(Turbine.UI.Lotro.Window)
@@ -295,12 +294,12 @@ local function _set_view_button_background(control, up_texture, down_texture, ac
         texture = down_texture
     end
 
-    if prepare_background_stretch_mode_1 ~= nil then
-        prepare_background_stretch_mode_1(control, texture)
-        return
+    local w, h = control:GetSize()
+    if type(w) == "number" and w > 0 and type(h) == "number" and h > 0 then
+        control:set_icon(texture, w, h)
+    else
+        control:set_icon(texture)
     end
-
-    control:SetBackground(texture)
 end
 
 local function _compare_text(left, right, descending)
@@ -557,7 +556,17 @@ function AssetsWindow:Constructor()
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
-    self.prev_button:SetText("<")
+    self.prev_button:set_text("")
+    self.prev_button:set_padding(2)
+    self.prev_button:set_icon(
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_transparent,
+        BASE_NAV_W,
+        nil,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
     self.prev_button.Click = function()
         self:set_page(self.page_index - 1)
     end
@@ -569,13 +578,24 @@ function AssetsWindow:Constructor()
 
     self.next_button = UI.Widgets.LuiButton()
     self.next_button:SetParent(self.page_bar)
-    self.next_button:SetText(">")
+    self.next_button:set_text("")
+    self.next_button:set_padding(2)
+    self.next_button:set_icon(
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_transparent,
+        BASE_NAV_W,
+        nil,
+        UI.Widgets.LuiButton.icon_position.RIGHT
+    )
     self.next_button.Click = function()
         self:set_page(self.page_index + 1)
     end
 
-    self.view_icons_button = Turbine.UI.Control()
+    self.view_icons_button = Image()
     self.view_icons_button:SetParent(self.nav_bar)
+    self.view_icons_button:SetMouseVisible(true)
     self.view_icons_button.MouseClick = function(_, args)
         if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
             return
@@ -583,8 +603,9 @@ function AssetsWindow:Constructor()
         self:set_view_mode(LUI_ENUMS.assets_view_mode.ICONS, true)
     end
 
-    self.view_details_button = Turbine.UI.Control()
+    self.view_details_button = Image()
     self.view_details_button:SetParent(self.nav_bar)
+    self.view_details_button:SetMouseVisible(true)
     self.view_details_button.MouseClick = function(_, args)
         if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
             return
@@ -604,7 +625,7 @@ function AssetsWindow:Constructor()
 
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:SetText(TR("Clear"))
+    self.clear_button:set_text(TR("Clear"))
     self.clear_button.Click = function()
         self.filter_tb:SetText("")
         self:update_filter()
@@ -960,9 +981,9 @@ function AssetsWindow:apply_settings()
     self.tile_size = self:_get_mode_tile_size(self.view_mode)
 
     local button_font = _scaled_font("Verdana", 11)
-    self.prev_button:SetFont(button_font)
-    self.next_button:SetFont(button_font)
-    self.clear_button:SetFont(button_font)
+    self.prev_button:set_font(button_font)
+    self.next_button:set_font(button_font)
+    self.clear_button:set_font(button_font)
     self.filter_tb:SetFont(button_font)
     self.stack_items_cb:SetScale(_G.settings.global.scale)
     self.stack_items_cb:SetFont(button_font)
@@ -1649,7 +1670,7 @@ function AssetsWindow:layout()
     local group_w = _scaled_int(BASE_GROUP_W)
     local clear_w = _scaled_int(BASE_CLEAR_W)
     local stack_cb_w = _scaled_int(BASE_STACK_CB_W)
-    local stack_box_w = _scaled_int(BASE_STACK_BOX_W)
+    local stack_box_w = math.max(_scaled_int(BASE_STACK_BOX_W), hint_h)
     local owner_label_w = _scaled_int(BASE_OWNER_LABEL_W)
     local owner_w = _scaled_int(BASE_OWNER_W)
     local storage_label_w = _scaled_int(BASE_STORAGE_LABEL_W)
@@ -1688,12 +1709,12 @@ function AssetsWindow:layout()
         view_icon_y = 0
     end
 
-    self.view_details_button:SetSize(view_icon_w, view_icon_w)
+    self.view_details_button:set_size(view_icon_w, view_icon_w)
     nav_right_x = nav_right_x - view_icon_w
     self.view_details_button:SetPosition(nav_right_x, view_icon_y)
     nav_right_x = nav_right_x - gap
 
-    self.view_icons_button:SetSize(view_icon_w, view_icon_w)
+    self.view_icons_button:set_size(view_icon_w, view_icon_w)
     nav_right_x = nav_right_x - view_icon_w
     self.view_icons_button:SetPosition(nav_right_x, view_icon_y)
     nav_right_x = nav_right_x - gap
@@ -1931,8 +1952,8 @@ function AssetsWindow:refresh_page()
 
     self.empty_label:SetVisible(#self.records == 0)
     self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(self.page_count))
-    self.prev_button:SetEnabled(self.page_index > 1)
-    self.next_button:SetEnabled(self.page_index < self.page_count)
+    self.prev_button:set_enabled(self.page_index > 1)
+    self.next_button:set_enabled(self.page_index < self.page_count)
     self:_refresh_summary(visible_count, page_start_index)
 
     self:_set_hint(nil)

@@ -7,7 +7,10 @@ Bestiary = Bestiary or {}
 Bestiary.Collector = class()
 Bestiary.current_location = Bestiary.current_location or nil
 
-local DROP_GRACE_SECONDS = 1.0
+local DATA_ACCESS = Bestiary.DataAccess
+-- Loot messages often arrive after the kill line and XP line, so keep a short
+-- post-kill attribution window here. Adjust if the client/chat timing shifts.
+local LOOT_POST_KILL_WINDOW_SECONDS = 0.10
 
 local function _is_english_client()
     if is_lui_english_language ~= nil then
@@ -129,124 +132,27 @@ local function _to_number(value, fallback)
 end
 
 local function _normalize_bestiary_name(name)
-    name = _trim(name)
-    if name == nil then
-        return nil
+    if DATA_ACCESS ~= nil and DATA_ACCESS.normalize_name ~= nil then
+        return DATA_ACCESS.normalize_name(name)
     end
 
-    local lowered = string.lower(name)
-    if string.sub(lowered, 1, 4) == "the " then
-        name = _trim(string.sub(name, 5))
-    end
-
-    name = name:gsub("%s*%.+$", "")
-    name = _trim(name)
-    if name == nil or name == "" then
-        return nil
-    end
-
-    return name
-end
-
-local function _merge_cache_entry(dst, src)
-    if type(dst) ~= "table" or type(src) ~= "table" then
-        return
-    end
-
-    if type(dst.levels) ~= "table" then
-        dst.levels = {}
-    end
-    if type(dst.d) ~= "table" then
-        dst.d = {}
-    end
-
-    dst.k = _to_number(dst.k, 0) + _to_number(src.k, 0)
-    dst.lmin = nil
-    dst.lmax = nil
-
-    if type(src.levels) == "table" then
-        for level, info in pairs(src.levels) do
-            if type(info) == "table" then
-                local dst_info = dst.levels[level]
-                if type(dst_info) ~= "table" then
-                    dst.levels[level] = {
-                        m = _to_number(info.m, 0),
-                        p = _to_number(info.p, 0),
-                    }
-                else
-                    local morale = _to_number(info.m, 0)
-                    local power = _to_number(info.p, 0)
-                    if morale > _to_number(dst_info.m, 0) then
-                        dst_info.m = morale
-                    end
-                    if power > _to_number(dst_info.p, 0) then
-                        dst_info.p = power
-                    end
-                end
-            end
-        end
-    end
-
-    if type(src.d) == "table" then
-        for item_name, count in pairs(src.d) do
-            if type(item_name) == "string" then
-                dst.d[item_name] = _to_number(dst.d[item_name], 0) + _to_number(count, 0)
-            end
-        end
-    end
-end
-
-local function _clear_legacy_level_bounds(entry)
-    if type(entry) ~= "table" then
-        return
-    end
-
-    entry.lmin = nil
-    entry.lmax = nil
-end
-
-local function _normalize_bestiary_cache_table(cache)
-    if type(cache) ~= "table" then
-        return cache
-    end
-
-    local renames = {}
-    for name, entry in pairs(cache) do
-        _clear_legacy_level_bounds(entry)
-        if type(name) == "string" and type(entry) == "table" then
-            local normalized = _normalize_bestiary_name(name)
-            if normalized ~= nil and normalized ~= name then
-                renames[#renames + 1] = { from = name, to = normalized }
-            end
-        end
-    end
-
-    for i = 1, #renames do
-        local rename = renames[i]
-        local entry = cache[rename.from]
-        if type(entry) == "table" then
-            if type(cache[rename.to]) == "table" and cache[rename.to] ~= entry then
-                _merge_cache_entry(cache[rename.to], entry)
-            else
-                cache[rename.to] = entry
-            end
-            cache[rename.from] = nil
-        end
-    end
-
-    return cache
+    return _trim(name)
 end
 
 local function _ensure_bestiary_cache()
+    if DATA_ACCESS ~= nil and DATA_ACCESS.ensure_cache ~= nil then
+        return DATA_ACCESS.ensure_cache()
+    end
+
     if ensure_bestiary_cache ~= nil then
-        return _normalize_bestiary_cache_table(ensure_bestiary_cache())
+        return ensure_bestiary_cache()
     end
 
     if type(_G.bestiary_cache) ~= "table" then
         _G.bestiary_cache = {}
     end
 
-    return _normalize_bestiary_cache_table(_G.bestiary_cache)
+    return _G.bestiary_cache
 end
 
 local function _touch_generation()
@@ -255,6 +161,9 @@ end
 
 local function _ensure_entry(name)
     name = _normalize_bestiary_name(name) or name
+    if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_builtin_name ~= nil then
+        name = DATA_ACCESS.resolve_builtin_name(name) or name
+    end
     local cache = _ensure_bestiary_cache()
     if type(cache[name]) ~= "table" then
         cache[name] = {
@@ -372,6 +281,10 @@ end
 
 function Bestiary.Collector:flush_expired()
     self:_flush_pending_kills(false)
+end
+
+function Bestiary.Collector:flush_pending()
+    self:_flush_pending_kills(true)
 end
 
 function Bestiary.Collector:destroy()
@@ -574,7 +487,7 @@ function Bestiary.Collector:_flush_pending_kills(flush_all)
     local now = Turbine.Engine.GetGameTime()
     while #self._pending_kills > 0 do
         local record = self._pending_kills[1]
-        if flush_all ~= true and record ~= nil and (now - _to_number(record.at, now)) < DROP_GRACE_SECONDS then
+        if flush_all ~= true and record ~= nil and (now - _to_number(record.at, now)) < LOOT_POST_KILL_WINDOW_SECONDS then
             break
         end
 
@@ -630,10 +543,13 @@ function Bestiary.Collector:_on_chat_received(args)
     end
 
     if args.ChatType == Turbine.ChatType.SelfLoot then
-        local drop_name = _parse_drop_name(message)
-        if drop_name ~= nil and #self._pending_kills > 0 then
-            local record = self._pending_kills[1]
-            record.drops[drop_name] = _to_number(record.drops[drop_name], 0) + 1
+        local item_name = _parse_drop_name(message)
+        if item_name ~= nil and #self._pending_kills > 0 then
+            self:_flush_pending_kills(false)
+            local record = self._pending_kills[#self._pending_kills]
+            if type(record) == "table" then
+                record.drops[item_name] = _to_number(record.drops[item_name], 0) + 1
+            end
         end
     end
 end

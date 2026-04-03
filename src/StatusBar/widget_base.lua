@@ -1,6 +1,7 @@
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
+local ICON_MARGIN = 2
 
 local StatusBarWidgetBase = class(Turbine.UI.Control)
 _G.StatusBarWidgetBase = StatusBarWidgetBase
@@ -25,15 +26,11 @@ function StatusBarWidgetBase:Constructor(widget_key, widget_w, bar_h, font, cont
     self:SetMouseVisible(false)
     self:SetSize(widget_w, bar_h)
 
-    self.icon = Turbine.UI.Control()
+    self.icon = Image()
     self.icon:SetParent(self)
-    self.icon:SetMouseVisible(false)
-    self.icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    self.icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self.icon:SetVisible(false)
 
-    self.label = UI.Widgets.LuiLabel()
+    self.label = LuiLabel()
     self.label:SetParent(self)
     self.label:SetMouseVisible(false)
     self.label:SetText("")
@@ -69,12 +66,10 @@ function StatusBarWidgetBase:Constructor(widget_key, widget_w, bar_h, font, cont
 
     if show_icon then
         local icon_y = S.get_centered_icon_y(h, icon_h)
-        prepare_background_stretch_mode_1(self.icon, icon_path)
-        self.icon:SetPosition(0, icon_y)
-        self.icon:SetSize(icon_w, icon_h)
-        self.icon:SetVisible(true)
-        self.label:SetPosition(icon_w + S.ICON_GAP, 0)
-        self.label:SetSize(math.max(0, w - icon_w - S.ICON_GAP), h)
+        self.icon:SetPosition(ICON_MARGIN, icon_y)
+        self.icon:set_icon(icon_path, icon_w, icon_h)
+        self.label:SetPosition(ICON_MARGIN + icon_w + S.ICON_GAP, 0)
+        self.label:SetSize(math.max(0, w - ICON_MARGIN - icon_w - S.ICON_GAP), h)
     else
         self.icon:SetVisible(false)
         self.label:SetPosition(0, 0)

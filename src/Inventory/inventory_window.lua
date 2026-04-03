@@ -173,32 +173,14 @@ function InventoryWindow:Constructor()
     self.header = Turbine.UI.Control()
     self.header:SetParent(self)
 
-    self.g_icon = Turbine.UI.Control()
+    self.g_icon = Image(GOLD_ICON)
     self.g_icon:SetParent(self.header)
-    self.g_icon:SetMouseVisible(false)
-    self.g_icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    self.g_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.g_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.g_icon:SetBackground(GOLD_ICON)
-    self.g_icon:SetStretchMode(2)
 
-    self.s_icon = Turbine.UI.Control()
+    self.s_icon = Image(SILVER_ICON)
     self.s_icon:SetParent(self.header)
-    self.s_icon:SetMouseVisible(false)
-    self.s_icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    self.s_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.s_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.s_icon:SetBackground(SILVER_ICON)
-    self.s_icon:SetStretchMode(2)
 
-    self.c_icon = Turbine.UI.Control()
+    self.c_icon = Image(COPPER_ICON)
     self.c_icon:SetParent(self.header)
-    self.c_icon:SetMouseVisible(false)
-    self.c_icon:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
-    self.c_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.c_icon:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self.c_icon:SetBackground(COPPER_ICON)
-    self.c_icon:SetStretchMode(2)
 
     local function make_money_label()
         local l = UI.Widgets.LuiLabel()
@@ -222,8 +204,8 @@ function InventoryWindow:Constructor()
 
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.header)
-    self.clear_button:SetFont(_scaled_font("Verdana", BASE_FILTER_FONT_SIZE))
-    self.clear_button:SetText(TR("Clear"))
+    self.clear_button:set_font(_scaled_font("Verdana", BASE_FILTER_FONT_SIZE))
+    self.clear_button:set_text(TR("Clear"))
     self.clear_button.Click = function()
         self.filter_tb:SetText("")
         self:update_filter()
@@ -411,21 +393,21 @@ function InventoryWindow:layout()
     local y = 0
 
     self.g_icon:SetPosition(x, y + 1)
-    self.g_icon:SetSize(icon_size, icon_size)
+    self.g_icon:set_size(icon_size, icon_size)
     x = x + icon_size + gap
     self.g_label:SetPosition(x, y)
     self.g_label:SetSize(field_w, money_h)
     x = x + field_w + gap
 
     self.s_icon:SetPosition(x, y + 1)
-    self.s_icon:SetSize(icon_size, icon_size)
+    self.s_icon:set_size(icon_size, icon_size)
     x = x + icon_size + gap
     self.s_label:SetPosition(x, y)
     self.s_label:SetSize(field_w, money_h)
     x = x + field_w + gap
 
     self.c_icon:SetPosition(x, y + 1)
-    self.c_icon:SetSize(icon_size, icon_size)
+    self.c_icon:set_size(icon_size, icon_size)
     x = x + icon_size + gap
     self.c_label:SetPosition(x, y)
     self.c_label:SetSize(field_w, money_h)
@@ -528,7 +510,7 @@ function InventoryWindow:apply_settings()
 
     local filter_font = _scaled_font("Verdana", BASE_FILTER_FONT_SIZE)
     self.filter_tb:SetFont(filter_font)
-    self.clear_button:SetFont(filter_font)
+    self.clear_button:set_font(filter_font)
 
     local hint_font_size = math.floor((BASE_HINT_FONT_SIZE * scale) + 0.5)
     local hint_font = FONT_TO_LOTRO("Verdana", hint_font_size)

@@ -1,5 +1,7 @@
 import "Turbine.UI"
 
+import "LUI.src.UI.assets"
+import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.label"
 
 local POSITION_TOP = "top"
@@ -20,6 +22,8 @@ local BASE_LABEL_PADDING_X = 8
 local BASE_CONTENT_PADDING = 0
 local BASE_MIN_TAB_WIDTH = 56
 local BASE_APPROX_CHAR_WIDTH = 7
+local BASE_SCROLL_BUTTON_SIZE = 18
+local BASE_SCROLL_BUTTON_GAP = 2
 
 local THEME_BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
 local THEME_STRIP_BACK = Turbine.UI.Color(1, 0.06, 0.06, 0.06)
@@ -267,6 +271,18 @@ function LuiTabBar:Constructor()
     self._show_tab_cap_left = true
     self._selected_index = nil
     self._tabs = {}
+    self._tab_rects = {}
+    self._tab_natural_rects = {}
+    self._horizontal_first_visible_index = 1
+    self._horizontal_last_visible_index = 0
+    self._horizontal_first_drawn_index = 1
+    self._horizontal_last_fully_visible_index = 0
+    self._horizontal_viewport_width = 0
+    self._horizontal_viewport_offset_x = 0
+    self._horizontal_scrollable = false
+    self._horizontal_scroll_button_size = 0
+    self._horizontal_scroll_button_gap = 0
+    self._horizontal_follow_selected_once = false
 
     self._border_color = THEME_BORDER_COLOR
     self._strip_back = THEME_STRIP_BACK
@@ -311,9 +327,19 @@ function LuiTabBar:Constructor()
     self._content_inner:SetParent(self._content_frame)
     self._content_inner:SetBackColor(self._content_back)
 
+    self._tabs_fill_host = Turbine.UI.Control()
+    self._tabs_fill_host:SetParent(self)
+    self._tabs_fill_host:SetMouseVisible(false)
+    self._tabs_fill_host:SetZOrder(4)
+
     self._tabs_host = Turbine.UI.Control()
     self._tabs_host:SetParent(self)
     self._tabs_host:SetZOrder(5)
+
+    self._tabs_overlay_host = Turbine.UI.Control()
+    self._tabs_overlay_host:SetParent(self)
+    self._tabs_overlay_host:SetMouseVisible(false)
+    self._tabs_overlay_host:SetZOrder(10)
 
     self._tab_fill_controls = {}
     self._divider_controls = {}
@@ -331,28 +357,86 @@ function LuiTabBar:Constructor()
     self._adjacent_line_after:SetZOrder(10)
 
     self._selected_outline_top = Turbine.UI.Control()
-    self._selected_outline_top:SetParent(self)
+    self._selected_outline_top:SetParent(self._tabs_overlay_host)
     self._selected_outline_top:SetMouseVisible(false)
     self._selected_outline_top:SetBackColor(self._border_color)
     self._selected_outline_top:SetZOrder(11)
 
     self._selected_outline_right = Turbine.UI.Control()
-    self._selected_outline_right:SetParent(self)
+    self._selected_outline_right:SetParent(self._tabs_overlay_host)
     self._selected_outline_right:SetMouseVisible(false)
     self._selected_outline_right:SetBackColor(self._border_color)
     self._selected_outline_right:SetZOrder(11)
 
     self._selected_outline_bottom = Turbine.UI.Control()
-    self._selected_outline_bottom:SetParent(self)
+    self._selected_outline_bottom:SetParent(self._tabs_overlay_host)
     self._selected_outline_bottom:SetMouseVisible(false)
     self._selected_outline_bottom:SetBackColor(self._border_color)
     self._selected_outline_bottom:SetZOrder(11)
 
     self._selected_outline_left = Turbine.UI.Control()
-    self._selected_outline_left:SetParent(self)
+    self._selected_outline_left:SetParent(self._tabs_overlay_host)
     self._selected_outline_left:SetMouseVisible(false)
     self._selected_outline_left:SetBackColor(self._border_color)
     self._selected_outline_left:SetZOrder(11)
+
+    self._scroll_left_button = LuiButton()
+    self._scroll_left_button:SetParent(self)
+    self._scroll_left_button:SetVisible(false)
+    self._scroll_left_button:SetZOrder(12)
+    self._scroll_left_button:set_text("")
+    self._scroll_left_button:set_padding(2)
+    self._scroll_left_button:set_border_thickness(0)
+    self._scroll_left_button:set_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_hover_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_pressed_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_hover_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_active_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_disabled_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_left_button:set_icon(
+        UI.AssetIds.arrow_l_yellow_normal,
+        UI.AssetIds.arrow_l_yellow_inverted,
+        UI.AssetIds.arrow_l_yellow_dark,
+        UI.AssetIds.arrow_l_transparent,
+        BASE_SCROLL_BUTTON_SIZE,
+        nil,
+        LuiButton.icon_position.LEFT
+    )
+    self._scroll_left_button.Click = function()
+        self:_scroll_to_previous_hidden_tab()
+    end
+
+    self._scroll_right_button = LuiButton()
+    self._scroll_right_button:SetParent(self)
+    self._scroll_right_button:SetVisible(false)
+    self._scroll_right_button:SetZOrder(12)
+    self._scroll_right_button:set_text("")
+    self._scroll_right_button:set_padding(2)
+    self._scroll_right_button:set_border_thickness(0)
+    self._scroll_right_button:set_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_hover_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_pressed_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_hover_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_active_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_disabled_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    self._scroll_right_button:set_icon(
+        UI.AssetIds.arrow_r_yellow_normal,
+        UI.AssetIds.arrow_r_yellow_inverted,
+        UI.AssetIds.arrow_r_yellow_dark,
+        UI.AssetIds.arrow_r_transparent,
+        BASE_SCROLL_BUTTON_SIZE,
+        nil,
+        LuiButton.icon_position.RIGHT
+    )
+    self._scroll_right_button.Click = function()
+        self:_scroll_to_next_hidden_tab()
+    end
 
     self.SizeChanged = function()
         self:_layout()
@@ -642,6 +726,7 @@ function LuiTabBar:set_selected_index(index, fire_event)
     end
 
     self._selected_index = index
+    self._horizontal_follow_selected_once = true
 
     for i = 1, #self._tabs do
         local entry = self._tabs[i]
@@ -695,7 +780,7 @@ end
 function LuiTabBar:_ensure_divider_count(count)
     while #self._divider_controls < count do
         local c = Turbine.UI.Control()
-        c:SetParent(self)
+        c:SetParent(self._tabs_overlay_host)
         c:SetMouseVisible(false)
         c:SetBackColor(self._border_color)
         c:SetZOrder(10)
@@ -710,7 +795,7 @@ end
 function LuiTabBar:_ensure_tab_fill_count(count)
     while #self._tab_fill_controls < count do
         local c = Turbine.UI.Control()
-        c:SetParent(self)
+        c:SetParent(self._tabs_fill_host)
         c:SetMouseVisible(false)
         c:SetZOrder(4)
         self._tab_fill_controls[#self._tab_fill_controls + 1] = c
@@ -755,9 +840,161 @@ function LuiTabBar:_layout_selected_widget()
     end
 end
 
+function LuiTabBar:_compute_horizontal_scroll_button_size(height)
+    return math.min(math.max(1, height), _scaled_int(self._scale, BASE_SCROLL_BUTTON_SIZE))
+end
+
+function LuiTabBar:_last_visible_horizontal_index(widths, start_index, viewport_width, gap)
+    local count = #widths
+    if count < 1 then
+        return 0
+    end
+
+    if type(start_index) ~= "number" then
+        start_index = tonumber(start_index) or 1
+    end
+    if type(viewport_width) ~= "number" then
+        viewport_width = tonumber(viewport_width) or 0
+    end
+
+    start_index = _round(start_index)
+    if start_index < 1 then
+        start_index = 1
+    elseif start_index > count then
+        start_index = count
+    end
+
+    local used = 0
+    local last_index = start_index
+
+    for i = start_index, count do
+        local tab_w = tonumber(widths[i]) or 0
+        if tab_w < 1 then
+            tab_w = 1
+        end
+
+        local extra = tab_w
+        if i > start_index then
+            extra = extra + gap
+        end
+
+        if i == start_index then
+            used = tab_w
+            last_index = i
+        elseif (used + extra) <= viewport_width then
+            used = used + extra
+            last_index = i
+        else
+            break
+        end
+
+        if used >= viewport_width then
+            break
+        end
+    end
+
+    return last_index
+end
+
+function LuiTabBar:_sync_horizontal_visible_range(widths, viewport_width, gap)
+    local count = #widths
+    if count < 1 then
+        self._horizontal_first_visible_index = 1
+        self._horizontal_last_visible_index = 0
+        self._horizontal_first_drawn_index = 1
+        self._horizontal_last_fully_visible_index = 0
+        return
+    end
+
+    local first_index = tonumber(self._horizontal_first_visible_index) or 1
+    first_index = _round(first_index)
+    if first_index < 1 then
+        first_index = 1
+    elseif first_index > count then
+        first_index = count
+    end
+
+    local last_index = self:_last_visible_horizontal_index(widths, first_index, viewport_width, gap)
+    local selected_index = self._selected_index
+    local follow_selected = self._horizontal_follow_selected_once == true
+    self._horizontal_follow_selected_once = false
+
+    if follow_selected == true and type(selected_index) == "number" then
+        selected_index = _round(selected_index)
+        if selected_index < first_index then
+            first_index = selected_index
+            last_index = self:_last_visible_horizontal_index(widths, first_index, viewport_width, gap)
+        else
+            while selected_index > last_index and first_index < count do
+                first_index = first_index + 1
+                last_index = self:_last_visible_horizontal_index(widths, first_index, viewport_width, gap)
+            end
+        end
+    end
+
+    while last_index == count and first_index > 1 do
+        local candidate_first = first_index - 1
+        local candidate_last = self:_last_visible_horizontal_index(widths, candidate_first, viewport_width, gap)
+        if candidate_last ~= count then
+            break
+        end
+        first_index = candidate_first
+        last_index = candidate_last
+    end
+
+    self._horizontal_first_visible_index = first_index
+    self._horizontal_last_visible_index = last_index
+    self._horizontal_first_drawn_index = first_index
+    self._horizontal_last_fully_visible_index = last_index
+end
+
+function LuiTabBar:_scroll_to_previous_hidden_tab()
+    if self._horizontal_scrollable ~= true then
+        return
+    end
+
+    local first_index = tonumber(self._horizontal_first_visible_index) or 1
+    if first_index <= 1 then
+        return
+    end
+
+    self._horizontal_first_visible_index = first_index - 1
+    self:_layout()
+end
+
+function LuiTabBar:_scroll_to_next_hidden_tab()
+    if self._horizontal_scrollable ~= true then
+        return
+    end
+
+    local count = #self._tabs
+    local first_index = tonumber(self._horizontal_first_visible_index) or 1
+    local last_index = tonumber(self._horizontal_last_fully_visible_index) or 0
+    if last_index >= count then
+        return
+    end
+
+    self._horizontal_first_visible_index = first_index + 1
+    self:_layout()
+end
+
 function LuiTabBar:_layout_tabs_horizontal(width, height)
     local count = #self._tabs
     self._tab_rects = {}
+    self._tab_natural_rects = {}
+    if type(self._horizontal_first_visible_index) ~= "number" then
+        self._horizontal_first_visible_index = 1
+    else
+        self._horizontal_first_visible_index = _round(self._horizontal_first_visible_index)
+    end
+    self._horizontal_last_visible_index = 0
+    self._horizontal_first_drawn_index = 1
+    self._horizontal_last_fully_visible_index = 0
+    self._horizontal_viewport_width = width
+    self._horizontal_viewport_offset_x = 0
+    self._horizontal_scrollable = false
+    self._horizontal_scroll_button_size = 0
+    self._horizontal_scroll_button_gap = 0
     if count == 0 then
         return
     end
@@ -775,7 +1012,8 @@ function LuiTabBar:_layout_tabs_horizontal(width, height)
     end
 
     total = total + (math.max(0, count - 1) * gap)
-    if self._fill_tabs == true or total > width then
+
+    if self._fill_tabs == true then
         local usable = width - (math.max(0, count - 1) * gap)
         local tab_w = count > 0 and math.floor(usable / count) or 0
         if tab_w < 1 then
@@ -784,17 +1022,105 @@ function LuiTabBar:_layout_tabs_horizontal(width, height)
         for i = 1, count do
             widths[i] = tab_w
         end
+    else
+        local scrollable = total > width
+        local viewport_width = width
+        if scrollable == true then
+            local button_gap = _scaled_int(self._scale, BASE_SCROLL_BUTTON_GAP)
+            local button_size = self:_compute_horizontal_scroll_button_size(height)
+            viewport_width = width - (button_size * 2) - (button_gap * 2)
+            if viewport_width < 1 then
+                viewport_width = 1
+            end
+            self._horizontal_scrollable = true
+            self._horizontal_viewport_offset_x = button_size + button_gap
+            self._horizontal_scroll_button_size = button_size
+            self._horizontal_scroll_button_gap = button_gap
+            self._horizontal_viewport_width = viewport_width
+        end
     end
 
+    if self._horizontal_scrollable ~= true then
+        self._horizontal_viewport_width = width
+    end
+
+    if self._horizontal_scrollable == true then
+        self:_sync_horizontal_visible_range(widths, self._horizontal_viewport_width, gap)
+    else
+        self._horizontal_first_visible_index = 1
+        self._horizontal_last_visible_index = count
+        self._horizontal_first_drawn_index = 1
+        self._horizontal_last_fully_visible_index = count
+    end
+
+    local first_visible = self._horizontal_first_visible_index
+    local first_drawn = first_visible
+    local last_drawn = 0
+    local last_fully_visible = 0
     local x = 0
+
+    if self._horizontal_scrollable == true then
+        local remaining_total = 0
+        for i = first_visible, count do
+            if i > first_visible then
+                remaining_total = remaining_total + gap
+            end
+            remaining_total = remaining_total + widths[i]
+        end
+
+        if remaining_total < self._horizontal_viewport_width and first_visible > 1 then
+            local missing = self._horizontal_viewport_width - remaining_total
+            local probe = first_visible - 1
+
+            while probe >= 1 do
+                local extra = widths[probe] + gap
+                if extra <= missing then
+                    first_visible = probe
+                    first_drawn = probe
+                    missing = missing - extra
+                    probe = probe - 1
+                else
+                    first_drawn = probe
+                    x = -(extra - missing)
+                    break
+                end
+            end
+        end
+    end
+
     for i = 1, count do
         local button = self._tabs[i].button
-        self._tab_rects[i] = { x = x, y = 0, w = widths[i], h = height }
-        if button ~= nil then
-            _set_rect(button, x, 0, widths[i], height)
+        local visible = false
+        if i >= first_drawn then
+            if x < self._horizontal_viewport_width then
+                visible = true
+            end
         end
-        x = x + widths[i] + gap
+        if visible == true then
+            local tab_w = widths[i]
+            self._tab_rects[i] = { x = x, y = 0, w = tab_w, h = height }
+            if button ~= nil then
+                button:SetVisible(true)
+                _set_rect(button, x, 0, tab_w, height)
+            end
+            if x >= 0 and (x + tab_w) <= self._horizontal_viewport_width then
+                last_fully_visible = i
+            end
+            last_drawn = i
+            x = x + tab_w + gap
+        else
+            self._tab_rects[i] = nil
+            if button ~= nil then
+                button:SetVisible(false)
+                _set_rect(button, 0, 0, 0, 0)
+            end
+        end
     end
+
+    self._horizontal_first_visible_index = first_visible
+    self._horizontal_first_drawn_index = first_drawn
+    self._horizontal_last_visible_index = last_drawn
+    self._horizontal_last_fully_visible_index = last_fully_visible
 end
 
 function LuiTabBar:_layout_tabs_vertical(width, height)
@@ -820,6 +1146,7 @@ function LuiTabBar:_layout_tabs_vertical(width, height)
         local button = self._tabs[i].button
         self._tab_rects[i] = { x = 0, y = y, w = width, h = tab_h }
         if button ~= nil then
+            button:SetVisible(true)
             _set_rect(button, 0, y, width, tab_h)
         end
         y = y + tab_h + gap
@@ -848,6 +1175,8 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
     local show_tab_cap_right = self._show_tab_cap_right == true
     local show_tab_cap_bottom = self._show_tab_cap_bottom == true
     local show_tab_cap_left = self._show_tab_cap_left == true
+    local visible_first_index = self._horizontal_scrollable == true and self._horizontal_first_drawn_index or 1
+    local visible_last_index = self._horizontal_scrollable == true and self._horizontal_last_visible_index or count
     self:_ensure_divider_count(divider_count)
 
     for i = 1, divider_count do
@@ -857,11 +1186,11 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
 
         if divider ~= nil and rect ~= nil and show_divider == true then
             if self._position == POSITION_TOP or self._position == POSITION_BOTTOM then
-                local boundary = strip_x + rect.x + rect.w
-                _set_rect(divider, boundary - math.floor(border / 2), strip_y, border, strip_h)
+                local boundary = rect.x + rect.w
+                _set_rect(divider, boundary - math.floor(border / 2), 0, border, strip_h)
             else
-                local boundary = strip_y + rect.y + rect.h
-                _set_rect(divider, strip_x, boundary - math.floor(border / 2), strip_w, border)
+                local boundary = rect.y + rect.h
+                _set_rect(divider, 0, boundary - math.floor(border / 2), strip_w, border)
             end
             divider:SetBackColor(self._border_color)
             divider:SetVisible(true)
@@ -882,39 +1211,43 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
     local selected_y = nil
     local selected_w = nil
     local selected_h = nil
+    local selected_abs_x = nil
+    local selected_abs_y = nil
     if selected_rect ~= nil then
-        selected_x = strip_x + selected_rect.x
-        selected_y = strip_y + selected_rect.y
+        selected_x = selected_rect.x
+        selected_y = selected_rect.y
         selected_w = selected_rect.w
         selected_h = selected_rect.h
+        selected_abs_x = strip_x + selected_x
+        selected_abs_y = strip_y + selected_y
     end
 
     if show_adjacent_border == true then
         if self._position == POSITION_TOP then
             local line_y = content_y
-            local before_w = selected_rect ~= nil and math.max(0, selected_x - content_x) or content_w
-            local after_x = selected_rect ~= nil and (selected_x + selected_w) or (content_x + content_w)
+            local before_w = selected_rect ~= nil and math.max(0, selected_abs_x - content_x) or content_w
+            local after_x = selected_rect ~= nil and (selected_abs_x + selected_w) or (content_x + content_w)
             local after_w = math.max(0, (content_x + content_w) - after_x)
             _set_rect(self._adjacent_line_before, content_x, line_y, before_w, border)
             _set_rect(self._adjacent_line_after, after_x, line_y, after_w, border)
         elseif self._position == POSITION_BOTTOM then
             local line_y = content_y + content_h - border
-            local before_w = selected_rect ~= nil and math.max(0, selected_x - content_x) or content_w
-            local after_x = selected_rect ~= nil and (selected_x + selected_w) or (content_x + content_w)
+            local before_w = selected_rect ~= nil and math.max(0, selected_abs_x - content_x) or content_w
+            local after_x = selected_rect ~= nil and (selected_abs_x + selected_w) or (content_x + content_w)
             local after_w = math.max(0, (content_x + content_w) - after_x)
             _set_rect(self._adjacent_line_before, content_x, line_y, before_w, border)
             _set_rect(self._adjacent_line_after, after_x, line_y, after_w, border)
         elseif self._position == POSITION_LEFT then
             local line_x = content_x
-            local before_h = selected_rect ~= nil and math.max(0, selected_y - content_y) or content_h
-            local after_y = selected_rect ~= nil and (selected_y + selected_h) or (content_y + content_h)
+            local before_h = selected_rect ~= nil and math.max(0, selected_abs_y - content_y) or content_h
+            local after_y = selected_rect ~= nil and (selected_abs_y + selected_h) or (content_y + content_h)
             local after_h = math.max(0, (content_y + content_h) - after_y)
             _set_rect(self._adjacent_line_before, line_x, content_y, border, before_h)
             _set_rect(self._adjacent_line_after, line_x, after_y, border, after_h)
         else
             local line_x = content_x + content_w - border
-            local before_h = selected_rect ~= nil and math.max(0, selected_y - content_y) or content_h
-            local after_y = selected_rect ~= nil and (selected_y + selected_h) or (content_y + content_h)
+            local before_h = selected_rect ~= nil and math.max(0, selected_abs_y - content_y) or content_h
+            local after_y = selected_rect ~= nil and (selected_abs_y + selected_h) or (content_y + content_h)
             local after_h = math.max(0, (content_y + content_h) - after_y)
             _set_rect(self._adjacent_line_before, line_x, content_y, border, before_h)
             _set_rect(self._adjacent_line_after, line_x, after_y, border, after_h)
@@ -935,11 +1268,11 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
             _set_rect(self._selected_outline_top, selected_x, selected_y, selected_w, border)
             self._selected_outline_top:SetVisible(true)
         end
-        if selected_index == 1 and show_tab_cap_left == true then
+        if selected_index == visible_first_index and show_tab_cap_left == true then
             _set_rect(self._selected_outline_left, selected_x, selected_y, border, selected_h)
             self._selected_outline_left:SetVisible(true)
         end
-        if selected_index == count and show_tab_cap_right == true then
+        if selected_index == visible_last_index and show_tab_cap_right == true then
             _set_rect(self._selected_outline_right, selected_x + selected_w - border, selected_y, border, selected_h)
             self._selected_outline_right:SetVisible(true)
         end
@@ -948,11 +1281,11 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
             _set_rect(self._selected_outline_bottom, selected_x, selected_y + selected_h - border, selected_w, border)
             self._selected_outline_bottom:SetVisible(true)
         end
-        if selected_index == 1 and show_tab_cap_left == true then
+        if selected_index == visible_first_index and show_tab_cap_left == true then
             _set_rect(self._selected_outline_left, selected_x, selected_y, border, selected_h)
             self._selected_outline_left:SetVisible(true)
         end
-        if selected_index == count and show_tab_cap_right == true then
+        if selected_index == visible_last_index and show_tab_cap_right == true then
             _set_rect(self._selected_outline_right, selected_x + selected_w - border, selected_y, border, selected_h)
             self._selected_outline_right:SetVisible(true)
         end
@@ -961,11 +1294,11 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
             _set_rect(self._selected_outline_left, selected_x, selected_y, border, selected_h)
             self._selected_outline_left:SetVisible(true)
         end
-        if selected_index == 1 and show_tab_cap_top == true then
+        if selected_index == visible_first_index and show_tab_cap_top == true then
             _set_rect(self._selected_outline_top, selected_x, selected_y, selected_w, border)
             self._selected_outline_top:SetVisible(true)
         end
-        if selected_index == count and show_tab_cap_bottom == true then
+        if selected_index == visible_last_index and show_tab_cap_bottom == true then
             _set_rect(self._selected_outline_bottom, selected_x, selected_y + selected_h - border, selected_w, border)
             self._selected_outline_bottom:SetVisible(true)
         end
@@ -974,11 +1307,11 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
             _set_rect(self._selected_outline_right, selected_x + selected_w - border, selected_y, border, selected_h)
             self._selected_outline_right:SetVisible(true)
         end
-        if selected_index == 1 and show_tab_cap_top == true then
+        if selected_index == visible_first_index and show_tab_cap_top == true then
             _set_rect(self._selected_outline_top, selected_x, selected_y, selected_w, border)
             self._selected_outline_top:SetVisible(true)
         end
-        if selected_index == count and show_tab_cap_bottom == true then
+        if selected_index == visible_last_index and show_tab_cap_bottom == true then
             _set_rect(self._selected_outline_bottom, selected_x, selected_y + selected_h - border, selected_w, border)
             self._selected_outline_bottom:SetVisible(true)
         end
@@ -1006,7 +1339,7 @@ function LuiTabBar:_layout_tab_fills(strip_x, strip_y)
         local show_fill = selected == true or (enabled == true and hovered == true)
 
         if fill ~= nil and rect ~= nil and show_fill == true then
-            _set_rect(fill, strip_x + rect.x, strip_y + rect.y, rect.w, rect.h)
+            _set_rect(fill, rect.x, rect.y, rect.w, rect.h)
             if selected == true then
                 fill:SetBackColor(self._content_back)
             else
@@ -1080,13 +1413,17 @@ function LuiTabBar:_layout()
         end
     end
 
+    local tabs_x = strip_x
+    local tabs_y = strip_y
+    local tabs_w = strip_w
+    local tabs_h = strip_h
+
     local inset_top = show_border_top == true and border or 0
     local inset_right = show_border_right == true and border or 0
     local inset_bottom = show_border_bottom == true and border or 0
     local inset_left = show_border_left == true and border or 0
 
     _set_rect(self._strip_back_control, strip_x, strip_y, strip_w, strip_h)
-    _set_rect(self._tabs_host, strip_x, strip_y, strip_w, strip_h)
     _set_rect(self._content_frame, content_x, content_y, content_w, content_h)
     _set_rect(self._content_border_top, 0, 0, content_w, border)
     _set_rect(self._content_border_right, content_w - border, 0, border, content_h)
@@ -1114,12 +1451,37 @@ function LuiTabBar:_layout()
 
     if self._position == POSITION_TOP or self._position == POSITION_BOTTOM then
         self:_layout_tabs_horizontal(strip_w, strip_h)
+        tabs_x = strip_x + (self._horizontal_viewport_offset_x or 0)
+        tabs_w = math.max(0, self._horizontal_viewport_width or strip_w)
     else
         self:_layout_tabs_vertical(strip_w, strip_h)
     end
 
-    self:_layout_tab_fills(strip_x, strip_y)
-    self:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, content_x, content_y, content_w, content_h, border,
+    _set_rect(self._tabs_fill_host, tabs_x, tabs_y, tabs_w, tabs_h)
+    _set_rect(self._tabs_host, tabs_x, tabs_y, tabs_w, tabs_h)
+    _set_rect(self._tabs_overlay_host, tabs_x, tabs_y, tabs_w, tabs_h)
+
+    local show_horizontal_scroll = self._position ~= POSITION_LEFT and self._position ~= POSITION_RIGHT and
+        self._horizontal_scrollable == true
+    if show_horizontal_scroll == true then
+        local button_size = self._horizontal_scroll_button_size or 0
+        local left_y = strip_y + math.floor((strip_h - button_size) / 2)
+        local right_x = strip_x + strip_w - button_size
+        _set_rect(self._scroll_left_button, strip_x, left_y, button_size, button_size)
+        _set_rect(self._scroll_right_button, right_x, left_y, button_size, button_size)
+        self._scroll_left_button:set_enabled((self._horizontal_first_visible_index or 1) > 1)
+        self._scroll_right_button:set_enabled((self._horizontal_last_fully_visible_index or 0) < #self._tabs)
+        self._scroll_left_button:SetVisible(true)
+        self._scroll_right_button:SetVisible(true)
+    else
+        self._scroll_left_button:set_enabled(false)
+        self._scroll_right_button:set_enabled(false)
+        self._scroll_left_button:SetVisible(false)
+        self._scroll_right_button:SetVisible(false)
+    end
+
+    self:_layout_tab_fills(tabs_x, tabs_y)
+    self:_layout_strip_overlays(tabs_x, tabs_y, tabs_w, tabs_h, content_x, content_y, content_w, content_h, border,
         show_adjacent_border)
     self:_layout_selected_widget()
 end

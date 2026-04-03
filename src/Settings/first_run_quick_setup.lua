@@ -351,7 +351,7 @@ function FirstRunQuickSetup:Constructor(options)
 
     self.scale_minus = UI.Widgets.LuiButton()
     self.scale_minus:SetParent(self.inner)
-    self.scale_minus:SetText("-")
+    self.scale_minus:set_text("-")
     self.scale_minus.Click = function()
         self:adjust_scale(-0.05)
     end
@@ -379,7 +379,7 @@ function FirstRunQuickSetup:Constructor(options)
 
     self.scale_plus = UI.Widgets.LuiButton()
     self.scale_plus:SetParent(self.inner)
-    self.scale_plus:SetText("+")
+    self.scale_plus:set_text("+")
     self.scale_plus.Click = function()
         self:adjust_scale(0.05)
     end
@@ -400,77 +400,77 @@ function FirstRunQuickSetup:Constructor(options)
 
     self.layout_bottom = UI.Widgets.LuiButton()
     self.layout_bottom:SetParent(self.inner)
-    self.layout_bottom:SetText(TR("Bottom layout"))
+    self.layout_bottom:set_text(TR("Bottom layout"))
     self.layout_bottom.Click = function()
         self:select_layout("bottom")
     end
 
     self.layout_top = UI.Widgets.LuiButton()
     self.layout_top:SetParent(self.inner)
-    self.layout_top:SetText(TR("Top layout"))
+    self.layout_top:set_text(TR("Top layout"))
     self.layout_top.Click = function()
         self:select_layout("top")
     end
 
     self.choice_no = UI.Widgets.LuiButton()
     self.choice_no:SetParent(self.inner)
-    self.choice_no:SetText(TR("No"))
+    self.choice_no:set_text(TR("No"))
     self.choice_no.Click = function()
         self:select_binary_choice(false)
     end
 
     self.choice_yes = UI.Widgets.LuiButton()
     self.choice_yes:SetParent(self.inner)
-    self.choice_yes:SetText(TR("Yes"))
+    self.choice_yes:set_text(TR("Yes"))
     self.choice_yes.Click = function()
         self:select_binary_choice(true)
     end
 
     self.use_button = UI.Widgets.LuiButton()
     self.use_button:SetParent(self.inner)
-    self.use_button:SetText(TR("Use"))
+    self.use_button:set_text(TR("Use"))
     self.use_button.Click = function()
         self:use_selected_configuration()
     end
 
     self.new_button = UI.Widgets.LuiButton()
     self.new_button:SetParent(self.inner)
-    self.new_button:SetText(TR("New"))
+    self.new_button:set_text(TR("New"))
     self.new_button.Click = function()
         self:go_next()
     end
 
     self.cancel_button = UI.Widgets.LuiButton()
     self.cancel_button:SetParent(self.inner)
-    self.cancel_button:SetText(TR("Cancel"))
+    self.cancel_button:set_text(TR("Cancel"))
     self.cancel_button.Click = function()
         self:cancel_setup()
     end
 
     self.next_button = UI.Widgets.LuiButton()
     self.next_button:SetParent(self.inner)
-    self.next_button:SetText(TR("Next"))
+    self.next_button:set_text(TR("Next"))
     self.next_button.Click = function()
         self:go_next()
     end
 
     self.done_button = UI.Widgets.LuiButton()
     self.done_button:SetParent(self.inner)
-    self.done_button:SetText(TR("Done"))
+    self.done_button:set_text(TR("Done"))
     self.done_button.Click = function()
         self:finish_done()
     end
 
     self.move_manually_button = UI.Widgets.LuiButton()
     self.move_manually_button:SetParent(self.inner)
-    self.move_manually_button:SetText(TR("Move"))
+    self.move_manually_button:set_text(TR("Move"))
     self.move_manually_button.Click = function()
         self:finish_move_manually()
     end
 
     self.settings_button = UI.Widgets.LuiButton()
     self.settings_button:SetParent(self.inner)
-    self.settings_button:SetText(TR("Settings"))
+    self.settings_button:set_text(TR("Settings"))
     self.settings_button.Click = function()
         self:finish_settings()
     end
@@ -549,19 +549,19 @@ function FirstRunQuickSetup:apply_ui_scale()
     self.config_dropdown:SetFont(body_font)
     self.config_dropdown:SetScale(_G.settings.global.scale)
 
-    self.scale_minus:SetFont(button_font)
-    self.scale_plus:SetFont(button_font)
-    self.use_button:SetFont(button_font)
-    self.new_button:SetFont(button_font)
-    self.cancel_button:SetFont(button_font)
-    self.next_button:SetFont(button_font)
-    self.done_button:SetFont(button_font)
-    self.move_manually_button:SetFont(button_font)
-    self.settings_button:SetFont(button_font)
-    self.layout_bottom:SetFont(button_font)
-    self.layout_top:SetFont(button_font)
-    self.choice_no:SetFont(button_font)
-    self.choice_yes:SetFont(button_font)
+    self.scale_minus:set_font(button_font)
+    self.scale_plus:set_font(button_font)
+    self.use_button:set_font(button_font)
+    self.new_button:set_font(button_font)
+    self.cancel_button:set_font(button_font)
+    self.next_button:set_font(button_font)
+    self.done_button:set_font(button_font)
+    self.move_manually_button:set_font(button_font)
+    self.settings_button:set_font(button_font)
+    self.layout_bottom:set_font(button_font)
+    self.layout_top:set_font(button_font)
+    self.choice_no:set_font(button_font)
+    self.choice_yes:set_font(button_font)
 
     self:layout()
     self:center()

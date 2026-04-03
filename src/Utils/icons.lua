@@ -3,14 +3,14 @@ import "Turbine.UI"
 
 local LEADER_ICON = Turbine.UI.Graphic(0x4113F18F) -- 64x64
 local BEORNING_ICON = Turbine.UI.Graphic(0x41153709) -- 50x50
-local BRAWLER_ICON = "LUI/src/PluginAssets/brawler.tga"
+local BRAWLER_ICON = "LUI/assets/brawler.tga"
 local BURGLAR_ICON = Turbine.UI.Graphic(0x410000E4) -- 50x50
 local CAPTAIN_ICON = Turbine.UI.Graphic(0x410000E5) -- 50x50
 local CHAMPION_ICON = Turbine.UI.Graphic(0x410000E6) -- 50x50
 local GUARDIAN_ICON = Turbine.UI.Graphic(0x410000E7) -- 50x50
 local HUNTER_ICON = Turbine.UI.Graphic(0x410000E8) -- 50x50
 local LORE_MASTER_ICON = Turbine.UI.Graphic(0x410000E9) -- 50x50
-local MARINER_ICON = "LUI/src/PluginAssets/mariner.tga"
+local MARINER_ICON = "LUI/assets/mariner.tga"
 local MINSTREL_ICON = Turbine.UI.Graphic(0x410000EA) -- 50x50
 local RUNE_KEEPER_ICON = Turbine.UI.Graphic(0x410E81CB) -- 48x48
 local WARDEN_ICON = Turbine.UI.Graphic(0x410E0DCA) -- 48x48

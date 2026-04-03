@@ -8,6 +8,7 @@ import "LUI.src.Utils.font"
 Bestiary = Bestiary or {}
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
+local DATA_ACCESS = Bestiary.DataAccess
 
 -- Bestiary icon for shortcut button: 0x410E0435
 -- Parchment icon: 0x410E9288
@@ -55,10 +56,11 @@ local BASE_TAXONOMY_PAD_X = 5
 local BASE_TAXONOMY_ARROW_W = 14
 local BASE_TAXONOMY_START_RATIO = 0.40
 local BASE_RESIZE_REFRESH_DELAY = 0.10
+local BASE_RESIZE_REFLOW_MIN_INTERVAL = 0.50
 local BASE_COLUMN_W = 600
 
-local AREA_COMPASS_ICON = "LUI/src/PluginAssets/ui/compass_64.tga"
-local AREA_COMPASS_HOVER_ICON = "LUI/src/PluginAssets/ui/compass_hover_64.tga"
+local AREA_COMPASS_ICON = "LUI/assets/ui/compass_64.tga"
+local AREA_COMPASS_HOVER_ICON = "LUI/assets/ui/compass_hover_64.tga"
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
@@ -238,17 +240,7 @@ local function _set_area_slot_icon_background(window, target_w, target_h)
         window._area_slot_icon_background = background
     end
 
-    if window.area_slot_icon.SetBackground ~= nil then
-        window.area_slot_icon:SetBackground(background)
-    end
-
-    _G.refresh_stretch_mode_1_from_current_content(window.area_slot_icon)
-    -- if window.area_slot_icon.SetStretchMode ~= nil then
-    --     window.area_slot_icon:SetStretchMode(1)
-    -- end
-    if window.area_slot_icon.SetSize ~= nil then
-        window.area_slot_icon:SetSize(target_w, target_h)
-    end
+    window.area_slot_icon:set_icon(background, target_w, target_h)
 end
 
 local function _to_number(value, fallback)
@@ -259,93 +251,6 @@ local function _to_number(value, fallback)
         return fallback or 0
     end
     return value
-end
-
-local function _copy_range(range_values)
-    if type(range_values) ~= "table" then
-        return nil
-    end
-
-    local min_value = _to_number(range_values[1], 0)
-    local max_value = _to_number(range_values[2], 0)
-    if min_value <= 0 and max_value <= 0 then
-        return nil
-    end
-    if min_value <= 0 then
-        min_value = max_value
-    end
-    if max_value <= 0 then
-        max_value = min_value
-    end
-
-    return { min_value, max_value }
-end
-
-local function _append_unique_name(list, value)
-    if type(list) ~= "table" or type(value) ~= "string" or value == "" then
-        return
-    end
-
-    for i = 1, #list do
-        if list[i] == value then
-            return
-        end
-    end
-
-    list[#list + 1] = value
-end
-
-local function _merge_text_values(current, next_value)
-    if type(next_value) ~= "string" or next_value == "" then
-        return current
-    end
-    if type(current) ~= "string" or current == "" then
-        return next_value
-    end
-    if string.lower(current) == string.lower(next_value) then
-        return current
-    end
-
-    local parts = {}
-    local seen = {}
-
-    local function push_parts(source)
-        if type(source) ~= "string" then
-            return
-        end
-
-        for part in string.gmatch(source, "([^/]+)") do
-            local candidate = part:gsub("^%s+", ""):gsub("%s+$", "")
-            if candidate ~= "" then
-                local key = string.lower(candidate)
-                if seen[key] ~= true then
-                    seen[key] = true
-                    parts[#parts + 1] = candidate
-                end
-            end
-        end
-    end
-
-    push_parts(current)
-    push_parts(next_value)
-    return table.concat(parts, " / ")
-end
-
-local function _merge_string_map(dst, field_name, src)
-    if type(dst) ~= "table" or type(src) ~= "table" then
-        return
-    end
-
-    if type(dst[field_name]) ~= "table" then
-        dst[field_name] = {}
-    end
-
-    local dst_map = dst[field_name]
-    for key, value in pairs(src) do
-        if type(key) == "string" and type(value) == "string" and value ~= "" and dst_map[key] == nil then
-            dst_map[key] = value
-        end
-    end
 end
 
 local function _append_filter_values(filter_parts, values)
@@ -374,128 +279,6 @@ local function _contains_value(list, value)
     return false
 end
 
-local function _merge_range(dst, field_name, src_value)
-    local src_range = _copy_range(src_value)
-    if src_range == nil then
-        return
-    end
-
-    local dst_range = dst[field_name]
-    if type(dst_range) ~= "table" then
-        dst[field_name] = src_range
-        return
-    end
-
-    if src_range[1] < dst_range[1] then
-        dst_range[1] = src_range[1]
-    end
-    if src_range[2] > dst_range[2] then
-        dst_range[2] = src_range[2]
-    end
-end
-
-local function _merge_entry(dst, src, name)
-    if type(dst) ~= "table" or type(src) ~= "table" or type(name) ~= "string" then
-        return
-    end
-
-    if type(src.n) == "string" and src.n ~= "" then
-        dst.display_name = src.n
-    elseif type(dst.display_name) ~= "string" or dst.display_name == "" then
-        dst.display_name = name
-    end
-
-    if type(dst.genus) ~= "string" and type(src.g) == "string" and src.g ~= "" then
-        dst.genus = src.g
-    end
-    if type(dst.subcategory) ~= "string" and type(src.s) == "string" and src.s ~= "" then
-        dst.subcategory = src.s
-    end
-    if type(src.sp) == "string" and src.sp ~= "" then
-        dst.species = _merge_text_values(dst.species, src.sp)
-    elseif type(dst.species) ~= "string" and type(src.s) == "string" and src.s ~= "" then
-        dst.species = src.s
-    end
-    if type(dst.region) ~= "string" and type(src.r) == "string" and src.r ~= "" then
-        dst.region = src.r
-    end
-    if type(dst.area) ~= "string" and type(src.a) == "string" and src.a ~= "" then
-        dst.area = src.a
-    end
-    if type(dst.instance) ~= "string" and type(src.i) == "string" and src.i ~= "" then
-        dst.instance = src.i
-    end
-    if type(src.t) == "string" and src.t ~= "" then
-        dst.monster_type = _merge_text_values(dst.monster_type, src.t)
-    end
-
-    _merge_range(dst, "static_levels", src.l)
-    _merge_range(dst, "static_morale", src.m)
-    _merge_range(dst, "static_power", src.p)
-    _merge_string_map(dst, "combat_effectiveness", src.ce)
-    _merge_string_map(dst, "resistances", src.rs)
-    _merge_string_map(dst, "mitigation", src.mi)
-
-    if type(src.w) == "table" then
-        for i = 1, #src.w do
-            _append_unique_name(dst.w, src.w[i])
-        end
-    end
-    if type(src.cw) == "table" then
-        for i = 1, #src.cw do
-            _append_unique_name(dst.cw, src.cw[i])
-        end
-    end
-    if type(src.ab) == "table" then
-        for i = 1, #src.ab do
-            _append_unique_name(dst.abilities, src.ab[i])
-        end
-    end
-    if type(src.qi) == "table" then
-        for i = 1, #src.qi do
-            _append_unique_name(dst.quest_involvement, src.qi[i])
-        end
-    end
-    if type(src.di) == "table" then
-        for i = 1, #src.di do
-            _append_unique_name(dst.deed_involvement, src.di[i])
-        end
-    end
-
-    dst.k = _to_number(dst.k, 0) + _to_number(src.k, 0)
-
-    if type(src.levels) == "table" then
-        for level, info in pairs(src.levels) do
-            if type(info) == "table" then
-                if type(dst.levels[level]) ~= "table" then
-                    dst.levels[level] = {
-                        m = _to_number(info.m, 0),
-                        p = _to_number(info.p, 0),
-                    }
-                else
-                    local level_entry = dst.levels[level]
-                    local morale = _to_number(info.m, 0)
-                    local power = _to_number(info.p, 0)
-                    if morale > _to_number(level_entry.m, 0) then
-                        level_entry.m = morale
-                    end
-                    if power > _to_number(level_entry.p, 0) then
-                        level_entry.p = power
-                    end
-                end
-            end
-        end
-    end
-
-    if type(src.d) == "table" then
-        for item_name, count in pairs(src.d) do
-            if type(item_name) == "string" then
-                dst.d[item_name] = _to_number(dst.d[item_name], 0) + _to_number(count, 0)
-            end
-        end
-    end
-end
-
 local function _merged_bestiary()
     local merged = {}
     local function merge_source(source)
@@ -505,40 +288,20 @@ local function _merged_bestiary()
 
         for name, entry in pairs(source) do
             if type(name) == "string" and type(entry) == "table" then
-                if type(merged[name]) ~= "table" then
-                    merged[name] = {
-                        display_name = name,
-                        genus = nil,
-                        subcategory = nil,
-                        species = nil,
-                        region = nil,
-                        area = nil,
-                        instance = nil,
-                        monster_type = nil,
-                        static_levels = nil,
-                        static_morale = nil,
-                        static_power = nil,
-                        combat_effectiveness = {},
-                        resistances = {},
-                        mitigation = {},
-                        abilities = {},
-                        quest_involvement = {},
-                        deed_involvement = {},
-                        w = {},
-                        cw = {},
-                        levels = {},
-                        k = 0,
-                        d = {},
-                    }
-                end
+                if DATA_ACCESS == nil or DATA_ACCESS.is_alias_entry == nil or DATA_ACCESS.is_alias_entry(entry) ~= true then
+                    if type(merged[name]) ~= "table" then
+                        merged[name] = DATA_ACCESS.new_merged_entry(name)
+                    end
 
-                _merge_entry(merged[name], entry, name)
+                    DATA_ACCESS.merge_entry(merged[name], entry, name)
+                end
             end
         end
     end
 
     merge_source(BUILTIN_BESTIARY)
-    merge_source(_G.bestiary_cache)
+    local cache = DATA_ACCESS ~= nil and DATA_ACCESS.ensure_cache ~= nil and DATA_ACCESS.ensure_cache() or _G.bestiary_cache
+    merge_source(cache)
 
     return merged
 end
@@ -708,73 +471,6 @@ local function _collect_unique_record_values(records, field_name, genus_filter)
     return out
 end
 
-local function _build_drop_records(entry)
-    local drops = {}
-    local kills = _to_number(entry.k, 0)
-
-    local by_name = {}
-    local function drop_key(item_name, chest)
-        return (chest == true and "c:" or "d:") .. item_name
-    end
-    if type(entry.w) == "table" then
-        for i = 1, #entry.w do
-            local item_name = entry.w[i]
-            local key = type(item_name) == "string" and drop_key(item_name, false) or nil
-            if key ~= nil and item_name ~= "" and by_name[key] == nil then
-                by_name[key] = { name = item_name, count = 0, rate = nil, chest = false }
-            end
-        end
-    end
-    if type(entry.cw) == "table" then
-        for i = 1, #entry.cw do
-            local item_name = entry.cw[i]
-            local key = type(item_name) == "string" and drop_key(item_name, true) or nil
-            if key ~= nil and item_name ~= "" and by_name[key] == nil then
-                by_name[key] = { name = item_name, count = 0, rate = nil, chest = true }
-            end
-        end
-    end
-
-    if type(entry.d) == "table" then
-        for item_name, count in pairs(entry.d) do
-            if type(item_name) == "string" then
-                local drop = by_name[drop_key(item_name, false)]
-                if type(drop) ~= "table" then
-                    drop = { name = item_name, count = 0, rate = nil, chest = false }
-                    by_name[drop_key(item_name, false)] = drop
-                end
-
-                local n = _to_number(count, 0)
-                drop.count = n
-                if kills > 0 and n > 0 then
-                    drop.rate = (n / kills) * 100
-                end
-            end
-        end
-    end
-
-    for _, drop in pairs(by_name) do
-        drops[#drops + 1] = drop
-    end
-
-    table.sort(drops, function(left, right)
-        if (left.chest == true) ~= (right.chest == true) then
-            return left.chest ~= true
-        end
-        local left_has_rate = type(left.rate) == "number"
-        local right_has_rate = type(right.rate) == "number"
-        if left_has_rate ~= right_has_rate then
-            return left_has_rate == true
-        end
-        if left_has_rate == true and right_has_rate == true and left.rate ~= right.rate then
-            return left.rate > right.rate
-        end
-        return _lower_text(left.name) < _lower_text(right.name)
-    end)
-
-    return drops
-end
-
 local function _build_records()
     local merged = _merged_bestiary()
     local out = {}
@@ -819,7 +515,7 @@ local function _build_records()
             end
         end
 
-        local drop_records = _build_drop_records(entry)
+        local drop_records = DATA_ACCESS.build_drop_records(entry)
         local display_name = type(entry.display_name) == "string" and entry.display_name or name
         local filter_parts = {
             _lower_text(name),
@@ -1009,6 +705,78 @@ local function _build_location_text(record)
     return ""
 end
 
+local function _ensure_record_drop_texts(record)
+    if type(record) ~= "table" then
+        return { { text = TR("No drops seen."), chest = false } }
+    end
+
+    local chip_texts = record._drop_texts
+    if type(chip_texts) == "table" then
+        return chip_texts
+    end
+
+    chip_texts = {}
+    for di = 1, #record.drops do
+        local drop = record.drops[di]
+        local text
+        if type(drop.rate) == "number" then
+            text = drop.name .. ": " .. _format_percent(drop.rate)
+        else
+            text = drop.name
+        end
+        chip_texts[#chip_texts + 1] = { text = text, chest = drop.chest == true }
+    end
+
+    if #chip_texts == 0 then
+        chip_texts = { { text = TR("No drops seen."), chest = false } }
+    end
+
+    record._drop_texts = chip_texts
+    return chip_texts
+end
+
+local function _ensure_record_display_texts(record)
+    if type(record) ~= "table" then
+        return
+    end
+
+    _ensure_record_drop_texts(record)
+    record.level_text = TR("Level") .. ": " .. _format_range(record.level_min, record.level_max)
+    record.taxonomy_text = _build_taxonomy_text(record)
+    record.location_text = _build_location_text(record)
+    record.morale_text = TR("Morale") .. ": " .. _format_number_range(record.morale_min, record.morale_max)
+    record.power_text = TR("Power") .. ": " .. _format_number_range(record.power_min, record.power_max)
+end
+
+local function _ensure_record_row_layout(record, width)
+    if type(record) ~= "table" then
+        return
+    end
+
+    width = math.max(1, math.floor(_to_number(width, 1) + 0.5))
+    _ensure_record_display_texts(record)
+
+    if record._layout_width == width and type(record._chip_layout) == "table"
+        and type(record._drop_height) == "number" and type(record._view_height) == "number" then
+        return
+    end
+
+    local pad_x = _scaled_int(BASE_ROW_PAD_X)
+    local pad_y = _scaled_int(BASE_ROW_PAD_Y)
+    local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
+    local line_h = _scaled_int(BASE_LINE_H)
+    local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
+    local inner_w = math.max(1, width - (2 * pad_x))
+    local chip_layout, drop_h = _build_chip_layout(_ensure_record_drop_texts(record), inner_w)
+    local has_meta_line = record.taxonomy_text ~= "" or record.location_text ~= ""
+    local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
+
+    record._layout_width = width
+    record._chip_layout = chip_layout
+    record._drop_height = drop_h
+    record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
+end
+
 local DropChip = class(Turbine.UI.Control)
 
 function DropChip:Constructor()
@@ -1182,14 +950,28 @@ function BestiaryRow:bind(record, width)
     local line_h = _scaled_int(BASE_LINE_H)
     local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
     local column_gap_x = _scaled_int(6)
-    local taxonomy_text = record ~= nil and (record.taxonomy_text or _build_taxonomy_text(record)) or ""
-    local location_text = record ~= nil and (record.location_text or _build_location_text(record)) or ""
+
+    if record == nil then
+        self._record = nil
+        self.taxonomy_label:SetVisible(false)
+        self.location_label:SetVisible(false)
+        for i = 1, #self.drop_chips do
+            self.drop_chips[i]:SetVisible(false)
+        end
+        self:SetVisible(false)
+        return
+    end
+
+    _ensure_record_row_layout(record, width)
+
+    local taxonomy_text = record.taxonomy_text or ""
+    local location_text = record.location_text or ""
     local has_meta_line = taxonomy_text ~= "" or location_text ~= ""
 
     local inner_w = math.max(1, width - (2 * pad_x))
     local right_text_w = math.max(
-        _estimate_text_width(record ~= nil and record.level_text or "", BASE_TAXONOMY_CHAR_W),
-        _estimate_text_width(record ~= nil and record.power_text or "", BASE_TAXONOMY_CHAR_W)
+        _estimate_text_width(record.level_text or "", BASE_TAXONOMY_CHAR_W),
+        _estimate_text_width(record.power_text or "", BASE_TAXONOMY_CHAR_W)
     )
     local right_w = math.min(
         math.max(_scaled_int(72), math.floor((inner_w - column_gap_x) / 2)),
@@ -1208,42 +990,10 @@ function BestiaryRow:bind(record, width)
         meta_right_w = inner_w
     end
 
-    local drop_layout = {}
-    local drop_h = _scaled_int(BASE_CHIP_H)
+    local drop_layout = record._chip_layout or {}
+    local drop_h = _to_number(record._drop_height, _scaled_int(BASE_CHIP_H))
     local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
-    local height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
-
-    self:SetSize(width, height)
-
-    self.level_label:SetPosition(pad_x + left_w + column_gap_x, pad_y)
-    self.level_label:SetSize(right_w, line_h)
-
-    self.morale_label:SetPosition(pad_x, pad_y + line_h + row_gap_y)
-    self.morale_label:SetSize(left_w, line_h)
-    self.power_label:SetPosition(pad_x + left_w + column_gap_x, pad_y + line_h + row_gap_y)
-    self.power_label:SetSize(right_w, line_h)
-
-    self.taxonomy_label:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
-    self.taxonomy_label:SetSize(meta_left_w, line_h)
-    self.location_label:SetPosition(meta_right_x, pad_y + (2 * (line_h + row_gap_y)))
-    self.location_label:SetSize(meta_right_w, line_h)
-
-    self.drop_area:SetPosition(pad_x, pad_y + (2 * line_h) + (2 * row_gap_y) + meta_line_extra)
-    self.drop_area:SetSize(inner_w, drop_h)
-
-    self.separator:SetPosition(0, height - separator_h)
-    self.separator:SetSize(width, separator_h)
-
-    if record == nil then
-        self._record = nil
-        self.taxonomy_label:SetVisible(false)
-        self.location_label:SetVisible(false)
-        for i = 1, #self.drop_chips do
-            self.drop_chips[i]:SetVisible(false)
-        end
-        self:SetVisible(false)
-        return
-    end
+    local height = _to_number(record._view_height, pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h)
 
     self._record = record
     self.name_label:SetText(record.name)
@@ -1251,20 +1001,23 @@ function BestiaryRow:bind(record, width)
     self.morale_label:SetText(record.morale_text)
     self.power_label:SetText(record.power_text)
 
-    local drop_texts = record._drop_texts
-    if type(drop_texts) ~= "table" then
-        drop_texts = { { text = TR("No drops seen."), chest = false } }
-    end
-    drop_layout, drop_h = _build_chip_layout(drop_texts, inner_w)
-    meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
-    height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
     self:SetSize(width, height)
-    self.drop_area:SetSize(inner_w, drop_h)
-    self.separator:SetPosition(0, height - separator_h)
-    self:_ensure_chip_count(#drop_layout)
-
     self.name_label:SetPosition(pad_x, pad_y)
     self.name_label:SetSize(left_w, line_h)
+    self.level_label:SetPosition(pad_x + left_w + column_gap_x, pad_y)
+    self.level_label:SetSize(right_w, line_h)
+    self.morale_label:SetPosition(pad_x, pad_y + line_h + row_gap_y)
+    self.morale_label:SetSize(left_w, line_h)
+    self.power_label:SetPosition(pad_x + left_w + column_gap_x, pad_y + line_h + row_gap_y)
+    self.power_label:SetSize(right_w, line_h)
+    self.taxonomy_label:SetPosition(pad_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.taxonomy_label:SetSize(meta_left_w, line_h)
+    self.location_label:SetPosition(meta_right_x, pad_y + (2 * (line_h + row_gap_y)))
+    self.location_label:SetSize(meta_right_w, line_h)
+    self.drop_area:SetPosition(pad_x, pad_y + (2 * line_h) + (2 * row_gap_y) + meta_line_extra)
+    self.drop_area:SetSize(inner_w, drop_h)
+    self.separator:SetPosition(0, height - separator_h)
+    self.separator:SetSize(width, separator_h)
 
     self.taxonomy_label:SetText(taxonomy_text)
     self.taxonomy_label:SetVisible(taxonomy_text ~= "")
@@ -1272,6 +1025,7 @@ function BestiaryRow:bind(record, width)
     self.location_label:SetText(location_text)
     self.location_label:SetVisible(location_text ~= "")
 
+    self:_ensure_chip_count(#drop_layout)
     local chip_h = _scaled_int(BASE_CHIP_H)
     for i = 1, #drop_layout do
         local chip_info = drop_layout[i]
@@ -1360,7 +1114,17 @@ function BestiaryWindow:Constructor()
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
-    self.prev_button:SetText("<")
+    self.prev_button:set_text("")
+    self.prev_button:set_padding(2)
+    self.prev_button:set_icon(
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_transparent,
+        BASE_NAV_W,
+        nil,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
     self.prev_button.Click = function()
         self:set_page(self.page_index - 1)
     end
@@ -1372,7 +1136,17 @@ function BestiaryWindow:Constructor()
 
     self.next_button = UI.Widgets.LuiButton()
     self.next_button:SetParent(self.page_bar)
-    self.next_button:SetText(">")
+    self.next_button:set_text("")
+    self.next_button:set_padding(2)
+    self.next_button:set_icon(
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_transparent,
+        BASE_NAV_W,
+        nil,
+        UI.Widgets.LuiButton.icon_position.RIGHT
+    )
     self.next_button.Click = function()
         self:set_page(self.page_index + 1)
     end
@@ -1447,7 +1221,7 @@ function BestiaryWindow:Constructor()
 
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:SetText(TR("Clear"))
+    self.clear_button:set_text(TR("Clear"))
     self.clear_button.Click = function()
         self.current_area = nil
         self.last_applied_area_query = nil
@@ -1497,10 +1271,9 @@ function BestiaryWindow:Constructor()
     self.area_slot_cover:SetBackColor(Turbine.UI.Color(1, 0, 0, 0))
     self.area_slot_cover:SetZOrder(2)
 
-    self.area_slot_icon = Turbine.UI.Control()
+    self.area_slot_icon = Image()
     self.area_slot_icon:SetParent(self.filter_bar)
     self.area_slot_icon:SetMouseVisible(false)
-    self.area_slot_icon:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.area_slot_icon:SetZOrder(3)
     _set_area_slot_icon_background(self, _scaled_int(BASE_FILTER_H), _scaled_int(BASE_FILTER_H))
 
@@ -1569,6 +1342,12 @@ function BestiaryWindow:Constructor()
         local visible = self:IsVisible() == true
         self:SetWantsUpdates(visible)
         if visible == true then
+            local tracker = _G.BESTIARY_TRACKER
+            if tracker ~= nil and tracker.flush_pending ~= nil then
+                tracker:flush_pending()
+            elseif tracker ~= nil and tracker.flush_expired ~= nil then
+                tracker:flush_expired()
+            end
             self.last_update_at = 0
             self._last_generation = nil
             self:bring_to_front()
@@ -1646,15 +1425,15 @@ function BestiaryWindow:apply_settings()
     self.sort_dropdown:SetFont(button_font)
     self.sort_dropdown:SetScale(_G.settings.global.scale)
     self.sort_dropdown:SetValue(self.sort_mode)
-    self.prev_button:SetFont(button_font)
+    self.prev_button:set_font(button_font)
     self.page_label:SetFont(button_font)
-    self.next_button:SetFont(button_font)
+    self.next_button:set_font(button_font)
     self.level_label:SetFont(button_font)
     self.level_min_box:SetFont(button_font)
     self.level_dash_label:SetFont(button_font)
     self.level_max_box:SetFont(button_font)
     self.filter_tb:SetFont(button_font)
-    self.clear_button:SetFont(button_font)
+    self.clear_button:set_font(button_font)
     self.area_label:SetFont(button_font)
     self:ensure_area_shortcut()
     self.genus_label:SetFont(button_font)
@@ -1712,7 +1491,9 @@ function BestiaryWindow:Update()
     local generation = _G.bestiary_cache_generation or 0
     if self._last_generation ~= generation then
         self:refresh_from_store(true)
-    elseif self._resize_dirty == true and (now - self._last_resize_at) >= BASE_RESIZE_REFRESH_DELAY then
+    elseif self._resize_dirty == true
+        and (now - self._last_resize_at) >= BASE_RESIZE_REFRESH_DELAY
+        and (now - self._last_resize_reflow_at) >= BASE_RESIZE_REFLOW_MIN_INTERVAL then
         self._resize_dirty = false
         self._last_resize_reflow_at = now
         self:refresh_layout_view(true)
@@ -1736,14 +1517,9 @@ function BestiaryWindow:handle_user_resize()
     end
 
     self:layout()
+    self:refresh_visible_page_layout()
     self._resize_dirty = true
     self._last_resize_at = Turbine.Engine.GetGameTime()
-
-    if (self._last_resize_at - self._last_resize_reflow_at) >= BASE_RESIZE_REFRESH_DELAY then
-        self._resize_dirty = false
-        self._last_resize_reflow_at = self._last_resize_at
-        self:refresh_layout_view(true)
-    end
 end
 
 function BestiaryWindow:update_filter()
@@ -2122,80 +1898,23 @@ function BestiaryWindow:refresh_from_store(force)
 end
 
 function BestiaryWindow:_prepare_records(records)
-    local column_count, _, bucket_content_w = self:_column_metrics()
-    local line_h = _scaled_int(BASE_LINE_H)
-    local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
-    local pad_y = _scaled_int(BASE_ROW_PAD_Y)
-    local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
-    local column_w = math.max(1, math.floor(bucket_content_w / column_count))
-    local inner_w = math.max(1, column_w - (2 * _scaled_int(BASE_ROW_PAD_X)))
-
     for i = 1, #records do
         local record = records[i]
-        local chip_texts = record._drop_texts
-        if type(chip_texts) ~= "table" then
-            chip_texts = {}
-            for di = 1, #record.drops do
-                local drop = record.drops[di]
-                local text
-                if type(drop.rate) == "number" then
-                    text = drop.name .. ": " .. _format_percent(drop.rate)
-                else
-                    text = drop.name
-                end
-                chip_texts[#chip_texts + 1] = { text = text, chest = drop.chest == true }
-            end
-
-            if #chip_texts == 0 then
-                chip_texts = { { text = TR("No drops seen."), chest = false } }
-            end
-
-            record._drop_texts = chip_texts
-        end
-
-        local chip_layout, drop_h = _build_chip_layout(chip_texts, inner_w)
-
-        local meta_parts = {}
-        if type(record.genus) == "string" and record.genus ~= "" then
-            meta_parts[#meta_parts + 1] = record.genus
-        end
-        if type(record.subcategory) == "string" and record.subcategory ~= "" then
-            meta_parts[#meta_parts + 1] = record.subcategory
-        end
-
-        record.level_text = TR("Level") .. ": " .. _format_range(record.level_min, record.level_max)
-        record.meta_text = #meta_parts > 0 and table.concat(meta_parts, " / ") or "-"
-        record.taxonomy_text = _build_taxonomy_text(record)
-        record.location_text = _build_location_text(record)
-        record.morale_text = TR("Morale") .. ": " .. _format_number_range(record.morale_min, record.morale_max)
-        record.power_text = TR("Power") .. ": " .. _format_number_range(record.power_min, record.power_max)
-        record._chip_layout = chip_layout
-        record._drop_height = drop_h
-        local has_meta_line = record.taxonomy_text ~= "" or record.location_text ~= ""
-        local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
-        record._view_height = pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
+        _ensure_record_display_texts(record)
+        record._layout_width = nil
+        record._chip_layout = nil
+        record._drop_height = nil
+        record._view_height = nil
     end
 end
 
 function BestiaryWindow:_measure_record_height(record, width)
-    local pad_x = _scaled_int(BASE_ROW_PAD_X)
-    local pad_y = _scaled_int(BASE_ROW_PAD_Y)
-    local row_gap_y = _scaled_int(BASE_ROW_GAP_Y)
-    local line_h = _scaled_int(BASE_LINE_H)
-    local separator_h = _scaled_int(BASE_ROW_SEPARATOR)
-    local inner_w = math.max(1, width - (2 * pad_x))
-    local drop_texts = record ~= nil and record._drop_texts or nil
-
-    if type(drop_texts) ~= "table" then
-        drop_texts = { TR("No drops seen.") }
+    _ensure_record_row_layout(record, width)
+    if type(record) ~= "table" then
+        return 0
     end
 
-    local _, drop_h = _build_chip_layout(drop_texts, inner_w)
-    local taxonomy_text = record ~= nil and (record.taxonomy_text or _build_taxonomy_text(record)) or ""
-    local location_text = record ~= nil and (record.location_text or _build_location_text(record)) or ""
-    local has_meta_line = taxonomy_text ~= "" or location_text ~= ""
-    local meta_line_extra = has_meta_line == true and (line_h + row_gap_y) or 0
-    return pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h
+    return _to_number(record._view_height, 0)
 end
 
 function BestiaryWindow:_column_metrics()
@@ -2271,16 +1990,20 @@ function BestiaryWindow:_build_pages(records)
         return best_slot
     end
 
+    local function measure_width_for_column(column_slot)
+        local column_index = column_slot - 1
+        local x = math.floor((column_index * content_w) / column_count)
+        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
+        return math.max(1, next_x - x)
+    end
+
     for record_index = 1, #records do
         if page == nil then
             begin_page()
         end
 
         local column_slot = shortest_column_slot()
-        local column_index = column_slot - 1
-        local x = math.floor((column_index * content_w) / column_count)
-        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
-        local item_w = math.max(1, next_x - x)
+        local item_w = measure_width_for_column(column_slot)
         local height = self:_measure_record_height(records[record_index], item_w)
         local y = column_heights[column_slot]
         if y > 0 then
@@ -2290,22 +2013,13 @@ function BestiaryWindow:_build_pages(records)
         if #page.items > 0 and (y + height) > content_h then
             pages[#pages + 1] = page
             begin_page()
-            column_index = 0
-            column_slot = 1
-            x = 0
-            next_x = math.floor(content_w / column_count)
-            item_w = math.max(1, next_x - x)
+            column_slot = shortest_column_slot()
+            item_w = measure_width_for_column(column_slot)
             height = self:_measure_record_height(records[record_index], item_w)
             y = 0
         end
 
-        page.items[#page.items + 1] = {
-            index = record_index,
-            c = column_slot,
-            x = x,
-            y = y,
-            w = item_w,
-        }
+        page.items[#page.items + 1] = record_index
 
         column_heights[column_slot] = y + height
     end
@@ -2341,14 +2055,103 @@ function BestiaryWindow:apply_view()
     self:refresh_layout_view(true)
 end
 
+function BestiaryWindow:_apply_page_layout(page, column_count, content_w)
+    local record_indices = type(page) == "table" and page.items or nil
+    if type(record_indices) ~= "table" then
+        record_indices = {}
+    end
+    local count = #record_indices
+    self:_ensure_rows(count)
+
+    local separator_w = _scaled_int(BASE_ROW_SEPARATOR)
+    local separator_count = math.max(0, math.min(column_count, count) - 1)
+    self:_ensure_column_separators(separator_count)
+    for i = 1, separator_count do
+        local boundary_x = math.floor((i * content_w) / column_count)
+        local separator = self.column_separators[i]
+        separator:SetPosition(math.max(0, boundary_x - math.floor(separator_w / 2)), 0)
+        separator:SetSize(separator_w, self.content:GetHeight())
+        separator:SetVisible(true)
+    end
+    for i = separator_count + 1, #self.column_separators do
+        self.column_separators[i]:SetVisible(false)
+    end
+
+    local content_h = math.max(1, self.content:GetHeight())
+    local column_heights = {}
+    for i = 1, column_count do
+        column_heights[i] = 0
+    end
+
+    local function shortest_column_slot()
+        local best_slot = 1
+        local best_height = column_heights[1]
+        for ci = 2, column_count do
+            local height = column_heights[ci]
+            if height < best_height then
+                best_slot = ci
+                best_height = height
+            end
+        end
+        return best_slot
+    end
+
+    for i = 1, count do
+        local column_slot = shortest_column_slot()
+        local column_index = column_slot - 1
+        local x = math.floor((column_index * content_w) / column_count)
+        local next_x = math.floor(((column_index + 1) * content_w) / column_count)
+        local item_w = math.max(1, next_x - x)
+        local record = self.records[record_indices[i]]
+        local row = self.entries[i]
+
+        row:bind(record, item_w)
+
+        local y = column_heights[column_slot]
+        if y > 0 then
+            y = y + _scaled_int(BASE_GAP)
+        end
+
+        if y < content_h then
+            row:SetPosition(x, y)
+            row:SetVisible(true)
+        else
+            row:SetVisible(false)
+        end
+
+        column_heights[column_slot] = y + row:GetHeight()
+    end
+
+    for i = count + 1, #self.entries do
+        self.entries[i]:SetVisible(false)
+    end
+end
+
+function BestiaryWindow:refresh_visible_page_layout()
+    if #self.records == 0 then
+        self:render_page()
+        return
+    end
+
+    local page = self.pages[self.page_index]
+    if page == nil then
+        self:render_page()
+        return
+    end
+
+    self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, #self.pages)))
+    local column_count, content_w = self:_column_metrics()
+    self:_apply_page_layout(page, column_count, content_w)
+end
+
 function BestiaryWindow:render_page()
     local page_count = #self.pages
     self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, page_count)))
-    if self.prev_button.SetEnabled ~= nil then
-        self.prev_button:SetEnabled(page_count > 0 and self.page_index > 1)
+    if self.prev_button.set_enabled ~= nil then
+        self.prev_button:set_enabled(page_count > 0 and self.page_index > 1)
     end
-    if self.next_button.SetEnabled ~= nil then
-        self.next_button:SetEnabled(page_count > 0 and self.page_index < page_count)
+    if self.next_button.set_enabled ~= nil then
+        self.next_button:set_enabled(page_count > 0 and self.page_index < page_count)
     end
 
     if #self.records == 0 then
@@ -2380,52 +2183,8 @@ function BestiaryWindow:render_page()
         return
     end
 
-    local items = page.items or {}
-    local count = #items
-    self:_ensure_rows(count)
-
     local column_count, content_w = self:_column_metrics()
-    local separator_w = _scaled_int(BASE_ROW_SEPARATOR)
-    local separator_count = math.max(0, math.min(column_count, count) - 1)
-    self:_ensure_column_separators(separator_count)
-    for i = 1, separator_count do
-        local boundary_x = math.floor((i * content_w) / column_count)
-        local separator = self.column_separators[i]
-        separator:SetPosition(math.max(0, boundary_x - math.floor(separator_w / 2)), 0)
-        separator:SetSize(separator_w, self.content:GetHeight())
-        separator:SetVisible(true)
-    end
-    for i = separator_count + 1, #self.column_separators do
-        self.column_separators[i]:SetVisible(false)
-    end
-
-    for i = 1, count do
-        local item = items[i]
-        local record = self.records[item.index]
-        local row = self.entries[i]
-        row:bind(record, item.w)
-    end
-
-    local column_heights = {}
-    for i = 1, column_count do
-        column_heights[i] = 0
-    end
-
-    for i = 1, count do
-        local item = items[i]
-        local row = self.entries[i]
-        local column_slot = item.c or 1
-        local y = column_heights[column_slot]
-        if y > 0 then
-            y = y + _scaled_int(BASE_GAP)
-        end
-        row:SetPosition(item.x, y)
-        column_heights[column_slot] = y + row:GetHeight()
-    end
-
-    for i = count + 1, #self.entries do
-        self.entries[i]:SetVisible(false)
-    end
+    self:_apply_page_layout(page, column_count, content_w)
 end
 
 Bestiary.BestiaryWindow = BestiaryWindow

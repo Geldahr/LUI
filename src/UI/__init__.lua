@@ -47,19 +47,22 @@ if UI ~= nil then
     UI.InventoryWindow = InventoryWindow
 end
 
-local assets_pkg = Assets
-if assets_pkg == nil and LUI ~= nil then
-    assets_pkg = LUI.Assets
+local assets_window_ctor = AssetsWindow
+if assets_window_ctor == nil and type(Assets) == "table" then
+    assets_window_ctor = Assets.AssetsWindow
 end
-if assets_pkg == nil and Geldahr ~= nil and LUI.src ~= nil then
-    assets_pkg = LUI.src.Assets
+if assets_window_ctor == nil and LUI ~= nil and type(LUI.Assets) == "table" then
+    assets_window_ctor = LUI.Assets.AssetsWindow
+end
+if assets_window_ctor == nil and Geldahr ~= nil and LUI.src ~= nil and type(LUI.src.Assets) == "table" then
+    assets_window_ctor = LUI.src.Assets.AssetsWindow
 end
 
-if assets_pkg ~= nil then
-    AssetsWindow = assets_pkg.AssetsWindow
+if assets_window_ctor ~= nil then
+    AssetsWindow = assets_window_ctor
 end
 if UI ~= nil then
-    UI.AssetsWindow = AssetsWindow
+    UI.AssetsWindow = assets_window_ctor
 end
 
 local status_bar_pkg = StatusBar
