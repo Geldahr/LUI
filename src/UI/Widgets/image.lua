@@ -26,7 +26,6 @@ function Image:Constructor(icon, w, h)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self._requested_w = nil
     self._requested_h = nil
-    self._requested_mode = nil
     self._align = nil
 
     if icon ~= nil then
@@ -37,15 +36,14 @@ function Image:Constructor(icon, w, h)
 end
 
 function Image:set_size(w, h)
-    w = _round_size(w)
-    h = _round_size(h)
     if w == nil then
         return
     end
+    w = _round_size(w)
+    h = _round_size(h)
 
     self._requested_w = w
     self._requested_h = h
-    self._requested_mode = "size"
 
     if w ~= nil and h ~= nil then
         self:SetSize(w, h)
@@ -81,7 +79,6 @@ function Image:set_width(w)
 
     self._requested_w = w
     self._requested_h = nil
-    self._requested_mode = "width"
 
     if self.original_w == nil or self.original_h == nil then
         return
@@ -105,7 +102,6 @@ function Image:set_height(h)
 
     self._requested_w = nil
     self._requested_h = h
-    self._requested_mode = "height"
 
     if self.original_h == nil or self.original_w == nil then
         return
@@ -128,12 +124,6 @@ function Image:set_icon(icon, w, h)
         self:SetBackground(nil)
         if w ~= nil then
             self:set_size(w, h)
-        elseif self._requested_mode == "size" and self._requested_w ~= nil then
-            self:set_size(self._requested_w, self._requested_h)
-        elseif self._requested_mode == "width" and self._requested_w ~= nil then
-            self:set_width(self._requested_w)
-        elseif self._requested_mode == "height" and self._requested_h ~= nil then
-            self:set_height(self._requested_h)
         end
         self:set_alignment(self._align)
         return
@@ -150,12 +140,6 @@ function Image:set_icon(icon, w, h)
 
     if w ~= nil then
         self:set_size(w, h)
-    elseif self._requested_mode == "size" and self._requested_w ~= nil then
-        self:set_size(self._requested_w, self._requested_h)
-    elseif self._requested_mode == "width" and self._requested_w ~= nil then
-        self:set_width(self._requested_w)
-    elseif self._requested_mode == "height" and self._requested_h ~= nil then
-        self:set_height(self._requested_h)
     end
 
     self:set_alignment(self._align)
