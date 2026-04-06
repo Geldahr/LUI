@@ -12,7 +12,7 @@ SelfExpiringEffectsWindow = class(ExpiringEffectsWindow)
 ---------------------------------------------------------------------
 
 function SelfExpiringEffectsWindow:Constructor()
-    ExpiringEffectsWindow.Constructor(self, { title = TR("Expiring Effects (Self)") })
+    ExpiringEffectsWindow.Constructor(self, { title = TR["Expiring Effects (Self)"] })
 end
 
 ---------------------------------------------------------------------

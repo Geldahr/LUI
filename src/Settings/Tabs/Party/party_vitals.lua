@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Party.party_vitals_page"
 
 PartyVitals = {
     key = "party_vitals",
-    text = TR("Party Vitals"),
+    text = TR["Party Vitals"],
 }
 
 local function _apply_color(ui, dest, hex)

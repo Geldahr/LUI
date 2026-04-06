@@ -398,7 +398,7 @@ function CreateStatusBarWalletSelector(page, key)
     entry.available_label:SetFont(page.window.field_label_font)
     entry.available_label:SetMultiline(true)
     entry.available_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    entry.available_label:SetText(TR("All wallet items"))
+    entry.available_label:SetText(TR["All wallet items"])
     entry.available_label:SetZOrder(1)
 
     entry.selected_label = UI.Widgets.LuiLabel()
@@ -406,7 +406,7 @@ function CreateStatusBarWalletSelector(page, key)
     entry.selected_label:SetFont(page.window.field_label_font)
     entry.selected_label:SetMultiline(true)
     entry.selected_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    entry.selected_label:SetText(TR("Shown in %wallet%"))
+    entry.selected_label:SetText(TR["Shown in %wallet%"])
     entry.selected_label:SetZOrder(1)
 
     entry.available_filter = Turbine.UI.Lotro.TextBox()
@@ -462,28 +462,28 @@ function CreateStatusBarWalletSelector(page, key)
 
     entry.add_button = UI.Widgets.LuiButton()
     entry.add_button:SetParent(entry.control)
-    entry.add_button:set_text(TR("Add"))
+    entry.add_button:set_text(TR["Add"])
     entry.add_button.Click = function()
         _wallet_selector_add(entry)
     end
 
     entry.remove_button = UI.Widgets.LuiButton()
     entry.remove_button:SetParent(entry.control)
-    entry.remove_button:set_text(TR("Remove"))
+    entry.remove_button:set_text(TR["Remove"])
     entry.remove_button.Click = function()
         _wallet_selector_remove(entry)
     end
 
     entry.up_button = UI.Widgets.LuiButton()
     entry.up_button:SetParent(entry.control)
-    entry.up_button:set_text(TR("Up"))
+    entry.up_button:set_text(TR["Up"])
     entry.up_button.Click = function()
         _wallet_selector_move(entry, -1)
     end
 
     entry.down_button = UI.Widgets.LuiButton()
     entry.down_button:SetParent(entry.control)
-    entry.down_button:set_text(TR("Down"))
+    entry.down_button:set_text(TR["Down"])
     entry.down_button.Click = function()
         _wallet_selector_move(entry, 1)
     end

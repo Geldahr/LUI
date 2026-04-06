@@ -144,7 +144,7 @@ local function _build_filter_text(record)
 end
 
 local function _build_owner_options(records)
-    local labels = { TR("All") }
+    local labels = { TR["All"] }
     local values = { OWNER_ALL }
     local owners = {}
     local seen = {}
@@ -516,7 +516,7 @@ end
 function AssetsWindow:Constructor()
     Turbine.UI.Lotro.Window.Constructor(self)
 
-    self:SetText(TR("Assets"))
+    self:SetText(TR["Assets"])
     self:SetVisible(false)
     self:SetResizable(true)
     self:SetWantsUpdates(false)
@@ -625,7 +625,7 @@ function AssetsWindow:Constructor()
 
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:set_text(TR("Clear"))
+    self.clear_button:set_text(TR["Clear"])
     self.clear_button.Click = function()
         self.filter_tb:SetText("")
         self:update_filter()
@@ -653,7 +653,7 @@ function AssetsWindow:Constructor()
     self.stack_items_label:SetMultiline(false)
     self.stack_items_label:SetFont(_scaled_font("Verdana", 11))
     self.stack_items_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.stack_items_label:SetText(TR(STACK_ITEMS_LABEL))
+    self.stack_items_label:SetText(TR[STACK_ITEMS_LABEL])
     self.stack_items_label.MouseClick = function(_, args)
         if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
             return
@@ -668,14 +668,14 @@ function AssetsWindow:Constructor()
     self.owner_label:SetMultiline(false)
     self.owner_label:SetFont(_scaled_font("Verdana", 11))
     self.owner_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.owner_label:SetText(TR("Character") .. ":")
+    self.owner_label:SetText(TR["Character"] .. ":")
 
     self._suppress_owner_changed = false
     self.owner_dropdown = UI.Widgets.LuiDropdown()
     self.owner_dropdown:SetParent(self.nav_bar)
     self.owner_dropdown:SetPopupHost(self)
     self.owner_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.owner_dropdown:SetMappedOptions({ TR("All") }, { OWNER_ALL })
+    self.owner_dropdown:SetMappedOptions({ TR["All"] }, { OWNER_ALL })
     self.owner_dropdown.ValueChanged = function(_, value)
         if self._suppress_owner_changed == true then
             return
@@ -690,14 +690,14 @@ function AssetsWindow:Constructor()
     self.storage_label:SetMultiline(false)
     self.storage_label:SetFont(_scaled_font("Verdana", 11))
     self.storage_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.storage_label:SetText(TR("Storage") .. ":")
+    self.storage_label:SetText(TR["Storage"] .. ":")
 
     self.storage_dropdown = UI.Widgets.LuiDropdown()
     self.storage_dropdown:SetParent(self.nav_bar)
     self.storage_dropdown:SetPopupHost(self)
     self.storage_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.storage_dropdown:SetMappedOptions(
-        { TR("All"), TR("Backpack"), TR("Bank"), TR("Shared Storage"), TR("Vault") },
+        { TR["All"], TR["Backpack"], TR["Bank"], TR["Shared Storage"], TR["Vault"] },
         { STORAGE_ALL, "backpack", "bank", "shared_storage", "vault" }
     )
     self.storage_dropdown.ValueChanged = function(_, value)
@@ -743,14 +743,14 @@ function AssetsWindow:Constructor()
     self.order_label:SetMultiline(false)
     self.order_label:SetFont(_scaled_font("Verdana", 11))
     self.order_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.order_label:SetText(TR("Order") .. ":")
+    self.order_label:SetText(TR["Order"] .. ":")
 
     self.sort_dropdown = UI.Widgets.LuiDropdown()
     self.sort_dropdown:SetParent(self.nav_bar)
     self.sort_dropdown:SetPopupHost(self)
     self.sort_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.sort_dropdown:SetMappedOptions(
-        { TR("A-Z"), TR("Z-A"), TR("Qty <"), TR("Qty >") },
+        { TR["A-Z"], TR["Z-A"], TR["Qty <"], TR["Qty >"] },
         { SORT_NAME_ASC, SORT_NAME_DESC, SORT_QUANTITY_ASC, SORT_QUANTITY_DESC }
     )
     self.sort_dropdown.ValueChanged = function(_, value)
@@ -764,14 +764,14 @@ function AssetsWindow:Constructor()
     self.group_label:SetMultiline(false)
     self.group_label:SetFont(_scaled_font("Verdana", 11))
     self.group_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.group_label:SetText(TR("Group by") .. ":")
+    self.group_label:SetText(TR["Group by"] .. ":")
 
     self.group_dropdown = UI.Widgets.LuiDropdown()
     self.group_dropdown:SetParent(self.nav_bar)
     self.group_dropdown:SetPopupHost(self)
     self.group_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.group_dropdown:SetMappedOptions(
-        { TR("None"), TR("Place"), TR("Character") },
+        { TR["None"], TR["Place"], TR["Character"] },
         { GROUP_NONE, GROUP_PLACE, GROUP_CHARACTER }
     )
     self.group_dropdown.ValueChanged = function(_, value)
@@ -786,7 +786,7 @@ function AssetsWindow:Constructor()
     self.empty_label:SetParent(self.content)
     self.empty_label:SetMouseVisible(false)
     self.empty_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.empty_label:SetText(TR("No cached items yet."))
+    self.empty_label:SetText(TR["No cached items yet."])
 
     self.hint_label = UI.Widgets.LuiLabel()
     self.hint_label:SetParent(self)
@@ -1259,11 +1259,11 @@ end
 
 function AssetsWindow:_refresh_empty_state()
     if #self.all_records == 0 then
-        self.empty_label:SetText(TR("No cached items yet."))
+        self.empty_label:SetText(TR["No cached items yet."])
         return
     end
 
-    self.empty_label:SetText(TR("No matching items."))
+    self.empty_label:SetText(TR["No matching items."])
 end
 
 function AssetsWindow:_refresh_owner_options()

@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Global.global_page"
 
 Global = {
     key = "global",
-    text = TR("Global"),
+    text = TR["Global"],
 }
 
 function Global.create_page(window)

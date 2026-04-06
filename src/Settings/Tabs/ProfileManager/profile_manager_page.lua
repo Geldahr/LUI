@@ -151,7 +151,7 @@ function ProfileManagerPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
     self.show_main_content_border = true
 
-    self:add_title(TR("Configuration / Profile Manager"))
+    self:add_title(TR["Configuration / Profile Manager"])
 
     local info_entry = self:add_custom("profile_manager_info", INFO_HEIGHT)
     info_entry.body = UI.Widgets.LuiLabel()
@@ -163,9 +163,9 @@ function ProfileManagerPage:Constructor(window)
     info_entry.body:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     info_entry.body:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
     info_entry.body:SetText(table.concat({
-        TR("Profile actions here apply immediately."),
-        TR("Deleting a profile removes it for all characters using it."),
-        TR("Profile Manager changes override unsaved changes in other tabs."),
+        TR["Profile actions here apply immediately."],
+        TR["Deleting a profile removes it for all characters using it."],
+        TR["Profile Manager changes override unsaved changes in other tabs."],
     }, "\n"))
     info_entry.control.SizeChanged = function()
         _layout_info(info_entry)
@@ -177,7 +177,7 @@ function ProfileManagerPage:Constructor(window)
 
     self:add_break(BLOCK_GAP)
 
-    local profile_dropdown = self:add_dropdown("profile_manager_profile", TR("Profile"), {}, {}, nil, true)
+    local profile_dropdown = self:add_dropdown("profile_manager_profile", TR["Profile"], {}, {}, nil, true)
     profile_dropdown.on_changed = function(value)
         _refresh_profile_manager(self, value)
     end
@@ -185,14 +185,14 @@ function ProfileManagerPage:Constructor(window)
     local profile_actions = self:add_custom("profile_manager_profile_actions", ACTION_ROW_HEIGHT)
     profile_actions.use_button = UI.Widgets.LuiButton()
     profile_actions.use_button:SetParent(profile_actions.control)
-    profile_actions.use_button:set_text(TR("Use"))
+    profile_actions.use_button:set_text(TR["Use"])
     profile_actions.use_button.Click = function()
         window:use_selected_profile()
     end
 
     profile_actions.delete_button = UI.Widgets.LuiButton()
     profile_actions.delete_button:SetParent(profile_actions.control)
-    profile_actions.delete_button:set_text(TR("Delete"))
+    profile_actions.delete_button:set_text(TR["Delete"])
     profile_actions.delete_button.Click = function()
         window:confirm_delete_selected_profile()
     end
@@ -207,12 +207,12 @@ function ProfileManagerPage:Constructor(window)
 
     self:add_break(BLOCK_GAP)
 
-    self:add_text("profile_manager_name", TR("Name"), false, nil, true)
+    self:add_text("profile_manager_name", TR["Name"], false, nil, true)
 
     local rename_actions = self:add_custom("profile_manager_name_actions", ACTION_ROW_HEIGHT)
     rename_actions.rename_button = UI.Widgets.LuiButton()
     rename_actions.rename_button:SetParent(rename_actions.control)
-    rename_actions.rename_button:set_text(TR("Rename"))
+    rename_actions.rename_button:set_text(TR["Rename"])
     rename_actions.rename_button.Click = function()
         window:rename_selected_profile()
     end
@@ -226,19 +226,19 @@ function ProfileManagerPage:Constructor(window)
     rename_actions:apply_ui_scale()
 
     self:add_break(BLOCK_GAP)
-    self:add_title(TR("Create"))
+    self:add_title(TR["Create"])
 
     local new_actions = self:add_custom("profile_manager_new_actions", ACTION_ROW_HEIGHT)
     new_actions.new_from_current_button = UI.Widgets.LuiButton()
     new_actions.new_from_current_button:SetParent(new_actions.control)
-    new_actions.new_from_current_button:set_text(TR("New from current"))
+    new_actions.new_from_current_button:set_text(TR["New from current"])
     new_actions.new_from_current_button.Click = function()
         window:create_profile_from_current()
     end
 
     new_actions.new_button = UI.Widgets.LuiButton()
     new_actions.new_button:SetParent(new_actions.control)
-    new_actions.new_button:set_text(TR("New"))
+    new_actions.new_button:set_text(TR["New"])
     new_actions.new_button.Click = function()
         window:start_new_profile_quick_setup()
     end

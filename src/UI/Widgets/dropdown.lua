@@ -407,7 +407,7 @@ function LuiDropdown:_set_index(index, fire_event)
 
     local t = (index ~= nil) and tostring(self._labels[index]) or ""
     if string.len(t) == 0 then
-        t = TR("Select")
+        t = TR["Select"]
     end
     self.button:set_text(t)
     self:_sync_active_items()

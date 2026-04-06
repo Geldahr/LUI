@@ -55,11 +55,11 @@ function _G.does_boss_name_match(target_name, target, self_entity)
         return false
     end
 
-    for boss_name in pairs(BOSS_NAMES) do
-        if string.find(target_name, boss_name, 1, true) ~= nil then
-            return true
-        end
-    end
+    -- for boss_name in pairs(BOSS_NAMES) do
+    --     if string.find(target_name, boss_name, 1, true) ~= nil then
+    --         return true
+    --     end
+    -- end
 
     return false
 end

@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.ProfileManager.profile_manager_page"
 
 ProfileManager = {
     key = "profile_manager",
-    text = TR("Profiles"),
+    text = TR["Profiles"],
 }
 
 function ProfileManager.create_page(window)

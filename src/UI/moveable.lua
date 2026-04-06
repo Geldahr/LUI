@@ -52,7 +52,7 @@ function CloseWindow:Constructor()
     self.button:SetSize(self:GetWidth(), self:GetHeight())
     self.button:SetPosition(0, 0)
     self.button:set_font(_scaled_font("Verdana", 13))
-    self.button:set_text(TR("Done moving UI"))
+    self.button:set_text(TR["Done moving UI"])
 
     self.button.Click = function()
         set_move_ui_mode(false)

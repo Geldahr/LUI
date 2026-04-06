@@ -46,7 +46,7 @@ function TargetVitals:Constructor(entity)
     self.em_added_event = nil
     self.em_removed_event = nil
 
-    VitalsBase.Constructor(self, "target", entity, TR("Target Vitals"))
+    VitalsBase.Constructor(self, "target", entity, TR["Target Vitals"])
 
     self.entity_control:SetMouseVisible(true)
     self.entity_control.MouseDoubleClick = function(_, args)

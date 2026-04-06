@@ -4,16 +4,16 @@ local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHAR
     SettingsFormPage
 
 local TILE_SIZE_LABELS = {
-    TR("Small (32)"),
-    TR("Medium (40)"),
-    TR("Large (48)"),
+    TR["Small (32)"],
+    TR["Medium (40)"],
+    TR["Large (48)"],
 }
 
 local TILE_SIZE_VALUES = { 32, 40, 48 }
 
 local VIEW_MODE_LABELS = {
-    TR("Icons"),
-    TR("Details"),
+    TR["Icons"],
+    TR["Details"],
 }
 
 local VIEW_MODE_VALUES = {
@@ -27,17 +27,17 @@ function AssetsPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
     self.show_main_content_border = true
 
-    self:add_title(TR("Assets"))
+    self:add_title(TR["Assets"])
 
     self:add_hr()
-    self:add_title(TR("General"))
-    self:add_checkbox("assets_enabled", TR("Enabled"))
-    self:add_dropdown("assets_view_mode", TR("View"), VIEW_MODE_LABELS, VIEW_MODE_VALUES)
+    self:add_title(TR["General"])
+    self:add_checkbox("assets_enabled", TR["Enabled"])
+    self:add_dropdown("assets_view_mode", TR["View"], VIEW_MODE_LABELS, VIEW_MODE_VALUES)
 
     self:add_hr()
-    self:add_title(TR("Tiles"))
-    self:add_dropdown("assets_tile_icons", TR("Icons"), TILE_SIZE_LABELS, TILE_SIZE_VALUES)
-    self:add_dropdown("assets_tile_details", TR("Details"), TILE_SIZE_LABELS, TILE_SIZE_VALUES)
+    self:add_title(TR["Tiles"])
+    self:add_dropdown("assets_tile_icons", TR["Icons"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
+    self:add_dropdown("assets_tile_details", TR["Details"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
 end
 
 function AssetsPage:load(assets)

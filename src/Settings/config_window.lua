@@ -56,7 +56,7 @@ function Options:Constructor()
     self.help:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     self.help:SetPosition(_scaled_int(7), _scaled_int(7))
     self.help:SetSize(_scaled_int(430), _scaled_int(74))
-    self.help:SetText(TR("Use '/LUI config' to toggle the configuration window."))
+    self.help:SetText(TR["Use '/LUI config' to toggle the configuration window."])
 end
 
 ConfigWindow = class(Turbine.UI.Lotro.Window)
@@ -74,7 +74,7 @@ import "LUI.src.Settings.Window.window_profiles"
 function ConfigWindow:Constructor()
     Turbine.UI.Lotro.Window.Constructor(self)
 
-    self:SetText(TR("LUI Configuration"))
+    self:SetText(TR["LUI Configuration"])
     self:SetResizable(true)
     self:SetVisible(false)
 
@@ -131,14 +131,14 @@ function ConfigWindow:Constructor()
 
     self.confirm_cancel_button = UI.Widgets.LuiButton()
     self.confirm_cancel_button:SetParent(self.confirm_dialog)
-    self.confirm_cancel_button:set_text(TR("Cancel"))
+    self.confirm_cancel_button:set_text(TR["Cancel"])
     self.confirm_cancel_button.Click = function()
         self:hide_confirmation_dialog()
     end
 
     self.confirm_confirm_button = UI.Widgets.LuiButton()
     self.confirm_confirm_button:SetParent(self.confirm_dialog)
-    self.confirm_confirm_button:set_text(TR("Delete"))
+    self.confirm_confirm_button:set_text(TR["Delete"])
     self.confirm_confirm_button.Click = function()
         local action = self.confirm_dialog_action
         self:hide_confirmation_dialog()
@@ -153,7 +153,7 @@ function ConfigWindow:Constructor()
     self.cancel_button = UI.Widgets.LuiButton()
     self.cancel_button:SetParent(self.button_bar)
     self.cancel_button:set_font(self.settings_font)
-    self.cancel_button:set_text(TR("Cancel"))
+    self.cancel_button:set_text(TR["Cancel"])
     self.cancel_button.Click = function()
         self:cancel()
     end
@@ -161,7 +161,7 @@ function ConfigWindow:Constructor()
     self.apply_button = UI.Widgets.LuiButton()
     self.apply_button:SetParent(self.button_bar)
     self.apply_button:set_font(self.settings_font)
-    self.apply_button:set_text(TR("Apply"))
+    self.apply_button:set_text(TR["Apply"])
     self.apply_button.Click = function()
         self:apply_changes(false)
     end
@@ -169,7 +169,7 @@ function ConfigWindow:Constructor()
     self.save_button = UI.Widgets.LuiButton()
     self.save_button:SetParent(self.button_bar)
     self.save_button:set_font(self.settings_font)
-    self.save_button:set_text(TR("Save"))
+    self.save_button:set_text(TR["Save"])
     self.save_button.Click = function()
         self:apply_changes(true)
     end
@@ -181,7 +181,7 @@ function ConfigWindow:Constructor()
     self.move_ui_button = UI.Widgets.LuiButton()
     self.move_ui_button:SetParent(self.button_bar)
     self.move_ui_button:set_font(self.settings_font)
-    self.move_ui_button:set_text(TR("Move UI"))
+    self.move_ui_button:set_text(TR["Move UI"])
     self.move_ui_button.Click = function()
         if set_move_ui_mode ~= nil then
             set_move_ui_mode(true, true)
@@ -350,7 +350,7 @@ function ConfigWindow:show_confirmation_dialog(text, confirm_text, action)
 
     self.confirm_dialog_action = action
     self.confirm_dialog_label:SetText(text or "")
-    self.confirm_confirm_button:set_text(confirm_text or TR("Confirm"))
+    self.confirm_confirm_button:set_text(confirm_text or TR["Confirm"])
     self.confirm_overlay:SetVisible(true)
     self:layout()
 end
@@ -431,13 +431,13 @@ function ConfigWindow:build_controls()
         LUI_ENUMS.font_name.VERDANA_BOLD,
     }
 
-    local font_style_labels = { TR("None"), TR("Outline") }
+    local font_style_labels = { TR["None"], TR["Outline"] }
     local font_style_values = { LUI_ENUMS.font_style.NONE, LUI_ENUMS.font_style.OUTLINE }
 
-    local side_labels = { TR("Left"), TR("Right") }
+    local side_labels = { TR["Left"], TR["Right"] }
     local side_values = { LUI_ENUMS.side.LEFT, LUI_ENUMS.side.RIGHT }
 
-    local text_alignment_labels = { TR("Left"), TR("Center"), TR("Right") }
+    local text_alignment_labels = { TR["Left"], TR["Center"], TR["Right"] }
     local text_alignment_values = {
         LUI_ENUMS.text_alignment.LEFT,
         LUI_ENUMS.text_alignment.CENTER,
@@ -464,31 +464,31 @@ function ConfigWindow:build_controls()
         LUI_ENUMS.abbrev_method.E3_E6_E9,
     }
 
-    local vitals_effects_position_labels = { TR("Above Morale"), TR("Below Power") }
+    local vitals_effects_position_labels = { TR["Above Morale"], TR["Below Power"] }
     local vitals_effects_position_values = {
         LUI_ENUMS.vitals_effects_position.ABOVE,
         LUI_ENUMS.vitals_effects_position.BELOW,
     }
 
     local vital_format_help = table.concat({
-        TR("Text template tokens:"),
-        TR("  %c = current value"),
-        TR("  %t = total / maximum value"),
-        TR("  %p = percent (e.g. 73%)"),
-        TR("  %b = bubble value (temporary morale)"),
-        TR("  %B = bubble format output (only when bubble > 0)"),
-        TR("  %name% = entity name"),
-        TR("  %level% = entity level"),
+        TR["Text template tokens:"],
+        TR["  %c = current value"],
+        TR["  %t = total / maximum value"],
+        TR["  %p = percent (e.g. 73%)"],
+        TR["  %b = bubble value (temporary morale)"],
+        TR["  %B = bubble format output (only when bubble > 0)"],
+        TR["  %name% = entity name"],
+        TR["  %level% = entity level"],
         "",
-        TR("Set the text to empty to hide the label."),
-        TR("You can use \\n for a new line."),
-        TR("Example: [%level%] %name%\n%c / %t - %p"),
+        TR["Set the text to empty to hide the label."],
+        TR["You can use \\n for a new line."],
+        TR["Example: [%level%] %name%\n%c / %t - %p"],
     }, "\n")
 
     local bubble_format_help = table.concat({
-        TR("Bubble format (used by %B; only when bubble > 0)."),
-        TR("Use %b for the bubble value."),
-        TR("Example:  - %b"),
+        TR["Bubble format (used by %B; only when bubble > 0)."],
+        TR["Use %b for the bubble value."],
+        TR["Example:  - %b"],
     }, "\n")
 
     self.controls = {}

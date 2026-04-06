@@ -238,7 +238,7 @@ function PartyVitals:Constructor()
 
     self.moveable = UI.Moveable(self, function(x, y)
         self:SetPosition(x, y)
-    end, TR("Party Vitals"))
+    end, TR["Party Vitals"])
 
     self.moveable:set_on_move_end(function(x, y)
         self:persist_position(x, y)

@@ -12,9 +12,9 @@ function SelfPage:Constructor(window)
     SettingsTabbedPage.Constructor(self, window)
     self.show_main_content_border = false
 
-    self:add_sub_page(TR("Vitals"), SelfVitals)
-    self:add_sub_page(TR("Expiring Effects"), SelfExpiringEffects)
-    self:add_sub_page(TR("Cooldowns"), Cooldowns)
+    self:add_sub_page(TR["Vitals"], SelfVitals)
+    self:add_sub_page(TR["Expiring Effects"], SelfExpiringEffects)
+    self:add_sub_page(TR["Cooldowns"], Cooldowns)
 end
 
 function SelfPage:load_from_settings(s, ui)

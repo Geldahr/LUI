@@ -1801,9 +1801,9 @@ function StatusBarWindow:_show_bar_menu()
     local menu = Turbine.UI.ContextMenu()
     local items = menu:GetItems()
 
-    items:Add(Turbine.UI.MenuItem(TR("Status Bar"), false))
+    items:Add(Turbine.UI.MenuItem(TR["Status Bar"], false))
 
-    local edit = Turbine.UI.MenuItem(TR("Edit Bar"))
+    local edit = Turbine.UI.MenuItem(TR["Edit Bar"])
     edit.Click = function()
         self:open_edit_window()
     end
@@ -1823,13 +1823,13 @@ function StatusBarWindow:_show_widget_menu(widget)
 
     items:Add(Turbine.UI.MenuItem(widget._status_bar_menu_title or "", false))
 
-    local edit = Turbine.UI.MenuItem(TR("Edit Bar"))
+    local edit = Turbine.UI.MenuItem(TR["Edit Bar"])
     edit.Click = function()
         self:open_edit_window()
     end
     items:Add(edit)
 
-    local remove = Turbine.UI.MenuItem(TR("Remove"))
+    local remove = Turbine.UI.MenuItem(TR["Remove"])
     remove.Click = function()
         self:_remove_widget_instance(widget)
     end

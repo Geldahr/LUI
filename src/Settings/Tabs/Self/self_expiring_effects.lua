@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Self.self_expiring_effects_page"
 
 SelfExpiringEffects = {
     key = "expiring_effects",
-    text = TR("Expiring Effects"),
+    text = TR["Expiring Effects"],
 }
 
 local function _apply_color(ui, dest, hex)

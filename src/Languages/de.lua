@@ -1,4 +1,4 @@
-return {
+DE = {
     ["Apply"] = "Übernehmen",
     ["Cancel"] = "Abbrechen",
     ["Save"] = "Speichern",

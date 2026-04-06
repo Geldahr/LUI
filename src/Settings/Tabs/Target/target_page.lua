@@ -13,10 +13,10 @@ function TargetPage:Constructor(window)
     SettingsTabbedPage.Constructor(self, window)
     self.show_main_content_border = false
 
-    self:add_sub_page(TR("Vitals"), TargetVitals)
-    self:add_sub_page(TR("Boss vitals"), TargetBossVitals)
-    self:add_sub_page(TR("Target's Target"), TargetTargetsTarget)
-    self:add_sub_page(TR("Expiring Effects"), ExpiringTargetEffects)
+    self:add_sub_page(TR["Vitals"], TargetVitals)
+    self:add_sub_page(TR["Boss vitals"], TargetBossVitals)
+    self:add_sub_page(TR["Target's Target"], TargetTargetsTarget)
+    self:add_sub_page(TR["Expiring Effects"], ExpiringTargetEffects)
 end
 
 function TargetPage:load_from_settings(s, ui)

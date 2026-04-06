@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Target.target_page"
 
 TargetTab = {
     key = "target",
-    text = TR("Target"),
+    text = TR["Target"],
 }
 
 function TargetTab.create_page(window)

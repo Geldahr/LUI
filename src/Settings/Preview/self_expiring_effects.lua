@@ -344,7 +344,7 @@ function ConfigWindow:update_expiring_effects_preview()
     local y = math.floor((ch - group_height) / 2)
     if y < 0 then y = 0 end
 
-    apply_row(p.buff, x, y, TR("Buff"), buff_bar_color)
-    apply_row(p.debuff_curable, x, y + bh + row_spacing, TR("Curable Debuff"), curable_debuff_bar_color)
-    apply_row(p.debuff_noncurable, x, y + (2 * (bh + row_spacing)), TR("Non-curable Debuff"), noncurable_debuff_bar_color)
+    apply_row(p.buff, x, y, TR["Buff"], buff_bar_color)
+    apply_row(p.debuff_curable, x, y + bh + row_spacing, TR["Curable Debuff"], curable_debuff_bar_color)
+    apply_row(p.debuff_noncurable, x, y + (2 * (bh + row_spacing)), TR["Non-curable Debuff"], noncurable_debuff_bar_color)
 end

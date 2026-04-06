@@ -333,7 +333,7 @@ function FirstRunQuickSetup:Constructor(options)
     self.title:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
     self.title:SetFont(_scaled_font("BookAntiqua", 22))
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.title:SetText(TR("LUI"))
+    self.title:SetText(TR["LUI"])
 
     self.title_rule = Turbine.UI.Control()
     self.title_rule:SetParent(self.inner)
@@ -400,77 +400,77 @@ function FirstRunQuickSetup:Constructor(options)
 
     self.layout_bottom = UI.Widgets.LuiButton()
     self.layout_bottom:SetParent(self.inner)
-    self.layout_bottom:set_text(TR("Bottom layout"))
+    self.layout_bottom:set_text(TR["Bottom layout"])
     self.layout_bottom.Click = function()
         self:select_layout("bottom")
     end
 
     self.layout_top = UI.Widgets.LuiButton()
     self.layout_top:SetParent(self.inner)
-    self.layout_top:set_text(TR("Top layout"))
+    self.layout_top:set_text(TR["Top layout"])
     self.layout_top.Click = function()
         self:select_layout("top")
     end
 
     self.choice_no = UI.Widgets.LuiButton()
     self.choice_no:SetParent(self.inner)
-    self.choice_no:set_text(TR("No"))
+    self.choice_no:set_text(TR["No"])
     self.choice_no.Click = function()
         self:select_binary_choice(false)
     end
 
     self.choice_yes = UI.Widgets.LuiButton()
     self.choice_yes:SetParent(self.inner)
-    self.choice_yes:set_text(TR("Yes"))
+    self.choice_yes:set_text(TR["Yes"])
     self.choice_yes.Click = function()
         self:select_binary_choice(true)
     end
 
     self.use_button = UI.Widgets.LuiButton()
     self.use_button:SetParent(self.inner)
-    self.use_button:set_text(TR("Use"))
+    self.use_button:set_text(TR["Use"])
     self.use_button.Click = function()
         self:use_selected_configuration()
     end
 
     self.new_button = UI.Widgets.LuiButton()
     self.new_button:SetParent(self.inner)
-    self.new_button:set_text(TR("New"))
+    self.new_button:set_text(TR["New"])
     self.new_button.Click = function()
         self:go_next()
     end
 
     self.cancel_button = UI.Widgets.LuiButton()
     self.cancel_button:SetParent(self.inner)
-    self.cancel_button:set_text(TR("Cancel"))
+    self.cancel_button:set_text(TR["Cancel"])
     self.cancel_button.Click = function()
         self:cancel_setup()
     end
 
     self.next_button = UI.Widgets.LuiButton()
     self.next_button:SetParent(self.inner)
-    self.next_button:set_text(TR("Next"))
+    self.next_button:set_text(TR["Next"])
     self.next_button.Click = function()
         self:go_next()
     end
 
     self.done_button = UI.Widgets.LuiButton()
     self.done_button:SetParent(self.inner)
-    self.done_button:set_text(TR("Done"))
+    self.done_button:set_text(TR["Done"])
     self.done_button.Click = function()
         self:finish_done()
     end
 
     self.move_manually_button = UI.Widgets.LuiButton()
     self.move_manually_button:SetParent(self.inner)
-    self.move_manually_button:set_text(TR("Move"))
+    self.move_manually_button:set_text(TR["Move"])
     self.move_manually_button.Click = function()
         self:finish_move_manually()
     end
 
     self.settings_button = UI.Widgets.LuiButton()
     self.settings_button:SetParent(self.inner)
-    self.settings_button:set_text(TR("Settings"))
+    self.settings_button:set_text(TR["Settings"])
     self.settings_button.Click = function()
         self:finish_settings()
     end
@@ -784,7 +784,7 @@ function FirstRunQuickSetup:update_step()
     self.settings_button:SetVisible(false)
 
     if self.has_existing_configurations == true and self.step == 1 then
-        self.body:SetText(TR("Do you want to use an existing configuration?"))
+        self.body:SetText(TR["Do you want to use an existing configuration?"])
         self.config_dropdown:SetVisible(true)
         self.use_button:SetVisible(true)
         self.new_button:SetVisible(true)
@@ -798,8 +798,8 @@ function FirstRunQuickSetup:update_step()
 
     if setup_step == 1 then
         self.body:SetText(table.concat({
-            TR("Thank you for using LUI."),
-            TR("We will guide you through a few short steps."),
+            TR["Thank you for using LUI."],
+            TR["We will guide you through a few short steps."],
         }, "\n"))
 
         self.cancel_button:SetVisible(true)
@@ -814,8 +814,8 @@ function FirstRunQuickSetup:update_step()
             self:select_layout("bottom")
         end
 
-        self.body:SetText(TR("Which layout do you prefer?"))
-        self.layout_label:SetText(TR("Pick the closest layout."))
+        self.body:SetText(TR["Which layout do you prefer?"])
+        self.layout_label:SetText(TR["Pick the closest layout."])
         self.layout_label:SetVisible(true)
         self.layout_bottom:SetVisible(true)
         self.layout_top:SetVisible(true)
@@ -828,7 +828,7 @@ function FirstRunQuickSetup:update_step()
     end
 
     if setup_step == 4 then
-        self.body:SetText(TR("Replace the default inventory bags?"))
+        self.body:SetText(TR["Replace the default inventory bags?"])
         self:update_binary_choice_buttons(_G.loaded_settings.inventory.replace == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
@@ -837,7 +837,7 @@ function FirstRunQuickSetup:update_step()
     end
 
     if setup_step == 3 then
-        self.body:SetText(TR("Select your scaling."))
+        self.body:SetText(TR["Select your scaling."])
         self.scale_minus:SetVisible(true)
         self.scale_box:SetVisible(true)
         self.scale_plus:SetVisible(true)
@@ -846,7 +846,7 @@ function FirstRunQuickSetup:update_step()
     end
 
     if setup_step == 5 then
-        self.body:SetText(TR("Enable the status bar?"))
+        self.body:SetText(TR["Enable the status bar?"])
         self:update_binary_choice_buttons(_G.loaded_settings.status_bar.enabled == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
@@ -854,7 +854,7 @@ function FirstRunQuickSetup:update_step()
         return
     end
 
-    self.body:SetText(TR("Do you want to modify anything else?"))
+    self.body:SetText(TR["Do you want to modify anything else?"])
     self.done_button:SetVisible(true)
     self.move_manually_button:SetVisible(true)
     self.settings_button:SetVisible(true)

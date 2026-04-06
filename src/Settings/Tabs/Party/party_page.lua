@@ -11,8 +11,8 @@ function PartyPage:Constructor(window)
     SettingsTabbedPage.Constructor(self, window)
     self.show_main_content_border = false
 
-    self:add_sub_page(TR("Layout"), PartyLayout)
-    self:add_sub_page(TR("Vitals"), PartyVitals)
+    self:add_sub_page(TR["Layout"], PartyLayout)
+    self:add_sub_page(TR["Vitals"], PartyVitals)
 end
 
 function PartyPage:load_from_settings(s, ui)

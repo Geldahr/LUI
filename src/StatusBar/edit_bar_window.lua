@@ -160,7 +160,7 @@ end
 
 function EditBarPaletteEntry:set_available(available)
     self._available = available == true
-    self.status:SetText(self._available == true and "" or TR("On bar"))
+    self.status:SetText(self._available == true and "" or TR["On bar"])
     self:_update_visual_state()
 end
 
@@ -267,7 +267,7 @@ function StatusBarEditWindow:Constructor(owner)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.title:SetForeColor(WINDOW_TITLE_COLOR)
     self.title:SetFont(_scaled_font("Verdana", 12))
-    self.title:SetText(TR("Edit Bar"))
+    self.title:SetText(TR["Edit Bar"])
 
     self.hint = UI.Widgets.LuiLabel()
     self.hint:SetParent(self)
@@ -276,7 +276,7 @@ function StatusBarEditWindow:Constructor(owner)
     self.hint:SetMouseVisible(false)
     self.hint:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     self.hint:SetForeColor(TEXT_COLOR)
-    self.hint:SetText(TR("Drag entries onto the status bar. Drag an existing bar item outside the bar to remove it."))
+    self.hint:SetText(TR["Drag entries onto the status bar. Drag an existing bar item outside the bar to remove it."])
 
     self.note = UI.Widgets.LuiLabel()
     self.note:SetParent(self)
@@ -285,7 +285,7 @@ function StatusBarEditWindow:Constructor(owner)
     self.note:SetMouseVisible(false)
     self.note:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     self.note:SetForeColor(STATUS_COLOR)
-    self.note:SetText(TR("Tracked inventory items are still added by dragging them from the inventory window."))
+    self.note:SetText(TR["Tracked inventory items are still added by dragging them from the inventory window."])
 
     self.rows_list = Turbine.UI.ListBox()
     self.rows_list:SetParent(self)
@@ -303,7 +303,7 @@ function StatusBarEditWindow:Constructor(owner)
 
     self.done_button = UI.Widgets.LuiButton()
     self.done_button:SetParent(self)
-    self.done_button:set_text(TR("Done"))
+    self.done_button:set_text(TR["Done"])
     self.done_button.Click = function()
         self:close_manually()
     end
@@ -397,7 +397,7 @@ end
 function StatusBarEditWindow:apply_scale()
     self:SetSize(_scaled_int(WINDOW_W), _scaled_int(WINDOW_H))
     self.title:SetFont(_scaled_font("Verdana", 12))
-    self.title:SetText(TR("Edit Bar"))
+    self.title:SetText(TR["Edit Bar"])
     self.hint:SetFont(_scaled_font("Verdana", 11))
     self.note:SetFont(_scaled_font("Verdana", 10))
     self.done_button:set_font(_scaled_font("Verdana", 12))

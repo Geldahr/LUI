@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Target.target_targets_target_page"
 
 TargetTargetsTarget = {
     key = "target_targets_target",
-    text = TR("Target's Target"),
+    text = TR["Target's Target"],
 }
 
 local function _apply_color(ui, dest, hex)
