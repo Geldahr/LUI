@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Self.self_page"
 
 SelfTab = {
     key = "self",
-    text = TR("Self"),
+    text = TR["Self"],
 }
 
 function SelfTab.create_page(window)

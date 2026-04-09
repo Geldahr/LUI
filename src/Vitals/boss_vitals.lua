@@ -20,7 +20,7 @@ function BossVitals:Constructor(entity)
     self._layout_busy = false
     self._power_fill_width = 0
 
-    VitalsBase.Constructor(self, "boss", entity, TR("Boss Vitals"))
+    VitalsBase.Constructor(self, "boss", entity, TR["Boss Vitals"])
 
     if self.buffs ~= nil then
         self.buffs.on_height_changed = function()

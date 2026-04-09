@@ -1,3 +1,6 @@
+import "LUI.src.Languages.de"
+import "LUI.src.Languages.fr"
+
 local function _detect_language_code()
     local lang = Turbine.Engine.GetLanguage()
 
@@ -40,30 +43,16 @@ end
 
 local function _load_translations()
     local code = _detect_language_code()
-    if code == "en" then
-        local tr = {}
-        setmetatable(tr, { __index = function(_, k) return k end })
-        return tr
-    end
-
-    local module_name = "LUI.src.Languages." .. code
-
-    local mod = require(module_name)
-    if type(mod) ~= "table" then
-        error("Invalid translations module: " .. tostring(module_name))
-    end
-
-    local tr = mod
-    setmetatable(tr, { __index = function(_, k) return k end })
+    local l = {}
+    l.de = DE
+    l.fr = FR
+    local tr = l[code] or {}
+    setmetatable(tr, { __index = function(k, v) return v or k end })
     return tr
 end
 
-TR_TABLE = _load_translations()
+_G.TR = _load_translations()
 
 function _G.is_lui_english_language()
     return _detect_language_code() == "en"
-end
-
-function _G.TR(text)
-    return TR_TABLE[text] or text
 end

@@ -114,16 +114,16 @@ end
 
 local function _make_location(owner, source_key)
     if source_key == SOURCE_BACKPACK then
-        return owner, TR("Backpack")
+        return owner, TR["Backpack"]
     end
     if source_key == SOURCE_BANK then
-        return owner, TR("Bank")
+        return owner, TR["Bank"]
     end
     if source_key == SOURCE_VAULT then
-        return owner, TR("Vault")
+        return owner, TR["Vault"]
     end
 
-    return "", TR("Shared Storage")
+    return "", TR["Shared Storage"]
 end
 
 local function _make_runtime_key(owner, source_key, slot)

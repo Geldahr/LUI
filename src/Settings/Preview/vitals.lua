@@ -329,8 +329,9 @@ function ConfigWindow:_update_vitals_preview(kind)
         p.info_label:SetSize(info_w, info_h)
         p.info_label:SetFont(info_font)
         p.info_label:SetForeColor(Turbine.UI.Color(0.85, 0.85, 0.85))
-        p.info_label:SetText(TR(
-            "Buffs area auto-resizes to the number of rows, up to the max height. Debuffs fill the remaining effects height. Effects can be placed above Morale or below Power."))
+        p.info_label:SetText(
+            TR["Buffs area auto-resizes to the number of rows, up to the max height. Debuffs fill the remaining effects height. Effects can be placed above Morale or below Power."]
+        )
     end
 
     y = y + info_h
@@ -379,13 +380,13 @@ function ConfigWindow:_update_vitals_preview(kind)
     p.effects_debuffs_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopCenter)
     p.effects_debuffs_label:SetPosition(0, 0)
     p.effects_debuffs_label:SetSize(frame_w, debuff_label_h)
-    p.effects_debuffs_label:SetText(string.format(TR("Debuffs: max %d (%dx%d)"), max_debuffs, debuff_cols, debuff_rows))
+    p.effects_debuffs_label:SetText(string.format(TR["Debuffs: max %d (%dx%d)"], max_debuffs, debuff_cols, debuff_rows))
 
     p.effects_buffs_label:SetFont(label_font)
     p.effects_buffs_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopCenter)
     p.effects_buffs_label:SetPosition(0, 0)
     p.effects_buffs_label:SetSize(frame_w, buff_label_h)
-    p.effects_buffs_label:SetText(string.format(TR("Buffs: max %d (%dx%d)"), max_buffs, buff_cols, buff_rows))
+    p.effects_buffs_label:SetText(string.format(TR["Buffs: max %d (%dx%d)"], max_buffs, buff_cols, buff_rows))
 
     local function _timer_text(time_left)
         local t = tonumber(time_left)
@@ -596,7 +597,7 @@ function ConfigWindow:_update_vitals_preview(kind)
     local bubble_max = math.floor(morale_max * bubble_percent + 0.5)
     local morale_pct_text = tostring(math.floor(morale_percent * 100 + 0.5)) .. "%"
 
-    local name = is_target and TR("Target") or TR("Player")
+    local name = is_target and TR["Target"] or TR["Player"]
     local level = is_target and "150" or ""
     local bubble_text = ""
     if bubble_max > 0 then

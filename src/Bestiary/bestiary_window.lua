@@ -707,7 +707,7 @@ end
 
 local function _ensure_record_drop_texts(record)
     if type(record) ~= "table" then
-        return { { text = TR("No drops seen."), chest = false } }
+        return { { text = TR["No drops seen."], chest = false } }
     end
 
     local chip_texts = record._drop_texts
@@ -728,7 +728,7 @@ local function _ensure_record_drop_texts(record)
     end
 
     if #chip_texts == 0 then
-        chip_texts = { { text = TR("No drops seen."), chest = false } }
+        chip_texts = { { text = TR["No drops seen."], chest = false } }
     end
 
     record._drop_texts = chip_texts
@@ -741,11 +741,11 @@ local function _ensure_record_display_texts(record)
     end
 
     _ensure_record_drop_texts(record)
-    record.level_text = TR("Level") .. ": " .. _format_range(record.level_min, record.level_max)
+    record.level_text = TR["Level"] .. ": " .. _format_range(record.level_min, record.level_max)
     record.taxonomy_text = _build_taxonomy_text(record)
     record.location_text = _build_location_text(record)
-    record.morale_text = TR("Morale") .. ": " .. _format_number_range(record.morale_min, record.morale_max)
-    record.power_text = TR("Power") .. ": " .. _format_number_range(record.power_min, record.power_max)
+    record.morale_text = TR["Morale"] .. ": " .. _format_number_range(record.morale_min, record.morale_max)
+    record.power_text = TR["Power"] .. ": " .. _format_number_range(record.power_min, record.power_max)
 end
 
 local function _ensure_record_row_layout(record, width)
@@ -1046,7 +1046,7 @@ local BestiaryWindow = class(Turbine.UI.Lotro.Window)
 function BestiaryWindow:Constructor()
     Turbine.UI.Lotro.Window.Constructor(self)
 
-    self:SetText(TR("Bestiary"))
+    self:SetText(TR["Bestiary"])
     self:SetVisible(false)
     self:SetResizable(true)
     self:SetWantsKeyEvents(true)
@@ -1095,14 +1095,14 @@ function BestiaryWindow:Constructor()
     self.order_label:SetMultiline(false)
     self.order_label:SetFont(_scaled_font("Verdana", 10))
     self.order_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.order_label:SetText(TR("Order") .. ":")
+    self.order_label:SetText(TR["Order"] .. ":")
 
     self.sort_dropdown = UI.Widgets.LuiDropdown()
     self.sort_dropdown:SetParent(self.nav_bar)
     self.sort_dropdown:SetPopupHost(self)
     self.sort_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.sort_dropdown:SetMappedOptions(
-        { TR("A-Z"), TR("Z-A"), TR("Lvl <"), TR("Lvl >") },
+        { TR["A-Z"], TR["Z-A"], TR["Lvl <"], TR["Lvl >"] },
         { SORT_NAME_ASC, SORT_NAME_DESC, SORT_LEVEL_ASC, SORT_LEVEL_DESC }
     )
     self.sort_dropdown.ValueChanged = function(_, value)
@@ -1164,7 +1164,7 @@ function BestiaryWindow:Constructor()
     self.level_label:SetMultiline(false)
     self.level_label:SetFont(_scaled_font("Verdana", 10))
     self.level_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.level_label:SetText(TR("Level") .. ":")
+    self.level_label:SetText(TR["Level"] .. ":")
 
     self.level_min_box = Turbine.UI.Lotro.TextBox()
     self.level_min_box:SetParent(self.level_bar)
@@ -1221,7 +1221,7 @@ function BestiaryWindow:Constructor()
 
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:set_text(TR("Clear"))
+    self.clear_button:set_text(TR["Clear"])
     self.clear_button.Click = function()
         self.current_area = nil
         self.last_applied_area_query = nil
@@ -1244,7 +1244,7 @@ function BestiaryWindow:Constructor()
     self.area_label:SetVisible(false)
 
     self.area_shortcut = Turbine.UI.Lotro.Shortcut(Turbine.UI.Lotro.ShortcutType.Alias, "")
-    self.area_shortcut:SetData(TR("/loc"))
+    self.area_shortcut:SetData(TR["/loc"])
 
     self.area_slot = Turbine.UI.Lotro.Quickslot()
     self.area_slot:SetParent(self.filter_bar)
@@ -1287,13 +1287,13 @@ function BestiaryWindow:Constructor()
     self.genus_label:SetMultiline(false)
     self.genus_label:SetFont(_scaled_font("Verdana", 10))
     self.genus_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.genus_label:SetText(TR("Genus") .. ":")
+    self.genus_label:SetText(TR["Genus"] .. ":")
 
     self.genus_dropdown = UI.Widgets.LuiDropdown()
     self.genus_dropdown:SetParent(self.taxonomy_bar)
     self.genus_dropdown:SetPopupHost(self)
     self.genus_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.genus_dropdown:SetMappedOptions({ TR("All") }, { FILTER_ALL })
+    self.genus_dropdown:SetMappedOptions({ TR["All"] }, { FILTER_ALL })
     self.genus_dropdown.ValueChanged = function(_, value)
         if self._suppress_genus_changed == true then
             return
@@ -1331,7 +1331,7 @@ function BestiaryWindow:Constructor()
     self.empty_label:SetMouseVisible(false)
     self.empty_label:SetMultiline(true)
     self.empty_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.empty_label:SetText(TR("No bestiary entries yet."))
+    self.empty_label:SetText(TR["No bestiary entries yet."])
     self.empty_label:SetZOrder(3)
 
     self.SizeChanged = function()
@@ -1412,7 +1412,7 @@ function BestiaryWindow:ensure_area_shortcut()
         return
     end
 
-    self.area_shortcut:SetData(TR("/loc"))
+    self.area_shortcut:SetData(TR["/loc"])
     self.area_slot:SetShortcut(self.area_shortcut)
     self.area_slot:SetAllowDrop(false)
 end
@@ -1573,7 +1573,7 @@ function BestiaryWindow:set_area_filter_query(query)
 end
 
 function BestiaryWindow:_refresh_genus_dropdown()
-    local labels = { TR("All") }
+    local labels = { TR["All"] }
     local values = { FILTER_ALL }
     local genera = _collect_unique_record_values(self.all_records, "genus", nil)
     for i = 1, #genera do
@@ -1602,7 +1602,7 @@ function BestiaryWindow:_refresh_subcategory_dropdown()
     if self.genus_filter ~= FILTER_ALL then
         local subcategories = _collect_unique_record_values(self.all_records, "subcategory", self.genus_filter)
         if #subcategories > 0 then
-            labels = { TR("All") }
+            labels = { TR["All"] }
             values = { FILTER_ALL }
             for i = 1, #subcategories do
                 labels[#labels + 1] = subcategories[i]
@@ -1837,7 +1837,7 @@ function BestiaryWindow:layout()
 
     local level_label_w = math.max(
         order_label_w,
-        _estimate_text_width(TR("Level") .. ":", BASE_TAXONOMY_CHAR_W) + gap
+        _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
     )
     local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)
     local level_dash_w = _scaled_int(10)
@@ -2156,9 +2156,9 @@ function BestiaryWindow:render_page()
 
     if #self.records == 0 then
         if #self.all_records == 0 then
-            self.empty_label:SetText(TR("No bestiary entries yet."))
+            self.empty_label:SetText(TR["No bestiary entries yet."])
         else
-            self.empty_label:SetText(TR("No matching bestiary entries."))
+            self.empty_label:SetText(TR["No matching bestiary entries."])
         end
         self.empty_label:SetVisible(true)
         for i = 1, #self.column_separators do

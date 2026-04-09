@@ -182,7 +182,7 @@ function CooldownsWindow:Constructor()
 
     self.moveable = UI.Moveable(self, function(x, y)
         self:SetPosition(x, y)
-    end, TR("Cooldowns"))
+    end, TR["Cooldowns"])
 
     self.moveable:set_on_move_end(function(x, y)
         self:persist_position(x, y)

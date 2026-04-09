@@ -10,7 +10,7 @@ local HELP_FONT_NAME = "Verdana"
 local HELP_FONT_SIZE = 13
 local GITHUB_URL = "https://github.com/Geldahr/LUI"
 local LINK_BACKGROUND = Turbine.UI.Color(1.0, 0.2, 0.2, 0.2)
-local GITHUB_LABEL_TEXT = TR("For more information, feature requests, or bug reports, please visit the GitHub repository:")
+local GITHUB_LABEL_TEXT = TR["For more information, feature requests, or bug reports, please visit the GitHub repository:"]
 local ABOUT_HEIGHT = 156
 local GITHUB_HEIGHT = 59
 local COMMANDS_HEIGHT = 205
@@ -124,36 +124,36 @@ function HelpPage:Constructor(window)
     self.show_main_content_border = true
 
     local about_text = table.concat({
-        TR("LUI replaces and extends key LotRO UI elements with a cleaner and more configurable layout."),
-        TR("It focuses on combat-related UI such as self vitals, target vitals, boss vitals, party vitals, expiring effects, cooldowns elements and also inventory, and status bar."),
+        TR["LUI replaces and extends key LotRO UI elements with a cleaner and more configurable layout."],
+        TR["It focuses on combat-related UI such as self vitals, target vitals, boss vitals, party vitals, expiring effects, cooldowns elements and also inventory, and status bar."],
         "",
-        TR("The global LUI UI scale applies uniformly across the whole LUI interface."),
-        TR("It is separate from the built-in LotRO UI scaling."),
+        TR["The global LUI UI scale applies uniformly across the whole LUI interface."],
+        TR["It is separate from the built-in LotRO UI scaling."],
         "",
-        TR("For the best experience, set the global LUI UI scale before changing individual sizes."),
-        TR("Recommended starting points: 1080p = 1.0, 1440p = 1.3 to 1.4, 2160p / 4k = 2.0."),
-        TR("After the global LUI UI scale feels right, use the other settings for micro adjustments."),
+        TR["For the best experience, set the global LUI UI scale before changing individual sizes."],
+        TR["Recommended starting points: 1080p = 1.0, 1440p = 1.3 to 1.4, 2160p / 4k = 2.0."],
+        TR["After the global LUI UI scale feels right, use the other settings for micro adjustments."],
     }, "\n")
 
     local commands_text = table.concat({
-        TR("/lui config - Toggle the configuration window."),
-        TR("/lui move - Toggle LUI move mode."),
-        TR("/lui move cancel - Leave move mode without saving the current positions."),
-        TR("/lui inventory - Toggle the inventory window."),
-        TR("/lui inv - Short alias for /lui inventory."),
-        TR("/lui assets - Toggle the assets window."),
-        TR("/lui bestiary - Toggle the bestiary window."),
-        TR("/lui beast - Alias for /lui bestiary."),
-        TR("/lui b - Short alias for /lui bestiary."),
+        TR["/lui config - Toggle the configuration window."],
+        TR["/lui move - Toggle LUI move mode."],
+        TR["/lui move cancel - Leave move mode without saving the current positions."],
+        TR["/lui inventory - Toggle the inventory window."],
+        TR["/lui inv - Short alias for /lui inventory."],
+        TR["/lui assets - Toggle the assets window."],
+        TR["/lui bestiary - Toggle the bestiary window."],
+        TR["/lui beast - Alias for /lui bestiary."],
+        TR["/lui b - Short alias for /lui bestiary."],
     }, "\n")
 
-    self:add_title(TR("About LUI"))
+    self:add_title(TR["About LUI"])
     _create_help_text(self, "help_about", about_text, ABOUT_HEIGHT)
     self:add_break()
     _create_link_box(self, "help_github", GITHUB_LABEL_TEXT, GITHUB_URL, GITHUB_HEIGHT)
 
     self:add_hr()
-    self:add_title(TR("Commands"))
+    self:add_title(TR["Commands"])
     _create_help_text(self, "help_commands", commands_text, COMMANDS_HEIGHT)
 end
 

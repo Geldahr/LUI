@@ -392,10 +392,10 @@ function ConfigWindow:update_cooldowns_preview()
     local time_t = lui_format_timeout(remaining)
     local time_s = lui_format_timeout_seconds(remaining)
     local ctx = {
-        name = TR("Example skill"),
+        name = TR["Example skill"],
         t = time_t,
         s = time_s,
-        n = TR("Example skill"),
+        n = TR["Example skill"],
         ts = time_s,
     }
 

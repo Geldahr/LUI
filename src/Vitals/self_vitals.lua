@@ -13,7 +13,7 @@ SelfVitals = class(VitalsBase)
 function SelfVitals:Constructor(entity)
     self.target_vitals = nil
     self.boss_vitals = nil
-    VitalsBase.Constructor(self, "self", entity, TR("Self Vitals"))
+    VitalsBase.Constructor(self, "self", entity, TR["Self Vitals"])
 end
 
 ---------------------------------------------------------------------

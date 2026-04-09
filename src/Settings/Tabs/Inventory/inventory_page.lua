@@ -4,9 +4,9 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
 local TILE_SIZE_LABELS = {
-    TR("Small (32)"),
-    TR("Medium (40)"),
-    TR("Large (48)"),
+    TR["Small (32)"],
+    TR["Medium (40)"],
+    TR["Large (48)"],
 }
 
 local TILE_SIZE_VALUES = { 32, 40, 48 }
@@ -27,7 +27,7 @@ function InventoryPage:Constructor(window)
     self.title = UI.Widgets.LuiLabel()
     self.title:SetParent(self)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.title:SetText(TR("Inventory"))
+    self.title:SetText(TR["Inventory"])
 
     self.hr_general = Turbine.UI.Control()
     self.hr_general:SetParent(self)
@@ -37,15 +37,15 @@ function InventoryPage:Constructor(window)
     self.general_title = UI.Widgets.LuiLabel()
     self.general_title:SetParent(self)
     self.general_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.general_title:SetText(TR("General"))
+    self.general_title:SetText(TR["General"])
 
     self.enabled = UI.Widgets.LuiCheckBox()
     self.enabled:SetParent(self)
-    self.enabled:SetText(TR("Enabled"))
+    self.enabled:SetText(TR["Enabled"])
 
     self.replace = UI.Widgets.LuiCheckBox()
     self.replace:SetParent(self)
-    self.replace:SetText(TR("Replace default backpack (I)"))
+    self.replace:SetText(TR["Replace default backpack (I)"])
 
     self.hr_window = Turbine.UI.Control()
     self.hr_window:SetParent(self)
@@ -55,12 +55,12 @@ function InventoryPage:Constructor(window)
     self.window_title = UI.Widgets.LuiLabel()
     self.window_title:SetParent(self)
     self.window_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.window_title:SetText(TR("Window"))
+    self.window_title:SetText(TR["Window"])
 
     self.cols_label = UI.Widgets.LuiLabel()
     self.cols_label:SetParent(self)
     self.cols_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.cols_label:SetText(TR("Columns"))
+    self.cols_label:SetText(TR["Columns"])
 
     self.cols_tb = Turbine.UI.Lotro.TextBox()
     self.cols_tb:SetParent(self)
@@ -74,12 +74,12 @@ function InventoryPage:Constructor(window)
     self.tiles_title = UI.Widgets.LuiLabel()
     self.tiles_title:SetParent(self)
     self.tiles_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.tiles_title:SetText(TR("Tiles"))
+    self.tiles_title:SetText(TR["Tiles"])
 
     self.tile_size_label = UI.Widgets.LuiLabel()
     self.tile_size_label:SetParent(self)
     self.tile_size_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.tile_size_label:SetText(TR("Tile Size"))
+    self.tile_size_label:SetText(TR["Tile Size"])
 
     self.tile_size = UI.Widgets.LuiDropdown()
     self.tile_size:SetParent(self)

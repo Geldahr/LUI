@@ -131,7 +131,7 @@ end
 
 function ExpiringEffectsWindow:get_moveable_title()
     local o = self._opts
-    return (type(o.title) == "string" and o.title) or TR("Expiring Effects")
+    return (type(o.title) == "string" and o.title) or TR["Expiring Effects"]
 end
 
 function ExpiringEffectsWindow:persist_position(x, y)

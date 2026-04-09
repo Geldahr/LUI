@@ -440,7 +440,7 @@ end
 
 local function _record_primary_variant_label(record)
     if type(record) ~= "table" then
-        return TR("Variant")
+        return TR["Variant"]
     end
     if type(record.variant_tab_label) == "string" and record.variant_tab_label ~= "" then
         return record.variant_tab_label
@@ -460,7 +460,7 @@ local function _record_primary_variant_label(record)
     if type(record.name) == "string" and record.name ~= "" then
         return record.name
     end
-    return type(record.key) == "string" and record.key or TR("Variant")
+    return type(record.key) == "string" and record.key or TR["Variant"]
 end
 
 local function _record_fallback_variant_label(record)
@@ -531,7 +531,7 @@ local function _assign_variant_tab_labels(records)
     for _, count in pairs(counts) do
         if count > 1 then
             for i = 1, #records do
-                records[i].tab_label = records[i].name or records[i].key or TR("Variant")
+                records[i].tab_label = records[i].name or records[i].key or TR["Variant"]
             end
 
             local keyed_counts = {}
@@ -591,7 +591,7 @@ local function _collect_variant_group(selected_record)
     local base_name = _record_base_name(selected_record)
     if type(base_name) ~= "string" or base_name == "" then
         return {
-            base_name = selected_record.name or selected_record.key or TR("Bestiary"),
+            base_name = selected_record.name or selected_record.key or TR["Bestiary"],
             records = { selected_record },
         }
     end
@@ -769,44 +769,44 @@ local function _format_power_text(record)
 end
 
 local LOCATION_FIELDS = {
-    { key = "region", label = TR("Region") },
-    { key = "area", label = TR("Area") },
-    { key = "instance", label = TR("Instance") },
+    { key = "region", label = TR["Region"] },
+    { key = "area", label = TR["Area"] },
+    { key = "instance", label = TR["Instance"] },
 }
 
 local CREATURE_FIELDS = {
-    { key = "type", label = TR("Type") },
-    { key = "genus", label = TR("Genus") },
-    { key = "species", label = TR("Species") },
+    { key = "type", label = TR["Type"] },
+    { key = "genus", label = TR["Genus"] },
+    { key = "species", label = TR["Species"] },
 }
 
 local COMBAT_FIELDS = {
-    { key = "f", label = TR("Finesse") },
-    { key = "fm", label = TR("F.M. Immune") },
-    { key = "sm", label = TR("Stun/Mez Imm.") },
-    { key = "rt", label = TR("Root Immune") },
+    { key = "f", label = TR["Finesse"] },
+    { key = "fm", label = TR["F.M. Immune"] },
+    { key = "sm", label = TR["Stun/Mez Imm."] },
+    { key = "rt", label = TR["Root Immune"] },
 }
 
 local RESISTANCE_FIELDS = {
-    { key = "cr", label = TR("Cry") },
-    { key = "so", label = TR("Song") },
-    { key = "ta", label = TR("Tactical") },
-    { key = "ph", label = TR("Physical") },
+    { key = "cr", label = TR["Cry"] },
+    { key = "so", label = TR["Song"] },
+    { key = "ta", label = TR["Tactical"] },
+    { key = "ph", label = TR["Physical"] },
 }
 
 local MITIGATION_LEFT_FIELDS = {
-    { key = "co", label = TR("Common") },
-    { key = "fi", label = TR("Fire") },
-    { key = "li", label = TR("Light") },
-    { key = "sh", label = TR("Shadow") },
-    { key = "lt", label = TR("Lightning") },
+    { key = "co", label = TR["Common"] },
+    { key = "fi", label = TR["Fire"] },
+    { key = "li", label = TR["Light"] },
+    { key = "sh", label = TR["Shadow"] },
+    { key = "lt", label = TR["Lightning"] },
 }
 
 local MITIGATION_RIGHT_FIELDS = {
-    { key = "ad", label = TR("Ancient Dwarf") },
-    { key = "be", label = TR("Beleriand") },
-    { key = "we", label = TR("Westernesse") },
-    { key = "fr", label = TR("Frost") },
+    { key = "ad", label = TR["Ancient Dwarf"] },
+    { key = "be", label = TR["Beleriand"] },
+    { key = "we", label = TR["Westernesse"] },
+    { key = "fr", label = TR["Frost"] },
 }
 
 local function _build_list_text(values)
@@ -840,7 +840,7 @@ local function _build_drop_texts(record)
     end
 
     if #texts == 0 then
-        texts[1] = { text = TR("No drops seen."), chest = false }
+        texts[1] = { text = TR["No drops seen."], chest = false }
     end
 
     return texts
@@ -1383,7 +1383,7 @@ function BestiaryCard:Constructor()
     self.sticky_position = false
     self._suppress_position_persist = false
 
-    self:SetText(TR("Bestiary"))
+    self:SetText(TR["Bestiary"])
     self:SetVisible(false)
     self:SetResizable(false)
     self:SetMouseVisible(true)
@@ -1400,22 +1400,22 @@ function BestiaryCard:Constructor()
     self.content:SetParent(self)
     self.content:SetMouseVisible(false)
 
-    self.level_panel = _create_panel(self.content, TR("Level"))
+    self.level_panel = _create_panel(self.content, TR["Level"])
     self.level_value = _create_text(self.level_panel.body, false, Turbine.UI.ContentAlignment.MiddleCenter)
 
-    self.morale_panel = _create_panel(self.content, TR("Morale"))
+    self.morale_panel = _create_panel(self.content, TR["Morale"])
     self.morale_value = _create_text(self.morale_panel.body, false, Turbine.UI.ContentAlignment.MiddleCenter)
 
-    self.power_panel = _create_panel(self.content, TR("Power"))
+    self.power_panel = _create_panel(self.content, TR["Power"])
     self.power_value = _create_text(self.power_panel.body, false, Turbine.UI.ContentAlignment.MiddleCenter)
 
-    self.location_panel = _create_panel(self.content, TR("Location"))
+    self.location_panel = _create_panel(self.content, TR["Location"])
     self.location_rows = _create_row_set(self.location_panel.body, LOCATION_FIELDS)
 
-    self.creature_panel = _create_panel(self.content, TR("Creature"))
+    self.creature_panel = _create_panel(self.content, TR["Creature"])
     self.creature_rows = _create_row_set(self.creature_panel.body, CREATURE_FIELDS)
 
-    self.drop_panel = _create_panel(self.content, TR("Drops"))
+    self.drop_panel = _create_panel(self.content, TR["Drops"])
     self.drop_list = Turbine.UI.ListBox()
     self.drop_list:SetParent(self.drop_panel.body)
     self.drop_list:SetOrientation(Turbine.UI.Orientation.Vertical)
@@ -1429,26 +1429,26 @@ function BestiaryCard:Constructor()
     self.drop_content:SetMouseVisible(false)
     self.drop_list:AddItem(self.drop_content)
 
-    self.combat_panel = _create_panel(self.content, TR("Combat Effectiveness"))
+    self.combat_panel = _create_panel(self.content, TR["Combat Effectiveness"])
     self.combat_rows = _create_row_set(self.combat_panel.body, COMBAT_FIELDS)
 
-    self.resistances_panel = _create_panel(self.content, TR("Resistances"))
+    self.resistances_panel = _create_panel(self.content, TR["Resistances"])
     self.resistance_rows = _create_row_set(self.resistances_panel.body, RESISTANCE_FIELDS)
 
-    self.mitigation_panel = _create_panel(self.content, TR("Mitigation"))
+    self.mitigation_panel = _create_panel(self.content, TR["Mitigation"])
     self.mitigation_left_rows = _create_row_set(self.mitigation_panel.body, MITIGATION_LEFT_FIELDS)
     self.mitigation_right_rows = _create_row_set(self.mitigation_panel.body, MITIGATION_RIGHT_FIELDS)
     self.mitigation_divider = Turbine.UI.Control()
     self.mitigation_divider:SetParent(self.mitigation_panel.body)
     self.mitigation_divider:SetMouseVisible(false)
 
-    self.abilities_panel = _create_panel(self.content, TR("Abilities"))
+    self.abilities_panel = _create_panel(self.content, TR["Abilities"])
     self.abilities_area = _create_scroll_label_area(self.abilities_panel.body)
 
-    self.quests_panel = _create_panel(self.content, TR("Quests"))
+    self.quests_panel = _create_panel(self.content, TR["Quests"])
     self.quests_area = _create_scroll_label_area(self.quests_panel.body)
 
-    self.deeds_panel = _create_panel(self.content, TR("Deeds"))
+    self.deeds_panel = _create_panel(self.content, TR["Deeds"])
     self.deeds_area = _create_scroll_label_area(self.deeds_panel.body)
 
     self.VisibleChanged = function()
@@ -1511,7 +1511,7 @@ function BestiaryCard:_reset_variant_tabs()
 
     for i = 1, #self.variant_records do
         local record = self.variant_records[i]
-        local label = type(record) == "table" and (record.tab_label or _record_primary_variant_label(record)) or TR("Variant")
+        local label = type(record) == "table" and (record.tab_label or _record_primary_variant_label(record)) or TR["Variant"]
         local widget = Turbine.UI.Control()
         widget:SetMouseVisible(false)
         self.variant_bar:add_tab(label, widget)
@@ -1559,9 +1559,9 @@ function BestiaryCard:_apply_selected_variant()
     self.current_record = record
 
     if self:_variant_tabs_visible() == true then
-        self:SetText(self.current_group_name or record.base_name or record.name or record.key or TR("Bestiary"))
+        self:SetText(self.current_group_name or record.base_name or record.name or record.key or TR["Bestiary"])
     else
-        self:SetText(record.name or record.key or TR("Bestiary"))
+        self:SetText(record.name or record.key or TR["Bestiary"])
     end
 
     self:_apply_record(record)
@@ -2073,7 +2073,7 @@ function BestiaryCard:apply_settings()
     if self.current_record ~= nil then
         self:_apply_record(self.current_record)
     else
-        self:_apply_drop_layout({ TR("No drops seen.") })
+        self:_apply_drop_layout({ TR["No drops seen."] })
     end
 end
 

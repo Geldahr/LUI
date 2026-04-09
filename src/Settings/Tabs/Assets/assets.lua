@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Assets.assets_page"
 
 AssetsTab = {
     key = "assets",
-    text = TR("Assets"),
+    text = TR["Assets"],
 }
 
 function AssetsTab.create_page(window)

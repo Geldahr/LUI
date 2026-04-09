@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.StatusBar.status_bar_page"
 
 StatusBar = {
     key = "status_bar",
-    text = TR("Status Bar"),
+    text = TR["Status Bar"],
 }
 
 function StatusBar.refresh_layout_help(window)

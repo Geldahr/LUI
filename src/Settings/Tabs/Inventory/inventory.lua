@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Inventory.inventory_page"
 
 Inventory = {
     key = "inventory",
-    text = TR("Inventory"),
+    text = TR["Inventory"],
 }
 
 function Inventory.create_page(window)

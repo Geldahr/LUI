@@ -6,7 +6,7 @@ local StatusBarApiCommandParser = _G.STATUS_BAR_API_COMMAND_PARSER
 local HELP_COMMAND_COLOR = "#33C7FF"
 
 local function _write_help_command(prefix, translated_line_key)
-    local line = TR(translated_line_key)
+    local line = TR[translated_line_key]
     if type(line) ~= "string" then
         return
     end
@@ -25,7 +25,7 @@ local function _write_help_command(prefix, translated_line_key)
 end
 
 local function display_help()
-    Turbine.Shell.WriteLine(TR("Available commands:"))
+    Turbine.Shell.WriteLine(TR["Available commands:"])
     _write_help_command("/lui config", "  /lui config     - Toggle configuration window")
     _write_help_command("/lui move", "  /lui move       - Toggle move mode")
     _write_help_command("/lui move cancel", "  /lui move cancel - Cancel move mode changes")
@@ -56,13 +56,13 @@ end
 
 function command:Execute(_, str)
     if str == nil or string.len(str) == 0 then
-        Turbine.Shell.WriteLine(TR("Missing Argument for more information type /lui help."))
+        Turbine.Shell.WriteLine(TR["Missing Argument for more information type /lui help."])
         return
     end
 
     local list = StatusBarApiCommandParser.tokenize_command_arguments(str)
     if #list == 0 then
-        Turbine.Shell.WriteLine(TR("Missing Argument for more information type /lui help."))
+        Turbine.Shell.WriteLine(TR["Missing Argument for more information type /lui help."])
         return
     end
 
@@ -114,12 +114,12 @@ function command:Execute(_, str)
     elseif cmd == "card" then
         local monster_name = table.concat(list, " ", 2)
         if monster_name == nil or monster_name == "" then
-            Turbine.Shell.WriteLine(TR("Usage: /lui card [monster name]"))
+            Turbine.Shell.WriteLine(TR["Usage: /lui card [monster name]"])
             return
         end
 
         if BESTIARY_CARD:show_for_name(monster_name, nil) ~= true then
-            Turbine.Shell.WriteLine(TR("Monster not found in bestiary: ") .. monster_name)
+            Turbine.Shell.WriteLine(TR["Monster not found in bestiary: "] .. monster_name)
         end
     elseif cmd == "api.sb" or (cmd == "api" and list[2] ~= nil and string.lower(list[2]) == "sb") then
         local start_index = cmd == "api.sb" and 2 or 3

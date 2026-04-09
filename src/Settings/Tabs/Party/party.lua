@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Party.party_page"
 
 PartyTab = {
     key = "party",
-    text = TR("Party"),
+    text = TR["Party"],
 }
 
 function PartyTab.create_page(window)

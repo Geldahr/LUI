@@ -22,7 +22,7 @@ local BASE_QTY_OUTLINE = Turbine.UI.Color(1, 0, 0, 0)
 local ITEM_INFO_CONTROL_EXTRA = 3
 local ITEM_CONTROL_OFFSET = -3
 local ITEM_CONTROL_EXTRA = 4
-local MULTIPLE_META_TEXT = TR("Various")
+local MULTIPLE_META_TEXT = TR["Various"]
 
 local QUALITY_NAME_COLORS = {
     [Turbine.Gameplay.ItemQuality.Common] = Turbine.UI.Color(1, 0.92, 0.92, 0.92),

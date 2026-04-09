@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Target.expiring_target_effects_page"
 
 ExpiringTargetEffects = {
     key = "expiring_target_effects",
-    text = TR("Expiring Effects (Target)"),
+    text = TR["Expiring Effects (Target)"],
 }
 
 local function _apply_color(ui, dest, hex)

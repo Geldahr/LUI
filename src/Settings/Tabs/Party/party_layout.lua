@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Party.party_layout_page"
 
 PartyLayout = {
     key = "party_layout",
-    text = TR("Layout"),
+    text = TR["Layout"],
 }
 
 function PartyLayout.create_page(window)

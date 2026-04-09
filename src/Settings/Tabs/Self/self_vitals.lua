@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Self.self_vitals_page"
 
 SelfVitals = {
     key = "self_vitals",
-    text = TR("Self Vitals"),
+    text = TR["Self Vitals"],
 }
 
 local function _apply_color(ui, dest, hex)

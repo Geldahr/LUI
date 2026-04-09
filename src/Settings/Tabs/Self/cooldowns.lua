@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Self.cooldowns_page"
 
 Cooldowns = {
     key = "cooldowns",
-    text = TR("Cooldowns"),
+    text = TR["Cooldowns"],
 }
 
 function Cooldowns.create_page(window)

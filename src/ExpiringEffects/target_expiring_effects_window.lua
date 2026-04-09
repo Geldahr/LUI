@@ -31,7 +31,7 @@ function TargetExpiringEffectsWindow:Constructor()
     self._effects = nil
     self._effect_events = { ea = nil, er = nil, ec = nil }
 
-    ExpiringEffectsWindow.Constructor(self, { title = TR("Expiring Effects (Target)") })
+    ExpiringEffectsWindow.Constructor(self, { title = TR["Expiring Effects (Target)"] })
 end
 
 ---------------------------------------------------------------------

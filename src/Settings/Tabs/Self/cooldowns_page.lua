@@ -102,74 +102,74 @@ CooldownsPage = class(SettingsFormPage)
 function CooldownsPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
 
-    local bar_mode_labels = { TR("Load"), TR("Unload") }
+    local bar_mode_labels = { TR["Load"], TR["Unload"] }
     local bar_mode_values = { LUI_ENUMS.bar_mode.LOAD, LUI_ENUMS.bar_mode.UNLOAD }
-    local flow_labels = { TR("Top to bottom"), TR("Bottom to top") }
+    local flow_labels = { TR["Top to bottom"], TR["Bottom to top"] }
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
-    local min_base_help = TR("Skills whose base cooldown is below this value are ignored.")
+    local min_base_help = TR["Skills whose base cooldown is below this value are ignored."]
     local fmt_help = table.concat({
-        TR("Tokens:"),
-        TR("  %name% - skill name"),
-        TR("  %t - remaining time with tenths (X.Ys)"),
-        TR("  %s - remaining time without tenths (Xs)"),
+        TR["Tokens:"],
+        TR["  %name% - skill name"],
+        TR["  %t - remaining time with tenths (X.Ys)"],
+        TR["  %s - remaining time without tenths (Xs)"],
         "",
-        TR("Examples:"),
-        TR("  %name% - %t"),
-        TR("  %name% - %s"),
+        TR["Examples:"],
+        TR["  %name% - %t"],
+        TR["  %name% - %s"],
     }, "\n")
-    local list_help = TR("One skill name per line or comma-separated. Case-insensitive. Exact match or prefix with trailing *.")
+    local list_help = TR["One skill name per line or comma-separated. Case-insensitive. Exact match or prefix with trailing *."]
 
     self.refresh_preview = function()
         self.window:update_cooldowns_preview()
     end
 
-    self:add_title(TR("Cooldowns"))
+    self:add_title(TR["Cooldowns"])
 
     self:add_hr()
-    self:add_title(TR("General"))
-    self:add_checkbox("cd_enabled", TR("Enabled"), true)
-    self:add_text("cd_threshold", TR("Threshold (s)"))
-    self:add_text("cd_min_base_cooldown", TR("Min base cooldown (s)"), false, min_base_help)
+    self:add_title(TR["General"])
+    self:add_checkbox("cd_enabled", TR["Enabled"], true)
+    self:add_text("cd_threshold", TR["Threshold (s)"])
+    self:add_text("cd_min_base_cooldown", TR["Min base cooldown (s)"], false, min_base_help)
 
     self:add_hr()
-    self:add_title(TR("Layout"))
-    self:add_text("cd_item_w", TR("Item width"))
-    self:add_text("cd_item_h", TR("Item height"))
-    self:add_text("cd_spacing", TR("Spacing (px)"))
-    self:add_text("cd_border_width", TR("Border width (px)"))
-    self:add_text("cd_columns", TR("Columns"))
-    self:add_text("cd_rows", TR("Rows"))
-    self:add_dropdown("cd_flow", TR("Order"), flow_labels, flow_values)
-    self:add_dropdown("cd_icon_side", TR("Icon position"), self.side_labels, self.side_values)
-    self:add_dropdown("cd_bar_mode", TR("Bar mode"), bar_mode_labels, bar_mode_values)
-    self:add_dropdown("cd_bar_expire_towards", TR("Bar movement towards"), self.side_labels, self.side_values)
-    self:add_text("cd_bg_color", TR("Background color"), true)
-    self:add_text("cd_bar_color", TR("Bar color"), true)
-    self:add_text("cd_border_color", TR("Border color"), true)
+    self:add_title(TR["Layout"])
+    self:add_text("cd_item_w", TR["Item width"])
+    self:add_text("cd_item_h", TR["Item height"])
+    self:add_text("cd_spacing", TR["Spacing (px)"])
+    self:add_text("cd_border_width", TR["Border width (px)"])
+    self:add_text("cd_columns", TR["Columns"])
+    self:add_text("cd_rows", TR["Rows"])
+    self:add_dropdown("cd_flow", TR["Order"], flow_labels, flow_values)
+    self:add_dropdown("cd_icon_side", TR["Icon position"], self.side_labels, self.side_values)
+    self:add_dropdown("cd_bar_mode", TR["Bar mode"], bar_mode_labels, bar_mode_values)
+    self:add_dropdown("cd_bar_expire_towards", TR["Bar movement towards"], self.side_labels, self.side_values)
+    self:add_text("cd_bg_color", TR["Background color"], true)
+    self:add_text("cd_bar_color", TR["Bar color"], true)
+    self:add_text("cd_border_color", TR["Border color"], true)
 
     self:add_hr()
-    self:add_title(TR("Text"))
-    self:add_text("cd_text_template", TR("Text template"), false, fmt_help, true)
-    self:add_dropdown("cd_text_alignment", TR("Text alignment"), self.text_alignment_labels, self.text_alignment_values)
-    self:add_text("cd_text_margin", TR("Text margin (px)"))
-    self:add_text("cd_name_max_chars", TR("Max name chars"))
+    self:add_title(TR["Text"])
+    self:add_text("cd_text_template", TR["Text template"], false, fmt_help, true)
+    self:add_dropdown("cd_text_alignment", TR["Text alignment"], self.text_alignment_labels, self.text_alignment_values)
+    self:add_text("cd_text_margin", TR["Text margin (px)"])
+    self:add_text("cd_name_max_chars", TR["Max name chars"])
 
     self:add_hr()
-    self:add_title(TR("Font"))
-    self:add_dropdown("cd_font_name", TR("Font"), self.font_name_labels, self.font_name_values)
-    self:add_text("cd_font_size", TR("Font size"))
-    self:add_text("cd_font_color", TR("Font color"), true)
-    self:add_dropdown("cd_font_style", TR("Font style"), self.font_style_labels, self.font_style_values)
-    self:add_text("cd_font_outline_color", TR("Outline color"), true)
+    self:add_title(TR["Font"])
+    self:add_dropdown("cd_font_name", TR["Font"], self.font_name_labels, self.font_name_values)
+    self:add_text("cd_font_size", TR["Font size"])
+    self:add_text("cd_font_color", TR["Font color"], true)
+    self:add_dropdown("cd_font_style", TR["Font style"], self.font_style_labels, self.font_style_values)
+    self:add_text("cd_font_outline_color", TR["Outline color"], true)
 
     self:add_hr()
-    self:add_title(TR("Preview"))
+    self:add_title(TR["Preview"])
     self:add_custom("cooldowns_preview", 52)
 
     self:add_hr()
-    self:add_title(TR("Lists"))
-    _create_text_area(self, "cd_whitelist", TR("Whitelist"), list_help)
-    _create_text_area(self, "cd_blacklist", TR("Blacklist"), list_help)
+    self:add_title(TR["Lists"])
+    _create_text_area(self, "cd_whitelist", TR["Whitelist"], list_help)
+    _create_text_area(self, "cd_blacklist", TR["Blacklist"], list_help)
 
     self.controls.cd_font_outline_color.visible_if = function()
         return _is_outline(self.controls.cd_font_style)

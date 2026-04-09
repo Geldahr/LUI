@@ -290,7 +290,7 @@ function ConfigWindow:update_target_targets_target_preview()
     end
 
     p.label:SetText(lui_format_tokenized(tt_fmt_tokens, {
-        name = TR("Target's Target"),
+        name = TR["Target's Target"],
         level = "150",
         c = lui_abbrev_number(tt_cur),
         t = lui_abbrev_number(tt_max),

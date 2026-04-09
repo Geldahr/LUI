@@ -2,7 +2,7 @@ import "LUI.src.Settings.Tabs.Target.target_vitals_page"
 
 TargetVitals = {
     key = "target_vitals",
-    text = TR("Target Vitals"),
+    text = TR["Target Vitals"],
 }
 
 local function _apply_color(ui, dest, hex)

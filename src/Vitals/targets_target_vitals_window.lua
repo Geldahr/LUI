@@ -52,7 +52,7 @@ function TargetsTargetVitalsWindow:Constructor(owner)
 
     self.moveable = UI.Moveable(self, function(x, y)
         self:SetPosition(x, y)
-    end, TR("Target's Target"))
+    end, TR["Target's Target"])
     self.moveable:set_on_move_end(function(x, y)
         self:persist_position(x, y)
     end)

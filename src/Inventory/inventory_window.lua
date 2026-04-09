@@ -131,7 +131,7 @@ end
 function InventoryWindow:Constructor()
     Turbine.UI.Lotro.Window.Constructor(self)
 
-    self:SetText(TR("Inventory"))
+    self:SetText(TR["Inventory"])
     self:SetVisible(false)
     self:SetResizable(true)
     self:SetWantsUpdates(false)
@@ -205,7 +205,7 @@ function InventoryWindow:Constructor()
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.header)
     self.clear_button:set_font(_scaled_font("Verdana", BASE_FILTER_FONT_SIZE))
-    self.clear_button:set_text(TR("Clear"))
+    self.clear_button:set_text(TR["Clear"])
     self.clear_button.Click = function()
         self.filter_tb:SetText("")
         self:update_filter()
@@ -217,7 +217,7 @@ function InventoryWindow:Constructor()
     -- self.lock_cb = UI.Widgets.LuiCheckBox()
     -- self.lock_cb:SetParent(self.header)
     -- self.lock_cb:SetFont(LABEL_FONT)
-    -- self.lock_cb:SetText(" " .. TR("Lock mode"))
+    -- self.lock_cb:SetText(" " .. TR["Lock mode"])
     -- self.lock_cb.CheckedChanged = function()
     --     self:set_lock_mode(self.lock_cb:IsChecked() == true)
     -- end
@@ -235,16 +235,16 @@ function InventoryWindow:Constructor()
     --     return b
     -- end
     --
-    -- self.lock_matches = make_action(TR("Lock matches"), function()
+    -- self.lock_matches = make_action(TR["Lock matches"], function()
     --     self:apply_lock_filter(true, true)
     -- end)
-    -- self.unlock_matches = make_action(TR("Unlock matches"), function()
+    -- self.unlock_matches = make_action(TR["Unlock matches"], function()
     --     self:apply_lock_filter(true, false)
     -- end)
-    -- self.lock_nonmatches = make_action(TR("Lock non-matches"), function()
+    -- self.lock_nonmatches = make_action(TR["Lock non-matches"], function()
     --     self:apply_lock_filter(false, true)
     -- end)
-    -- self.unlock_nonmatches = make_action(TR("Unlock non-matches"), function()
+    -- self.unlock_nonmatches = make_action(TR["Unlock non-matches"], function()
     --     self:apply_lock_filter(false, false)
     -- end)
 
@@ -260,8 +260,9 @@ function InventoryWindow:Constructor()
     self.hint_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     self.hint_label:SetMultiline(true)
     self.hint_label:SetFont(_scaled_font("Verdana", BASE_HINT_FONT_SIZE))
-    self.hint_label:SetText(TR(
-        "Hint: to lock/unlock an item you can select it using Alt+Left click and then press Ctrl+T to toggle the lock."))
+    self.hint_label:SetText(
+        TR["Hint: to lock/unlock an item you can select it using Alt+Left click and then press Ctrl+T to toggle the lock."]
+    )
 
     self.rows = {}
     self.slots = {}

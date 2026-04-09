@@ -475,7 +475,7 @@ function ConfigWindow:update_party_vitals_preview()
                 p = morale_pct_text,
                 b = bubble_text,
                 B = "",
-                name = TR("Player ") .. tostring(i),
+                name = TR["Player "] .. tostring(i),
                 level = "150",
             }
 
@@ -527,7 +527,7 @@ function ConfigWindow:update_party_vitals_preview()
                 c = lui_abbrev_number(power_cur),
                 t = lui_abbrev_number(power_max),
                 p = power_pct_text,
-                name = TR("Player ") .. tostring(i),
+                name = TR["Player "] .. tostring(i),
                 level = "150",
             }))
         end

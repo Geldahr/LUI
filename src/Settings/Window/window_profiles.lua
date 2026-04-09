@@ -83,14 +83,14 @@ function ConfigWindow:confirm_delete_selected_profile()
         return
     end
 
-    local profile_name = get_configuration_name(profile_id) or TR("Profile")
+    local profile_name = get_configuration_name(profile_id) or TR["Profile"]
     local message = table.concat({
-        string.format(TR("Delete profile '%s'?"), profile_name),
-        TR("This will delete it for all characters using it."),
-        TR("This action cannot be undone."),
+        string.format(TR["Delete profile '%s'?"], profile_name),
+        TR["This will delete it for all characters using it."],
+        TR["This action cannot be undone."],
     }, "\n")
 
-    self:show_confirmation_dialog(message, TR("Delete"), function()
+    self:show_confirmation_dialog(message, TR["Delete"], function()
         local deleting_current_profile = profile_id == _G.current_profile_id
         if delete_configuration(profile_id) ~= true then
             return
