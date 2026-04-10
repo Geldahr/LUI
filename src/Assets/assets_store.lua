@@ -642,6 +642,10 @@ function AssetsStore:Update()
     if changed == true then
         self.generation = self.generation + 1
     end
+
+    if _G.CRAFTING_STORE ~= nil and _G.CRAFTING_STORE.refresh ~= nil then
+        _G.CRAFTING_STORE:refresh(false, 1)
+    end
 end
 
 function AssetsStore:_mark_source_dirty(source_key)

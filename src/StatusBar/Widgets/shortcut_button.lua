@@ -17,6 +17,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.font = font
     self.icon_background = S.get_shortcut_icon(shortcut_key)
     self._available = nil
+    self._interaction_enabled = true
 
     self:SetSize(widget_w, bar_h)
     self:SetMouseVisible(false)
@@ -63,8 +64,27 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     end
 
     self.button.Click = function()
+        if self._interaction_enabled ~= true then
+            return
+        end
         S.activate_shortcut(self.shortcut_key)
         self:_refresh_state()
+    end
+
+    self.button.MouseClick = function(_, args)
+        if self.MouseClick ~= nil then
+            self:MouseClick(args)
+        end
+    end
+    self.button.MouseDown = function(_, args)
+        if self.MouseDown ~= nil then
+            self:MouseDown(args)
+        end
+    end
+    self.button.MouseMove = function(_, args)
+        if self.MouseMove ~= nil then
+            self:MouseMove(args)
+        end
     end
 
     self.SizeChanged = function()
@@ -76,6 +96,11 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
 end
 
 function ShortcutButtonWidget:update(now)
+    self:_refresh_state()
+end
+
+function ShortcutButtonWidget:set_interaction_enabled(enabled)
+    self._interaction_enabled = enabled == true
     self:_refresh_state()
 end
 
@@ -114,9 +139,12 @@ function ShortcutButtonWidget:_refresh_state()
     local available = S.get_shortcut_state(self.shortcut_key)
     local is_available = available == true
     if is_available == self._available then
+        if self.button ~= nil then
+            self.button:set_enabled(self._available == true and self._interaction_enabled == true)
+        end
         return
     end
 
     self._available = is_available
-    self.button:set_enabled(self._available)
+    self.button:set_enabled(self._available == true and self._interaction_enabled == true)
 end

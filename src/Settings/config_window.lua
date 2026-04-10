@@ -600,6 +600,9 @@ function ConfigWindow:refresh_runtime_settings()
     if BESTIARY_WINDOW ~= nil and BESTIARY_WINDOW.apply_settings ~= nil then
         BESTIARY_WINDOW:apply_settings()
     end
+    if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
+        CRAFTING_WINDOW:apply_settings()
+    end
     if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.apply_settings ~= nil then
         BESTIARY_TRACKER:apply_settings()
     end

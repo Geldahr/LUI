@@ -12,6 +12,7 @@ import "LUI.src.ExpiringEffects"
 import "LUI.src.Cooldowns"
 import "LUI.src.Assets"
 import "LUI.src.Bestiary"
+import "LUI.src.Crafting"
 import "LUI.src.StatusBar.api_chat_bridge"
 
 if _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK ~= nil then
@@ -32,6 +33,15 @@ local function _ensure_bestiary_window()
     if window == nil and Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil then
         window = Bestiary.BestiaryWindow()
         _G.BESTIARY_WINDOW = window
+    end
+    return window
+end
+
+local function _ensure_crafting_window()
+    local window = _G.CRAFTING_WINDOW
+    if window == nil and Crafting ~= nil and Crafting.CraftingWindow ~= nil then
+        window = Crafting.CraftingWindow()
+        _G.CRAFTING_WINDOW = window
     end
     return window
 end
@@ -83,6 +93,28 @@ function _G.toggle_bestiary_shortcut()
         return
     end
 
+    if window.open ~= nil then
+        window:open()
+    else
+        window:SetVisible(true)
+    end
+end
+
+function _G.toggle_crafting_shortcut()
+    local window = _ensure_crafting_window()
+    if window == nil then
+        return
+    end
+
+    if window:IsVisible() == true then
+        window:SetVisible(false)
+        window:SetWantsUpdates(false)
+        return
+    end
+
+    if window.clear_material_filter ~= nil then
+        window:clear_material_filter()
+    end
     if window.open ~= nil then
         window:open()
     else
@@ -183,6 +215,16 @@ function apply_cooldowns_settings()
     end
 end
 
+function apply_crafting_settings()
+    if Crafting ~= nil and Crafting.get_shared_store ~= nil then
+        Crafting.get_shared_store()
+    end
+
+    if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
+        CRAFTING_WINDOW:apply_settings()
+    end
+end
+
 load_settings()
 if _G.loaded_settings_was_new == true then
     _G.loaded_settings = _G.DefaultLayouts.build("bottom", _G.DefaultLayouts.get_resolution_scale())
@@ -209,11 +251,13 @@ STATUS_BAR = nil
 _G.STATUS_BAR = nil
 COOLDOWNS_WINDOW = nil
 BESTIARY_WINDOW = nil
+CRAFTING_WINDOW = nil
 BESTIARY_TRACKER = Bestiary.Collector()
 apply_inventory_settings()
 apply_assets_settings()
 apply_status_bar_settings()
 apply_cooldowns_settings()
+apply_crafting_settings()
 if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.apply_settings ~= nil then
     BESTIARY_TRACKER:apply_settings()
 end
@@ -240,11 +284,27 @@ Plugins["LUI"].Unload = function()
         _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
     end
     _G.STATUS_BAR = nil
+    if ASSETS_WINDOW ~= nil then
+        if ASSETS_WINDOW.SetVisible ~= nil then
+            ASSETS_WINDOW:SetVisible(false)
+        end
+        ASSETS_WINDOW._crafting_store = nil
+        ASSETS_WINDOW._last_crafting_store_version = nil
+        ASSETS_WINDOW = nil
+    end
     if BESTIARY_WINDOW ~= nil then
         if BESTIARY_WINDOW.SetVisible ~= nil then
             BESTIARY_WINDOW:SetVisible(false)
         end
         BESTIARY_WINDOW = nil
+    end
+    if CRAFTING_WINDOW ~= nil then
+        if CRAFTING_WINDOW.SetVisible ~= nil then
+            CRAFTING_WINDOW:SetVisible(false)
+        end
+        CRAFTING_WINDOW.store = nil
+        CRAFTING_WINDOW = nil
+        _G.CRAFTING_WINDOW = nil
     end
     if BESTIARY_CARD ~= nil then
         if BESTIARY_CARD.SetVisible ~= nil then
@@ -265,6 +325,9 @@ Plugins["LUI"].Unload = function()
     if ASSETS_STORE ~= nil then
         ASSETS_STORE:destroy()
         ASSETS_STORE = nil
+    end
+    if Crafting ~= nil and Crafting.destroy_shared_store ~= nil then
+        Crafting.destroy_shared_store()
     end
 
     save_assets_cache()

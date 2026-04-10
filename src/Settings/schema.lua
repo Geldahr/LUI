@@ -40,6 +40,7 @@ function _G.ensure_loaded_settings()
     ensure_table(s, "target")
     ensure_table(s, "party")
     ensure_table(s, "inventory")
+    ensure_table(s, "crafting")
     ensure_table(s, "assets")
     ensure_table(s, "bestiary")
     ensure_table(s, "status_bar")
@@ -131,6 +132,7 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "party", "effects", "debuffs", "timer_font" })
 
     ensure_table_at(s, { "inventory", "window" })
+    ensure_table_at(s, { "crafting", "window" })
     ensure_table_at(s, { "assets", "window" })
     ensure_table_at(s, { "assets", "tile" })
     ensure_table_at(s, { "assets", "layouts" })
@@ -408,6 +410,20 @@ function _G.ensure_loaded_settings()
     ensure_assets_layout(assets_layouts.icons, 16, 8)
     ensure_assets_layout(assets_layouts.details, 4, 10)
 
+    local crafting = s.crafting
+    if crafting.window.left == nil then
+        crafting.window.left = _pos_x(720)
+    end
+    if crafting.window.top == nil then
+        crafting.window.top = _pos_y(150)
+    end
+    if crafting.window.width == nil then
+        crafting.window.width = 1100
+    end
+    if crafting.window.height == nil then
+        crafting.window.height = 700
+    end
+
     local bestiary = s.bestiary
     if bestiary.window.left == nil then
         bestiary.window.left = _pos_x(900)
@@ -651,6 +667,9 @@ function _G.ensure_loaded_settings()
         sb.layout.center = ""
     end
     if sb.layout.right == nil then
+        sb.layout.right = "%inventory% %gold%"
+    end
+    if sb.layout.right == "%inventory% %gold% %craft%" then
         sb.layout.right = "%inventory% %gold%"
     end
 

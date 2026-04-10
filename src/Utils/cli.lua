@@ -31,6 +31,7 @@ local function display_help()
     _write_help_command("/lui move cancel", "  /lui move cancel - Cancel move mode changes")
     _write_help_command("/lui inventory", "  /lui inventory  - Toggle inventory window")
     _write_help_command("/lui assets", "  /lui assets      - Toggle assets window")
+    _write_help_command("/lui craft", "  /lui craft      - Toggle crafting window")
     _write_help_command("/lui bestiary", "  /lui bestiary   - Toggle bestiary window")
     _write_help_command("/lui beast", "  /lui beast      - Alias for /lui bestiary")
     _write_help_command("/lui b", "  /lui b          - Short alias for /lui bestiary")
@@ -92,6 +93,12 @@ function command:Execute(_, str)
             _G.toggle_assets_shortcut()
         elseif ASSETS_WINDOW ~= nil and ASSETS_WINDOW.toggle ~= nil then
             ASSETS_WINDOW:toggle()
+        end
+    elseif cmd == "craft" then
+        if _G.toggle_crafting_shortcut ~= nil then
+            _G.toggle_crafting_shortcut()
+        elseif CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.toggle ~= nil then
+            CRAFTING_WINDOW:toggle()
         end
     elseif cmd == "bestiary" or cmd == "beast" or cmd == "b" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil

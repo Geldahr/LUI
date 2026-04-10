@@ -42,6 +42,7 @@ local BASE_STACK_HINT_MIN_H = 44
 local BASE_STACK_HINT_PAD_X = 12
 local BASE_STACK_HINT_PAD_Y = 9
 local BASE_STACK_HINT_LINE_H = 12
+local BASE_RECIPES_BUTTON_W = 108
 local STACK_HINT_BORDER = 2
 
 local SUMMARY_TRACK_WIDTH_FACTOR = 0.70
@@ -119,6 +120,22 @@ local function _lower_text(text)
         return ""
     end
     return string.lower(text)
+end
+
+local function _trim_text(text)
+    local value
+    if text == nil then
+        value = ""
+    else
+        value = tostring(text)
+    end
+    value = value:gsub("^%s+", "")
+    value = value:gsub("%s+$", "")
+    return value
+end
+
+local function _normalize_recipe_filter_key(text)
+    return _lower_text(_trim_text(text))
 end
 
 local function _source_rank(source_key)
@@ -736,6 +753,26 @@ function AssetsWindow:Constructor()
     self.summary_text:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.summary_text:SetZOrder(2)
 
+    self.recipes_button = UI.Widgets.LuiButton()
+    self.recipes_button:SetParent(self.summary_bar)
+    self.recipes_button:set_text(TR["Recipes"] .. " (0)")
+    self.recipes_button.Click = function()
+        if type(self._visible_recipe_filter_keys) ~= "table" or next(self._visible_recipe_filter_keys) == nil then
+            return
+        end
+
+        local window = _G.CRAFTING_WINDOW
+        if window == nil and Crafting ~= nil and Crafting.CraftingWindow ~= nil then
+            window = Crafting.CraftingWindow()
+            _G.CRAFTING_WINDOW = window
+        end
+        if window ~= nil and window.open_from_asset_materials ~= nil then
+            window:open_from_asset_materials(self._visible_recipe_filter_keys)
+        elseif window ~= nil and window.open ~= nil then
+            window:open()
+        end
+    end
+
     self.order_label = UI.Widgets.LuiLabel()
     self.order_label:SetParent(self.nav_bar)
     self.order_label:SetMouseVisible(false)
@@ -1008,6 +1045,7 @@ function AssetsWindow:apply_settings()
 
     self.page_label:SetFont(button_font)
     self.summary_text:SetFont(button_font)
+    self.recipes_button:set_font(button_font)
     self.order_label:SetFont(_scaled_font("Verdana", 11))
     self.group_label:SetFont(_scaled_font("Verdana", 11))
     self.hint_label:SetFont(_scaled_font("Verdana", 10))
@@ -1034,6 +1072,16 @@ function AssetsWindow:Update()
     self.last_update_at = now
 
     self:refresh_from_store(false)
+    local store = self._crafting_store
+    if store ~= nil then
+        local version = tonumber(store.version) or 0
+        if version ~= self._last_crafting_store_version then
+            self._last_crafting_store_version = version
+            self:_refresh_recipes_button()
+        end
+    elseif type(self._visible_recipe_filter_keys) == "table" and next(self._visible_recipe_filter_keys) ~= nil then
+        self:_refresh_recipes_button()
+    end
 end
 
 ---------------------------------------------------------------------
@@ -1578,8 +1626,74 @@ function AssetsWindow:_apply_record_view(reset_page)
         self.page_index = 1
     end
 
+    self:_rebuild_visible_recipe_filter_keys()
+    self:_refresh_recipes_button()
     self:_refresh_empty_state()
     self:refresh_page()
+end
+
+function AssetsWindow:_get_crafting_store()
+    if Crafting == nil then
+        return nil
+    end
+
+    if self._crafting_store == nil then
+        if Crafting.get_shared_store ~= nil then
+            self._crafting_store = Crafting.get_shared_store()
+        elseif Crafting.CraftingStore ~= nil then
+            self._crafting_store = Crafting.CraftingStore()
+        end
+    end
+
+    return self._crafting_store
+end
+
+function AssetsWindow:_refresh_recipes_button()
+    local keys = self._visible_recipe_filter_keys
+    local count = 0
+    local loading = false
+    local store = nil
+    if type(keys) == "table" and next(keys) ~= nil then
+        store = self:_get_crafting_store()
+    end
+    if store ~= nil and type(keys) == "table" and next(keys) ~= nil then
+        store:refresh(false, 1)
+        for i = 1, #store.recipes do
+            if store:recipe_uses_item_key(store.recipes[i], keys) == true then
+                count = count + 1
+            end
+        end
+        loading = store:is_loading() == true
+        self._last_crafting_store_version = tonumber(store.version) or 0
+    else
+        self._last_crafting_store_version = nil
+    end
+
+    local button_text
+    if loading == true then
+        if count > 0 then
+            button_text = TR["Recipes"] .. " (" .. tostring(count) .. "+)"
+        else
+            button_text = TR["Recipes"] .. " (...)"
+        end
+    else
+        button_text = TR["Recipes"] .. " (" .. tostring(count) .. ")"
+    end
+
+    self.recipes_button:set_text(button_text)
+    self.recipes_button:set_enabled((count > 0) or loading == true)
+end
+
+function AssetsWindow:_rebuild_visible_recipe_filter_keys()
+    local keys = {}
+    for i = 1, #self.records do
+        local record = self.records[i]
+        local key = _normalize_recipe_filter_key(record ~= nil and record.name or nil)
+        if key ~= "" then
+            keys[key] = true
+        end
+    end
+    self._visible_recipe_filter_keys = keys
 end
 
 function AssetsWindow:_refresh_summary(visible_count, page_start_index)
@@ -1788,9 +1902,21 @@ function AssetsWindow:layout()
     self.summary_bar:SetPosition(margin_left, summary_top)
     self.summary_bar:SetSize(inner_w, summary_h)
 
-    local summary_track_w = math.floor((width * SUMMARY_TRACK_WIDTH_FACTOR) + 0.5)
-    if summary_track_w > inner_w then
-        summary_track_w = inner_w
+    local recipes_button_w = _scaled_int(BASE_RECIPES_BUTTON_W)
+    if recipes_button_w > inner_w then
+        recipes_button_w = inner_w
+    end
+    self.recipes_button:SetPosition(math.max(0, inner_w - recipes_button_w), 0)
+    self.recipes_button:SetSize(recipes_button_w, summary_h)
+
+    local summary_track_area_w = inner_w - recipes_button_w - gap
+    if summary_track_area_w < 0 then
+        summary_track_area_w = 0
+    end
+
+    local summary_track_w = math.floor((summary_track_area_w * SUMMARY_TRACK_WIDTH_FACTOR) + 0.5)
+    if summary_track_w > summary_track_area_w then
+        summary_track_w = summary_track_area_w
     end
     if summary_track_w < 0 then
         summary_track_w = 0
@@ -1801,7 +1927,7 @@ function AssetsWindow:layout()
         summary_track_h = 1
     end
 
-    local summary_track_x = math.floor((inner_w - summary_track_w) / 2)
+    local summary_track_x = math.floor((summary_track_area_w - summary_track_w) / 2)
     if summary_track_x < 0 then
         summary_track_x = 0
     end

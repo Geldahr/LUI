@@ -50,6 +50,7 @@ S.STATUS_BAR_LAYOUT_TOKENS = {
     money = "money",
     wallet = "wallet",
     config = "config",
+    craft = "craft",
     assets = "assets",
     bestiary = "bestiary",
 }
@@ -60,6 +61,7 @@ S.STATUS_BAR_WIDGET_LAYOUT_TOKENS = {
     money = "%gold%",
     wallet = "%wallet%",
     config = "%config%",
+    craft = "%craft%",
     assets = "%assets%",
     bestiary = "%bestiary%",
 }
@@ -70,6 +72,7 @@ S.STATUS_BAR_EDITABLE_WIDGET_KEYS = {
     "money",
     "wallet",
     "config",
+    "craft",
     "assets",
     "bestiary",
 }
@@ -950,6 +953,8 @@ function S.get_status_bar_widget_display_name(widget_key)
         return TR["Wallet"]
     elseif widget_key == "config" then
         return S.get_shortcut_label("config")
+    elseif widget_key == "craft" then
+        return S.get_shortcut_label("craft")
     elseif widget_key == "assets" then
         return S.get_shortcut_label("assets")
     elseif widget_key == "bestiary" then
@@ -1211,6 +1216,8 @@ end
 function S.get_shortcut_icon(shortcut_key)
     if shortcut_key == "config" then
         return S.CONFIG_SHORTCUT_ICON
+    elseif shortcut_key == "craft" then
+        return nil
     elseif shortcut_key == "assets" then
         return S.ASSETS_SHORTCUT_ICON
     elseif shortcut_key == "bestiary" then
@@ -1233,6 +1240,8 @@ end
 function S.get_shortcut_label(shortcut_key)
     if shortcut_key == "config" then
         return TR["Config"]
+    elseif shortcut_key == "craft" then
+        return TR["Craft"]
     elseif shortcut_key == "assets" then
         return TR["Assets"]
     elseif shortcut_key == "bestiary" then
@@ -1244,6 +1253,9 @@ end
 function S.get_shortcut_state(shortcut_key)
     if shortcut_key == "config" then
         return CONFIG_WINDOW ~= nil, S.window_is_visible(CONFIG_WINDOW)
+    elseif shortcut_key == "craft" then
+        local can_open = _G.CRAFTING_WINDOW ~= nil or (Crafting ~= nil and Crafting.CraftingWindow ~= nil)
+        return can_open, S.window_is_visible(_G.CRAFTING_WINDOW)
     elseif shortcut_key == "assets" then
         return ASSETS_WINDOW ~= nil, S.window_is_visible(ASSETS_WINDOW)
     elseif shortcut_key == "bestiary" then
@@ -1257,6 +1269,10 @@ function S.activate_shortcut(shortcut_key)
     if shortcut_key == "config" then
         if _G.toggle_config_shortcut ~= nil then
             _G.toggle_config_shortcut()
+        end
+    elseif shortcut_key == "craft" then
+        if _G.toggle_crafting_shortcut ~= nil then
+            _G.toggle_crafting_shortcut()
         end
     elseif shortcut_key == "assets" then
         if _G.toggle_assets_shortcut ~= nil then

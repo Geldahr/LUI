@@ -313,6 +313,14 @@ function _G.capture_runtime_geometry()
             BESTIARY_WINDOW:persist_geometry()
         end
     end
+
+    if CRAFTING_WINDOW ~= nil then
+        if CRAFTING_WINDOW.capture_geometry ~= nil then
+            CRAFTING_WINDOW:capture_geometry()
+        elseif CRAFTING_WINDOW.persist_geometry ~= nil then
+            CRAFTING_WINDOW:persist_geometry()
+        end
+    end
 end
 
 function _G.save_assets_cache()

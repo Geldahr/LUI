@@ -7,6 +7,7 @@ local S = _G.STATUS_BAR_COMMON
 
 local SHORTCUT_WIDGETS = {
     config = { shortcut_key = "config", display_mode = "icon" },
+    craft = { shortcut_key = "craft", display_mode = "text" },
     assets = { shortcut_key = "assets", display_mode = "icon" },
     bestiary = { shortcut_key = "bestiary", display_mode = "icon" },
 }

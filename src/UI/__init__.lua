@@ -4,6 +4,7 @@ import "LUI.src.Vitals"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Settings"
 import "LUI.src.Inventory"
+import "LUI.src.Crafting"
 import "LUI.src.Assets"
 import "LUI.src.StatusBar"
 
@@ -45,6 +46,24 @@ if inv_pkg ~= nil then
 end
 if UI ~= nil then
     UI.InventoryWindow = InventoryWindow
+end
+
+local crafting_window_ctor = CraftingWindow
+if crafting_window_ctor == nil and type(Crafting) == "table" then
+    crafting_window_ctor = Crafting.CraftingWindow
+end
+if crafting_window_ctor == nil and LUI ~= nil and type(LUI.Crafting) == "table" then
+    crafting_window_ctor = LUI.Crafting.CraftingWindow
+end
+if crafting_window_ctor == nil and Geldahr ~= nil and LUI.src ~= nil and type(LUI.src.Crafting) == "table" then
+    crafting_window_ctor = LUI.src.Crafting.CraftingWindow
+end
+
+if crafting_window_ctor ~= nil then
+    CraftingWindow = crafting_window_ctor
+end
+if UI ~= nil then
+    UI.CraftingWindow = crafting_window_ctor
 end
 
 local assets_window_ctor = AssetsWindow
