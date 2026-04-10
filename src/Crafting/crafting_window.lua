@@ -215,6 +215,27 @@ local function _format_count(value)
     return tostring(number)
 end
 
+local function _ratio_text(current, total)
+    return _format_count(current) .. "/" .. _format_count(total)
+end
+
+local function _top_level_progress(evaluation)
+    if type(evaluation) ~= "table" or type(evaluation.ingredients) ~= "table" then
+        return 0, 0
+    end
+
+    local ready = 0
+    local total = #evaluation.ingredients
+    for index = 1, total do
+        local ingredient = evaluation.ingredients[index]
+        if type(ingredient) == "table" and ingredient.satisfied == true then
+            ready = ready + 1
+        end
+    end
+
+    return ready, total
+end
+
 local function _parse_level_value(text)
     local value = tonumber(_trim(text))
     if value == nil then
@@ -732,7 +753,7 @@ function CraftingPlanRow:set_width(width)
     self:_layout()
 end
 
-function CraftingPlanRow:set_data(recipe, plan_count, evaluation)
+function CraftingPlanRow:set_data(recipe, plan_count, evaluation, craftable_count)
     self.recipe = recipe
     if recipe ~= nil then
         self.icon:bind_item(recipe.result_item_info, recipe.icon_id, recipe.background_image_id)
@@ -741,9 +762,11 @@ function CraftingPlanRow:set_data(recipe, plan_count, evaluation)
     end
     self.name:SetText(recipe ~= nil and recipe.result_name or "")
     self.count_label:SetText(_format_count(plan_count))
-    self.status_label:SetText(CraftingWindow._status_text(nil, evaluation))
-    self.status_label:SetForeColor(CraftingWindow._status_color(nil, evaluation))
-    self:SetBackColor(evaluation ~= nil and evaluation.craftable == true and Turbine.UI.Color(1.00, 0.09, 0.15, 0.11) or
+    craftable_count = _safe_number(craftable_count, plan_count)
+    local all_ready = craftable_count >= _safe_number(plan_count, 0) and _safe_number(plan_count, 0) > 0
+    self.status_label:SetText(_ratio_text(craftable_count, plan_count))
+    self.status_label:SetForeColor(all_ready == true and CraftingWindow._status_color(nil, evaluation) or STATUS_MISSING)
+    self:SetBackColor(all_ready == true and Turbine.UI.Color(1.00, 0.09, 0.15, 0.11) or
         Turbine.UI.Color(1.00, 0.16, 0.09, 0.09))
 end
 
@@ -1171,13 +1194,13 @@ function CraftingWindow._status_text(_, evaluation)
     if evaluation == nil then
         return ""
     end
-    if evaluation.craftable == true then
-        if evaluation.used_expansion == true then
-            return TR["Ready via sub-craft"]
-        end
-        return TR["Ready"]
+
+    local ready, total = _top_level_progress(evaluation)
+    if total <= 0 then
+        return ""
     end
-    return TR["Missing "] .. _format_count(evaluation.missing_total)
+
+    return _ratio_text(ready, total)
 end
 
 function CraftingWindow:bring_to_front()
@@ -1633,10 +1656,7 @@ function CraftingWindow:_ingredient_detail_text(node)
     if node.expanded == true then
         local summary = self:_leaf_summary_text(node)
         if summary ~= "" then
-            if node.satisfied == true then
-                return TR["Auto-crafted from "] .. summary
-            end
-            return TR["Needs "] .. summary
+            return summary
         end
     end
 
@@ -1644,11 +1664,7 @@ function CraftingWindow:_ingredient_detail_text(node)
         return TR["Multiple known sub-recipes; auto-breakdown skipped"]
     end
 
-    if node.satisfied == true then
-        return TR["Directly available"]
-    end
-
-    return TR["Missing resource"]
+    return ""
 end
 
 function CraftingWindow:refresh_selected_recipe()
@@ -1707,7 +1723,7 @@ function CraftingWindow:refresh_selected_recipe()
             node.background_image_id,
             node.name,
             self:_ingredient_detail_text(node),
-            _format_count(node.owned_in_scope) .. " / " .. _format_count(node.required),
+            _ratio_text(node.owned_in_scope, node.required),
             color
         )
         self.ingredients_list:AddItem(row)
@@ -1745,7 +1761,7 @@ function CraftingWindow:refresh_plan()
     if has_plan == true then
         self.plan_summary:SetText(
             _format_count(#plan_entries) .. " " .. TR["recipes"] ..
-            " - " .. _format_count(evaluation.missing_total) .. " " .. TR["missing"]
+            " - " .. _ratio_text(evaluation.craftable_count_total, evaluation.planned_recipe_count)
         )
     else
         self.plan_summary:SetText(TR["No recipes planned"])
@@ -1767,13 +1783,29 @@ function CraftingWindow:refresh_plan()
         )
         row:set_scale(_G.settings.global.scale)
         row:set_width(row_w)
-        row:set_data(entry.recipe, entry.count, entry.evaluation)
+        row:set_data(entry.recipe, entry.count, entry.evaluation, entry.craftable_count)
         self.plan_list:AddItem(row)
+    end
+
+    local leaf_requirements = {}
+    for i = 1, #evaluation.entries do
+        local ingredients = evaluation.entries[i] ~= nil and evaluation.entries[i].evaluation ~= nil and evaluation.entries[i].evaluation.ingredients or nil
+        if type(ingredients) == "table" then
+            for ingredient_index = 1, #ingredients do
+                self:_collect_leaf_requirements(ingredients[ingredient_index], leaf_requirements)
+            end
+        end
     end
 
     local missing_w = self:_current_missing_list_width()
     for i = 1, #evaluation.missing_list do
         local entry = evaluation.missing_list[i]
+        local required_quantity = _safe_number(entry.quantity, 0)
+        local required_entry = leaf_requirements[entry.key]
+        if type(required_entry) == "table" then
+            required_quantity = math.max(required_quantity, _safe_number(required_entry.quantity, 0))
+        end
+        local owned_quantity = math.max(0, required_quantity - _safe_number(entry.quantity, 0))
         local row = CraftingIngredientRow()
         row:set_scale(_G.settings.global.scale)
         row:set_width(missing_w)
@@ -1782,8 +1814,8 @@ function CraftingWindow:refresh_plan()
             entry.icon_id,
             entry.background_image_id,
             entry.name,
-            TR["Still needed for the full build plan"],
-            TR["Missing x"] .. _format_count(entry.quantity),
+            "",
+            _ratio_text(owned_quantity, required_quantity),
             STATUS_MISSING
         )
         self.missing_list:AddItem(row)

@@ -481,6 +481,15 @@ local function _recipe_uses_item_key(recipe, item_key)
     return false
 end
 
+local function _missing_map_has_key(missing_map, item_key)
+    if type(missing_map) ~= "table" or item_key == nil or item_key == "" then
+        return false
+    end
+
+    local entry = missing_map[item_key]
+    return type(entry) == "table" and _safe_number(entry.quantity, 0) > 0
+end
+
 local function _add_result_index_entry(index_map, key, record)
     if type(index_map) ~= "table" or type(record) ~= "table" then
         return
@@ -678,6 +687,7 @@ function CraftingStore:evaluate_plan(plan_entries, scope_key)
         missing_list = {},
         missing_total = 0,
         planned_recipe_count = 0,
+        craftable_count_total = 0,
     }
 
     if type(plan_entries) ~= "table" then
@@ -691,11 +701,14 @@ function CraftingStore:evaluate_plan(plan_entries, scope_key)
         count = math.floor(count + 0.5)
         if recipe ~= nil and count > 0 then
             result.planned_recipe_count = result.planned_recipe_count + count
+            local craftable_count = self:_count_craftable_with_stock(recipe, count, working_stock)
+            result.craftable_count_total = result.craftable_count_total + craftable_count
             local evaluation = self:_evaluate_recipe_with_stock(recipe, count, working_stock)
             working_stock = evaluation.remaining_stock
             result.entries[#result.entries + 1] = {
                 recipe = recipe,
                 count = count,
+                craftable_count = craftable_count,
                 evaluation = evaluation,
             }
             self:_merge_missing_maps(result.missing, evaluation.missing)
@@ -840,20 +853,7 @@ function CraftingStore:_register_recipe_record(record)
 
     self.recipes[#self.recipes + 1] = record
     self.recipe_by_id[record.id] = record
-    if type(record.result_alias_keys) == "table" then
-        for i = 1, #record.result_alias_keys do
-            _add_result_index_entry(self.result_index, record.result_alias_keys[i], record)
-        end
-    else
-        _add_result_index_entry(self.result_index, record.result_key, record)
-    end
-    if type(record.result_visual_keys) == "table" then
-        for i = 1, #record.result_visual_keys do
-            _add_result_index_entry(self.result_visual_index, record.result_visual_keys[i], record)
-        end
-    elseif record.result_visual_key ~= nil then
-        _add_result_index_entry(self.result_visual_index, record.result_visual_key, record)
-    end
+    _add_result_index_entry(self.result_index, record.result_key, record)
 end
 
 function CraftingStore:_step_recipe_load(batch_size)
@@ -966,20 +966,7 @@ function CraftingStore:_collect_recipes(current_character)
                     if record ~= nil then
                         recipes[#recipes + 1] = record
                         recipe_by_id[record.id] = record
-                        if type(record.result_alias_keys) == "table" then
-                            for alias_index = 1, #record.result_alias_keys do
-                                _add_result_index_entry(result_index, record.result_alias_keys[alias_index], record)
-                            end
-                        else
-                            _add_result_index_entry(result_index, record.result_key, record)
-                        end
-                        if type(record.result_visual_keys) == "table" then
-                            for visual_index = 1, #record.result_visual_keys do
-                                _add_result_index_entry(result_visual_index, record.result_visual_keys[visual_index], record)
-                            end
-                        elseif record.result_visual_key ~= nil then
-                            _add_result_index_entry(result_visual_index, record.result_visual_key, record)
-                        end
+                        _add_result_index_entry(result_index, record.result_key, record)
                         _append_token(token_parts, record.id)
                         _append_token(token_parts, record.name)
                         _append_token(token_parts, record.result_name)
@@ -1143,23 +1130,6 @@ function CraftingStore:_get_recipes_for_item(item_key)
         return list
     end
 
-    local meta = self.item_meta[item_key]
-    local visual_key = meta ~= nil and _result_visual_key(meta.item_info, meta.icon_id, meta.background_image_id, meta.quality) or nil
-    if visual_key ~= nil then
-        list = self.result_visual_index[visual_key]
-        if type(list) == "table" and #list > 0 then
-            return list
-        end
-    end
-
-    local legacy_visual_key = meta ~= nil and _legacy_result_visual_key(meta.icon_id, meta.background_image_id, meta.quality) or nil
-    if legacy_visual_key ~= nil and legacy_visual_key ~= visual_key then
-        list = self.result_visual_index[legacy_visual_key]
-        if type(list) == "table" and #list > 0 then
-            return list
-        end
-    end
-
     return nil
 end
 
@@ -1223,6 +1193,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
             local crafts_needed = math.floor(((needed + per_craft - 1) / per_craft) + 0.0)
             local combined_missing = {}
             local all_ok = true
+            local candidate_invalid = false
             local candidate_node = {
                 key = node.key,
                 name = node.name,
@@ -1259,31 +1230,42 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
             end
             visiting[item_key] = nil
 
-            if all_ok == true then
-                local produced = crafts_needed * per_craft
-                candidate_node.produced = produced
-                local leftover = produced - needed
-                if leftover > 0 then
-                    branch_stock[item_key] = _safe_number(branch_stock[item_key], 0) + leftover
+            if _missing_map_has_key(combined_missing, item_key) == true then
+                candidate_invalid = true
+            end
+
+            if candidate_invalid == true then
+                -- Reject recursive breakdowns that still bottom out in the same intermediate item.
+                -- If no exact sub-recipe resolves the ingredient cleanly, the caller should keep the
+                -- intermediate as the missing resource instead of inventing a hybrid leaf quantity.
+                all_ok = false
+            else
+                if all_ok == true then
+                    local produced = crafts_needed * per_craft
+                    candidate_node.produced = produced
+                    local leftover = produced - needed
+                    if leftover > 0 then
+                        branch_stock[item_key] = _safe_number(branch_stock[item_key], 0) + leftover
+                    end
+                    return true, candidate_node, branch_stock, combined_missing
                 end
-                return true, candidate_node, branch_stock, combined_missing
-            end
 
-            candidate_node.missing = needed
-            local missing_total = _sum_missing_map(combined_missing)
-            local missing_distinct = 0
-            for _ in pairs(combined_missing) do
-                missing_distinct = missing_distinct + 1
-            end
+                candidate_node.missing = needed
+                local missing_total = _sum_missing_map(combined_missing)
+                local missing_distinct = 0
+                for _ in pairs(combined_missing) do
+                    missing_distinct = missing_distinct + 1
+                end
 
-            if best_failed_node == nil or
-                missing_total < best_failed_total or
-                (missing_total == best_failed_total and missing_distinct < best_failed_distinct) then
-                best_failed_node = candidate_node
-                best_failed_stock = branch_stock
-                best_failed_missing = combined_missing
-                best_failed_total = missing_total
-                best_failed_distinct = missing_distinct
+                if best_failed_node == nil or
+                    missing_total < best_failed_total or
+                    (missing_total == best_failed_total and missing_distinct < best_failed_distinct) then
+                    best_failed_node = candidate_node
+                    best_failed_stock = branch_stock
+                    best_failed_missing = combined_missing
+                    best_failed_total = missing_total
+                    best_failed_distinct = missing_distinct
+                end
             end
         end
     end
@@ -1365,4 +1347,25 @@ function CraftingStore:_evaluate_recipe_with_stock(recipe, craft_count, stock)
     evaluation.missing_total = _sum_missing_map(evaluation.missing)
     evaluation.missing_list = _missing_map_to_list(evaluation.missing)
     return evaluation
+end
+
+function CraftingStore:_count_craftable_with_stock(recipe, craft_count, stock)
+    local requested = math.max(0, math.floor(_safe_number(craft_count, 0) + 0.5))
+    if requested <= 0 or type(recipe) ~= "table" then
+        return 0
+    end
+
+    local working_stock = _copy_counts(stock)
+    local craftable_count = 0
+
+    for _ = 1, requested do
+        local evaluation = self:_evaluate_recipe_with_stock(recipe, 1, working_stock)
+        if evaluation == nil or evaluation.craftable ~= true then
+            break
+        end
+        craftable_count = craftable_count + 1
+        working_stock = _copy_counts(evaluation.remaining_stock)
+    end
+
+    return craftable_count
 end
