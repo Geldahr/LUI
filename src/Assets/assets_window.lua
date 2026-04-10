@@ -1633,7 +1633,7 @@ function AssetsWindow:_apply_record_view(reset_page)
 end
 
 function AssetsWindow:_get_crafting_store()
-    if Crafting == nil then
+    if _G.LUI_IS_UNLOADING == true or Crafting == nil then
         return nil
     end
 

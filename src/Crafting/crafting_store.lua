@@ -188,6 +188,30 @@ local function _item_info_quality(item_info)
     return _safe_invoke(item_info, "GetQuality")
 end
 
+local function _item_info_category(item_info)
+    return _safe_number(_safe_invoke(item_info, "GetCategory"), nil)
+end
+
+local function _item_info_description(item_info)
+    return _trim(_safe_invoke(item_info, "GetDescription"))
+end
+
+local function _item_info_max_quantity(item_info)
+    return _safe_number(_safe_invoke(item_info, "GetMaxQuantity"), nil)
+end
+
+local function _item_info_max_stack_size(item_info)
+    return _safe_number(_safe_invoke(item_info, "GetMaxStackSize"), nil)
+end
+
+local function _item_info_is_magic(item_info)
+    return _safe_invoke(item_info, "IsMagic") == true and 1 or 0
+end
+
+local function _item_info_is_unique(item_info)
+    return _safe_invoke(item_info, "IsUnique") == true and 1 or 0
+end
+
 local function _positive_integer(value)
     local number = _safe_number(value, nil)
     if number == nil then
@@ -385,6 +409,103 @@ local function _recipe_sort_compare(left, right)
     return _lower(left ~= nil and left.name or nil) < _lower(right ~= nil and right.name or nil)
 end
 
+local function _result_visual_key(item_info, icon_id, background_image_id, quality)
+    local icon = _safe_number(icon_id, nil)
+    if icon == nil then
+        icon = _item_info_icon_id(item_info)
+    end
+    icon = _safe_number(icon, 0) or 0
+
+    local background = _safe_number(background_image_id, nil)
+    if background == nil then
+        background = _item_info_background_id(item_info)
+    end
+    background = _safe_number(background, 0) or 0
+
+    local item_quality = _safe_number(quality, nil)
+    if item_quality == nil then
+        item_quality = _item_info_quality(item_info)
+    end
+    item_quality = _safe_number(item_quality, 0) or 0
+
+    local category = _safe_number(_item_info_category(item_info), 0) or 0
+    local description = _item_info_description(item_info)
+    local max_quantity = _safe_number(_item_info_max_quantity(item_info), 0) or 0
+    local max_stack_size = _safe_number(_item_info_max_stack_size(item_info), 0) or 0
+    local magic_flag = _item_info_is_magic(item_info)
+    local unique_flag = _item_info_is_unique(item_info)
+
+    if icon == 0 and background == 0 and category == 0 and description == "" and max_quantity == 0 and max_stack_size == 0 then
+        return nil
+    end
+
+    return table.concat({
+        tostring(icon),
+        tostring(background),
+        tostring(item_quality),
+        tostring(category),
+        description,
+        tostring(max_quantity),
+        tostring(max_stack_size),
+        tostring(magic_flag),
+        tostring(unique_flag),
+    }, "\30")
+end
+
+local function _legacy_result_visual_key(icon_id, background_image_id, quality)
+    local icon = _safe_number(icon_id, 0) or 0
+    local background = _safe_number(background_image_id, 0) or 0
+    local item_quality = _safe_number(quality, 0) or 0
+    if icon == 0 and background == 0 then
+        return nil
+    end
+    return table.concat({
+        tostring(icon),
+        tostring(background),
+        tostring(item_quality),
+    }, "\30")
+end
+
+local function _recipe_uses_item_key(recipe, item_key)
+    if type(recipe) ~= "table" or type(recipe.ingredients) ~= "table" or item_key == nil or item_key == "" then
+        return false
+    end
+
+    for index = 1, #recipe.ingredients do
+        local ingredient = recipe.ingredients[index]
+        if type(ingredient) == "table" and ingredient.key == item_key then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function _add_result_index_entry(index_map, key, record)
+    if type(index_map) ~= "table" or type(record) ~= "table" then
+        return
+    end
+
+    local normalized_key = _normalize_name(key)
+    if normalized_key == "" then
+        return
+    end
+
+    local list = index_map[normalized_key]
+    if type(list) ~= "table" then
+        list = {}
+        index_map[normalized_key] = list
+    end
+
+    for i = 1, #list do
+        if list[i] == record then
+            return
+        end
+    end
+
+    list[#list + 1] = record
+end
+
 function CraftingStore:Constructor()
     Turbine.UI.Control.Constructor(self)
 
@@ -396,6 +517,7 @@ function CraftingStore:Constructor()
     self.recipes = {}
     self.recipe_by_id = {}
     self.result_index = {}
+    self.result_visual_index = {}
     self.item_meta = {}
     self.ownership = {
         [SCOPE_SERVER] = {},
@@ -697,6 +819,7 @@ function CraftingStore:_start_recipe_load(current_character)
     self.recipes = {}
     self.recipe_by_id = {}
     self.result_index = {}
+    self.result_visual_index = {}
     self.item_meta = {}
     self.profession_option_labels = profession_labels
     self.profession_option_values = profession_values
@@ -717,10 +840,20 @@ function CraftingStore:_register_recipe_record(record)
 
     self.recipes[#self.recipes + 1] = record
     self.recipe_by_id[record.id] = record
-    if type(self.result_index[record.result_key]) ~= "table" then
-        self.result_index[record.result_key] = {}
+    if type(record.result_alias_keys) == "table" then
+        for i = 1, #record.result_alias_keys do
+            _add_result_index_entry(self.result_index, record.result_alias_keys[i], record)
+        end
+    else
+        _add_result_index_entry(self.result_index, record.result_key, record)
     end
-    self.result_index[record.result_key][#self.result_index[record.result_key] + 1] = record
+    if type(record.result_visual_keys) == "table" then
+        for i = 1, #record.result_visual_keys do
+            _add_result_index_entry(self.result_visual_index, record.result_visual_keys[i], record)
+        end
+    elseif record.result_visual_key ~= nil then
+        _add_result_index_entry(self.result_visual_index, record.result_visual_key, record)
+    end
 end
 
 function CraftingStore:_step_recipe_load(batch_size)
@@ -776,6 +909,7 @@ function CraftingStore:_collect_recipes(current_character)
     local recipes = {}
     local recipe_by_id = {}
     local result_index = {}
+    local result_visual_index = {}
     local item_meta = {}
     local profession_labels = { TR["All professions"] }
     local profession_values = { FILTER_ALL }
@@ -789,6 +923,7 @@ function CraftingStore:_collect_recipes(current_character)
             recipes = recipes,
             recipe_by_id = recipe_by_id,
             result_index = result_index,
+            result_visual_index = result_visual_index,
             item_meta = item_meta,
             profession_labels = profession_labels,
             profession_values = profession_values,
@@ -831,10 +966,20 @@ function CraftingStore:_collect_recipes(current_character)
                     if record ~= nil then
                         recipes[#recipes + 1] = record
                         recipe_by_id[record.id] = record
-                        if type(result_index[record.result_key]) ~= "table" then
-                            result_index[record.result_key] = {}
+                        if type(record.result_alias_keys) == "table" then
+                            for alias_index = 1, #record.result_alias_keys do
+                                _add_result_index_entry(result_index, record.result_alias_keys[alias_index], record)
+                            end
+                        else
+                            _add_result_index_entry(result_index, record.result_key, record)
                         end
-                        result_index[record.result_key][#result_index[record.result_key] + 1] = record
+                        if type(record.result_visual_keys) == "table" then
+                            for visual_index = 1, #record.result_visual_keys do
+                                _add_result_index_entry(result_visual_index, record.result_visual_keys[visual_index], record)
+                            end
+                        elseif record.result_visual_key ~= nil then
+                            _add_result_index_entry(result_visual_index, record.result_visual_key, record)
+                        end
                         _append_token(token_parts, record.id)
                         _append_token(token_parts, record.name)
                         _append_token(token_parts, record.result_name)
@@ -851,6 +996,7 @@ function CraftingStore:_collect_recipes(current_character)
         recipes = recipes,
         recipe_by_id = recipe_by_id,
         result_index = result_index,
+        result_visual_index = result_visual_index,
         item_meta = item_meta,
         profession_labels = profession_labels,
         profession_values = profession_values,
@@ -924,6 +1070,16 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         cooldown = _safe_number(_safe_invoke(recipe, "GetCooldown"), 0),
         result_name = result_name,
         result_key = result_key,
+        result_alias_keys = {
+            result_key,
+            _normalize_name(recipe_name),
+        },
+        result_visual_key = _result_visual_key(
+            result_info,
+            _item_info_icon_id(result_info),
+            _item_info_background_id(result_info),
+            _item_info_quality(result_info)
+        ),
         result_quantity = math.max(1, _safe_number(_safe_invoke(recipe, "GetResultItemQuantity"), 1)),
         icon_id = _item_info_icon_id(result_info),
         background_image_id = _item_info_background_id(result_info),
@@ -932,6 +1088,11 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         result_item_info = result_info,
         ingredients = ingredients,
         haystack_lower = table.concat(filter_parts, "\n"),
+    }
+
+    record.result_visual_keys = {
+        record.result_visual_key,
+        _legacy_result_visual_key(record.icon_id, record.background_image_id, record.quality),
     }
 
     return record
@@ -976,12 +1137,30 @@ function CraftingStore:_make_missing_entry(item_key, quantity)
     }
 end
 
-function CraftingStore:_choose_recipe_for_item(item_key)
+function CraftingStore:_get_recipes_for_item(item_key)
     local list = self.result_index[item_key]
-    if type(list) ~= "table" or #list ~= 1 then
-        return nil, type(list) == "table" and #list > 1
+    if type(list) == "table" and #list > 0 then
+        return list
     end
-    return list[1], false
+
+    local meta = self.item_meta[item_key]
+    local visual_key = meta ~= nil and _result_visual_key(meta.item_info, meta.icon_id, meta.background_image_id, meta.quality) or nil
+    if visual_key ~= nil then
+        list = self.result_visual_index[visual_key]
+        if type(list) == "table" and #list > 0 then
+            return list
+        end
+    end
+
+    local legacy_visual_key = meta ~= nil and _legacy_result_visual_key(meta.icon_id, meta.background_image_id, meta.quality) or nil
+    if legacy_visual_key ~= nil and legacy_visual_key ~= visual_key then
+        list = self.result_visual_index[legacy_visual_key]
+        if type(list) == "table" and #list > 0 then
+            return list
+        end
+    end
+
+    return nil
 end
 
 function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
@@ -1022,57 +1201,101 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
         return true, node, next_stock, {}
     end
 
-    local recipe, ambiguous = self:_choose_recipe_for_item(item_key)
-    if recipe == nil or visiting[item_key] == true then
-        node.ambiguous = ambiguous == true
+    local recipes = self:_get_recipes_for_item(item_key)
+    if recipes == nil or visiting[item_key] == true then
         node.missing = needed
         return false, node, next_stock, {
             [item_key] = self:_make_missing_entry(item_key, needed),
         }
     end
 
-    local branch_stock = _copy_counts(next_stock)
-    local per_craft = math.max(1, _safe_number(recipe.result_quantity, 1))
-    local crafts_needed = math.floor(((needed + per_craft - 1) / per_craft) + 0.0)
-    local combined_missing = {}
-    local all_ok = true
+    local best_failed_node = nil
+    local best_failed_stock = nil
+    local best_failed_missing = nil
+    local best_failed_total = nil
+    local best_failed_distinct = nil
 
-    node.expanded = true
-    node.recipe = recipe
-    node.craft_count = crafts_needed
-    node.children = {}
+    for recipe_index = 1, #recipes do
+        local recipe = recipes[recipe_index]
+        if _recipe_uses_item_key(recipe, item_key) ~= true then
+            local branch_stock = _copy_counts(next_stock)
+            local per_craft = math.max(1, _safe_number(recipe.result_quantity, 1))
+            local crafts_needed = math.floor(((needed + per_craft - 1) / per_craft) + 0.0)
+            local combined_missing = {}
+            local all_ok = true
+            local candidate_node = {
+                key = node.key,
+                name = node.name,
+                required = node.required,
+                from_stock = node.from_stock,
+                produced = 0,
+                craft_count = crafts_needed,
+                expanded = true,
+                ambiguous = false,
+                missing = 0,
+                recipe = recipe,
+                children = {},
+                icon_id = node.icon_id,
+                background_image_id = node.background_image_id,
+                quality = node.quality,
+                item_info = node.item_info,
+            }
 
-    visiting[item_key] = true
-    for i = 1, #recipe.ingredients do
-        local ingredient = recipe.ingredients[i]
-        local child_ok, child_node, child_stock, child_missing = self:_satisfy_item(
-            branch_stock,
-            ingredient.key,
-            ingredient.quantity * crafts_needed,
-            visiting
-        )
-        branch_stock = child_stock
-        node.children[#node.children + 1] = child_node
-        self:_merge_missing_maps(combined_missing, child_missing)
-        if child_ok ~= true then
-            all_ok = false
+            visiting[item_key] = true
+            for i = 1, #recipe.ingredients do
+                local ingredient = recipe.ingredients[i]
+                local child_ok, child_node, child_stock, child_missing = self:_satisfy_item(
+                    branch_stock,
+                    ingredient.key,
+                    ingredient.quantity * crafts_needed,
+                    visiting
+                )
+                branch_stock = child_stock
+                candidate_node.children[#candidate_node.children + 1] = child_node
+                self:_merge_missing_maps(combined_missing, child_missing)
+                if child_ok ~= true then
+                    all_ok = false
+                end
+            end
+            visiting[item_key] = nil
+
+            if all_ok == true then
+                local produced = crafts_needed * per_craft
+                candidate_node.produced = produced
+                local leftover = produced - needed
+                if leftover > 0 then
+                    branch_stock[item_key] = _safe_number(branch_stock[item_key], 0) + leftover
+                end
+                return true, candidate_node, branch_stock, combined_missing
+            end
+
+            candidate_node.missing = needed
+            local missing_total = _sum_missing_map(combined_missing)
+            local missing_distinct = 0
+            for _ in pairs(combined_missing) do
+                missing_distinct = missing_distinct + 1
+            end
+
+            if best_failed_node == nil or
+                missing_total < best_failed_total or
+                (missing_total == best_failed_total and missing_distinct < best_failed_distinct) then
+                best_failed_node = candidate_node
+                best_failed_stock = branch_stock
+                best_failed_missing = combined_missing
+                best_failed_total = missing_total
+                best_failed_distinct = missing_distinct
+            end
         end
     end
-    visiting[item_key] = nil
 
-    if all_ok ~= true then
-        node.missing = needed
-        return false, node, branch_stock, combined_missing
+    if best_failed_node ~= nil then
+        return false, best_failed_node, best_failed_stock, best_failed_missing
     end
 
-    local produced = crafts_needed * per_craft
-    node.produced = produced
-    local leftover = produced - needed
-    if leftover > 0 then
-        branch_stock[item_key] = _safe_number(branch_stock[item_key], 0) + leftover
-    end
-
-    return true, node, branch_stock, combined_missing
+    node.missing = needed
+    return false, node, next_stock, {
+        [item_key] = self:_make_missing_entry(item_key, needed),
+    }
 end
 
 function CraftingStore:_node_has_expansion(node)

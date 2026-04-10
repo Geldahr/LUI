@@ -6,6 +6,9 @@ import "LUI.src.Crafting.crafting_window"
 local _shared_store = nil
 
 function Crafting.get_shared_store()
+    if _G.LUI_IS_UNLOADING == true then
+        return nil
+    end
     if _shared_store == nil then
         _shared_store = CraftingStore()
         _G.CRAFTING_STORE = _shared_store

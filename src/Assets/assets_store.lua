@@ -643,8 +643,14 @@ function AssetsStore:Update()
         self.generation = self.generation + 1
     end
 
-    if _G.CRAFTING_STORE ~= nil and _G.CRAFTING_STORE.refresh ~= nil then
-        _G.CRAFTING_STORE:refresh(false, 1)
+    if _G.LUI_IS_UNLOADING ~= true then
+        local crafting_store = _G.CRAFTING_STORE
+        if crafting_store == nil and Crafting ~= nil and Crafting.get_shared_store ~= nil then
+            crafting_store = Crafting.get_shared_store()
+        end
+        if crafting_store ~= nil and crafting_store.refresh ~= nil then
+            crafting_store:refresh(false, 1)
+        end
     end
 end
 

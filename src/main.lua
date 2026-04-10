@@ -216,14 +216,12 @@ function apply_cooldowns_settings()
 end
 
 function apply_crafting_settings()
-    if Crafting ~= nil and Crafting.get_shared_store ~= nil then
-        Crafting.get_shared_store()
-    end
-
     if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
         CRAFTING_WINDOW:apply_settings()
     end
 end
+
+_G.LUI_IS_UNLOADING = false
 
 load_settings()
 if _G.loaded_settings_was_new == true then
@@ -279,6 +277,7 @@ Turbine.Shell.WriteLine(string.format(
 ))
 
 Plugins["LUI"].Unload = function()
+    _G.LUI_IS_UNLOADING = true
     save_settings()
     if _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK ~= nil then
         _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()

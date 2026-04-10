@@ -101,27 +101,113 @@ local function _lower(text)
     return string.lower(_safe_string(text, ""))
 end
 
-local function _parse_terms(text)
-    local terms = {}
-    local query = _lower(text)
-    for term in query:gmatch("%S+") do
-        terms[#terms + 1] = term
+local function _push_query_term(group, term)
+    if type(term) ~= "string" then
+        return
     end
-    return terms
+    local trimmed = _trim(term)
+    if trimmed == "" then
+        return
+    end
+    group[#group + 1] = trimmed
 end
 
-local function _matches_terms(terms, haystack)
-    if type(terms) ~= "table" or #terms == 0 then
+local function _end_query_group(groups, group)
+    if type(group) ~= "table" or #group == 0 then
+        return
+    end
+    groups[#groups + 1] = group
+end
+
+local function _parse_query(text)
+    local query = _safe_string(text, "")
+    local groups = {}
+    local current_group = {}
+    local index = 1
+    local length = #query
+
+    while index <= length do
+        local char = query:sub(index, index)
+        if char == "\"" then
+            local end_index = index + 1
+            while end_index <= length and query:sub(end_index, end_index) ~= "\"" do
+                end_index = end_index + 1
+            end
+            _push_query_term(current_group, query:sub(index + 1, end_index - 1))
+            index = (end_index <= length) and (end_index + 1) or (length + 1)
+        elseif char == "|" then
+            _end_query_group(groups, current_group)
+            current_group = {}
+            index = index + 1
+        elseif char:match("%s") then
+            index = index + 1
+        else
+            local end_index = index
+            while end_index <= length do
+                local next_char = query:sub(end_index, end_index)
+                if next_char == "|" or next_char == "\"" or next_char:match("%s") then
+                    break
+                end
+                end_index = end_index + 1
+            end
+            _push_query_term(current_group, query:sub(index, end_index - 1))
+            index = end_index
+        end
+    end
+
+    _end_query_group(groups, current_group)
+    return groups
+end
+
+local function _normalize_query_groups(groups)
+    if type(groups) ~= "table" or #groups == 0 then
+        return {}
+    end
+
+    local normalized_groups = {}
+    for group_index = 1, #groups do
+        local group = groups[group_index]
+        if type(group) == "table" and #group > 0 then
+            local normalized_terms = {}
+            for term_index = 1, #group do
+                local term = group[term_index]
+                if type(term) == "string" then
+                    term = _lower(term)
+                    if term ~= "" then
+                        normalized_terms[#normalized_terms + 1] = term
+                    end
+                end
+            end
+            if #normalized_terms > 0 then
+                normalized_groups[#normalized_groups + 1] = normalized_terms
+            end
+        end
+    end
+
+    return normalized_groups
+end
+
+local function _matches_query_groups(groups, haystack)
+    if type(groups) ~= "table" or #groups == 0 then
         return true
     end
 
     local text = _lower(haystack)
-    for i = 1, #terms do
-        if string.find(text, terms[i], 1, true) == nil then
-            return false
+    for group_index = 1, #groups do
+        local group = groups[group_index]
+        local matched = true
+        for term_index = 1, #group do
+            if string.find(text, group[term_index], 1, true) == nil then
+                matched = false
+                break
+            end
+        end
+        if matched == true then
+            return true
         end
     end
-    return true
+
+    return false
 end
 
 local function _format_count(value)
@@ -732,7 +818,7 @@ function CraftingWindow:Constructor()
     self._loading_visible = false
     self.store = Crafting.get_shared_store ~= nil and Crafting.get_shared_store() or Crafting.CraftingStore()
     self._last_store_version = _safe_number(self.store ~= nil and self.store.version or nil, 0)
-    self.search_terms = {}
+    self.search_groups = {}
     self.scope_key = SCOPE_PERSONAL
     self.profession_filter = FILTER_ALL
     self.availability_filter = AVAILABILITY_ALL
@@ -755,7 +841,8 @@ function CraftingWindow:Constructor()
     self.search_box:SetParent(self.top_bar)
     self.search_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.search_box.TextChanged = function()
-        self.search_terms = _parse_terms(self.search_box:GetText())
+        self.search_groups = _normalize_query_groups(_parse_query(self.search_box:GetText()))
+        self:_invalidate_recipe_list()
         self:refresh_recipe_list()
     end
 
@@ -764,7 +851,8 @@ function CraftingWindow:Constructor()
     self.clear_button:set_text(TR["Clear"])
     self.clear_button.Click = function()
         self.search_box:SetText("")
-        self.search_terms = {}
+        self.search_groups = {}
+        self:_invalidate_recipe_list()
         self:refresh_recipe_list()
         self.search_box:Focus()
     end
@@ -1259,13 +1347,14 @@ function CraftingWindow:refresh_from_store(reset_filters)
     self.profession_dropdown:SetValue(self.profession_filter)
 
     if reset_filters == true then
-        self.search_terms = _parse_terms(self.search_box:GetText())
+        self.search_groups = _normalize_query_groups(_parse_query(self.search_box:GetText()))
     end
 
-    local loading = self.store:is_loading() == true
     self:refresh_recipe_list()
-    if reset_filters == true or loading ~= true or self.selected_recipe_id == nil then
+    if reset_filters == true or self.selected_recipe_id ~= nil then
         self:refresh_selected_recipe()
+    end
+    if reset_filters == true or #self.plan_order > 0 then
         self:refresh_plan()
     end
     self:refresh_loading_state()
@@ -1355,7 +1444,7 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
     if self.profession_filter ~= FILTER_ALL and recipe.profession_key ~= self.profession_filter then
         return false
     end
-    if _matches_terms(self.search_terms, recipe.haystack_lower) ~= true then
+    if _matches_query_groups(self.search_groups, recipe.haystack_lower) ~= true then
         return false
     end
     if type(self.material_filter_keys) == "table" and self.store:recipe_uses_item_key(recipe, self.material_filter_keys) ~= true then
@@ -1398,7 +1487,7 @@ function CraftingWindow:_recipe_filter_signature()
         _safe_string(self.level_min_filter, ""),
         _safe_string(self.level_max_filter, ""),
         _safe_string(self.search_box ~= nil and self.search_box:GetText() or "", ""),
-        tostring(self.material_filter_keys),
+        _safe_string(self.material_filter_keys ~= nil and next(self.material_filter_keys) ~= nil and "material_filter" or "", ""),
     }, "\30")
 end
 
