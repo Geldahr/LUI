@@ -8,6 +8,7 @@ import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.color_field"
 import "LUI.src.UI.Widgets.dropdown"
 import "LUI.src.UI.Widgets.tab_bar"
+import "LUI.src.UI.Widgets.spin_box"
 
 _G.LuiLabel = LuiLabel
 _G.Image = Image
@@ -16,6 +17,7 @@ _G.LuiButton = LuiButton
 _G.LuiColorField = LuiColorField
 _G.LuiDropdown = LuiDropdown
 _G.LuiTabBar = LuiTabBar
+_G.LuiSpinBox = LuiSpinBox
 
 UI.Widgets.LuiLabel = LuiLabel
 UI.Widgets.Image = Image
@@ -24,3 +26,4 @@ UI.Widgets.LuiButton = LuiButton
 UI.Widgets.LuiColorField = LuiColorField
 UI.Widgets.LuiDropdown = LuiDropdown
 UI.Widgets.LuiTabBar = LuiTabBar
+UI.Widgets.LuiSpinBox = LuiSpinBox

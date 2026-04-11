@@ -34,8 +34,7 @@ local BASE_SCROLL_W = 10
 local BASE_PANEL_BORDER = 1
 local BASE_DETAIL_HEADER_H = 78
 local BASE_PLAN_HEADER_H = 24
-local BASE_PLAN_CONTROLS_W = 102
-local BASE_PLAN_QTY_W = 28
+local BASE_PLAN_CONTROLS_W = 72
 local BASE_SMALL_BUTTON_W = 22
 local BASE_STATUS_W = 120
 local BASE_TREE_INDENT_W = 16
@@ -700,12 +699,11 @@ end
 
 local CraftingPlanRow = class(Turbine.UI.Control)
 
-function CraftingPlanRow:Constructor(on_minus, on_plus, on_remove)
+function CraftingPlanRow:Constructor(on_count_changed, on_remove)
     Turbine.UI.Control.Constructor(self)
 
     self._scale = 1
-    self._on_minus = on_minus
-    self._on_plus = on_plus
+    self._on_count_changed = on_count_changed
     self._on_remove = on_remove
     self.recipe = nil
 
@@ -725,27 +723,16 @@ function CraftingPlanRow:Constructor(on_minus, on_plus, on_remove)
     self.status_label:SetMouseVisible(false)
     self.status_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
 
-    self.minus_button = UI.Widgets.LuiButton()
-    self.minus_button:SetParent(self)
-    self.minus_button:set_text("-")
-    self.minus_button.Click = function()
-        if self.recipe ~= nil and type(self._on_minus) == "function" then
-            self._on_minus(self.recipe)
-        end
-    end
-
-    self.count_label = UI.Widgets.LuiLabel()
-    self.count_label:SetParent(self)
-    self.count_label:SetMouseVisible(false)
-    self.count_label:SetForeColor(TEXT_MAIN)
-    self.count_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-
-    self.plus_button = UI.Widgets.LuiButton()
-    self.plus_button:SetParent(self)
-    self.plus_button:set_text("+")
-    self.plus_button.Click = function()
-        if self.recipe ~= nil and type(self._on_plus) == "function" then
-            self._on_plus(self.recipe)
+    self.count_box = UI.Widgets.LuiSpinBox()
+    self.count_box:SetParent(self)
+    self.count_box:set_render(UI.Widgets.LuiSpinBox.render.PLUS_MINUS)
+    self.count_box:set_minimum(0)
+    self.count_box:set_step(1)
+    self.count_box:set_decimals(0)
+    self.count_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.count_box.ValueChanged = function(_, value)
+        if self.recipe ~= nil and type(self._on_count_changed) == "function" then
+            self._on_count_changed(self.recipe, value)
         end
     end
 
@@ -763,9 +750,9 @@ function CraftingPlanRow:set_scale(scale)
     self._scale = scale
     self.name:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.status_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.count_label:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.minus_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
-    self.plus_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
+    self.count_box:set_scale(scale)
+    self.count_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.remove_button:set_scale(scale)
     self.remove_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
 end
 
@@ -782,7 +769,8 @@ function CraftingPlanRow:set_data(recipe, plan_count, evaluation, craftable_coun
         self.icon:bind_item(nil, nil, nil)
     end
     self.name:SetText(recipe ~= nil and recipe.result_name or "")
-    self.count_label:SetText(_format_count(plan_count))
+    self.count_box:set_value(plan_count, false)
+    self.count_box:set_enabled(recipe ~= nil)
     craftable_count = _safe_number(craftable_count, plan_count)
     local all_ready = craftable_count >= _safe_number(plan_count, 0) and _safe_number(plan_count, 0) > 0
     self.status_label:SetText(_ratio_text(craftable_count, plan_count))
@@ -804,29 +792,21 @@ function CraftingPlanRow:_layout()
         icon_side = 0
     end
     local button_w = _scaled_int(BASE_SMALL_BUTTON_W)
-    local count_w = _scaled_int(BASE_PLAN_QTY_W)
+    local count_w = _scaled_int(BASE_PLAN_CONTROLS_W)
+    local control_h = _scaled_int(BASE_BAR_H)
     local status_w = _scaled_int(BASE_STATUS_W)
     local remove_w = button_w
     local right = width - gap
+    local control_y = math.max(0, math.floor((height - control_h) / 2))
 
-    self.remove_button:SetSize(remove_w, height - _scaled_int(2))
+    self.remove_button:SetSize(remove_w, control_h)
     right = right - remove_w
-    self.remove_button:SetPosition(right, _scaled_int(1))
+    self.remove_button:SetPosition(right, control_y)
 
     right = right - gap
-    self.plus_button:SetSize(button_w, height - _scaled_int(2))
-    right = right - button_w
-    self.plus_button:SetPosition(right, _scaled_int(1))
-
-    right = right - gap
-    self.count_label:SetPosition(right - count_w, 0)
-    self.count_label:SetSize(count_w, height)
+    self.count_box:SetPosition(right - count_w, control_y)
+    self.count_box:SetSize(count_w, control_h)
     right = right - count_w
-
-    right = right - gap
-    self.minus_button:SetSize(button_w, height - _scaled_int(2))
-    right = right - button_w
-    self.minus_button:SetPosition(right, _scaled_int(1))
 
     right = right - gap
     self.status_label:SetPosition(right - status_w, 0)
@@ -842,6 +822,7 @@ end
 
 function CraftingPlanRow:destroy()
     _destroy_control(self.icon)
+    _destroy_control(self.count_box)
     self:SetVisible(false)
 end
 
@@ -1059,29 +1040,17 @@ function CraftingWindow:Constructor()
     self.plan_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.plan_label:SetText(TR["Build plan"])
 
-    self.plan_minus_button = UI.Widgets.LuiButton()
-    self.plan_minus_button:SetParent(self.detail_panel.inner)
-    self.plan_minus_button:set_text("-")
-    self.plan_minus_button.Click = function()
+    self.plan_spin_box = UI.Widgets.LuiSpinBox()
+    self.plan_spin_box:SetParent(self.detail_panel.inner)
+    self.plan_spin_box:set_render(UI.Widgets.LuiSpinBox.render.PLUS_MINUS)
+    self.plan_spin_box:set_minimum(0)
+    self.plan_spin_box:set_step(1)
+    self.plan_spin_box:set_decimals(0)
+    self.plan_spin_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.plan_spin_box.ValueChanged = function(_, value)
         local recipe = self:_selected_recipe()
         if recipe ~= nil then
-            self:adjust_plan_count(recipe.id, -1)
-        end
-    end
-
-    self.plan_count_label = UI.Widgets.LuiLabel()
-    self.plan_count_label:SetParent(self.detail_panel.inner)
-    self.plan_count_label:SetMouseVisible(false)
-    self.plan_count_label:SetForeColor(TEXT_MAIN)
-    self.plan_count_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-
-    self.plan_plus_button = UI.Widgets.LuiButton()
-    self.plan_plus_button:SetParent(self.detail_panel.inner)
-    self.plan_plus_button:set_text("+")
-    self.plan_plus_button.Click = function()
-        local recipe = self:_selected_recipe()
-        if recipe ~= nil then
-            self:adjust_plan_count(recipe.id, 1)
+            self:set_plan_count(recipe.id, value)
         end
     end
 
@@ -1402,9 +1371,8 @@ function CraftingWindow:apply_settings()
     self.detail_meta:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.detail_status:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.plan_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.plan_minus_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
-    self.plan_count_label:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.plan_plus_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
+    self.plan_spin_box:set_scale(_G.settings.global.scale)
+    self.plan_spin_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.ingredients_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.detail_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.queue_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
@@ -1813,7 +1781,8 @@ function CraftingWindow:refresh_selected_recipe()
         self.detail_title:SetText("")
         self.detail_meta:SetText("")
         self.detail_status:SetText("")
-        self.plan_count_label:SetText("0")
+        self.plan_spin_box:set_enabled(false)
+        self.plan_spin_box:set_value(0, false)
         self.ingredients_list:SetVisible(false)
         self.ingredients_scroll:SetVisible(false)
         return
@@ -1844,7 +1813,8 @@ function CraftingWindow:refresh_selected_recipe()
     self.detail_meta:SetText(table.concat(meta_parts, " - "))
     self.detail_status:SetText(self:_status_text(evaluation))
     self.detail_status:SetForeColor(self:_status_color(evaluation))
-    self.plan_count_label:SetText(_format_count(self.plan_counts[recipe.id] or 0))
+    self.plan_spin_box:set_enabled(true)
+    self.plan_spin_box:set_value(self.plan_counts[recipe.id] or 0, false)
 
     local row_w = self:_current_detail_list_width()
     for i = 1, #evaluation.ingredients do
@@ -1898,11 +1868,8 @@ function CraftingWindow:refresh_plan()
     for i = 1, #evaluation.entries do
         local entry = evaluation.entries[i]
         local queue_row = CraftingPlanRow(
-            function(recipe)
-                self:adjust_plan_count(recipe.id, -1)
-            end,
-            function(recipe)
-                self:adjust_plan_count(recipe.id, 1)
+            function(recipe, value)
+                self:set_plan_count(recipe.id, value)
             end,
             function(recipe)
                 self:set_plan_count(recipe.id, 0)
@@ -1914,11 +1881,8 @@ function CraftingWindow:refresh_plan()
         self.queue_list:AddItem(queue_row)
 
         local plan_row = CraftingPlanRow(
-            function(recipe)
-                self:adjust_plan_count(recipe.id, -1)
-            end,
-            function(recipe)
-                self:adjust_plan_count(recipe.id, 1)
+            function(recipe, value)
+                self:set_plan_count(recipe.id, value)
             end,
             function(recipe)
                 self:set_plan_count(recipe.id, 0)
@@ -1980,9 +1944,11 @@ function CraftingWindow:refresh_plan()
 
     local selected_recipe = self:_selected_recipe()
     if selected_recipe ~= nil then
-        self.plan_count_label:SetText(_format_count(self.plan_counts[selected_recipe.id] or 0))
+        self.plan_spin_box:set_enabled(true)
+        self.plan_spin_box:set_value(self.plan_counts[selected_recipe.id] or 0, false)
     else
-        self.plan_count_label:SetText("0")
+        self.plan_spin_box:set_enabled(false)
+        self.plan_spin_box:set_value(0, false)
     end
 end
 
@@ -2087,8 +2053,6 @@ function CraftingWindow:layout()
     local detail_header_h = _scaled_int(BASE_DETAIL_HEADER_H)
     local plan_header_h = _scaled_int(BASE_PLAN_HEADER_H)
     local section_bar_h = plan_header_h
-    local small_button_w = _scaled_int(BASE_SMALL_BUTTON_W)
-    local plan_qty_w = _scaled_int(BASE_PLAN_QTY_W)
     local plan_controls_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local loading_track_h = _scaled_int(BASE_LOADING_TRACK_H)
 
@@ -2199,12 +2163,8 @@ function CraftingWindow:layout()
     local plan_controls_x = detail_inner:GetWidth() - plan_controls_w
     self.plan_label:SetPosition(plan_controls_x, _scaled_int(6))
     self.plan_label:SetSize(plan_controls_w, _scaled_int(16))
-    self.plan_minus_button:SetPosition(plan_controls_x, _scaled_int(26))
-    self.plan_minus_button:SetSize(small_button_w, bar_h)
-    self.plan_count_label:SetPosition(plan_controls_x + small_button_w + gap, _scaled_int(26))
-    self.plan_count_label:SetSize(plan_qty_w, bar_h)
-    self.plan_plus_button:SetPosition(plan_controls_x + small_button_w + gap + plan_qty_w + gap, _scaled_int(26))
-    self.plan_plus_button:SetSize(small_button_w, bar_h)
+    self.plan_spin_box:SetPosition(plan_controls_x, _scaled_int(24))
+    self.plan_spin_box:SetSize(plan_controls_w, bar_h)
 
     local ingredients_header_y = detail_header_h - section_bar_h
     if ingredients_header_y < 0 then
