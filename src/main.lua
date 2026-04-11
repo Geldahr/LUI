@@ -39,6 +39,9 @@ end
 
 local function _ensure_crafting_window()
     local window = _G.CRAFTING_WINDOW
+    if Crafting ~= nil and Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true then
+        return nil
+    end
     if window == nil and Crafting ~= nil and Crafting.CraftingWindow ~= nil then
         window = Crafting.CraftingWindow()
         _G.CRAFTING_WINDOW = window
@@ -256,6 +259,23 @@ function apply_cooldowns_settings()
 end
 
 function apply_crafting_settings()
+    local enabled = _G.settings ~= nil and _G.settings.crafting ~= nil and _G.settings.crafting.enabled == true
+
+    if enabled ~= true then
+        if CRAFTING_WINDOW ~= nil then
+            if CRAFTING_WINDOW.SetVisible ~= nil then
+                CRAFTING_WINDOW:SetVisible(false)
+            end
+            CRAFTING_WINDOW.store = nil
+            CRAFTING_WINDOW = nil
+            _G.CRAFTING_WINDOW = nil
+        end
+        if Crafting ~= nil and Crafting.destroy_shared_store ~= nil then
+            Crafting.destroy_shared_store()
+        end
+        return
+    end
+
     if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
         CRAFTING_WINDOW:apply_settings()
     end

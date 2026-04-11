@@ -7,6 +7,10 @@ local _shared_store = nil
 local _tracked_plan_cache = nil
 local _tracked_plan_autoload_after = nil
 
+local function _is_enabled()
+    return type(_G.settings) == "table" and type(_G.settings.crafting) == "table" and _G.settings.crafting.enabled == true
+end
+
 local function _copy_tracked_plan_entries(entries)
     local out = {}
     if type(entries) ~= "table" then
@@ -76,8 +80,12 @@ function Crafting.invalidate_tracked_plan_cache()
     _tracked_plan_cache = nil
 end
 
+function Crafting.is_enabled()
+    return _is_enabled()
+end
+
 function Crafting.get_shared_store()
-    if _G.LUI_IS_UNLOADING == true then
+    if _G.LUI_IS_UNLOADING == true or _is_enabled() ~= true then
         return nil
     end
     if _shared_store == nil then
@@ -158,6 +166,20 @@ end
 function Crafting.get_tracked_plan_resource_state(store)
     local entries = Crafting.get_tracked_plan_entries()
     local signature = _tracked_plan_signature(entries)
+    if _is_enabled() ~= true then
+        return {
+            resources = {},
+            incomplete_resources = {},
+            ready = false,
+            saved_entry_count = 0,
+            unresolved_count = 0,
+            total_entry_count = 0,
+            loading = false,
+            loading_loaded = 0,
+            loading_total = 0,
+            loading_complete = false,
+        }
+    end
     if #entries <= 0 then
         return {
             resources = {},

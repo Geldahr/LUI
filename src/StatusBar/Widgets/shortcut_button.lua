@@ -24,6 +24,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
 
     self.button = LuiButton()
     self.button:SetParent(self)
+    self._interaction_target = self.button
     self.button:set_border_thickness(BUTTON_BORDER)
     self.button:set_border_color(S.SHORTCUT_BORDER_COLOR)
     self.button:set_hover_border_color(S.SHORTCUT_BORDER_HOVER_COLOR)
@@ -71,22 +72,6 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
         self:_refresh_state()
     end
 
-    self.button.MouseClick = function(_, args)
-        if self.MouseClick ~= nil then
-            self:MouseClick(args)
-        end
-    end
-    self.button.MouseDown = function(_, args)
-        if self.MouseDown ~= nil then
-            self:MouseDown(args)
-        end
-    end
-    self.button.MouseMove = function(_, args)
-        if self.MouseMove ~= nil then
-            self:MouseMove(args)
-        end
-    end
-
     self.SizeChanged = function()
         self:_layout()
     end
@@ -102,6 +87,10 @@ end
 function ShortcutButtonWidget:set_interaction_enabled(enabled)
     self._interaction_enabled = enabled == true
     self:_refresh_state()
+end
+
+function ShortcutButtonWidget:get_interaction_target()
+    return self._interaction_target
 end
 
 function ShortcutButtonWidget:destroy()

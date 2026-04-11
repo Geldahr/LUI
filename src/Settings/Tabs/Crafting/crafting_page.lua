@@ -28,9 +28,17 @@ function CraftingPage:Constructor(window)
     self:add_title(TR["Crafting"])
 
     self:add_hr()
+    self:add_title(TR["General"])
+    self:add_checkbox("crafting_enabled", TR["Enabled"])
+
+    self:add_hr()
     self:add_title(TR["Recipes"])
     self:add_dropdown("crafting_display_mode", TR["Display"], DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES, DISPLAY_MODE_HELP)
     self:add_info(TR["Reload the plugin for display mode changes to take effect."])
+
+    self.controls.crafting_display_mode.visible_if = function()
+        return self.controls.crafting_enabled.cb:IsChecked() == true
+    end
 end
 
 function CraftingPage:load(crafting)
@@ -39,6 +47,7 @@ function CraftingPage:load(crafting)
     end
 
     self.loading = true
+    self.controls.crafting_enabled.cb:SetChecked(crafting.enabled == true)
     self.controls.crafting_display_mode:set_value(crafting.display_mode)
     self.loading = false
 end
@@ -48,6 +57,7 @@ function CraftingPage:apply(crafting)
         return
     end
 
+    crafting.enabled = self.controls.crafting_enabled.cb:IsChecked() == true
     crafting.display_mode = self.controls.crafting_display_mode:get_value()
 end
 

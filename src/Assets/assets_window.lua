@@ -760,6 +760,9 @@ function AssetsWindow:Constructor()
         if type(self._visible_recipe_filter_keys) ~= "table" or next(self._visible_recipe_filter_keys) == nil then
             return
         end
+        if Crafting ~= nil and Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true then
+            return
+        end
 
         local window = _G.CRAFTING_WINDOW
         if window == nil and Crafting ~= nil and Crafting.CraftingWindow ~= nil then
@@ -1633,16 +1636,12 @@ function AssetsWindow:_apply_record_view(reset_page)
 end
 
 function AssetsWindow:_get_crafting_store()
-    if _G.LUI_IS_UNLOADING == true or Crafting == nil then
+    if _G.LUI_IS_UNLOADING == true or Crafting == nil or (Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true) then
         return nil
     end
 
     if self._crafting_store == nil then
-        if Crafting.get_shared_store ~= nil then
-            self._crafting_store = Crafting.get_shared_store()
-        elseif Crafting.CraftingStore ~= nil then
-            self._crafting_store = Crafting.CraftingStore()
-        end
+        self._crafting_store = _G.CRAFTING_STORE
     end
 
     return self._crafting_store
@@ -1653,6 +1652,7 @@ function AssetsWindow:_refresh_recipes_button()
     local count = 0
     local loading = false
     local store = nil
+    local crafting_enabled = Crafting == nil or Crafting.is_enabled == nil or Crafting.is_enabled() == true
     if type(keys) == "table" and next(keys) ~= nil then
         store = self:_get_crafting_store()
     end
@@ -1676,12 +1676,20 @@ function AssetsWindow:_refresh_recipes_button()
         else
             button_text = TR["Recipes"] .. " (...)"
         end
+    elseif crafting_enabled ~= true then
+        button_text = TR["Recipes"] .. " (0)"
+    elseif store == nil and type(keys) == "table" and next(keys) ~= nil then
+        button_text = TR["Recipes"] .. " (...)"
     else
         button_text = TR["Recipes"] .. " (" .. tostring(count) .. ")"
     end
 
     self.recipes_button:set_text(button_text)
-    self.recipes_button:set_enabled((count > 0) or loading == true)
+    self.recipes_button:set_enabled(
+        crafting_enabled == true and
+        (type(keys) == "table" and next(keys) ~= nil) and
+        ((count > 0) or loading == true or store == nil)
+    )
 end
 
 function AssetsWindow:_rebuild_visible_recipe_filter_keys()

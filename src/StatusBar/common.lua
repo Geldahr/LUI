@@ -1259,7 +1259,8 @@ function S.get_shortcut_state(shortcut_key)
     if shortcut_key == "config" then
         return CONFIG_WINDOW ~= nil, S.window_is_visible(CONFIG_WINDOW)
     elseif shortcut_key == "craft" then
-        local can_open = _G.CRAFTING_WINDOW ~= nil or (Crafting ~= nil and Crafting.CraftingWindow ~= nil)
+        local enabled = Crafting == nil or Crafting.is_enabled == nil or Crafting.is_enabled() == true
+        local can_open = enabled == true and (_G.CRAFTING_WINDOW ~= nil or (Crafting ~= nil and Crafting.CraftingWindow ~= nil))
         return can_open, S.window_is_visible(_G.CRAFTING_WINDOW)
     elseif shortcut_key == "assets" then
         return ASSETS_WINDOW ~= nil, S.window_is_visible(ASSETS_WINDOW)

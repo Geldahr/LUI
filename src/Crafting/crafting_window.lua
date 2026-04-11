@@ -976,7 +976,10 @@ function CraftingWindow:Constructor()
     self._last_update_at = 0
     self.update_every = 0.75
     self._loading_visible = false
-    self.store = Crafting.get_shared_store ~= nil and Crafting.get_shared_store() or Crafting.CraftingStore()
+    self.store = Crafting.get_shared_store ~= nil and Crafting.get_shared_store() or nil
+    if self.store == nil then
+        error("Crafting window requires enabled crafting store")
+    end
     self._last_store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
     self.search_groups = {}
     self.scope_key = SCOPE_PERSONAL
