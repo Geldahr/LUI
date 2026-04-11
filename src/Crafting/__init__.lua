@@ -5,6 +5,7 @@ import "LUI.src.Crafting.crafting_window"
 
 local _shared_store = nil
 local _tracked_plan_cache = nil
+local _tracked_plan_autoload_after = nil
 
 local function _copy_tracked_plan_entries(entries)
     local out = {}
@@ -21,6 +22,9 @@ local function _copy_tracked_plan_entries(entries)
                 result_key = entry.result_key,
                 recipe_name_key = entry.recipe_name_key,
                 category_name_key = entry.category_name_key,
+                result_name = entry.result_name,
+                profession_name = entry.profession_name,
+                category_name = entry.category_name,
                 tier = entry.tier,
                 count = entry.count,
             }
@@ -89,6 +93,7 @@ function Crafting.destroy_shared_store()
     end
     _shared_store = nil
     _G.CRAFTING_STORE = nil
+    _tracked_plan_autoload_after = nil
     Crafting.invalidate_tracked_plan_cache()
 end
 
@@ -108,6 +113,7 @@ function Crafting.set_tracked_plan_entries(entries, save_now)
         _G.settings.crafting.tracked_plan = tracked_plan
     end
     Crafting.invalidate_tracked_plan_cache()
+    _tracked_plan_autoload_after = nil
 
     if save_now == true and _G.save_settings ~= nil then
         _G.save_settings()
@@ -115,8 +121,8 @@ function Crafting.set_tracked_plan_entries(entries, save_now)
 end
 
 function Crafting.resolve_tracked_plan_entries(store)
-    local crafting_store = store or Crafting.get_shared_store()
-    if crafting_store == nil or crafting_store.resolve_saved_plan_entries == nil then
+    local entries = Crafting.get_tracked_plan_entries()
+    if #entries <= 0 then
         return {
             entries = {},
             unresolved_count = 0,
@@ -124,7 +130,15 @@ function Crafting.resolve_tracked_plan_entries(store)
         }
     end
 
-    local entries = Crafting.get_tracked_plan_entries()
+    local crafting_store = store or _G.CRAFTING_STORE
+    if crafting_store == nil or crafting_store.resolve_saved_plan_entries == nil then
+        return {
+            entries = {},
+            unresolved_count = #entries,
+            total_count = #entries,
+        }
+    end
+
     local signature = _tracked_plan_signature(entries)
     local store_version = tonumber(crafting_store.version) or 0
     if type(_tracked_plan_cache) == "table" and _tracked_plan_cache.signature == signature and
@@ -142,13 +156,50 @@ function Crafting.resolve_tracked_plan_entries(store)
 end
 
 function Crafting.get_tracked_plan_resource_state(store)
-    local crafting_store = store or Crafting.get_shared_store()
-    if crafting_store == nil or crafting_store.evaluate_plan_resources == nil then
-        return nil
-    end
-
     local entries = Crafting.get_tracked_plan_entries()
     local signature = _tracked_plan_signature(entries)
+    if #entries <= 0 then
+        return {
+            resources = {},
+            incomplete_resources = {},
+            ready = false,
+            saved_entry_count = 0,
+            unresolved_count = 0,
+            total_entry_count = 0,
+            loading = false,
+            loading_loaded = 0,
+            loading_total = 0,
+            loading_complete = false,
+        }
+    end
+
+    local crafting_store = store or Crafting.get_shared_store()
+    if store == nil and crafting_store == nil and _G.LUI_IS_UNLOADING ~= true then
+        local now = Turbine.Engine.GetGameTime()
+        if _tracked_plan_autoload_after == nil then
+            _tracked_plan_autoload_after = now + 1.50
+        end
+        if now >= _tracked_plan_autoload_after then
+            crafting_store = Crafting.get_shared_store()
+            _tracked_plan_autoload_after = nil
+        end
+    end
+
+    if crafting_store == nil or crafting_store.evaluate_plan_resources == nil then
+        return {
+            resources = {},
+            incomplete_resources = {},
+            ready = false,
+            saved_entry_count = #entries,
+            unresolved_count = #entries,
+            total_entry_count = #entries,
+            loading = _G.LUI_IS_UNLOADING ~= true,
+            loading_loaded = 0,
+            loading_total = 0,
+            loading_complete = false,
+        }
+    end
+
     local store_version = tonumber(crafting_store.version) or 0
     if type(_tracked_plan_cache) == "table" and _tracked_plan_cache.signature == signature and
         _tracked_plan_cache.store_version == store_version and _tracked_plan_cache.resource_state ~= nil then
@@ -160,6 +211,11 @@ function Crafting.get_tracked_plan_resource_state(store)
     resource_state.saved_entry_count = #entries
     resource_state.unresolved_count = resolved.unresolved_count or 0
     resource_state.total_entry_count = resolved.total_count or #entries
+    local progress = crafting_store.get_loading_progress ~= nil and crafting_store:get_loading_progress() or nil
+    resource_state.loading = progress ~= nil and progress.loading == true
+    resource_state.loading_loaded = progress ~= nil and (tonumber(progress.loaded) or 0) or 0
+    resource_state.loading_total = progress ~= nil and (tonumber(progress.total) or 0) or 0
+    resource_state.loading_complete = progress ~= nil and progress.complete == true
 
     _tracked_plan_cache = {
         signature = signature,

@@ -824,6 +824,9 @@ function CraftingStore:serialize_plan_entries(plan_entries)
                 result_key = recipe.result_key,
                 recipe_name_key = _normalize_name(recipe.name),
                 category_name_key = _normalize_name(recipe.category_name),
+                result_name = recipe.result_name,
+                profession_name = recipe.profession_name,
+                category_name = recipe.category_name,
                 tier = tonumber(recipe.tier) or 0,
                 count = count,
             }
@@ -835,11 +838,13 @@ end
 
 function CraftingStore:resolve_saved_plan_entries(saved_entries)
     local resolved_entries = {}
+    local unresolved_entries = {}
     local unresolved_count = 0
 
     if type(saved_entries) ~= "table" then
         return {
             entries = resolved_entries,
+            unresolved_entries = unresolved_entries,
             unresolved_count = unresolved_count,
             total_count = 0,
         }
@@ -874,12 +879,17 @@ function CraftingStore:resolve_saved_plan_entries(saved_entries)
                 count = count,
             }
         elseif count > 0 then
+            unresolved_entries[#unresolved_entries + 1] = {
+                saved_entry = saved_entry,
+                count = count,
+            }
             unresolved_count = unresolved_count + 1
         end
     end
 
     return {
         entries = resolved_entries,
+        unresolved_entries = unresolved_entries,
         unresolved_count = unresolved_count,
         total_count = #saved_entries,
     }

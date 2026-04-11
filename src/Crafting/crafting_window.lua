@@ -237,6 +237,29 @@ local function _saved_plan_entries_equal(left, right)
     return true
 end
 
+local function _display_name_from_saved_entry(saved_entry)
+    if type(saved_entry) ~= "table" then
+        return ""
+    end
+
+    local explicit_name = _trim(saved_entry.result_name or "")
+    if explicit_name ~= "" then
+        return explicit_name
+    end
+
+    local key = _trim(saved_entry.result_key or "")
+    if key == "" then
+        return ""
+    end
+
+    local out = {}
+    for token in string.gmatch(key, "[^%s]+") do
+        local lower = string.lower(token)
+        out[#out + 1] = string.upper(string.sub(lower, 1, 1)) .. string.sub(lower, 2)
+    end
+    return table.concat(out, " ")
+end
+
 local function _format_count(value)
     local number = math.max(0, math.floor((tonumber(value) or 0) + 0.5))
     return tostring(number)
@@ -745,6 +768,7 @@ function CraftingPlanRow:Constructor(on_count_changed, on_remove)
     self._on_count_changed = on_count_changed
     self._on_remove = on_remove
     self.recipe = nil
+    self._read_only = false
 
     self:SetBackColor(SECTION_BACK)
 
@@ -800,6 +824,11 @@ function CraftingPlanRow:set_width(width)
     self:_layout()
 end
 
+function CraftingPlanRow:set_read_only(read_only)
+    self._read_only = read_only == true
+    self:_layout()
+end
+
 function CraftingPlanRow:set_data(recipe, plan_count, evaluation, craftable_count)
     self.recipe = recipe
     if recipe ~= nil then
@@ -809,7 +838,9 @@ function CraftingPlanRow:set_data(recipe, plan_count, evaluation, craftable_coun
     end
     self.name:SetText(recipe ~= nil and recipe.result_name or "")
     self.count_box:set_value(plan_count, false)
-    self.count_box:set_enabled(recipe ~= nil)
+    self.count_box:set_enabled(recipe ~= nil and self._read_only ~= true)
+    self.count_box:SetVisible(self._read_only ~= true)
+    self.remove_button:SetVisible(self._read_only ~= true)
     craftable_count = tonumber(craftable_count) or plan_count
     local plan_total = tonumber(plan_count) or 0
     local all_ready = craftable_count >= plan_total and plan_total > 0
@@ -817,6 +848,19 @@ function CraftingPlanRow:set_data(recipe, plan_count, evaluation, craftable_coun
     self.status_label:SetForeColor(all_ready == true and CraftingWindow._status_color(nil, evaluation) or STATUS_MISSING)
     self:SetBackColor(all_ready == true and Turbine.UI.Color(1.00, 0.09, 0.15, 0.11) or
         Turbine.UI.Color(1.00, 0.16, 0.09, 0.09))
+end
+
+function CraftingPlanRow:set_placeholder_data(label_text, plan_count, loading)
+    self.recipe = nil
+    self.icon:bind_item(nil, nil, nil)
+    self.name:SetText(label_text or "")
+    self.count_box:set_value(plan_count, false)
+    self.count_box:set_enabled(false)
+    self.count_box:SetVisible(false)
+    self.remove_button:SetVisible(false)
+    self.status_label:SetText(loading == true and "..." or "?")
+    self.status_label:SetForeColor(TEXT_META)
+    self:SetBackColor(Turbine.UI.Color(1.00, 0.12, 0.12, 0.12))
 end
 
 function CraftingPlanRow:_layout()
@@ -839,14 +883,21 @@ function CraftingPlanRow:_layout()
     local right = width - gap
     local control_y = math.max(0, math.floor((height - control_h) / 2))
 
-    self.remove_button:SetSize(remove_w, control_h)
-    right = right - remove_w
-    self.remove_button:SetPosition(right, control_y)
+    if self._read_only == true then
+        self.remove_button:SetVisible(false)
+        self.count_box:SetVisible(false)
+    else
+        self.remove_button:SetVisible(true)
+        self.remove_button:SetSize(remove_w, control_h)
+        right = right - remove_w
+        self.remove_button:SetPosition(right, control_y)
 
-    right = right - gap
-    self.count_box:SetPosition(right - count_w, control_y)
-    self.count_box:SetSize(count_w, control_h)
-    right = right - count_w
+        right = right - gap
+        self.count_box:SetVisible(true)
+        self.count_box:SetPosition(right - count_w, control_y)
+        self.count_box:SetSize(count_w, control_h)
+        right = right - count_w
+    end
 
     right = right - gap
     self.status_label:SetPosition(right - status_w, 0)
@@ -1186,12 +1237,6 @@ function CraftingWindow:Constructor()
     self.plan_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.plan_title:SetText(TR["Build plan"])
 
-    self.plan_summary = UI.Widgets.LuiLabel()
-    self.plan_summary:SetParent(self.plan_panel.inner)
-    self.plan_summary:SetMouseVisible(false)
-    self.plan_summary:SetForeColor(TEXT_MAIN)
-    self.plan_summary:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-
     self.plan_track_button = UI.Widgets.LuiButton()
     self.plan_track_button:SetParent(self.plan_panel.inner)
     self.plan_track_button:set_text(TR["Track Plan"])
@@ -1213,7 +1258,6 @@ function CraftingWindow:Constructor()
         self:clear_plan()
     end
     self.plan_title:SetZOrder(2)
-    self.plan_summary:SetZOrder(2)
     self.plan_track_button:SetZOrder(2)
     self.plan_revert_button:SetZOrder(2)
     self.plan_clear_button:SetZOrder(2)
@@ -1447,6 +1491,8 @@ function CraftingWindow:open()
     if self.store ~= nil and self.store.refresh ~= nil then
         self.store:refresh(false, 2)
     end
+    self:_sync_draft_plan_from_tracked()
+    self._plan_dirty = false
     self:refresh_from_store(true)
 end
 
@@ -1525,7 +1571,6 @@ function CraftingWindow:apply_settings()
     self.queue_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
 
     self.plan_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.plan_summary:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.plan_track_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
     self.plan_revert_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
     self.plan_clear_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
@@ -1623,11 +1668,13 @@ function CraftingWindow:refresh_from_store(reset_filters)
         self:_sync_draft_plan_from_tracked()
     end
 
+    local has_saved_tracked_plan = #self:_saved_plan_entries() > 0
+
     self:refresh_recipe_list()
     if reset_filters == true or self.selected_recipe_id ~= nil then
         self:refresh_selected_recipe()
     end
-    if reset_filters == true or #self.plan_order > 0 then
+    if reset_filters == true or #self.plan_order > 0 or has_saved_tracked_plan == true then
         self:refresh_plan()
     end
     self:refresh_loading_state()
@@ -1977,43 +2024,51 @@ function CraftingWindow:refresh_plan()
     _clear_list_box(self.plan_list)
     _clear_list_box(self.missing_list)
 
-    local plan_entries = self:_build_plan_entries()
-    local resource_state = self.store.evaluate_plan_resources ~= nil and
-        self.store:evaluate_plan_resources(plan_entries, self.scope_key) or
-        { evaluation = self.store:evaluate_plan(plan_entries, self.scope_key), resources = {}, incomplete_resources = {}, ready = false }
-    local evaluation = resource_state.evaluation
+    local draft_plan_entries = self:_build_plan_entries()
+    local draft_resource_state = self.store.evaluate_plan_resources ~= nil and
+        self.store:evaluate_plan_resources(draft_plan_entries, self.scope_key) or
+        { evaluation = self.store:evaluate_plan(draft_plan_entries, self.scope_key), resources = {}, incomplete_resources = {}, ready = false }
+    local draft_evaluation = draft_resource_state.evaluation
 
-    local has_plan = #plan_entries > 0
+    local tracked_resolved = Crafting ~= nil and Crafting.resolve_tracked_plan_entries ~= nil and
+        Crafting.resolve_tracked_plan_entries(self.store) or { entries = {}, unresolved_entries = {}, unresolved_count = 0, total_count = 0 }
+    local tracked_plan_entries = tracked_resolved.entries or {}
+    local tracked_unresolved_entries = tracked_resolved.unresolved_entries or {}
+    local tracked_resource_state = self.store.evaluate_plan_resources ~= nil and
+        self.store:evaluate_plan_resources(tracked_plan_entries, self.scope_key) or
+        { evaluation = self.store:evaluate_plan(tracked_plan_entries, self.scope_key), resources = {}, incomplete_resources = {}, ready = false }
+    local tracked_evaluation = tracked_resource_state.evaluation
+
+    local has_draft_plan = #draft_plan_entries > 0
+    local has_tracked_plan = (#tracked_plan_entries > 0) or (#tracked_unresolved_entries > 0)
     self:_refresh_plan_dirty_state()
-    self.queue_empty:SetVisible(has_plan ~= true)
-    self.plan_empty:SetVisible(has_plan ~= true)
+    self.queue_empty:SetVisible(has_draft_plan ~= true)
+    self.plan_empty:SetVisible(has_tracked_plan ~= true)
 
-    if has_plan == true then
-        local summary_text =
-            _format_count(#plan_entries) .. " " .. TR["recipes"] ..
-            " - " .. _ratio_text(evaluation.craftable_count_total, evaluation.planned_recipe_count)
+    if has_draft_plan == true then
+        local queue_summary_text =
+            _format_count(#draft_plan_entries) .. " " .. TR["recipes"] ..
+            " - " .. _ratio_text(draft_evaluation.craftable_count_total, draft_evaluation.planned_recipe_count)
         if self._plan_dirty == true then
-            summary_text = summary_text .. " - " .. TR["Unsaved"]
+            queue_summary_text = queue_summary_text .. " - " .. TR["Unsaved"]
         end
-        self.queue_summary:SetText(summary_text)
-        self.plan_summary:SetText(summary_text)
+        self.queue_summary:SetText(queue_summary_text)
     else
         local empty_summary = TR["No recipes planned"]
         if self._plan_dirty == true then
             empty_summary = empty_summary .. " - " .. TR["Unsaved"]
         end
         self.queue_summary:SetText(empty_summary)
-        self.plan_summary:SetText(empty_summary)
     end
 
     self.plan_track_button:set_enabled(self._plan_dirty == true)
-    self.plan_revert_button:set_enabled(self._plan_dirty == true or #self:_saved_plan_entries() > 0)
-    self.plan_clear_button:set_enabled(has_plan == true)
+    self.plan_revert_button:set_enabled(self._plan_dirty == true)
+    self.plan_clear_button:set_enabled(has_draft_plan == true or has_tracked_plan == true)
 
     local queue_w = self:_current_queue_list_width()
     local row_w = self:_current_plan_list_width()
-    for i = 1, #evaluation.entries do
-        local entry = evaluation.entries[i]
+    for i = 1, #draft_evaluation.entries do
+        local entry = draft_evaluation.entries[i]
         local queue_row = CraftingPlanRow(
             function(recipe, value)
                 self:set_plan_count(recipe.id, value)
@@ -2026,7 +2081,10 @@ function CraftingWindow:refresh_plan()
         queue_row:set_width(queue_w)
         queue_row:set_data(entry.recipe, entry.count, entry.evaluation, entry.craftable_count)
         self.queue_list:AddItem(queue_row)
+    end
 
+    for i = 1, #tracked_evaluation.entries do
+        local entry = tracked_evaluation.entries[i]
         local plan_row = CraftingPlanRow(
             function(recipe, value)
                 self:set_plan_count(recipe.id, value)
@@ -2037,6 +2095,7 @@ function CraftingWindow:refresh_plan()
         )
         plan_row:set_scale(_G.settings.global.scale)
         plan_row:set_width(row_w)
+        plan_row:set_read_only(true)
         plan_row:set_data(entry.recipe, entry.count, entry.evaluation, entry.craftable_count)
         self.plan_list:AddItem(plan_row)
 
@@ -2048,9 +2107,22 @@ function CraftingWindow:refresh_plan()
         end
     end
 
+    local loading_tracked = self.store ~= nil and self.store.is_loading ~= nil and self.store:is_loading() == true
+    for i = 1, #tracked_unresolved_entries do
+        local unresolved_entry = tracked_unresolved_entries[i]
+        local saved_entry = unresolved_entry ~= nil and unresolved_entry.saved_entry or nil
+        local count = unresolved_entry ~= nil and (tonumber(unresolved_entry.count) or 0) or 0
+        local plan_row = CraftingPlanRow(nil, nil)
+        plan_row:set_scale(_G.settings.global.scale)
+        plan_row:set_width(row_w)
+        plan_row:set_read_only(true)
+        plan_row:set_placeholder_data(_display_name_from_saved_entry(saved_entry), count, loading_tracked)
+        self.plan_list:AddItem(plan_row)
+    end
+
     local missing_w = self:_current_missing_list_width()
-    for i = 1, #resource_state.resources do
-        local entry = resource_state.resources[i]
+    for i = 1, #tracked_resource_state.resources do
+        local entry = tracked_resource_state.resources[i]
         local row = CraftingIngredientRow()
         row:set_scale(_G.settings.global.scale)
         row:set_width(missing_w)
@@ -2066,12 +2138,12 @@ function CraftingWindow:refresh_plan()
         self.missing_list:AddItem(row)
     end
 
-    self.queue_list:SetVisible(has_plan == true)
-    self.queue_scroll:SetVisible(has_plan == true)
-    self.plan_list:SetVisible(has_plan == true)
-    self.plan_scroll:SetVisible(has_plan == true)
-    self.missing_list:SetVisible(#resource_state.resources > 0)
-    self.missing_scroll:SetVisible(#resource_state.resources > 0)
+    self.queue_list:SetVisible(has_draft_plan == true)
+    self.queue_scroll:SetVisible(has_draft_plan == true)
+    self.plan_list:SetVisible(has_tracked_plan == true)
+    self.plan_scroll:SetVisible(has_tracked_plan == true)
+    self.missing_list:SetVisible(#tracked_resource_state.resources > 0)
+    self.missing_scroll:SetVisible(#tracked_resource_state.resources > 0)
 
     local selected_recipe = self:_selected_recipe()
     if selected_recipe ~= nil then
@@ -2139,7 +2211,10 @@ end
 function CraftingWindow:clear_plan()
     self.plan_order = {}
     self.plan_counts = {}
-    self:_refresh_plan_dirty_state()
+    if Crafting ~= nil and Crafting.set_tracked_plan_entries ~= nil then
+        Crafting.set_tracked_plan_entries({}, true)
+    end
+    self._plan_dirty = false
     self:refresh_selected_recipe()
     self:refresh_plan()
 end
@@ -2372,10 +2447,6 @@ function CraftingWindow:layout()
     self.plan_header_bar:SetSize(plan_inner:GetWidth(), section_bar_h)
     self.plan_title:SetPosition(_scaled_int(8), 0)
     self.plan_title:SetSize(_scaled_int(90), section_bar_h)
-    self.plan_summary:SetPosition(_scaled_int(104), 0)
-    self.plan_summary:SetSize(math.max(0,
-        plan_inner:GetWidth() - track_w - revert_w - clear_w - _scaled_int(140)
-    ), section_bar_h)
     self.plan_track_button:SetPosition(
         plan_inner:GetWidth() - clear_w - revert_w - track_w - _scaled_int(12),
         _scaled_int(2)

@@ -16,6 +16,7 @@ local POPUP_BORDER = Turbine.UI.Color(0.95, 0.28, 0.35, 0.45)
 local POPUP_BACK = Turbine.UI.Color(0.98, 0.08, 0.09, 0.11)
 local POPUP_ROW_BACK = Turbine.UI.Color(0.90, 0.12, 0.15, 0.17)
 local POPUP_ROW_GAP = 2
+local POPUP_SECTION_GAP = 4
 local ITEM_INFO_CONTROL_OFFSET = -3
 local ITEM_INFO_CONTROL_EXTRA = 6
 
@@ -59,6 +60,9 @@ local function _resource_state_signature(state)
         tostring(state.saved_entry_count or 0),
         tostring(state.unresolved_count or 0),
         tostring(state.ready == true),
+        tostring(state.loading == true),
+        tostring(state.loading_loaded or 0),
+        tostring(state.loading_total or 0),
     }
 
     local resources = state.resources or {}
@@ -211,16 +215,18 @@ function CraftPlanChip:Constructor(owner, font)
     self.MouseEnter = function()
         self._hover = true
         self:_refresh_visual()
-        if self._show_popup == true and self._owner ~= nil and self._owner._show_popup ~= nil then
+        if self._owner ~= nil and self._owner._set_hovered ~= nil then
+            self._owner:_set_hovered(true)
+        end
+        if self._owner ~= nil and self._owner._show_popup_if_needed ~= nil then
+            self._owner:_show_popup_if_needed()
+        elseif self._show_popup == true and self._owner ~= nil and self._owner._show_popup ~= nil then
             self._owner:_show_popup()
         end
     end
     self.MouseLeave = function()
         self._hover = false
         self:_refresh_visual()
-        if self._show_popup == true and self._owner ~= nil and self._owner._hide_popup ~= nil then
-            self._owner:_hide_popup()
-        end
     end
     self.MouseClick = function(_, args)
         local owner = self._owner
@@ -415,6 +421,7 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
     self._popup_rows = {}
     self._state_signature = nil
     self._resource_state = nil
+    self._hovering = false
 
     self:SetSize(widget_w, bar_h)
     self:SetMouseVisible(true)
@@ -433,6 +440,16 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
     self.popup_inner:SetMouseVisible(false)
     self.popup_inner:SetBackColor(POPUP_BACK)
 
+    self.popup_header = LuiLabel()
+    self.popup_header:SetParent(self.popup_inner)
+    _apply_font(self.popup_header, self.font, META_TEXT, Turbine.UI.ContentAlignment.MiddleLeft)
+    self.popup_header:SetVisible(false)
+
+    self.popup_note = LuiLabel()
+    self.popup_note:SetParent(self.popup_inner)
+    _apply_font(self.popup_note, self.font, META_TEXT, Turbine.UI.ContentAlignment.MiddleLeft)
+    self.popup_note:SetVisible(false)
+
     self.MouseClick = function(_, args)
         if args ~= nil and args.Button == Turbine.UI.MouseButton.Left and self._interaction_enabled == true then
             if _G.open_crafting_plan_shortcut ~= nil then
@@ -441,7 +458,13 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
         end
     end
 
+    self.MouseEnter = function()
+        self:_set_hovered(true)
+        self:_show_popup_if_needed()
+    end
+
     self.MouseLeave = function()
+        self:_set_hovered(false)
         self:_hide_popup()
     end
 
@@ -464,7 +487,7 @@ function CraftPlanWidget:set_interaction_enabled(enabled)
 end
 
 function CraftPlanWidget:update(_)
-    local store = Crafting ~= nil and Crafting.get_shared_store ~= nil and Crafting.get_shared_store() or nil
+    local store = _G.CRAFTING_STORE
     local state = Crafting ~= nil and Crafting.get_tracked_plan_resource_state ~= nil and
         Crafting.get_tracked_plan_resource_state(store) or nil
     local signature = _resource_state_signature(state)
@@ -481,6 +504,12 @@ function CraftPlanWidget:destroy()
     end
     if self.popup_inner ~= nil then
         self.popup_inner:SetParent(nil)
+    end
+    if self.popup_header ~= nil then
+        self.popup_header:SetParent(nil)
+    end
+    if self.popup_note ~= nil then
+        self.popup_note:SetParent(nil)
     end
     for i = 1, #self._chips do
         self._chips[i]:destroy()
@@ -522,22 +551,26 @@ function CraftPlanWidget:_refresh_from_state(state)
     self:_hide_popup()
 
     local visible_specs = {}
+    local incomplete = type(state) == "table" and state.incomplete_resources or {}
+    local resources = type(state) == "table" and state.resources or {}
 
     if type(state) ~= "table" or (state.saved_entry_count or 0) <= 0 then
         visible_specs[1] = { text = TR["No plan"], color = META_TEXT, popup = false }
     elseif state.ready == true then
         visible_specs[1] = { text = TR["Ready"], color = READY_TEXT, popup = true }
     else
-        local incomplete = state.incomplete_resources or {}
         local visible_count = math.min(#incomplete, self._max_visible)
         for i = 1, visible_count do
             visible_specs[#visible_specs + 1] = { resource = incomplete[i] }
         end
-        if #incomplete > visible_count or (state.unresolved_count or 0) > 0 then
+        local has_hidden_details = (#resources > self._max_visible) or (state.unresolved_count or 0) > 0 or state.loading == true
+        if #visible_specs == 0 and state.loading == true then
+            visible_specs[1] = { text = TR["Loading"] .. "...", color = META_TEXT, popup = true }
+        elseif has_hidden_details == true then
             visible_specs[#visible_specs + 1] = { text = "[...]", color = META_TEXT, popup = true }
         end
         if #visible_specs == 0 then
-            visible_specs[1] = { text = TR["Loading"], color = META_TEXT, popup = false }
+            visible_specs[1] = { text = "[...]", color = META_TEXT, popup = true }
         end
     end
 
@@ -553,6 +586,41 @@ function CraftPlanWidget:_refresh_from_state(state)
     end
 
     self:_layout()
+    if self._hovering == true then
+        self:_show_popup_if_needed()
+    end
+end
+
+function CraftPlanWidget:_set_hovered(hovering)
+    self._hovering = hovering == true
+end
+
+function CraftPlanWidget:_should_show_popup()
+    local state = self._resource_state
+    if type(state) ~= "table" or (state.saved_entry_count or 0) <= 0 then
+        return false
+    end
+
+    local resources = state.resources or {}
+    if state.ready == true then
+        return #resources > 0
+    end
+
+    if state.loading == true or (state.unresolved_count or 0) > 0 then
+        return true
+    end
+
+    if #resources > self._max_visible then
+        return true
+    end
+
+    return false
+end
+
+function CraftPlanWidget:_show_popup_if_needed()
+    if self:_should_show_popup() == true then
+        self:_show_popup()
+    end
 end
 
 function CraftPlanWidget:_layout()
@@ -617,26 +685,77 @@ function CraftPlanWidget:_show_popup()
 
     local state = self._resource_state
     local resources = type(state) == "table" and state.resources or nil
-    if type(resources) ~= "table" or #resources == 0 then
+    local has_resources = type(resources) == "table" and #resources > 0
+    local header_text = nil
+    local note_text = nil
+
+    if type(state) == "table" and state.loading == true then
+        header_text = TR["Loading recipes"] .. " " .. tostring(state.loading_loaded or 0) .. " / " .. tostring(state.loading_total or 0)
+    end
+
+    if type(state) == "table" and (state.unresolved_count or 0) > 0 then
+        local unresolved = tonumber(state.unresolved_count) or 0
+        local total = tonumber(state.total_entry_count) or tonumber(state.saved_entry_count) or unresolved
+        if state.loading == true then
+            note_text = tostring(unresolved) .. "/" .. tostring(total) .. " " .. TR["planned recipes still unresolved"]
+        else
+            note_text = tostring(unresolved) .. "/" .. tostring(total) .. " " .. TR["planned recipes unresolved"]
+        end
+    end
+
+    if has_resources ~= true and header_text == nil and note_text == nil then
         return
     end
 
     local width = math.max(220, math.min(420, self:GetWidth() + 140))
     local row_h = math.max(20, self:GetHeight())
     local inner_w = width - 2
-    local inner_h = (#resources * row_h) + math.max(0, (#resources - 1) * POPUP_ROW_GAP)
+    local header_h = header_text ~= nil and row_h or 0
+    local note_h = note_text ~= nil and row_h or 0
+    local rows_h = has_resources == true and ((#resources * row_h) + math.max(0, (#resources - 1) * POPUP_ROW_GAP)) or 0
+    local inner_h = header_h + note_h + rows_h
+    if header_h > 0 and (note_h > 0 or rows_h > 0) then
+        inner_h = inner_h + POPUP_SECTION_GAP
+    end
+    if note_h > 0 and rows_h > 0 then
+        inner_h = inner_h + POPUP_SECTION_GAP
+    end
 
     self.popup:SetSize(width, inner_h + 2)
     self.popup_inner:SetPosition(1, 1)
     self.popup_inner:SetSize(inner_w, inner_h)
 
-    self:_ensure_popup_row_count(#resources)
     local y = 0
-    for i = 1, #resources do
-        local row = self._popup_rows[i]
-        row:SetPosition(0, y)
-        row:set_data(resources[i], inner_w, row_h)
-        y = y + row_h + POPUP_ROW_GAP
+    self.popup_header:SetVisible(header_h > 0)
+    if header_h > 0 then
+        self.popup_header:SetText(header_text)
+        self.popup_header:SetPosition(CHIP_PAD_X, y)
+        self.popup_header:SetSize(math.max(0, inner_w - (CHIP_PAD_X * 2)), row_h)
+        y = y + row_h
+        if note_h > 0 or rows_h > 0 then
+            y = y + POPUP_SECTION_GAP
+        end
+    end
+
+    self.popup_note:SetVisible(note_h > 0)
+    if note_h > 0 then
+        self.popup_note:SetText(note_text)
+        self.popup_note:SetPosition(CHIP_PAD_X, y)
+        self.popup_note:SetSize(math.max(0, inner_w - (CHIP_PAD_X * 2)), row_h)
+        y = y + row_h
+        if rows_h > 0 then
+            y = y + POPUP_SECTION_GAP
+        end
+    end
+
+    self:_ensure_popup_row_count(has_resources == true and #resources or 0)
+    if has_resources == true then
+        for i = 1, #resources do
+            local row = self._popup_rows[i]
+            row:SetPosition(0, y)
+            row:set_data(resources[i], inner_w, row_h)
+            y = y + row_h + POPUP_ROW_GAP
+        end
     end
 
     local x, y_screen = self:PointToScreen(0, self:GetHeight() + 1)
@@ -647,5 +766,11 @@ end
 function CraftPlanWidget:_hide_popup()
     if self.popup ~= nil then
         self.popup:SetVisible(false)
+    end
+    if self.popup_header ~= nil then
+        self.popup_header:SetVisible(false)
+    end
+    if self.popup_note ~= nil then
+        self.popup_note:SetVisible(false)
     end
 end
