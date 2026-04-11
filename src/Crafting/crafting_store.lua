@@ -17,8 +17,8 @@ local SCOPE_INVENTORY = "inventory"
 local SCOPE_PERSONAL = "personal"
 local SCOPE_SHARED = "shared"
 local RECIPE_LOAD_BATCH_SIZE = 1
-local BACKGROUND_UPDATE_EVERY = 1.00
-local FOREGROUND_UPDATE_EVERY = 0.25
+local BACKGROUND_UPDATE_EVERY = 0.50
+local FOREGROUND_UPDATE_EVERY = 0.20
 local FOREGROUND_RECIPE_BATCH_SIZE = 2
 
 local PROFESSION_ORDER = {
@@ -127,11 +127,6 @@ local function _collect_leaf_requirements(node, out)
             if type(out[key]) ~= "table" then
                 out[key] = {
                     key = key,
-                    name = node.name or "",
-                    item_info = node.item_info,
-                    icon_id = node.icon_id,
-                    background_image_id = node.background_image_id,
-                    quality = node.quality,
                     quantity = 0,
                 }
             end
@@ -180,7 +175,7 @@ local function _saved_plan_entry_matches_recipe(saved_entry, recipe)
     if saved_entry.result_key ~= nil and tostring(saved_entry.result_key) ~= tostring(recipe.result_key) then
         return false
     end
-    if saved_entry.recipe_name_key ~= nil and tostring(saved_entry.recipe_name_key) ~= _normalize_name(recipe.name) then
+    if saved_entry.recipe_name_key ~= nil and tostring(saved_entry.recipe_name_key) ~= tostring(recipe.recipe_name_key or recipe.result_key or "") then
         return false
     end
     if saved_entry.category_name_key ~= nil and tostring(saved_entry.category_name_key) ~= _normalize_name(recipe.category_name) then
@@ -373,12 +368,12 @@ local function _recipe_required_level(result_info, recipe_name, category_name)
     return nil
 end
 
-local function _remember_item_meta(item_meta, key, name, item_info)
+local function _remember_item(items, key, name, item_info)
     if key == nil or key == "" then
         return
     end
 
-    local current = item_meta[key]
+    local current = items[key]
     if type(current) ~= "table" then
         current = {
             key = key,
@@ -389,7 +384,7 @@ local function _remember_item_meta(item_meta, key, name, item_info)
             required_level = nil,
             item_info = nil,
         }
-        item_meta[key] = current
+        items[key] = current
     end
 
     if current.name == nil or current.name == "" then
@@ -488,20 +483,28 @@ local function _scope_option_values()
     }
 end
 
-local function _recipe_sort_compare(left, right)
+local function _recipe_sort_compare(items, left, right)
     local left_profession = _lower(left ~= nil and left.profession_name or nil)
     local right_profession = _lower(right ~= nil and right.profession_name or nil)
     if left_profession ~= right_profession then
         return left_profession < right_profession
     end
 
-    local left_name = _lower(left ~= nil and left.result_name or nil)
-    local right_name = _lower(right ~= nil and right.result_name or nil)
+    local left_item = type(items) == "table" and items[left ~= nil and left.result_key or nil] or nil
+    local right_item = type(items) == "table" and items[right ~= nil and right.result_key or nil] or nil
+    local left_name = _lower(left_item ~= nil and left_item.name or nil)
+    local right_name = _lower(right_item ~= nil and right_item.name or nil)
     if left_name ~= right_name then
         return left_name < right_name
     end
 
-    return _lower(left ~= nil and left.name or nil) < _lower(right ~= nil and right.name or nil)
+    local left_recipe_name = _lower(left ~= nil and left.recipe_name or nil)
+    local right_recipe_name = _lower(right ~= nil and right.recipe_name or nil)
+    if left_recipe_name ~= right_recipe_name then
+        return left_recipe_name < right_recipe_name
+    end
+
+    return _lower(left ~= nil and left.id or nil) < _lower(right ~= nil and right.id or nil)
 end
 
 local function _recipe_reenters_path(recipe, visiting)
@@ -552,10 +555,10 @@ function CraftingStore:Constructor()
 
     self.current_character_name = _current_character_name()
     self.professions = {}
+    self.items = {}
     self.recipes = {}
     self.recipe_by_id = {}
-    self.result_index = {}
-    self.item_meta = {}
+    self.recipes_by_result = {}
     self.ownership = {
         [SCOPE_SERVER] = {},
         [SCOPE_INVENTORY] = {},
@@ -680,9 +683,101 @@ function CraftingStore:get_recipe_status(recipe_or_id, scope_key)
 
     local cache = self._status_cache[scope]
     if cache[recipe.id] == nil then
-        cache[recipe.id] = self:evaluate_recipe(recipe, scope, 1)
+        local evaluation = self:evaluate_recipe(recipe, scope, 1)
+        local summary = {
+            craftable = evaluation ~= nil and evaluation.craftable == true or false,
+            used_expansion = evaluation ~= nil and evaluation.used_expansion == true or false,
+            ingredients = {},
+        }
+        if evaluation ~= nil and type(evaluation.ingredients) == "table" then
+            for i = 1, #evaluation.ingredients do
+                local node = evaluation.ingredients[i]
+                summary.ingredients[#summary.ingredients + 1] = {
+                    satisfied = node ~= nil and node.satisfied == true or false,
+                    expanded = node ~= nil and node.expanded == true or false,
+                }
+            end
+        end
+        cache[recipe.id] = summary
     end
     return cache[recipe.id]
+end
+
+function CraftingStore:get_item(item_key)
+    if type(self.items) ~= "table" then
+        return nil
+    end
+    return self.items[item_key]
+end
+
+function CraftingStore:get_recipe_result_item(recipe_or_id)
+    local recipe = recipe_or_id
+    if type(recipe_or_id) ~= "table" then
+        recipe = self.recipe_by_id[recipe_or_id]
+    end
+    if type(recipe) ~= "table" then
+        return nil
+    end
+    return self:get_item(recipe.result_key)
+end
+
+function CraftingStore:get_recipe_required_level(recipe_or_id)
+    local item = self:get_recipe_result_item(recipe_or_id)
+    return item ~= nil and item.required_level or nil
+end
+
+function CraftingStore:get_recipe_result_name(recipe_or_id)
+    local item = self:get_recipe_result_item(recipe_or_id)
+    if item ~= nil and item.name ~= nil and item.name ~= "" then
+        return item.name
+    end
+
+    local recipe = recipe_or_id
+    if type(recipe_or_id) ~= "table" then
+        recipe = self.recipe_by_id[recipe_or_id]
+    end
+    return type(recipe) == "table" and (recipe.result_key or "") or ""
+end
+
+function CraftingStore:recipe_matches_query(recipe, groups)
+    if type(recipe) ~= "table" then
+        return false
+    end
+    if type(groups) ~= "table" or #groups == 0 then
+        return true
+    end
+
+    local result_item = self:get_item(recipe.result_key)
+    local searchable = {
+        _lower(result_item ~= nil and result_item.name or nil),
+        _lower(recipe.profession_name),
+        _lower(recipe.category_name),
+        _lower(recipe.recipe_name),
+    }
+    if type(recipe.ingredients) == "table" then
+        for i = 1, #recipe.ingredients do
+            local ingredient = recipe.ingredients[i]
+            local item = self:get_item(ingredient ~= nil and ingredient.key or nil)
+            searchable[#searchable + 1] = _lower(item ~= nil and item.name or nil)
+        end
+    end
+
+    local haystack = table.concat(searchable, "\n")
+    for group_index = 1, #groups do
+        local group = groups[group_index]
+        local matched = true
+        for term_index = 1, #group do
+            if string.find(haystack, group[term_index], 1, true) == nil then
+                matched = false
+                break
+            end
+        end
+        if matched == true then
+            return true
+        end
+    end
+
+    return false
 end
 
 function CraftingStore:evaluate_recipe(recipe_or_id, scope_key, craft_count)
@@ -764,9 +859,9 @@ function CraftingStore:serialize_plan_entries(plan_entries)
                 id = recipe.id,
                 profession_key = recipe.profession_key,
                 result_key = recipe.result_key,
-                recipe_name_key = _normalize_name(recipe.name),
+                recipe_name_key = recipe.recipe_name_key,
                 category_name_key = _normalize_name(recipe.category_name),
-                result_name = recipe.result_name,
+                result_name = self:get_recipe_result_name(recipe),
                 profession_name = recipe.profession_name,
                 category_name = recipe.category_name,
                 tier = tonumber(recipe.tier) or 0,
@@ -867,13 +962,14 @@ function CraftingStore:evaluate_plan_resources(plan_entries, scope_key)
             local missing_entry = missing_by_key[key]
             local missing = tonumber(missing_entry ~= nil and missing_entry.quantity or nil) or 0
             local owned = math.max(0, required - missing)
+            local item = self:get_item(key)
             local resource = {
                 key = key,
-                name = requirement.name or "",
-                item_info = requirement.item_info,
-                icon_id = requirement.icon_id,
-                background_image_id = requirement.background_image_id,
-                quality = requirement.quality,
+                name = item ~= nil and item.name or key,
+                item_info = item ~= nil and item.item_info or nil,
+                icon_id = item ~= nil and item.icon_id or nil,
+                background_image_id = item ~= nil and item.background_image_id or nil,
+                quality = item ~= nil and item.quality or nil,
                 owned = owned,
                 required = required,
                 missing = missing,
@@ -1006,10 +1102,10 @@ function CraftingStore:_start_recipe_load(current_character)
 
     self.current_character_name = current_character
     self.professions = professions
+    self.items = {}
     self.recipes = {}
     self.recipe_by_id = {}
-    self.result_index = {}
-    self.item_meta = {}
+    self.recipes_by_result = {}
     self.profession_option_labels = profession_labels
     self.profession_option_values = profession_values
     self._status_cache = {}
@@ -1029,9 +1125,9 @@ function CraftingStore:_register_recipe_record(record)
 
     self.recipes[#self.recipes + 1] = record
     self.recipe_by_id[record.id] = record
-    _add_result_index_entry(self.result_index, record.result_key, record)
+    _add_result_index_entry(self.recipes_by_result, record.result_key, record)
     if record.recipe_name_key ~= nil then
-        _add_result_index_entry(self.result_index, record.recipe_name_key, record)
+        _add_result_index_entry(self.recipes_by_result, record.recipe_name_key, record)
     end
 end
 
@@ -1054,7 +1150,7 @@ function CraftingStore:_step_recipe_load(batch_size)
         local profession_info = queue_entry ~= nil and queue_entry.profession_info or nil
         local recipe = profession_info ~= nil and profession_info:GetRecipe(recipe_index) or nil
         if recipe ~= nil and profession ~= nil then
-            self:_register_recipe_record(self:_build_recipe_record(recipe, profession, recipe_index, self.item_meta))
+            self:_register_recipe_record(self:_build_recipe_record(recipe, profession, recipe_index, self.items))
         end
 
         self._recipe_load_done = self._recipe_load_done + 1
@@ -1071,7 +1167,9 @@ function CraftingStore:_step_recipe_load(batch_size)
         self._recipe_loading = false
         self._recipe_load_queue = nil
         self._recipe_load_queue_index = 1
-        table.sort(self.recipes, _recipe_sort_compare)
+        table.sort(self.recipes, function(left, right)
+            return _recipe_sort_compare(self.items, left, right)
+        end)
         self._recipe_token = table.concat({
             tostring(self.current_character_name or ""),
             tostring(#self.professions),
@@ -1083,7 +1181,7 @@ function CraftingStore:_step_recipe_load(batch_size)
     return changed
 end
 
-function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, item_meta)
+function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, items)
     local recipe_name = _trim(recipe:GetName())
     local recipe_name_key = _normalize_name(recipe_name)
     local result_info = recipe:GetResultItemInfo()
@@ -1101,16 +1199,13 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         return nil
     end
 
-    _remember_item_meta(item_meta, result_key, result_name, result_info)
+    _remember_item(items, result_key, result_name, result_info)
+    if type(items[result_key]) == "table" and items[result_key].required_level == nil then
+        items[result_key].required_level = _recipe_required_level(result_info, recipe_name, category_name)
+    end
 
     local ingredient_count = recipe:GetIngredientCount() or 0
     local ingredients = {}
-    local filter_parts = {
-        _lower(recipe_name),
-        _lower(result_name),
-        _lower(profession.name),
-        _lower(category_name),
-    }
 
     for ingredient_index = 1, ingredient_count do
         local ingredient = recipe:GetIngredient(ingredient_index)
@@ -1121,16 +1216,10 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
             if ingredient_key ~= "" then
                 local ingredient_record = {
                     key = ingredient_key,
-                    name = ingredient_name,
                     quantity = math.max(1, tonumber(ingredient:GetRequiredQuantity()) or 1),
-                    icon_id = _item_info_icon_id(ingredient_info),
-                    background_image_id = _item_info_background_id(ingredient_info),
-                    quality = _item_info_quality(ingredient_info),
-                    item_info = ingredient_info,
                 }
                 ingredients[#ingredients + 1] = ingredient_record
-                filter_parts[#filter_parts + 1] = _lower(ingredient_name)
-                _remember_item_meta(item_meta, ingredient_key, ingredient_name, ingredient_info)
+                _remember_item(items, ingredient_key, ingredient_name, ingredient_info)
             end
         end
     end
@@ -1145,21 +1234,14 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         profession = profession.profession,
         profession_key = profession.key,
         profession_name = profession.name,
-        name = recipe_name ~= "" and recipe_name or result_name,
         category_name = category_name,
         tier = tonumber(recipe:GetTier()) or 0,
         cooldown = tonumber(recipe:GetCooldown()) or 0,
-        result_name = result_name,
         result_key = result_key,
         recipe_name_key = recipe_name_key ~= "" and recipe_name_key ~= result_key and recipe_name_key or nil,
+        recipe_name = recipe_name ~= "" and recipe_name ~= result_name and recipe_name or nil,
         result_quantity = math.max(1, tonumber(recipe:GetResultItemQuantity()) or 1),
-        icon_id = _item_info_icon_id(result_info),
-        background_image_id = _item_info_background_id(result_info),
-        quality = _item_info_quality(result_info),
-        required_level = _recipe_required_level(result_info, recipe_name, category_name),
-        result_item_info = result_info,
         ingredients = ingredients,
-        haystack_lower = table.concat(filter_parts, "\n"),
     }
 
     return record
@@ -1175,16 +1257,8 @@ function CraftingStore:_merge_missing_maps(destination, source)
             if type(destination[key]) ~= "table" then
                 destination[key] = {
                     key = key,
-                    name = entry.name,
                     quantity = 0,
-                    icon_id = entry.icon_id,
-                    background_image_id = entry.background_image_id,
-                    quality = entry.quality,
-                    item_info = entry.item_info,
                 }
-            end
-            if destination[key].item_info == nil then
-                destination[key].item_info = entry.item_info
             end
             destination[key].quantity = (tonumber(destination[key].quantity) or 0) + (tonumber(entry.quantity) or 0)
         end
@@ -1192,20 +1266,14 @@ function CraftingStore:_merge_missing_maps(destination, source)
 end
 
 function CraftingStore:_make_missing_entry(item_key, quantity)
-    local meta = self.item_meta[item_key] or {}
     return {
         key = item_key,
-        name = meta.name or item_key,
         quantity = quantity,
-        icon_id = meta.icon_id,
-        background_image_id = meta.background_image_id,
-        quality = meta.quality,
-        item_info = meta.item_info,
     }
 end
 
 function CraftingStore:_get_recipes_for_item(item_key)
-    local list = self.result_index[item_key]
+    local list = self.recipes_by_result[item_key]
     if type(list) == "table" and #list > 0 then
         return list
     end
@@ -1215,10 +1283,8 @@ end
 
 function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
     local needed = math.max(0, tonumber(quantity) or 0)
-    local meta = self.item_meta[item_key] or {}
     local node = {
         key = item_key,
-        name = meta.name or item_key,
         required = needed,
         from_stock = 0,
         produced = 0,
@@ -1226,12 +1292,8 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
         expanded = false,
         ambiguous = false,
         missing = 0,
-        recipe = nil,
+        recipe_id = nil,
         children = nil,
-        icon_id = meta.icon_id,
-        background_image_id = meta.background_image_id,
-        quality = meta.quality,
-        item_info = meta.item_info,
     }
 
     local next_stock = _copy_counts(stock)
@@ -1275,7 +1337,6 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
             local all_ok = true
             local candidate_node = {
                 key = node.key,
-                name = node.name,
                 required = node.required,
                 from_stock = node.from_stock,
                 produced = 0,
@@ -1283,12 +1344,8 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
                 expanded = true,
                 ambiguous = false,
                 missing = 0,
-                recipe = recipe,
+                recipe_id = recipe.id,
                 children = {},
-                icon_id = node.icon_id,
-                background_image_id = node.background_image_id,
-                quality = node.quality,
-                item_info = node.item_info,
             }
 
             visiting[item_key] = true
@@ -1371,7 +1428,6 @@ function CraftingStore:_evaluate_recipe_with_stock(recipe, craft_count, stock)
     local base_stock = _copy_counts(stock)
     local working_stock = _copy_counts(stock)
     local evaluation = {
-        recipe = recipe,
         requested_count = count,
         ingredients = {},
         missing = {},
@@ -1395,10 +1451,6 @@ function CraftingStore:_evaluate_recipe_with_stock(recipe, craft_count, stock)
         working_stock = next_stock
         node.required = required
         node.owned_in_scope = tonumber(base_stock[ingredient.key]) or 0
-        node.icon_id = ingredient.icon_id
-        node.background_image_id = ingredient.background_image_id
-        node.quality = ingredient.quality
-        node.item_info = ingredient.item_info
         node.satisfied = ingredient_ok == true
         evaluation.ingredients[#evaluation.ingredients + 1] = node
         self:_merge_missing_maps(evaluation.missing, child_missing)

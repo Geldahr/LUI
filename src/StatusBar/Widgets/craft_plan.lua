@@ -7,6 +7,7 @@ local S = _G.STATUS_BAR_COMMON
 local CHIP_GAP = 0
 local CHIP_ICON_GAP = 2
 local CHIP_PAD_X = 3
+local CHIP_ICON_MARGIN = 2
 local CHIP_BACK = Turbine.UI.Color(0.00, 0.00, 0.00, 0.00)
 local CHIP_HOVER = CHIP_BACK
 local READY_TEXT = Turbine.UI.Color(1.00, 0.55, 0.92, 0.55)
@@ -20,7 +21,7 @@ local POPUP_ROW_BACK = Turbine.UI.Color(0.90, 0.12, 0.15, 0.17)
 local POPUP_ROW_GAP = 2
 local POPUP_SECTION_GAP = 4
 local ITEM_INFO_CONTROL_OFFSET = -3
-local ITEM_INFO_CONTROL_EXTRA = 6
+local ITEM_INFO_CONTROL_EXTRA = 3
 
 local function _set_stretch_mode_zero(control)
     if control ~= nil and control.SetStretchMode ~= nil then
@@ -93,17 +94,26 @@ function CraftPlanItemSlot:Constructor(forward_target)
     self.background = Image()
     self.background:SetParent(self)
     self.background:SetMouseVisible(false)
+    self.background:SetZOrder(1)
+    if self.background.SetBlendMode ~= nil then
+        self.background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    end
     _set_stretch_mode_zero(self.background)
 
     self.foreground = Image()
     self.foreground:SetParent(self)
     self.foreground:SetMouseVisible(false)
+    self.foreground:SetZOrder(2)
+    if self.foreground.SetBlendMode ~= nil then
+        self.foreground:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    end
     _set_stretch_mode_zero(self.foreground)
 
     self.item_info_control = Turbine.UI.Lotro.ItemInfoControl()
     self.item_info_control:SetParent(self)
     self.item_info_control:SetVisible(false)
     self.item_info_control:SetMouseVisible(false)
+    self.item_info_control:SetZOrder(0)
     if self.item_info_control.SetBlendMode ~= nil then
         self.item_info_control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     end
@@ -161,16 +171,18 @@ function CraftPlanItemSlot:bind_item(item_info, icon_id, background_image_id)
 end
 
 function CraftPlanItemSlot:_refresh_item_binding()
-    local use_item_info = self._item_info ~= nil and self.item_info_control.SetItemInfo ~= nil
-    self.background:set_icon(use_item_info == true and nil or self._background_image_id, self._side)
-    self.background:SetVisible(use_item_info ~= true and self._background_image_id ~= nil)
-    self.foreground:set_icon(use_item_info == true and nil or self._icon_id, self._side)
-    self.foreground:SetVisible(use_item_info ~= true and self._icon_id ~= nil)
+    local has_item_info = self._item_info ~= nil and self.item_info_control.SetItemInfo ~= nil
+    local has_manual_visual = self._background_image_id ~= nil or self._icon_id ~= nil
+
+    self.background:set_icon(self._background_image_id, self._side)
+    self.background:SetVisible(self._background_image_id ~= nil)
+    self.foreground:set_icon(self._icon_id, self._side)
+    self.foreground:SetVisible(self._icon_id ~= nil)
     if self.item_info_control.SetItemInfo ~= nil then
         self.item_info_control:SetItemInfo(self._item_info)
     end
-    self.item_info_control:SetVisible(use_item_info == true)
-    self.item_info_control:SetMouseVisible(use_item_info == true and self._interaction_enabled == true)
+    self.item_info_control:SetVisible(has_item_info == true and (has_manual_visual ~= true or self._interaction_enabled == true))
+    self.item_info_control:SetMouseVisible(has_item_info == true and self._interaction_enabled == true)
     _set_stretch_mode_zero(self.background)
     _set_stretch_mode_zero(self.foreground)
     _set_stretch_mode_zero(self.item_info_control)
@@ -300,7 +312,7 @@ end
 function CraftPlanChip:get_preferred_width(bar_h)
     local has_icon = self._resource ~= nil
     local icon_w = has_icon == true and S.get_icon_size(bar_h) or 0
-    return (has_icon == true and (icon_w + CHIP_ICON_GAP) or 0) + _rough_text_width(self._display_text, bar_h) + (CHIP_PAD_X * 2)
+    return (has_icon == true and (CHIP_ICON_MARGIN + icon_w + CHIP_ICON_GAP) or 0) + _rough_text_width(self._display_text, bar_h) + (CHIP_PAD_X * 2)
 end
 
 function CraftPlanChip:set_bounds(width, height)
@@ -324,9 +336,9 @@ function CraftPlanChip:_layout()
     if has_icon == true then
         self.slot:SetVisible(true)
         self.slot:set_side(icon_side)
-        self.slot:SetPosition(0, icon_y)
-        self.label:SetPosition(icon_side + CHIP_ICON_GAP, 0)
-        self.label:SetSize(math.max(0, w - icon_side - CHIP_ICON_GAP - CHIP_PAD_X), h)
+        self.slot:SetPosition(CHIP_ICON_MARGIN, icon_y)
+        self.label:SetPosition(CHIP_ICON_MARGIN + icon_side + CHIP_ICON_GAP, 0)
+        self.label:SetSize(math.max(0, w - CHIP_ICON_MARGIN - icon_side - CHIP_ICON_GAP - CHIP_PAD_X), h)
     else
         self.slot:SetVisible(false)
         self.label:SetPosition(CHIP_PAD_X, 0)
@@ -385,7 +397,7 @@ function CraftPlanPopupRow:set_data(resource, width, height)
     local icon_w = S.get_icon_size(height)
     local icon_y = S.get_centered_icon_y(height, icon_w)
     self.slot:set_side(icon_w)
-    self.slot:SetPosition(0, icon_y)
+    self.slot:SetPosition(CHIP_ICON_MARGIN, icon_y)
     self.slot:bind_item(
         resource ~= nil and resource.item_info or nil,
         resource ~= nil and resource.icon_id or nil,
@@ -394,8 +406,8 @@ function CraftPlanPopupRow:set_data(resource, width, height)
     self.name:SetText(resource ~= nil and resource.name or "")
     self.amount:SetText(tostring(resource ~= nil and resource.owned or 0) .. "/" .. tostring(resource ~= nil and resource.required or 0))
     self.amount:SetForeColor(resource ~= nil and resource.complete == true and READY_TEXT or MISSING_TEXT)
-    self.name:SetPosition(icon_w + CHIP_ICON_GAP + CHIP_PAD_X, 0)
-    self.name:SetSize(math.max(0, width - icon_w - _rough_text_width(self.amount:GetText(), height) - _rough_text_width(" ", height) - (CHIP_PAD_X * 4) - CHIP_ICON_GAP), height)
+    self.name:SetPosition(CHIP_ICON_MARGIN + icon_w + CHIP_ICON_GAP + CHIP_PAD_X, 0)
+    self.name:SetSize(math.max(0, width - CHIP_ICON_MARGIN - icon_w - _rough_text_width(self.amount:GetText(), height) - _rough_text_width(" ", height) - (CHIP_PAD_X * 4) - CHIP_ICON_GAP), height)
     self.amount:SetPosition(width - _rough_text_width(self.amount:GetText(), height) - CHIP_PAD_X, 0)
     self.amount:SetSize(_rough_text_width(self.amount:GetText(), height), height)
 end

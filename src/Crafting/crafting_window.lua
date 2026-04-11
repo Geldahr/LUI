@@ -595,23 +595,23 @@ function CraftingRecipeRow:set_selected(selected)
     self:_refresh_visual()
 end
 
-function CraftingRecipeRow:set_data(recipe, status)
+function CraftingRecipeRow:set_data(recipe, status, result_item, required_level)
     self.recipe = recipe
     self.status = status
 
-    local title = recipe ~= nil and recipe.result_name or ""
+    local title = result_item ~= nil and result_item.name or ""
     local subtitle_parts = {}
     if recipe ~= nil and recipe.profession_name ~= "" then
         subtitle_parts[#subtitle_parts + 1] = recipe.profession_name
     end
-    if recipe ~= nil and recipe.required_level ~= nil then
-        subtitle_parts[#subtitle_parts + 1] = TR["Level"] .. " " .. _format_count(recipe.required_level)
+    if required_level ~= nil then
+        subtitle_parts[#subtitle_parts + 1] = TR["Level"] .. " " .. _format_count(required_level)
     end
     if recipe ~= nil and recipe.category_name ~= "" then
         subtitle_parts[#subtitle_parts + 1] = recipe.category_name
     end
-    if recipe ~= nil and recipe.name ~= "" and _lower(recipe.name) ~= _lower(recipe.result_name) then
-        subtitle_parts[#subtitle_parts + 1] = recipe.name
+    if recipe ~= nil and _trim(recipe.recipe_name or "") ~= "" and _lower(recipe.recipe_name) ~= _lower(title) then
+        subtitle_parts[#subtitle_parts + 1] = recipe.recipe_name
     end
 
     self.title:SetText(title)
@@ -619,8 +619,8 @@ function CraftingRecipeRow:set_data(recipe, status)
     self.status_label:SetText(CraftingWindow._status_text(nil, status))
     self.status_label:SetForeColor(CraftingWindow._status_color(nil, status))
 
-    if recipe ~= nil then
-        self.icon:bind_item(recipe.result_item_info, recipe.icon_id, recipe.background_image_id)
+    if result_item ~= nil then
+        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id)
     else
         self.icon:bind_item(nil, nil, nil)
     end
@@ -859,14 +859,14 @@ function CraftingPlanRow:set_read_only(read_only)
     self:_layout()
 end
 
-function CraftingPlanRow:set_data(recipe, plan_count, evaluation, craftable_count)
+function CraftingPlanRow:set_data(recipe, result_item, result_name, plan_count, evaluation, craftable_count)
     self.recipe = recipe
-    if recipe ~= nil then
-        self.icon:bind_item(recipe.result_item_info, recipe.icon_id, recipe.background_image_id)
+    if result_item ~= nil then
+        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id)
     else
         self.icon:bind_item(nil, nil, nil)
     end
-    self.name:SetText(recipe ~= nil and recipe.result_name or "")
+    self.name:SetText(result_name or "")
     self.count_box:set_value(plan_count, false)
     self.count_box:set_enabled(recipe ~= nil and self._read_only ~= true)
     self.count_box:SetVisible(self._read_only ~= true)
@@ -1469,6 +1469,22 @@ function CraftingWindow._status_color(_, evaluation)
     return STATUS_MISSING
 end
 
+function CraftingWindow:_item(item_key)
+    return self.store ~= nil and self.store.get_item ~= nil and self.store:get_item(item_key) or nil
+end
+
+function CraftingWindow:_recipe_result_item(recipe)
+    return self.store ~= nil and self.store.get_recipe_result_item ~= nil and self.store:get_recipe_result_item(recipe) or nil
+end
+
+function CraftingWindow:_recipe_result_name(recipe)
+    return self.store ~= nil and self.store.get_recipe_result_name ~= nil and self.store:get_recipe_result_name(recipe) or ""
+end
+
+function CraftingWindow:_recipe_required_level(recipe)
+    return self.store ~= nil and self.store.get_recipe_required_level ~= nil and self.store:get_recipe_required_level(recipe) or nil
+end
+
 function CraftingWindow._status_text(_, evaluation)
     if evaluation == nil then
         return ""
@@ -1888,14 +1904,14 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
     if self.profession_filter ~= FILTER_ALL and recipe.profession_key ~= self.profession_filter then
         return false
     end
-    if _matches_query_groups(self.search_groups, recipe.haystack_lower) ~= true then
+    if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
         return false
     end
     if type(self.material_filter_keys) == "table" and self.store:recipe_uses_item_key(recipe, self.material_filter_keys) ~= true then
         return false
     end
     if self.level_min_filter ~= nil or self.level_max_filter ~= nil then
-        local required_level = tonumber(recipe.required_level)
+        local required_level = tonumber(self:_recipe_required_level(recipe))
         if required_level == nil then
             return false
         end
@@ -1941,6 +1957,8 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
     end
 
     local status = self.store:get_recipe_status(recipe, self.scope_key)
+    local result_item = self:_recipe_result_item(recipe)
+    local required_level = self:_recipe_required_level(recipe)
     local row = CraftingRecipeRow(function(selected_recipe)
         self.selected_recipe_id = selected_recipe.id
         self:_invalidate_recipe_list()
@@ -1949,7 +1967,7 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
     end)
     row:set_scale(_G.settings.global.scale)
     row:set_width(row_w)
-    row:set_data(recipe, status)
+    row:set_data(recipe, status, result_item, required_level)
     row:set_selected(recipe.id == self.selected_recipe_id)
     self.recipe_list:AddItem(row)
 end
@@ -2090,14 +2108,15 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level)
         return
     end
 
+    local item = self:_item(node.key)
     local row = CraftingIngredientRow()
     row:set_scale(_G.settings.global.scale)
     row:set_width(row_w)
     row:set_data(
-        node.item_info,
-        node.icon_id,
-        node.background_image_id,
-        node.name,
+        item ~= nil and item.item_info or nil,
+        item ~= nil and item.icon_id or nil,
+        item ~= nil and item.background_image_id or nil,
+        item ~= nil and item.name or node.key,
         self:_ingredient_detail_text(node),
         self:_node_amount_text(node),
         self:_node_status_color(node),
@@ -2132,17 +2151,24 @@ function CraftingWindow:refresh_selected_recipe()
     end
 
     local evaluation = self.store:evaluate_recipe(recipe, self.scope_key, 1)
+    local result_item = self:_recipe_result_item(recipe)
+    local result_name = self:_recipe_result_name(recipe)
+    local required_level = self:_recipe_required_level(recipe)
     self.detail_empty:SetVisible(false)
 
-    self.detail_icon:bind_item(recipe.result_item_info, recipe.icon_id, recipe.background_image_id)
+    self.detail_icon:bind_item(
+        result_item ~= nil and result_item.item_info or nil,
+        result_item ~= nil and result_item.icon_id or nil,
+        result_item ~= nil and result_item.background_image_id or nil
+    )
 
-    self.detail_title:SetText(recipe.result_name)
+    self.detail_title:SetText(result_name)
     local meta_parts = {}
     if recipe.profession_name ~= "" then
         meta_parts[#meta_parts + 1] = recipe.profession_name
     end
-    if recipe.required_level ~= nil then
-        meta_parts[#meta_parts + 1] = TR["Level"] .. " " .. _format_count(recipe.required_level)
+    if required_level ~= nil then
+        meta_parts[#meta_parts + 1] = TR["Level"] .. " " .. _format_count(required_level)
     end
     if recipe.category_name ~= "" then
         meta_parts[#meta_parts + 1] = recipe.category_name
@@ -2243,7 +2269,14 @@ function CraftingWindow:refresh_plan()
         )
         queue_row:set_scale(_G.settings.global.scale)
         queue_row:set_width(queue_w)
-        queue_row:set_data(entry.recipe, entry.count, entry.evaluation, entry.craftable_count)
+        queue_row:set_data(
+            entry.recipe,
+            self:_recipe_result_item(entry.recipe),
+            self:_recipe_result_name(entry.recipe),
+            entry.count,
+            entry.evaluation,
+            entry.craftable_count
+        )
         self.queue_list:AddItem(queue_row)
     end
 
@@ -2260,7 +2293,14 @@ function CraftingWindow:refresh_plan()
         plan_row:set_scale(_G.settings.global.scale)
         plan_row:set_width(row_w)
         plan_row:set_read_only(true)
-        plan_row:set_data(entry.recipe, entry.count, entry.evaluation, entry.craftable_count)
+        plan_row:set_data(
+            entry.recipe,
+            self:_recipe_result_item(entry.recipe),
+            self:_recipe_result_name(entry.recipe),
+            entry.count,
+            entry.evaluation,
+            entry.craftable_count
+        )
         self.plan_list:AddItem(plan_row)
 
         local ingredients = entry.evaluation ~= nil and entry.evaluation.ingredients or nil
