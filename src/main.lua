@@ -296,6 +296,17 @@ Turbine.Shell.WriteLine(string.format(
 
 Plugins["LUI"].Unload = function()
     _G.LUI_IS_UNLOADING = true
+    if CRAFTING_WINDOW ~= nil then
+        if CRAFTING_WINDOW.SetVisible ~= nil then
+            CRAFTING_WINDOW:SetVisible(false)
+        end
+        CRAFTING_WINDOW.store = nil
+        CRAFTING_WINDOW = nil
+        _G.CRAFTING_WINDOW = nil
+    end
+    if Crafting ~= nil and Crafting.destroy_shared_store ~= nil then
+        Crafting.destroy_shared_store()
+    end
     save_settings()
     if _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK ~= nil then
         _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
@@ -314,14 +325,6 @@ Plugins["LUI"].Unload = function()
             BESTIARY_WINDOW:SetVisible(false)
         end
         BESTIARY_WINDOW = nil
-    end
-    if CRAFTING_WINDOW ~= nil then
-        if CRAFTING_WINDOW.SetVisible ~= nil then
-            CRAFTING_WINDOW:SetVisible(false)
-        end
-        CRAFTING_WINDOW.store = nil
-        CRAFTING_WINDOW = nil
-        _G.CRAFTING_WINDOW = nil
     end
     if BESTIARY_CARD ~= nil then
         if BESTIARY_CARD.SetVisible ~= nil then
@@ -343,9 +346,5 @@ Plugins["LUI"].Unload = function()
         ASSETS_STORE:destroy()
         ASSETS_STORE = nil
     end
-    if Crafting ~= nil and Crafting.destroy_shared_store ~= nil then
-        Crafting.destroy_shared_store()
-    end
-
     save_assets_cache()
 end

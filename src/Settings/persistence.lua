@@ -314,7 +314,7 @@ function _G.capture_runtime_geometry()
         end
     end
 
-    if CRAFTING_WINDOW ~= nil then
+    if _G.LUI_IS_UNLOADING ~= true and CRAFTING_WINDOW ~= nil then
         if CRAFTING_WINDOW.capture_geometry ~= nil then
             CRAFTING_WINDOW:capture_geometry()
         elseif CRAFTING_WINDOW.persist_geometry ~= nil then
