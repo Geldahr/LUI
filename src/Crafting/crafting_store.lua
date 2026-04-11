@@ -377,19 +377,17 @@ end
 
 local function _scope_option_labels()
     return {
-        TR["All known materials across all characters on this server"],
-        TR["Materials directly available on this character right now"],
-        TR["All materials owned by this character"],
-        TR["Shared storage only"],
+        TR["This character"],
+        TR["Backpack only"],
+        TR["Server-wide"],
     }
 end
 
 local function _scope_option_values()
     return {
-        SCOPE_SERVER,
-        SCOPE_INVENTORY,
         SCOPE_PERSONAL,
-        SCOPE_SHARED,
+        SCOPE_INVENTORY,
+        SCOPE_SERVER,
     }
 end
 
