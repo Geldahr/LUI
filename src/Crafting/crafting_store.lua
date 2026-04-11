@@ -464,28 +464,19 @@ local function _legacy_result_visual_key(icon_id, background_image_id, quality)
     }, "\30")
 end
 
-local function _recipe_uses_item_key(recipe, item_key)
-    if type(recipe) ~= "table" or type(recipe.ingredients) ~= "table" or item_key == nil or item_key == "" then
+local function _recipe_reenters_path(recipe, visiting)
+    if type(recipe) ~= "table" or type(recipe.ingredients) ~= "table" or type(visiting) ~= "table" then
         return false
     end
 
     for index = 1, #recipe.ingredients do
         local ingredient = recipe.ingredients[index]
-        if type(ingredient) == "table" and ingredient.key == item_key then
+        if type(ingredient) == "table" and visiting[ingredient.key] == true then
             return true
         end
     end
 
     return false
-end
-
-local function _missing_map_has_key(missing_map, item_key)
-    if type(missing_map) ~= "table" or item_key == nil or item_key == "" then
-        return false
-    end
-
-    local entry = missing_map[item_key]
-    return type(entry) == "table" and _safe_number(entry.quantity, 0) > 0
 end
 
 local function _add_result_index_entry(index_map, key, record)
@@ -852,6 +843,12 @@ function CraftingStore:_register_recipe_record(record)
     self.recipes[#self.recipes + 1] = record
     self.recipe_by_id[record.id] = record
     _add_result_index_entry(self.result_index, record.result_key, record)
+
+    if type(record.result_alias_keys) == "table" then
+        for index = 1, #record.result_alias_keys do
+            _add_result_index_entry(self.result_index, record.result_alias_keys[index], record)
+        end
+    end
 end
 
 function CraftingStore:_step_recipe_load(batch_size)
@@ -965,6 +962,11 @@ function CraftingStore:_collect_recipes(current_character)
                         recipes[#recipes + 1] = record
                         recipe_by_id[record.id] = record
                         _add_result_index_entry(result_index, record.result_key, record)
+                        if type(record.result_alias_keys) == "table" then
+                            for alias_index = 1, #record.result_alias_keys do
+                                _add_result_index_entry(result_index, record.result_alias_keys[alias_index], record)
+                            end
+                        end
                         _append_token(token_parts, record.id)
                         _append_token(token_parts, record.name)
                         _append_token(token_parts, record.result_name)
@@ -1185,13 +1187,12 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
 
     for recipe_index = 1, #recipes do
         local recipe = recipes[recipe_index]
-        if _recipe_uses_item_key(recipe, item_key) ~= true then
+        if _recipe_reenters_path(recipe, visiting) ~= true then
             local branch_stock = _copy_counts(next_stock)
             local per_craft = math.max(1, _safe_number(recipe.result_quantity, 1))
             local crafts_needed = math.floor(((needed + per_craft - 1) / per_craft) + 0.0)
             local combined_missing = {}
             local all_ok = true
-            local candidate_invalid = false
             local candidate_node = {
                 key = node.key,
                 name = node.name,
@@ -1228,42 +1229,31 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
             end
             visiting[item_key] = nil
 
-            if _missing_map_has_key(combined_missing, item_key) == true then
-                candidate_invalid = true
+            if all_ok == true then
+                local produced = crafts_needed * per_craft
+                candidate_node.produced = produced
+                local leftover = produced - needed
+                if leftover > 0 then
+                    branch_stock[item_key] = _safe_number(branch_stock[item_key], 0) + leftover
+                end
+                return true, candidate_node, branch_stock, combined_missing
             end
 
-            if candidate_invalid == true then
-                -- Reject recursive breakdowns that still bottom out in the same intermediate item.
-                -- If no exact sub-recipe resolves the ingredient cleanly, the caller should keep the
-                -- intermediate as the missing resource instead of inventing a hybrid leaf quantity.
-                all_ok = false
-            else
-                if all_ok == true then
-                    local produced = crafts_needed * per_craft
-                    candidate_node.produced = produced
-                    local leftover = produced - needed
-                    if leftover > 0 then
-                        branch_stock[item_key] = _safe_number(branch_stock[item_key], 0) + leftover
-                    end
-                    return true, candidate_node, branch_stock, combined_missing
-                end
+            candidate_node.missing = needed
+            local missing_total = _sum_missing_map(combined_missing)
+            local missing_distinct = 0
+            for _ in pairs(combined_missing) do
+                missing_distinct = missing_distinct + 1
+            end
 
-                candidate_node.missing = needed
-                local missing_total = _sum_missing_map(combined_missing)
-                local missing_distinct = 0
-                for _ in pairs(combined_missing) do
-                    missing_distinct = missing_distinct + 1
-                end
-
-                if best_failed_node == nil or
-                    missing_total < best_failed_total or
-                    (missing_total == best_failed_total and missing_distinct < best_failed_distinct) then
-                    best_failed_node = candidate_node
-                    best_failed_stock = branch_stock
-                    best_failed_missing = combined_missing
-                    best_failed_total = missing_total
-                    best_failed_distinct = missing_distinct
-                end
+            if best_failed_node == nil or
+                missing_total < best_failed_total or
+                (missing_total == best_failed_total and missing_distinct < best_failed_distinct) then
+                best_failed_node = candidate_node
+                best_failed_stock = branch_stock
+                best_failed_missing = combined_missing
+                best_failed_total = missing_total
+                best_failed_distinct = missing_distinct
             end
         end
     end
