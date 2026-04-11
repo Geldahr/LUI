@@ -173,7 +173,7 @@ function Crafting.get_tracked_plan_resource_state(store)
         }
     end
 
-    local crafting_store = store or Crafting.get_shared_store()
+    local crafting_store = store or _G.CRAFTING_STORE
     if store == nil and crafting_store == nil and _G.LUI_IS_UNLOADING ~= true then
         local now = Turbine.Engine.GetGameTime()
         if _tracked_plan_autoload_after == nil then
