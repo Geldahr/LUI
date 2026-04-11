@@ -2142,16 +2142,21 @@ function CraftingWindow:layout()
 
     self.right_tab_bar:SetPosition(0, 0)
     self.right_tab_bar:SetSize(right_w, content_h)
-
-    local recipe_page_x, recipe_page_y = self.recipe_page:GetPosition()
-    local recipe_page_w, recipe_page_h = self.recipe_page:GetSize()
-    if recipe_page_w <= 0 or recipe_page_h <= 0 then
-        recipe_page_x, recipe_page_y = self.plan_page:GetPosition()
-        recipe_page_w, recipe_page_h = self.plan_page:GetSize()
+    if self.right_tab_bar._layout ~= nil then
+        self.right_tab_bar:_layout()
     end
-    self.recipe_page:SetPosition(recipe_page_x, recipe_page_y)
+
+    local recipe_page_w = 0
+    local recipe_page_h = 0
+    if self.right_tab_bar._content_inner ~= nil then
+        recipe_page_w, recipe_page_h = self.right_tab_bar._content_inner:GetSize()
+    end
+    if recipe_page_w <= 0 or recipe_page_h <= 0 then
+        recipe_page_w, recipe_page_h = self.recipe_page:GetSize()
+    end
+    self.recipe_page:SetPosition(0, 0)
     self.recipe_page:SetSize(recipe_page_w, recipe_page_h)
-    self.plan_page:SetPosition(recipe_page_x, recipe_page_y)
+    self.plan_page:SetPosition(0, 0)
     self.plan_page:SetSize(recipe_page_w, recipe_page_h)
 
     local split_gap = _fixed_int(BASE_SECTION_SPLIT_H)
