@@ -34,16 +34,6 @@ local PROFESSION_ORDER = {
     Turbine.Gameplay.Profession.Woodworker,
 }
 
-local function _safe_number(value, fallback)
-    if type(value) ~= "number" then
-        value = tonumber(value)
-    end
-    if value == nil then
-        return fallback
-    end
-    return value
-end
-
 local function _safe_string(value, fallback)
     if value == nil then
         return fallback or ""
@@ -71,24 +61,6 @@ local function _normalize_name(name)
     return _lower(value)
 end
 
-local function _safe_invoke(object, method_name, ...)
-    if object == nil then
-        return nil
-    end
-
-    local method = object[method_name]
-    if type(method) ~= "function" then
-        return nil
-    end
-
-    local ok, result = pcall(method, object, ...)
-    if ok ~= true then
-        return nil
-    end
-
-    return result
-end
-
 local function _copy_counts(source)
     local out = {}
     if type(source) ~= "table" then
@@ -110,7 +82,7 @@ local function _sum_missing_map(missing_map)
 
     for _, entry in pairs(missing_map) do
         if type(entry) == "table" then
-            total = total + _safe_number(entry.quantity, 0)
+            total = total + (tonumber(entry.quantity) or 0)
         end
     end
 
@@ -124,7 +96,7 @@ local function _sort_missing_list(left, right)
         return left_name < right_name
     end
 
-    return _safe_number(left ~= nil and left.quantity or nil, 0) > _safe_number(right ~= nil and right.quantity or nil, 0)
+    return (tonumber(left ~= nil and left.quantity or nil) or 0) > (tonumber(right ~= nil and right.quantity or nil) or 0)
 end
 
 local function _missing_map_to_list(missing_map)
@@ -134,7 +106,7 @@ local function _missing_map_to_list(missing_map)
     end
 
     for _, entry in pairs(missing_map) do
-        if type(entry) == "table" and _safe_number(entry.quantity, 0) > 0 then
+        if type(entry) == "table" and (tonumber(entry.quantity) or 0) > 0 then
             out[#out + 1] = entry
         end
     end
@@ -156,7 +128,7 @@ local function _current_character_name()
     end
 
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    local name = _safe_invoke(player, "GetName")
+    local name = player ~= nil and player:GetName() or nil
     name = _trim(name)
     if name ~= "" then
         return name
@@ -166,7 +138,10 @@ local function _current_character_name()
 end
 
 local function _item_info_icon_id(item_info)
-    local icon_id = _safe_number(_safe_invoke(item_info, "GetIconImageID"), nil)
+    if item_info == nil then
+        return nil
+    end
+    local icon_id = tonumber(item_info:GetIconImageID())
     if icon_id == 0 then
         icon_id = nil
     end
@@ -174,9 +149,12 @@ local function _item_info_icon_id(item_info)
 end
 
 local function _item_info_background_id(item_info)
-    local background_id = _safe_number(_safe_invoke(item_info, "GetBackgroundImageID"), nil)
+    if item_info == nil then
+        return nil
+    end
+    local background_id = tonumber(item_info:GetBackgroundImageID())
     if background_id == nil or background_id == 0 then
-        background_id = _safe_number(_safe_invoke(item_info, "GetQualityImageID"), nil)
+        background_id = tonumber(item_info:GetQualityImageID())
         if background_id == 0 then
             background_id = nil
         end
@@ -185,35 +163,50 @@ local function _item_info_background_id(item_info)
 end
 
 local function _item_info_quality(item_info)
-    return _safe_invoke(item_info, "GetQuality")
+    if item_info == nil then
+        return nil
+    end
+    return item_info:GetQuality()
 end
 
 local function _item_info_category(item_info)
-    return _safe_number(_safe_invoke(item_info, "GetCategory"), nil)
+    if item_info == nil then
+        return nil
+    end
+    return tonumber(item_info:GetCategory())
 end
 
 local function _item_info_description(item_info)
-    return _trim(_safe_invoke(item_info, "GetDescription"))
+    if item_info == nil then
+        return ""
+    end
+    return _trim(item_info:GetDescription())
 end
 
 local function _item_info_max_quantity(item_info)
-    return _safe_number(_safe_invoke(item_info, "GetMaxQuantity"), nil)
+    if item_info == nil then
+        return nil
+    end
+    return tonumber(item_info:GetMaxQuantity())
 end
 
 local function _item_info_max_stack_size(item_info)
-    return _safe_number(_safe_invoke(item_info, "GetMaxStackSize"), nil)
+    if item_info == nil then
+        return nil
+    end
+    return tonumber(item_info:GetMaxStackSize())
 end
 
 local function _item_info_is_magic(item_info)
-    return _safe_invoke(item_info, "IsMagic") == true and 1 or 0
+    return item_info ~= nil and item_info:IsMagic() == true and 1 or 0
 end
 
 local function _item_info_is_unique(item_info)
-    return _safe_invoke(item_info, "IsUnique") == true and 1 or 0
+    return item_info ~= nil and item_info:IsUnique() == true and 1 or 0
 end
 
 local function _positive_integer(value)
-    local number = _safe_number(value, nil)
+    local number = tonumber(value)
     if number == nil then
         return nil
     end
@@ -250,6 +243,10 @@ local function _extract_level_from_text(text)
 end
 
 local function _item_info_required_level(item_info)
+    if item_info == nil then
+        return nil
+    end
+
     local method_names = {
         "GetRequiredLevel",
         "GetMinimumLevel",
@@ -257,18 +254,40 @@ local function _item_info_required_level(item_info)
     }
 
     for i = 1, #method_names do
-        local level = _positive_integer(_safe_invoke(item_info, method_names[i]))
-        if level ~= nil then
-            return level
+        local method = item_info[method_names[i]]
+        if type(method) == "function" then
+            local level = _positive_integer(method(item_info))
+            if level ~= nil then
+                return level
+            end
         end
     end
 
-    local level = _extract_level_from_text(_safe_invoke(item_info, "GetName"))
+    local level = _extract_level_from_text(item_info:GetName())
     if level ~= nil then
         return level
     end
 
-    level = _extract_level_from_text(_safe_invoke(item_info, "GetDescription"))
+    level = _extract_level_from_text(item_info:GetDescription())
+    if level ~= nil then
+        return level
+    end
+
+    return nil
+end
+
+local function _recipe_required_level(result_info, recipe_name, category_name)
+    local level = _item_info_required_level(result_info)
+    if level ~= nil then
+        return level
+    end
+
+    level = _extract_level_from_text(category_name)
+    if level ~= nil then
+        return level
+    end
+
+    level = _extract_level_from_text(recipe_name)
     if level ~= nil then
         return level
     end
@@ -408,28 +427,28 @@ local function _recipe_sort_compare(left, right)
 end
 
 local function _result_visual_key(item_info, icon_id, background_image_id, quality)
-    local icon = _safe_number(icon_id, nil)
+    local icon = tonumber(icon_id)
     if icon == nil then
         icon = _item_info_icon_id(item_info)
     end
-    icon = _safe_number(icon, 0) or 0
+    icon = tonumber(icon) or 0
 
-    local background = _safe_number(background_image_id, nil)
+    local background = tonumber(background_image_id)
     if background == nil then
         background = _item_info_background_id(item_info)
     end
-    background = _safe_number(background, 0) or 0
+    background = tonumber(background) or 0
 
-    local item_quality = _safe_number(quality, nil)
+    local item_quality = tonumber(quality)
     if item_quality == nil then
         item_quality = _item_info_quality(item_info)
     end
-    item_quality = _safe_number(item_quality, 0) or 0
+    item_quality = tonumber(item_quality) or 0
 
-    local category = _safe_number(_item_info_category(item_info), 0) or 0
+    local category = tonumber(_item_info_category(item_info)) or 0
     local description = _item_info_description(item_info)
-    local max_quantity = _safe_number(_item_info_max_quantity(item_info), 0) or 0
-    local max_stack_size = _safe_number(_item_info_max_stack_size(item_info), 0) or 0
+    local max_quantity = tonumber(_item_info_max_quantity(item_info)) or 0
+    local max_stack_size = tonumber(_item_info_max_stack_size(item_info)) or 0
     local magic_flag = _item_info_is_magic(item_info)
     local unique_flag = _item_info_is_unique(item_info)
 
@@ -451,9 +470,9 @@ local function _result_visual_key(item_info, icon_id, background_image_id, quali
 end
 
 local function _legacy_result_visual_key(icon_id, background_image_id, quality)
-    local icon = _safe_number(icon_id, 0) or 0
-    local background = _safe_number(background_image_id, 0) or 0
-    local item_quality = _safe_number(quality, 0) or 0
+    local icon = tonumber(icon_id) or 0
+    local background = tonumber(background_image_id) or 0
+    local item_quality = tonumber(quality) or 0
     if icon == 0 and background == 0 then
         return nil
     end
@@ -560,8 +579,8 @@ function CraftingStore:is_loading()
 end
 
 function CraftingStore:get_loading_progress()
-    local total = _safe_number(self._recipe_load_total, #self.recipes)
-    local loaded = _safe_number(self._recipe_load_done, #self.recipes)
+    local total = tonumber(self._recipe_load_total) or #self.recipes
+    local loaded = tonumber(self._recipe_load_done) or #self.recipes
     if total < loaded then
         total = loaded
     end
@@ -598,7 +617,7 @@ end
 
 function CraftingStore:refresh(force, recipe_batch_size)
     local current_character = _current_character_name()
-    local assets_token = ASSETS_STORE ~= nil and _safe_number(ASSETS_STORE.generation, 0) or 0
+    local assets_token = ASSETS_STORE ~= nil and (tonumber(ASSETS_STORE.generation) or 0) or 0
     local changed = false
     local recipe_refresh_needed = force == true or self._recipes_initialized ~= true or self.current_character_name ~= current_character
 
@@ -655,7 +674,7 @@ function CraftingStore:evaluate_recipe(recipe_or_id, scope_key, craft_count)
         return nil
     end
 
-    local count = _safe_number(craft_count, 1)
+    local count = tonumber(craft_count) or 1
     if count < 1 then
         count = 1
     end
@@ -686,7 +705,7 @@ function CraftingStore:evaluate_plan(plan_entries, scope_key)
     for i = 1, #plan_entries do
         local entry = plan_entries[i]
         local recipe = entry ~= nil and self.recipe_by_id[entry.recipe_id] or nil
-        local count = entry ~= nil and _safe_number(entry.count, 0) or 0
+        local count = entry ~= nil and (tonumber(entry.count) or 0) or 0
         count = math.floor(count + 0.5)
         if recipe ~= nil and count > 0 then
             result.planned_recipe_count = result.planned_recipe_count + count
@@ -746,7 +765,7 @@ function CraftingStore:_build_ownership(current_character)
     for i = 1, #entries do
         local record = entries[i]
         local key = _normalize_name(record ~= nil and record.name or nil)
-        local quantity = _safe_number(record ~= nil and record.quantity or nil, 0)
+        local quantity = tonumber(record ~= nil and record.quantity or nil) or 0
         if key ~= "" and quantity > 0 then
             ownership[SCOPE_SERVER][key] = (ownership[SCOPE_SERVER][key] or 0) + quantity
 
@@ -776,28 +795,28 @@ function CraftingStore:_start_recipe_load(current_character)
     local recipe_total = 0
 
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    local attributes = _safe_invoke(player, "GetAttributes")
+    local attributes = player ~= nil and player:GetAttributes() or nil
 
     if attributes ~= nil then
         for i = 1, #PROFESSION_ORDER do
             local profession_enum = PROFESSION_ORDER[i]
-            local profession_info = _safe_invoke(attributes, "GetProfessionInfo", profession_enum)
+            local profession_info = attributes:GetProfessionInfo(profession_enum)
             if profession_info ~= nil then
-                local profession_name = _trim(_safe_invoke(profession_info, "GetName"))
+                local profession_name = _trim(profession_info:GetName())
                 if profession_name == "" then
                     profession_name = tostring(profession_enum)
                 end
 
-                local recipe_count = _safe_number(_safe_invoke(profession_info, "GetRecipeCount"), 0)
+                local recipe_count = profession_info:GetRecipeCount() or 0
                 local profession = {
                     profession = profession_enum,
                     key = tostring(profession_enum),
                     name = profession_name,
                     recipe_count = recipe_count,
-                    proficiency_level = _safe_number(_safe_invoke(profession_info, "GetProficiencyLevel"), 0),
-                    proficiency_title = _trim(_safe_invoke(profession_info, "GetProficiencyTitle")),
-                    mastery_level = _safe_number(_safe_invoke(profession_info, "GetMasteryLevel"), 0),
-                    mastery_title = _trim(_safe_invoke(profession_info, "GetMasteryTitle")),
+                    proficiency_level = profession_info:GetProficiencyLevel() or 0,
+                    proficiency_title = _trim(profession_info:GetProficiencyTitle()),
+                    mastery_level = profession_info:GetMasteryLevel() or 0,
+                    mastery_title = _trim(profession_info:GetMasteryTitle()),
                 }
                 professions[#professions + 1] = profession
                 profession_labels[#profession_labels + 1] = profession_name
@@ -856,7 +875,7 @@ function CraftingStore:_step_recipe_load(batch_size)
         return false
     end
 
-    local remaining = _safe_number(batch_size, RECIPE_LOAD_BATCH_SIZE)
+    local remaining = tonumber(batch_size) or RECIPE_LOAD_BATCH_SIZE
     if remaining == nil or remaining < 1 then
         remaining = RECIPE_LOAD_BATCH_SIZE
     end
@@ -865,10 +884,10 @@ function CraftingStore:_step_recipe_load(batch_size)
     while remaining > 0 and type(self._recipe_load_queue) == "table" and
         self._recipe_load_queue_index <= #self._recipe_load_queue do
         local queue_entry = self._recipe_load_queue[self._recipe_load_queue_index]
-        local recipe_index = _safe_number(queue_entry ~= nil and queue_entry.next_recipe_index or nil, 1)
+        local recipe_index = tonumber(queue_entry ~= nil and queue_entry.next_recipe_index or nil) or 1
         local profession = queue_entry ~= nil and queue_entry.profession or nil
         local profession_info = queue_entry ~= nil and queue_entry.profession_info or nil
-        local recipe = _safe_invoke(profession_info, "GetRecipe", recipe_index)
+        local recipe = profession_info ~= nil and profession_info:GetRecipe(recipe_index) or nil
         if recipe ~= nil and profession ~= nil then
             self:_register_recipe_record(self:_build_recipe_record(recipe, profession, recipe_index, self.item_meta))
         end
@@ -878,7 +897,7 @@ function CraftingStore:_step_recipe_load(batch_size)
         remaining = remaining - 1
         changed = true
 
-        if queue_entry.next_recipe_index > _safe_number(queue_entry.recipe_count, 0) then
+        if queue_entry.next_recipe_index > (tonumber(queue_entry.recipe_count) or 0) then
             self._recipe_load_queue_index = self._recipe_load_queue_index + 1
         end
     end
@@ -911,7 +930,7 @@ function CraftingStore:_collect_recipes(current_character)
     local token_parts = { current_character }
 
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    local attributes = _safe_invoke(player, "GetAttributes")
+    local attributes = player ~= nil and player:GetAttributes() or nil
     if attributes == nil then
         return {
             professions = professions,
@@ -928,23 +947,23 @@ function CraftingStore:_collect_recipes(current_character)
 
     for i = 1, #PROFESSION_ORDER do
         local profession_enum = PROFESSION_ORDER[i]
-        local profession_info = _safe_invoke(attributes, "GetProfessionInfo", profession_enum)
+        local profession_info = attributes:GetProfessionInfo(profession_enum)
         if profession_info ~= nil then
-            local profession_name = _trim(_safe_invoke(profession_info, "GetName"))
+            local profession_name = _trim(profession_info:GetName())
             if profession_name == "" then
                 profession_name = tostring(profession_enum)
             end
 
-            local recipe_count = _safe_number(_safe_invoke(profession_info, "GetRecipeCount"), 0)
+            local recipe_count = profession_info:GetRecipeCount() or 0
             local profession = {
                 profession = profession_enum,
                 key = tostring(profession_enum),
                 name = profession_name,
                 recipe_count = recipe_count,
-                proficiency_level = _safe_number(_safe_invoke(profession_info, "GetProficiencyLevel"), 0),
-                proficiency_title = _trim(_safe_invoke(profession_info, "GetProficiencyTitle")),
-                mastery_level = _safe_number(_safe_invoke(profession_info, "GetMasteryLevel"), 0),
-                mastery_title = _trim(_safe_invoke(profession_info, "GetMasteryTitle")),
+                proficiency_level = profession_info:GetProficiencyLevel() or 0,
+                proficiency_title = _trim(profession_info:GetProficiencyTitle()),
+                mastery_level = profession_info:GetMasteryLevel() or 0,
+                mastery_title = _trim(profession_info:GetMasteryTitle()),
             }
             professions[#professions + 1] = profession
             profession_labels[#profession_labels + 1] = profession_name
@@ -955,7 +974,7 @@ function CraftingStore:_collect_recipes(current_character)
             _append_token(token_parts, profession.recipe_count)
 
             for recipe_index = 1, recipe_count do
-                local recipe = _safe_invoke(profession_info, "GetRecipe", recipe_index)
+                local recipe = profession_info:GetRecipe(recipe_index)
                 if recipe ~= nil then
                     local record = self:_build_recipe_record(recipe, profession, recipe_index, item_meta)
                     if record ~= nil then
@@ -992,9 +1011,10 @@ function CraftingStore:_collect_recipes(current_character)
 end
 
 function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, item_meta)
-    local recipe_name = _trim(_safe_invoke(recipe, "GetName"))
-    local result_info = _safe_invoke(recipe, "GetResultItemInfo")
-    local result_name = _trim(_safe_invoke(result_info, "GetName"))
+    local recipe_name = _trim(recipe:GetName())
+    local result_info = recipe:GetResultItemInfo()
+    local result_name = _trim(result_info ~= nil and result_info:GetName() or nil)
+    local category_name = _trim(recipe:GetCategoryName())
     if result_name == "" then
         result_name = recipe_name
     end
@@ -1009,26 +1029,26 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
 
     _remember_item_meta(item_meta, result_key, result_name, result_info)
 
-    local ingredient_count = _safe_number(_safe_invoke(recipe, "GetIngredientCount"), 0)
+    local ingredient_count = recipe:GetIngredientCount() or 0
     local ingredients = {}
     local filter_parts = {
         _lower(recipe_name),
         _lower(result_name),
         _lower(profession.name),
-        _lower(_safe_invoke(recipe, "GetCategoryName")),
+        _lower(category_name),
     }
 
     for ingredient_index = 1, ingredient_count do
-        local ingredient = _safe_invoke(recipe, "GetIngredient", ingredient_index)
+        local ingredient = recipe:GetIngredient(ingredient_index)
         if ingredient ~= nil then
-            local ingredient_info = _safe_invoke(ingredient, "GetItemInfo")
-            local ingredient_name = _trim(_safe_invoke(ingredient_info, "GetName"))
+            local ingredient_info = ingredient:GetItemInfo()
+            local ingredient_name = _trim(ingredient_info ~= nil and ingredient_info:GetName() or nil)
             local ingredient_key = _normalize_name(ingredient_name)
             if ingredient_key ~= "" then
                 local ingredient_record = {
                     key = ingredient_key,
                     name = ingredient_name,
-                    quantity = math.max(1, _safe_number(_safe_invoke(ingredient, "GetRequiredQuantity"), 1)),
+                    quantity = math.max(1, tonumber(ingredient:GetRequiredQuantity()) or 1),
                     icon_id = _item_info_icon_id(ingredient_info),
                     background_image_id = _item_info_background_id(ingredient_info),
                     quality = _item_info_quality(ingredient_info),
@@ -1052,9 +1072,9 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         profession_key = profession.key,
         profession_name = profession.name,
         name = recipe_name ~= "" and recipe_name or result_name,
-        category_name = _trim(_safe_invoke(recipe, "GetCategoryName")),
-        tier = _safe_number(_safe_invoke(recipe, "GetTier"), 0),
-        cooldown = _safe_number(_safe_invoke(recipe, "GetCooldown"), 0),
+        category_name = category_name,
+        tier = tonumber(recipe:GetTier()) or 0,
+        cooldown = tonumber(recipe:GetCooldown()) or 0,
         result_name = result_name,
         result_key = result_key,
         result_alias_keys = {
@@ -1067,11 +1087,11 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
             _item_info_background_id(result_info),
             _item_info_quality(result_info)
         ),
-        result_quantity = math.max(1, _safe_number(_safe_invoke(recipe, "GetResultItemQuantity"), 1)),
+        result_quantity = math.max(1, tonumber(recipe:GetResultItemQuantity()) or 1),
         icon_id = _item_info_icon_id(result_info),
         background_image_id = _item_info_background_id(result_info),
         quality = _item_info_quality(result_info),
-        required_level = _item_info_required_level(result_info),
+        required_level = _recipe_required_level(result_info, recipe_name, category_name),
         result_item_info = result_info,
         ingredients = ingredients,
         haystack_lower = table.concat(filter_parts, "\n"),
@@ -1091,7 +1111,7 @@ function CraftingStore:_merge_missing_maps(destination, source)
     end
 
     for key, entry in pairs(source) do
-        if type(entry) == "table" and _safe_number(entry.quantity, 0) > 0 then
+        if type(entry) == "table" and (tonumber(entry.quantity) or 0) > 0 then
             if type(destination[key]) ~= "table" then
                 destination[key] = {
                     key = key,
@@ -1106,7 +1126,7 @@ function CraftingStore:_merge_missing_maps(destination, source)
             if destination[key].item_info == nil then
                 destination[key].item_info = entry.item_info
             end
-            destination[key].quantity = _safe_number(destination[key].quantity, 0) + _safe_number(entry.quantity, 0)
+            destination[key].quantity = (tonumber(destination[key].quantity) or 0) + (tonumber(entry.quantity) or 0)
         end
     end
 end
@@ -1134,7 +1154,7 @@ function CraftingStore:_get_recipes_for_item(item_key)
 end
 
 function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
-    local needed = math.max(0, _safe_number(quantity, 0))
+    local needed = math.max(0, tonumber(quantity) or 0)
     local meta = self.item_meta[item_key] or {}
     local node = {
         key = item_key,
@@ -1159,7 +1179,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
         return true, node, next_stock, {}
     end
 
-    local available = _safe_number(next_stock[item_key], 0)
+    local available = tonumber(next_stock[item_key]) or 0
     if available > 0 then
         local used = math.min(available, needed)
         node.from_stock = used
@@ -1189,7 +1209,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
         local recipe = recipes[recipe_index]
         if _recipe_reenters_path(recipe, visiting) ~= true then
             local branch_stock = _copy_counts(next_stock)
-            local per_craft = math.max(1, _safe_number(recipe.result_quantity, 1))
+            local per_craft = math.max(1, tonumber(recipe.result_quantity) or 1)
             local crafts_needed = math.floor(((needed + per_craft - 1) / per_craft) + 0.0)
             local combined_missing = {}
             local all_ok = true
@@ -1234,7 +1254,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
                 candidate_node.produced = produced
                 local leftover = produced - needed
                 if leftover > 0 then
-                    branch_stock[item_key] = _safe_number(branch_stock[item_key], 0) + leftover
+                    branch_stock[item_key] = (tonumber(branch_stock[item_key]) or 0) + leftover
                 end
                 return true, candidate_node, branch_stock, combined_missing
             end
@@ -1287,7 +1307,7 @@ function CraftingStore:_node_has_expansion(node)
 end
 
 function CraftingStore:_evaluate_recipe_with_stock(recipe, craft_count, stock)
-    local count = math.max(1, math.floor(_safe_number(craft_count, 1) + 0.5))
+    local count = math.max(1, math.floor((tonumber(craft_count) or 1) + 0.5))
     local base_stock = _copy_counts(stock)
     local working_stock = _copy_counts(stock)
     local evaluation = {
@@ -1314,7 +1334,7 @@ function CraftingStore:_evaluate_recipe_with_stock(recipe, craft_count, stock)
 
         working_stock = next_stock
         node.required = required
-        node.owned_in_scope = _safe_number(base_stock[ingredient.key], 0)
+        node.owned_in_scope = tonumber(base_stock[ingredient.key]) or 0
         node.icon_id = ingredient.icon_id
         node.background_image_id = ingredient.background_image_id
         node.quality = ingredient.quality
@@ -1338,7 +1358,7 @@ function CraftingStore:_evaluate_recipe_with_stock(recipe, craft_count, stock)
 end
 
 function CraftingStore:_count_craftable_with_stock(recipe, craft_count, stock)
-    local requested = math.max(0, math.floor(_safe_number(craft_count, 0) + 0.5))
+    local requested = math.max(0, math.floor((tonumber(craft_count) or 0) + 0.5))
     if requested <= 0 or type(recipe) ~= "table" then
         return 0
     end

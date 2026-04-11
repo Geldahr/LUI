@@ -77,16 +77,6 @@ local function _fixed_int(value)
     return math.floor(value + 0.5)
 end
 
-local function _safe_number(value, fallback)
-    if type(value) ~= "number" then
-        value = tonumber(value)
-    end
-    if value == nil then
-        return fallback
-    end
-    return value
-end
-
 local function _safe_string(value, fallback)
     if value == nil then
         return fallback or ""
@@ -215,7 +205,7 @@ local function _matches_query_groups(groups, haystack)
 end
 
 local function _format_count(value)
-    local number = math.max(0, math.floor(_safe_number(value, 0) + 0.5))
+    local number = math.max(0, math.floor((tonumber(value) or 0) + 0.5))
     return tostring(number)
 end
 
@@ -283,7 +273,7 @@ local function _fit_inner_border(control)
         return
     end
     local width, height = control:GetSize()
-    local inset = math.max(0, math.floor(_safe_number(control._inner_inset, BASE_PANEL_BORDER) + 0.5))
+    local inset = math.max(0, math.floor((tonumber(control._inner_inset) or BASE_PANEL_BORDER) + 0.5))
     control.inner:SetSize(
         math.max(0, width - (inset * 2)),
         math.max(0, height - (inset * 2))
@@ -663,7 +653,7 @@ function CraftingIngredientRow:set_width(width)
 end
 
 function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level)
-    self._indent_level = math.max(0, math.floor(_safe_number(indent_level, 0) + 0.5))
+    self._indent_level = math.max(0, math.floor((tonumber(indent_level) or 0) + 0.5))
     self.icon:bind_item(item_info, icon_id, background_image_id)
     self.name:SetText(label_text or "")
     self.detail:SetText(detail_text or "")
@@ -787,8 +777,9 @@ function CraftingPlanRow:set_data(recipe, plan_count, evaluation, craftable_coun
     self.name:SetText(recipe ~= nil and recipe.result_name or "")
     self.count_box:set_value(plan_count, false)
     self.count_box:set_enabled(recipe ~= nil)
-    craftable_count = _safe_number(craftable_count, plan_count)
-    local all_ready = craftable_count >= _safe_number(plan_count, 0) and _safe_number(plan_count, 0) > 0
+    craftable_count = tonumber(craftable_count) or plan_count
+    local plan_total = tonumber(plan_count) or 0
+    local all_ready = craftable_count >= plan_total and plan_total > 0
     self.status_label:SetText(_ratio_text(craftable_count, plan_count))
     self.status_label:SetForeColor(all_ready == true and CraftingWindow._status_color(nil, evaluation) or STATUS_MISSING)
     self:SetBackColor(all_ready == true and Turbine.UI.Color(1.00, 0.09, 0.15, 0.11) or
@@ -859,7 +850,7 @@ function CraftingWindow:Constructor()
     self.update_every = 0.75
     self._loading_visible = false
     self.store = Crafting.get_shared_store ~= nil and Crafting.get_shared_store() or Crafting.CraftingStore()
-    self._last_store_version = _safe_number(self.store ~= nil and self.store.version or nil, 0)
+    self._last_store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
     self.search_groups = {}
     self.scope_key = SCOPE_PERSONAL
     self.profession_filter = FILTER_ALL
@@ -1363,7 +1354,7 @@ function CraftingWindow:persist_geometry()
 end
 
 function CraftingWindow:apply_settings()
-    self.update_every = math.max(0.20, 1.0 / math.max(1, _safe_number(_G.settings.global.refresh_rate, 30)))
+    self.update_every = math.max(0.20, 1.0 / math.max(1, tonumber(_G.settings.global.refresh_rate) or 30))
     self:SetMinimumSize(_scaled_int(BASE_MIN_W), _scaled_int(BASE_MIN_H))
     self:_enforce_min_size()
 
@@ -1423,10 +1414,10 @@ function CraftingWindow:_load_geometry()
         return
     end
 
-    local left = _safe_number(window.left, self:GetLeft())
-    local top = _safe_number(window.top, self:GetTop())
-    local width = _safe_number(window.width, self:GetWidth())
-    local height = _safe_number(window.height, self:GetHeight())
+    local left = tonumber(window.left) or self:GetLeft()
+    local top = tonumber(window.top) or self:GetTop()
+    local width = tonumber(window.width) or self:GetWidth()
+    local height = tonumber(window.height) or self:GetHeight()
 
     self._suppress_size_changed = true
     self:SetPosition(left, top)
@@ -1464,7 +1455,7 @@ function CraftingWindow:Update()
     if self.store ~= nil and self.store.refresh ~= nil then
         store_changed = self.store:refresh(false, 2) == true
     end
-    local store_version = _safe_number(self.store ~= nil and self.store.version or nil, 0)
+    local store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
     if store_changed == true or store_version ~= self._last_store_version then
         self._last_store_version = store_version
         self:refresh_from_store(false)
@@ -1499,7 +1490,7 @@ function CraftingWindow:refresh_from_store(reset_filters)
         self:refresh_plan()
     end
     self:refresh_loading_state()
-    self._last_store_version = _safe_number(self.store ~= nil and self.store.version or nil, 0)
+    self._last_store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
 end
 
 function CraftingWindow:set_material_filter_keys(material_keys)
@@ -1542,6 +1533,7 @@ function CraftingWindow:update_level_filter()
     self.level_max_filter = filter_max
     self:_invalidate_recipe_list()
     self:refresh_recipe_list()
+    self:refresh_selected_recipe()
 end
 
 function CraftingWindow:_selected_recipe()
@@ -1596,7 +1588,7 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
         return false
     end
     if self.level_min_filter ~= nil or self.level_max_filter ~= nil then
-        local required_level = _safe_number(recipe.required_level, nil)
+        local required_level = tonumber(recipe.required_level)
         if required_level == nil then
             return false
         end
@@ -1732,7 +1724,7 @@ function CraftingWindow:_collect_leaf_requirements(node, out)
                     quantity = 0,
                 }
             end
-            out[key].quantity = _safe_number(out[key].quantity, 0) + _safe_number(node.required, 0)
+            out[key].quantity = (tonumber(out[key].quantity) or 0) + (tonumber(node.required) or 0)
         end
         return
     end
@@ -1759,8 +1751,11 @@ function CraftingWindow:_node_amount_text(node)
         return ""
     end
 
-    local owned_quantity = _safe_number(node.from_stock, _safe_number(node.owned_in_scope, 0))
-    return _ratio_text(owned_quantity, _safe_number(node.required, 0))
+    local owned_quantity = tonumber(node.from_stock)
+    if owned_quantity == nil then
+        owned_quantity = tonumber(node.owned_in_scope) or 0
+    end
+    return _ratio_text(owned_quantity, tonumber(node.required) or 0)
 end
 
 function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level)
@@ -1850,7 +1845,7 @@ function CraftingWindow:_build_plan_entries()
     local entries = {}
     for i = 1, #self.plan_order do
         local recipe_id = self.plan_order[i]
-        local count = _safe_number(self.plan_counts[recipe_id], 0)
+        local count = tonumber(self.plan_counts[recipe_id]) or 0
         if count > 0 then
             entries[#entries + 1] = {
                 recipe_id = recipe_id,
@@ -1935,12 +1930,12 @@ function CraftingWindow:refresh_plan()
     local missing_w = self:_current_missing_list_width()
     for i = 1, #evaluation.missing_list do
         local entry = evaluation.missing_list[i]
-        local required_quantity = _safe_number(entry.quantity, 0)
+        local required_quantity = tonumber(entry.quantity) or 0
         local required_entry = leaf_requirements[entry.key]
         if type(required_entry) == "table" then
-            required_quantity = math.max(required_quantity, _safe_number(required_entry.quantity, 0))
+            required_quantity = math.max(required_quantity, tonumber(required_entry.quantity) or 0)
         end
-        local owned_quantity = math.max(0, required_quantity - _safe_number(entry.quantity, 0))
+        local owned_quantity = math.max(0, required_quantity - (tonumber(entry.quantity) or 0))
         local row = CraftingIngredientRow()
         row:set_scale(_G.settings.global.scale)
         row:set_width(missing_w)
@@ -1974,7 +1969,7 @@ function CraftingWindow:refresh_plan()
 end
 
 function CraftingWindow:adjust_plan_count(recipe_id, delta)
-    local next_count = _safe_number(self.plan_counts[recipe_id], 0) + _safe_number(delta, 0)
+    local next_count = (tonumber(self.plan_counts[recipe_id]) or 0) + (tonumber(delta) or 0)
     self:set_plan_count(recipe_id, next_count)
 end
 
@@ -1983,7 +1978,7 @@ function CraftingWindow:set_plan_count(recipe_id, count)
         return
     end
 
-    local next_count = math.floor(_safe_number(count, 0) + 0.5)
+    local next_count = math.floor((tonumber(count) or 0) + 0.5)
     if next_count < 0 then
         next_count = 0
     end
