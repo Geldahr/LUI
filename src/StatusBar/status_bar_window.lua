@@ -459,6 +459,12 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
         end
         return ctor(widget_entry ~= nil and widget_entry.name or nil, widget_w, bar_h, font,
             widget_entry ~= nil and widget_entry.icon_image_id or nil)
+    elseif widget_key == "craft_plan" then
+        local ctor = _widget_ctor("CraftPlanWidget")
+        if ctor == nil then
+            error("Missing StatusBar widget constructor: CraftPlanWidget")
+        end
+        return ctor(widget_w, bar_h, font, widget_cfg ~= nil and widget_cfg.max_visible or nil)
     elseif widget_key == "button" then
         local ctor = _widget_ctor("AliasButtonWidget")
         if ctor == nil then

@@ -96,7 +96,7 @@ function _G.rebuild_settings()
             },
         },
         inventory = { window = {} },
-        crafting = { window = {} },
+        crafting = { window = {}, tracked_plan = { entries = {} } },
         assets = { window = {}, tile = {}, layouts = { icons = {}, details = {} } },
         bestiary = { window = {} },
     }
@@ -203,6 +203,7 @@ function _G.rebuild_settings()
     local raw_crafting = raw.crafting
     if raw_crafting ~= nil then
         _G.settings.crafting.window = raw_crafting.window
+        _G.settings.crafting.tracked_plan = raw_crafting.tracked_plan
     end
 
     local raw_bestiary = raw.bestiary
@@ -396,6 +397,12 @@ function _G.rebuild_settings()
     sb.widgets.shortcut = {
         width = scaled_int(raw_sb.widgets.shortcut.width),
         height = scaled_int(raw_sb.widgets.shortcut.height),
+    }
+
+    sb.widgets.craft_plan = {
+        enabled = in_zones("craft_plan"),
+        width = scaled_int(raw_sb.widgets.craft_plan.width),
+        max_visible = math.max(1, tonumber(raw_sb.widgets.craft_plan.max_visible) or 4),
     }
 
     sb.widgets.button = {

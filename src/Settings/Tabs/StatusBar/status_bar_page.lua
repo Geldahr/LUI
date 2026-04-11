@@ -96,6 +96,11 @@ function StatusBarPage:Constructor(window)
     self:add_text("sb_shortcut_width", TR["Width"])
     self:add_text("sb_shortcut_height", TR["Height"])
 
+    self:add_hr()
+    self:add_title(TR["Crafting plan"])
+    self:add_text("sb_craft_plan_width", TR["Width"])
+    self:add_text("sb_craft_plan_max_visible", TR["Max visible resources"])
+
     self.controls.sb_font_outline_color.visible_if = function()
         return self.controls.sb_font_style:get_value() == LUI_ENUMS.font_style.OUTLINE
     end
@@ -175,6 +180,8 @@ function StatusBarPage:load(sb)
 
     self.controls.sb_shortcut_width.tb:SetText(tostring(widgets.shortcut.width))
     self.controls.sb_shortcut_height.tb:SetText(tostring(widgets.shortcut.height))
+    self.controls.sb_craft_plan_width.tb:SetText(tostring(widgets.craft_plan.width))
+    self.controls.sb_craft_plan_max_visible.tb:SetText(tostring(widgets.craft_plan.max_visible))
 
     self:update_all_swatches()
     self.loading = false
@@ -254,6 +261,11 @@ function StatusBarPage:apply(sb)
     if shortcut_w ~= nil then widgets.shortcut.width = shortcut_w end
     local shortcut_h = tonumber(self.controls.sb_shortcut_height.tb:GetText())
     if shortcut_h ~= nil then widgets.shortcut.height = shortcut_h end
+
+    local craft_plan_w = tonumber(self.controls.sb_craft_plan_width.tb:GetText())
+    if craft_plan_w ~= nil then widgets.craft_plan.width = craft_plan_w end
+    local craft_plan_max_visible = tonumber(self.controls.sb_craft_plan_max_visible.tb:GetText())
+    if craft_plan_max_visible ~= nil then widgets.craft_plan.max_visible = craft_plan_max_visible end
 end
 
 function StatusBarPage:load_from_settings(s)

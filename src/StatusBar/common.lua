@@ -51,6 +51,7 @@ S.STATUS_BAR_LAYOUT_TOKENS = {
     wallet = "wallet",
     config = "config",
     craft = "craft",
+    ["craft.plan"] = "craft_plan",
     assets = "assets",
     bestiary = "bestiary",
 }
@@ -62,6 +63,7 @@ S.STATUS_BAR_WIDGET_LAYOUT_TOKENS = {
     wallet = "%wallet%",
     config = "%config%",
     craft = "%craft%",
+    craft_plan = "%craft.plan%",
     assets = "%assets%",
     bestiary = "%bestiary%",
 }
@@ -73,6 +75,7 @@ S.STATUS_BAR_EDITABLE_WIDGET_KEYS = {
     "wallet",
     "config",
     "craft",
+    "craft_plan",
     "assets",
     "bestiary",
 }
@@ -955,6 +958,8 @@ function S.get_status_bar_widget_display_name(widget_key)
         return S.get_shortcut_label("config")
     elseif widget_key == "craft" then
         return S.get_shortcut_label("craft")
+    elseif widget_key == "craft_plan" then
+        return TR["Craft plan"]
     elseif widget_key == "assets" then
         return S.get_shortcut_label("assets")
     elseif widget_key == "bestiary" then

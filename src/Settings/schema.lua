@@ -65,6 +65,7 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "status_bar", "widgets", "wallet" })
     ensure_table_at(s, { "status_bar", "widgets", "wallet", "items" })
     ensure_table_at(s, { "status_bar", "widgets", "shortcut" })
+    ensure_table_at(s, { "status_bar", "widgets", "craft_plan" })
 
     ensure_table_at(s, { "self", "vitals" })
     ensure_table_at(s, { "self", "vitals", "frame" })
@@ -133,6 +134,8 @@ function _G.ensure_loaded_settings()
 
     ensure_table_at(s, { "inventory", "window" })
     ensure_table_at(s, { "crafting", "window" })
+    ensure_table_at(s, { "crafting", "tracked_plan" })
+    ensure_table_at(s, { "crafting", "tracked_plan", "entries" })
     ensure_table_at(s, { "assets", "window" })
     ensure_table_at(s, { "assets", "tile" })
     ensure_table_at(s, { "assets", "layouts" })
@@ -422,6 +425,9 @@ function _G.ensure_loaded_settings()
     end
     if crafting.window.height == nil then
         crafting.window.height = 700
+    end
+    if type(crafting.tracked_plan.entries) ~= "table" then
+        crafting.tracked_plan.entries = {}
     end
 
     local bestiary = s.bestiary
@@ -732,6 +738,14 @@ function _G.ensure_loaded_settings()
 
     if widgets.shortcut.width == nil then widgets.shortcut.width = 20 end
     if widgets.shortcut.height == nil then widgets.shortcut.height = 20 end
+
+    local craft_plan_widget = widgets.craft_plan or {}
+    if craft_plan_widget.width == nil then craft_plan_widget.width = 220 end
+    if craft_plan_widget.max_visible == nil then craft_plan_widget.max_visible = 4 end
+    widgets.craft_plan = {
+        width = craft_plan_widget.width,
+        max_visible = craft_plan_widget.max_visible,
+    }
 
     local cd = s.self.cooldowns
     if cd.enabled == nil then

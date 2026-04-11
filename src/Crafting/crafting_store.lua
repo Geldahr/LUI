@@ -115,6 +115,84 @@ local function _missing_map_to_list(missing_map)
     return out
 end
 
+local function _collect_leaf_requirements(node, out)
+    if type(node) ~= "table" or type(out) ~= "table" then
+        return
+    end
+
+    local children = node.children
+    if type(children) ~= "table" or #children == 0 then
+        local key = node.key
+        if key ~= nil and key ~= "" then
+            if type(out[key]) ~= "table" then
+                out[key] = {
+                    key = key,
+                    name = node.name or "",
+                    item_info = node.item_info,
+                    icon_id = node.icon_id,
+                    background_image_id = node.background_image_id,
+                    quality = node.quality,
+                    quantity = 0,
+                }
+            end
+            out[key].quantity = (tonumber(out[key].quantity) or 0) + (tonumber(node.required) or 0)
+        end
+        return
+    end
+
+    for i = 1, #children do
+        _collect_leaf_requirements(children[i], out)
+    end
+end
+
+local function _resource_progress_sort_compare(left, right)
+    local left_complete = left ~= nil and left.complete == true
+    local right_complete = right ~= nil and right.complete == true
+    if left_complete ~= right_complete then
+        return left_complete ~= true
+    end
+
+    local left_missing = tonumber(left ~= nil and left.missing or nil) or 0
+    local right_missing = tonumber(right ~= nil and right.missing or nil) or 0
+    if left_missing ~= right_missing then
+        return left_missing > right_missing
+    end
+
+    local left_required = tonumber(left ~= nil and left.required or nil) or 0
+    local right_required = tonumber(right ~= nil and right.required or nil) or 0
+    if left_required ~= right_required then
+        return left_required > right_required
+    end
+
+    local left_name = _lower(left ~= nil and left.name or nil)
+    local right_name = _lower(right ~= nil and right.name or nil)
+    return left_name < right_name
+end
+
+local function _saved_plan_entry_matches_recipe(saved_entry, recipe)
+    if type(saved_entry) ~= "table" or type(recipe) ~= "table" then
+        return false
+    end
+
+    if saved_entry.profession_key ~= nil and tostring(saved_entry.profession_key) ~= tostring(recipe.profession_key) then
+        return false
+    end
+    if saved_entry.result_key ~= nil and tostring(saved_entry.result_key) ~= tostring(recipe.result_key) then
+        return false
+    end
+    if saved_entry.recipe_name_key ~= nil and tostring(saved_entry.recipe_name_key) ~= _normalize_name(recipe.name) then
+        return false
+    end
+    if saved_entry.category_name_key ~= nil and tostring(saved_entry.category_name_key) ~= _normalize_name(recipe.category_name) then
+        return false
+    end
+    if saved_entry.tier ~= nil and (tonumber(saved_entry.tier) or 0) ~= (tonumber(recipe.tier) or 0) then
+        return false
+    end
+
+    return true
+end
+
 local function _append_token(parts, value)
     local text = _safe_string(value, "")
     if text ~= "" then
@@ -726,6 +804,145 @@ function CraftingStore:evaluate_plan(plan_entries, scope_key)
     result.missing_list = _missing_map_to_list(result.missing)
     result.missing_total = _sum_missing_map(result.missing)
     return result
+end
+
+function CraftingStore:serialize_plan_entries(plan_entries)
+    local saved_entries = {}
+    if type(plan_entries) ~= "table" then
+        return saved_entries
+    end
+
+    for i = 1, #plan_entries do
+        local entry = plan_entries[i]
+        local recipe = entry ~= nil and self.recipe_by_id[entry.recipe_id] or nil
+        local count = entry ~= nil and (tonumber(entry.count) or 0) or 0
+        count = math.floor(count + 0.5)
+        if recipe ~= nil and count > 0 then
+            saved_entries[#saved_entries + 1] = {
+                id = recipe.id,
+                profession_key = recipe.profession_key,
+                result_key = recipe.result_key,
+                recipe_name_key = _normalize_name(recipe.name),
+                category_name_key = _normalize_name(recipe.category_name),
+                tier = tonumber(recipe.tier) or 0,
+                count = count,
+            }
+        end
+    end
+
+    return saved_entries
+end
+
+function CraftingStore:resolve_saved_plan_entries(saved_entries)
+    local resolved_entries = {}
+    local unresolved_count = 0
+
+    if type(saved_entries) ~= "table" then
+        return {
+            entries = resolved_entries,
+            unresolved_count = unresolved_count,
+            total_count = 0,
+        }
+    end
+
+    for i = 1, #saved_entries do
+        local saved_entry = saved_entries[i]
+        local recipe = nil
+        local count = saved_entry ~= nil and (tonumber(saved_entry.count) or 0) or 0
+        count = math.floor(count + 0.5)
+
+        if count > 0 and type(saved_entry) == "table" then
+            recipe = saved_entry.id ~= nil and self.recipe_by_id[saved_entry.id] or nil
+            if _saved_plan_entry_matches_recipe(saved_entry, recipe) ~= true then
+                recipe = nil
+            end
+
+            if recipe == nil then
+                for recipe_index = 1, #self.recipes do
+                    local candidate = self.recipes[recipe_index]
+                    if _saved_plan_entry_matches_recipe(saved_entry, candidate) == true then
+                        recipe = candidate
+                        break
+                    end
+                end
+            end
+        end
+
+        if recipe ~= nil and count > 0 then
+            resolved_entries[#resolved_entries + 1] = {
+                recipe_id = recipe.id,
+                count = count,
+            }
+        elseif count > 0 then
+            unresolved_count = unresolved_count + 1
+        end
+    end
+
+    return {
+        entries = resolved_entries,
+        unresolved_count = unresolved_count,
+        total_count = #saved_entries,
+    }
+end
+
+function CraftingStore:evaluate_plan_resources(plan_entries, scope_key)
+    local evaluation = self:evaluate_plan(plan_entries, scope_key)
+    local leaf_requirements = {}
+    local missing_by_key = {}
+    local resources = {}
+    local incomplete_resources = {}
+
+    for i = 1, #evaluation.entries do
+        local ingredients = evaluation.entries[i] ~= nil and evaluation.entries[i].evaluation ~= nil and
+            evaluation.entries[i].evaluation.ingredients or nil
+        if type(ingredients) == "table" then
+            for ingredient_index = 1, #ingredients do
+                _collect_leaf_requirements(ingredients[ingredient_index], leaf_requirements)
+            end
+        end
+    end
+
+    for i = 1, #evaluation.missing_list do
+        local missing_entry = evaluation.missing_list[i]
+        if type(missing_entry) == "table" and missing_entry.key ~= nil then
+            missing_by_key[missing_entry.key] = missing_entry
+        end
+    end
+
+    for key, requirement in pairs(leaf_requirements) do
+        local required = tonumber(requirement ~= nil and requirement.quantity or nil) or 0
+        if required > 0 then
+            local missing_entry = missing_by_key[key]
+            local missing = tonumber(missing_entry ~= nil and missing_entry.quantity or nil) or 0
+            local owned = math.max(0, required - missing)
+            local resource = {
+                key = key,
+                name = requirement.name or "",
+                item_info = requirement.item_info,
+                icon_id = requirement.icon_id,
+                background_image_id = requirement.background_image_id,
+                quality = requirement.quality,
+                owned = owned,
+                required = required,
+                missing = missing,
+                complete = missing <= 0,
+            }
+            resources[#resources + 1] = resource
+            if resource.complete ~= true then
+                incomplete_resources[#incomplete_resources + 1] = resource
+            end
+        end
+    end
+
+    table.sort(resources, _resource_progress_sort_compare)
+    table.sort(incomplete_resources, _resource_progress_sort_compare)
+
+    return {
+        evaluation = evaluation,
+        resources = resources,
+        incomplete_resources = incomplete_resources,
+        ready = #resources > 0 and #incomplete_resources == 0,
+    }
 end
 
 function CraftingStore:recipe_uses_item_key(recipe, key_set)

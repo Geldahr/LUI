@@ -122,6 +122,24 @@ function _G.toggle_crafting_shortcut()
     end
 end
 
+function _G.open_crafting_plan_shortcut()
+    local window = _ensure_crafting_window()
+    if window == nil then
+        return
+    end
+
+    if window.clear_material_filter ~= nil then
+        window:clear_material_filter()
+    end
+    if window.open_plan ~= nil then
+        window:open_plan()
+    elseif window.open ~= nil then
+        window:open()
+    else
+        window:SetVisible(true)
+    end
+end
+
 function apply_inventory_settings()
     local enabled = _G.settings.inventory.enabled == true
     local replace = enabled and _G.settings.inventory.replace == true
