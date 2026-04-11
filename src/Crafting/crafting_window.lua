@@ -44,12 +44,14 @@ local BASE_LEVEL_BOX_W = 44
 local BASE_LEVEL_DASH_W = 14
 local BASE_LOADING_PANEL_H = 34
 local BASE_LOADING_TRACK_H = 10
+local BASE_SECTION_SPLIT_H = 2
 local ITEM_INFO_CONTROL_OFFSET = -3
 local ITEM_INFO_CONTROL_EXTRA = 3
 
 local PANEL_BACK = Turbine.UI.Color(1.00, 0.07, 0.08, 0.10)
 local PANEL_BORDER = Turbine.UI.Color(1.00, 0.19, 0.22, 0.28)
 local SECTION_BACK = Turbine.UI.Color(1.00, 0.09, 0.11, 0.13)
+local SECTION_HEADER_BACK = Turbine.UI.Color(1.00, 0.13, 0.16, 0.20)
 local SELECTED_BACK = Turbine.UI.Color(1.00, 0.15, 0.22, 0.32)
 local HOVER_BACK = Turbine.UI.Color(1.00, 0.12, 0.14, 0.18)
 local TEXT_MAIN = Turbine.UI.Color(1.00, 0.92, 0.95, 0.98)
@@ -256,7 +258,8 @@ local function _set_control_border(control, border, fill)
     control:SetBackColor(border)
     control.inner = control.inner or Turbine.UI.Control()
     control.inner:SetParent(control)
-    control.inner:SetPosition(BASE_PANEL_BORDER, BASE_PANEL_BORDER)
+    control._inner_inset = BASE_PANEL_BORDER
+    control.inner:SetPosition(control._inner_inset, control._inner_inset)
     control.inner:SetBackColor(fill)
 end
 
@@ -265,10 +268,23 @@ local function _fit_inner_border(control)
         return
     end
     local width, height = control:GetSize()
+    local inset = math.max(0, math.floor(_safe_number(control._inner_inset, BASE_PANEL_BORDER) + 0.5))
     control.inner:SetSize(
-        math.max(0, width - (BASE_PANEL_BORDER * 2)),
-        math.max(0, height - (BASE_PANEL_BORDER * 2))
+        math.max(0, width - (inset * 2)),
+        math.max(0, height - (inset * 2))
     )
+end
+
+local function _set_control_fill(control, fill)
+    if control == nil then
+        return
+    end
+    control:SetBackColor(fill)
+    control.inner = control.inner or Turbine.UI.Control()
+    control.inner:SetParent(control)
+    control._inner_inset = 0
+    control.inner:SetPosition(0, 0)
+    control.inner:SetBackColor(fill)
 end
 
 local function _destroy_control(control)
@@ -1009,7 +1025,12 @@ function CraftingWindow:Constructor()
 
     self.detail_panel = Turbine.UI.Control()
     self.detail_panel:SetParent(self.recipe_page)
-    _set_control_border(self.detail_panel, PANEL_BORDER, PANEL_BACK)
+    _set_control_fill(self.detail_panel, PANEL_BACK)
+
+    self.recipe_split_border = Turbine.UI.Control()
+    self.recipe_split_border:SetParent(self.recipe_page)
+    self.recipe_split_border:SetMouseVisible(false)
+    self.recipe_split_border:SetBackColor(PANEL_BORDER)
 
     self.detail_icon = CraftingItemIcon()
     self.detail_icon:SetParent(self.detail_panel.inner)
@@ -1071,6 +1092,13 @@ function CraftingWindow:Constructor()
     self.ingredients_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.ingredients_title:SetText(TR["Ingredients"])
 
+    self.ingredients_header_bar = Turbine.UI.Control()
+    self.ingredients_header_bar:SetParent(self.detail_panel.inner)
+    self.ingredients_header_bar:SetMouseVisible(false)
+    self.ingredients_header_bar:SetBackColor(SECTION_HEADER_BACK)
+    self.ingredients_header_bar:SetZOrder(1)
+    self.ingredients_title:SetZOrder(2)
+
     self.ingredients_list = Turbine.UI.ListBox()
     self.ingredients_list:SetParent(self.detail_panel.inner)
     self.ingredients_list:SetOrientation(Turbine.UI.Orientation.Vertical)
@@ -1090,7 +1118,13 @@ function CraftingWindow:Constructor()
 
     self.queue_panel = Turbine.UI.Control()
     self.queue_panel:SetParent(self.recipe_page)
-    _set_control_border(self.queue_panel, PANEL_BORDER, PANEL_BACK)
+    _set_control_fill(self.queue_panel, PANEL_BACK)
+
+    self.queue_header_bar = Turbine.UI.Control()
+    self.queue_header_bar:SetParent(self.queue_panel.inner)
+    self.queue_header_bar:SetMouseVisible(false)
+    self.queue_header_bar:SetBackColor(SECTION_HEADER_BACK)
+    self.queue_header_bar:SetZOrder(1)
 
     self.queue_title = UI.Widgets.LuiLabel()
     self.queue_title:SetParent(self.queue_panel.inner)
@@ -1103,7 +1137,9 @@ function CraftingWindow:Constructor()
     self.queue_summary:SetParent(self.queue_panel.inner)
     self.queue_summary:SetMouseVisible(false)
     self.queue_summary:SetForeColor(TEXT_MAIN)
-    self.queue_summary:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.queue_summary:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.queue_title:SetZOrder(2)
+    self.queue_summary:SetZOrder(2)
 
     self.queue_list = Turbine.UI.ListBox()
     self.queue_list:SetParent(self.queue_panel.inner)
@@ -1124,7 +1160,13 @@ function CraftingWindow:Constructor()
 
     self.plan_panel = Turbine.UI.Control()
     self.plan_panel:SetParent(self.plan_page)
-    _set_control_border(self.plan_panel, PANEL_BORDER, PANEL_BACK)
+    _set_control_fill(self.plan_panel, PANEL_BACK)
+
+    self.plan_header_bar = Turbine.UI.Control()
+    self.plan_header_bar:SetParent(self.plan_panel.inner)
+    self.plan_header_bar:SetMouseVisible(false)
+    self.plan_header_bar:SetBackColor(SECTION_HEADER_BACK)
+    self.plan_header_bar:SetZOrder(1)
 
     self.plan_title = UI.Widgets.LuiLabel()
     self.plan_title:SetParent(self.plan_panel.inner)
@@ -1137,7 +1179,7 @@ function CraftingWindow:Constructor()
     self.plan_summary:SetParent(self.plan_panel.inner)
     self.plan_summary:SetMouseVisible(false)
     self.plan_summary:SetForeColor(TEXT_MAIN)
-    self.plan_summary:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.plan_summary:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
 
     self.plan_clear_button = UI.Widgets.LuiButton()
     self.plan_clear_button:SetParent(self.plan_panel.inner)
@@ -1145,6 +1187,9 @@ function CraftingWindow:Constructor()
     self.plan_clear_button.Click = function()
         self:clear_plan()
     end
+    self.plan_title:SetZOrder(2)
+    self.plan_summary:SetZOrder(2)
+    self.plan_clear_button:SetZOrder(2)
 
     self.plan_list = Turbine.UI.ListBox()
     self.plan_list:SetParent(self.plan_panel.inner)
@@ -1161,6 +1206,18 @@ function CraftingWindow:Constructor()
     self.missing_title:SetForeColor(TEXT_META)
     self.missing_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.missing_title:SetText(TR["Resources"])
+
+    self.missing_header_bar = Turbine.UI.Control()
+    self.missing_header_bar:SetParent(self.plan_panel.inner)
+    self.missing_header_bar:SetMouseVisible(false)
+    self.missing_header_bar:SetBackColor(SECTION_HEADER_BACK)
+    self.missing_header_bar:SetZOrder(1)
+    self.missing_title:SetZOrder(2)
+
+    self.plan_resources_border = Turbine.UI.Control()
+    self.plan_resources_border:SetParent(self.plan_panel.inner)
+    self.plan_resources_border:SetMouseVisible(false)
+    self.plan_resources_border:SetBackColor(PANEL_BORDER)
 
     self.missing_list = Turbine.UI.ListBox()
     self.missing_list:SetParent(self.plan_panel.inner)
@@ -1503,23 +1560,23 @@ function CraftingWindow:_selected_recipe()
 end
 
 function CraftingWindow:_current_recipe_list_width()
-    return math.max(0, self.recipe_list:GetWidth() - self.recipe_scroll:GetWidth() - _scaled_int(2))
+    return math.max(0, self.recipe_list:GetWidth() - _scaled_int(2))
 end
 
 function CraftingWindow:_current_detail_list_width()
-    return math.max(0, self.ingredients_list:GetWidth() - self.ingredients_scroll:GetWidth() - _scaled_int(2))
+    return math.max(0, self.ingredients_list:GetWidth() - _scaled_int(2))
 end
 
 function CraftingWindow:_current_queue_list_width()
-    return math.max(0, self.queue_list:GetWidth() - self.queue_scroll:GetWidth() - _scaled_int(2))
+    return math.max(0, self.queue_list:GetWidth() - _scaled_int(2))
 end
 
 function CraftingWindow:_current_plan_list_width()
-    return math.max(0, self.plan_list:GetWidth() - self.plan_scroll:GetWidth() - _scaled_int(2))
+    return math.max(0, self.plan_list:GetWidth() - _scaled_int(2))
 end
 
 function CraftingWindow:_current_missing_list_width()
-    return math.max(0, self.missing_list:GetWidth() - self.missing_scroll:GetWidth() - _scaled_int(2))
+    return math.max(0, self.missing_list:GetWidth() - _scaled_int(2))
 end
 
 function CraftingWindow:_ensure_selected_visible_recipe()
@@ -2029,6 +2086,7 @@ function CraftingWindow:layout()
     local scroll_w = _fixed_int(BASE_SCROLL_W)
     local detail_header_h = _scaled_int(BASE_DETAIL_HEADER_H)
     local plan_header_h = _scaled_int(BASE_PLAN_HEADER_H)
+    local section_bar_h = plan_header_h
     local small_button_w = _scaled_int(BASE_SMALL_BUTTON_W)
     local plan_qty_w = _scaled_int(BASE_PLAN_QTY_W)
     local plan_controls_w = _scaled_int(BASE_PLAN_CONTROLS_W)
@@ -2117,13 +2175,15 @@ function CraftingWindow:layout()
     self.plan_page:SetPosition(recipe_page_x, recipe_page_y)
     self.plan_page:SetSize(recipe_page_w, recipe_page_h)
 
-    local split_gap = gap
+    local split_gap = _fixed_int(BASE_SECTION_SPLIT_H)
     local recipe_detail_h = math.max(0, math.floor((recipe_page_h - split_gap) * 0.5))
     local queue_h = math.max(0, recipe_page_h - recipe_detail_h - split_gap)
 
     self.detail_panel:SetPosition(0, 0)
     self.detail_panel:SetSize(recipe_page_w, recipe_detail_h)
     _fit_inner_border(self.detail_panel)
+    self.recipe_split_border:SetPosition(0, recipe_detail_h)
+    self.recipe_split_border:SetSize(recipe_page_w, split_gap)
 
     local detail_inner = self.detail_panel.inner
     local icon_side = _fixed_int(BASE_ICON_SIDE)
@@ -2146,8 +2206,14 @@ function CraftingWindow:layout()
     self.plan_plus_button:SetPosition(plan_controls_x + small_button_w + gap + plan_qty_w + gap, _scaled_int(26))
     self.plan_plus_button:SetSize(small_button_w, bar_h)
 
-    self.ingredients_title:SetPosition(_scaled_int(8), detail_header_h - _scaled_int(18))
-    self.ingredients_title:SetSize(detail_inner:GetWidth() - _scaled_int(16), _scaled_int(18))
+    local ingredients_header_y = detail_header_h - section_bar_h
+    if ingredients_header_y < 0 then
+        ingredients_header_y = 0
+    end
+    self.ingredients_header_bar:SetPosition(0, ingredients_header_y)
+    self.ingredients_header_bar:SetSize(detail_inner:GetWidth(), section_bar_h)
+    self.ingredients_title:SetPosition(_scaled_int(8), ingredients_header_y)
+    self.ingredients_title:SetSize(detail_inner:GetWidth() - _scaled_int(16), section_bar_h)
 
     local ingredient_list_top = detail_header_h
     local ingredient_list_h = detail_inner:GetHeight() - ingredient_list_top
@@ -2166,11 +2232,13 @@ function CraftingWindow:layout()
     _fit_inner_border(self.queue_panel)
 
     local queue_inner = self.queue_panel.inner
+    self.queue_header_bar:SetPosition(0, 0)
+    self.queue_header_bar:SetSize(queue_inner:GetWidth(), section_bar_h)
     self.queue_title:SetPosition(_scaled_int(8), 0)
-    self.queue_title:SetSize(_scaled_int(90), plan_header_h)
-    self.queue_summary:SetPosition(_scaled_int(8), plan_header_h)
-    self.queue_summary:SetSize(queue_inner:GetWidth() - _scaled_int(16), _scaled_int(20))
-    local queue_list_top = plan_header_h + _scaled_int(22)
+    self.queue_title:SetSize(_scaled_int(90), section_bar_h)
+    self.queue_summary:SetPosition(_scaled_int(104), 0)
+    self.queue_summary:SetSize(queue_inner:GetWidth() - _scaled_int(112), section_bar_h)
+    local queue_list_top = section_bar_h
     local queue_list_h = queue_inner:GetHeight() - queue_list_top
     if queue_list_h < 0 then
         queue_list_h = 0
@@ -2187,24 +2255,32 @@ function CraftingWindow:layout()
     _fit_inner_border(self.plan_panel)
 
     local plan_inner = self.plan_panel.inner
+    self.plan_header_bar:SetPosition(0, 0)
+    self.plan_header_bar:SetSize(plan_inner:GetWidth(), section_bar_h)
     self.plan_title:SetPosition(_scaled_int(8), 0)
-    self.plan_title:SetSize(_scaled_int(90), plan_header_h)
-    self.plan_summary:SetPosition(_scaled_int(8), plan_header_h)
-    self.plan_summary:SetSize(plan_inner:GetWidth() - clear_w - _scaled_int(16) - gap, _scaled_int(20))
+    self.plan_title:SetSize(_scaled_int(90), section_bar_h)
+    self.plan_summary:SetPosition(_scaled_int(104), 0)
+    self.plan_summary:SetSize(plan_inner:GetWidth() - clear_w - _scaled_int(120), section_bar_h)
     self.plan_clear_button:SetPosition(plan_inner:GetWidth() - clear_w - _scaled_int(8), _scaled_int(2))
     self.plan_clear_button:SetSize(clear_w, bar_h)
 
-    local plan_list_top = plan_header_h + _scaled_int(22)
-    local plan_list_h = math.max(_scaled_int(90), math.floor((plan_inner:GetHeight() - plan_list_top - _scaled_int(26) - gap) * 0.56))
+    local plan_list_top = section_bar_h
+    local plan_list_h = math.max(_scaled_int(90), math.floor((plan_inner:GetHeight() - plan_list_top - section_bar_h - gap) * 0.56))
     self.plan_scroll:SetPosition(plan_inner:GetWidth() - scroll_w, plan_list_top)
     self.plan_scroll:SetSize(scroll_w, plan_list_h)
     self.plan_list:SetPosition(0, plan_list_top)
     self.plan_list:SetSize(plan_inner:GetWidth() - scroll_w, plan_list_h)
 
-    local missing_top = plan_list_top + plan_list_h + gap
+    local missing_split_y = plan_list_top + plan_list_h
+    self.plan_resources_border:SetPosition(0, missing_split_y)
+    self.plan_resources_border:SetSize(plan_inner:GetWidth(), split_gap)
+
+    local missing_top = missing_split_y + split_gap
+    self.missing_header_bar:SetPosition(0, missing_top)
+    self.missing_header_bar:SetSize(plan_inner:GetWidth(), section_bar_h)
     self.missing_title:SetPosition(_scaled_int(8), missing_top)
-    self.missing_title:SetSize(plan_inner:GetWidth() - _scaled_int(16), _scaled_int(18))
-    local missing_list_top = missing_top + _scaled_int(18)
+    self.missing_title:SetSize(plan_inner:GetWidth() - _scaled_int(16), section_bar_h)
+    local missing_list_top = missing_top + section_bar_h
     local missing_list_h = plan_inner:GetHeight() - missing_list_top
     if missing_list_h < 0 then
         missing_list_h = 0
