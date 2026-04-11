@@ -270,6 +270,9 @@ if _G.loaded_settings_was_new == true then
     _G.fix_colors()
     _G.rebuild_settings()
 end
+_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = (
+    _G.settings ~= nil and _G.settings.crafting ~= nil and _G.settings.crafting.display_mode
+) or "pages"
 
 BESTIARY_CARD = Bestiary.BestiaryCard()
 _G.BESTIARY_CARD = BESTIARY_CARD
@@ -319,17 +322,17 @@ Turbine.Shell.WriteLine(string.format(
 Plugins["LUI"].Unload = function()
     _G.LUI_IS_UNLOADING = true
     if CRAFTING_WINDOW ~= nil then
-        if CRAFTING_WINDOW.destroy ~= nil then
-            CRAFTING_WINDOW:destroy()
-        elseif CRAFTING_WINDOW.SetVisible ~= nil then
+        if CRAFTING_WINDOW.SetVisible ~= nil then
             CRAFTING_WINDOW:SetVisible(false)
         end
+        CRAFTING_WINDOW.store = nil
         CRAFTING_WINDOW = nil
         _G.CRAFTING_WINDOW = nil
     end
     if Crafting ~= nil and Crafting.destroy_shared_store ~= nil then
         Crafting.destroy_shared_store()
     end
+    _G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = nil
     save_settings()
     if _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK ~= nil then
         _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()

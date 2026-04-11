@@ -3,6 +3,7 @@ import "LUI.src.Settings.Tabs.Self.self_page"
 import "LUI.src.Settings.Tabs.Target.target_page"
 import "LUI.src.Settings.Tabs.Party.party_page"
 import "LUI.src.Settings.Tabs.Inventory.inventory_page"
+import "LUI.src.Settings.Tabs.Crafting.crafting_page"
 import "LUI.src.Settings.Tabs.Assets.assets_page"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_page"
 import "LUI.src.Settings.Tabs.ProfileManager.profile_manager_page"
@@ -13,6 +14,7 @@ local SelfPage = LUI.src.Settings.Tabs.Self.SelfPage
 local TargetPage = LUI.src.Settings.Tabs.Target.TargetPage
 local PartyPage = LUI.src.Settings.Tabs.Party.PartyPage
 local InventoryPage = LUI.src.Settings.Tabs.Inventory.InventoryPage
+local CraftingPage = LUI.src.Settings.Tabs.Crafting.CraftingPage
 local AssetsPage = LUI.src.Settings.Tabs.Assets.AssetsPage
 local StatusBarPage = LUI.src.Settings.Tabs.StatusBar.StatusBarPage
 local ProfileManagerPage = LUI.src.Settings.Tabs.ProfileManager.ProfileManagerPage
@@ -111,6 +113,10 @@ function ConfigWindow:build_tabs()
     local inventory_page = InventoryPage(self)
     inventory_page._tab_key = "inventory"
     self.main_tab_bar:add_tab(TR["Inventory"], inventory_page)
+
+    local crafting_page = CraftingPage(self)
+    crafting_page._tab_key = "crafting"
+    self.main_tab_bar:add_tab(TR["Crafting"], crafting_page)
 
     local assets_page = AssetsPage(self)
     assets_page._tab_key = "assets"

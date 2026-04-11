@@ -429,6 +429,9 @@ function _G.ensure_loaded_settings()
     if type(crafting.tracked_plan.entries) ~= "table" then
         crafting.tracked_plan.entries = {}
     end
+    if crafting.display_mode ~= "scroll" and crafting.display_mode ~= "pages" then
+        crafting.display_mode = "pages"
+    end
 
     local bestiary = s.bestiary
     if bestiary.window.left == nil then

@@ -584,27 +584,6 @@ end
 function CraftingStore:destroy()
     self:SetWantsUpdates(false)
     self:SetVisible(false)
-    self.current_character_name = nil
-    self.professions = nil
-    self.recipes = nil
-    self.recipe_by_id = nil
-    self.result_index = nil
-    self.item_meta = nil
-    self.ownership = nil
-    self.profession_option_labels = nil
-    self.profession_option_values = nil
-    self.scope_option_labels = nil
-    self.scope_option_values = nil
-    self._status_cache = nil
-    self._assets_token = nil
-    self._recipe_token = nil
-    self._recipes_initialized = false
-    self._recipe_loading = false
-    self._recipe_load_queue = nil
-    self._recipe_load_queue_index = nil
-    self._recipe_load_done = nil
-    self._recipe_load_total = nil
-    self._foreground_loading = false
 end
 
 function CraftingStore:get_scope_options()
