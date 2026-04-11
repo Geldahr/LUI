@@ -38,6 +38,7 @@ local BASE_PLAN_CONTROLS_W = 102
 local BASE_PLAN_QTY_W = 28
 local BASE_SMALL_BUTTON_W = 22
 local BASE_STATUS_W = 120
+local BASE_TREE_INDENT_W = 16
 local BASE_LEVEL_LABEL_W = 40
 local BASE_LEVEL_BOX_W = 44
 local BASE_LEVEL_DASH_W = 14
@@ -591,6 +592,7 @@ function CraftingIngredientRow:Constructor()
 
     self:SetMouseVisible(false)
     self._scale = 1
+    self._indent_level = 0
 
     self.status_strip = Turbine.UI.Control()
     self.status_strip:SetParent(self)
@@ -629,7 +631,8 @@ function CraftingIngredientRow:set_width(width)
     self:_layout()
 end
 
-function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color)
+function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level)
+    self._indent_level = math.max(0, math.floor(_safe_number(indent_level, 0) + 0.5))
     self.icon:bind_item(item_info, icon_id, background_image_id)
     self.name:SetText(label_text or "")
     self.detail:SetText(detail_text or "")
@@ -637,6 +640,7 @@ function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id,
     self.amount:SetForeColor(color or TEXT_META)
     self.status_strip:SetBackColor(color or TEXT_META)
     self:SetBackColor(SECTION_BACK)
+    self:_layout()
 end
 
 function CraftingIngredientRow:_layout()
@@ -644,6 +648,7 @@ function CraftingIngredientRow:_layout()
     local gap = _scaled_int(BASE_GAP)
     local strip_w = _scaled_int(3)
     local amount_w = _scaled_int(86)
+    local indent_w = _scaled_int(BASE_TREE_INDENT_W) * self._indent_level
     local icon_side = _fixed_int(BASE_ICON_SIDE)
     local icon_pad = _scaled_int(1)
     local max_icon_side = height - (icon_pad * 2)
@@ -653,14 +658,14 @@ function CraftingIngredientRow:_layout()
     if icon_side < 0 then
         icon_side = 0
     end
-    local left = strip_w + gap + icon_side + gap
+    local left = strip_w + gap + indent_w + icon_side + gap
     local text_w = width - left - gap - amount_w
     local title_h = math.floor(height * 0.55)
 
     self.status_strip:SetPosition(0, 0)
     self.status_strip:SetSize(strip_w, height)
 
-    self.icon:SetPosition(strip_w + gap, math.max(icon_pad, math.floor((height - icon_side) / 2)))
+    self.icon:SetPosition(strip_w + gap + indent_w, math.max(icon_pad, math.floor((height - icon_side) / 2)))
     self.icon:set_side(icon_side)
 
     self.name:SetPosition(left, 0)
@@ -985,10 +990,25 @@ function CraftingWindow:Constructor()
 
     self.right_panel = Turbine.UI.Control()
     self.right_panel:SetParent(self)
-    self.right_panel:SetBackColor(PANEL_BORDER)
+    self.right_panel:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+
+    self.right_tab_bar = UI.Widgets.LuiTabBar()
+    self.right_tab_bar:SetParent(self.right_panel)
+    self.right_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
+    self.right_tab_bar:set_content_padding(0)
+    self.right_tab_bar:set_show_content_border(true)
+    self.right_tab_bar:set_fill_tabs(false)
+
+    self.recipe_page = Turbine.UI.Control()
+
+    self.plan_page = Turbine.UI.Control()
+
+    self.right_tab_bar:add_tab(TR["Recipe"], self.recipe_page)
+    self.right_tab_bar:add_tab(TR["Plan"], self.plan_page)
+    self.right_tab_bar:select_tab(1)
 
     self.detail_panel = Turbine.UI.Control()
-    self.detail_panel:SetParent(self.right_panel)
+    self.detail_panel:SetParent(self.recipe_page)
     _set_control_border(self.detail_panel, PANEL_BORDER, PANEL_BACK)
 
     self.detail_icon = CraftingItemIcon()
@@ -1068,8 +1088,42 @@ function CraftingWindow:Constructor()
     self.detail_empty:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.detail_empty:SetText(TR["Select a recipe to see the breakdown."])
 
+    self.queue_panel = Turbine.UI.Control()
+    self.queue_panel:SetParent(self.recipe_page)
+    _set_control_border(self.queue_panel, PANEL_BORDER, PANEL_BACK)
+
+    self.queue_title = UI.Widgets.LuiLabel()
+    self.queue_title:SetParent(self.queue_panel.inner)
+    self.queue_title:SetMouseVisible(false)
+    self.queue_title:SetForeColor(TEXT_META)
+    self.queue_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.queue_title:SetText(TR["Plan queue"])
+
+    self.queue_summary = UI.Widgets.LuiLabel()
+    self.queue_summary:SetParent(self.queue_panel.inner)
+    self.queue_summary:SetMouseVisible(false)
+    self.queue_summary:SetForeColor(TEXT_MAIN)
+    self.queue_summary:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+
+    self.queue_list = Turbine.UI.ListBox()
+    self.queue_list:SetParent(self.queue_panel.inner)
+    self.queue_list:SetOrientation(Turbine.UI.Orientation.Vertical)
+
+    self.queue_scroll = Turbine.UI.Lotro.ScrollBar()
+    self.queue_scroll:SetParent(self.queue_panel.inner)
+    self.queue_scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
+    self.queue_list:SetVerticalScrollBar(self.queue_scroll)
+
+    self.queue_empty = UI.Widgets.LuiLabel()
+    self.queue_empty:SetParent(self.queue_panel.inner)
+    self.queue_empty:SetMouseVisible(false)
+    self.queue_empty:SetMultiline(true)
+    self.queue_empty:SetForeColor(TEXT_META)
+    self.queue_empty:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.queue_empty:SetText(TR["Add recipes to the plan to keep a short queue here."])
+
     self.plan_panel = Turbine.UI.Control()
-    self.plan_panel:SetParent(self.right_panel)
+    self.plan_panel:SetParent(self.plan_page)
     _set_control_border(self.plan_panel, PANEL_BORDER, PANEL_BACK)
 
     self.plan_title = UI.Widgets.LuiLabel()
@@ -1106,7 +1160,7 @@ function CraftingWindow:Constructor()
     self.missing_title:SetMouseVisible(false)
     self.missing_title:SetForeColor(TEXT_META)
     self.missing_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.missing_title:SetText(TR["Missing resources"])
+    self.missing_title:SetText(TR["Resources"])
 
     self.missing_list = Turbine.UI.ListBox()
     self.missing_list:SetParent(self.plan_panel.inner)
@@ -1203,6 +1257,19 @@ function CraftingWindow._status_text(_, evaluation)
     return _ratio_text(ready, total)
 end
 
+function CraftingWindow._node_status_color(_, node)
+    if type(node) ~= "table" then
+        return TEXT_META
+    end
+    if node.satisfied == true then
+        if node.expanded == true then
+            return STATUS_AUTO
+        end
+        return STATUS_READY
+    end
+    return STATUS_MISSING
+end
+
 function CraftingWindow:bring_to_front()
     if self:IsVisible() == true and self.Activate ~= nil then
         self:Activate()
@@ -1272,6 +1339,8 @@ function CraftingWindow:apply_settings()
     self.level_max_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
 
     self.recipe_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.right_tab_bar:set_font(_scaled_font("Verdana", BASE_META_FONT))
+    self.right_tab_bar:set_scale(_G.settings.global.scale)
     self.detail_title:SetFont(_scaled_font("Verdana", BASE_TITLE_FONT))
     self.detail_meta:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.detail_status:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
@@ -1281,6 +1350,9 @@ function CraftingWindow:apply_settings()
     self.plan_plus_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
     self.ingredients_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.detail_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.queue_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.queue_summary:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.queue_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
 
     self.plan_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.plan_summary:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
@@ -1436,6 +1508,10 @@ end
 
 function CraftingWindow:_current_detail_list_width()
     return math.max(0, self.ingredients_list:GetWidth() - self.ingredients_scroll:GetWidth() - _scaled_int(2))
+end
+
+function CraftingWindow:_current_queue_list_width()
+    return math.max(0, self.queue_list:GetWidth() - self.queue_scroll:GetWidth() - _scaled_int(2))
 end
 
 function CraftingWindow:_current_plan_list_width()
@@ -1620,44 +1696,9 @@ function CraftingWindow:_collect_leaf_requirements(node, out)
     end
 end
 
-function CraftingWindow:_leaf_summary_text(node)
-    local leaf_map = {}
-    self:_collect_leaf_requirements(node, leaf_map)
-
-    local leaves = {}
-    for _, entry in pairs(leaf_map) do
-        leaves[#leaves + 1] = entry
-    end
-    table.sort(leaves, function(left, right)
-        return _lower(left.name) < _lower(right.name)
-    end)
-
-    if #leaves == 0 then
-        return ""
-    end
-
-    local parts = {}
-    local limit = math.min(3, #leaves)
-    for i = 1, limit do
-        parts[#parts + 1] = leaves[i].name .. " x" .. _format_count(leaves[i].quantity)
-    end
-    if #leaves > limit then
-        parts[#parts + 1] = "+"
-    end
-
-    return table.concat(parts, ", ")
-end
-
 function CraftingWindow:_ingredient_detail_text(node)
     if node == nil then
         return ""
-    end
-
-    if node.expanded == true then
-        local summary = self:_leaf_summary_text(node)
-        if summary ~= "" then
-            return summary
-        end
     end
 
     if node.ambiguous == true then
@@ -1665,6 +1706,44 @@ function CraftingWindow:_ingredient_detail_text(node)
     end
 
     return ""
+end
+
+function CraftingWindow:_node_amount_text(node)
+    if type(node) ~= "table" then
+        return ""
+    end
+
+    local owned_quantity = _safe_number(node.from_stock, _safe_number(node.owned_in_scope, 0))
+    return _ratio_text(owned_quantity, _safe_number(node.required, 0))
+end
+
+function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level)
+    if list_box == nil or type(node) ~= "table" then
+        return
+    end
+
+    local row = CraftingIngredientRow()
+    row:set_scale(_G.settings.global.scale)
+    row:set_width(row_w)
+    row:set_data(
+        node.item_info,
+        node.icon_id,
+        node.background_image_id,
+        node.name,
+        self:_ingredient_detail_text(node),
+        self:_node_amount_text(node),
+        self:_node_status_color(node),
+        indent_level
+    )
+    list_box:AddItem(row)
+
+    if type(node.children) ~= "table" then
+        return
+    end
+
+    for index = 1, #node.children do
+        self:_append_node_rows(list_box, row_w, node.children[index], indent_level + 1)
+    end
 end
 
 function CraftingWindow:refresh_selected_recipe()
@@ -1712,21 +1791,7 @@ function CraftingWindow:refresh_selected_recipe()
 
     local row_w = self:_current_detail_list_width()
     for i = 1, #evaluation.ingredients do
-        local node = evaluation.ingredients[i]
-        local color = node.satisfied == true and (node.expanded == true and STATUS_AUTO or STATUS_READY) or STATUS_MISSING
-        local row = CraftingIngredientRow()
-        row:set_scale(_G.settings.global.scale)
-        row:set_width(row_w)
-        row:set_data(
-            node.item_info,
-            node.icon_id,
-            node.background_image_id,
-            node.name,
-            self:_ingredient_detail_text(node),
-            _ratio_text(node.owned_in_scope, node.required),
-            color
-        )
-        self.ingredients_list:AddItem(row)
+        self:_append_node_rows(self.ingredients_list, row_w, evaluation.ingredients[i], 0)
     end
 
     self.ingredients_list:SetVisible(true)
@@ -1749,6 +1814,7 @@ function CraftingWindow:_build_plan_entries()
 end
 
 function CraftingWindow:refresh_plan()
+    _clear_list_box(self.queue_list)
     _clear_list_box(self.plan_list)
     _clear_list_box(self.missing_list)
 
@@ -1756,21 +1822,25 @@ function CraftingWindow:refresh_plan()
     local evaluation = self.store:evaluate_plan(plan_entries, self.scope_key)
 
     local has_plan = #plan_entries > 0
+    self.queue_empty:SetVisible(has_plan ~= true)
     self.plan_empty:SetVisible(has_plan ~= true)
 
     if has_plan == true then
-        self.plan_summary:SetText(
+        local summary_text =
             _format_count(#plan_entries) .. " " .. TR["recipes"] ..
             " - " .. _ratio_text(evaluation.craftable_count_total, evaluation.planned_recipe_count)
-        )
+        self.queue_summary:SetText(summary_text)
+        self.plan_summary:SetText(summary_text)
     else
+        self.queue_summary:SetText(TR["No recipes planned"])
         self.plan_summary:SetText(TR["No recipes planned"])
     end
 
+    local queue_w = self:_current_queue_list_width()
     local row_w = self:_current_plan_list_width()
     for i = 1, #evaluation.entries do
         local entry = evaluation.entries[i]
-        local row = CraftingPlanRow(
+        local queue_row = CraftingPlanRow(
             function(recipe)
                 self:adjust_plan_count(recipe.id, -1)
             end,
@@ -1781,10 +1851,33 @@ function CraftingWindow:refresh_plan()
                 self:set_plan_count(recipe.id, 0)
             end
         )
-        row:set_scale(_G.settings.global.scale)
-        row:set_width(row_w)
-        row:set_data(entry.recipe, entry.count, entry.evaluation, entry.craftable_count)
-        self.plan_list:AddItem(row)
+        queue_row:set_scale(_G.settings.global.scale)
+        queue_row:set_width(queue_w)
+        queue_row:set_data(entry.recipe, entry.count, entry.evaluation, entry.craftable_count)
+        self.queue_list:AddItem(queue_row)
+
+        local plan_row = CraftingPlanRow(
+            function(recipe)
+                self:adjust_plan_count(recipe.id, -1)
+            end,
+            function(recipe)
+                self:adjust_plan_count(recipe.id, 1)
+            end,
+            function(recipe)
+                self:set_plan_count(recipe.id, 0)
+            end
+        )
+        plan_row:set_scale(_G.settings.global.scale)
+        plan_row:set_width(row_w)
+        plan_row:set_data(entry.recipe, entry.count, entry.evaluation, entry.craftable_count)
+        self.plan_list:AddItem(plan_row)
+
+        local ingredients = entry.evaluation ~= nil and entry.evaluation.ingredients or nil
+        if type(ingredients) == "table" then
+            for ingredient_index = 1, #ingredients do
+                self:_append_node_rows(self.plan_list, row_w, ingredients[ingredient_index], 1)
+            end
+        end
     end
 
     local leaf_requirements = {}
@@ -1821,6 +1914,8 @@ function CraftingWindow:refresh_plan()
         self.missing_list:AddItem(row)
     end
 
+    self.queue_list:SetVisible(has_plan == true)
+    self.queue_scroll:SetVisible(has_plan == true)
     self.plan_list:SetVisible(has_plan == true)
     self.plan_scroll:SetVisible(has_plan == true)
     self.missing_list:SetVisible(#evaluation.missing_list > 0)
@@ -1931,11 +2026,6 @@ function CraftingWindow:layout()
     if content_h < 0 then
         content_h = 0
     end
-    local right_detail_h = math.max(_scaled_int(250), math.floor((content_h - gap) * 0.52))
-    local right_plan_h = content_h - gap - right_detail_h
-    if right_plan_h < 0 then
-        right_plan_h = 0
-    end
     local scroll_w = _fixed_int(BASE_SCROLL_W)
     local detail_header_h = _scaled_int(BASE_DETAIL_HEADER_H)
     local plan_header_h = _scaled_int(BASE_PLAN_HEADER_H)
@@ -2013,8 +2103,26 @@ function CraftingWindow:layout()
     self.right_panel:SetPosition(margin_left + left_w + gap, content_top)
     self.right_panel:SetSize(right_w, content_h)
 
+    self.right_tab_bar:SetPosition(0, 0)
+    self.right_tab_bar:SetSize(right_w, content_h)
+
+    local recipe_page_x, recipe_page_y = self.recipe_page:GetPosition()
+    local recipe_page_w, recipe_page_h = self.recipe_page:GetSize()
+    if recipe_page_w <= 0 or recipe_page_h <= 0 then
+        recipe_page_x, recipe_page_y = self.plan_page:GetPosition()
+        recipe_page_w, recipe_page_h = self.plan_page:GetSize()
+    end
+    self.recipe_page:SetPosition(recipe_page_x, recipe_page_y)
+    self.recipe_page:SetSize(recipe_page_w, recipe_page_h)
+    self.plan_page:SetPosition(recipe_page_x, recipe_page_y)
+    self.plan_page:SetSize(recipe_page_w, recipe_page_h)
+
+    local split_gap = gap
+    local recipe_detail_h = math.max(0, math.floor((recipe_page_h - split_gap) * 0.5))
+    local queue_h = math.max(0, recipe_page_h - recipe_detail_h - split_gap)
+
     self.detail_panel:SetPosition(0, 0)
-    self.detail_panel:SetSize(right_w, right_detail_h)
+    self.detail_panel:SetSize(recipe_page_w, recipe_detail_h)
     _fit_inner_border(self.detail_panel)
 
     local detail_inner = self.detail_panel.inner
@@ -2053,8 +2161,29 @@ function CraftingWindow:layout()
     self.detail_empty:SetPosition(_scaled_int(8), ingredient_list_top)
     self.detail_empty:SetSize(detail_inner:GetWidth() - _scaled_int(16), ingredient_list_h)
 
-    self.plan_panel:SetPosition(0, right_detail_h + gap)
-    self.plan_panel:SetSize(right_w, right_plan_h)
+    self.queue_panel:SetPosition(0, recipe_detail_h + split_gap)
+    self.queue_panel:SetSize(recipe_page_w, queue_h)
+    _fit_inner_border(self.queue_panel)
+
+    local queue_inner = self.queue_panel.inner
+    self.queue_title:SetPosition(_scaled_int(8), 0)
+    self.queue_title:SetSize(_scaled_int(90), plan_header_h)
+    self.queue_summary:SetPosition(_scaled_int(8), plan_header_h)
+    self.queue_summary:SetSize(queue_inner:GetWidth() - _scaled_int(16), _scaled_int(20))
+    local queue_list_top = plan_header_h + _scaled_int(22)
+    local queue_list_h = queue_inner:GetHeight() - queue_list_top
+    if queue_list_h < 0 then
+        queue_list_h = 0
+    end
+    self.queue_scroll:SetPosition(queue_inner:GetWidth() - scroll_w, queue_list_top)
+    self.queue_scroll:SetSize(scroll_w, queue_list_h)
+    self.queue_list:SetPosition(0, queue_list_top)
+    self.queue_list:SetSize(queue_inner:GetWidth() - scroll_w, queue_list_h)
+    self.queue_empty:SetPosition(_scaled_int(8), queue_list_top)
+    self.queue_empty:SetSize(queue_inner:GetWidth() - _scaled_int(16), queue_list_h)
+
+    self.plan_panel:SetPosition(0, 0)
+    self.plan_panel:SetSize(self.plan_page:GetWidth(), self.plan_page:GetHeight())
     _fit_inner_border(self.plan_panel)
 
     local plan_inner = self.plan_panel.inner
