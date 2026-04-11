@@ -46,6 +46,28 @@ local function _ensure_crafting_window()
     return window
 end
 
+local function _release_persistent_state()
+    _G.account_settings = nil
+    _G.server_settings = nil
+    _G.loaded_settings = nil
+    _G.settings = nil
+
+    _G.assets_cache = nil
+    _G.assets_cache_loaded = nil
+    _G.assets_cache_loading = nil
+    _G.assets_cache_dirty = nil
+
+    _G.bestiary_cache = nil
+    _G.bestiary_cache_loaded = nil
+    _G.bestiary_cache_loading = nil
+    _G.bestiary_cache_dirty = nil
+    _G.bestiary_cache_generation = nil
+
+    _G.current_profile_id = nil
+    _G.current_character_name = nil
+    _G.loaded_settings_was_new = nil
+end
+
 function _G.toggle_config_shortcut()
     if CONFIG_WINDOW == nil then
         return
@@ -297,10 +319,11 @@ Turbine.Shell.WriteLine(string.format(
 Plugins["LUI"].Unload = function()
     _G.LUI_IS_UNLOADING = true
     if CRAFTING_WINDOW ~= nil then
-        if CRAFTING_WINDOW.SetVisible ~= nil then
+        if CRAFTING_WINDOW.destroy ~= nil then
+            CRAFTING_WINDOW:destroy()
+        elseif CRAFTING_WINDOW.SetVisible ~= nil then
             CRAFTING_WINDOW:SetVisible(false)
         end
-        CRAFTING_WINDOW.store = nil
         CRAFTING_WINDOW = nil
         _G.CRAFTING_WINDOW = nil
     end
@@ -347,4 +370,5 @@ Plugins["LUI"].Unload = function()
         ASSETS_STORE = nil
     end
     save_assets_cache()
+    _release_persistent_state()
 end

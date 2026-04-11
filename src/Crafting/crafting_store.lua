@@ -433,7 +433,7 @@ end
 
 local function _collect_asset_entries_from_cache()
     local entries = {}
-    local cache = _G.assets_cache
+    local cache = _G.ensure_assets_cache ~= nil and _G.ensure_assets_cache() or _G.assets_cache
     if type(cache) ~= "table" then
         return entries
     end
@@ -504,63 +504,6 @@ local function _recipe_sort_compare(left, right)
     return _lower(left ~= nil and left.name or nil) < _lower(right ~= nil and right.name or nil)
 end
 
-local function _result_visual_key(item_info, icon_id, background_image_id, quality)
-    local icon = tonumber(icon_id)
-    if icon == nil then
-        icon = _item_info_icon_id(item_info)
-    end
-    icon = tonumber(icon) or 0
-
-    local background = tonumber(background_image_id)
-    if background == nil then
-        background = _item_info_background_id(item_info)
-    end
-    background = tonumber(background) or 0
-
-    local item_quality = tonumber(quality)
-    if item_quality == nil then
-        item_quality = _item_info_quality(item_info)
-    end
-    item_quality = tonumber(item_quality) or 0
-
-    local category = tonumber(_item_info_category(item_info)) or 0
-    local description = _item_info_description(item_info)
-    local max_quantity = tonumber(_item_info_max_quantity(item_info)) or 0
-    local max_stack_size = tonumber(_item_info_max_stack_size(item_info)) or 0
-    local magic_flag = _item_info_is_magic(item_info)
-    local unique_flag = _item_info_is_unique(item_info)
-
-    if icon == 0 and background == 0 and category == 0 and description == "" and max_quantity == 0 and max_stack_size == 0 then
-        return nil
-    end
-
-    return table.concat({
-        tostring(icon),
-        tostring(background),
-        tostring(item_quality),
-        tostring(category),
-        description,
-        tostring(max_quantity),
-        tostring(max_stack_size),
-        tostring(magic_flag),
-        tostring(unique_flag),
-    }, "\30")
-end
-
-local function _legacy_result_visual_key(icon_id, background_image_id, quality)
-    local icon = tonumber(icon_id) or 0
-    local background = tonumber(background_image_id) or 0
-    local item_quality = tonumber(quality) or 0
-    if icon == 0 and background == 0 then
-        return nil
-    end
-    return table.concat({
-        tostring(icon),
-        tostring(background),
-        tostring(item_quality),
-    }, "\30")
-end
-
 local function _recipe_reenters_path(recipe, visiting)
     if type(recipe) ~= "table" or type(recipe.ingredients) ~= "table" or type(visiting) ~= "table" then
         return false
@@ -612,7 +555,6 @@ function CraftingStore:Constructor()
     self.recipes = {}
     self.recipe_by_id = {}
     self.result_index = {}
-    self.result_visual_index = {}
     self.item_meta = {}
     self.ownership = {
         [SCOPE_SERVER] = {},
@@ -642,6 +584,27 @@ end
 function CraftingStore:destroy()
     self:SetWantsUpdates(false)
     self:SetVisible(false)
+    self.current_character_name = nil
+    self.professions = nil
+    self.recipes = nil
+    self.recipe_by_id = nil
+    self.result_index = nil
+    self.item_meta = nil
+    self.ownership = nil
+    self.profession_option_labels = nil
+    self.profession_option_values = nil
+    self.scope_option_labels = nil
+    self.scope_option_values = nil
+    self._status_cache = nil
+    self._assets_token = nil
+    self._recipe_token = nil
+    self._recipes_initialized = false
+    self._recipe_loading = false
+    self._recipe_load_queue = nil
+    self._recipe_load_queue_index = nil
+    self._recipe_load_done = nil
+    self._recipe_load_total = nil
+    self._foreground_loading = false
 end
 
 function CraftingStore:get_scope_options()
@@ -1067,7 +1030,6 @@ function CraftingStore:_start_recipe_load(current_character)
     self.recipes = {}
     self.recipe_by_id = {}
     self.result_index = {}
-    self.result_visual_index = {}
     self.item_meta = {}
     self.profession_option_labels = profession_labels
     self.profession_option_values = profession_values
@@ -1089,11 +1051,8 @@ function CraftingStore:_register_recipe_record(record)
     self.recipes[#self.recipes + 1] = record
     self.recipe_by_id[record.id] = record
     _add_result_index_entry(self.result_index, record.result_key, record)
-
-    if type(record.result_alias_keys) == "table" then
-        for index = 1, #record.result_alias_keys do
-            _add_result_index_entry(self.result_index, record.result_alias_keys[index], record)
-        end
+    if record.recipe_name_key ~= nil then
+        _add_result_index_entry(self.result_index, record.recipe_name_key, record)
     end
 end
 
@@ -1145,100 +1104,9 @@ function CraftingStore:_step_recipe_load(batch_size)
     return changed
 end
 
-function CraftingStore:_collect_recipes(current_character)
-    local professions = {}
-    local recipes = {}
-    local recipe_by_id = {}
-    local result_index = {}
-    local result_visual_index = {}
-    local item_meta = {}
-    local profession_labels = { TR["All professions"] }
-    local profession_values = { FILTER_ALL }
-    local token_parts = { current_character }
-
-    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    local attributes = player ~= nil and player:GetAttributes() or nil
-    if attributes == nil then
-        return {
-            professions = professions,
-            recipes = recipes,
-            recipe_by_id = recipe_by_id,
-            result_index = result_index,
-            result_visual_index = result_visual_index,
-            item_meta = item_meta,
-            profession_labels = profession_labels,
-            profession_values = profession_values,
-            token = table.concat(token_parts, "\30"),
-        }
-    end
-
-    for i = 1, #PROFESSION_ORDER do
-        local profession_enum = PROFESSION_ORDER[i]
-        local profession_info = attributes:GetProfessionInfo(profession_enum)
-        if profession_info ~= nil then
-            local profession_name = _trim(profession_info:GetName())
-            if profession_name == "" then
-                profession_name = tostring(profession_enum)
-            end
-
-            local recipe_count = profession_info:GetRecipeCount() or 0
-            local profession = {
-                profession = profession_enum,
-                key = tostring(profession_enum),
-                name = profession_name,
-                recipe_count = recipe_count,
-                proficiency_level = profession_info:GetProficiencyLevel() or 0,
-                proficiency_title = _trim(profession_info:GetProficiencyTitle()),
-                mastery_level = profession_info:GetMasteryLevel() or 0,
-                mastery_title = _trim(profession_info:GetMasteryTitle()),
-            }
-            professions[#professions + 1] = profession
-            profession_labels[#profession_labels + 1] = profession_name
-            profession_values[#profession_values + 1] = profession.key
-
-            _append_token(token_parts, profession.key)
-            _append_token(token_parts, profession.name)
-            _append_token(token_parts, profession.recipe_count)
-
-            for recipe_index = 1, recipe_count do
-                local recipe = profession_info:GetRecipe(recipe_index)
-                if recipe ~= nil then
-                    local record = self:_build_recipe_record(recipe, profession, recipe_index, item_meta)
-                    if record ~= nil then
-                        recipes[#recipes + 1] = record
-                        recipe_by_id[record.id] = record
-                        _add_result_index_entry(result_index, record.result_key, record)
-                        if type(record.result_alias_keys) == "table" then
-                            for alias_index = 1, #record.result_alias_keys do
-                                _add_result_index_entry(result_index, record.result_alias_keys[alias_index], record)
-                            end
-                        end
-                        _append_token(token_parts, record.id)
-                        _append_token(token_parts, record.name)
-                        _append_token(token_parts, record.result_name)
-                    end
-                end
-            end
-        end
-    end
-
-    table.sort(recipes, _recipe_sort_compare)
-
-    return {
-        professions = professions,
-        recipes = recipes,
-        recipe_by_id = recipe_by_id,
-        result_index = result_index,
-        result_visual_index = result_visual_index,
-        item_meta = item_meta,
-        profession_labels = profession_labels,
-        profession_values = profession_values,
-        token = table.concat(token_parts, "\30"),
-    }
-end
-
 function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, item_meta)
     local recipe_name = _trim(recipe:GetName())
+    local recipe_name_key = _normalize_name(recipe_name)
     local result_info = recipe:GetResultItemInfo()
     local result_name = _trim(result_info ~= nil and result_info:GetName() or nil)
     local category_name = _trim(recipe:GetCategoryName())
@@ -1304,16 +1172,7 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         cooldown = tonumber(recipe:GetCooldown()) or 0,
         result_name = result_name,
         result_key = result_key,
-        result_alias_keys = {
-            result_key,
-            _normalize_name(recipe_name),
-        },
-        result_visual_key = _result_visual_key(
-            result_info,
-            _item_info_icon_id(result_info),
-            _item_info_background_id(result_info),
-            _item_info_quality(result_info)
-        ),
+        recipe_name_key = recipe_name_key ~= "" and recipe_name_key ~= result_key and recipe_name_key or nil,
         result_quantity = math.max(1, tonumber(recipe:GetResultItemQuantity()) or 1),
         icon_id = _item_info_icon_id(result_info),
         background_image_id = _item_info_background_id(result_info),
@@ -1322,11 +1181,6 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         result_item_info = result_info,
         ingredients = ingredients,
         haystack_lower = table.concat(filter_parts, "\n"),
-    }
-
-    record.result_visual_keys = {
-        record.result_visual_key,
-        _legacy_result_visual_key(record.icon_id, record.background_image_id, record.quality),
     }
 
     return record

@@ -107,7 +107,155 @@ function _G.ensure_server_settings()
     end
 end
 
+local function _merge_assets_cache(loaded)
+    if type(loaded) ~= "table" then
+        return
+    end
+
+    if type(_G.assets_cache) ~= "table" or next(_G.assets_cache) == nil then
+        _G.assets_cache = loaded
+        return
+    end
+
+    local current = _G.assets_cache
+    if type(current.characters) ~= "table" then
+        current.characters = {}
+    end
+    if type(loaded.characters) == "table" then
+        for character_name, loaded_character_cache in pairs(loaded.characters) do
+            if type(current.characters[character_name]) ~= "table" then
+                current.characters[character_name] = loaded_character_cache
+            elseif type(loaded_character_cache) == "table" then
+                local current_character_cache = current.characters[character_name]
+                local source_names = { "backpack", "bank", "vault" }
+                for i = 1, #source_names do
+                    local source_name = source_names[i]
+                    local current_source = current_character_cache[source_name]
+                    local loaded_source = loaded_character_cache[source_name]
+                    if type(current_source) ~= "table" or type(current_source.items) ~= "table" or #current_source.items <= 0 then
+                        current_character_cache[source_name] = loaded_source
+                    end
+                end
+            end
+        end
+    end
+
+    if type(current.shared_storage) ~= "table" or type(current.shared_storage.items) ~= "table" or #current.shared_storage.items <= 0 then
+        current.shared_storage = loaded.shared_storage
+    end
+end
+
+local function _merge_count_map(target, source)
+    if type(source) ~= "table" then
+        return
+    end
+    if type(target) ~= "table" then
+        return
+    end
+
+    for key, value in pairs(source) do
+        target[key] = (tonumber(target[key]) or 0) + (tonumber(value) or 0)
+    end
+end
+
+local function _merge_bestiary_cache(loaded)
+    if type(loaded) ~= "table" then
+        return
+    end
+
+    if type(_G.bestiary_cache) ~= "table" or next(_G.bestiary_cache) == nil then
+        _G.bestiary_cache = loaded
+        return
+    end
+
+    local current = _G.bestiary_cache
+    for name, loaded_entry in pairs(loaded) do
+        if type(current[name]) ~= "table" then
+            current[name] = loaded_entry
+        elseif type(loaded_entry) == "table" then
+            local current_entry = current[name]
+            current_entry.k = (tonumber(current_entry.k) or 0) + (tonumber(loaded_entry.k) or 0)
+            if type(current_entry.levels) ~= "table" then
+                current_entry.levels = {}
+            end
+            if type(current_entry.d) ~= "table" then
+                current_entry.d = {}
+            end
+            _merge_count_map(current_entry.levels, loaded_entry.levels)
+            _merge_count_map(current_entry.d, loaded_entry.d)
+        end
+    end
+end
+
+function _G.ensure_assets_cache()
+    if _G.assets_cache_loaded ~= true and _G.assets_cache_loading ~= true then
+        _G.assets_cache_loading = true
+        local loaded = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, function(data)
+            if _G.LUI_IS_UNLOADING == true then
+                return
+            end
+            _merge_assets_cache(data)
+            _G.assets_cache_loaded = true
+            _G.assets_cache_loading = false
+            if _G.assets_cache_dirty ~= true then
+                _G.assets_cache_dirty = false
+            end
+            if _G.ASSETS_STORE ~= nil then
+                _G.ASSETS_STORE.generation = (tonumber(_G.ASSETS_STORE.generation) or 0) + 1
+            end
+        end)
+        if loaded ~= nil then
+            _merge_assets_cache(loaded)
+            _G.assets_cache_loaded = true
+            _G.assets_cache_loading = false
+            if _G.assets_cache_dirty ~= true then
+                _G.assets_cache_dirty = false
+            end
+        end
+    end
+
+    if type(_G.assets_cache) ~= "table" then
+        _G.assets_cache = {}
+    end
+
+    local cache = _G.assets_cache
+    if type(cache.characters) ~= "table" then
+        cache.characters = {}
+    end
+    if type(cache.shared_storage) ~= "table" then
+        cache.shared_storage = { items = {} }
+    elseif type(cache.shared_storage.items) ~= "table" then
+        cache.shared_storage.items = {}
+    end
+
+    return cache
+end
+
 function _G.ensure_bestiary_cache()
+    if _G.bestiary_cache_loaded ~= true and _G.bestiary_cache_loading ~= true then
+        _G.bestiary_cache_loading = true
+        local loaded = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, function(data)
+            if _G.LUI_IS_UNLOADING == true then
+                return
+            end
+            _merge_bestiary_cache(data)
+            _G.bestiary_cache_loaded = true
+            _G.bestiary_cache_loading = false
+            if _G.bestiary_cache_dirty ~= true then
+                _G.bestiary_cache_dirty = false
+            end
+            _G.bestiary_cache_generation = (_G.bestiary_cache_generation or 0) + 1
+        end)
+        if loaded ~= nil then
+            _merge_bestiary_cache(loaded)
+            _G.bestiary_cache_loaded = true
+            _G.bestiary_cache_loading = false
+            if _G.bestiary_cache_dirty ~= true then
+                _G.bestiary_cache_dirty = false
+            end
+        end
+    end
+
     if type(_G.bestiary_cache) ~= "table" then
         _G.bestiary_cache = {}
     end
@@ -324,23 +472,41 @@ function _G.capture_runtime_geometry()
 end
 
 function _G.save_assets_cache()
+    if _G.assets_cache_dirty ~= true then
+        return
+    end
+    if type(_G.assets_cache) ~= "table" then
+        _G.assets_cache = {}
+    end
     Turbine.PluginData.Save(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, _G.assets_cache)
+    _G.assets_cache_dirty = false
 end
 
 function _G.save_bestiary_cache()
-    _G.ensure_bestiary_cache()
+    if _G.bestiary_cache_dirty ~= true then
+        return
+    end
+    if type(_G.bestiary_cache) ~= "table" then
+        _G.bestiary_cache = {}
+    end
     Turbine.PluginData.Save(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, _G.bestiary_cache)
+    _G.bestiary_cache_dirty = false
 end
 
 function _G.load_settings()
     _G.account_settings = Turbine.PluginData.Load(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY)
     _G.server_settings = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_DATA_KEY)
-    _G.assets_cache = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY)
-    _G.bestiary_cache = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY)
+    _G.assets_cache = nil
+    _G.assets_cache_loaded = false
+    _G.assets_cache_loading = false
+    _G.assets_cache_dirty = false
+    _G.bestiary_cache = nil
+    _G.bestiary_cache_loaded = false
+    _G.bestiary_cache_loading = false
+    _G.bestiary_cache_dirty = false
 
     _G.ensure_account_settings()
     _G.ensure_server_settings()
-    _G.ensure_bestiary_cache()
 
     _G.current_character_name = _get_current_character_name()
     _G.current_profile_id = nil

@@ -369,12 +369,13 @@ local function _clear_list_box(list)
         return
     end
     if list.GetItemCount ~= nil and list.GetItem ~= nil then
-        for i = list:GetItemCount(), 1, -1 do
+        for i = 1, list:GetItemCount() do
             local item = list:GetItem(i)
-            if item ~= nil and list.RemoveItemAt ~= nil then
-                list:RemoveItemAt(i)
+            if item ~= nil and item.prepare_for_list_clear ~= nil then
+                item:prepare_for_list_clear()
+            elseif item ~= nil and item.SetVisible ~= nil then
+                item:SetVisible(false)
             end
-            _destroy_control(item)
         end
     end
     list:ClearItems()
@@ -489,6 +490,11 @@ function CraftingItemIcon:bind_item(item_info, icon_id, background_image_id)
 end
 
 function CraftingItemIcon:destroy()
+    self:bind_item(nil, nil, nil)
+    self:SetVisible(false)
+end
+
+function CraftingItemIcon:prepare_for_list_clear()
     self:bind_item(nil, nil, nil)
     self:SetVisible(false)
 end
@@ -662,6 +668,13 @@ function CraftingRecipeRow:destroy()
     self:SetVisible(false)
 end
 
+function CraftingRecipeRow:prepare_for_list_clear()
+    if self.icon ~= nil and self.icon.prepare_for_list_clear ~= nil then
+        self.icon:prepare_for_list_clear()
+    end
+    self:SetVisible(false)
+end
+
 local CraftingIngredientRow = class(Turbine.UI.Control)
 
 function CraftingIngredientRow:Constructor()
@@ -756,6 +769,13 @@ end
 
 function CraftingIngredientRow:destroy()
     _destroy_control(self.icon)
+    self:SetVisible(false)
+end
+
+function CraftingIngredientRow:prepare_for_list_clear()
+    if self.icon ~= nil and self.icon.prepare_for_list_clear ~= nil then
+        self.icon:prepare_for_list_clear()
+    end
     self:SetVisible(false)
 end
 
@@ -914,6 +934,19 @@ end
 function CraftingPlanRow:destroy()
     _destroy_control(self.icon)
     _destroy_control(self.count_box)
+    self:SetVisible(false)
+end
+
+function CraftingPlanRow:prepare_for_list_clear()
+    if self.icon ~= nil and self.icon.prepare_for_list_clear ~= nil then
+        self.icon:prepare_for_list_clear()
+    end
+    if self.count_box ~= nil and self.count_box.SetVisible ~= nil then
+        self.count_box:SetVisible(false)
+    end
+    if self.remove_button ~= nil and self.remove_button.SetVisible ~= nil then
+        self.remove_button:SetVisible(false)
+    end
     self:SetVisible(false)
 end
 
@@ -1514,6 +1547,28 @@ function CraftingWindow:toggle()
     end
 
     self:open()
+end
+
+function CraftingWindow:destroy()
+    self:SetWantsUpdates(false)
+    self:SetVisible(false)
+
+    _destroy_control(self.loading_panel)
+    _destroy_control(self.right_panel)
+    _destroy_control(self.left_panel)
+    _destroy_control(self.top_bar)
+
+    self.store = nil
+    self.search_groups = nil
+    self.visible_recipes = nil
+    self.plan_order = nil
+    self.plan_counts = nil
+    self.material_filter_keys = nil
+    self.selected_recipe_id = nil
+    self._recipe_list_signature = nil
+    self._recipe_list_loaded_count = nil
+    self._recipe_list_loading = nil
+    self._recipe_list_row_width = nil
 end
 
 function CraftingWindow:capture_geometry()
