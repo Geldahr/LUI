@@ -7,11 +7,13 @@ local S = _G.STATUS_BAR_COMMON
 local CHIP_GAP = 0
 local CHIP_ICON_GAP = 2
 local CHIP_PAD_X = 3
-local CHIP_BACK = Turbine.UI.Color(0.90, 0.09, 0.11, 0.13)
+local CHIP_BACK = Turbine.UI.Color(0.00, 0.00, 0.00, 0.00)
 local CHIP_HOVER = CHIP_BACK
 local READY_TEXT = Turbine.UI.Color(1.00, 0.55, 0.92, 0.55)
 local MISSING_TEXT = Turbine.UI.Color(1.00, 0.88, 0.35, 0.35)
 local META_TEXT = Turbine.UI.Color(0.85, 0.82, 0.82, 0.82)
+local LOADING_TRACK_BACK = Turbine.UI.Color(0.35, 0.10, 0.12, 0.16)
+local LOADING_FILL_BACK = Turbine.UI.Color(0.65, 0.38, 0.54, 0.78)
 local POPUP_BORDER = Turbine.UI.Color(0.95, 0.28, 0.35, 0.45)
 local POPUP_BACK = Turbine.UI.Color(0.98, 0.08, 0.09, 0.11)
 local POPUP_ROW_BACK = Turbine.UI.Color(0.90, 0.12, 0.15, 0.17)
@@ -204,6 +206,7 @@ function CraftPlanChip:Constructor(owner, font)
     self.background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.background:SetBackColor(CHIP_BACK)
+    self.background:SetVisible(false)
 
     self.slot = CraftPlanItemSlot(self)
     self.slot:SetParent(self)
@@ -307,6 +310,7 @@ end
 
 function CraftPlanChip:_refresh_visual()
     self.background:SetBackColor(CHIP_BACK)
+    self.background:SetVisible(false)
 end
 
 function CraftPlanChip:_layout()
@@ -429,6 +433,22 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
 
+    self.loading_track = Turbine.UI.Control()
+    self.loading_track:SetParent(self)
+    self.loading_track:SetMouseVisible(false)
+    self.loading_track:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.loading_track:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.loading_track:SetBackColor(LOADING_TRACK_BACK)
+    self.loading_track:SetVisible(false)
+
+    self.loading_fill = Turbine.UI.Control()
+    self.loading_fill:SetParent(self)
+    self.loading_fill:SetMouseVisible(false)
+    self.loading_fill:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.loading_fill:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.loading_fill:SetBackColor(LOADING_FILL_BACK)
+    self.loading_fill:SetVisible(false)
+
     self.popup = Turbine.UI.Window()
     self.popup:SetVisible(false)
     self.popup:SetMouseVisible(false)
@@ -510,6 +530,12 @@ function CraftPlanWidget:destroy()
     end
     if self.popup_note ~= nil then
         self.popup_note:SetParent(nil)
+    end
+    if self.loading_fill ~= nil then
+        self.loading_fill:SetParent(nil)
+    end
+    if self.loading_track ~= nil then
+        self.loading_track:SetParent(nil)
     end
     for i = 1, #self._chips do
         self._chips[i]:destroy()
@@ -623,9 +649,39 @@ function CraftPlanWidget:_show_popup_if_needed()
     end
 end
 
+function CraftPlanWidget:_refresh_loading_background()
+    local w, h = self:GetSize()
+    local state = self._resource_state
+    local loading = type(state) == "table" and state.loading == true
+
+    self.loading_track:SetPosition(0, 0)
+    self.loading_track:SetSize(w, h)
+    self.loading_track:SetVisible(loading == true and w > 0 and h > 0)
+
+    local fill_w = 0
+    if loading == true and w > 0 and h > 0 then
+        local loaded = tonumber(state.loading_loaded) or 0
+        local total = tonumber(state.loading_total) or 0
+        if total > 0 then
+            fill_w = math.floor((w * loaded) / total)
+            if fill_w < 0 then
+                fill_w = 0
+            elseif fill_w > w then
+                fill_w = w
+            end
+        end
+    end
+
+    self.loading_fill:SetPosition(0, 0)
+    self.loading_fill:SetSize(fill_w, h)
+    self.loading_fill:SetVisible(loading == true and fill_w > 0 and h > 0)
+end
+
 function CraftPlanWidget:_layout()
     local w, h = self:GetSize()
     local visible = {}
+
+    self:_refresh_loading_background()
 
     for i = 1, #self._chips do
         local chip = self._chips[i]
