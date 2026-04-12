@@ -43,6 +43,7 @@ local BASE_STACK_HINT_PAD_X = 12
 local BASE_STACK_HINT_PAD_Y = 9
 local BASE_STACK_HINT_LINE_H = 12
 local BASE_RECIPES_BUTTON_W = 108
+local MIN_LAYOUT_COLS = 2
 local STACK_HINT_BORDER = 2
 
 local SUMMARY_TRACK_WIDTH_FACTOR = 0.70
@@ -132,10 +133,6 @@ local function _trim_text(text)
     value = value:gsub("^%s+", "")
     value = value:gsub("%s+$", "")
     return value
-end
-
-local function _normalize_recipe_filter_key(text)
-    return _lower_text(_trim_text(text))
 end
 
 local function _source_rank(source_key)
@@ -669,7 +666,7 @@ function AssetsWindow:Constructor()
     self.stack_items_label:SetSelectable(false)
     self.stack_items_label:SetMultiline(false)
     self.stack_items_label:SetFont(_scaled_font("Verdana", 11))
-    self.stack_items_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.stack_items_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.stack_items_label:SetText(TR[STACK_ITEMS_LABEL])
     self.stack_items_label.MouseClick = function(_, args)
         if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
@@ -754,12 +751,9 @@ function AssetsWindow:Constructor()
     self.summary_text:SetZOrder(2)
 
     self.recipes_button = UI.Widgets.LuiButton()
-    self.recipes_button:SetParent(self.summary_bar)
+    self.recipes_button:SetParent(self)
     self.recipes_button:set_text(TR["Recipes"] .. " (0)")
     self.recipes_button.Click = function()
-        if type(self._visible_recipe_filter_keys) ~= "table" or next(self._visible_recipe_filter_keys) == nil then
-            return
-        end
         if Crafting ~= nil and Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true then
             return
         end
@@ -770,7 +764,7 @@ function AssetsWindow:Constructor()
             _G.CRAFTING_WINDOW = window
         end
         if window ~= nil and window.open_from_asset_materials ~= nil then
-            window:open_from_asset_materials(self._visible_recipe_filter_keys)
+            window:open_from_asset_materials(nil)
         elseif window ~= nil and window.open ~= nil then
             window:open()
         end
@@ -1082,7 +1076,7 @@ function AssetsWindow:Update()
             self._last_crafting_store_version = version
             self:_refresh_recipes_button()
         end
-    elseif type(self._visible_recipe_filter_keys) == "table" and next(self._visible_recipe_filter_keys) ~= nil then
+    elseif Crafting ~= nil and (Crafting.is_enabled == nil or Crafting.is_enabled() == true) then
         self:_refresh_recipes_button()
     end
 end
@@ -1093,8 +1087,7 @@ end
 
 function AssetsWindow:_enforce_min_size()
     local width, height = self:GetSize()
-    local min_w = _scaled_int(BASE_MIN_W)
-    local min_h = _scaled_int(BASE_MIN_H)
+    local min_w, min_h = self:_get_min_window_size(self.view_mode, self.tile_size)
 
     if width < min_w or height < min_h then
         self._suppress_size_changed = true
@@ -1179,11 +1172,33 @@ function AssetsWindow:_get_cell_size()
     return self:_get_cell_size_for(self.view_mode, self.tile_size)
 end
 
+function AssetsWindow:_get_footer_height(layout)
+    if layout.page_h > layout.hint_h then
+        return layout.page_h
+    end
+    return layout.hint_h
+end
+
+function AssetsWindow:_get_min_window_size(mode, tile_size)
+    local layout = self:_get_layout_numbers()
+    local min_w = _scaled_int(BASE_MIN_W)
+    local min_h = _scaled_int(BASE_MIN_H)
+    local min_content_w = self:_get_content_size_for_layout_grid(mode, tile_size, MIN_LAYOUT_COLS, 1)
+    local grid_min_w = layout.margin_left + layout.margin_right + min_content_w
+
+    if grid_min_w > min_w then
+        min_w = grid_min_w
+    end
+
+    return min_w, min_h
+end
+
 function AssetsWindow:_get_content_size_from_window(width, height)
     local layout = self:_get_layout_numbers()
+    local footer_h = self:_get_footer_height(layout)
     local content_w = width - layout.margin_left - layout.margin_right
     local content_h = height - layout.margin_top - layout.margin_bottom - layout.bar_h - layout.filter_h -
-        layout.summary_h - layout.page_h - layout.hint_h - (layout.gap * 5)
+        layout.summary_h - footer_h - (layout.gap * 4)
 
     if content_w < 0 then content_w = 0 end
     if content_h < 0 then content_h = 0 end
@@ -1217,21 +1232,26 @@ end
 
 function AssetsWindow:_get_window_size_for_layout_grid(mode, tile_size, cols, rows)
     local layout = self:_get_layout_numbers()
+    local footer_h = self:_get_footer_height(layout)
     local content_w, content_h = self:_get_content_size_for_layout_grid(mode, tile_size, cols, rows)
+    local min_w, min_h = self:_get_min_window_size(mode, tile_size)
 
     local width = layout.margin_left + layout.margin_right + content_w
     local height = layout.margin_top + layout.margin_bottom + layout.bar_h + layout.filter_h + layout.summary_h +
-        layout.page_h + layout.hint_h + (layout.gap * 5) + content_h
+        footer_h + (layout.gap * 4) + content_h
+
+    if width < min_w then width = min_w end
+    if height < min_h then height = min_h end
 
     return width, height
 end
 
 function AssetsWindow:get_snap_dimensions(width, height)
     local content_w, content_h, layout = self:_get_content_size_from_window(width, height)
+    local footer_h = self:_get_footer_height(layout)
     local cols, rows = self:_get_layout_grid_from_content_size(self.view_mode, self.tile_size, content_w, content_h)
 
-    local min_w = _scaled_int(BASE_MIN_W)
-    local min_h = _scaled_int(BASE_MIN_H)
+    local min_w, min_h = self:_get_min_window_size(self.view_mode, self.tile_size)
     local min_content_w, min_content_h = self:_get_content_size_from_window(min_w, min_h)
     local min_cols, min_rows = self:_get_layout_grid_from_content_size(self.view_mode, self.tile_size, min_content_w,
         min_content_h)
@@ -1242,7 +1262,7 @@ function AssetsWindow:get_snap_dimensions(width, height)
         cols, rows)
     local snapped_w = layout.margin_left + layout.margin_right + snapped_content_w
     local snapped_h = layout.margin_top + layout.margin_bottom + layout.bar_h + layout.filter_h + layout.summary_h +
-        layout.page_h + layout.hint_h + (layout.gap * 5) + snapped_content_h
+        footer_h + (layout.gap * 4) + snapped_content_h
 
     if snapped_w < min_w then snapped_w = min_w end
     if snapped_h < min_h then snapped_h = min_h end
@@ -1629,7 +1649,6 @@ function AssetsWindow:_apply_record_view(reset_page)
         self.page_index = 1
     end
 
-    self:_rebuild_visible_recipe_filter_keys()
     self:_refresh_recipes_button()
     self:_refresh_empty_state()
     self:refresh_page()
@@ -1637,29 +1656,35 @@ end
 
 function AssetsWindow:_get_crafting_store()
     if _G.LUI_IS_UNLOADING == true or Crafting == nil or (Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true) then
+        self._crafting_store = nil
         return nil
     end
 
-    if self._crafting_store == nil then
-        self._crafting_store = _G.CRAFTING_STORE
+    local store = nil
+    if Crafting.get_shared_store ~= nil then
+        store = Crafting.get_shared_store()
+    else
+        store = _G.CRAFTING_STORE
     end
 
-    return self._crafting_store
+    self._crafting_store = store
+    return store
 end
 
 function AssetsWindow:_refresh_recipes_button()
-    local keys = self._visible_recipe_filter_keys
     local count = 0
     local loading = false
     local store = nil
     local crafting_enabled = Crafting == nil or Crafting.is_enabled == nil or Crafting.is_enabled() == true
-    if type(keys) == "table" and next(keys) ~= nil then
+    if crafting_enabled == true then
         store = self:_get_crafting_store()
     end
-    if store ~= nil and type(keys) == "table" and next(keys) ~= nil then
+    if store ~= nil then
         store:refresh(false, 1)
         for i = 1, #store.recipes do
-            if store:recipe_uses_item_key(store.recipes[i], keys) == true then
+            local recipe = store.recipes[i]
+            local status = store:get_recipe_status(recipe, "server")
+            if status ~= nil and status.craftable == true then
                 count = count + 1
             end
         end
@@ -1678,30 +1703,14 @@ function AssetsWindow:_refresh_recipes_button()
         end
     elseif crafting_enabled ~= true then
         button_text = TR["Recipes"] .. " (0)"
-    elseif store == nil and type(keys) == "table" and next(keys) ~= nil then
+    elseif store == nil then
         button_text = TR["Recipes"] .. " (...)"
     else
         button_text = TR["Recipes"] .. " (" .. tostring(count) .. ")"
     end
 
     self.recipes_button:set_text(button_text)
-    self.recipes_button:set_enabled(
-        crafting_enabled == true and
-        (type(keys) == "table" and next(keys) ~= nil) and
-        ((count > 0) or loading == true or store == nil)
-    )
-end
-
-function AssetsWindow:_rebuild_visible_recipe_filter_keys()
-    local keys = {}
-    for i = 1, #self.records do
-        local record = self.records[i]
-        local key = _normalize_recipe_filter_key(record ~= nil and record.name or nil)
-        if key ~= "" then
-            keys[key] = true
-        end
-    end
-    self._visible_recipe_filter_keys = keys
+    self.recipes_button:set_enabled(crafting_enabled == true)
 end
 
 function AssetsWindow:_refresh_summary(visible_count, page_start_index)
@@ -1910,17 +1919,7 @@ function AssetsWindow:layout()
     self.summary_bar:SetPosition(margin_left, summary_top)
     self.summary_bar:SetSize(inner_w, summary_h)
 
-    local recipes_button_w = _scaled_int(BASE_RECIPES_BUTTON_W)
-    if recipes_button_w > inner_w then
-        recipes_button_w = inner_w
-    end
-    self.recipes_button:SetPosition(math.max(0, inner_w - recipes_button_w), 0)
-    self.recipes_button:SetSize(recipes_button_w, summary_h)
-
-    local summary_track_area_w = inner_w - recipes_button_w - gap
-    if summary_track_area_w < 0 then
-        summary_track_area_w = 0
-    end
+    local summary_track_area_w = inner_w
 
     local summary_track_w = math.floor((summary_track_area_w * SUMMARY_TRACK_WIDTH_FACTOR) + 0.5)
     if summary_track_w > summary_track_area_w then
@@ -1956,7 +1955,8 @@ function AssetsWindow:layout()
     self.summary_track_inner:SetPosition(summary_track_w > 1 and 1 or 0, summary_track_h > 1 and 1 or 0)
     self.summary_track_inner:SetSize(summary_inner_w, summary_inner_h)
 
-    local hint_top = height - margin_bottom - hint_h
+    local footer_h = self:_get_footer_height(layout)
+    local footer_top = height - margin_bottom - footer_h
     local stack_toggle_w = stack_cb_w
     if stack_toggle_w > inner_w then
         stack_toggle_w = inner_w
@@ -1964,37 +1964,35 @@ function AssetsWindow:layout()
     if stack_toggle_w < 0 then
         stack_toggle_w = 0
     end
-    local stack_toggle_x = margin_left + inner_w - stack_toggle_w
-    if stack_toggle_x < margin_left then
-        stack_toggle_x = margin_left
-    end
-    self.stack_items_toggle:SetPosition(stack_toggle_x, hint_top)
+    local stack_toggle_y = footer_top + math.floor((footer_h - hint_h) / 2)
+    self.stack_items_toggle:SetPosition(margin_left, stack_toggle_y)
     self.stack_items_toggle:SetSize(stack_toggle_w, hint_h)
 
     local stack_box_h = hint_h
-    local stack_box_x = stack_toggle_w - stack_box_w
-    if stack_box_x < 0 then
-        stack_box_x = 0
-    end
-    self.stack_items_cb:SetPosition(stack_box_x, 0)
+    self.stack_items_cb:SetPosition(0, 0)
     self.stack_items_cb:SetSize(math.min(stack_box_w, stack_toggle_w), stack_box_h)
 
-    local stack_label_w = stack_box_x - gap
+    local stack_label_x = math.min(stack_toggle_w, stack_box_w + gap)
+    local stack_label_w = stack_toggle_w - stack_label_x
     if stack_label_w < 0 then
         stack_label_w = 0
     end
-    self.stack_items_label:SetPosition(0, 0)
+    self.stack_items_label:SetPosition(stack_label_x, 0)
     self.stack_items_label:SetSize(stack_label_w, hint_h)
 
-    local hint_w = inner_w - stack_toggle_w - gap
-    if hint_w < 0 then
-        hint_w = 0
+    local recipes_button_w = _scaled_int(BASE_RECIPES_BUTTON_W)
+    if recipes_button_w > inner_w then
+        recipes_button_w = inner_w
     end
-    self.hint_label:SetPosition(margin_left, hint_top)
-    self.hint_label:SetSize(hint_w, hint_h)
+    local recipes_button_x = margin_left + inner_w - recipes_button_w
+    local recipes_button_y = footer_top + math.floor((footer_h - page_h) / 2)
+    self.recipes_button:SetPosition(recipes_button_x, recipes_button_y)
+    self.recipes_button:SetSize(recipes_button_w, page_h)
 
-    local page_top = hint_top - gap - page_h
-    self.page_bar:SetPosition(margin_left, page_top)
+    self.hint_label:SetPosition(0, 0)
+    self.hint_label:SetSize(0, 0)
+
+    self.page_bar:SetPosition(margin_left, footer_top)
     self.page_bar:SetSize(inner_w, page_h)
 
     local pager_w = (nav_w * 2) + page_w + (gap * 2)
@@ -2013,7 +2011,7 @@ function AssetsWindow:layout()
     self.next_button:SetSize(nav_w, page_h)
 
     local content_top = summary_top + summary_h + gap
-    local content_h = page_top - gap - content_top
+    local content_h = footer_top - gap - content_top
     if content_h < 0 then content_h = 0 end
 
     self.content:SetPosition(margin_left, content_top)

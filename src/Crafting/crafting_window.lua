@@ -996,7 +996,7 @@ function CraftingWindow:Constructor()
     self.plan_order = {}
     self.plan_counts = {}
     self._plan_dirty = false
-    self.material_filter_keys = nil
+    self._suppress_search_text_changed = false
     self._recipe_list_signature = nil
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
@@ -1009,6 +1009,9 @@ function CraftingWindow:Constructor()
     self.search_box:SetParent(self.top_bar)
     self.search_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.search_box.TextChanged = function()
+        if self._suppress_search_text_changed == true then
+            return
+        end
         self.search_groups = _normalize_query_groups(_parse_query(self.search_box:GetText()))
         self.recipe_page_index = 1
         self:_invalidate_recipe_list()
@@ -1019,8 +1022,7 @@ function CraftingWindow:Constructor()
     self.clear_button:SetParent(self.top_bar)
     self.clear_button:set_text(TR["Clear"])
     self.clear_button.Click = function()
-        self.search_box:SetText("")
-        self.search_groups = {}
+        self:_apply_search_query("")
         self.recipe_page_index = 1
         self:_invalidate_recipe_list()
         self:refresh_recipe_list()
@@ -1597,6 +1599,14 @@ function CraftingWindow:_refresh_plan_dirty_state()
     self._plan_dirty = _saved_plan_entries_equal(current_saved_entries, self:_saved_plan_entries()) ~= true
 end
 
+function CraftingWindow:_apply_search_query(text)
+    local query_text = _safe_string(text, "")
+    self._suppress_search_text_changed = true
+    self.search_box:SetText(query_text)
+    self._suppress_search_text_changed = false
+    self.search_groups = _normalize_query_groups(_parse_query(query_text))
+end
+
 function CraftingWindow:open()
     self:SetVisible(true)
     self:SetWantsUpdates(true)
@@ -1609,9 +1619,34 @@ function CraftingWindow:open()
     self:refresh_from_store(true)
 end
 
-function CraftingWindow:open_from_asset_materials(material_keys)
-    self:set_material_filter_keys(material_keys)
+function CraftingWindow:open_from_asset_materials(_)
+    self.profession_filter = FILTER_ALL
+    self.scope_key = SCOPE_SERVER
+    self.availability_filter = AVAILABILITY_READY
+    self.level_min_filter = nil
+    self.level_max_filter = nil
+    self.recipe_page_index = 1
+    self:_apply_search_query("")
+    self:_invalidate_recipe_list()
+
+    if self.profession_dropdown ~= nil then
+        self.profession_dropdown:SetValue(self.profession_filter)
+    end
+    if self.scope_dropdown ~= nil then
+        self.scope_dropdown:SetValue(self.scope_key)
+    end
+    if self.availability_dropdown ~= nil then
+        self.availability_dropdown:SetValue(self.availability_filter)
+    end
+    if self.level_min_box ~= nil then
+        self.level_min_box:SetText("")
+    end
+    if self.level_max_box ~= nil then
+        self.level_max_box:SetText("")
+    end
+
     self:open()
+    self:show_recipe_tab()
 end
 
 function CraftingWindow:open_plan()
@@ -1802,34 +1837,11 @@ function CraftingWindow:refresh_from_store(reset_filters)
 end
 
 function CraftingWindow:set_material_filter_keys(material_keys)
-    if type(material_keys) ~= "table" then
-        self.material_filter_keys = nil
-    else
-        local copy = {}
-        for key, value in pairs(material_keys) do
-            if value == true then
-                copy[key] = true
-            end
-        end
-        self.material_filter_keys = next(copy) ~= nil and copy or nil
-    end
-
-    if self:IsVisible() == true then
-        self.recipe_page_index = 1
-        self:_invalidate_recipe_list()
-        self:refresh_recipe_list()
-        self:refresh_selected_recipe()
-    end
+    return material_keys
 end
 
 function CraftingWindow:clear_material_filter()
-    self.material_filter_keys = nil
-    if self:IsVisible() == true then
-        self.recipe_page_index = 1
-        self:_invalidate_recipe_list()
-        self:refresh_recipe_list()
-        self:refresh_selected_recipe()
-    end
+    return
 end
 
 function CraftingWindow:update_level_filter()
@@ -1907,9 +1919,6 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
     if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
         return false
     end
-    if type(self.material_filter_keys) == "table" and self.store:recipe_uses_item_key(recipe, self.material_filter_keys) ~= true then
-        return false
-    end
     if self.level_min_filter ~= nil or self.level_max_filter ~= nil then
         local required_level = tonumber(self:_recipe_required_level(recipe))
         if required_level == nil then
@@ -1947,7 +1956,6 @@ function CraftingWindow:_recipe_filter_signature()
         _safe_string(self.level_min_filter, ""),
         _safe_string(self.level_max_filter, ""),
         _safe_string(self.search_box ~= nil and self.search_box:GetText() or "", ""),
-        _safe_string(self.material_filter_keys ~= nil and next(self.material_filter_keys) ~= nil and "material_filter" or "", ""),
     }, "\30")
 end
 
@@ -2454,6 +2462,9 @@ function CraftingWindow:refresh_loading_state()
 
     if visibility_changed == true then
         self:layout()
+        if self.display_mode == DISPLAY_PAGES then
+            self:_refresh_recipe_page_rows(self:_current_recipe_list_width())
+        end
     end
 end
 
