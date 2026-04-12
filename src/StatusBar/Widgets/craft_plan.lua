@@ -23,9 +23,9 @@ local POPUP_SECTION_GAP = 4
 local ITEM_INFO_CONTROL_OFFSET = -3
 local ITEM_INFO_CONTROL_EXTRA = 3
 
-local function _set_stretch_mode_zero(control)
+local function _set_stretch_mode_fit(control)
     if control ~= nil and control.SetStretchMode ~= nil then
-        control:SetStretchMode(0)
+        control:SetStretchMode(1)
     end
 end
 
@@ -98,7 +98,7 @@ function CraftPlanItemSlot:Constructor(forward_target)
     if self.background.SetBlendMode ~= nil then
         self.background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     end
-    _set_stretch_mode_zero(self.background)
+    _set_stretch_mode_fit(self.background)
 
     self.foreground = Image()
     self.foreground:SetParent(self)
@@ -107,7 +107,7 @@ function CraftPlanItemSlot:Constructor(forward_target)
     if self.foreground.SetBlendMode ~= nil then
         self.foreground:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     end
-    _set_stretch_mode_zero(self.foreground)
+    _set_stretch_mode_fit(self.foreground)
 
     self.item_info_control = Turbine.UI.Lotro.ItemInfoControl()
     self.item_info_control:SetParent(self)
@@ -117,7 +117,7 @@ function CraftPlanItemSlot:Constructor(forward_target)
     if self.item_info_control.SetBlendMode ~= nil then
         self.item_info_control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     end
-    _set_stretch_mode_zero(self.item_info_control)
+    _set_stretch_mode_fit(self.item_info_control)
 
     local function _forward(name, args)
         local target = self._forward_target
@@ -197,9 +197,9 @@ function CraftPlanItemSlot:_refresh_item_binding()
     end
     self.item_info_control:SetVisible(has_item_info == true and (has_manual_visual ~= true or self._interaction_enabled == true))
     self.item_info_control:SetMouseVisible(has_item_info == true and self._interaction_enabled == true)
-    _set_stretch_mode_zero(self.background)
-    _set_stretch_mode_zero(self.foreground)
-    _set_stretch_mode_zero(self.item_info_control)
+    _set_stretch_mode_fit(self.background)
+    _set_stretch_mode_fit(self.foreground)
+    _set_stretch_mode_fit(self.item_info_control)
 end
 
 function CraftPlanItemSlot:destroy()
