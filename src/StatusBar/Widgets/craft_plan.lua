@@ -139,11 +139,25 @@ function CraftPlanItemSlot:Constructor(forward_target)
     self.item_info_control.MouseUp = function(_, args)
         _forward("MouseUp", args)
     end
-    self.item_info_control.MouseEnter = function(_, args)
-        _forward("MouseEnter", args)
+    local function _set_icon_hover(hovering)
+        local target = self._forward_target
+        local handler = target ~= nil and target._on_icon_hover_changed or nil
+        if type(handler) == "function" then
+            handler(target, hovering == true)
+        end
     end
-    self.item_info_control.MouseLeave = function(_, args)
-        _forward("MouseLeave", args)
+
+    self.MouseEnter = function()
+        _set_icon_hover(true)
+    end
+    self.MouseLeave = function()
+        _set_icon_hover(false)
+    end
+    self.item_info_control.MouseEnter = function()
+        _set_icon_hover(true)
+    end
+    self.item_info_control.MouseLeave = function()
+        _set_icon_hover(false)
     end
 end
 
@@ -206,6 +220,7 @@ function CraftPlanChip:Constructor(owner, font)
     self._interaction_enabled = true
     self._show_popup = false
     self._display_text = ""
+    self._icon_hover = false
 
     self:SetMouseVisible(true)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
@@ -214,11 +229,11 @@ function CraftPlanChip:Constructor(owner, font)
 
     self.background = Turbine.UI.Control()
     self.background:SetParent(self)
-    self.background:SetMouseVisible(false)
+    self.background:SetMouseVisible(true)
     self.background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.background:SetBackColor(CHIP_BACK)
-    self.background:SetVisible(false)
+    self.background:SetVisible(true)
 
     self.slot = CraftPlanItemSlot(self)
     self.slot:SetParent(self)
@@ -226,8 +241,17 @@ function CraftPlanChip:Constructor(owner, font)
     self.label = LuiLabel()
     self.label:SetParent(self)
     _apply_font(self.label, font, META_TEXT, Turbine.UI.ContentAlignment.MiddleLeft)
+    self.label:SetMouseVisible(true)
 
-    self.MouseEnter = function()
+    local function _owner_mouse(name, args)
+        local owner = self._owner
+        local handler = owner ~= nil and owner[name] or nil
+        if type(handler) == "function" then
+            handler(owner, args)
+        end
+    end
+
+    local function _enter_non_icon()
         self._hover = true
         self:_refresh_visual()
         if self._owner ~= nil and self._owner._set_hovered ~= nil then
@@ -237,6 +261,57 @@ function CraftPlanChip:Constructor(owner, font)
             self._owner:_show_popup_if_needed()
         elseif self._show_popup == true and self._owner ~= nil and self._owner._show_popup ~= nil then
             self._owner:_show_popup()
+        end
+    end
+
+    local function _leave_non_icon()
+        self._hover = false
+        self:_refresh_visual()
+    end
+
+    self.background.MouseEnter = function()
+        _enter_non_icon()
+    end
+    self.background.MouseLeave = function()
+        _leave_non_icon()
+    end
+    self.background.MouseClick = function(_, args)
+        _owner_mouse("MouseClick", args)
+    end
+    self.background.MouseDown = function(_, args)
+        _owner_mouse("MouseDown", args)
+    end
+    self.background.MouseMove = function(_, args)
+        _owner_mouse("MouseMove", args)
+    end
+    self.background.MouseUp = function(_, args)
+        _owner_mouse("MouseUp", args)
+    end
+
+    self.label.MouseEnter = function()
+        _enter_non_icon()
+    end
+    self.label.MouseLeave = function()
+        _leave_non_icon()
+    end
+    self.label.MouseClick = function(_, args)
+        _owner_mouse("MouseClick", args)
+    end
+    self.label.MouseDown = function(_, args)
+        _owner_mouse("MouseDown", args)
+    end
+    self.label.MouseMove = function(_, args)
+        _owner_mouse("MouseMove", args)
+    end
+    self.label.MouseUp = function(_, args)
+        _owner_mouse("MouseUp", args)
+    end
+
+    self.MouseEnter = function()
+        self._hover = true
+        self:_refresh_visual()
+        if self._owner ~= nil and self._owner._set_hovered ~= nil then
+            self._owner:_set_hovered(true)
         end
     end
     self.MouseLeave = function()
@@ -270,6 +345,13 @@ function CraftPlanChip:Constructor(owner, font)
         if type(handler) == "function" then
             handler(owner, args)
         end
+    end
+end
+
+function CraftPlanChip:_on_icon_hover_changed(hovering)
+    self._icon_hover = hovering == true
+    if self._owner ~= nil and self._owner._set_icon_hovered ~= nil then
+        self._owner:_set_icon_hovered(self._icon_hover)
     end
 end
 
@@ -438,6 +520,7 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
     self._state_signature = nil
     self._resource_state = nil
     self._hovering = false
+    self._icon_hovered = false
 
     self:SetSize(widget_w, bar_h)
     self:SetMouseVisible(true)
@@ -633,6 +716,15 @@ function CraftPlanWidget:_set_hovered(hovering)
     self._hovering = hovering == true
 end
 
+function CraftPlanWidget:_set_icon_hovered(hovering)
+    self._icon_hovered = hovering == true
+    if self._icon_hovered == true then
+        self:_hide_popup()
+    elseif self._hovering == true then
+        self:_show_popup_if_needed()
+    end
+end
+
 function CraftPlanWidget:_should_show_popup()
     local state = self._resource_state
     if type(state) ~= "table" or (state.saved_entry_count or 0) <= 0 then
@@ -656,6 +748,9 @@ function CraftPlanWidget:_should_show_popup()
 end
 
 function CraftPlanWidget:_show_popup_if_needed()
+    if self._icon_hovered == true then
+        return
+    end
     if self:_should_show_popup() == true then
         self:_show_popup()
     end
