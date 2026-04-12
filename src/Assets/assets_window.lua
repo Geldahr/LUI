@@ -1069,15 +1069,16 @@ function AssetsWindow:Update()
     self.last_update_at = now
 
     self:refresh_from_store(false)
-    local store = self._crafting_store
-    if store ~= nil then
+    local store = _G.CRAFTING_STORE
+    if store ~= self._crafting_store then
+        self._crafting_store = store
+        self:_refresh_recipes_button()
+    elseif store ~= nil then
         local version = tonumber(store.version) or 0
         if version ~= self._last_crafting_store_version then
             self._last_crafting_store_version = version
             self:_refresh_recipes_button()
         end
-    elseif Crafting ~= nil and (Crafting.is_enabled == nil or Crafting.is_enabled() == true) then
-        self:_refresh_recipes_button()
     end
 end
 
@@ -1660,15 +1661,8 @@ function AssetsWindow:_get_crafting_store()
         return nil
     end
 
-    local store = nil
-    if Crafting.get_shared_store ~= nil then
-        store = Crafting.get_shared_store()
-    else
-        store = _G.CRAFTING_STORE
-    end
-
-    self._crafting_store = store
-    return store
+    self._crafting_store = _G.CRAFTING_STORE
+    return self._crafting_store
 end
 
 function AssetsWindow:_refresh_recipes_button()

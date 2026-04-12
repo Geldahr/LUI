@@ -2010,6 +2010,7 @@ function CraftingWindow:_refresh_recipe_page_rows(row_w)
 end
 
 function CraftingWindow:refresh_recipe_list()
+    local previous_selected = self.selected_recipe_id
     local row_w = self:_current_recipe_list_width()
     local loading = self.store:is_loading() == true
     local signature = self:_recipe_filter_signature()
@@ -2059,6 +2060,7 @@ function CraftingWindow:refresh_recipe_list()
         end
     end
 
+    local selection_changed = previous_selected ~= self.selected_recipe_id
     self._recipe_list_signature = signature
     self._recipe_list_loaded_count = loaded_count
     self._recipe_list_loading = loading
@@ -2084,6 +2086,10 @@ function CraftingWindow:refresh_recipe_list()
             self.recipe_prev_button:set_enabled(false)
             self.recipe_next_button:set_enabled(false)
         end
+    end
+
+    if selection_changed == true then
+        self:refresh_selected_recipe()
     end
 end
 
