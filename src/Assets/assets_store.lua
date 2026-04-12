@@ -861,26 +861,32 @@ function AssetsStore:_attach(object, event_name, callback)
 end
 
 function AssetsStore:_attach_callbacks()
+    local function queue_refresh(source_key)
+        self:_mark_source_dirty(source_key)
+        self.last_update_at = 0
+    end
+
     local function refresh_backpack()
-        self:refresh_now(SOURCE_BACKPACK, false)
+        queue_refresh(SOURCE_BACKPACK)
     end
 
     local function refresh_bank()
-        self:refresh_now(SOURCE_BANK, false)
+        queue_refresh(SOURCE_BANK)
     end
 
     local function refresh_vault()
-        self:refresh_now(SOURCE_VAULT, false)
+        queue_refresh(SOURCE_VAULT)
     end
 
     local function refresh_shared()
-        self:refresh_now(SOURCE_SHARED, false)
+        queue_refresh(SOURCE_SHARED)
     end
 
     if self.backpack ~= nil then
         self:_attach(self.backpack, "ItemAdded", refresh_backpack)
         self:_attach(self.backpack, "ItemRemoved", refresh_backpack)
         self:_attach(self.backpack, "ItemMoved", refresh_backpack)
+        self:_attach(self.backpack, "ItemChanged", refresh_backpack)
         self:_attach(self.backpack, "SizeChanged", refresh_backpack)
     end
 
@@ -888,6 +894,7 @@ function AssetsStore:_attach_callbacks()
         self:_attach(self.bank, "ItemAdded", refresh_bank)
         self:_attach(self.bank, "ItemRemoved", refresh_bank)
         self:_attach(self.bank, "ItemMoved", refresh_bank)
+        self:_attach(self.bank, "ItemChanged", refresh_bank)
         self:_attach(self.bank, "CountChanged", refresh_bank)
         self:_attach(self.bank, "ItemsRefreshed", refresh_bank)
         self:_attach(self.bank, "IsAvailableChanged", refresh_bank)
@@ -897,6 +904,7 @@ function AssetsStore:_attach_callbacks()
         self:_attach(self.vault, "ItemAdded", refresh_vault)
         self:_attach(self.vault, "ItemRemoved", refresh_vault)
         self:_attach(self.vault, "ItemMoved", refresh_vault)
+        self:_attach(self.vault, "ItemChanged", refresh_vault)
         self:_attach(self.vault, "CountChanged", refresh_vault)
         self:_attach(self.vault, "ItemsRefreshed", refresh_vault)
         self:_attach(self.vault, "IsAvailableChanged", refresh_vault)
@@ -906,6 +914,7 @@ function AssetsStore:_attach_callbacks()
         self:_attach(self.shared_storage, "ItemAdded", refresh_shared)
         self:_attach(self.shared_storage, "ItemRemoved", refresh_shared)
         self:_attach(self.shared_storage, "ItemMoved", refresh_shared)
+        self:_attach(self.shared_storage, "ItemChanged", refresh_shared)
         self:_attach(self.shared_storage, "CountChanged", refresh_shared)
         self:_attach(self.shared_storage, "ItemsRefreshed", refresh_shared)
         self:_attach(self.shared_storage, "IsAvailableChanged", refresh_shared)

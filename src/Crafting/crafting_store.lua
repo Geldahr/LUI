@@ -74,6 +74,28 @@ local function _copy_counts(source)
     return out
 end
 
+local function _count_map_signature(counts)
+    if type(counts) ~= "table" then
+        return ""
+    end
+
+    local keys = {}
+    for key, quantity in pairs(counts) do
+        if key ~= nil and key ~= "" and (tonumber(quantity) or 0) > 0 then
+            keys[#keys + 1] = key
+        end
+    end
+    table.sort(keys)
+
+    local parts = {}
+    for i = 1, #keys do
+        local key = keys[i]
+        parts[#parts + 1] = key .. "\31" .. tostring(tonumber(counts[key]) or 0)
+    end
+
+    return table.concat(parts, "\30")
+end
+
 local function _sum_missing_map(missing_map)
     local total = 0
     if type(missing_map) ~= "table" then
@@ -579,6 +601,7 @@ function CraftingStore:Constructor()
     self._recipe_load_done = 0
     self._recipe_load_total = 0
     self._foreground_loading = false
+    self._live_inventory_token = ""
     self.update_every = BACKGROUND_UPDATE_EVERY
     self.last_update_at = 0
     self.version = 0
@@ -641,6 +664,8 @@ end
 function CraftingStore:refresh(force, recipe_batch_size)
     local current_character = _current_character_name()
     local assets_token = ASSETS_STORE ~= nil and (tonumber(ASSETS_STORE.generation) or 0) or 0
+    local live_inventory_counts = self:_capture_live_backpack_counts(current_character)
+    local live_inventory_token = _count_map_signature(live_inventory_counts)
     local changed = false
     local recipe_refresh_needed = force == true or self._recipes_initialized ~= true or self.current_character_name ~= current_character
 
@@ -651,7 +676,8 @@ function CraftingStore:refresh(force, recipe_batch_size)
         changed = true
     end
 
-    local ownership_refresh_needed = force == true or recipe_refresh_needed == true or self._assets_token ~= assets_token
+    local ownership_refresh_needed = force == true or recipe_refresh_needed == true or self._assets_token ~= assets_token or
+        self._live_inventory_token ~= live_inventory_token
 
     if changed ~= true and ownership_refresh_needed ~= true then
         return false
@@ -659,9 +685,10 @@ function CraftingStore:refresh(force, recipe_batch_size)
 
     self.current_character_name = current_character
     if ownership_refresh_needed == true then
-        self.ownership = self:_build_ownership(current_character)
+        self.ownership = self:_build_ownership(current_character, live_inventory_counts)
         self._status_cache = {}
         self._assets_token = assets_token
+        self._live_inventory_token = live_inventory_token
     end
     self.version = self.version + 1
     return true
@@ -1008,7 +1035,39 @@ function CraftingStore:recipe_uses_item_key(recipe, key_set)
     return false
 end
 
-function CraftingStore:_build_ownership(current_character)
+function CraftingStore:_capture_live_backpack_counts(current_character)
+    local counts = {}
+    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
+    local backpack = player ~= nil and player.GetBackpack ~= nil and player:GetBackpack() or nil
+    if backpack == nil or backpack.GetSize == nil or backpack.GetItem == nil then
+        return counts
+    end
+
+    local size = tonumber(backpack:GetSize()) or 0
+    for index = 1, size do
+        local item = backpack:GetItem(index)
+        if item ~= nil then
+            local item_info = item.GetItemInfo ~= nil and item:GetItemInfo() or nil
+            local name = item.GetName ~= nil and item:GetName() or nil
+            if (name == nil or name == "") and item_info ~= nil and item_info.GetName ~= nil then
+                name = item_info:GetName()
+            end
+
+            local key = _normalize_name(name)
+            if key ~= "" then
+                local quantity = item.GetQuantity ~= nil and item:GetQuantity() or 1
+                quantity = tonumber(quantity) or 0
+                if quantity > 0 then
+                    counts[key] = (counts[key] or 0) + quantity
+                end
+            end
+        end
+    end
+
+    return counts
+end
+
+function CraftingStore:_build_ownership(current_character, live_inventory_counts)
     local ownership = {
         [SCOPE_SERVER] = {},
         [SCOPE_INVENTORY] = {},
@@ -1032,19 +1091,33 @@ function CraftingStore:_build_ownership(current_character)
         local key = _normalize_name(record ~= nil and record.name or nil)
         local quantity = tonumber(record ~= nil and record.quantity or nil) or 0
         if key ~= "" and quantity > 0 then
-            ownership[SCOPE_SERVER][key] = (ownership[SCOPE_SERVER][key] or 0) + quantity
+            local is_current_backpack = record.owner == current_character and record.source_key == SOURCE_BACKPACK
+            if is_current_backpack ~= true then
+                ownership[SCOPE_SERVER][key] = (ownership[SCOPE_SERVER][key] or 0) + quantity
 
-            if record.owner == current_character and record.source_key == SOURCE_BACKPACK then
-                ownership[SCOPE_INVENTORY][key] = (ownership[SCOPE_INVENTORY][key] or 0) + quantity
+                if record.owner == current_character and record.source_key == SOURCE_BACKPACK then
+                    ownership[SCOPE_INVENTORY][key] = (ownership[SCOPE_INVENTORY][key] or 0) + quantity
+                end
+
+                if record.owner == current_character and
+                    (record.source_key == SOURCE_BACKPACK or record.source_key == SOURCE_BANK or record.source_key == SOURCE_VAULT) then
+                    ownership[SCOPE_PERSONAL][key] = (ownership[SCOPE_PERSONAL][key] or 0) + quantity
+                end
+
+                if record.source_key == SOURCE_SHARED then
+                    ownership[SCOPE_SHARED][key] = (ownership[SCOPE_SHARED][key] or 0) + quantity
+                end
             end
+        end
+    end
 
-            if record.owner == current_character and
-                (record.source_key == SOURCE_BACKPACK or record.source_key == SOURCE_BANK or record.source_key == SOURCE_VAULT) then
-                ownership[SCOPE_PERSONAL][key] = (ownership[SCOPE_PERSONAL][key] or 0) + quantity
-            end
-
-            if record.source_key == SOURCE_SHARED then
-                ownership[SCOPE_SHARED][key] = (ownership[SCOPE_SHARED][key] or 0) + quantity
+    if type(live_inventory_counts) == "table" then
+        for key, quantity in pairs(live_inventory_counts) do
+            local amount = tonumber(quantity) or 0
+            if key ~= nil and key ~= "" and amount > 0 then
+                ownership[SCOPE_INVENTORY][key] = amount
+                ownership[SCOPE_PERSONAL][key] = (ownership[SCOPE_PERSONAL][key] or 0) + amount
+                ownership[SCOPE_SERVER][key] = (ownership[SCOPE_SERVER][key] or 0) + amount
             end
         end
     end
@@ -1289,6 +1362,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
         from_stock = 0,
         produced = 0,
         craft_count = 0,
+        satisfied = false,
         expanded = false,
         ambiguous = false,
         missing = 0,
@@ -1298,6 +1372,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
 
     local next_stock = _copy_counts(stock)
     if needed <= 0 then
+        node.satisfied = true
         return true, node, next_stock, {}
     end
 
@@ -1310,12 +1385,14 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
     end
 
     if needed <= 0 then
+        node.satisfied = true
         return true, node, next_stock, {}
     end
 
     local recipes = self:_get_recipes_for_item(item_key)
     if recipes == nil or visiting[item_key] == true then
         node.missing = needed
+        node.satisfied = false
         return false, node, next_stock, {
             [item_key] = self:_make_missing_entry(item_key, needed),
         }
@@ -1341,6 +1418,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
                 from_stock = node.from_stock,
                 produced = 0,
                 craft_count = crafts_needed,
+                satisfied = false,
                 expanded = true,
                 ambiguous = false,
                 missing = 0,
@@ -1369,6 +1447,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
             if all_ok == true then
                 local produced = crafts_needed * per_craft
                 candidate_node.produced = produced
+                candidate_node.satisfied = true
                 local leftover = produced - needed
                 if leftover > 0 then
                     branch_stock[item_key] = (tonumber(branch_stock[item_key]) or 0) + leftover
@@ -1377,6 +1456,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
             end
 
             candidate_node.missing = needed
+            candidate_node.satisfied = false
             local missing_total = _sum_missing_map(combined_missing)
             local missing_distinct = 0
             for _ in pairs(combined_missing) do
@@ -1400,6 +1480,7 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
     end
 
     node.missing = needed
+    node.satisfied = false
     return false, node, next_stock, {
         [item_key] = self:_make_missing_entry(item_key, needed),
     }
