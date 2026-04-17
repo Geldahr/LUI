@@ -1207,7 +1207,7 @@ function BestiaryWindow:Constructor()
         on_level_filter_changed(self.level_max_box)
     end
 
-    self.filter_tb = UI.Widgets.LuiTextInput()
+    self.filter_tb = UI.Widgets.LineEdit()
     self.filter_tb:SetParent(self.filter_bar)
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.filter_tb:set_placeholder_text(TR["Search..."])

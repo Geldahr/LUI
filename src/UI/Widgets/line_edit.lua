@@ -6,10 +6,10 @@ import "LUI.src.UI.Widgets.label"
 local DEFAULT_PLACEHOLDER_COLOR = Turbine.UI.Color(1, 0.45, 0.45, 0.45)
 local DEFAULT_INSET_X = 4
 
----@class LuiTextInput : Turbine.UI.Control
-LuiTextInput = class(Turbine.UI.Control)
+---@class LuiLineEdit : Turbine.UI.Control
+LuiLineEdit = class(Turbine.UI.Control)
 
-function LuiTextInput:Constructor()
+function LuiLineEdit:Constructor()
     Turbine.UI.Control.Constructor(self)
 
     self._placeholder_text = ""
@@ -62,7 +62,7 @@ function LuiTextInput:Constructor()
     end
 end
 
-function LuiTextInput:_layout()
+function LuiLineEdit:_layout()
     local w, h = self:GetSize()
     self.text_box:SetPosition(0, 0)
     self.text_box:SetSize(w, h)
@@ -72,22 +72,22 @@ function LuiTextInput:_layout()
     self.placeholder_label:SetSize(math.max(0, w - (inset_x * 2)), h)
 end
 
-function LuiTextInput:_refresh_placeholder()
+function LuiLineEdit:_refresh_placeholder()
     local text = self.text_box:GetText() or ""
     self.placeholder_label:SetVisible(self._placeholder_text ~= "" and text == "")
 end
 
-function LuiTextInput:set_placeholder_text(text)
+function LuiLineEdit:set_placeholder_text(text)
     self._placeholder_text = tostring(text or "")
     self.placeholder_label:SetText(self._placeholder_text)
     self:_refresh_placeholder()
 end
 
-function LuiTextInput:get_placeholder_text()
+function LuiLineEdit:get_placeholder_text()
     return self._placeholder_text
 end
 
-function LuiTextInput:set_placeholder_color(color)
+function LuiLineEdit:set_placeholder_color(color)
     if color == nil then
         return
     end
@@ -95,24 +95,24 @@ function LuiTextInput:set_placeholder_color(color)
     self.placeholder_label:SetForeColor(color)
 end
 
-function LuiTextInput:SetPlaceholderText(text)
+function LuiLineEdit:SetPlaceholderText(text)
     self:set_placeholder_text(text)
 end
 
-function LuiTextInput:GetPlaceholderText()
+function LuiLineEdit:GetPlaceholderText()
     return self:get_placeholder_text()
 end
 
-function LuiTextInput:SetPlaceholderColor(color)
+function LuiLineEdit:SetPlaceholderColor(color)
     self:set_placeholder_color(color)
 end
 
-function LuiTextInput:SetSize(w, h)
+function LuiLineEdit:SetSize(w, h)
     Turbine.UI.Control.SetSize(self, w, h)
     self:_layout()
 end
 
-function LuiTextInput:SetFont(font)
+function LuiLineEdit:SetFont(font)
     if font == nil then
         return
     end
@@ -120,7 +120,7 @@ function LuiTextInput:SetFont(font)
     self.placeholder_label:SetFont(font)
 end
 
-function LuiTextInput:SetTextAlignment(alignment)
+function LuiLineEdit:SetTextAlignment(alignment)
     if alignment == nil then
         return
     end
@@ -129,64 +129,58 @@ function LuiTextInput:SetTextAlignment(alignment)
     self.placeholder_label:SetTextAlignment(alignment)
 end
 
-function LuiTextInput:SetForeColor(color)
+function LuiLineEdit:SetForeColor(color)
     if color ~= nil and self.text_box.SetForeColor ~= nil then
         self.text_box:SetForeColor(color)
     end
 end
 
-function LuiTextInput:SetText(text)
+function LuiLineEdit:SetText(text)
     self.text_box:SetText(text or "")
     self:_refresh_placeholder()
 end
 
-function LuiTextInput:GetText()
+function LuiLineEdit:GetText()
     return self.text_box:GetText()
 end
 
-function LuiTextInput:SetWantsKeyEvents(wants_key_events)
+function LuiLineEdit:SetWantsKeyEvents(wants_key_events)
     if self.text_box.SetWantsKeyEvents ~= nil then
         self.text_box:SetWantsKeyEvents(wants_key_events)
     end
 end
 
-function LuiTextInput:SetMultiline(multiline)
-    if self.text_box.SetMultiline ~= nil then
-        self.text_box:SetMultiline(multiline)
-    end
-end
-
-function LuiTextInput:SetSelectable(selectable)
+function LuiLineEdit:SetSelectable(selectable)
     if self.text_box.SetSelectable ~= nil then
         self.text_box:SetSelectable(selectable)
     end
 end
 
-function LuiTextInput:SetReadOnly(read_only)
+function LuiLineEdit:SetReadOnly(read_only)
     if self.text_box.SetReadOnly ~= nil then
         self.text_box:SetReadOnly(read_only)
     end
 end
 
-function LuiTextInput:SetEnabled(enabled)
+function LuiLineEdit:SetEnabled(enabled)
     Turbine.UI.Control.SetEnabled(self, enabled)
     if self.text_box.SetEnabled ~= nil then
         self.text_box:SetEnabled(enabled)
     end
 end
 
-function LuiTextInput:Focus()
+function LuiLineEdit:Focus()
     self.text_box:Focus()
 end
 
-function LuiTextInput:HasFocus()
+function LuiLineEdit:HasFocus()
     if self.text_box.HasFocus == nil then
         return false
     end
     return self.text_box:HasFocus()
 end
 
-function LuiTextInput:destroy()
+function LuiLineEdit:destroy()
     if self.placeholder_label ~= nil then
         self.placeholder_label:SetParent(nil)
     end

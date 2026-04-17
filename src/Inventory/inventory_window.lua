@@ -197,7 +197,7 @@ function InventoryWindow:Constructor()
 
     self._last_money = nil
 
-    self.filter_tb = UI.Widgets.LuiTextInput()
+    self.filter_tb = UI.Widgets.LineEdit()
     self.filter_tb:SetParent(self.header)
     self.filter_tb:SetFont(_scaled_font("Verdana", BASE_FILTER_FONT_SIZE))
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)

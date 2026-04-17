@@ -1005,7 +1005,7 @@ function CraftingWindow:Constructor()
     self.top_bar = Turbine.UI.Control()
     self.top_bar:SetParent(self)
 
-    self.search_box = UI.Widgets.LuiTextInput()
+    self.search_box = UI.Widgets.LineEdit()
     self.search_box:SetParent(self.top_bar)
     self.search_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.search_box:set_placeholder_text(TR["Search..."])

@@ -409,7 +409,7 @@ function CreateStatusBarWalletSelector(page, key)
     entry.selected_label:SetText(TR["Shown in %wallet%"])
     entry.selected_label:SetZOrder(1)
 
-    entry.available_filter = UI.Widgets.LuiTextInput()
+    entry.available_filter = UI.Widgets.LineEdit()
     entry.available_filter:SetParent(entry.control)
     entry.available_filter:SetFont(page.window.input_font)
     entry.available_filter:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
