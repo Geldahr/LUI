@@ -4,6 +4,26 @@ import "Turbine.UI.Lotro"
 UI = UI or {}
 UI.Widgets = UI.Widgets or {}
 
+--[[
+Widget style sheet:
+Define _G.STYLE before importing or creating LUI widgets to override the shared
+widget look globally. LUI does not create _G.STYLE; if it is nil, widgets use
+the complete DEFAULTS table below.
+
+Example:
+_G.STYLE = {
+    CONTROL_BACKGROUND = Turbine.UI.Color(1, 0.15, 0.15, 0.15),
+    CONTROL_FOREGROUND = Turbine.UI.Color(1, 1, 1, 1),
+    CONTROL_BORDER = Turbine.UI.Color(1, 0.35, 0.40, 0.50),
+    CONTROL_BORDER_WIDTH = 1.5,
+    DROPDOWN_ARROW = 0x41007e1a,
+}
+
+Widgets read values as UI.Widgets.Style.CONTROL_BORDER or Style["CONTROL_BORDER"].
+Keys are exact uppercase names. If _G.STYLE omits a state-specific value such as
+CONTROL_BORDER_HOVER, the lookup tries its fallback key in _G.STYLE and then the
+fully populated DEFAULTS value.
+]]
 local DEFAULTS = {
     BACKGROUND = Turbine.UI.Color(1, 0.08, 0.08, 0.08),
     FOREGROUND = Turbine.UI.Color(1, 1, 1, 1),
