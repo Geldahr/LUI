@@ -2,9 +2,10 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.label"
+import "LUI.src.UI.Widgets.style"
 
-local DEFAULT_PLACEHOLDER_COLOR = Turbine.UI.Color(1, 0.45, 0.45, 0.45)
 local DEFAULT_INSET_X = 4
+local Style = UI.Widgets.Style
 
 ---@class LuiLineEdit : Turbine.UI.Control
 LuiLineEdit = class(Turbine.UI.Control)
@@ -13,7 +14,7 @@ function LuiLineEdit:Constructor()
     Turbine.UI.Control.Constructor(self)
 
     self._placeholder_text = ""
-    self._placeholder_color = DEFAULT_PLACEHOLDER_COLOR
+    self._placeholder_color = Style.PLACEHOLDER_FOREGROUND
     self._text_alignment = Turbine.UI.ContentAlignment.MiddleLeft
 
     self.text_box = Turbine.UI.Lotro.TextBox()
@@ -30,9 +31,6 @@ function LuiLineEdit:Constructor()
     self.placeholder_label:SetForeColor(self._placeholder_color)
     self.placeholder_label:SetText("")
     self.placeholder_label:SetVisible(false)
-
-    -- Compatibility alias for callers that need direct access to the native TextBox.
-    self.tb = self.text_box
 
     self.text_box.TextChanged = function(sender, args)
         self:_refresh_placeholder()

@@ -3,6 +3,7 @@ import "Turbine.UI"
 import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.label"
+import "LUI.src.UI.Widgets.style"
 
 local POSITION_TOP = "top"
 local POSITION_BOTTOM = "bottom"
@@ -12,7 +13,6 @@ local POSITION_RIGHT = "right"
 local BASE_WIDGET_W = 320
 local BASE_WIDGET_H = 200
 local BASE_FONT_SIZE = 12
-local BASE_BORDER = 1.5
 local BASE_TAB_HEIGHT = 24
 local BASE_SIDE_TAB_WIDTH = 124
 local BASE_SIDE_TAB_HEIGHT = 24
@@ -24,14 +24,7 @@ local BASE_MIN_TAB_WIDTH = 56
 local BASE_APPROX_CHAR_WIDTH = 7
 local BASE_SCROLL_BUTTON_SIZE = 18
 local BASE_SCROLL_BUTTON_GAP = 2
-
-local THEME_BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
-local THEME_STRIP_BACK = Turbine.UI.Color(1, 0.06, 0.06, 0.06)
-local THEME_CONTENT_BACK = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
-local THEME_HOVER_BACK = Turbine.UI.Color(1, 0.18, 0.18, 0.18)
-local THEME_TEXT_COLOR = Turbine.UI.Color(1, 1, 1, 1)
-local THEME_TEXT_MUTED = Turbine.UI.Color(0.88, 0.88, 0.88)
-local THEME_TEXT_DISABLED = Turbine.UI.Color(0.55, 0.85, 0.85, 0.85)
+local Style = UI.Widgets.Style
 
 local function _round(value)
     return math.floor((tonumber(value) or 0) + 0.5)
@@ -99,10 +92,10 @@ function LuiTabButton:Constructor(owner)
     self._hover = false
     self._scale = 1
 
-    self._text_normal = THEME_TEXT_MUTED
-    self._text_hover = THEME_TEXT_COLOR
-    self._text_selected = THEME_TEXT_COLOR
-    self._text_disabled = THEME_TEXT_DISABLED
+    self._text_normal = Style.ALTERNATE_FOREGROUND
+    self._text_hover = Style.CONTROL_FOREGROUND_HOVER
+    self._text_selected = Style.SELECTION_FOREGROUND
+    self._text_disabled = Style.CONTROL_FOREGROUND_DISABLED
 
     self:SetMouseVisible(true)
 
@@ -284,14 +277,15 @@ function LuiTabBar:Constructor()
     self._horizontal_scroll_button_gap = 0
     self._horizontal_follow_selected_once = false
 
-    self._border_color = THEME_BORDER_COLOR
-    self._strip_back = THEME_STRIP_BACK
-    self._content_back = THEME_CONTENT_BACK
-    self._hover_back = THEME_HOVER_BACK
-    self._tab_text = THEME_TEXT_MUTED
-    self._tab_text_hover = THEME_TEXT_COLOR
-    self._tab_text_selected = THEME_TEXT_COLOR
-    self._tab_text_disabled = THEME_TEXT_DISABLED
+    self._border_width = tonumber(Style.CONTROL_BORDER_WIDTH) or 1
+    self._border_color = Style.CONTROL_BORDER
+    self._strip_back = Style.ALTERNATE_BACKGROUND
+    self._content_back = Style.BACKGROUND
+    self._hover_back = Style.CONTROL_BACKGROUND_HOVER
+    self._tab_text = Style.ALTERNATE_FOREGROUND
+    self._tab_text_hover = Style.CONTROL_FOREGROUND_HOVER
+    self._tab_text_selected = Style.SELECTION_FOREGROUND
+    self._tab_text_disabled = Style.CONTROL_FOREGROUND_DISABLED
 
     self._strip_back_control = Turbine.UI.Control()
     self._strip_back_control:SetParent(self)
@@ -386,16 +380,7 @@ function LuiTabBar:Constructor()
     self._scroll_left_button:SetZOrder(12)
     self._scroll_left_button:set_text("")
     self._scroll_left_button:set_padding(2)
-    self._scroll_left_button:set_border_thickness(0)
-    self._scroll_left_button:set_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:set_hover_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:set_pressed_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:set_border_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:set_hover_border_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:set_active_border_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_left_button:set_disabled_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    Style.apply_transparent_button(self._scroll_left_button)
     self._scroll_left_button:set_icon(
         UI.AssetIds.arrow_l_yellow_normal,
         UI.AssetIds.arrow_l_yellow_inverted,
@@ -415,16 +400,7 @@ function LuiTabBar:Constructor()
     self._scroll_right_button:SetZOrder(12)
     self._scroll_right_button:set_text("")
     self._scroll_right_button:set_padding(2)
-    self._scroll_right_button:set_border_thickness(0)
-    self._scroll_right_button:set_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:set_hover_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:set_pressed_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:set_active_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:set_disabled_back_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:set_border_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:set_hover_border_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:set_active_border_color(Turbine.UI.Color(0, 0, 0, 0))
-    self._scroll_right_button:set_disabled_border_color(Turbine.UI.Color(0, 0, 0, 0))
+    Style.apply_transparent_button(self._scroll_right_button)
     self._scroll_right_button:set_icon(
         UI.AssetIds.arrow_r_yellow_normal,
         UI.AssetIds.arrow_r_yellow_inverted,
@@ -1354,7 +1330,7 @@ end
 
 function LuiTabBar:_layout()
     local width, height = self:GetSize()
-    local border = math.max(1, _scaled_int(self._scale, BASE_BORDER))
+    local border = math.max(1, _scaled_int(self._scale, self._border_width or tonumber(Style.CONTROL_BORDER_WIDTH) or 1))
     local horizontal_strip = _scaled_int(self._scale, BASE_TAB_HEIGHT)
     local vertical_strip = self:_desired_side_strip_width()
     local show_border_top = self._show_border_top == true

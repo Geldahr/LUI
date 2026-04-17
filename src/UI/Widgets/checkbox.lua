@@ -1,15 +1,14 @@
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets.label"
+import "LUI.src.UI.Widgets.style"
 
 local BASE_CHECKBOX_W = 120
 local BASE_CHECKBOX_H = 16
 local BASE_ICON_SIZE = 16
 local BASE_TEXT_GAP = 6
-local BASE_BORDER_THICKNESS = 1.5
 local BASE_FILL_MARGIN = 2
-local THEME_BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
-local THEME_FILL_COLOR = Turbine.UI.Color(1, 0.68, 0.74, 0.88)
+local Style = UI.Widgets.Style
 
 local function _round(value)
     return math.floor(value + 0.5)
@@ -31,13 +30,13 @@ function LuiCheckBox:Constructor()
     self._scale = 1
     self._icon_scale = 1
 
-    self._text_color = Turbine.UI.Color(1, 1, 1, 1)
-    self._text_disabled_color = Turbine.UI.Color(0.55, 0.85, 0.85, 0.85)
-    self._border_color = THEME_BORDER_COLOR
-    self._border_hover_color = THEME_BORDER_COLOR
-    self._border_disabled_color = Turbine.UI.Color(0.45, 0.62, 0.62, 0.62)
-    self._fill_color = THEME_FILL_COLOR
-    self._fill_disabled_color = Turbine.UI.Color(0.50, 0.68, 0.68, 0.68)
+    self._text_color = Style.CONTROL_FOREGROUND
+    self._text_disabled_color = Style.CONTROL_FOREGROUND_DISABLED
+    self._border_color = Style.CONTROL_BORDER
+    self._border_hover_color = Style.CONTROL_BORDER_HOVER
+    self._border_disabled_color = Style.CONTROL_BORDER_DISABLED
+    self._fill_color = Style.ACCENT_BACKGROUND
+    self._fill_disabled_color = Style.ACCENT_BACKGROUND_DISABLED
 
     self:SetMouseVisible(true)
 
@@ -230,7 +229,7 @@ function LuiCheckBox:_layout()
     local icon_y = math.max(0, _round((h - icon_size) / 2))
     local label_x = icon_size
     local visual_scale = self._scale * self._icon_scale
-    local border_thickness = math.max(1, _round(BASE_BORDER_THICKNESS * visual_scale))
+    local border_thickness = math.max(1, _round((tonumber(Style.CONTROL_BORDER_WIDTH) or 1) * visual_scale))
     local fill_margin = math.max(1, _round(BASE_FILL_MARGIN * visual_scale))
     local fill_offset = border_thickness + fill_margin
 

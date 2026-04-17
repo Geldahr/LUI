@@ -2,10 +2,10 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.style"
 
 local BASE_WIDGET_W = 72
 local BASE_WIDGET_H = 21
-local BASE_BORDER_THICKNESS = 1.5
 local BASE_BUTTON_W = 18
 local BASE_BUTTON_FONT_SIZE = 8
 local BASE_TEXTBOX_INSET_X = 2
@@ -15,16 +15,7 @@ local BASE_FONT_SIZE = 12
 
 local RENDER_PLUS_MINUS = "plus_minus"
 local RENDER_ARROWS = "arrows"
-
-local BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
-local FIELD_BACK = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
-local BUTTONS_BACK = Turbine.UI.Color(1, 0.12, 0.12, 0.12)
-local BUTTON_NORMAL = Turbine.UI.Color(0, 0, 0, 0)
-local BUTTON_HOVER = Turbine.UI.Color(0.70, 0.24, 0.34, 0.48)
-local BUTTON_PRESSED = Turbine.UI.Color(0.60, 0.10, 0.14, 0.20)
-local BUTTON_DISABLED = Turbine.UI.Color(0, 0, 0, 0)
-local TEXT_COLOR = Turbine.UI.Color(1, 1, 1, 1)
-local TEXT_DISABLED = Turbine.UI.Color(0.55, 0.85, 0.85, 0.85)
+local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -130,25 +121,25 @@ function LuiSpinBox:Constructor()
     self._frame:SetParent(self)
     self._frame:SetMouseVisible(false)
     _set_alpha_blend(self._frame)
-    self._frame:SetBackColor(BORDER_COLOR)
+    self._frame:SetBackColor(Style.CONTROL_BORDER)
 
     self._inner = Turbine.UI.Control()
     self._inner:SetParent(self._frame)
     self._inner:SetMouseVisible(false)
     _set_alpha_blend(self._inner)
-    self._inner:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self._inner:SetBackColor(Style.TRANSPARENT_BACKGROUND)
 
     self._field_back = Turbine.UI.Control()
     self._field_back:SetParent(self._inner)
     self._field_back:SetMouseVisible(false)
     _set_alpha_blend(self._field_back)
-    self._field_back:SetBackColor(FIELD_BACK)
+    self._field_back:SetBackColor(Style.BACKGROUND)
 
     self._buttons_back = Turbine.UI.Control()
     self._buttons_back:SetParent(self._inner)
     self._buttons_back:SetMouseVisible(false)
     _set_alpha_blend(self._buttons_back)
-    self._buttons_back:SetBackColor(BUTTONS_BACK)
+    self._buttons_back:SetBackColor(Style.ALTERNATE_BACKGROUND)
 
     self.text_box = Turbine.UI.Lotro.TextBox()
     self.text_box:SetParent(self._field_back)
@@ -174,36 +165,14 @@ function LuiSpinBox:Constructor()
 
     self.increment_button = LuiButton()
     self.increment_button:SetParent(self._buttons_back)
-    self.increment_button:set_border_thickness(0)
-    self.increment_button:set_padding(0)
-    self.increment_button:set_back_color(BUTTON_NORMAL)
-    self.increment_button:set_hover_back_color(BUTTON_HOVER)
-    self.increment_button:set_pressed_back_color(BUTTON_PRESSED)
-    self.increment_button:set_active_back_color(BUTTON_PRESSED)
-    self.increment_button:set_disabled_back_color(BUTTON_DISABLED)
-    self.increment_button:set_text_color(TEXT_COLOR)
-    self.increment_button:set_hover_text_color(TEXT_COLOR)
-    self.increment_button:set_pressed_text_color(TEXT_COLOR)
-    self.increment_button:set_active_text_color(TEXT_COLOR)
-    self.increment_button:set_disabled_text_color(TEXT_DISABLED)
+    Style.apply_embedded_button(self.increment_button)
     self.increment_button.Click = function()
         self:_adjust(self._step)
     end
 
     self.decrement_button = LuiButton()
     self.decrement_button:SetParent(self._buttons_back)
-    self.decrement_button:set_border_thickness(0)
-    self.decrement_button:set_padding(0)
-    self.decrement_button:set_back_color(BUTTON_NORMAL)
-    self.decrement_button:set_hover_back_color(BUTTON_HOVER)
-    self.decrement_button:set_pressed_back_color(BUTTON_PRESSED)
-    self.decrement_button:set_active_back_color(BUTTON_PRESSED)
-    self.decrement_button:set_disabled_back_color(BUTTON_DISABLED)
-    self.decrement_button:set_text_color(TEXT_COLOR)
-    self.decrement_button:set_hover_text_color(TEXT_COLOR)
-    self.decrement_button:set_pressed_text_color(TEXT_COLOR)
-    self.decrement_button:set_active_text_color(TEXT_COLOR)
-    self.decrement_button:set_disabled_text_color(TEXT_DISABLED)
+    Style.apply_embedded_button(self.decrement_button)
     self.decrement_button.Click = function()
         self:_adjust(-self._step)
     end
@@ -333,7 +302,7 @@ end
 
 function LuiSpinBox:_layout()
     local width, height = self:GetSize()
-    local border = math.max(1, _scaled_int(self._scale, BASE_BORDER_THICKNESS))
+    local border = math.max(1, _scaled_int(self._scale, tonumber(Style.CONTROL_BORDER_WIDTH) or 1))
     local button_w = _scaled_int(self._scale, BASE_BUTTON_W)
     local inset_x = _scaled_int(self._scale, BASE_TEXTBOX_INSET_X)
     local inset_y = _scaled_int(self._scale, BASE_TEXTBOX_INSET_Y)
