@@ -5,6 +5,7 @@ import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 
 local DEFAULT_INSET_X = 4
+local PLACEHOLDER_CURSOR_GAP = 2
 local Style = UI.Widgets.Style
 
 ---@class LuiLineEdit : Turbine.UI.Control
@@ -75,7 +76,7 @@ function LuiLineEdit:_layout()
     self.text_box:SetPosition(0, 0)
     self.text_box:SetSize(w, h)
 
-    local inset_x = DEFAULT_INSET_X
+    local inset_x = DEFAULT_INSET_X + PLACEHOLDER_CURSOR_GAP
     self.placeholder_label:SetPosition(inset_x, 0)
     self.placeholder_label:SetSize(math.max(0, w - (inset_x * 2)), h)
 end
