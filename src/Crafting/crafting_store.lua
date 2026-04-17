@@ -10,6 +10,7 @@ local SOURCE_BACKPACK = "backpack"
 local SOURCE_BANK = "bank"
 local SOURCE_VAULT = "vault"
 local SOURCE_SHARED = "shared_storage"
+local SOURCE_SCOPE_PREFIX = "sources:"
 
 local FILTER_ALL = "__all"
 local SCOPE_SERVER = "server"
@@ -20,6 +21,20 @@ local RECIPE_LOAD_BATCH_SIZE = 1
 local BACKGROUND_UPDATE_EVERY = 0.50
 local FOREGROUND_UPDATE_EVERY = 0.20
 local FOREGROUND_RECIPE_BATCH_SIZE = 2
+
+local SOURCE_ORDER = {
+    SOURCE_BACKPACK,
+    SOURCE_BANK,
+    SOURCE_VAULT,
+    SOURCE_SHARED,
+}
+
+local SOURCE_SET = {
+    [SOURCE_BACKPACK] = true,
+    [SOURCE_BANK] = true,
+    [SOURCE_VAULT] = true,
+    [SOURCE_SHARED] = true,
+}
 
 local PROFESSION_ORDER = {
     Turbine.Gameplay.Profession.Cook,
@@ -72,6 +87,92 @@ local function _copy_counts(source)
     end
 
     return out
+end
+
+local function _copy_array(source)
+    local out = {}
+    if type(source) ~= "table" then
+        return out
+    end
+    for i = 1, #source do
+        out[#out + 1] = source[i]
+    end
+    return out
+end
+
+local function _add_count(map, key, quantity)
+    local amount = tonumber(quantity) or 0
+    if type(map) ~= "table" or key == nil or key == "" or amount <= 0 then
+        return
+    end
+    map[key] = (map[key] or 0) + amount
+end
+
+local function _normalize_source_keys(source_keys)
+    local selected = {}
+    if type(source_keys) == "table" then
+        for i = 1, #source_keys do
+            local key = source_keys[i]
+            if SOURCE_SET[key] == true then
+                selected[key] = true
+            end
+        end
+    elseif type(source_keys) == "string" then
+        local encoded = source_keys
+        if string.sub(encoded, 1, string.len(SOURCE_SCOPE_PREFIX)) == SOURCE_SCOPE_PREFIX then
+            encoded = string.sub(encoded, string.len(SOURCE_SCOPE_PREFIX) + 1)
+        end
+        for key in string.gmatch(encoded, "[^,]+") do
+            if SOURCE_SET[key] == true then
+                selected[key] = true
+            end
+        end
+    end
+
+    local out = {}
+    for i = 1, #SOURCE_ORDER do
+        local key = SOURCE_ORDER[i]
+        if selected[key] == true then
+            out[#out + 1] = key
+        end
+    end
+    return out
+end
+
+local function _source_scope_key(source_keys)
+    local normalized = _normalize_source_keys(source_keys)
+    return SOURCE_SCOPE_PREFIX .. table.concat(normalized, ",")
+end
+
+local function _is_source_scope_key(scope_key)
+    return type(scope_key) == "table" or
+        (type(scope_key) == "string" and string.sub(scope_key, 1, string.len(SOURCE_SCOPE_PREFIX)) == SOURCE_SCOPE_PREFIX)
+end
+
+local function _source_keys_from_scope(scope_key)
+    if _is_source_scope_key(scope_key) == true then
+        return _normalize_source_keys(scope_key)
+    end
+    if scope_key == SCOPE_INVENTORY then
+        return { SOURCE_BACKPACK }
+    end
+    if scope_key == SCOPE_SHARED then
+        return { SOURCE_SHARED }
+    end
+    if scope_key == SCOPE_SERVER then
+        return _copy_array(SOURCE_ORDER)
+    end
+    return { SOURCE_BACKPACK, SOURCE_BANK, SOURCE_VAULT }
+end
+
+local function _normalized_scope_key(scope_key)
+    if _is_source_scope_key(scope_key) == true then
+        return _source_scope_key(scope_key)
+    end
+    if scope_key == SCOPE_SERVER or scope_key == SCOPE_INVENTORY or scope_key == SCOPE_PERSONAL or scope_key == SCOPE_SHARED then
+        return scope_key
+    end
+    return SCOPE_PERSONAL
 end
 
 local function _count_map_signature(counts)
@@ -505,6 +606,19 @@ local function _scope_option_values()
     }
 end
 
+local function _source_option_labels()
+    return {
+        TR["Backpack"],
+        TR["Bank"],
+        TR["Vault"],
+        TR["Shared Storage"],
+    }
+end
+
+local function _source_option_values()
+    return _copy_array(SOURCE_ORDER)
+end
+
 local function _recipe_sort_compare(items, left, right)
     local left_profession = _lower(left ~= nil and left.profession_name or nil)
     local right_profession = _lower(right ~= nil and right.profession_name or nil)
@@ -587,10 +701,18 @@ function CraftingStore:Constructor()
         [SCOPE_PERSONAL] = {},
         [SCOPE_SHARED] = {},
     }
+    self.source_ownership = {
+        [SOURCE_BACKPACK] = {},
+        [SOURCE_BANK] = {},
+        [SOURCE_VAULT] = {},
+        [SOURCE_SHARED] = {},
+    }
     self.profession_option_labels = { TR["All professions"] }
     self.profession_option_values = { FILTER_ALL }
     self.scope_option_labels = _scope_option_labels()
     self.scope_option_values = _scope_option_values()
+    self.source_option_labels = _source_option_labels()
+    self.source_option_values = _source_option_values()
     self._status_cache = {}
     self._assets_token = nil
     self._recipe_token = nil
@@ -614,6 +736,30 @@ end
 
 function CraftingStore:get_scope_options()
     return self.scope_option_labels, self.scope_option_values
+end
+
+function CraftingStore:get_source_options()
+    return self.source_option_labels, self.source_option_values
+end
+
+function CraftingStore:get_default_source_keys()
+    return { SOURCE_BACKPACK, SOURCE_BANK, SOURCE_VAULT }
+end
+
+function CraftingStore:get_all_source_keys()
+    return _copy_array(SOURCE_ORDER)
+end
+
+function CraftingStore:normalize_source_keys(source_keys)
+    return _normalize_source_keys(source_keys)
+end
+
+function CraftingStore:source_keys_from_scope(scope_key)
+    return _source_keys_from_scope(scope_key)
+end
+
+function CraftingStore:scope_key_from_sources(source_keys)
+    return _source_scope_key(source_keys)
 end
 
 function CraftingStore:get_profession_options()
@@ -685,7 +831,7 @@ function CraftingStore:refresh(force, recipe_batch_size)
 
     self.current_character_name = current_character
     if ownership_refresh_needed == true then
-        self.ownership = self:_build_ownership(current_character, live_inventory_counts)
+        self.ownership, self.source_ownership = self:_build_ownership(current_character, live_inventory_counts)
         self._status_cache = {}
         self._assets_token = assets_token
         self._live_inventory_token = live_inventory_token
@@ -695,7 +841,7 @@ function CraftingStore:refresh(force, recipe_batch_size)
 end
 
 function CraftingStore:get_recipe_status(recipe_or_id, scope_key)
-    local scope = scope_key or SCOPE_PERSONAL
+    local scope = _normalized_scope_key(scope_key)
     if type(self._status_cache[scope]) ~= "table" then
         self._status_cache[scope] = {}
     end
@@ -807,6 +953,28 @@ function CraftingStore:recipe_matches_query(recipe, groups)
     return false
 end
 
+function CraftingStore:_stock_for_source_keys(source_keys)
+    local stock = {}
+    local normalized = _normalize_source_keys(source_keys)
+    for i = 1, #normalized do
+        local source_stock = self.source_ownership[normalized[i]]
+        if type(source_stock) == "table" then
+            for key, quantity in pairs(source_stock) do
+                _add_count(stock, key, quantity)
+            end
+        end
+    end
+    return stock
+end
+
+function CraftingStore:_stock_for_scope(scope_key)
+    local scope = _normalized_scope_key(scope_key)
+    if _is_source_scope_key(scope) == true then
+        return self:_stock_for_source_keys(_source_keys_from_scope(scope))
+    end
+    return _copy_counts(self.ownership[scope] or self.ownership[SCOPE_PERSONAL] or {})
+end
+
 function CraftingStore:evaluate_recipe(recipe_or_id, scope_key, craft_count)
     local recipe = recipe_or_id
     if type(recipe_or_id) ~= "table" then
@@ -822,14 +990,15 @@ function CraftingStore:evaluate_recipe(recipe_or_id, scope_key, craft_count)
     end
     count = math.floor(count + 0.5)
 
-    local base_stock = _copy_counts(self.ownership[scope_key] or {})
+    local scope = _normalized_scope_key(scope_key)
+    local base_stock = self:_stock_for_scope(scope)
     local evaluation = self:_evaluate_recipe_with_stock(recipe, count, base_stock)
-    evaluation.scope_key = scope_key
+    evaluation.scope_key = scope
     return evaluation
 end
 
 function CraftingStore:evaluate_plan(plan_entries, scope_key)
-    local base_stock = _copy_counts(self.ownership[scope_key] or {})
+    local base_stock = self:_stock_for_scope(scope_key)
     local working_stock = _copy_counts(base_stock)
     local result = {
         entries = {},
@@ -1074,6 +1243,12 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
         [SCOPE_PERSONAL] = {},
         [SCOPE_SHARED] = {},
     }
+    local source_ownership = {
+        [SOURCE_BACKPACK] = {},
+        [SOURCE_BANK] = {},
+        [SOURCE_VAULT] = {},
+        [SOURCE_SHARED] = {},
+    }
 
     local entries
     if ASSETS_STORE ~= nil and ASSETS_STORE.get_entries ~= nil then
@@ -1083,7 +1258,7 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
     end
 
     if type(entries) ~= "table" then
-        return ownership
+        return ownership, source_ownership
     end
 
     for i = 1, #entries do
@@ -1093,19 +1268,26 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
         if key ~= "" and quantity > 0 then
             local is_current_backpack = record.owner == current_character and record.source_key == SOURCE_BACKPACK
             if is_current_backpack ~= true then
-                ownership[SCOPE_SERVER][key] = (ownership[SCOPE_SERVER][key] or 0) + quantity
+                _add_count(ownership[SCOPE_SERVER], key, quantity)
 
                 if record.owner == current_character and record.source_key == SOURCE_BACKPACK then
-                    ownership[SCOPE_INVENTORY][key] = (ownership[SCOPE_INVENTORY][key] or 0) + quantity
+                    _add_count(ownership[SCOPE_INVENTORY], key, quantity)
                 end
 
                 if record.owner == current_character and
                     (record.source_key == SOURCE_BACKPACK or record.source_key == SOURCE_BANK or record.source_key == SOURCE_VAULT) then
-                    ownership[SCOPE_PERSONAL][key] = (ownership[SCOPE_PERSONAL][key] or 0) + quantity
+                    _add_count(ownership[SCOPE_PERSONAL], key, quantity)
+                end
+
+                if record.owner == current_character and record.source_key == SOURCE_BANK then
+                    _add_count(source_ownership[SOURCE_BANK], key, quantity)
+                elseif record.owner == current_character and record.source_key == SOURCE_VAULT then
+                    _add_count(source_ownership[SOURCE_VAULT], key, quantity)
                 end
 
                 if record.source_key == SOURCE_SHARED then
-                    ownership[SCOPE_SHARED][key] = (ownership[SCOPE_SHARED][key] or 0) + quantity
+                    _add_count(ownership[SCOPE_SHARED], key, quantity)
+                    _add_count(source_ownership[SOURCE_SHARED], key, quantity)
                 end
             end
         end
@@ -1116,13 +1298,14 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
             local amount = tonumber(quantity) or 0
             if key ~= nil and key ~= "" and amount > 0 then
                 ownership[SCOPE_INVENTORY][key] = amount
-                ownership[SCOPE_PERSONAL][key] = (ownership[SCOPE_PERSONAL][key] or 0) + amount
-                ownership[SCOPE_SERVER][key] = (ownership[SCOPE_SERVER][key] or 0) + amount
+                source_ownership[SOURCE_BACKPACK][key] = amount
+                _add_count(ownership[SCOPE_PERSONAL], key, amount)
+                _add_count(ownership[SCOPE_SERVER], key, amount)
             end
         end
     end
 
-    return ownership
+    return ownership, source_ownership
 end
 
 function CraftingStore:_start_recipe_load(current_character)

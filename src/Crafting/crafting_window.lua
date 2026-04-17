@@ -10,9 +10,6 @@ local FILTER_ALL = "__all"
 local AVAILABILITY_ALL = "all"
 local AVAILABILITY_READY = "ready"
 local AVAILABILITY_MISSING = "missing"
-local SCOPE_PERSONAL = "personal"
-local SCOPE_SERVER = "server"
-local SCOPE_INVENTORY = "inventory"
 local DISPLAY_PAGES = "pages"
 local DISPLAY_SCROLL = "scroll"
 
@@ -283,13 +280,6 @@ local function _format_percent(value)
         percent = percent * 100
     end
     return _format_count(percent) .. "%"
-end
-
-local function _normalize_scope_key(value)
-    if value == SCOPE_SERVER or value == SCOPE_INVENTORY or value == SCOPE_PERSONAL then
-        return value
-    end
-    return SCOPE_PERSONAL
 end
 
 local function _normalize_availability_filter(value)
@@ -1086,7 +1076,8 @@ function CraftingWindow:Constructor()
     end
     self._last_store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
     self.search_groups = {}
-    self.scope_key = SCOPE_PERSONAL
+    self.scope_source_keys = self.store:get_default_source_keys()
+    self.scope_key = self.store:scope_key_from_sources(self.scope_source_keys)
     self.profession_filter = FILTER_ALL
     self.availability_filter = AVAILABILITY_ALL
     self.display_mode = _normalize_display_mode(_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE)
@@ -1142,16 +1133,15 @@ function CraftingWindow:Constructor()
     self.scope_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.scope_label:SetText(TR["Materials"])
 
-    self.scope_dropdown = UI.Widgets.LuiDropdown()
+    self.scope_dropdown = UI.Widgets.LuiCheckDropdown()
     self.scope_dropdown:SetParent(self.top_bar)
     self.scope_dropdown:SetPopupHost(self)
     self.scope_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.scope_dropdown.ValueChanged = function(_, value)
-        self.scope_key = _normalize_scope_key(value)
-        self.recipe_page_index = 1
-        self:refresh_recipe_list()
-        self:refresh_selected_recipe()
-        self:refresh_plan()
+    self.scope_dropdown:SetSummaryFormatter(function(selected_values)
+        return self:_scope_source_summary(selected_values)
+    end)
+    self.scope_dropdown.SelectedValuesChanged = function(_, values)
+        self:set_scope_sources(values, true)
     end
 
     self.profession_label = UI.Widgets.LuiLabel()
@@ -1733,6 +1723,64 @@ function CraftingWindow:_apply_search_query(text)
     self.search_groups = _normalize_query_groups(_parse_query(query_text))
 end
 
+function CraftingWindow:_scope_source_summary(selected_values)
+    local labels, values = self.store:get_source_options()
+    local selected = {}
+    for i = 1, #selected_values do
+        selected[selected_values[i]] = true
+    end
+
+    local selected_labels = {}
+    for i = 1, #values do
+        if selected[values[i]] == true then
+            selected_labels[#selected_labels + 1] = labels[i]
+        end
+    end
+
+    if #selected_labels == 0 then
+        return TR["None"]
+    end
+    if #selected_labels == #values then
+        return TR["All"]
+    end
+    if #selected_labels <= 2 then
+        return table.concat(selected_labels, " + ")
+    end
+    return _format_count(#selected_labels) .. " " .. TR["locations"]
+end
+
+function CraftingWindow:_set_scope_dropdown_options()
+    if self.scope_dropdown == nil then
+        return
+    end
+
+    local labels, values = self.store:get_source_options()
+    self.scope_dropdown:SetMappedOptions(labels, values)
+    self:set_scope_sources(self.scope_source_keys, false)
+end
+
+function CraftingWindow:set_scope_sources(source_keys, refresh)
+    local normalized = self.store:normalize_source_keys(source_keys)
+    local next_scope_key = self.store:scope_key_from_sources(normalized)
+    local changed = next_scope_key ~= self.scope_key
+
+    self.scope_source_keys = normalized
+    self.scope_key = next_scope_key
+    if self.scope_dropdown ~= nil then
+        self.scope_dropdown:SetSelectedValues(self.scope_source_keys, false)
+    end
+
+    if refresh ~= true or changed ~= true then
+        return
+    end
+
+    self.recipe_page_index = 1
+    self:_invalidate_recipe_list()
+    self:refresh_recipe_list()
+    self:refresh_selected_recipe()
+    self:refresh_plan()
+end
+
 function CraftingWindow:open()
     self:SetVisible(true)
     self:SetWantsUpdates(true)
@@ -1747,7 +1795,7 @@ end
 
 function CraftingWindow:open_from_asset_materials(_)
     self.profession_filter = FILTER_ALL
-    self.scope_key = SCOPE_SERVER
+    self:set_scope_sources(self.store:get_all_source_keys(), false)
     self.availability_filter = AVAILABILITY_READY
     self.level_min_filter = nil
     self.level_max_filter = nil
@@ -1759,7 +1807,7 @@ function CraftingWindow:open_from_asset_materials(_)
         self.profession_dropdown:SetValue(self.profession_filter)
     end
     if self.scope_dropdown ~= nil then
-        self.scope_dropdown:SetValue(self.scope_key)
+        self.scope_dropdown:SetSelectedValues(self.scope_source_keys, false)
     end
     if self.availability_dropdown ~= nil then
         self.availability_dropdown:SetValue(self.availability_filter)
@@ -1860,11 +1908,8 @@ function CraftingWindow:apply_settings()
     self.plan_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.loading_text:SetFont(_scaled_font("Verdana", BASE_META_FONT))
 
-    local scope_labels, scope_values = self.store:get_scope_options()
-    self.scope_dropdown:SetMappedOptions(scope_labels, scope_values)
-    self.scope_key = _normalize_scope_key(self.scope_key)
+    self:_set_scope_dropdown_options()
     self.availability_filter = _normalize_availability_filter(self.availability_filter)
-    self.scope_dropdown:SetValue(self.scope_key)
     self.availability_dropdown:SetValue(self.availability_filter)
 
     self:_load_geometry()
@@ -2682,7 +2727,7 @@ function CraftingWindow:layout()
 
     local row2_y = bar_h + gap
     local scope_label_w = _scaled_int(56)
-    local scope_w = _scaled_int(160)
+    local scope_w = _scaled_int(176)
     local profession_label_w = _scaled_int(54)
     local profession_w = _scaled_int(140)
     local availability_label_w = _scaled_int(34)

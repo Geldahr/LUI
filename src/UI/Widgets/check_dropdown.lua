@@ -2,6 +2,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.checkbox"
 import "LUI.src.UI.Widgets.style"
 
 local BASE_ITEM_H = 18
@@ -14,44 +15,43 @@ local BASE_FLIP_GAP = 4
 local BASE_SCROLL_W = 10
 local Style = UI.Widgets.Style
 
-local function _scaled_size(scale, value)
-    return value * scale
-end
-
 local function _scaled_int(scale, value)
-    return math.floor(_scaled_size(scale, value) + 0.5)
+    return math.floor((value * scale) + 0.5)
 end
 
----@class LuiDropdown : Turbine.UI.Control
-LuiDropdown = class(Turbine.UI.Control)
+local function _copy_array(source)
+    local out = {}
+    if type(source) ~= "table" then
+        return out
+    end
+    for i = 1, #source do
+        out[#out + 1] = source[i]
+    end
+    return out
+end
 
----------------------------------------------------------------------
--- Constructor
----------------------------------------------------------------------
+---@class LuiCheckDropdown : Turbine.UI.Control
+LuiCheckDropdown = class(Turbine.UI.Control)
 
-function LuiDropdown:Constructor()
+function LuiCheckDropdown:Constructor()
     Turbine.UI.Control.Constructor(self)
 
     self._scale = 1
     self._uses_default_size = true
     self._enabled = true
-    self._index = nil
-    self._value = nil
     self._popup_host = nil
     self._popup_overlay = nil
-
     self._labels = {}
     self._values = {}
-
-    self._popup_border = tonumber(Style.BORDER_WIDTH) or 1
-    self._popup_border_color = Style.CONTROL_BORDER
-    self._popup_back_color = Style.BACKGROUND
-
+    self._selected = {}
+    self._items = {}
+    self._item_font = nil
     self._item_height = _scaled_int(self._scale, BASE_ITEM_H)
     self._max_visible = 10
-    self._item_font = nil
+    self._summary_formatter = nil
+    self._suppress_item_changed = false
 
-    self.ValueChanged = nil
+    self.SelectedValuesChanged = nil
 
     self.button = LuiButton()
     self.button:SetParent(self)
@@ -67,7 +67,7 @@ function LuiDropdown:Constructor()
     self.popup:SetVisible(false)
     self.popup:SetZOrder(3000)
     self.popup:SetMouseVisible(true)
-    self.popup:SetBackColor(self._popup_border_color)
+    self.popup:SetBackColor(Style.CONTROL_BORDER)
     self.popup:SetWantsKeyEvents(true)
     self.popup.KeyDown = function(_, args)
         if args ~= nil and args.Action ~= nil and args.Action == Turbine.UI.Lotro.Action.Escape then
@@ -82,9 +82,7 @@ function LuiDropdown:Constructor()
 
     self.popup_inner = Turbine.UI.Control()
     self.popup_inner:SetParent(self.popup)
-    local initial_border = self:_popup_border_size()
-    self.popup_inner:SetPosition(initial_border, initial_border)
-    self.popup_inner:SetBackColor(self._popup_back_color)
+    self.popup_inner:SetBackColor(Style.BACKGROUND)
 
     self.popup_list = Turbine.UI.ListBox()
     self.popup_list:SetParent(self.popup_inner)
@@ -96,25 +94,20 @@ function LuiDropdown:Constructor()
     self.popup_scroll:SetWidth(BASE_SCROLL_W)
     self.popup_list:SetVerticalScrollBar(self.popup_scroll)
 
-    self._items = {}
-
     self.SizeChanged = function()
         self.button:SetSize(self:GetSize())
     end
 
     Turbine.UI.Control.SetSize(self, _scaled_int(self._scale, BASE_DROPDOWN_W), _scaled_int(self._scale, BASE_DROPDOWN_H))
     self.button:SetSize(self:GetSize())
+    self:_refresh_summary()
 end
 
-function LuiDropdown:_popup_border_size()
-    return math.max(1, _scaled_int(self._scale, self._popup_border or tonumber(Style.BORDER_WIDTH) or 1))
+function LuiCheckDropdown:_popup_border_size()
+    return math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH) or 1))
 end
 
----------------------------------------------------------------------
--- Destructor
----------------------------------------------------------------------
-
-function LuiDropdown:Close()
+function LuiCheckDropdown:Close()
     if self._popup_overlay ~= nil then
         self._popup_overlay:SetVisible(false)
         self._popup_overlay = nil
@@ -124,41 +117,34 @@ function LuiDropdown:Close()
         self.popup:SetVisible(false)
     end
 
-    if LuiDropdown._active == self then
-        LuiDropdown._active = nil
+    if LuiCheckDropdown._active == self then
+        LuiCheckDropdown._active = nil
     end
 end
 
----------------------------------------------------------------------
--- Public functions
----------------------------------------------------------------------
-
-function LuiDropdown:SetFont(font)
+function LuiCheckDropdown:SetFont(font)
     self._item_font = font
     if self.button ~= nil then
         self.button:set_font(font)
     end
     for i = 1, #self._items do
-        local b = self._items[i]
-        if b ~= nil then
-            b:set_font(font)
+        if self._items[i] ~= nil then
+            self._items[i]:SetFont(font)
         end
     end
 end
 
-function LuiDropdown:set_scale(scale)
-    self._scale = scale
+function LuiCheckDropdown:set_scale(scale)
+    self._scale = tonumber(scale) or 1
     self._item_height = _scaled_int(self._scale, BASE_ITEM_H)
 
     if self.button ~= nil then
         self.button:set_scale(self._scale)
         Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     end
-
     for i = 1, #self._items do
-        local b = self._items[i]
-        if b ~= nil then
-            b:set_scale(self._scale)
+        if self._items[i] ~= nil then
+            self._items[i]:SetScale(self._scale)
         end
     end
 
@@ -171,21 +157,21 @@ function LuiDropdown:set_scale(scale)
     end
 end
 
-function LuiDropdown:SetScale(scale)
+function LuiCheckDropdown:SetScale(scale)
     self:set_scale(scale)
 end
 
-function LuiDropdown:SetTextAlignment(alignment)
+function LuiCheckDropdown:SetTextAlignment(alignment)
     if self.button ~= nil then
         self.button:set_text_alignment(alignment)
     end
 end
 
-function LuiDropdown:SetPopupHost(host_window)
+function LuiCheckDropdown:SetPopupHost(host_window)
     self._popup_host = host_window
 end
 
-function LuiDropdown:SetEnabled(enabled)
+function LuiCheckDropdown:SetEnabled(enabled)
     self._enabled = enabled == true
     self.button:set_enabled(self._enabled)
     if self._enabled ~= true then
@@ -193,78 +179,84 @@ function LuiDropdown:SetEnabled(enabled)
     end
 end
 
-function LuiDropdown:GetValue()
-    return self._value
+function LuiCheckDropdown:SetSummaryFormatter(formatter)
+    self._summary_formatter = type(formatter) == "function" and formatter or nil
+    self:_refresh_summary()
 end
 
-function LuiDropdown:GetIndex()
-    return self._index
+function LuiCheckDropdown:SetMappedOptions(labels, values)
+    self:set_mapped_options(labels, values)
 end
 
-function LuiDropdown:get_value()
-    return self._value
-end
-
-function LuiDropdown:get_index()
-    return self._index
-end
-
-function LuiDropdown:SetValue(value)
-    self:set_value(value)
-end
-
-function LuiDropdown:set_value(value)
-    local found = nil
-    for i = 1, #self._values do
-        if self._values[i] == value then
-            found = i
-            break
-        end
-    end
-    self:_set_index(found, true)
-end
-
-function LuiDropdown:set_mapped_options(labels, values)
-    self._labels = labels or {}
-    self._values = values or {}
-
+function LuiCheckDropdown:set_mapped_options(labels, values)
+    self._labels = _copy_array(labels)
+    self._values = _copy_array(values)
     if #self._labels ~= #self._values then
         self._labels = {}
         self._values = {}
     end
 
-    self:_rebuild_items()
-
-    if #self._labels == 0 then
-        self:_set_index(nil)
-        return
+    local valid = {}
+    for i = 1, #self._values do
+        valid[self._values[i]] = true
     end
-
-    if self._value ~= nil then
-        for i = 1, #self._values do
-            if self._values[i] == self._value then
-                self:_set_index(i)
-                return
-            end
+    for value, _ in pairs(self._selected) do
+        if valid[value] ~= true then
+            self._selected[value] = nil
         end
     end
 
-    self:_set_index(1)
+    self:_rebuild_items()
+    self:_sync_items()
+    self:_refresh_summary()
 end
 
-function LuiDropdown:SetMappedOptions(labels, values)
-    self:set_mapped_options(labels, values)
+function LuiCheckDropdown:SetSelectedValues(values, fire_event)
+    self:set_selected_values(values, fire_event)
 end
 
-function LuiDropdown:set_dropdown_options(labels, values)
-    self:set_mapped_options(labels, values)
+function LuiCheckDropdown:set_selected_values(values, fire_event)
+    local next_selected = {}
+    if type(values) == "table" then
+        for i = 1, #values do
+            next_selected[values[i]] = true
+        end
+    end
+
+    local changed = false
+    for i = 1, #self._values do
+        local value = self._values[i]
+        local selected = next_selected[value] == true
+        if (self._selected[value] == true) ~= selected then
+            changed = true
+        end
+        self._selected[value] = selected and true or nil
+    end
+
+    self:_sync_items()
+    self:_refresh_summary()
+
+    if fire_event == true and changed == true and type(self.SelectedValuesChanged) == "function" then
+        self:SelectedValuesChanged(self:GetSelectedValues())
+    end
 end
 
-function LuiDropdown:SetDropdownOptions(labels, values)
-    self:set_mapped_options(labels, values)
+function LuiCheckDropdown:GetSelectedValues()
+    local out = {}
+    for i = 1, #self._values do
+        local value = self._values[i]
+        if self._selected[value] == true then
+            out[#out + 1] = value
+        end
+    end
+    return out
 end
 
-function LuiDropdown:Open()
+function LuiCheckDropdown:IsValueSelected(value)
+    return self._selected[value] == true
+end
+
+function LuiCheckDropdown:Open()
     if self._enabled ~= true then return end
     if self.popup:IsVisible() then return end
 
@@ -273,43 +265,36 @@ function LuiDropdown:Open()
         return
     end
 
-    if LuiCheckDropdown ~= nil and LuiCheckDropdown._active ~= nil then
-        LuiCheckDropdown._active:Close()
-    end
-    if LuiDropdown._active ~= nil and LuiDropdown._active ~= self then
+    if LuiDropdown ~= nil and LuiDropdown._active ~= nil then
         LuiDropdown._active:Close()
     end
-    LuiDropdown._active = self
+    if LuiCheckDropdown._active ~= nil and LuiCheckDropdown._active ~= self then
+        LuiCheckDropdown._active:Close()
+    end
+    LuiCheckDropdown._active = self
 
     local x, y = self.button:PointToScreen(0, self.button:GetHeight() + _scaled_int(self._scale, BASE_OPEN_GAP))
     local width = self.button:GetWidth()
-
-    local visible_count = item_count
-    if visible_count > self._max_visible then
-        visible_count = self._max_visible
-    end
-
-    local list_height = (visible_count * self._item_height)
-    local list_width = width
-
+    local visible_count = math.min(item_count, self._max_visible)
+    local list_height = visible_count * self._item_height
     local border = self:_popup_border_size()
-    local scroll_w = BASE_SCROLL_W
     local use_scroll = item_count > visible_count
+    local scroll_w = BASE_SCROLL_W
 
-    self.popup:SetSize(list_width + (2 * border), list_height + (2 * border))
-    self.popup_inner:SetSize(list_width, list_height)
+    self.popup:SetSize(width + (2 * border), list_height + (2 * border))
+    self.popup_inner:SetPosition(border, border)
+    self.popup_inner:SetSize(width, list_height)
 
     self.popup_list:SetPosition(0, 0)
-    self.popup_list:SetSize(list_width - (use_scroll and scroll_w or 0), list_height)
+    self.popup_list:SetSize(width - (use_scroll and scroll_w or 0), list_height)
 
     self.popup_scroll:SetPosition(self.popup_list:GetWidth(), 0)
     self.popup_scroll:SetHeight(list_height)
     self.popup_scroll:SetVisible(use_scroll)
 
     for i = 1, item_count do
-        local b = self._items[i]
-        if b ~= nil then
-            b:SetSize(self.popup_list:GetWidth(), self._item_height)
+        if self._items[i] ~= nil then
+            self._items[i]:SetSize(self.popup_list:GetWidth(), self._item_height)
         end
     end
 
@@ -322,11 +307,7 @@ function LuiDropdown:Open()
     end
     if x < 0 then x = 0 end
     if y < 0 then y = 0 end
-
     self.popup:SetPosition(x, y)
-    self.popup_inner:SetPosition(border, border)
-
-    self:_sync_active_items()
 
     if self._popup_host ~= nil then
         local host = self._popup_host
@@ -337,7 +318,6 @@ function LuiDropdown:Open()
         overlay:SetMouseVisible(true)
         overlay:SetZOrder(9999)
         overlay:SetVisible(true)
-
         overlay.MouseDown = function(_, args)
             local cx = args ~= nil and args.X or nil
             local cy = args ~= nil and args.Y or nil
@@ -353,14 +333,13 @@ function LuiDropdown:Open()
             end
             self:Close()
         end
-
         self._popup_overlay = overlay
     end
 
     self.popup:SetVisible(true)
 end
 
-function LuiDropdown:Toggle()
+function LuiCheckDropdown:Toggle()
     if self.popup:IsVisible() then
         self:Close()
     else
@@ -368,74 +347,84 @@ function LuiDropdown:Toggle()
     end
 end
 
----------------------------------------------------------------------
--- Private functions
----------------------------------------------------------------------
-
-function LuiDropdown:_set_index(index, fire_event)
-    local previous_index = self._index
-    local previous_value = self._value
-
-    if type(index) ~= "number" then
-        index = nil
-    else
-        index = math.floor(index)
-        if index < 1 or index > #self._labels then
-            index = nil
-        end
-    end
-
-    self._index = index
-    self._value = (index ~= nil) and self._values[index] or nil
-
-    local t = (index ~= nil) and tostring(self._labels[index]) or ""
-    if string.len(t) == 0 then
-        t = TR["Select"]
-    end
-    self.button:set_text(t)
-    self:_sync_active_items()
-
-    if fire_event == true and previous_index == self._index and previous_value == self._value then
+function LuiCheckDropdown:_set_value_selected(value, selected, fire_event)
+    local next_selected = selected == true
+    if (self._selected[value] == true) == next_selected then
         return
     end
-    if fire_event == true and type(self.ValueChanged) == "function" then
-        self:ValueChanged(self._value)
+
+    self._selected[value] = next_selected and true or nil
+    self:_refresh_summary()
+
+    if fire_event == true and type(self.SelectedValuesChanged) == "function" then
+        self:SelectedValuesChanged(self:GetSelectedValues())
     end
 end
 
-function LuiDropdown:_rebuild_items()
+function LuiCheckDropdown:_rebuild_items()
     self.popup_list:ClearItems()
     self._items = {}
 
     for i = 1, #self._labels do
-        local opt = self._labels[i]
-        local b = LuiButton()
-        b:set_scale(self._scale)
-        b:set_border_thickness(0)
-        b:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        b:set_text(tostring(opt))
+        local checkbox = LuiCheckBox()
+        checkbox:SetScale(self._scale)
+        checkbox:SetText(tostring(self._labels[i]))
+        checkbox:SetForeColor(Style.CONTROL_FOREGROUND)
         if self._item_font ~= nil then
-            b:set_font(self._item_font)
+            checkbox:SetFont(self._item_font)
         end
-        b.Click = function()
-            self:_set_index(i, true)
-            self:Close()
+        checkbox.CheckedChanged = function()
+            if self._suppress_item_changed == true then
+                return
+            end
+            self:_set_value_selected(self._values[i], checkbox:IsChecked() == true, true)
         end
-        self.popup_list:AddItem(b)
-        table.insert(self._items, b)
+        self.popup_list:AddItem(checkbox)
+        self._items[#self._items + 1] = checkbox
     end
 end
 
-function LuiDropdown:_sync_active_items()
-    for i = 1, #self._labels do
-        local b = self._items[i]
-        if b ~= nil then
-            b:set_active(i == self._index)
+function LuiCheckDropdown:_sync_items()
+    self._suppress_item_changed = true
+    for i = 1, #self._items do
+        local checkbox = self._items[i]
+        if checkbox ~= nil then
+            checkbox:SetChecked(self._selected[self._values[i]] == true)
         end
     end
+    self._suppress_item_changed = false
 end
 
-function LuiDropdown:SetSize(w, h)
+function LuiCheckDropdown:_refresh_summary()
+    local selected_values = self:GetSelectedValues()
+    local text = nil
+    if self._summary_formatter ~= nil then
+        text = self._summary_formatter(selected_values, self._labels, self._values)
+    end
+
+    if text == nil then
+        if #selected_values == 0 then
+            text = TR["None"]
+        elseif #selected_values == #self._values then
+            text = TR["All"]
+        elseif #selected_values == 1 then
+            for i = 1, #self._values do
+                if self._values[i] == selected_values[1] then
+                    text = tostring(self._labels[i])
+                    break
+                end
+            end
+        else
+            text = tostring(#selected_values) .. " selected"
+        end
+    end
+
+    self.button:set_text(text or "")
+end
+
+function LuiCheckDropdown:SetSize(w, h)
     self._uses_default_size = false
     Turbine.UI.Control.SetSize(self, w, h)
 end
+
+UI.Widgets.LuiCheckDropdown = LuiCheckDropdown

@@ -139,6 +139,7 @@ FR = {
     ["Above Morale"] = "Au-dessus du moral",
     ["After the global LUI UI scale feels right, use the other settings for micro adjustments."] = "Une fois l'échelle globale de l'interface LUI correcte, utilisez les autres réglages pour les micro-ajustements.",
     ["All"] = "Tous",
+    ["locations"] = "emplacements",
     ["Genus"] = "Genre",
     ["Assets"] = "Stock",
     ["Bestiary"] = "Bestiaire",
