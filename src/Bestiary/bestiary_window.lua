@@ -1166,7 +1166,7 @@ function BestiaryWindow:Constructor()
     self.level_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.level_label:SetText(TR["Level"] .. ":")
 
-    self.level_min_box = Turbine.UI.Lotro.TextBox()
+    self.level_min_box = UI.Widgets.LuiLineEdit()
     self.level_min_box:SetParent(self.level_bar)
     self.level_min_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 
@@ -1179,7 +1179,7 @@ function BestiaryWindow:Constructor()
     self.level_dash_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.level_dash_label:SetText("-")
 
-    self.level_max_box = Turbine.UI.Lotro.TextBox()
+    self.level_max_box = UI.Widgets.LuiLineEdit()
     self.level_max_box:SetParent(self.level_bar)
     self.level_max_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 

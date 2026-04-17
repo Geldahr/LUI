@@ -84,6 +84,30 @@ function LuiTooltip:_layout(width, height)
     self._label:SetSize(math.max(0, inner_w - (pad_x * 2)), math.max(0, inner_h - (pad_y * 2)))
 end
 
+function LuiTooltip:_sync_style()
+    self:SetBackColor(Style.CONTROL_BORDER)
+    self._inner:SetBackColor(Style.PANEL_BACKGROUND)
+    self._label:SetForeColor(Style.FOREGROUND)
+end
+
+function LuiTooltip:_position_for(control, width, height)
+    local offset = _scaled_int(self._scale, BASE_OFFSET)
+    local margin = _scaled_int(self._scale, BASE_SCREEN_MARGIN)
+    local x, y = control:PointToScreen(0, control:GetHeight() + offset)
+    local display_width, display_height = Turbine.UI.Display.GetSize()
+
+    if x + width > display_width then
+        x = display_width - width - margin
+    end
+    if y + height > display_height then
+        y = y - height - control:GetHeight() - margin
+    end
+    if x < 0 then x = 0 end
+    if y < 0 then y = 0 end
+
+    self:SetPosition(x, y)
+end
+
 function LuiTooltip:SetScale(scale)
     if type(scale) ~= "number" then
         scale = tonumber(scale)
@@ -103,6 +127,10 @@ function LuiTooltip:SetFont(font)
         return
     end
     self._label:SetFont(font)
+end
+
+function LuiTooltip:GetContentHost()
+    return self._inner
 end
 
 function LuiTooltip:ShowFor(control, text)
@@ -126,34 +154,44 @@ function LuiTooltip:ShowFor(control, text)
         math.max(min_height, (_line_count(text) * line_height) + (pad_y * 2) + (border * 2) + height_extra)
     )
 
-    self:SetBackColor(Style.CONTROL_BORDER)
-    self._inner:SetBackColor(Style.PANEL_BACKGROUND)
-    self._label:SetForeColor(Style.FOREGROUND)
+    self:_sync_style()
     self._label:SetText(text)
+    self._label:SetVisible(true)
     self:SetSize(max_width, desired_height)
     self:_layout(max_width, desired_height)
+    self:_position_for(control, max_width, desired_height)
+    self:SetVisible(true)
+end
 
-    local offset = _scaled_int(self._scale, BASE_OFFSET)
-    local margin = _scaled_int(self._scale, BASE_SCREEN_MARGIN)
-    local x, y = control:PointToScreen(0, control:GetHeight() + offset)
-    local display_width, display_height = Turbine.UI.Display.GetSize()
-
-    if x + max_width > display_width then
-        x = display_width - max_width - margin
+function LuiTooltip:ShowContentFor(control, width, height)
+    if control == nil then
+        self:Hide()
+        return
     end
-    if y + desired_height > display_height then
-        y = y - desired_height - control:GetHeight() - margin
-    end
-    if x < 0 then x = 0 end
-    if y < 0 then y = 0 end
 
-    self:SetPosition(x, y)
+    width = tonumber(width)
+    height = tonumber(height)
+    if width == nil or height == nil or width <= 0 or height <= 0 then
+        self:Hide()
+        return
+    end
+
+    width = math.floor(width + 0.5)
+    height = math.floor(height + 0.5)
+    self._anchor = control
+    self._text = nil
+    self:_sync_style()
+    self._label:SetVisible(false)
+    self:SetSize(width, height)
+    self:_layout(width, height)
+    self:_position_for(control, width, height)
     self:SetVisible(true)
 end
 
 function LuiTooltip:Hide()
     self._anchor = nil
     self._text = nil
+    self._label:SetVisible(false)
     self:SetVisible(false)
 end
 

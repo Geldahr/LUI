@@ -62,7 +62,7 @@ function InventoryPage:Constructor(window)
     self.cols_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.cols_label:SetText(TR["Columns"])
 
-    self.cols_tb = Turbine.UI.Lotro.TextBox()
+    self.cols_tb = UI.Widgets.LuiLineEdit()
     self.cols_tb:SetParent(self)
     self.cols_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 

@@ -2,6 +2,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.style"
 
 local BASE_WIDGET_W = 72
@@ -141,7 +142,7 @@ function LuiSpinBox:Constructor()
     _set_alpha_blend(self._buttons_back)
     self._buttons_back:SetBackColor(Style.ALTERNATE_BACKGROUND)
 
-    self.text_box = Turbine.UI.Lotro.TextBox()
+    self.text_box = LuiLineEdit()
     self.text_box:SetParent(self._field_back)
     self.text_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.text_box:SetWantsKeyEvents(true)

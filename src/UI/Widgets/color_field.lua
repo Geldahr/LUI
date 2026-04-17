@@ -2,6 +2,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.style"
 import "LUI.src.Utils.color"
 
@@ -158,7 +159,7 @@ function LuiColorField:Constructor(swatch_size, swatch_gap)
     self._picker_original = nil
     self.TextChanged = nil
 
-    self.tb = Turbine.UI.Lotro.TextBox()
+    self.tb = LuiLineEdit()
     self.tb:SetParent(self)
     self.tb:SetZOrder(1)
 

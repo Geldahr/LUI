@@ -32,6 +32,16 @@ function LuiLineEdit:Constructor()
     self.placeholder_label:SetText("")
     self.placeholder_label:SetVisible(false)
 
+    self.text_box.MouseEnter = function(sender, args)
+        if type(self.MouseEnter) == "function" then
+            self.MouseEnter(self, args)
+        end
+    end
+    self.text_box.MouseLeave = function(sender, args)
+        if type(self.MouseLeave) == "function" then
+            self.MouseLeave(self, args)
+        end
+    end
     self.text_box.TextChanged = function(sender, args)
         self:_refresh_placeholder()
         if type(self.TextChanged) == "function" then
@@ -130,6 +140,22 @@ end
 function LuiLineEdit:SetForeColor(color)
     if color ~= nil and self.text_box.SetForeColor ~= nil then
         self.text_box:SetForeColor(color)
+    end
+end
+
+function LuiLineEdit:SetBackColor(color)
+    if color == nil then
+        return
+    end
+    Turbine.UI.Control.SetBackColor(self, color)
+    if self.text_box.SetBackColor ~= nil then
+        self.text_box:SetBackColor(color)
+    end
+end
+
+function LuiLineEdit:SetMultiline(multiline)
+    if self.text_box.SetMultiline ~= nil then
+        self.text_box:SetMultiline(multiline)
     end
 end
 

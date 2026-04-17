@@ -93,7 +93,7 @@ local function _create_link_box(page, key, label_text, link_text, height)
     entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     entry.label:SetText(label_text)
 
-    entry.link_tb = Turbine.UI.TextBox()
+    entry.link_tb = UI.Widgets.LuiLineEdit()
     entry.link_tb:SetParent(entry.control)
     entry.link_tb:SetFont(_scaled_help_font())
     entry.link_tb:SetMultiline(false)

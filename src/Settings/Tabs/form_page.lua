@@ -244,7 +244,7 @@ function SettingsFormPage:add_text(key, label_text, is_color, help_text, full_wi
         entry.tb:SetZOrder(2)
         self._color_fields[#self._color_fields + 1] = entry
     else
-        entry.tb = Turbine.UI.Lotro.TextBox()
+        entry.tb = UI.Widgets.LuiLineEdit()
         entry.tb:SetParent(self.form)
         entry.tb:SetFont(self.window.input_font)
         entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)

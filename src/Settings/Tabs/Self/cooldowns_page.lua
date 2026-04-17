@@ -73,7 +73,7 @@ local function _create_text_area(page, key, label_text, help_text)
     entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     entry.label:SetText(label_text)
 
-    entry.tb = Turbine.UI.Lotro.TextBox()
+    entry.tb = UI.Widgets.LuiLineEdit()
     entry.tb:SetParent(entry.control)
     entry.tb:SetFont(page.window.input_font)
     entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)

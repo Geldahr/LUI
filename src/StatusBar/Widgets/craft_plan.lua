@@ -3,6 +3,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
+local Style = UI.Widgets.Style
 
 local CHIP_GAP = 0
 local CHIP_ICON_GAP = 2
@@ -15,9 +16,6 @@ local MISSING_TEXT = Turbine.UI.Color(1.00, 0.88, 0.35, 0.35)
 local META_TEXT = Turbine.UI.Color(0.85, 0.82, 0.82, 0.82)
 local LOADING_TRACK_BACK = Turbine.UI.Color(0.35, 0.10, 0.12, 0.16)
 local LOADING_FILL_BACK = Turbine.UI.Color(0.65, 0.38, 0.54, 0.78)
-local POPUP_BORDER = Turbine.UI.Color(0.95, 0.28, 0.35, 0.45)
-local POPUP_BACK = Turbine.UI.Color(0.98, 0.08, 0.09, 0.11)
-local POPUP_ROW_BACK = Turbine.UI.Color(0.90, 0.12, 0.15, 0.17)
 local POPUP_ROW_GAP = 2
 local POPUP_SECTION_GAP = 4
 local ITEM_INFO_CONTROL_OFFSET = -3
@@ -452,7 +450,7 @@ function CraftPlanPopupRow:Constructor(font)
     self.background = Turbine.UI.Control()
     self.background:SetParent(self)
     self.background:SetMouseVisible(false)
-    self.background:SetBackColor(POPUP_ROW_BACK)
+    self.background:SetBackColor(Style.ALTERNATE_BACKGROUND)
 
     self.slot = CraftPlanItemSlot(self)
     self.slot:SetParent(self)
@@ -544,16 +542,12 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
     self.loading_fill:SetBackColor(LOADING_FILL_BACK)
     self.loading_fill:SetVisible(false)
 
-    self.popup = Turbine.UI.Window()
-    self.popup:SetVisible(false)
-    self.popup:SetMouseVisible(false)
+    self.popup = UI.Widgets.LuiTooltip()
     self.popup:SetZOrder(2200)
-    self.popup:SetBackColor(POPUP_BORDER)
 
     self.popup_inner = Turbine.UI.Control()
-    self.popup_inner:SetParent(self.popup)
+    self.popup_inner:SetParent(self.popup:GetContentHost())
     self.popup_inner:SetMouseVisible(false)
-    self.popup_inner:SetBackColor(POPUP_BACK)
 
     self.popup_header = LuiLabel()
     self.popup_header:SetParent(self.popup_inner)
@@ -615,7 +609,7 @@ end
 function CraftPlanWidget:destroy()
     self:_hide_popup()
     if self.popup ~= nil then
-        self.popup:SetVisible(false)
+        self.popup:Hide()
     end
     if self.popup_inner ~= nil then
         self.popup_inner:SetParent(nil)
@@ -872,7 +866,8 @@ function CraftPlanWidget:_show_popup()
 
     local width = math.max(220, math.min(420, self:GetWidth() + 140))
     local row_h = math.max(20, self:GetHeight())
-    local inner_w = width - 2
+    local border = math.max(0, math.floor((tonumber(Style.BORDER_WIDTH_THIN) or 1) + 0.5))
+    local inner_w = width - (border * 2)
     local header_h = header_text ~= nil and row_h or 0
     local note_h = note_text ~= nil and row_h or 0
     local rows_h = has_resources == true and ((#resources * row_h) + math.max(0, (#resources - 1) * POPUP_ROW_GAP)) or 0
@@ -884,8 +879,8 @@ function CraftPlanWidget:_show_popup()
         inner_h = inner_h + POPUP_SECTION_GAP
     end
 
-    self.popup:SetSize(width, inner_h + 2)
-    self.popup_inner:SetPosition(1, 1)
+    self.popup:ShowContentFor(self, width, inner_h + (border * 2))
+    self.popup_inner:SetPosition(0, 0)
     self.popup_inner:SetSize(inner_w, inner_h)
 
     local y = 0
@@ -920,15 +915,11 @@ function CraftPlanWidget:_show_popup()
             y = y + row_h + POPUP_ROW_GAP
         end
     end
-
-    local x, y_screen = self:PointToScreen(0, self:GetHeight() + 1)
-    self.popup:SetPosition(x, y_screen)
-    self.popup:SetVisible(true)
 end
 
 function CraftPlanWidget:_hide_popup()
     if self.popup ~= nil then
-        self.popup:SetVisible(false)
+        self.popup:Hide()
     end
     if self.popup_header ~= nil then
         self.popup_header:SetVisible(false)

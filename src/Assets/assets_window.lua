@@ -7,6 +7,7 @@ import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Assets.assets_entry"
 
 AssetsWindow = class(Turbine.UI.Lotro.Window)
+local Style = UI.Widgets.Style
 
 local BASE_MARGIN_LEFT = 15
 local BASE_MARGIN_TOP = 33
@@ -44,7 +45,6 @@ local BASE_STACK_HINT_PAD_Y = 9
 local BASE_STACK_HINT_LINE_H = 12
 local BASE_RECIPES_BUTTON_W = 108
 local MIN_LAYOUT_COLS = 2
-local STACK_HINT_BORDER = 2
 
 local SUMMARY_TRACK_WIDTH_FACTOR = 0.70
 
@@ -54,7 +54,6 @@ local SUMMARY_FILTERED_COLOR = Turbine.UI.Color(1, 0.20, 0.45, 0.80)
 local SUMMARY_VISIBLE_COLOR = Turbine.UI.Color(1, 0.24, 0.72, 0.28)
 local SUMMARY_TEXT_COLOR = Turbine.UI.Color(1, 1, 1, 1)
 local SUMMARY_TEXT_OUTLINE = Turbine.UI.Color(1, 0, 0, 0)
-local STACK_HINT_BACK_COLOR = Turbine.UI.Color(0.92, 0.05, 0.05, 0.05)
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
@@ -829,16 +828,13 @@ function AssetsWindow:Constructor()
     self.hint_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.hint_label:SetVisible(false)
 
-    self.stack_hint = Turbine.UI.Window()
-    self.stack_hint:SetVisible(false)
-    self.stack_hint:SetMouseVisible(false)
+    self.stack_hint = UI.Widgets.LuiTooltip()
+    self.stack_hint:SetScale(_G.settings.global.scale)
     self.stack_hint:SetZOrder(2200)
-    self.stack_hint:SetBackColor(SUMMARY_BORDER_COLOR)
 
     self.stack_hint_inner = Turbine.UI.Control()
-    self.stack_hint_inner:SetParent(self.stack_hint)
+    self.stack_hint_inner:SetParent(self.stack_hint:GetContentHost())
     self.stack_hint_inner:SetMouseVisible(false)
-    self.stack_hint_inner:SetBackColor(STACK_HINT_BACK_COLOR)
     self.stack_hint_rows = {}
 
     self.SizeChanged = function()
@@ -1048,6 +1044,9 @@ function AssetsWindow:apply_settings()
     self.group_label:SetFont(_scaled_font("Verdana", 11))
     self.hint_label:SetFont(_scaled_font("Verdana", 10))
     self.empty_label:SetFont(_scaled_font("Verdana", 12))
+    if self.stack_hint ~= nil then
+        self.stack_hint:SetScale(_G.settings.global.scale)
+    end
 
     self:_apply_layout_for_mode(self.view_mode)
     self:snap_window_size()
@@ -1525,7 +1524,7 @@ end
 
 function AssetsWindow:_hide_stack_hint()
     if self.stack_hint ~= nil then
-        self.stack_hint:SetVisible(false)
+        self.stack_hint:Hide()
     end
 end
 
@@ -1540,13 +1539,14 @@ function AssetsWindow:_show_stack_hint(anchor_control, record)
     local padding_y = _scaled_int(BASE_STACK_HINT_PAD_Y)
     local line_height = _scaled_int(BASE_STACK_HINT_LINE_H)
     local line_count = #record.stack_parts
+    local tooltip_border = math.max(0, _scaled_int(tonumber(Style.BORDER_WIDTH_THIN) or 1))
     local content_height = math.min(
         _scaled_int(BASE_STACK_HINT_MAX_H),
         math.max(_scaled_int(BASE_STACK_HINT_MIN_H), (line_count * line_height) + padding_y + _scaled_int(7))
     )
-    local desired_height = content_height + (STACK_HINT_BORDER * 2)
-    local inner_w = max_width - (STACK_HINT_BORDER * 2)
-    local inner_h = desired_height - (STACK_HINT_BORDER * 2)
+    local desired_height = content_height + (tooltip_border * 2)
+    local inner_w = max_width - (tooltip_border * 2)
+    local inner_h = desired_height - (tooltip_border * 2)
 
     self:_ensure_stack_hint_rows(line_count)
     for i = 1, #self.stack_hint_rows do
@@ -1604,23 +1604,9 @@ function AssetsWindow:_show_stack_hint(anchor_control, record)
         end
     end
 
-    self.stack_hint:SetSize(max_width, desired_height)
-    self.stack_hint_inner:SetPosition(STACK_HINT_BORDER, STACK_HINT_BORDER)
+    self.stack_hint:ShowContentFor(anchor_control, max_width, desired_height)
+    self.stack_hint_inner:SetPosition(0, 0)
     self.stack_hint_inner:SetSize(inner_w, inner_h)
-
-    local x, y = anchor_control:PointToScreen(0, anchor_control:GetHeight() + _scaled_int(1))
-    local display_width, display_height = Turbine.UI.Display.GetSize()
-    if x + max_width > display_width then
-        x = display_width - max_width - _scaled_int(4)
-    end
-    if y + desired_height > display_height then
-        y = y - desired_height - anchor_control:GetHeight() - _scaled_int(4)
-    end
-    if x < 0 then x = 0 end
-    if y < 0 then y = 0 end
-
-    self.stack_hint:SetPosition(x, y)
-    self.stack_hint:SetVisible(true)
 end
 
 function AssetsWindow:_apply_record_view(reset_page)

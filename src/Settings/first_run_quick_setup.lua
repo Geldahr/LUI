@@ -356,7 +356,7 @@ function FirstRunQuickSetup:Constructor(options)
         self:adjust_scale(-0.05)
     end
 
-    self.scale_box = Turbine.UI.Lotro.TextBox()
+    self.scale_box = UI.Widgets.LuiLineEdit()
     self.scale_box:SetParent(self.inner)
     self.scale_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.scale_box:SetWantsKeyEvents(true)
