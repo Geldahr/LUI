@@ -1,0 +1,197 @@
+import "Turbine.UI"
+import "Turbine.UI.Lotro"
+
+import "LUI.src.UI.Widgets.label"
+
+local DEFAULT_PLACEHOLDER_COLOR = Turbine.UI.Color(1, 0.45, 0.45, 0.45)
+local DEFAULT_INSET_X = 4
+
+---@class LuiTextInput : Turbine.UI.Control
+LuiTextInput = class(Turbine.UI.Control)
+
+function LuiTextInput:Constructor()
+    Turbine.UI.Control.Constructor(self)
+
+    self._placeholder_text = ""
+    self._placeholder_color = DEFAULT_PLACEHOLDER_COLOR
+    self._text_alignment = Turbine.UI.ContentAlignment.MiddleLeft
+
+    self.text_box = Turbine.UI.Lotro.TextBox()
+    self.text_box:SetParent(self)
+    self.text_box:SetZOrder(1)
+    self.text_box:SetTextAlignment(self._text_alignment)
+
+    self.placeholder_label = LuiLabel()
+    self.placeholder_label:SetParent(self)
+    self.placeholder_label:SetZOrder(2)
+    self.placeholder_label:SetMouseVisible(false)
+    self.placeholder_label:SetSelectable(false)
+    self.placeholder_label:SetTextAlignment(self._text_alignment)
+    self.placeholder_label:SetForeColor(self._placeholder_color)
+    self.placeholder_label:SetText("")
+    self.placeholder_label:SetVisible(false)
+
+    -- Compatibility alias for callers that need direct access to the native TextBox.
+    self.tb = self.text_box
+
+    self.text_box.TextChanged = function(sender, args)
+        self:_refresh_placeholder()
+        if type(self.TextChanged) == "function" then
+            self.TextChanged(self, args)
+        end
+    end
+    self.text_box.FocusGained = function(sender, args)
+        if type(self.FocusGained) == "function" then
+            self.FocusGained(self, args)
+        end
+    end
+    self.text_box.FocusLost = function(sender, args)
+        if type(self.FocusLost) == "function" then
+            self.FocusLost(self, args)
+        end
+    end
+    self.text_box.KeyDown = function(sender, args)
+        if type(self.KeyDown) == "function" then
+            self.KeyDown(self, args)
+        end
+    end
+    self.text_box.KeyUp = function(sender, args)
+        if type(self.KeyUp) == "function" then
+            self.KeyUp(self, args)
+        end
+    end
+end
+
+function LuiTextInput:_layout()
+    local w, h = self:GetSize()
+    self.text_box:SetPosition(0, 0)
+    self.text_box:SetSize(w, h)
+
+    local inset_x = DEFAULT_INSET_X
+    self.placeholder_label:SetPosition(inset_x, 0)
+    self.placeholder_label:SetSize(math.max(0, w - (inset_x * 2)), h)
+end
+
+function LuiTextInput:_refresh_placeholder()
+    local text = self.text_box:GetText() or ""
+    self.placeholder_label:SetVisible(self._placeholder_text ~= "" and text == "")
+end
+
+function LuiTextInput:set_placeholder_text(text)
+    self._placeholder_text = tostring(text or "")
+    self.placeholder_label:SetText(self._placeholder_text)
+    self:_refresh_placeholder()
+end
+
+function LuiTextInput:get_placeholder_text()
+    return self._placeholder_text
+end
+
+function LuiTextInput:set_placeholder_color(color)
+    if color == nil then
+        return
+    end
+    self._placeholder_color = color
+    self.placeholder_label:SetForeColor(color)
+end
+
+function LuiTextInput:SetPlaceholderText(text)
+    self:set_placeholder_text(text)
+end
+
+function LuiTextInput:GetPlaceholderText()
+    return self:get_placeholder_text()
+end
+
+function LuiTextInput:SetPlaceholderColor(color)
+    self:set_placeholder_color(color)
+end
+
+function LuiTextInput:SetSize(w, h)
+    Turbine.UI.Control.SetSize(self, w, h)
+    self:_layout()
+end
+
+function LuiTextInput:SetFont(font)
+    if font == nil then
+        return
+    end
+    self.text_box:SetFont(font)
+    self.placeholder_label:SetFont(font)
+end
+
+function LuiTextInput:SetTextAlignment(alignment)
+    if alignment == nil then
+        return
+    end
+    self._text_alignment = alignment
+    self.text_box:SetTextAlignment(alignment)
+    self.placeholder_label:SetTextAlignment(alignment)
+end
+
+function LuiTextInput:SetForeColor(color)
+    if color ~= nil and self.text_box.SetForeColor ~= nil then
+        self.text_box:SetForeColor(color)
+    end
+end
+
+function LuiTextInput:SetText(text)
+    self.text_box:SetText(text or "")
+    self:_refresh_placeholder()
+end
+
+function LuiTextInput:GetText()
+    return self.text_box:GetText()
+end
+
+function LuiTextInput:SetWantsKeyEvents(wants_key_events)
+    if self.text_box.SetWantsKeyEvents ~= nil then
+        self.text_box:SetWantsKeyEvents(wants_key_events)
+    end
+end
+
+function LuiTextInput:SetMultiline(multiline)
+    if self.text_box.SetMultiline ~= nil then
+        self.text_box:SetMultiline(multiline)
+    end
+end
+
+function LuiTextInput:SetSelectable(selectable)
+    if self.text_box.SetSelectable ~= nil then
+        self.text_box:SetSelectable(selectable)
+    end
+end
+
+function LuiTextInput:SetReadOnly(read_only)
+    if self.text_box.SetReadOnly ~= nil then
+        self.text_box:SetReadOnly(read_only)
+    end
+end
+
+function LuiTextInput:SetEnabled(enabled)
+    Turbine.UI.Control.SetEnabled(self, enabled)
+    if self.text_box.SetEnabled ~= nil then
+        self.text_box:SetEnabled(enabled)
+    end
+end
+
+function LuiTextInput:Focus()
+    self.text_box:Focus()
+end
+
+function LuiTextInput:HasFocus()
+    if self.text_box.HasFocus == nil then
+        return false
+    end
+    return self.text_box:HasFocus()
+end
+
+function LuiTextInput:destroy()
+    if self.placeholder_label ~= nil then
+        self.placeholder_label:SetParent(nil)
+    end
+    if self.text_box ~= nil then
+        self.text_box:SetParent(nil)
+    end
+    self:SetVisible(false)
+end

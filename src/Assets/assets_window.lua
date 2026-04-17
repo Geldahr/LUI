@@ -630,9 +630,10 @@ function AssetsWindow:Constructor()
     self.filter_bar = Turbine.UI.Control()
     self.filter_bar:SetParent(self)
 
-    self.filter_tb = Turbine.UI.Lotro.TextBox()
+    self.filter_tb = UI.Widgets.LuiTextInput()
     self.filter_tb:SetParent(self.filter_bar)
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.filter_tb:set_placeholder_text(TR["Search..."])
     self.filter_tb.TextChanged = function()
         self:update_filter()
     end
