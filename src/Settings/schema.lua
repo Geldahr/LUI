@@ -40,6 +40,7 @@ function _G.ensure_loaded_settings()
     ensure_table(s, "target")
     ensure_table(s, "party")
     ensure_table(s, "inventory")
+    ensure_table(s, "crafting")
     ensure_table(s, "assets")
     ensure_table(s, "bestiary")
     ensure_table(s, "status_bar")
@@ -64,6 +65,7 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "status_bar", "widgets", "wallet" })
     ensure_table_at(s, { "status_bar", "widgets", "wallet", "items" })
     ensure_table_at(s, { "status_bar", "widgets", "shortcut" })
+    ensure_table_at(s, { "status_bar", "widgets", "craft_plan" })
 
     ensure_table_at(s, { "self", "vitals" })
     ensure_table_at(s, { "self", "vitals", "frame" })
@@ -131,6 +133,9 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "party", "effects", "debuffs", "timer_font" })
 
     ensure_table_at(s, { "inventory", "window" })
+    ensure_table_at(s, { "crafting", "window" })
+    ensure_table_at(s, { "crafting", "tracked_plan" })
+    ensure_table_at(s, { "crafting", "tracked_plan", "entries" })
     ensure_table_at(s, { "assets", "window" })
     ensure_table_at(s, { "assets", "tile" })
     ensure_table_at(s, { "assets", "layouts" })
@@ -408,6 +413,29 @@ function _G.ensure_loaded_settings()
     ensure_assets_layout(assets_layouts.icons, 16, 8)
     ensure_assets_layout(assets_layouts.details, 4, 10)
 
+    local crafting = s.crafting
+    if crafting.window.left == nil then
+        crafting.window.left = _pos_x(720)
+    end
+    if crafting.window.top == nil then
+        crafting.window.top = _pos_y(150)
+    end
+    if crafting.window.width == nil then
+        crafting.window.width = 1100
+    end
+    if crafting.window.height == nil then
+        crafting.window.height = 700
+    end
+    if type(crafting.tracked_plan.entries) ~= "table" then
+        crafting.tracked_plan.entries = {}
+    end
+    if crafting.enabled == nil then
+        crafting.enabled = true
+    end
+    if crafting.display_mode ~= "scroll" and crafting.display_mode ~= "pages" then
+        crafting.display_mode = "pages"
+    end
+
     local bestiary = s.bestiary
     if bestiary.window.left == nil then
         bestiary.window.left = _pos_x(900)
@@ -653,6 +681,9 @@ function _G.ensure_loaded_settings()
     if sb.layout.right == nil then
         sb.layout.right = "%inventory% %gold%"
     end
+    if sb.layout.right == "%inventory% %gold% %craft%" then
+        sb.layout.right = "%inventory% %gold%"
+    end
 
     sb.item_registry = sb.item_registry or {}
 
@@ -713,6 +744,14 @@ function _G.ensure_loaded_settings()
 
     if widgets.shortcut.width == nil then widgets.shortcut.width = 20 end
     if widgets.shortcut.height == nil then widgets.shortcut.height = 20 end
+
+    local craft_plan_widget = widgets.craft_plan or {}
+    if craft_plan_widget.width == nil then craft_plan_widget.width = 220 end
+    if craft_plan_widget.max_visible == nil then craft_plan_widget.max_visible = 4 end
+    widgets.craft_plan = {
+        width = craft_plan_widget.width,
+        max_visible = craft_plan_widget.max_visible,
+    }
 
     local cd = s.self.cooldowns
     if cd.enabled == nil then

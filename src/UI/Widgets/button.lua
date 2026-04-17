@@ -2,13 +2,14 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
+import "LUI.src.UI.Widgets.style"
 
 local BASE_BUTTON_W = 89
 local BASE_BUTTON_H = 21
 local BASE_FONT_SIZE = 12
-local BASE_BORDER_THICKNESS = 1.5
 local ICON_POSITION_LEFT = "left"
 local ICON_POSITION_RIGHT = "right"
+local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -59,23 +60,23 @@ function LuiButton:Constructor()
     self._hover = false
     self._pressed = false
 
-    self._border_thickness = BASE_BORDER_THICKNESS
-    self._border_color = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
-    self._border_hover_color = self._border_color
-    self._border_active_color = self._border_color
-    self._border_disabled_color = self._border_color
+    self._border_thickness = tonumber(Style.BORDER_WIDTH) or 1
+    self._border_color = Style.CONTROL_BORDER
+    self._border_hover_color = Style.CONTROL_BORDER_HOVER
+    self._border_active_color = Style.CONTROL_BORDER_ACTIVE
+    self._border_disabled_color = Style.CONTROL_BORDER_DISABLED
 
-    self._back_normal = Turbine.UI.Color(1, 0.15, 0.15, 0.15)
-    self._back_hover = Turbine.UI.Color(1, 0.18, 0.24, 0.34)
-    self._back_pressed = Turbine.UI.Color(1, 0.10, 0.14, 0.20)
-    self._back_active = Turbine.UI.Color(1, 0.18, 0.30, 0.46)
-    self._back_disabled = Turbine.UI.Color(1, 0.10, 0.10, 0.10)
+    self._back_normal = Style.CONTROL_BACKGROUND
+    self._back_hover = Style.CONTROL_BACKGROUND_HOVER
+    self._back_pressed = Style.CONTROL_BACKGROUND_PRESSED
+    self._back_active = Style.CONTROL_BACKGROUND_ACTIVE
+    self._back_disabled = Style.CONTROL_BACKGROUND_DISABLED
 
-    self._text_normal = Turbine.UI.Color(1, 1, 1, 1)
-    self._text_hover = Turbine.UI.Color(1, 1, 1, 1)
-    self._text_pressed = Turbine.UI.Color(1, 1, 1, 1)
-    self._text_active = Turbine.UI.Color(1, 1, 1, 1)
-    self._text_disabled = Turbine.UI.Color(0.55, 0.85, 0.85, 0.85)
+    self._text_normal = Style.CONTROL_FOREGROUND
+    self._text_hover = Style.CONTROL_FOREGROUND_HOVER
+    self._text_pressed = Style.CONTROL_FOREGROUND_PRESSED
+    self._text_active = Style.CONTROL_FOREGROUND_ACTIVE
+    self._text_disabled = Style.CONTROL_FOREGROUND_DISABLED
 
     Turbine.UI.Control.SetSize(self, _scaled_int(self._scale, BASE_BUTTON_W), _scaled_int(self._scale, BASE_BUTTON_H))
     self:SetMouseVisible(true)
@@ -453,11 +454,11 @@ function LuiButton:_apply_default_font()
 end
 
 function LuiButton:_update_visual_state()
-    local border_px = math.max(0, _scaled_int(self._scale, self._border_thickness or BASE_BORDER_THICKNESS))
+    local border_px = math.max(0, _scaled_int(self._scale, self._border_thickness or tonumber(Style.BORDER_WIDTH) or 1))
     if border_px > 0 then
         self:SetBackColor(self:_current_border_color())
     else
-        self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+        self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     end
     if self._inner ~= nil then
         self._inner:SetBackColor(self:_current_back_color())
@@ -481,7 +482,7 @@ end
 
 function LuiButton:_layout()
     local w, h = self:GetSize()
-    local t = math.max(0, _scaled_int(self._scale, self._border_thickness or BASE_BORDER_THICKNESS))
+    local t = math.max(0, _scaled_int(self._scale, self._border_thickness or tonumber(Style.BORDER_WIDTH) or 1))
     if t < 0 then t = 0 end
 
     if self._inner ~= nil then

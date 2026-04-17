@@ -7,6 +7,7 @@ FR = {
     ["Use '/LUI config' to toggle the configuration window."] = "Utilisez '/LUI config' pour afficher ou fermer la fenêtre de configuration.",
     ["Done moving UI"] = "Déplacement terminé",
     ["Select"] = "Sélectionner",
+    ["Search..."] = "Rechercher...",
     ["Global"] = "Global",
     ["Self"] = "Soi",
     ["Target"] = "Cible",

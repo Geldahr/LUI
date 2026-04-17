@@ -7,6 +7,7 @@ DE = {
     ["Use '/LUI config' to toggle the configuration window."] = "Benutze '/LUI config', um das Einstellungsfenster umzuschalten.",
     ["Done moving UI"] = "UI verschieben beendet",
     ["Select"] = "Auswählen",
+    ["Search..."] = "Suchen...",
     ["Global"] = "Global",
     ["Self"] = "Selbst",
     ["Target"] = "Ziel",

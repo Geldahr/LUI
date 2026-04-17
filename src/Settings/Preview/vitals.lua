@@ -12,6 +12,7 @@ local _preview_scaled_number = Common.preview_scaled_number
 local _preview_text_align = Common.preview_text_align
 local _preview_resource_background = Common.preview_resource_background
 local _apply_preview_label_bounds = Common.apply_preview_label_bounds
+local _sync_preview_holder_height = Common.sync_preview_holder_height
 local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
 
 function ConfigWindow:init_self_vitals_preview()
@@ -306,10 +307,7 @@ function ConfigWindow:_update_vitals_preview(kind)
     local desired_h_inner = info_h + root_inner_h + _scaled_int(9)
     local desired_h = desired_h_inner + (2 * preview_border)
     local holder = self.controls[is_target and "target_vitals_preview" or "self_vitals_preview"]
-    if holder ~= nil and holder.height ~= desired_h then
-        holder.height = desired_h
-        self:layout()
-    end
+    _sync_preview_holder_height(self, holder, desired_h)
 
     local cw, ch = p.container:GetSize()
     local root_outer_h = root_inner_h + (2 * preview_border)

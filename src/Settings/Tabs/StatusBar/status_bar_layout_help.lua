@@ -12,6 +12,8 @@ function BuildStatusBarLayoutHelp()
         TR["  %wallet% - selected wallet items"],
         TR["  %item:[Simple Fish]% - tracked total for one inventory item"],
         TR["  %config% - toggle configuration window"],
+        TR["  %craft% - toggle crafting window"],
+        TR["  %craft.plan% - tracked crafting plan resources"],
         TR["  %bestiary% - toggle bestiary window"],
         TR["  %assets% - toggle assets window"],
     }

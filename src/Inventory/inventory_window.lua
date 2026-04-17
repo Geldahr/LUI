@@ -197,10 +197,11 @@ function InventoryWindow:Constructor()
 
     self._last_money = nil
 
-    self.filter_tb = Turbine.UI.Lotro.TextBox()
+    self.filter_tb = UI.Widgets.LineEdit()
     self.filter_tb:SetParent(self.header)
     self.filter_tb:SetFont(_scaled_font("Verdana", BASE_FILTER_FONT_SIZE))
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.filter_tb:set_placeholder_text(TR["Search..."])
 
     self.clear_button = UI.Widgets.LuiButton()
     self.clear_button:SetParent(self.header)

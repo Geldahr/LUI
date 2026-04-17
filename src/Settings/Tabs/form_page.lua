@@ -102,6 +102,10 @@ function SettingsFormPage:_bind_hint(target, help_source)
     if target == nil or help_source == nil then
         return
     end
+    if self.window ~= nil and self.window.bind_tooltip ~= nil then
+        self.window:bind_tooltip(target, help_source)
+        return
+    end
 
     local function resolve_help()
         local text = help_source
@@ -240,7 +244,7 @@ function SettingsFormPage:add_text(key, label_text, is_color, help_text, full_wi
         entry.tb:SetZOrder(2)
         self._color_fields[#self._color_fields + 1] = entry
     else
-        entry.tb = Turbine.UI.Lotro.TextBox()
+        entry.tb = UI.Widgets.LuiLineEdit()
         entry.tb:SetParent(self.form)
         entry.tb:SetFont(self.window.input_font)
         entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)

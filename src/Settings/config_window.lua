@@ -91,21 +91,9 @@ function ConfigWindow:Constructor()
         self:_on_main_tab_changed(index, page, text, self._pending_main_tab_sub_key)
     end
 
-    self.hint = Turbine.UI.Window()
-    self.hint:SetVisible(false)
-    self.hint:SetMouseVisible(false)
-    self.hint:SetZOrder(2000)
-    self.hint:SetBackColor(Turbine.UI.Color(0.92, 0.05, 0.05, 0.05))
-
-    self.hint_label = UI.Widgets.LuiLabel()
-    self.hint_label:SetParent(self.hint)
-    self.hint_label:SetPosition(_scaled_int(6), _scaled_int(4))
-    self.hint_label:SetSize(_scaled_int(267), _scaled_int(148))
-    self.hint_label:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
-    self.hint_label:SetForeColor(Turbine.UI.Color(1, 1, 1))
-    self.hint_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
-    self.hint_label:SetMultiline(true)
-    self.hint_label:SetMouseVisible(false)
+    self.tooltip = UI.Widgets.LuiTooltip()
+    self.tooltip:SetScale(_G.settings.global.scale)
+    self.tooltip:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
 
     self.confirm_overlay = Turbine.UI.Control()
     self.confirm_overlay:SetParent(self)
@@ -247,10 +235,9 @@ function ConfigWindow:apply_ui_scale()
     self:_update_ui_scale_metrics()
     local scale = _G.settings.global.scale
 
-    if self.hint_label ~= nil then
-        self.hint_label:SetPosition(_scaled_int(6), _scaled_int(4))
-        self.hint_label:SetSize(_scaled_int(267), _scaled_int(148))
-        self.hint_label:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
+    if self.tooltip ~= nil then
+        self.tooltip:SetScale(scale)
+        self.tooltip:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
     end
 
     if self.cancel_button ~= nil then
@@ -300,46 +287,21 @@ function ConfigWindow:close_all_dropdowns()
 end
 
 function ConfigWindow:show_hint_for(control, text)
-    if control == nil or type(text) ~= "string" or string.len(text) == 0 then
+    if self.tooltip == nil then
         return
     end
-
-    local max_width = _scaled_int(311)
-    local padding_x = _scaled_int(12)
-    local padding_y = _scaled_int(9)
-    local line_height = _scaled_int(12)
-
-    local line_count = 1
-    for _ in text:gmatch("\n") do
-        line_count = line_count + 1
-    end
-
-    local desired_height = math.min(
-        _scaled_int(178),
-        math.max(_scaled_int(44), (line_count * line_height) + padding_y + _scaled_int(7))
-    )
-    self.hint_label:SetText(text)
-    self.hint_label:SetSize(max_width - padding_x, desired_height - padding_y)
-    self.hint:SetSize(max_width, desired_height)
-
-    local x, y = control:PointToScreen(0, control:GetHeight() + _scaled_int(1))
-    local display_width, display_height = Turbine.UI.Display.GetSize()
-    if x + max_width > display_width then
-        x = display_width - max_width - _scaled_int(4)
-    end
-    if y + desired_height > display_height then
-        y = y - desired_height - control:GetHeight() - _scaled_int(4)
-    end
-    if x < 0 then x = 0 end
-    if y < 0 then y = 0 end
-
-    self.hint:SetPosition(x, y)
-    self.hint:SetVisible(true)
+    self.tooltip:ShowFor(control, text)
 end
 
 function ConfigWindow:hide_hint()
-    if self.hint ~= nil then
-        self.hint:SetVisible(false)
+    if self.tooltip ~= nil then
+        self.tooltip:Hide()
+    end
+end
+
+function ConfigWindow:bind_tooltip(control, text_source)
+    if self.tooltip ~= nil then
+        self.tooltip:Bind(control, text_source)
     end
 end
 
@@ -566,6 +528,7 @@ function ConfigWindow:refresh_runtime_settings()
     apply_assets_settings()
     apply_status_bar_settings()
     apply_cooldowns_settings()
+    apply_crafting_settings()
 
     self:apply_ui_scale()
     self:layout()
@@ -599,6 +562,9 @@ function ConfigWindow:refresh_runtime_settings()
     end
     if BESTIARY_WINDOW ~= nil and BESTIARY_WINDOW.apply_settings ~= nil then
         BESTIARY_WINDOW:apply_settings()
+    end
+    if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
+        CRAFTING_WINDOW:apply_settings()
     end
     if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.apply_settings ~= nil then
         BESTIARY_TRACKER:apply_settings()

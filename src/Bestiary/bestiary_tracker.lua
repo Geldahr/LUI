@@ -157,6 +157,7 @@ end
 
 local function _touch_generation()
     _G.bestiary_cache_generation = (_G.bestiary_cache_generation or 0) + 1
+    _G.bestiary_cache_dirty = true
 end
 
 local function _ensure_entry(name)

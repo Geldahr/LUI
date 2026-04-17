@@ -1166,7 +1166,7 @@ function BestiaryWindow:Constructor()
     self.level_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.level_label:SetText(TR["Level"] .. ":")
 
-    self.level_min_box = Turbine.UI.Lotro.TextBox()
+    self.level_min_box = UI.Widgets.LuiLineEdit()
     self.level_min_box:SetParent(self.level_bar)
     self.level_min_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 
@@ -1179,7 +1179,7 @@ function BestiaryWindow:Constructor()
     self.level_dash_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.level_dash_label:SetText("-")
 
-    self.level_max_box = Turbine.UI.Lotro.TextBox()
+    self.level_max_box = UI.Widgets.LuiLineEdit()
     self.level_max_box:SetParent(self.level_bar)
     self.level_max_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 
@@ -1207,9 +1207,10 @@ function BestiaryWindow:Constructor()
         on_level_filter_changed(self.level_max_box)
     end
 
-    self.filter_tb = Turbine.UI.Lotro.TextBox()
+    self.filter_tb = UI.Widgets.LineEdit()
     self.filter_tb:SetParent(self.filter_bar)
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.filter_tb:set_placeholder_text(TR["Search..."])
     self.filter_tb.TextChanged = function()
         if self._suppress_area_text_changed ~= true then
             self.current_area = nil

@@ -76,6 +76,10 @@ local function _get_current_character_name()
 end
 
 local function _ensure_assets_cache()
+    if _G.ensure_assets_cache ~= nil then
+        return _G.ensure_assets_cache()
+    end
+
     if type(_G.assets_cache) ~= "table" then
         _G.assets_cache = {}
     end
@@ -484,11 +488,14 @@ end
 ---------------------------------------------------------------------
 
 function AssetsStore:destroy()
-    self:_mark_all_dirty()
-    self:_refresh_availability_flags()
-    local changed = self:_flush_dirty_snapshots()
-    if changed == true then
-        self.generation = self.generation + 1
+    if _G.LUI_IS_UNLOADING ~= true then
+        self:_mark_all_dirty()
+        self:_refresh_availability_flags()
+        local changed = self:_flush_dirty_snapshots()
+        if changed == true then
+            self.generation = self.generation + 1
+            _G.assets_cache_dirty = true
+        end
     end
 
     self:_detach_callbacks()
@@ -515,6 +522,7 @@ function AssetsStore:refresh_now(source_key, force_bindings)
     local changed = self:_flush_dirty_snapshots()
     if changed == true then
         self.generation = self.generation + 1
+        _G.assets_cache_dirty = true
     end
 
     return changed
@@ -641,6 +649,14 @@ function AssetsStore:Update()
 
     if changed == true then
         self.generation = self.generation + 1
+        _G.assets_cache_dirty = true
+    end
+
+    if _G.LUI_IS_UNLOADING ~= true then
+        local crafting_store = _G.CRAFTING_STORE
+        if crafting_store ~= nil and crafting_store.refresh ~= nil then
+            crafting_store:refresh(false, 1)
+        end
     end
 end
 
@@ -845,26 +861,32 @@ function AssetsStore:_attach(object, event_name, callback)
 end
 
 function AssetsStore:_attach_callbacks()
+    local function queue_refresh(source_key)
+        self:_mark_source_dirty(source_key)
+        self.last_update_at = 0
+    end
+
     local function refresh_backpack()
-        self:refresh_now(SOURCE_BACKPACK, false)
+        queue_refresh(SOURCE_BACKPACK)
     end
 
     local function refresh_bank()
-        self:refresh_now(SOURCE_BANK, false)
+        queue_refresh(SOURCE_BANK)
     end
 
     local function refresh_vault()
-        self:refresh_now(SOURCE_VAULT, false)
+        queue_refresh(SOURCE_VAULT)
     end
 
     local function refresh_shared()
-        self:refresh_now(SOURCE_SHARED, false)
+        queue_refresh(SOURCE_SHARED)
     end
 
     if self.backpack ~= nil then
         self:_attach(self.backpack, "ItemAdded", refresh_backpack)
         self:_attach(self.backpack, "ItemRemoved", refresh_backpack)
         self:_attach(self.backpack, "ItemMoved", refresh_backpack)
+        self:_attach(self.backpack, "ItemChanged", refresh_backpack)
         self:_attach(self.backpack, "SizeChanged", refresh_backpack)
     end
 
@@ -872,6 +894,7 @@ function AssetsStore:_attach_callbacks()
         self:_attach(self.bank, "ItemAdded", refresh_bank)
         self:_attach(self.bank, "ItemRemoved", refresh_bank)
         self:_attach(self.bank, "ItemMoved", refresh_bank)
+        self:_attach(self.bank, "ItemChanged", refresh_bank)
         self:_attach(self.bank, "CountChanged", refresh_bank)
         self:_attach(self.bank, "ItemsRefreshed", refresh_bank)
         self:_attach(self.bank, "IsAvailableChanged", refresh_bank)
@@ -881,6 +904,7 @@ function AssetsStore:_attach_callbacks()
         self:_attach(self.vault, "ItemAdded", refresh_vault)
         self:_attach(self.vault, "ItemRemoved", refresh_vault)
         self:_attach(self.vault, "ItemMoved", refresh_vault)
+        self:_attach(self.vault, "ItemChanged", refresh_vault)
         self:_attach(self.vault, "CountChanged", refresh_vault)
         self:_attach(self.vault, "ItemsRefreshed", refresh_vault)
         self:_attach(self.vault, "IsAvailableChanged", refresh_vault)
@@ -890,6 +914,7 @@ function AssetsStore:_attach_callbacks()
         self:_attach(self.shared_storage, "ItemAdded", refresh_shared)
         self:_attach(self.shared_storage, "ItemRemoved", refresh_shared)
         self:_attach(self.shared_storage, "ItemMoved", refresh_shared)
+        self:_attach(self.shared_storage, "ItemChanged", refresh_shared)
         self:_attach(self.shared_storage, "CountChanged", refresh_shared)
         self:_attach(self.shared_storage, "ItemsRefreshed", refresh_shared)
         self:_attach(self.shared_storage, "IsAvailableChanged", refresh_shared)

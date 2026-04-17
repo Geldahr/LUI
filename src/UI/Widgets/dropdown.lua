@@ -2,11 +2,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.button"
-
-local DROP_DOWN_ARROW = Turbine.UI.Graphic(0x41007e1a)
-local DROP_DOWN_ARROW_HIGHLIGHT = Turbine.UI.Graphic(0x41007e1b)
-local DROP_DOWN_ARROW_PRESSED = Turbine.UI.Graphic(0x41007e18)
-local DROP_DOWN_ARROW_PRESSED_HIGHLIGHT = Turbine.UI.Graphic(0x41007e19)
+import "LUI.src.UI.Widgets.style"
 
 local BASE_ITEM_H = 18
 local BASE_ARROW_W = 13
@@ -16,7 +12,7 @@ local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_FLIP_GAP = 4
 local BASE_SCROLL_W = 10
-local BASE_BORDER_THICKNESS = 1.5
+local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -47,9 +43,9 @@ function LuiDropdown:Constructor()
     self._labels = {}
     self._values = {}
 
-    self._popup_border = BASE_BORDER_THICKNESS
-    self._popup_border_color = Turbine.UI.Color(1, 0.55, 0.65, 0.85)
-    self._popup_back_color = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
+    self._popup_border = tonumber(Style.BORDER_WIDTH) or 1
+    self._popup_border_color = Style.CONTROL_BORDER
+    self._popup_back_color = Style.BACKGROUND
 
     self._item_height = _scaled_int(self._scale, BASE_ITEM_H)
     self._max_visible = 10
@@ -61,15 +57,7 @@ function LuiDropdown:Constructor()
     self.button:SetParent(self)
     self.button:set_scale(self._scale)
     self.button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.button:set_icon(
-        DROP_DOWN_ARROW,
-        DROP_DOWN_ARROW_HIGHLIGHT,
-        DROP_DOWN_ARROW_PRESSED_HIGHLIGHT,
-        DROP_DOWN_ARROW,
-        BASE_ARROW_W,
-        nil,
-        LuiButton.icon_position.RIGHT
-    )
+    Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     self.button:set_icon_stretch_mode(0)
     self.button.Click = function()
         self:Toggle()
@@ -119,7 +107,7 @@ function LuiDropdown:Constructor()
 end
 
 function LuiDropdown:_popup_border_size()
-    return math.max(1, _scaled_int(self._scale, self._popup_border or BASE_BORDER_THICKNESS))
+    return math.max(1, _scaled_int(self._scale, self._popup_border or tonumber(Style.BORDER_WIDTH) or 1))
 end
 
 ---------------------------------------------------------------------
@@ -164,15 +152,7 @@ function LuiDropdown:set_scale(scale)
 
     if self.button ~= nil then
         self.button:set_scale(self._scale)
-        self.button:set_icon(
-            DROP_DOWN_ARROW,
-            DROP_DOWN_ARROW_HIGHLIGHT,
-            DROP_DOWN_ARROW_PRESSED_HIGHLIGHT,
-            DROP_DOWN_ARROW,
-            BASE_ARROW_W,
-            nil,
-            LuiButton.icon_position.RIGHT
-        )
+        Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     end
 
     for i = 1, #self._items do

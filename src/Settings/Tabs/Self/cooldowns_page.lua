@@ -41,6 +41,10 @@ local function _bind_hint(window, target, help_text)
     if target == nil or type(help_text) ~= "string" or help_text == "" then
         return
     end
+    if window ~= nil and window.bind_tooltip ~= nil then
+        window:bind_tooltip(target, help_text)
+        return
+    end
 
     local prev_enter = target.MouseEnter
     target.MouseEnter = function(sender, args)
@@ -69,7 +73,7 @@ local function _create_text_area(page, key, label_text, help_text)
     entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     entry.label:SetText(label_text)
 
-    entry.tb = Turbine.UI.Lotro.TextBox()
+    entry.tb = UI.Widgets.LuiLineEdit()
     entry.tb:SetParent(entry.control)
     entry.tb:SetFont(page.window.input_font)
     entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)

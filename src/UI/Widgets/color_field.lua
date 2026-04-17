@@ -2,6 +2,8 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.line_edit"
+import "LUI.src.UI.Widgets.style"
 import "LUI.src.Utils.color"
 
 ---@class LuiColorField : Turbine.UI.Control
@@ -34,6 +36,7 @@ local BASE_PICKER_CURSOR = 7
 local PICKER_DRAG_NONE = 0
 local PICKER_DRAG_HS = 1
 local PICKER_DRAG_VALUE = 2
+local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -156,14 +159,14 @@ function LuiColorField:Constructor(swatch_size, swatch_gap)
     self._picker_original = nil
     self.TextChanged = nil
 
-    self.tb = Turbine.UI.Lotro.TextBox()
+    self.tb = LuiLineEdit()
     self.tb:SetParent(self)
     self.tb:SetZOrder(1)
 
     self.swatch_border = Turbine.UI.Control()
     self.swatch_border:SetParent(self)
     self.swatch_border:SetMouseVisible(true)
-    self.swatch_border:SetBackColor(Turbine.UI.Color.White)
+    self.swatch_border:SetBackColor(Style.CONTROL_BORDER)
     self.swatch_border:SetZOrder(2)
 
     self.swatch = Turbine.UI.Control()
@@ -267,7 +270,7 @@ function LuiColorField:update_swatch()
     end
     local color = _hex_to_color(self:GetText())
     if color == nil then
-        self.swatch:SetBackColor(Turbine.UI.Color(0.2, 0.2, 0.2))
+        self.swatch:SetBackColor(Style.INVALID_BACKGROUND)
         return
     end
     self.swatch:SetBackColor(color)
@@ -340,20 +343,20 @@ function LuiColorField:open_picker()
     local panel = Turbine.UI.Control()
     panel:SetParent(overlay)
     panel:SetMouseVisible(true)
-    panel:SetBackColor(Turbine.UI.Color(0.10, 0.10, 0.10))
+    panel:SetBackColor(Style.PANEL_BACKGROUND)
     panel:SetZOrder(10000)
     panel:SetVisible(true)
 
     local border = Turbine.UI.Control()
     border:SetParent(panel)
     border:SetMouseVisible(false)
-    border:SetBackColor(Turbine.UI.Color.White)
+    border:SetBackColor(Style.CONTROL_BORDER)
     border:SetZOrder(1)
 
     local inner = Turbine.UI.Control()
     inner:SetParent(border)
     inner:SetMouseVisible(false)
-    inner:SetBackColor(Turbine.UI.Color(0.12, 0.12, 0.12))
+    inner:SetBackColor(Style.PANEL_INNER_BACKGROUND)
     inner:SetPosition(1, 1)
     inner:SetZOrder(2)
 

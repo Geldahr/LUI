@@ -17,12 +17,14 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.font = font
     self.icon_background = S.get_shortcut_icon(shortcut_key)
     self._available = nil
+    self._interaction_enabled = true
 
     self:SetSize(widget_w, bar_h)
     self:SetMouseVisible(false)
 
     self.button = LuiButton()
     self.button:SetParent(self)
+    self._interaction_target = self.button
     self.button:set_border_thickness(BUTTON_BORDER)
     self.button:set_border_color(S.SHORTCUT_BORDER_COLOR)
     self.button:set_hover_border_color(S.SHORTCUT_BORDER_HOVER_COLOR)
@@ -63,6 +65,9 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     end
 
     self.button.Click = function()
+        if self._interaction_enabled ~= true then
+            return
+        end
         S.activate_shortcut(self.shortcut_key)
         self:_refresh_state()
     end
@@ -77,6 +82,15 @@ end
 
 function ShortcutButtonWidget:update(now)
     self:_refresh_state()
+end
+
+function ShortcutButtonWidget:set_interaction_enabled(enabled)
+    self._interaction_enabled = enabled == true
+    self:_refresh_state()
+end
+
+function ShortcutButtonWidget:get_interaction_target()
+    return self._interaction_target
 end
 
 function ShortcutButtonWidget:destroy()
@@ -114,9 +128,12 @@ function ShortcutButtonWidget:_refresh_state()
     local available = S.get_shortcut_state(self.shortcut_key)
     local is_available = available == true
     if is_available == self._available then
+        if self.button ~= nil then
+            self.button:set_enabled(self._available == true and self._interaction_enabled == true)
+        end
         return
     end
 
     self._available = is_available
-    self.button:set_enabled(self._available)
+    self.button:set_enabled(self._available == true and self._interaction_enabled == true)
 end

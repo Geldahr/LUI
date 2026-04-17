@@ -96,6 +96,7 @@ function _G.rebuild_settings()
             },
         },
         inventory = { window = {} },
+        crafting = { window = {}, tracked_plan = { entries = {} }, display_mode = "pages", enabled = true },
         assets = { window = {}, tile = {}, layouts = { icons = {}, details = {} } },
         bestiary = { window = {} },
     }
@@ -197,6 +198,14 @@ function _G.rebuild_settings()
         assets.stack_items = raw_assets.stack_items
         assets.tile.icons = scaled_int(raw_assets.tile.icons)
         assets.tile.details = scaled_int(raw_assets.tile.details)
+    end
+
+    local raw_crafting = raw.crafting
+    if raw_crafting ~= nil then
+        _G.settings.crafting.window = raw_crafting.window
+        _G.settings.crafting.tracked_plan = raw_crafting.tracked_plan
+        _G.settings.crafting.display_mode = raw_crafting.display_mode
+        _G.settings.crafting.enabled = raw_crafting.enabled
     end
 
     local raw_bestiary = raw.bestiary
@@ -392,6 +401,12 @@ function _G.rebuild_settings()
         height = scaled_int(raw_sb.widgets.shortcut.height),
     }
 
+    sb.widgets.craft_plan = {
+        enabled = in_zones("craft_plan"),
+        width = scaled_int(raw_sb.widgets.craft_plan.width),
+        max_visible = math.max(1, tonumber(raw_sb.widgets.craft_plan.max_visible) or 4),
+    }
+
     sb.widgets.button = {
         width = sb.widgets.shortcut.width,
         height = sb.widgets.shortcut.height,
@@ -408,6 +423,7 @@ function _G.rebuild_settings()
     sb.widgets.config = build_shortcut_widget("config")
     sb.widgets.assets = build_shortcut_widget("assets")
     sb.widgets.bestiary = build_shortcut_widget("bestiary")
+    sb.widgets.craft = build_shortcut_widget("craft")
 
     local raw_cd = raw.self.cooldowns
     local cd = _G.settings.self.cooldowns

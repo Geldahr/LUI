@@ -1,4 +1,7 @@
 import "Turbine.UI"
+import "LUI.src.UI.Widgets.style"
+
+local Style = UI.Widgets.Style
 
 ---@class Image : Turbine.UI.Control
 Image = class(Turbine.UI.Control)
@@ -23,7 +26,7 @@ function Image:Constructor(icon, w, h)
     self:SetMouseVisible(false)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self._requested_w = nil
     self._requested_h = nil
     self._requested_side = nil

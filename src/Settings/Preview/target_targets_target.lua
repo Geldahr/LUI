@@ -5,6 +5,7 @@ local _require_font = Common.require_font
 local _apply_preview_border = Common.apply_preview_border
 local _preview_number_abbrev_settings = Common.preview_number_abbrev_settings
 local _morale_color_preview = Common.morale_color_preview
+local _sync_preview_holder_height = Common.sync_preview_holder_height
 local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
 
 function ConfigWindow:init_target_targets_target_preview()
@@ -139,10 +140,7 @@ function ConfigWindow:update_target_targets_target_preview()
     local outer_h = bar_h + (2 * preview_border)
     local desired_h = bar_h + 24 + (2 * preview_border)
     local holder = self.controls.target_targets_target_preview
-    if holder ~= nil and holder.height ~= desired_h then
-        holder.height = desired_h
-        self:layout()
-    end
+    _sync_preview_holder_height(self, holder, desired_h)
 
     local cw, ch = p.container:GetSize()
     local x = math.floor((cw - outer_w) / 2)

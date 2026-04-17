@@ -7,6 +7,7 @@ local S = _G.STATUS_BAR_COMMON
 
 local SHORTCUT_WIDGETS = {
     config = { shortcut_key = "config", display_mode = "icon" },
+    craft = { shortcut_key = "craft", display_mode = "text" },
     assets = { shortcut_key = "assets", display_mode = "icon" },
     bestiary = { shortcut_key = "bestiary", display_mode = "icon" },
 }
@@ -241,13 +242,23 @@ local function _bind_widget_interactions(owner, widget, menu_title)
     end
 
     widget._status_bar_menu_title = tostring(menu_title or "")
-    widget:SetMouseVisible(true)
-    if widget.SetAllowDrop ~= nil then
-        widget:SetAllowDrop(true)
+    local target = widget
+    if widget.get_interaction_target ~= nil then
+        local candidate = widget:get_interaction_target()
+        if candidate ~= nil then
+            target = candidate
+        end
+    elseif widget._interaction_target ~= nil then
+        target = widget._interaction_target
     end
 
-    local prior_mouse_click = widget.MouseClick
-    widget.MouseClick = function(sender, args)
+    target:SetMouseVisible(true)
+    if target.SetAllowDrop ~= nil then
+        target:SetAllowDrop(true)
+    end
+
+    local prior_mouse_click = target.MouseClick
+    target.MouseClick = function(sender, args)
         if args ~= nil and args.Button == Turbine.UI.MouseButton.Right then
             owner:_show_widget_menu(widget)
             return
@@ -260,8 +271,8 @@ local function _bind_widget_interactions(owner, widget, menu_title)
         end
     end
 
-    local prior_mouse_down = widget.MouseDown
-    widget.MouseDown = function(sender, args)
+    local prior_mouse_down = target.MouseDown
+    target.MouseDown = function(sender, args)
         if owner:_handle_widget_mouse_down(widget, args) == true then
             return
         end
@@ -270,18 +281,18 @@ local function _bind_widget_interactions(owner, widget, menu_title)
         end
     end
 
-    widget.DragDrop = function(_, args)
+    target.DragDrop = function(_, args)
         owner:_handle_drag_drop(widget, args)
     end
-    widget.DragEnter = function(_, args)
+    target.DragEnter = function(_, args)
         owner:_handle_drag_enter(widget, args)
     end
-    widget.DragLeave = function(_, args)
+    target.DragLeave = function(_, args)
         owner:_handle_drag_leave(widget, args)
     end
 
-    local prior_mouse_move = widget.MouseMove
-    widget.MouseMove = function(sender, args)
+    local prior_mouse_move = target.MouseMove
+    target.MouseMove = function(sender, args)
         if owner:_handle_widget_mouse_move(widget, args) == true then
             return
         end
@@ -291,8 +302,8 @@ local function _bind_widget_interactions(owner, widget, menu_title)
         end
     end
 
-    local prior_mouse_up = widget.MouseUp
-    widget.MouseUp = function(sender, args)
+    local prior_mouse_up = target.MouseUp
+    target.MouseUp = function(sender, args)
         if owner:_handle_widget_mouse_up(widget, args) == true then
             return
         end
@@ -458,6 +469,12 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
         end
         return ctor(widget_entry ~= nil and widget_entry.name or nil, widget_w, bar_h, font,
             widget_entry ~= nil and widget_entry.icon_image_id or nil)
+    elseif widget_key == "craft_plan" then
+        local ctor = _widget_ctor("CraftPlanWidget")
+        if ctor == nil then
+            error("Missing StatusBar widget constructor: CraftPlanWidget")
+        end
+        return ctor(widget_w, bar_h, font, widget_cfg ~= nil and widget_cfg.max_visible or nil)
     elseif widget_key == "button" then
         local ctor = _widget_ctor("AliasButtonWidget")
         if ctor == nil then
