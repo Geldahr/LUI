@@ -6,6 +6,7 @@ local _scaled_int = Common.scaled_int
 local _apply_preview_border = Common.apply_preview_border
 local _preview_number_abbrev_settings = Common.preview_number_abbrev_settings
 local _morale_color_preview = Common.morale_color_preview
+local _sync_preview_holder_height = Common.sync_preview_holder_height
 local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
 
 function ConfigWindow:init_target_boss_vitals_preview()
@@ -204,10 +205,7 @@ function ConfigWindow:update_target_boss_vitals_preview()
     local outer_w = frame_w + (2 * preview_border)
     local outer_h = total_h + (2 * preview_border)
     local holder_extra_h = _scaled_int(9)
-    if holder ~= nil and holder.height ~= (outer_h + holder_extra_h) then
-        holder.height = outer_h + holder_extra_h
-        self:layout()
-    end
+    _sync_preview_holder_height(self, holder, outer_h + holder_extra_h)
 
     local off_x = math.max(0, math.floor((holder_w - outer_w) / 2))
     local outer_y = _scaled_int(4)

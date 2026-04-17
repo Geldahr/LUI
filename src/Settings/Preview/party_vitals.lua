@@ -12,6 +12,7 @@ local _preview_scaled_number = Common.preview_scaled_number
 local _preview_text_align = Common.preview_text_align
 local _preview_resource_background = Common.preview_resource_background
 local _apply_preview_label_bounds = Common.apply_preview_label_bounds
+local _sync_preview_holder_height = Common.sync_preview_holder_height
 local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
 
 function ConfigWindow:init_party_vitals_preview()
@@ -311,10 +312,7 @@ function ConfigWindow:update_party_vitals_preview()
     local preview_border = 1
     local desired_height = total_h + 12 + (2 * preview_border)
     if desired_height < 80 then desired_height = 80 end
-    if holder.height ~= desired_height then
-        holder.height = desired_height
-        self:layout()
-    end
+    _sync_preview_holder_height(self, holder, desired_height)
 
     local p = self.party_vitals_preview
     local outer_w = total_w + (2 * preview_border)

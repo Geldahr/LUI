@@ -169,6 +169,35 @@ function Common.apply_preview_border(p, w, h, x, y)
     p.border_right:SetSize(bw, hh)
 end
 
+function Common.sync_preview_holder_height(window, holder, desired_height)
+    if window == nil or holder == nil or holder.control == nil then
+        return holder
+    end
+
+    local h = tonumber(desired_height)
+    if h == nil then
+        return holder
+    end
+    h = math.floor(h + 0.5)
+    if h < 1 then
+        h = 1
+    end
+
+    if holder.height ~= h then
+        holder.height = h
+        if window.layout ~= nil then
+            window:layout()
+        end
+    end
+
+    local w = holder.control:GetWidth()
+    if type(w) == "number" and w > 0 then
+        holder.control:SetSize(w, h)
+    end
+
+    return holder
+end
+
 function Common.ensure_gradient_preview(window, control_key)
     local holder = window.controls[control_key]
     if holder == nil or holder.control == nil then

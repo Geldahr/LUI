@@ -1,6 +1,7 @@
 local Common = SettingsPreviewCommon
 local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
+local _sync_preview_holder_height = Common.sync_preview_holder_height
 
 local function _create_row(container)
     local row = {}
@@ -234,10 +235,7 @@ function ConfigWindow:update_expiring_effects_preview()
 
     local desired_height = (3 * bh) + (2 * row_spacing) + 12
     if desired_height < 80 then desired_height = 80 end
-    if holder.height ~= desired_height then
-        holder.height = desired_height
-        self:layout()
-    end
+    _sync_preview_holder_height(self, holder, desired_height)
 
     local function text_align(value)
         return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
