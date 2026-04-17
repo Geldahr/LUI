@@ -2289,8 +2289,13 @@ function CraftingWindow:_node_amount_text(node)
     return _ratio_text(owned_quantity, tonumber(node.required) or 0)
 end
 
-function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level)
+function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, options)
     if list_box == nil or type(node) ~= "table" then
+        return
+    end
+
+    local path_keys = type(options) == "table" and options.path_keys or nil
+    if type(path_keys) == "table" and node.key ~= nil and path_keys[node.key] == true then
         return
     end
 
@@ -2314,8 +2319,29 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level)
         return
     end
 
+    local child_options = options
+    if node.key ~= nil then
+        local next_path_keys = {}
+        if type(path_keys) == "table" then
+            for key, value in pairs(path_keys) do
+                if value == true then
+                    next_path_keys[key] = true
+                end
+            end
+        end
+        next_path_keys[node.key] = true
+
+        child_options = {}
+        if type(options) == "table" then
+            for key, value in pairs(options) do
+                child_options[key] = value
+            end
+        end
+        child_options.path_keys = next_path_keys
+    end
+
     for index = 1, #node.children do
-        self:_append_node_rows(list_box, row_w, node.children[index], indent_level + 1)
+        self:_append_node_rows(list_box, row_w, node.children[index], indent_level + 1, child_options)
     end
 end
 
@@ -2408,8 +2434,17 @@ function CraftingWindow:refresh_selected_recipe()
     self.plan_spin_box:set_value(self.plan_counts[recipe.id] or 0, false)
 
     local row_w = self:_current_detail_list_width()
+    local detail_node_options = {
+        path_keys = {},
+    }
+    if type(recipe.result_key) == "string" and recipe.result_key ~= "" then
+        detail_node_options.path_keys[recipe.result_key] = true
+    end
+    if type(recipe.critical_result_key) == "string" and recipe.critical_result_key ~= "" then
+        detail_node_options.path_keys[recipe.critical_result_key] = true
+    end
     for i = 1, #evaluation.ingredients do
-        self:_append_node_rows(self.ingredients_list, row_w, evaluation.ingredients[i], 0)
+        self:_append_node_rows(self.ingredients_list, row_w, evaluation.ingredients[i], 0, detail_node_options)
     end
 
     self.ingredients_list:SetVisible(true)
