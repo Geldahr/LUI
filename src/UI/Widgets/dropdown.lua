@@ -12,6 +12,7 @@ local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_FLIP_GAP = 4
 local BASE_SCROLL_W = 10
+local BASE_POPUP_PAD_X = 2
 local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
@@ -56,6 +57,7 @@ function LuiDropdown:Constructor()
     self.button = LuiButton()
     self.button:SetParent(self)
     self.button:set_scale(self._scale)
+    self.button:set_padding(BASE_POPUP_PAD_X)
     self.button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
     Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     self.button:set_icon_stretch_mode(0)
@@ -152,6 +154,7 @@ function LuiDropdown:set_scale(scale)
 
     if self.button ~= nil then
         self.button:set_scale(self._scale)
+        self.button:set_padding(BASE_POPUP_PAD_X)
         Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     end
 
@@ -289,18 +292,17 @@ function LuiDropdown:Open()
         visible_count = self._max_visible
     end
 
-    local list_height = (visible_count * self._item_height)
-    local list_width = width
-
     local border = self:_popup_border_size()
+    local inner_width = math.max(0, width - (2 * border))
     local scroll_w = BASE_SCROLL_W
     local use_scroll = item_count > visible_count
+    local list_height = visible_count * self._item_height
 
-    self.popup:SetSize(list_width + (2 * border), list_height + (2 * border))
-    self.popup_inner:SetSize(list_width, list_height)
+    self.popup:SetSize(width, list_height + (2 * border))
+    self.popup_inner:SetSize(inner_width, list_height)
 
     self.popup_list:SetPosition(0, 0)
-    self.popup_list:SetSize(list_width - (use_scroll and scroll_w or 0), list_height)
+    self.popup_list:SetSize(math.max(0, inner_width - (use_scroll and scroll_w or 0)), list_height)
 
     self.popup_scroll:SetPosition(self.popup_list:GetWidth(), 0)
     self.popup_scroll:SetHeight(list_height)
@@ -412,6 +414,7 @@ function LuiDropdown:_rebuild_items()
         local b = LuiButton()
         b:set_scale(self._scale)
         b:set_border_thickness(0)
+        b:set_padding(BASE_POPUP_PAD_X)
         b:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
         b:set_text(tostring(opt))
         if self._item_font ~= nil then

@@ -1130,7 +1130,7 @@ function CraftingWindow:Constructor()
     self.scope_label:SetParent(self.top_bar)
     self.scope_label:SetMouseVisible(false)
     self.scope_label:SetForeColor(TEXT_META)
-    self.scope_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.scope_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.scope_label:SetText(TR["Materials"])
 
     self.scope_dropdown = UI.Widgets.LuiCheckDropdown()
@@ -1148,7 +1148,7 @@ function CraftingWindow:Constructor()
     self.profession_label:SetParent(self.top_bar)
     self.profession_label:SetMouseVisible(false)
     self.profession_label:SetForeColor(TEXT_META)
-    self.profession_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.profession_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.profession_label:SetText(TR["Profession"])
 
     self.profession_dropdown = UI.Widgets.LuiDropdown()
@@ -1165,7 +1165,7 @@ function CraftingWindow:Constructor()
     self.availability_label:SetParent(self.top_bar)
     self.availability_label:SetMouseVisible(false)
     self.availability_label:SetForeColor(TEXT_META)
-    self.availability_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.availability_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.availability_label:SetText(TR["Show"])
 
     self.availability_dropdown = UI.Widgets.LuiDropdown()
@@ -1186,7 +1186,7 @@ function CraftingWindow:Constructor()
     self.level_label:SetParent(self.top_bar)
     self.level_label:SetMouseVisible(false)
     self.level_label:SetForeColor(TEXT_META)
-    self.level_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.level_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.level_label:SetText(TR["Equip lvl"])
 
     self.level_min_box = UI.Widgets.LuiLineEdit()
@@ -1743,8 +1743,8 @@ function CraftingWindow:_scope_source_summary(selected_values)
     if #selected_labels == #values then
         return TR["All"]
     end
-    if #selected_labels <= 2 then
-        return table.concat(selected_labels, " + ")
+    if #selected_labels == 1 then
+        return selected_labels[1]
     end
     return _format_count(#selected_labels) .. " " .. TR["locations"]
 end
@@ -2726,8 +2726,10 @@ function CraftingWindow:layout()
     self.clear_button:SetSize(clear_w, bar_h)
 
     local row2_y = bar_h + gap
+    local label_gap = _scaled_int(4)
+    local group_gap = _scaled_int(18)
     local scope_label_w = _scaled_int(56)
-    local scope_w = _scaled_int(176)
+    local scope_w = _scaled_int(152)
     local profession_label_w = _scaled_int(54)
     local profession_w = _scaled_int(140)
     local availability_label_w = _scaled_int(34)
@@ -2742,27 +2744,27 @@ function CraftingWindow:layout()
     self.level_dash_label:SetSize(level_dash_w, bar_h)
     self.level_min_box:SetPosition(row2_right - (level_box_w * 2) - (gap * 2) - level_dash_w, row2_y)
     self.level_min_box:SetSize(level_box_w, bar_h)
-    self.level_label:SetPosition(row2_right - (level_box_w * 2) - (gap * 3) - level_dash_w - level_label_w, row2_y)
+    self.level_label:SetPosition(row2_right - (level_box_w * 2) - (gap * 2) - label_gap - level_dash_w - level_label_w, row2_y)
     self.level_label:SetSize(level_label_w, bar_h)
 
     local row2_left = 0
     self.profession_label:SetPosition(row2_left, row2_y)
     self.profession_label:SetSize(profession_label_w, bar_h)
-    row2_left = row2_left + profession_label_w + gap
+    row2_left = row2_left + profession_label_w + label_gap
     self.profession_dropdown:SetPosition(row2_left, row2_y)
     self.profession_dropdown:SetSize(profession_w, bar_h)
-    row2_left = row2_left + profession_w + gap
+    row2_left = row2_left + profession_w + group_gap
 
     self.scope_label:SetPosition(row2_left, row2_y)
     self.scope_label:SetSize(scope_label_w, bar_h)
-    row2_left = row2_left + scope_label_w + gap
+    row2_left = row2_left + scope_label_w + label_gap
     self.scope_dropdown:SetPosition(row2_left, row2_y)
     self.scope_dropdown:SetSize(scope_w, bar_h)
-    row2_left = row2_left + scope_w + gap
+    row2_left = row2_left + scope_w + group_gap
 
     self.availability_label:SetPosition(row2_left, row2_y)
     self.availability_label:SetSize(availability_label_w, bar_h)
-    row2_left = row2_left + availability_label_w + gap
+    row2_left = row2_left + availability_label_w + label_gap
     self.availability_dropdown:SetPosition(row2_left, row2_y)
     self.availability_dropdown:SetSize(availability_w, bar_h)
 

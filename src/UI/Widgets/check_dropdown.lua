@@ -13,6 +13,11 @@ local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_FLIP_GAP = 4
 local BASE_SCROLL_W = 10
+local BASE_POPUP_PAD_X = 2
+local BASE_VISIBLE_PAD = 2
+local BASE_VISIBLE_ITEM_GAP = 2
+local BASE_RIGHT_EXTRA_PAD = 2
+local BASE_CHECKBOX_ICON_SIZE = 16
 local Style = UI.Widgets.Style
 
 local function _scaled_int(scale, value)
@@ -45,6 +50,7 @@ function LuiCheckDropdown:Constructor()
     self._values = {}
     self._selected = {}
     self._items = {}
+    self._rows = {}
     self._item_font = nil
     self._item_height = _scaled_int(self._scale, BASE_ITEM_H)
     self._max_visible = 10
@@ -56,6 +62,7 @@ function LuiCheckDropdown:Constructor()
     self.button = LuiButton()
     self.button:SetParent(self)
     self.button:set_scale(self._scale)
+    self.button:set_padding(BASE_POPUP_PAD_X)
     self.button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
     Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     self.button:set_icon_stretch_mode(0)
@@ -140,6 +147,7 @@ function LuiCheckDropdown:set_scale(scale)
 
     if self.button ~= nil then
         self.button:set_scale(self._scale)
+        self.button:set_padding(BASE_POPUP_PAD_X)
         Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     end
     for i = 1, #self._items do
@@ -276,25 +284,41 @@ function LuiCheckDropdown:Open()
     local x, y = self.button:PointToScreen(0, self.button:GetHeight() + _scaled_int(self._scale, BASE_OPEN_GAP))
     local width = self.button:GetWidth()
     local visible_count = math.min(item_count, self._max_visible)
-    local list_height = visible_count * self._item_height
     local border = self:_popup_border_size()
+    local inner_width = math.max(0, width - (2 * border))
     local use_scroll = item_count > visible_count
     local scroll_w = BASE_SCROLL_W
+    local pad_x = _scaled_int(self._scale, BASE_POPUP_PAD_X)
+    local visible_pad = _scaled_int(self._scale, BASE_VISIBLE_PAD)
+    local visible_gap = _scaled_int(self._scale, BASE_VISIBLE_ITEM_GAP)
+    local right_pad = pad_x + _scaled_int(self._scale, BASE_RIGHT_EXTRA_PAD)
+    local checkbox_icon_h = math.min(self._item_height, _scaled_int(self._scale, BASE_CHECKBOX_ICON_SIZE))
+    local checkbox_inner_y = math.max(0, math.floor(((self._item_height - checkbox_icon_h) / 2) + 0.5))
+    local pad_y = math.max(0, visible_pad - checkbox_inner_y)
+    local row_gap = math.max(0, visible_gap - (checkbox_inner_y * 2))
+    local list_height = (visible_count * self._item_height) + (math.max(0, visible_count - 1) * row_gap)
 
-    self.popup:SetSize(width + (2 * border), list_height + (2 * border))
+    self.popup:SetSize(width, list_height + (2 * pad_y) + (2 * border))
     self.popup_inner:SetPosition(border, border)
-    self.popup_inner:SetSize(width, list_height)
+    self.popup_inner:SetSize(inner_width, list_height + (2 * pad_y))
 
-    self.popup_list:SetPosition(0, 0)
-    self.popup_list:SetSize(width - (use_scroll and scroll_w or 0), list_height)
+    self.popup_list:SetPosition(pad_x, pad_y)
+    self.popup_list:SetSize(math.max(0, inner_width - pad_x - right_pad - (use_scroll and scroll_w or 0)), list_height)
 
-    self.popup_scroll:SetPosition(self.popup_list:GetWidth(), 0)
+    self.popup_scroll:SetPosition(pad_x + self.popup_list:GetWidth(), pad_y)
     self.popup_scroll:SetHeight(list_height)
     self.popup_scroll:SetVisible(use_scroll)
 
     for i = 1, item_count do
-        if self._items[i] ~= nil then
-            self._items[i]:SetSize(self.popup_list:GetWidth(), self._item_height)
+        local row = self._rows[i]
+        local checkbox = self._items[i]
+        if row ~= nil then
+            local item_gap = (i < item_count) and row_gap or 0
+            row:SetSize(self.popup_list:GetWidth(), self._item_height + item_gap)
+        end
+        if checkbox ~= nil then
+            checkbox:SetPosition(0, 0)
+            checkbox:SetSize(self.popup_list:GetWidth(), self._item_height)
         end
     end
 
@@ -364,9 +388,14 @@ end
 function LuiCheckDropdown:_rebuild_items()
     self.popup_list:ClearItems()
     self._items = {}
+    self._rows = {}
 
     for i = 1, #self._labels do
+        local row = Turbine.UI.Control()
+        row:SetMouseVisible(false)
+
         local checkbox = LuiCheckBox()
+        checkbox:SetParent(row)
         checkbox:SetScale(self._scale)
         checkbox:SetText(tostring(self._labels[i]))
         checkbox:SetForeColor(Style.CONTROL_FOREGROUND)
@@ -379,7 +408,8 @@ function LuiCheckDropdown:_rebuild_items()
             end
             self:_set_value_selected(self._values[i], checkbox:IsChecked() == true, true)
         end
-        self.popup_list:AddItem(checkbox)
+        self.popup_list:AddItem(row)
+        self._rows[#self._rows + 1] = row
         self._items[#self._items + 1] = checkbox
     end
 end

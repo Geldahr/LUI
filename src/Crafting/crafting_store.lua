@@ -10,6 +10,7 @@ local SOURCE_BACKPACK = "backpack"
 local SOURCE_BANK = "bank"
 local SOURCE_VAULT = "vault"
 local SOURCE_SHARED = "shared_storage"
+local SOURCE_OTHER_CHARACTERS = "other_characters"
 local SOURCE_SCOPE_PREFIX = "sources:"
 
 local FILTER_ALL = "__all"
@@ -27,6 +28,7 @@ local SOURCE_ORDER = {
     SOURCE_BANK,
     SOURCE_VAULT,
     SOURCE_SHARED,
+    SOURCE_OTHER_CHARACTERS,
 }
 
 local SOURCE_SET = {
@@ -34,6 +36,7 @@ local SOURCE_SET = {
     [SOURCE_BANK] = true,
     [SOURCE_VAULT] = true,
     [SOURCE_SHARED] = true,
+    [SOURCE_OTHER_CHARACTERS] = true,
 }
 
 local PROFESSION_ORDER = {
@@ -612,6 +615,7 @@ local function _source_option_labels()
         TR["Bank"],
         TR["Vault"],
         TR["Shared Storage"],
+        TR["Other characters"],
     }
 end
 
@@ -706,6 +710,7 @@ function CraftingStore:Constructor()
         [SOURCE_BANK] = {},
         [SOURCE_VAULT] = {},
         [SOURCE_SHARED] = {},
+        [SOURCE_OTHER_CHARACTERS] = {},
     }
     self.profession_option_labels = { TR["All professions"] }
     self.profession_option_values = { FILTER_ALL }
@@ -743,7 +748,7 @@ function CraftingStore:get_source_options()
 end
 
 function CraftingStore:get_default_source_keys()
-    return { SOURCE_BACKPACK, SOURCE_BANK, SOURCE_VAULT }
+    return { SOURCE_BACKPACK, SOURCE_BANK, SOURCE_VAULT, SOURCE_SHARED }
 end
 
 function CraftingStore:get_all_source_keys()
@@ -1248,6 +1253,7 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
         [SOURCE_BANK] = {},
         [SOURCE_VAULT] = {},
         [SOURCE_SHARED] = {},
+        [SOURCE_OTHER_CHARACTERS] = {},
     }
 
     local entries
@@ -1283,6 +1289,9 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
                     _add_count(source_ownership[SOURCE_BANK], key, quantity)
                 elseif record.owner == current_character and record.source_key == SOURCE_VAULT then
                     _add_count(source_ownership[SOURCE_VAULT], key, quantity)
+                elseif record.owner ~= current_character and
+                    (record.source_key == SOURCE_BACKPACK or record.source_key == SOURCE_BANK or record.source_key == SOURCE_VAULT) then
+                    _add_count(source_ownership[SOURCE_OTHER_CHARACTERS], key, quantity)
                 end
 
                 if record.source_key == SOURCE_SHARED then

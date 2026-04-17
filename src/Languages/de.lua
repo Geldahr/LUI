@@ -264,6 +264,7 @@ DE = {
     ["One skill name per line or comma-separated. Case-insensitive. Exact match or prefix with trailing *."] = "Ein Fertigkeitsname pro Zeile oder durch Kommas getrennt. Groß-/Kleinschreibung wird ignoriert. Exakte Übereinstimmung oder Präfix mit abschließendem *.",
     ["Order"] = "Reihenfolge",
     ["Order matters. Unknown tokens are ignored."] = "Die Reihenfolge ist wichtig. Unbekannte Tokens werden ignoriert.",
+    ["Other characters"] = "Andere Charaktere",
     ["Outline color"] = "Umrissfarbe",
     ["Party Layout"] = "Gruppenlayout",
     ["Pick the closest layout."] = "Wähle das ähnlichste Layout.",

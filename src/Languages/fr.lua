@@ -264,6 +264,7 @@ FR = {
     ["One skill name per line or comma-separated. Case-insensitive. Exact match or prefix with trailing *."] = "Un nom de compétence par ligne ou séparé par des virgules. Insensible à la casse. Correspondance exacte ou préfixe avec * final.",
     ["Order"] = "Ordre",
     ["Order matters. Unknown tokens are ignored."] = "L'ordre compte. Les jetons inconnus sont ignorés.",
+    ["Other characters"] = "Autres personnages",
     ["Outline color"] = "Couleur du contour",
     ["Party Layout"] = "Disposition du groupe",
     ["Pick the closest layout."] = "Choisissez la disposition la plus proche.",
