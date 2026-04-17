@@ -102,6 +102,10 @@ function SettingsFormPage:_bind_hint(target, help_source)
     if target == nil or help_source == nil then
         return
     end
+    if self.window ~= nil and self.window.bind_tooltip ~= nil then
+        self.window:bind_tooltip(target, help_source)
+        return
+    end
 
     local function resolve_help()
         local text = help_source

@@ -41,6 +41,10 @@ local function _bind_hint(window, target, help_text)
     if target == nil or type(help_text) ~= "string" or help_text == "" then
         return
     end
+    if window ~= nil and window.bind_tooltip ~= nil then
+        window:bind_tooltip(target, help_text)
+        return
+    end
 
     local prev_enter = target.MouseEnter
     target.MouseEnter = function(sender, args)

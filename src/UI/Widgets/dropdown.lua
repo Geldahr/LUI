@@ -43,7 +43,7 @@ function LuiDropdown:Constructor()
     self._labels = {}
     self._values = {}
 
-    self._popup_border = tonumber(Style.CONTROL_BORDER_WIDTH) or 1
+    self._popup_border = tonumber(Style.BORDER_WIDTH) or 1
     self._popup_border_color = Style.CONTROL_BORDER
     self._popup_back_color = Style.BACKGROUND
 
@@ -107,7 +107,7 @@ function LuiDropdown:Constructor()
 end
 
 function LuiDropdown:_popup_border_size()
-    return math.max(1, _scaled_int(self._scale, self._popup_border or tonumber(Style.CONTROL_BORDER_WIDTH) or 1))
+    return math.max(1, _scaled_int(self._scale, self._popup_border or tonumber(Style.BORDER_WIDTH) or 1))
 end
 
 ---------------------------------------------------------------------

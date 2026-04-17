@@ -229,7 +229,7 @@ function LuiCheckBox:_layout()
     local icon_y = math.max(0, _round((h - icon_size) / 2))
     local label_x = icon_size
     local visual_scale = self._scale * self._icon_scale
-    local border_thickness = math.max(1, _round((tonumber(Style.CONTROL_BORDER_WIDTH) or 1) * visual_scale))
+    local border_thickness = math.max(1, _round((tonumber(Style.BORDER_WIDTH) or 1) * visual_scale))
     local fill_margin = math.max(1, _round(BASE_FILL_MARGIN * visual_scale))
     local fill_offset = border_thickness + fill_margin
 

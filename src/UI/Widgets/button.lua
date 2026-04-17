@@ -60,7 +60,7 @@ function LuiButton:Constructor()
     self._hover = false
     self._pressed = false
 
-    self._border_thickness = tonumber(Style.CONTROL_BORDER_WIDTH) or 1
+    self._border_thickness = tonumber(Style.BORDER_WIDTH) or 1
     self._border_color = Style.CONTROL_BORDER
     self._border_hover_color = Style.CONTROL_BORDER_HOVER
     self._border_active_color = Style.CONTROL_BORDER_ACTIVE
@@ -454,7 +454,7 @@ function LuiButton:_apply_default_font()
 end
 
 function LuiButton:_update_visual_state()
-    local border_px = math.max(0, _scaled_int(self._scale, self._border_thickness or tonumber(Style.CONTROL_BORDER_WIDTH) or 1))
+    local border_px = math.max(0, _scaled_int(self._scale, self._border_thickness or tonumber(Style.BORDER_WIDTH) or 1))
     if border_px > 0 then
         self:SetBackColor(self:_current_border_color())
     else
@@ -482,7 +482,7 @@ end
 
 function LuiButton:_layout()
     local w, h = self:GetSize()
-    local t = math.max(0, _scaled_int(self._scale, self._border_thickness or tonumber(Style.CONTROL_BORDER_WIDTH) or 1))
+    local t = math.max(0, _scaled_int(self._scale, self._border_thickness or tonumber(Style.BORDER_WIDTH) or 1))
     if t < 0 then t = 0 end
 
     if self._inner ~= nil then

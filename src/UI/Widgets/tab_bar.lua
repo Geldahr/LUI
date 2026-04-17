@@ -277,7 +277,7 @@ function LuiTabBar:Constructor()
     self._horizontal_scroll_button_gap = 0
     self._horizontal_follow_selected_once = false
 
-    self._border_width = tonumber(Style.CONTROL_BORDER_WIDTH) or 1
+    self._border_width = tonumber(Style.BORDER_WIDTH) or 1
     self._border_color = Style.CONTROL_BORDER
     self._strip_back = Style.ALTERNATE_BACKGROUND
     self._content_back = Style.BACKGROUND
@@ -1330,7 +1330,7 @@ end
 
 function LuiTabBar:_layout()
     local width, height = self:GetSize()
-    local border = math.max(1, _scaled_int(self._scale, self._border_width or tonumber(Style.CONTROL_BORDER_WIDTH) or 1))
+    local border = math.max(1, _scaled_int(self._scale, self._border_width or tonumber(Style.BORDER_WIDTH) or 1))
     local horizontal_strip = _scaled_int(self._scale, BASE_TAB_HEIGHT)
     local vertical_strip = self:_desired_side_strip_width()
     local show_border_top = self._show_border_top == true

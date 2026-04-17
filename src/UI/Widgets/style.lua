@@ -15,7 +15,9 @@ _G.STYLE = {
     CONTROL_BACKGROUND = Turbine.UI.Color(1, 0.15, 0.15, 0.15),
     CONTROL_FOREGROUND = Turbine.UI.Color(1, 1, 1, 1),
     CONTROL_BORDER = Turbine.UI.Color(1, 0.35, 0.40, 0.50),
-    CONTROL_BORDER_WIDTH = 1.5,
+    BORDER_WIDTH = 1.5,
+    BORDER_WIDTH_THIN = 1,
+    BORDER_WIDTH_LARGE = 2,
     DROPDOWN_ARROW = 0x41007e1a,
 }
 
@@ -46,7 +48,9 @@ local DEFAULTS = {
     CONTROL_BORDER_HOVER = Turbine.UI.Color(1, 0.35, 0.40, 0.50),
     CONTROL_BORDER_ACTIVE = Turbine.UI.Color(1, 0.35, 0.40, 0.50),
     CONTROL_BORDER_DISABLED = Turbine.UI.Color(0.45, 0.62, 0.62, 0.62),
-    CONTROL_BORDER_WIDTH = 1.5,
+    BORDER_WIDTH = 1.5,
+    BORDER_WIDTH_THIN = 1,
+    BORDER_WIDTH_LARGE = 2,
 
     ACCENT_BACKGROUND = Turbine.UI.Color(1, 0.68, 0.74, 0.88),
     ACCENT_BACKGROUND_DISABLED = Turbine.UI.Color(0.50, 0.68, 0.68, 0.68),

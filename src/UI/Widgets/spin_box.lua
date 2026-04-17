@@ -302,7 +302,7 @@ end
 
 function LuiSpinBox:_layout()
     local width, height = self:GetSize()
-    local border = math.max(1, _scaled_int(self._scale, tonumber(Style.CONTROL_BORDER_WIDTH) or 1))
+    local border = math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH) or 1))
     local button_w = _scaled_int(self._scale, BASE_BUTTON_W)
     local inset_x = _scaled_int(self._scale, BASE_TEXTBOX_INSET_X)
     local inset_y = _scaled_int(self._scale, BASE_TEXTBOX_INSET_Y)
