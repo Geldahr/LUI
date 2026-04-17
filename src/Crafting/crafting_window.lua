@@ -29,6 +29,7 @@ local BASE_RIGHT_W = 340
 local BASE_RECIPE_ROW_H = 46
 local BASE_INGREDIENT_ROW_H = 38
 local BASE_PLAN_ROW_H = 38
+local BASE_CRITICAL_RESULT_ROW_H = 34
 local BASE_TITLE_FONT = 14
 local BASE_BODY_FONT = 11
 local BASE_META_FONT = 10
@@ -271,6 +272,17 @@ end
 
 local function _ratio_text(current, total)
     return _format_count(current) .. "/" .. _format_count(total)
+end
+
+local function _format_percent(value)
+    local percent = tonumber(value)
+    if percent == nil then
+        return nil
+    end
+    if percent > 0 and percent <= 1 then
+        percent = percent * 100
+    end
+    return _format_count(percent) .. "%"
 end
 
 local function _normalize_scope_key(value)
@@ -790,6 +802,96 @@ function CraftingIngredientRow:prepare_for_list_clear()
     self:SetVisible(false)
 end
 
+local CraftingResultInfoRow = class(Turbine.UI.Control)
+
+function CraftingResultInfoRow:Constructor()
+    Turbine.UI.Control.Constructor(self)
+
+    self._scale = 1
+
+    self:SetBackColor(SECTION_BACK)
+    self:SetMouseVisible(false)
+
+    self.status_strip = Turbine.UI.Control()
+    self.status_strip:SetParent(self)
+    self.status_strip:SetMouseVisible(false)
+
+    self.icon = CraftingItemIcon()
+    self.icon:SetParent(self)
+
+    self.title = UI.Widgets.LuiLabel()
+    self.title:SetParent(self)
+    self.title:SetMouseVisible(false)
+    self.title:SetForeColor(TEXT_MAIN)
+    self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+
+    self.detail = UI.Widgets.LuiLabel()
+    self.detail:SetParent(self)
+    self.detail:SetMouseVisible(false)
+    self.detail:SetForeColor(TEXT_META)
+    self.detail:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+end
+
+function CraftingResultInfoRow:set_scale(scale)
+    self._scale = scale
+    self.title:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.detail:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+end
+
+function CraftingResultInfoRow:set_width(width)
+    self:SetSize(width, _scaled_int(BASE_CRITICAL_RESULT_ROW_H))
+    self:_layout()
+end
+
+function CraftingResultInfoRow:set_data(item_info, icon_id, background_image_id, title, detail, color)
+    self.icon:bind_item(item_info, icon_id, background_image_id)
+    self.title:SetText(title or "")
+    self.detail:SetText(detail or "")
+    self.status_strip:SetBackColor(color or TEXT_META)
+    self:SetBackColor(SECTION_BACK)
+    self:_layout()
+end
+
+function CraftingResultInfoRow:_layout()
+    local width, height = self:GetSize()
+    local gap = _scaled_int(BASE_GAP)
+    local strip_w = _scaled_int(3)
+    local icon_pad = _scaled_int(1)
+    local icon_side = _fixed_int(BASE_ICON_SIDE)
+    local max_icon_side = height - (icon_pad * 2)
+    if icon_side > max_icon_side then
+        icon_side = max_icon_side
+    end
+    if icon_side < 0 then
+        icon_side = 0
+    end
+
+    local text_left = strip_w + gap + icon_side + gap
+    local text_w = width - text_left - gap
+    local title_h = math.floor(height * 0.55)
+
+    self.status_strip:SetPosition(0, 0)
+    self.status_strip:SetSize(strip_w, height)
+    self.icon:SetPosition(strip_w + gap, math.max(icon_pad, math.floor((height - icon_side) / 2)))
+    self.icon:set_side(icon_side)
+    self.title:SetPosition(text_left, 0)
+    self.title:SetSize(math.max(0, text_w), title_h)
+    self.detail:SetPosition(text_left, title_h)
+    self.detail:SetSize(math.max(0, text_w), height - title_h)
+end
+
+function CraftingResultInfoRow:destroy()
+    _destroy_control(self.icon)
+    self:SetVisible(false)
+end
+
+function CraftingResultInfoRow:prepare_for_list_clear()
+    if self.icon ~= nil and self.icon.prepare_for_list_clear ~= nil then
+        self.icon:prepare_for_list_clear()
+    end
+    self:SetVisible(false)
+end
+
 local CraftingPlanRow = class(Turbine.UI.Control)
 
 function CraftingPlanRow:Constructor(on_count_changed, on_remove)
@@ -1003,6 +1105,7 @@ function CraftingWindow:Constructor()
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
     self._recipe_list_row_width = 0
+    self._critical_result_visible = false
 
     self.top_bar = Turbine.UI.Control()
     self.top_bar:SetParent(self)
@@ -1227,6 +1330,10 @@ function CraftingWindow:Constructor()
     self.detail_status:SetParent(self.detail_panel.inner)
     self.detail_status:SetMouseVisible(false)
     self.detail_status:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+
+    self.critical_result_row = CraftingResultInfoRow()
+    self.critical_result_row:SetParent(self.detail_panel.inner)
+    self.critical_result_row:SetVisible(false)
 
     self.plan_label = UI.Widgets.LuiLabel()
     self.plan_label:SetParent(self.detail_panel.inner)
@@ -1486,8 +1593,24 @@ function CraftingWindow:_recipe_result_name(recipe)
     return self.store ~= nil and self.store.get_recipe_result_name ~= nil and self.store:get_recipe_result_name(recipe) or ""
 end
 
+function CraftingWindow:_recipe_critical_result_item(recipe)
+    return self:_item(recipe ~= nil and recipe.critical_result_key or nil)
+end
+
 function CraftingWindow:_recipe_required_level(recipe)
     return self.store ~= nil and self.store.get_recipe_required_level ~= nil and self.store:get_recipe_required_level(recipe) or nil
+end
+
+function CraftingWindow:_critical_result_detail(recipe)
+    local parts = { TR["Critical result"] }
+    if recipe ~= nil and (tonumber(recipe.critical_result_quantity) or 0) > 1 then
+        parts[#parts + 1] = TR["Makes x"] .. _format_count(recipe.critical_result_quantity)
+    end
+    local critical_chance = _format_percent(recipe ~= nil and recipe.critical_chance or nil)
+    if critical_chance ~= nil then
+        parts[#parts + 1] = TR["Base crit"] .. " " .. critical_chance
+    end
+    return table.concat(parts, " - ")
 end
 
 function CraftingWindow._status_text(_, evaluation)
@@ -1719,6 +1842,7 @@ function CraftingWindow:apply_settings()
     self.detail_title:SetFont(_scaled_font("Verdana", BASE_TITLE_FONT))
     self.detail_meta:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.detail_status:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.critical_result_row:set_scale(_G.settings.global.scale)
     self.plan_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.plan_spin_box:set_scale(_G.settings.global.scale)
     self.plan_spin_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
@@ -2150,11 +2274,45 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level)
     end
 end
 
+function CraftingWindow:_clear_critical_result_detail()
+    self._critical_result_visible = false
+    if self.critical_result_row ~= nil then
+        self.critical_result_row:set_data(nil, nil, nil, "", "", TEXT_META)
+        self.critical_result_row:SetVisible(false)
+    end
+end
+
+function CraftingWindow:_refresh_critical_result_detail(recipe)
+    self:_clear_critical_result_detail()
+    if type(recipe) ~= "table" then
+        return
+    end
+
+    local row_w = math.max(0, self.detail_panel.inner:GetWidth())
+    local critical_item = self:_recipe_critical_result_item(recipe)
+    if critical_item ~= nil then
+        self._critical_result_visible = true
+        self.critical_result_row:set_scale(_G.settings.global.scale)
+        self.critical_result_row:set_width(row_w)
+        self.critical_result_row:set_data(
+            critical_item.item_info,
+            critical_item.icon_id,
+            critical_item.background_image_id,
+            critical_item.name,
+            self:_critical_result_detail(recipe),
+            STATUS_AUTO
+        )
+        self.critical_result_row:SetVisible(true)
+    end
+end
+
 function CraftingWindow:refresh_selected_recipe()
     _clear_list_box(self.ingredients_list)
 
     local recipe = self:_selected_recipe()
     if recipe == nil then
+        self:_clear_critical_result_detail()
+        self:layout()
         self.detail_empty:SetVisible(true)
         self.detail_icon:bind_item(nil, nil, nil)
         self.detail_title:SetText("")
@@ -2172,6 +2330,8 @@ function CraftingWindow:refresh_selected_recipe()
     local result_name = self:_recipe_result_name(recipe)
     local required_level = self:_recipe_required_level(recipe)
     self.detail_empty:SetVisible(false)
+    self:_refresh_critical_result_detail(recipe)
+    self:layout()
 
     self.detail_icon:bind_item(
         result_item ~= nil and result_item.item_info or nil,
@@ -2503,9 +2663,11 @@ function CraftingWindow:layout()
         content_h = 0
     end
     local scroll_w = _fixed_int(BASE_SCROLL_W)
-    local detail_header_h = _scaled_int(BASE_DETAIL_HEADER_H)
     local plan_header_h = _scaled_int(BASE_PLAN_HEADER_H)
     local section_bar_h = plan_header_h
+    local detail_top_h = math.max(0, _scaled_int(BASE_DETAIL_HEADER_H) - section_bar_h)
+    local critical_result_h = self._critical_result_visible == true and _scaled_int(BASE_CRITICAL_RESULT_ROW_H) or 0
+    local detail_header_h = detail_top_h + critical_result_h + section_bar_h
     local plan_controls_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local loading_track_h = _scaled_int(BASE_LOADING_TRACK_H)
     local pages_mode = self.display_mode == DISPLAY_PAGES
@@ -2642,8 +2804,7 @@ function CraftingWindow:layout()
 
     local detail_inner = self.detail_panel.inner
     local icon_side = _fixed_int(BASE_ICON_SIDE)
-    local detail_header_content_h = math.max(0, detail_header_h - section_bar_h)
-    local detail_icon_y = math.max(0, math.floor((detail_header_content_h - icon_side) / 2))
+    local detail_icon_y = math.max(0, math.floor((detail_top_h - icon_side) / 2))
     self.detail_icon:SetPosition(_scaled_int(8), detail_icon_y)
     self.detail_icon:set_side(icon_side)
     self.detail_title:SetPosition(_scaled_int(8) + icon_side + gap, _scaled_int(6))
@@ -2659,7 +2820,13 @@ function CraftingWindow:layout()
     self.plan_spin_box:SetPosition(plan_controls_x, _scaled_int(24))
     self.plan_spin_box:SetSize(plan_controls_w, bar_h)
 
-    local ingredients_header_y = detail_header_h - section_bar_h
+    if self.critical_result_row ~= nil then
+        self.critical_result_row:SetPosition(0, detail_top_h)
+        self.critical_result_row:set_width(detail_inner:GetWidth())
+        self.critical_result_row:SetVisible(self._critical_result_visible == true)
+    end
+
+    local ingredients_header_y = detail_top_h + critical_result_h
     if ingredients_header_y < 0 then
         ingredients_header_y = 0
     end

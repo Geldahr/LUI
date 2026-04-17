@@ -1260,6 +1260,9 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
     local result_info = recipe:GetResultItemInfo()
     local result_name = _trim(result_info ~= nil and result_info:GetName() or nil)
     local category_name = _trim(recipe:GetCategoryName())
+    local critical_result_info = nil
+    local critical_result_name = ""
+    local critical_result_key = nil
     if result_name == "" then
         result_name = recipe_name
     end
@@ -1275,6 +1278,22 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
     _remember_item(items, result_key, result_name, result_info)
     if type(items[result_key]) == "table" and items[result_key].required_level == nil then
         items[result_key].required_level = _recipe_required_level(result_info, recipe_name, category_name)
+    end
+
+    if recipe.HasCriticalResultItem ~= nil and recipe:HasCriticalResultItem() == true and
+        recipe.GetCriticalResultItemInfo ~= nil then
+        critical_result_info = recipe:GetCriticalResultItemInfo()
+        critical_result_name = _trim(critical_result_info ~= nil and critical_result_info:GetName() or nil)
+        critical_result_key = _normalize_name(critical_result_name)
+        if critical_result_key ~= "" then
+            _remember_item(items, critical_result_key, critical_result_name, critical_result_info)
+            if type(items[critical_result_key]) == "table" and items[critical_result_key].required_level == nil then
+                items[critical_result_key].required_level =
+                    _recipe_required_level(critical_result_info, recipe_name, category_name)
+            end
+        else
+            critical_result_key = nil
+        end
     end
 
     local ingredient_count = recipe:GetIngredientCount() or 0
@@ -1310,7 +1329,12 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         category_name = category_name,
         tier = tonumber(recipe:GetTier()) or 0,
         cooldown = tonumber(recipe:GetCooldown()) or 0,
+        critical_chance = recipe.GetBaseCriticalSuccessChance ~= nil and
+            tonumber(recipe:GetBaseCriticalSuccessChance()) or nil,
         result_key = result_key,
+        critical_result_key = critical_result_key,
+        critical_result_quantity = critical_result_key ~= nil and recipe.GetCriticalResultItemQuantity ~= nil and
+            math.max(1, tonumber(recipe:GetCriticalResultItemQuantity()) or 1) or 0,
         recipe_name_key = recipe_name_key ~= "" and recipe_name_key ~= result_key and recipe_name_key or nil,
         recipe_name = recipe_name ~= "" and recipe_name ~= result_name and recipe_name or nil,
         result_quantity = math.max(1, tonumber(recipe:GetResultItemQuantity()) or 1),
