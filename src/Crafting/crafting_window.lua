@@ -42,6 +42,7 @@ local BASE_PLAN_HEADER_H = 24
 local BASE_PLAN_CONTROLS_W = 72
 local BASE_SMALL_BUTTON_W = 22
 local BASE_STATUS_W = 120
+local BASE_PLAN_STATUS_W = 48
 local BASE_TREE_INDENT_W = 16
 local BASE_LEVEL_LABEL_W = 40
 local BASE_LEVEL_BOX_W = 44
@@ -908,7 +909,7 @@ function CraftingPlanRow:_layout()
     local button_w = _scaled_int(BASE_SMALL_BUTTON_W)
     local count_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local control_h = _scaled_int(BASE_BAR_H)
-    local status_w = _scaled_int(BASE_STATUS_W)
+    local status_w = _scaled_int(BASE_PLAN_STATUS_W)
     local remove_w = button_w
     local right = width - gap
     local control_y = math.max(0, math.floor((height - control_h) / 2))
@@ -937,8 +938,9 @@ function CraftingPlanRow:_layout()
     self.icon:SetPosition(gap, math.max(icon_pad, math.floor((height - icon_side) / 2)))
     self.icon:set_side(icon_side)
 
-    self.name:SetPosition(gap + icon_side + gap, 0)
-    self.name:SetSize(math.max(0, right - ((gap * 3) + icon_side)), height)
+    local name_left = gap + icon_side + gap
+    self.name:SetPosition(name_left, 0)
+    self.name:SetSize(math.max(0, right - name_left - gap), height)
 end
 
 function CraftingPlanRow:destroy()
@@ -2640,7 +2642,9 @@ function CraftingWindow:layout()
 
     local detail_inner = self.detail_panel.inner
     local icon_side = _fixed_int(BASE_ICON_SIDE)
-    self.detail_icon:SetPosition(_scaled_int(8), _scaled_int(8))
+    local detail_header_content_h = math.max(0, detail_header_h - section_bar_h)
+    local detail_icon_y = math.max(0, math.floor((detail_header_content_h - icon_side) / 2))
+    self.detail_icon:SetPosition(_scaled_int(8), detail_icon_y)
     self.detail_icon:set_side(icon_side)
     self.detail_title:SetPosition(_scaled_int(8) + icon_side + gap, _scaled_int(6))
     self.detail_title:SetSize(detail_inner:GetWidth() - icon_side - _scaled_int(16) - gap, _scaled_int(24))
