@@ -3030,39 +3030,34 @@ function CraftingWindow:refresh_plan()
         Crafting.resolve_tracked_plan_entries(self.store) or { entries = {}, unresolved_entries = {}, unresolved_count = 0, total_count = 0 }
     local tracked_plan_entries = tracked_resolved.entries or {}
     local tracked_unresolved_entries = tracked_resolved.unresolved_entries or {}
-    local tracked_resource_state = self.store.evaluate_plan_resources ~= nil and
-        self.store:evaluate_plan_resources(tracked_plan_entries, self.scope_key) or
-        { evaluation = self.store:evaluate_plan(tracked_plan_entries, self.scope_key), resources = {}, incomplete_resources = {}, ready = false }
-    local tracked_evaluation = tracked_resource_state.evaluation
 
     local has_draft_plan = #draft_plan_entries > 0
-    local has_tracked_plan = (#tracked_plan_entries > 0) or (#tracked_unresolved_entries > 0)
     self:_refresh_plan_dirty_state()
-    self.queue_empty:SetVisible(has_draft_plan ~= true)
-    self.plan_empty:SetVisible(has_tracked_plan ~= true)
+    local has_saved_plan = (#tracked_plan_entries > 0) or (#tracked_unresolved_entries > 0)
+    local show_saved_unresolved = #tracked_unresolved_entries > 0 and (self._plan_dirty ~= true or has_draft_plan ~= true)
+    local has_queue_rows = has_draft_plan == true or show_saved_unresolved == true
+    local has_plan_rows = has_draft_plan == true or show_saved_unresolved == true
+    self.queue_empty:SetVisible(has_queue_rows ~= true)
+    self.plan_empty:SetVisible(has_plan_rows ~= true)
 
     if has_draft_plan == true then
         local queue_summary_text =
             _format_count(#draft_plan_entries) .. " " .. TR["recipes"] ..
             " - " .. _ratio_text(draft_evaluation.craftable_count_total, draft_evaluation.planned_recipe_count)
-        if self._plan_dirty == true then
-            queue_summary_text = queue_summary_text .. " - " .. TR["Unsaved"]
-        end
         self.queue_summary:SetText(queue_summary_text)
+    elseif show_saved_unresolved == true then
+        self.queue_summary:SetText(_format_count(#tracked_unresolved_entries) .. " " .. TR["recipes"])
     else
-        local empty_summary = TR["No recipes planned"]
-        if self._plan_dirty == true then
-            empty_summary = empty_summary .. " - " .. TR["Unsaved"]
-        end
-        self.queue_summary:SetText(empty_summary)
+        self.queue_summary:SetText(TR["No recipes planned"])
     end
 
     self.plan_track_button:set_enabled(self._plan_dirty == true)
     self.plan_revert_button:set_enabled(self._plan_dirty == true)
-    self.plan_clear_button:set_enabled(has_draft_plan == true or has_tracked_plan == true)
+    self.plan_clear_button:set_enabled(has_draft_plan == true or has_saved_plan == true)
 
     local queue_w = self:_current_queue_list_width()
     local row_w = self:_current_plan_list_width()
+    local loading_tracked = self.store ~= nil and self.store.is_loading ~= nil and self.store:is_loading() == true
     for i = 1, #draft_evaluation.entries do
         local entry = draft_evaluation.entries[i]
         local queue_row = CraftingPlanRow(
@@ -3086,8 +3081,22 @@ function CraftingWindow:refresh_plan()
         self.queue_list:AddItem(queue_row)
     end
 
-    for i = 1, #tracked_evaluation.entries do
-        local entry = tracked_evaluation.entries[i]
+    if show_saved_unresolved == true then
+        for i = 1, #tracked_unresolved_entries do
+            local unresolved_entry = tracked_unresolved_entries[i]
+            local saved_entry = unresolved_entry ~= nil and unresolved_entry.saved_entry or nil
+            local count = unresolved_entry ~= nil and (tonumber(unresolved_entry.count) or 0) or 0
+            local queue_row = CraftingPlanRow(nil, nil)
+            queue_row:set_scale(_G.settings.global.scale)
+            queue_row:set_width(queue_w)
+            queue_row:set_read_only(true)
+            queue_row:set_placeholder_data(_display_name_from_saved_entry(saved_entry), count, loading_tracked)
+            self.queue_list:AddItem(queue_row)
+        end
+    end
+
+    for i = 1, #draft_evaluation.entries do
+        local entry = draft_evaluation.entries[i]
         local plan_row = CraftingPlanRow(
             function(recipe, value)
                 self:set_plan_count(recipe.id, value)
@@ -3117,22 +3126,23 @@ function CraftingWindow:refresh_plan()
         end
     end
 
-    local loading_tracked = self.store ~= nil and self.store.is_loading ~= nil and self.store:is_loading() == true
-    for i = 1, #tracked_unresolved_entries do
-        local unresolved_entry = tracked_unresolved_entries[i]
-        local saved_entry = unresolved_entry ~= nil and unresolved_entry.saved_entry or nil
-        local count = unresolved_entry ~= nil and (tonumber(unresolved_entry.count) or 0) or 0
-        local plan_row = CraftingPlanRow(nil, nil)
-        plan_row:set_scale(_G.settings.global.scale)
-        plan_row:set_width(row_w)
-        plan_row:set_read_only(true)
-        plan_row:set_placeholder_data(_display_name_from_saved_entry(saved_entry), count, loading_tracked)
-        self.plan_list:AddItem(plan_row)
+    if show_saved_unresolved == true then
+        for i = 1, #tracked_unresolved_entries do
+            local unresolved_entry = tracked_unresolved_entries[i]
+            local saved_entry = unresolved_entry ~= nil and unresolved_entry.saved_entry or nil
+            local count = unresolved_entry ~= nil and (tonumber(unresolved_entry.count) or 0) or 0
+            local plan_row = CraftingPlanRow(nil, nil)
+            plan_row:set_scale(_G.settings.global.scale)
+            plan_row:set_width(row_w)
+            plan_row:set_read_only(true)
+            plan_row:set_placeholder_data(_display_name_from_saved_entry(saved_entry), count, loading_tracked)
+            self.plan_list:AddItem(plan_row)
+        end
     end
 
     local missing_w = self:_current_missing_list_width()
-    for i = 1, #tracked_resource_state.resources do
-        local entry = tracked_resource_state.resources[i]
+    for i = 1, #draft_resource_state.resources do
+        local entry = draft_resource_state.resources[i]
         local source_breakdown = entry.source_breakdown or self:_source_breakdown_for_item(entry.key, entry.required)
         local source_hint_text, source_hint_color = self:_source_breakdown_hint_text(source_breakdown)
         local row = CraftingIngredientRow()
@@ -3162,12 +3172,12 @@ function CraftingWindow:refresh_plan()
         self.missing_list:AddItem(row)
     end
 
-    self.queue_list:SetVisible(has_draft_plan == true)
-    self.queue_scroll:SetVisible(has_draft_plan == true)
-    self.plan_list:SetVisible(has_tracked_plan == true)
-    self.plan_scroll:SetVisible(has_tracked_plan == true)
-    self.missing_list:SetVisible(#tracked_resource_state.resources > 0)
-    self.missing_scroll:SetVisible(#tracked_resource_state.resources > 0)
+    self.queue_list:SetVisible(has_queue_rows == true)
+    self.queue_scroll:SetVisible(has_queue_rows == true)
+    self.plan_list:SetVisible(has_plan_rows == true)
+    self.plan_scroll:SetVisible(has_plan_rows == true)
+    self.missing_list:SetVisible(#draft_resource_state.resources > 0)
+    self.missing_scroll:SetVisible(#draft_resource_state.resources > 0)
 
     local selected_recipe = self:_selected_recipe()
     if selected_recipe ~= nil then
