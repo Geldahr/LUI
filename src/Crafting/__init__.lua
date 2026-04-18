@@ -38,20 +38,118 @@ local function _copy_tracked_plan_entries(entries)
     return out
 end
 
-local function _tracked_plan_settings()
-    if type(_G.loaded_settings) ~= "table" then
+local function _copy_favorite_entries(entries)
+    local out = {}
+    if type(entries) ~= "table" then
+        return out
+    end
+
+    for i = 1, #entries do
+        local entry = entries[i]
+        if type(entry) == "table" then
+            out[#out + 1] = {
+                i = entry.i or entry.id,
+                p = entry.p or entry.profession_key,
+                r = entry.r or entry.result_key,
+                n = entry.n or entry.recipe_name_key,
+                c = entry.c or entry.category_name_key,
+            }
+        end
+    end
+
+    return out
+end
+
+local function _current_character_entry()
+    if _G.ensure_server_settings ~= nil then
+        _G.ensure_server_settings()
+    end
+    if type(_G.server_settings) ~= "table" or type(_G.server_settings.characters) ~= "table" then
         return nil
     end
-    if type(_G.loaded_settings.crafting) ~= "table" then
-        _G.loaded_settings.crafting = {}
+
+    local character_name = _G.current_character_name
+    if type(character_name) ~= "string" or string.len(character_name) == 0 then
+        return nil
     end
-    if type(_G.loaded_settings.crafting.tracked_plan) ~= "table" then
-        _G.loaded_settings.crafting.tracked_plan = {}
+
+    local entry = _G.server_settings.characters[character_name]
+    if type(entry) ~= "table" then
+        entry = {}
+        _G.server_settings.characters[character_name] = entry
     end
-    if type(_G.loaded_settings.crafting.tracked_plan.entries) ~= "table" then
-        _G.loaded_settings.crafting.tracked_plan.entries = {}
+    return entry
+end
+
+local function _character_crafting_settings()
+    local entry = _current_character_entry()
+    if entry == nil then
+        return nil
     end
-    return _G.loaded_settings.crafting.tracked_plan
+
+    if type(entry.crafting) ~= "table" then
+        entry.crafting = {}
+    end
+    return entry.crafting
+end
+
+local function _profile_crafting_settings()
+    if type(_G.loaded_settings) ~= "table" or type(_G.loaded_settings.crafting) ~= "table" then
+        return nil
+    end
+    return _G.loaded_settings.crafting
+end
+
+local function _profile_section_entries(section_key)
+    local crafting = _profile_crafting_settings()
+    local section = crafting ~= nil and crafting[section_key] or nil
+    if type(section) ~= "table" or type(section.entries) ~= "table" then
+        return nil
+    end
+    return section.entries
+end
+
+local function _remove_profile_section(section_key)
+    local crafting = _profile_crafting_settings()
+    if crafting ~= nil then
+        crafting[section_key] = nil
+    end
+    if type(_G.settings) == "table" and type(_G.settings.crafting) == "table" then
+        _G.settings.crafting[section_key] = nil
+    end
+end
+
+local function _character_section_settings(section_key, copy_entries)
+    local crafting = _character_crafting_settings()
+    if crafting == nil then
+        return nil
+    end
+
+    if type(crafting[section_key]) ~= "table" then
+        crafting[section_key] = {}
+    end
+    local section = crafting[section_key]
+    if type(section.entries) ~= "table" then
+        section.entries = {}
+    end
+
+    local profile_entries = _profile_section_entries(section_key)
+    if type(profile_entries) == "table" then
+        if #section.entries <= 0 and #profile_entries > 0 then
+            section.entries = copy_entries(profile_entries)
+        end
+        _remove_profile_section(section_key)
+    end
+
+    return section
+end
+
+local function _tracked_plan_settings()
+    return _character_section_settings("tracked_plan", _copy_tracked_plan_entries)
+end
+
+local function _favorite_settings()
+    return _character_section_settings("favorites", _copy_favorite_entries)
 end
 
 local function _tracked_plan_signature(entries)
@@ -117,11 +215,26 @@ function Crafting.set_tracked_plan_entries(entries, save_now)
     end
 
     tracked_plan.entries = _copy_tracked_plan_entries(entries)
-    if type(_G.settings) == "table" and type(_G.settings.crafting) == "table" then
-        _G.settings.crafting.tracked_plan = tracked_plan
-    end
     Crafting.invalidate_tracked_plan_cache()
     _tracked_plan_autoload_after = nil
+
+    if save_now == true and _G.save_settings ~= nil then
+        _G.save_settings()
+    end
+end
+
+function Crafting.get_favorite_recipe_entries()
+    local favorites = _favorite_settings()
+    return _copy_favorite_entries(favorites ~= nil and favorites.entries or nil)
+end
+
+function Crafting.set_favorite_recipe_entries(entries, save_now)
+    local favorites = _favorite_settings()
+    if favorites == nil then
+        return
+    end
+
+    favorites.entries = _copy_favorite_entries(entries)
 
     if save_now == true and _G.save_settings ~= nil then
         _G.save_settings()

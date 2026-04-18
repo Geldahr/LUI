@@ -291,9 +291,12 @@ function _G.assign_character_profile(profile_id)
     end
 
     local character_name = _G.current_character_name or _get_current_character_name()
-    _G.server_settings.characters[character_name] = {
-        profile_id = profile_id,
-    }
+    local character_entry = _G.server_settings.characters[character_name]
+    if type(character_entry) ~= "table" then
+        character_entry = {}
+        _G.server_settings.characters[character_name] = character_entry
+    end
+    character_entry.profile_id = profile_id
 
     _G.current_character_name = character_name
     _G.current_profile_id = profile_id
@@ -408,7 +411,10 @@ function _G.delete_configuration(profile_id)
 
     for character_name, entry in pairs(_G.server_settings.characters) do
         if type(entry) == "table" and entry.profile_id == profile_id then
-            _G.server_settings.characters[character_name] = nil
+            entry.profile_id = nil
+            if next(entry) == nil then
+                _G.server_settings.characters[character_name] = nil
+            end
         end
     end
 
@@ -521,7 +527,7 @@ function _G.load_settings()
     if profile_id ~= nil then
         profile = _G.account_settings.profiles[profile_id]
         if type(profile) ~= "table" then
-            _G.server_settings.characters[_G.current_character_name] = nil
+            character_entry.profile_id = nil
         end
     end
 

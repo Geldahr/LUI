@@ -1056,22 +1056,32 @@ function CraftingStore:serialize_plan_entries(plan_entries)
         local count = entry ~= nil and (tonumber(entry.count) or 0) or 0
         count = math.floor(count + 0.5)
         if recipe ~= nil and count > 0 then
-            saved_entries[#saved_entries + 1] = {
-                id = recipe.id,
-                profession_key = recipe.profession_key,
-                result_key = recipe.result_key,
-                recipe_name_key = recipe.recipe_name_key,
-                category_name_key = _normalize_name(recipe.category_name),
-                result_name = self:get_recipe_result_name(recipe),
-                profession_name = recipe.profession_name,
-                category_name = recipe.category_name,
-                tier = tonumber(recipe.tier) or 0,
-                count = count,
-            }
+            local saved_entry = self:serialize_recipe_identity(recipe)
+            saved_entry.count = count
+            saved_entries[#saved_entries + 1] = saved_entry
         end
     end
 
     return saved_entries
+end
+
+function CraftingStore:serialize_recipe_identity(recipe)
+    if type(recipe) ~= "table" then
+        return nil
+    end
+
+    return {
+        id = recipe.id,
+        profession_key = recipe.profession_key,
+        result_key = recipe.result_key,
+        recipe_name_key = recipe.recipe_name_key,
+        category_name_key = _normalize_name(recipe.category_name),
+        tier = tonumber(recipe.tier) or 0,
+    }
+end
+
+function CraftingStore:saved_entry_matches_recipe(saved_entry, recipe)
+    return _saved_plan_entry_matches_recipe(saved_entry, recipe)
 end
 
 function CraftingStore:resolve_saved_plan_entries(saved_entries)

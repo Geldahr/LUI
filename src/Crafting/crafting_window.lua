@@ -63,6 +63,16 @@ local STATUS_READY = Turbine.UI.Color(1.00, 0.31, 0.78, 0.43)
 local STATUS_MISSING = Turbine.UI.Color(1.00, 0.86, 0.30, 0.30)
 local STATUS_AUTO = Turbine.UI.Color(1.00, 0.35, 0.75, 0.90)
 
+local FAVORITE_SCALE_BREAKPOINT = 1.5
+local FAVORITE_ICON_SMALL = 24
+local FAVORITE_ICON_LARGE = 48
+local FAVORITE_STAR_24 = "LUI/assets/ui/star_24.tga"
+local FAVORITE_STAR_48 = "LUI/assets/ui/star_48.tga"
+local FAVORITE_STAR_GRAY_24 = "LUI/assets/ui/star_gray_24.tga"
+local FAVORITE_STAR_GRAY_48 = "LUI/assets/ui/star_gray_48.tga"
+local FAVORITE_STAR_HOVER_24 = "LUI/assets/ui/star_hover_24.tga"
+local FAVORITE_STAR_HOVER_48 = "LUI/assets/ui/star_hover_48.tga"
+
 local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
 end
@@ -73,6 +83,42 @@ local function _scaled_font(name, size)
         error("Missing scaled font: " .. tostring(name) .. " " .. tostring(size))
     end
     return font
+end
+
+local function _favorite_icon_size()
+    local scale = _G.settings ~= nil and _G.settings.global ~= nil and tonumber(_G.settings.global.scale) or 1
+    return scale > FAVORITE_SCALE_BREAKPOINT and FAVORITE_ICON_LARGE or FAVORITE_ICON_SMALL
+end
+
+local function _favorite_icon_paths(favorite)
+    local side = _favorite_icon_size()
+    if side > FAVORITE_ICON_SMALL then
+        return favorite == true and FAVORITE_STAR_48 or FAVORITE_STAR_GRAY_48, FAVORITE_STAR_HOVER_48,
+            FAVORITE_STAR_GRAY_48, side
+    end
+
+    return favorite == true and FAVORITE_STAR_24 or FAVORITE_STAR_GRAY_24, FAVORITE_STAR_HOVER_24,
+        FAVORITE_STAR_GRAY_24, side
+end
+
+local function _apply_favorite_icon(button, favorite)
+    if button == nil then
+        return
+    end
+
+    local normal, hover, disabled, side = _favorite_icon_paths(favorite)
+    button:set_text("")
+    button:set_icon(
+        normal,
+        hover,
+        hover,
+        disabled,
+        side,
+        side,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
+    button:set_icon_stretch_mode(0)
+    button:set_active(false)
 end
 
 local function _fixed_int(value)
@@ -237,6 +283,20 @@ local function _saved_plan_entries_equal(left, right)
         end
     end
     return true
+end
+
+local function _favorite_entry_key(entry)
+    if type(entry) ~= "table" then
+        return ""
+    end
+
+    local result_key = entry.r or entry.result_key
+    return table.concat({
+        tostring(entry.p or entry.profession_key or ""),
+        tostring(result_key or ""),
+        tostring(entry.n or entry.recipe_name_key or result_key or ""),
+        tostring(entry.c or entry.category_name_key or ""),
+    }, "\31")
 end
 
 local function _display_name_from_saved_entry(saved_entry)
@@ -514,13 +574,15 @@ end
 
 local CraftingRecipeRow = class(Turbine.UI.Control)
 
-function CraftingRecipeRow:Constructor(on_click)
+function CraftingRecipeRow:Constructor(on_click, on_favorite_toggle)
     Turbine.UI.Control.Constructor(self)
 
     self._scale = 1
     self._selected = false
     self._hover = false
+    self._favorite = false
     self._on_click = on_click
+    self._on_favorite_toggle = on_favorite_toggle
     self.recipe = nil
     self.status = nil
 
@@ -565,6 +627,18 @@ function CraftingRecipeRow:Constructor(on_click)
     self.status_label:SetMouseVisible(false)
     self.status_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
 
+    self.favorite_button = UI.Widgets.LuiButton()
+    self.favorite_button:SetParent(self)
+    self.favorite_button:set_padding(0)
+    self.favorite_button:set_scale(1)
+    UI.Widgets.Style.apply_transparent_button(self.favorite_button)
+    _apply_favorite_icon(self.favorite_button, false)
+    self.favorite_button.Click = function()
+        if self.recipe ~= nil and type(self._on_favorite_toggle) == "function" then
+            self._on_favorite_toggle(self.recipe)
+        end
+    end
+
     self.MouseEnter = function()
         self._hover = true
         self:_refresh_visual()
@@ -586,6 +660,8 @@ function CraftingRecipeRow:set_scale(scale)
     self.title:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.subtitle:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.status_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.favorite_button:set_scale(1)
+    _apply_favorite_icon(self.favorite_button, self._favorite)
 end
 
 function CraftingRecipeRow:set_width(width)
@@ -598,7 +674,12 @@ function CraftingRecipeRow:set_selected(selected)
     self:_refresh_visual()
 end
 
-function CraftingRecipeRow:set_data(recipe, status, result_item, required_level)
+function CraftingRecipeRow:set_favorite(favorite)
+    self._favorite = favorite == true
+    _apply_favorite_icon(self.favorite_button, self._favorite)
+end
+
+function CraftingRecipeRow:set_data(recipe, status, result_item, required_level, favorite)
     self.recipe = recipe
     self.status = status
 
@@ -628,6 +709,7 @@ function CraftingRecipeRow:set_data(recipe, status, result_item, required_level)
         self.icon:bind_item(nil, nil, nil)
     end
 
+    self:set_favorite(favorite)
     self:_refresh_visual()
 end
 
@@ -656,8 +738,11 @@ function CraftingRecipeRow:_layout()
         icon_side = 0
     end
     local status_w = _scaled_int(BASE_STATUS_W)
+    local favorite_w = _favorite_icon_size()
     local text_left = strip_w + gap + icon_side + gap
-    local text_w = width - text_left - gap - status_w
+    local status_x = width - status_w - gap
+    local favorite_x = status_x - gap - favorite_w
+    local text_w = favorite_x - text_left - gap
     local title_h = math.floor(height * 0.55)
     local subtitle_h = height - title_h
 
@@ -672,12 +757,16 @@ function CraftingRecipeRow:_layout()
     self.subtitle:SetPosition(text_left, title_h)
     self.subtitle:SetSize(math.max(0, text_w), subtitle_h)
 
-    self.status_label:SetPosition(width - status_w - gap, 0)
+    self.favorite_button:SetPosition(favorite_x, math.max(0, math.floor((height - favorite_w) / 2)))
+    self.favorite_button:SetSize(favorite_w, favorite_w)
+
+    self.status_label:SetPosition(status_x, 0)
     self.status_label:SetSize(status_w, height)
 end
 
 function CraftingRecipeRow:destroy()
     _destroy_control(self.icon)
+    _destroy_control(self.favorite_button)
     self:SetVisible(false)
 end
 
@@ -1080,6 +1169,9 @@ function CraftingWindow:Constructor()
     self.scope_key = self.store:scope_key_from_sources(self.scope_source_keys)
     self.profession_filter = FILTER_ALL
     self.availability_filter = AVAILABILITY_ALL
+    self.favorite_filter_active = false
+    self.favorite_entries = {}
+    self.favorite_keys = {}
     self.display_mode = _normalize_display_mode(_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE)
     self.level_min_filter = nil
     self.level_max_filter = nil
@@ -1124,6 +1216,16 @@ function CraftingWindow:Constructor()
         self:_invalidate_recipe_list()
         self:refresh_recipe_list()
         self.search_box:Focus()
+    end
+
+    self.favorite_filter_button = UI.Widgets.LuiButton()
+    self.favorite_filter_button:SetParent(self.top_bar)
+    self.favorite_filter_button:set_padding(0)
+    self.favorite_filter_button:set_scale(1)
+    UI.Widgets.Style.apply_transparent_button(self.favorite_filter_button)
+    _apply_favorite_icon(self.favorite_filter_button, false)
+    self.favorite_filter_button.Click = function()
+        self:set_favorite_filter(self.favorite_filter_active ~= true)
     end
 
     self.scope_label = UI.Widgets.LuiLabel()
@@ -1654,6 +1756,118 @@ function CraftingWindow:_saved_plan_entries()
     return {}
 end
 
+function CraftingWindow:_favorite_key_for_entry(entry)
+    return _favorite_entry_key(entry)
+end
+
+function CraftingWindow:_favorite_entry_for_recipe(recipe)
+    if self.store == nil or self.store.serialize_recipe_identity == nil then
+        return nil
+    end
+    local entry = self.store:serialize_recipe_identity(recipe)
+    if type(entry) ~= "table" then
+        return nil
+    end
+    return {
+        i = entry.id,
+        p = entry.profession_key,
+        r = entry.result_key,
+        n = entry.recipe_name_key,
+        c = entry.category_name_key,
+    }
+end
+
+function CraftingWindow:_favorite_key_for_recipe(recipe)
+    return self:_favorite_key_for_entry(self:_favorite_entry_for_recipe(recipe))
+end
+
+function CraftingWindow:_rebuild_favorite_keys()
+    self.favorite_keys = {}
+    if type(self.favorite_entries) ~= "table" then
+        self.favorite_entries = {}
+        return
+    end
+
+    for i = 1, #self.favorite_entries do
+        local key = self:_favorite_key_for_entry(self.favorite_entries[i])
+        if key ~= "" then
+            self.favorite_keys[key] = true
+        end
+    end
+end
+
+function CraftingWindow:_load_favorites()
+    if Crafting ~= nil and Crafting.get_favorite_recipe_entries ~= nil then
+        self.favorite_entries = Crafting.get_favorite_recipe_entries()
+    else
+        self.favorite_entries = {}
+    end
+    self:_rebuild_favorite_keys()
+end
+
+function CraftingWindow:_save_favorites()
+    if Crafting ~= nil and Crafting.set_favorite_recipe_entries ~= nil then
+        Crafting.set_favorite_recipe_entries(self.favorite_entries, true)
+    end
+end
+
+function CraftingWindow:_is_recipe_favorite(recipe)
+    local key = self:_favorite_key_for_recipe(recipe)
+    return key ~= "" and type(self.favorite_keys) == "table" and self.favorite_keys[key] == true
+end
+
+function CraftingWindow:_set_recipe_favorite(recipe, favorite)
+    local entry = self:_favorite_entry_for_recipe(recipe)
+    local key = self:_favorite_key_for_entry(entry)
+    if key == "" then
+        return
+    end
+
+    local next_entries = {}
+    for i = 1, #self.favorite_entries do
+        local saved_entry = self.favorite_entries[i]
+        local saved_key = self:_favorite_key_for_entry(saved_entry)
+        local matches = saved_key == key
+        if matches ~= true and self.store ~= nil and self.store.saved_entry_matches_recipe ~= nil then
+            matches = self.store:saved_entry_matches_recipe(saved_entry, recipe) == true
+        end
+        if matches ~= true then
+            next_entries[#next_entries + 1] = saved_entry
+        end
+    end
+
+    if favorite == true then
+        next_entries[#next_entries + 1] = entry
+    end
+
+    self.favorite_entries = next_entries
+    self:_rebuild_favorite_keys()
+    self:_save_favorites()
+    self:_invalidate_recipe_list()
+    self:refresh_recipe_list()
+    self:refresh_selected_recipe()
+end
+
+function CraftingWindow:toggle_recipe_favorite(recipe)
+    self:_set_recipe_favorite(recipe, self:_is_recipe_favorite(recipe) ~= true)
+end
+
+function CraftingWindow:_refresh_favorite_filter_button()
+    if self.favorite_filter_button == nil then
+        return
+    end
+    _apply_favorite_icon(self.favorite_filter_button, self.favorite_filter_active == true)
+end
+
+function CraftingWindow:set_favorite_filter(active)
+    self.favorite_filter_active = active == true
+    self:_refresh_favorite_filter_button()
+    self.recipe_page_index = 1
+    self:_invalidate_recipe_list()
+    self:refresh_recipe_list()
+    self:refresh_selected_recipe()
+end
+
 function CraftingWindow:_set_runtime_plan_entries(plan_entries)
     self.plan_order = {}
     self.plan_counts = {}
@@ -1869,6 +2083,7 @@ function CraftingWindow:apply_settings()
 
     self.search_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.clear_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
+    self.favorite_filter_button:set_scale(1)
     self.scope_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.scope_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.scope_dropdown:SetScale(_G.settings.global.scale)
@@ -1909,6 +2124,8 @@ function CraftingWindow:apply_settings()
     self.loading_text:SetFont(_scaled_font("Verdana", BASE_META_FONT))
 
     self:_set_scope_dropdown_options()
+    self:_load_favorites()
+    self:_refresh_favorite_filter_button()
     self.availability_filter = _normalize_availability_filter(self.availability_filter)
     self.availability_dropdown:SetValue(self.availability_filter)
 
@@ -2091,6 +2308,9 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
     if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
         return false
     end
+    if self.favorite_filter_active == true and self:_is_recipe_favorite(recipe) ~= true then
+        return false
+    end
     if self.level_min_filter ~= nil or self.level_max_filter ~= nil then
         local required_level = tonumber(self:_recipe_required_level(recipe))
         if required_level == nil then
@@ -2125,6 +2345,7 @@ function CraftingWindow:_recipe_filter_signature()
         _safe_string(self.scope_key, ""),
         _safe_string(self.profession_filter, ""),
         _safe_string(self.availability_filter, ""),
+        self.favorite_filter_active == true and "favorites" or "",
         _safe_string(self.level_min_filter, ""),
         _safe_string(self.level_max_filter, ""),
         _safe_string(self.search_box ~= nil and self.search_box:GetText() or "", ""),
@@ -2139,15 +2360,20 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
     local status = self.store:get_recipe_status(recipe, self.scope_key)
     local result_item = self:_recipe_result_item(recipe)
     local required_level = self:_recipe_required_level(recipe)
-    local row = CraftingRecipeRow(function(selected_recipe)
-        self.selected_recipe_id = selected_recipe.id
-        self:_invalidate_recipe_list()
-        self:refresh_recipe_list()
-        self:refresh_selected_recipe()
-    end)
+    local row = CraftingRecipeRow(
+        function(selected_recipe)
+            self.selected_recipe_id = selected_recipe.id
+            self:_invalidate_recipe_list()
+            self:refresh_recipe_list()
+            self:refresh_selected_recipe()
+        end,
+        function(selected_recipe)
+            self:toggle_recipe_favorite(selected_recipe)
+        end
+    )
     row:set_scale(_G.settings.global.scale)
     row:set_width(row_w)
-    row:set_data(recipe, status, result_item, required_level)
+    row:set_data(recipe, status, result_item, required_level, self:_is_recipe_favorite(recipe))
     row:set_selected(recipe.id == self.selected_recipe_id)
     self.recipe_list:AddItem(row)
 end
@@ -2726,6 +2952,7 @@ function CraftingWindow:layout()
     local gap = _scaled_int(BASE_GAP)
     local bar_h = _scaled_int(BASE_BAR_H)
     local clear_w = _scaled_int(BASE_CLEAR_W)
+    local favorite_filter_w = _favorite_icon_size()
     local revert_w = _scaled_int(62)
     local track_w = _scaled_int(78)
     local loading_panel_h = self._loading_visible == true and _scaled_int(BASE_LOADING_PANEL_H) or 0
@@ -2735,7 +2962,8 @@ function CraftingWindow:layout()
         left_w = _scaled_int(280)
         right_w = width - margin_left - margin_right - gap - left_w
     end
-    local top_bar_h = (bar_h * 2) + gap
+    local top_row_h = math.max(bar_h, favorite_filter_w)
+    local top_bar_h = top_row_h + gap + bar_h
     local content_top = margin_top + top_bar_h + gap
     local content_bottom_gap = loading_panel_h > 0 and gap or 0
     local content_h = height - content_top - margin_bottom - loading_panel_h - content_bottom_gap
@@ -2755,12 +2983,16 @@ function CraftingWindow:layout()
     self.top_bar:SetPosition(margin_left, margin_top)
     self.top_bar:SetSize(width - margin_left - margin_right, top_bar_h)
 
-    self.search_box:SetPosition(0, 0)
-    self.search_box:SetSize(self.top_bar:GetWidth() - clear_w - gap, bar_h)
-    self.clear_button:SetPosition(self.top_bar:GetWidth() - clear_w, 0)
+    local top_control_y = math.max(0, math.floor((top_row_h - bar_h) / 2))
+    local favorite_filter_y = math.max(0, math.floor((top_row_h - favorite_filter_w) / 2))
+    self.search_box:SetPosition(0, top_control_y)
+    self.search_box:SetSize(self.top_bar:GetWidth() - clear_w - favorite_filter_w - (gap * 2), bar_h)
+    self.favorite_filter_button:SetPosition(self.top_bar:GetWidth() - clear_w - gap - favorite_filter_w, favorite_filter_y)
+    self.favorite_filter_button:SetSize(favorite_filter_w, favorite_filter_w)
+    self.clear_button:SetPosition(self.top_bar:GetWidth() - clear_w, top_control_y)
     self.clear_button:SetSize(clear_w, bar_h)
 
-    local row2_y = bar_h + gap
+    local row2_y = top_row_h + gap
     local label_gap = _scaled_int(4)
     local group_gap = _scaled_int(18)
     local scope_label_w = _scaled_int(56)

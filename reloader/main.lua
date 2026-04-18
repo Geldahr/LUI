@@ -13,7 +13,7 @@ local function _register_button()
         key = "reloader",
         title = "LUI Reloader button",
         description = "Button to reload the LUI plugin",
-        image = 0x411BBF59,
+        image = "LUI/reloader/reload.tga",
         command = "/luireloader",
     })
 
