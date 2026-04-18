@@ -26,7 +26,8 @@ LUI is a custom user interface plugin for The Lord of the Rings Online. It focus
 - Cooldown tracker with thresholds, whitelist and blacklist support
 - Inventory window with optional default backpack replacement
 - Assets window for server-wide item holdings across characters
-- Status bar widgets for local time, inventory space, money, and more planned
+- Crafting browser with recipe search, source filters, favorites, recursive ingredient breakdowns, and per-character tracked plans
+- Status bar widgets for local time, inventory space, money, crafting shortcuts, tracked crafting resources, and more planned
 - Bestiary browser, bestiary cards, and optional bestiary capture on English clients
 - First-run quick setup to get you up and running quickly
 - Profile management so multiple characters can reuse or switch configurations
@@ -75,6 +76,7 @@ git clone https://github.com/Geldahr/LUI.git
 - `/lui move cancel` - Leave move mode without saving the current positions
 - `/lui inventory` or `/lui inv` - Toggle the inventory window
 - `/lui assets` or `/lui a` - Toggle the assets window
+- `/lui craft` - Toggle the crafting window
 - `/lui bestiary`, `/lui beast`, or `/lui b` - Toggle the bestiary window
 - `/lui card [monster name]` - Open the bestiary card for a monster
 - `/lui api.sb --add -k "key" -t "Title" [-d "Description"] -i "0x11223344|path/to/icon.tga" -c "/command args"` - Register a status bar API button
