@@ -845,7 +845,7 @@ function CraftingIngredientRow:Constructor()
 
     self.source_hint = UI.Widgets.LuiLabel()
     self.source_hint:SetParent(self)
-    self.source_hint:SetMouseVisible(false)
+    self.source_hint:SetMouseVisible(true)
     self.source_hint:SetForeColor(TEXT_META)
     self.source_hint:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.source_hint:SetMultiline(false)
@@ -853,19 +853,29 @@ function CraftingIngredientRow:Constructor()
 
     self.amount = UI.Widgets.LuiLabel()
     self.amount:SetParent(self)
-    self.amount:SetMouseVisible(false)
+    self.amount:SetMouseVisible(true)
     self.amount:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
 
-    self.MouseEnter = function()
+    local function show_source_breakdown(anchor_control)
         if self._source_breakdown ~= nil and type(self._show_source_breakdown) == "function" then
-            self._show_source_breakdown(self, self._source_breakdown)
+            self._show_source_breakdown(anchor_control, self._source_breakdown)
         end
     end
-    self.MouseLeave = function()
+
+    local function hide_source_breakdown()
         if type(self._hide_source_breakdown) == "function" then
             self._hide_source_breakdown()
         end
     end
+
+    self.source_hint.MouseEnter = function()
+        show_source_breakdown(self.source_hint)
+    end
+    self.source_hint.MouseLeave = hide_source_breakdown
+    self.amount.MouseEnter = function()
+        show_source_breakdown(self.amount)
+    end
+    self.amount.MouseLeave = hide_source_breakdown
 end
 
 function CraftingIngredientRow:set_scale(scale)
@@ -1258,7 +1268,7 @@ function CraftingWindow:Constructor()
     self._last_update_at = 0
     self.update_every = 0.75
     self._loading_visible = false
-    self.store = Crafting.get_shared_store ~= nil and Crafting.get_shared_store() or nil
+    self.store = Crafting.get_shared_store()
     if self.store == nil then
         error("Crafting window requires enabled crafting store")
     end
@@ -1765,7 +1775,7 @@ function CraftingWindow:Constructor()
     self.VisibleChanged = function()
         local visible = self:IsVisible() == true
         self:SetWantsUpdates(visible)
-        if self.store ~= nil and self.store.set_loading_priority ~= nil then
+        if self.store ~= nil then
             self.store:set_loading_priority(visible)
         end
         if visible == true then
@@ -1793,11 +1803,14 @@ function CraftingWindow._status_color(_, evaluation)
 end
 
 function CraftingWindow:_item(item_key)
-    return self.store ~= nil and self.store.get_item ~= nil and self.store:get_item(item_key) or nil
+    if self.store == nil then
+        return nil
+    end
+    return self.store:get_item(item_key)
 end
 
 function CraftingWindow:_source_breakdown_for_item(item_key, required)
-    if self.store == nil or self.store.get_source_breakdown == nil then
+    if self.store == nil then
         return nil
     end
 
@@ -1972,11 +1985,17 @@ function CraftingWindow:_show_source_breakdown_hint(anchor_control, breakdown)
 end
 
 function CraftingWindow:_recipe_result_item(recipe)
-    return self.store ~= nil and self.store.get_recipe_result_item ~= nil and self.store:get_recipe_result_item(recipe) or nil
+    if self.store == nil then
+        return nil
+    end
+    return self.store:get_recipe_result_item(recipe)
 end
 
 function CraftingWindow:_recipe_result_name(recipe)
-    return self.store ~= nil and self.store.get_recipe_result_name ~= nil and self.store:get_recipe_result_name(recipe) or ""
+    if self.store == nil then
+        return ""
+    end
+    return self.store:get_recipe_result_name(recipe)
 end
 
 function CraftingWindow:_recipe_critical_result_item(recipe)
@@ -1984,7 +2003,10 @@ function CraftingWindow:_recipe_critical_result_item(recipe)
 end
 
 function CraftingWindow:_recipe_required_level(recipe)
-    return self.store ~= nil and self.store.get_recipe_required_level ~= nil and self.store:get_recipe_required_level(recipe) or nil
+    if self.store == nil then
+        return nil
+    end
+    return self.store:get_recipe_required_level(recipe)
 end
 
 function CraftingWindow:_critical_result_detail(recipe)
@@ -2059,10 +2081,7 @@ function CraftingWindow:show_plan_tab()
 end
 
 function CraftingWindow:_saved_plan_entries()
-    if Crafting ~= nil and Crafting.get_tracked_plan_entries ~= nil then
-        return Crafting.get_tracked_plan_entries()
-    end
-    return {}
+    return Crafting.get_tracked_plan_entries()
 end
 
 function CraftingWindow:_favorite_key_for_entry(entry)
@@ -2070,7 +2089,7 @@ function CraftingWindow:_favorite_key_for_entry(entry)
 end
 
 function CraftingWindow:_favorite_entry_for_recipe(recipe)
-    if self.store == nil or self.store.serialize_recipe_identity == nil then
+    if self.store == nil then
         return nil
     end
     return self.store:serialize_recipe_identity(recipe)
@@ -2096,18 +2115,12 @@ function CraftingWindow:_rebuild_favorite_keys()
 end
 
 function CraftingWindow:_load_favorites()
-    if Crafting ~= nil and Crafting.get_favorite_recipe_entries ~= nil then
-        self.favorite_entries = Crafting.get_favorite_recipe_entries()
-    else
-        self.favorite_entries = {}
-    end
+    self.favorite_entries = Crafting.get_favorite_recipe_entries()
     self:_rebuild_favorite_keys()
 end
 
 function CraftingWindow:_save_favorites()
-    if Crafting ~= nil and Crafting.set_favorite_recipe_entries ~= nil then
-        Crafting.set_favorite_recipe_entries(self.favorite_entries, true)
-    end
+    Crafting.set_favorite_recipe_entries(self.favorite_entries, true)
 end
 
 function CraftingWindow:_is_recipe_favorite(recipe)
@@ -2184,7 +2197,7 @@ function CraftingWindow:_set_runtime_plan_entries(plan_entries)
 end
 
 function CraftingWindow:_sync_draft_plan_from_tracked()
-    if self.store == nil or Crafting == nil or Crafting.resolve_tracked_plan_entries == nil then
+    if self.store == nil then
         return false
     end
 
@@ -2216,7 +2229,7 @@ function CraftingWindow:_sync_draft_plan_from_tracked()
 end
 
 function CraftingWindow:_refresh_plan_dirty_state()
-    if self.store == nil or self.store.serialize_plan_entries == nil then
+    if self.store == nil then
         self._plan_dirty = false
         self._plan_user_changed = false
         return
@@ -2341,7 +2354,7 @@ function CraftingWindow:open()
     self:SetVisible(true)
     self:SetWantsUpdates(true)
     self:bring_to_front()
-    if self.store ~= nil and self.store.refresh_if_due ~= nil then
+    if self.store ~= nil then
         self.store:refresh_if_due()
     end
     self._plan_user_changed = false
@@ -2525,7 +2538,7 @@ function CraftingWindow:Update()
     self._last_update_at = now
 
     local store_changed = false
-    if self.store ~= nil and self.store.refresh_if_due ~= nil then
+    if self.store ~= nil then
         store_changed = self.store:refresh_if_due() == true
     end
     local store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
@@ -2546,8 +2559,7 @@ function CraftingWindow:refresh_from_store(reset_filters)
         self.search_groups = _normalize_query_groups(_parse_query(self.search_box:GetText()))
     end
 
-    local loaded_result_keys = self.store.consume_loaded_recipe_result_keys ~= nil and
-        self.store:consume_loaded_recipe_result_keys() or {}
+    local loaded_result_keys = self.store:consume_loaded_recipe_result_keys()
     local selected_recipe_discovered =
         self:_loaded_recipe_matches_watch(self._selected_recipe_watch_keys, loaded_result_keys)
     local plan_recipe_discovered =
@@ -3149,13 +3161,10 @@ function CraftingWindow:refresh_plan()
     self._plan_recipe_watch_keys = {}
 
     local draft_plan_entries = self:_build_plan_entries()
-    local draft_resource_state = self.store.evaluate_plan_resources ~= nil and
-        self.store:evaluate_plan_resources(draft_plan_entries, self.scope_key) or
-        { evaluation = self.store:evaluate_plan(draft_plan_entries, self.scope_key), resources = {}, incomplete_resources = {}, ready = false }
+    local draft_resource_state = self.store:evaluate_plan_resources(draft_plan_entries, self.scope_key)
     local draft_evaluation = draft_resource_state.evaluation
 
-    local tracked_resolved = Crafting ~= nil and Crafting.resolve_tracked_plan_entries ~= nil and
-        Crafting.resolve_tracked_plan_entries(self.store) or { entries = {}, unresolved_entries = {}, unresolved_count = 0, total_count = 0 }
+    local tracked_resolved = Crafting.resolve_tracked_plan_entries(self.store)
     local tracked_plan_entries = tracked_resolved.entries or {}
     local tracked_unresolved_entries = tracked_resolved.unresolved_entries or {}
 
@@ -3185,7 +3194,7 @@ function CraftingWindow:refresh_plan()
 
     local queue_w = self:_current_queue_list_width()
     local row_w = self:_current_plan_list_width()
-    local loading_tracked = self.store ~= nil and self.store.is_loading ~= nil and self.store:is_loading() == true
+    local loading_tracked = self.store:is_loading() == true
     for i = 1, #draft_evaluation.entries do
         local entry = draft_evaluation.entries[i]
         local queue_row = CraftingPlanRow(
@@ -3249,8 +3258,15 @@ function CraftingWindow:refresh_plan()
         local ingredients = entry.evaluation ~= nil and entry.evaluation.ingredients or nil
         if type(ingredients) == "table" then
             local plan_node_options = {
+                path_keys = {},
                 watch_keys = self._plan_recipe_watch_keys,
             }
+            if type(entry.recipe.result_key) == "string" and entry.recipe.result_key ~= "" then
+                plan_node_options.path_keys[entry.recipe.result_key] = true
+            end
+            if type(entry.recipe.critical_result_key) == "string" and entry.recipe.critical_result_key ~= "" then
+                plan_node_options.path_keys[entry.recipe.critical_result_key] = true
+            end
             for ingredient_index = 1, #ingredients do
                 self:_append_node_rows(self.plan_list, row_w, ingredients[ingredient_index], 1, plan_node_options)
             end
@@ -3364,8 +3380,7 @@ function CraftingWindow:set_plan_count(recipe_id, count)
 end
 
 function CraftingWindow:track_plan()
-    if self.store == nil or self.store.serialize_plan_entries == nil or Crafting == nil or
-        Crafting.set_tracked_plan_entries == nil then
+    if self.store == nil then
         return
     end
 
@@ -3387,9 +3402,7 @@ end
 function CraftingWindow:clear_plan()
     self.plan_order = {}
     self.plan_counts = {}
-    if Crafting ~= nil and Crafting.set_tracked_plan_entries ~= nil then
-        Crafting.set_tracked_plan_entries({}, true)
-    end
+    Crafting.set_tracked_plan_entries({}, true)
     self._plan_user_changed = false
     self._plan_dirty = false
     self:refresh_selected_recipe()

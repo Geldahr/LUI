@@ -216,7 +216,7 @@ function Crafting.resolve_tracked_plan_entries(store)
     end
 
     local crafting_store = store or _G.CRAFTING_STORE
-    if crafting_store == nil or crafting_store.resolve_saved_plan_entries == nil then
+    if crafting_store == nil then
         return {
             entries = {},
             unresolved_count = #entries,
@@ -284,7 +284,7 @@ function Crafting.get_tracked_plan_resource_state(store)
         end
     end
 
-    if crafting_store == nil or crafting_store.evaluate_plan_resources == nil then
+    if crafting_store == nil then
         return {
             resources = {},
             incomplete_resources = {},
@@ -306,17 +306,16 @@ function Crafting.get_tracked_plan_resource_state(store)
     end
 
     local resolved = Crafting.resolve_tracked_plan_entries(crafting_store)
-    local resource_scope = crafting_store.scope_key_from_sources ~= nil and
-        crafting_store:scope_key_from_sources({ "backpack" }) or nil
+    local resource_scope = crafting_store:scope_key_from_sources({ "backpack" })
     local resource_state = crafting_store:evaluate_plan_resources(resolved.entries, resource_scope)
     resource_state.saved_entry_count = #entries
     resource_state.unresolved_count = resolved.unresolved_count or 0
     resource_state.total_entry_count = resolved.total_count or #entries
-    local progress = crafting_store.get_loading_progress ~= nil and crafting_store:get_loading_progress() or nil
-    resource_state.loading = progress ~= nil and progress.loading == true
-    resource_state.loading_loaded = progress ~= nil and (tonumber(progress.loaded) or 0) or 0
-    resource_state.loading_total = progress ~= nil and (tonumber(progress.total) or 0) or 0
-    resource_state.loading_complete = progress ~= nil and progress.complete == true
+    local progress = crafting_store:get_loading_progress()
+    resource_state.loading = progress.loading == true
+    resource_state.loading_loaded = tonumber(progress.loaded) or 0
+    resource_state.loading_total = tonumber(progress.total) or 0
+    resource_state.loading_complete = progress.complete == true
 
     _tracked_plan_cache = {
         signature = signature,
