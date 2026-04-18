@@ -751,6 +751,7 @@ function CraftingStore:Constructor()
     self._recipe_load_done = 0
     self._recipe_load_total = 0
     self._foreground_loading = false
+    self._pending_loaded_result_keys = {}
     self._live_inventory_token = ""
     self.update_every = BACKGROUND_UPDATE_EVERY
     self.last_update_at = 0
@@ -855,6 +856,15 @@ function CraftingStore:get_loading_progress()
         total = total,
         complete = self._recipes_initialized == true and self._recipe_loading ~= true,
     }
+end
+
+function CraftingStore:consume_loaded_recipe_result_keys()
+    local loaded_result_keys = self._pending_loaded_result_keys
+    self._pending_loaded_result_keys = {}
+    if type(loaded_result_keys) ~= "table" then
+        return {}
+    end
+    return loaded_result_keys
 end
 
 function CraftingStore:set_loading_priority(enabled)
@@ -1456,6 +1466,7 @@ function CraftingStore:_start_recipe_load(current_character)
     self._recipe_load_queue_index = 1
     self._recipe_load_done = 0
     self._recipe_load_total = recipe_total
+    self._pending_loaded_result_keys = {}
 end
 
 function CraftingStore:_register_recipe_record(record)
@@ -1468,6 +1479,21 @@ function CraftingStore:_register_recipe_record(record)
     _add_result_index_entry(self.recipes_by_result, record.result_key, record)
     if record.recipe_name_key ~= nil then
         _add_result_index_entry(self.recipes_by_result, record.recipe_name_key, record)
+    end
+end
+
+function CraftingStore:_remember_loaded_recipe_result(record)
+    if type(record) ~= "table" then
+        return
+    end
+    if type(self._pending_loaded_result_keys) ~= "table" then
+        self._pending_loaded_result_keys = {}
+    end
+    if record.result_key ~= nil then
+        self._pending_loaded_result_keys[record.result_key] = true
+    end
+    if record.recipe_name_key ~= nil then
+        self._pending_loaded_result_keys[record.recipe_name_key] = true
     end
 end
 
@@ -1490,7 +1516,9 @@ function CraftingStore:_step_recipe_load(batch_size)
         local profession_info = queue_entry ~= nil and queue_entry.profession_info or nil
         local recipe = profession_info ~= nil and profession_info:GetRecipe(recipe_index) or nil
         if recipe ~= nil and profession ~= nil then
-            self:_register_recipe_record(self:_build_recipe_record(recipe, profession, recipe_index, self.items))
+            local record = self:_build_recipe_record(recipe, profession, recipe_index, self.items)
+            self:_register_recipe_record(record)
+            self:_remember_loaded_recipe_result(record)
         end
 
         self._recipe_load_done = self._recipe_load_done + 1

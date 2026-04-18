@@ -286,6 +286,20 @@ local function _saved_plan_entry_signature(entry)
     }, "\31")
 end
 
+local function _option_list_signature(labels, values)
+    local parts = {}
+    local label_count = type(labels) == "table" and #labels or 0
+    local value_count = type(values) == "table" and #values or 0
+    local count = math.max(label_count, value_count)
+    for i = 1, count do
+        parts[#parts + 1] = table.concat({
+            tostring(type(labels) == "table" and labels[i] or ""),
+            tostring(type(values) == "table" and values[i] or ""),
+        }, "\31")
+    end
+    return table.concat(parts, "\30")
+end
+
 local function _saved_plan_entries_equal(left, right)
     if type(left) ~= "table" then
         left = {}
@@ -1274,6 +1288,13 @@ function CraftingWindow:Constructor()
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
     self._recipe_list_row_width = 0
+    self._recipe_list_page_size = 0
+    self._recipe_page_rendered_start = 1
+    self._recipe_page_rendered_end = 0
+    self._profession_options_signature = nil
+    self._store_loading = self.store:is_loading() == true
+    self._selected_recipe_watch_keys = {}
+    self._plan_recipe_watch_keys = {}
     self._critical_result_visible = false
 
     self.top_bar = Turbine.UI.Control()
@@ -2257,6 +2278,42 @@ function CraftingWindow:_set_scope_dropdown_options()
     self:set_scope_sources(self.scope_source_keys, false)
 end
 
+function CraftingWindow:_refresh_profession_options()
+    local profession_labels, profession_values = self.store:get_profession_options()
+    local options_signature = _option_list_signature(profession_labels, profession_values)
+    if options_signature ~= self._profession_options_signature then
+        self.profession_dropdown:SetMappedOptions(profession_labels, profession_values)
+        self._profession_options_signature = options_signature
+    end
+
+    local profession_found = false
+    for i = 1, #profession_values do
+        if profession_values[i] == self.profession_filter then
+            profession_found = true
+            break
+        end
+    end
+    if profession_found ~= true then
+        self.profession_filter = FILTER_ALL
+    end
+
+    if self.profession_dropdown:GetValue() ~= self.profession_filter then
+        self.profession_dropdown:SetValue(self.profession_filter)
+    end
+end
+
+function CraftingWindow:_loaded_recipe_matches_watch(watch_keys, loaded_result_keys)
+    if type(watch_keys) ~= "table" or type(loaded_result_keys) ~= "table" then
+        return false
+    end
+    for key in pairs(loaded_result_keys) do
+        if watch_keys[key] == true then
+            return true
+        end
+    end
+    return false
+end
+
 function CraftingWindow:set_scope_sources(source_keys, refresh)
     local normalized = self.store:normalize_source_keys(source_keys)
     local next_scope_key = self.store:scope_key_from_sources(normalized)
@@ -2479,39 +2536,43 @@ function CraftingWindow:Update()
 end
 
 function CraftingWindow:refresh_from_store(reset_filters)
-    local profession_labels, profession_values = self.store:get_profession_options()
-    self.profession_dropdown:SetMappedOptions(profession_labels, profession_values)
-
-    local profession_found = false
-    for i = 1, #profession_values do
-        if profession_values[i] == self.profession_filter then
-            profession_found = true
-            break
-        end
-    end
-    if profession_found ~= true then
-        self.profession_filter = FILTER_ALL
-    end
-    self.profession_dropdown:SetValue(self.profession_filter)
+    local was_loading = self._store_loading == true
+    local loading = self.store:is_loading() == true
+    self._store_loading = loading
+    self:refresh_loading_state()
+    self:_refresh_profession_options()
 
     if reset_filters == true then
         self.search_groups = _normalize_query_groups(_parse_query(self.search_box:GetText()))
     end
 
+    local loaded_result_keys = self.store.consume_loaded_recipe_result_keys ~= nil and
+        self.store:consume_loaded_recipe_result_keys() or {}
+    local selected_recipe_discovered =
+        self:_loaded_recipe_matches_watch(self._selected_recipe_watch_keys, loaded_result_keys)
+    local plan_recipe_discovered =
+        self:_loaded_recipe_matches_watch(self._plan_recipe_watch_keys, loaded_result_keys)
+
+    local plan_synced = false
     if self._plan_user_changed ~= true then
-        self:_sync_draft_plan_from_tracked()
+        plan_synced = self:_sync_draft_plan_from_tracked()
     end
 
     local has_saved_tracked_plan = #self:_saved_plan_entries() > 0
+    local completed_loading = was_loading == true and loading ~= true
+    local recipe_list_state = self:refresh_recipe_list({ refresh_selected = false })
 
-    self:refresh_recipe_list()
-    if reset_filters == true or self.selected_recipe_id ~= nil then
+    if reset_filters == true or completed_loading == true or
+        selected_recipe_discovered == true or
+        (recipe_list_state ~= nil and recipe_list_state.selection_changed == true) then
         self:refresh_selected_recipe()
     end
-    if reset_filters == true or #self.plan_order > 0 or has_saved_tracked_plan == true then
+
+    if reset_filters == true or plan_synced == true or completed_loading == true or
+        plan_recipe_discovered == true or
+        (loading ~= true and (#self.plan_order > 0 or has_saved_tracked_plan == true)) then
         self:refresh_plan()
     end
-    self:refresh_loading_state()
     self._last_store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
 end
 
@@ -2628,6 +2689,9 @@ function CraftingWindow:_invalidate_recipe_list()
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
     self._recipe_list_row_width = 0
+    self._recipe_list_page_size = 0
+    self._recipe_page_rendered_start = 1
+    self._recipe_page_rendered_end = 0
 end
 
 function CraftingWindow:_recipe_filter_signature()
@@ -2674,7 +2738,11 @@ function CraftingWindow:_recipe_page_capacity()
     return math.max(1, math.floor(list_h / row_h))
 end
 
-function CraftingWindow:_refresh_recipe_page_rows(row_w)
+function CraftingWindow:_recipe_filter_needs_status()
+    return self.availability_filter == AVAILABILITY_READY or self.availability_filter == AVAILABILITY_MISSING
+end
+
+function CraftingWindow:_refresh_recipe_page_controls()
     self.recipe_page_size = self:_recipe_page_capacity()
     self.recipe_page_count = math.max(1, math.ceil(#self.visible_recipes / self.recipe_page_size))
     if self.recipe_page_index > self.recipe_page_count then
@@ -2684,6 +2752,13 @@ function CraftingWindow:_refresh_recipe_page_rows(row_w)
         self.recipe_page_index = 1
     end
 
+    self.recipe_page_label:SetText(tostring(self.recipe_page_index) .. " / " .. tostring(self.recipe_page_count))
+    self.recipe_prev_button:set_enabled(self.recipe_page_index > 1)
+    self.recipe_next_button:set_enabled(self.recipe_page_index < self.recipe_page_count)
+end
+
+function CraftingWindow:_refresh_recipe_page_rows(row_w)
+    self:_refresh_recipe_page_controls()
     _clear_list_box(self.recipe_list)
 
     local start_index = ((self.recipe_page_index - 1) * self.recipe_page_size) + 1
@@ -2692,29 +2767,65 @@ function CraftingWindow:_refresh_recipe_page_rows(row_w)
         self:_append_recipe_row(self.visible_recipes[i], row_w)
     end
 
-    self.recipe_page_label:SetText(tostring(self.recipe_page_index) .. " / " .. tostring(self.recipe_page_count))
-    self.recipe_prev_button:set_enabled(self.recipe_page_index > 1)
-    self.recipe_next_button:set_enabled(self.recipe_page_index < self.recipe_page_count)
+    self._recipe_page_rendered_start = start_index
+    self._recipe_page_rendered_end = end_index
+    self._recipe_list_page_size = self.recipe_page_size
 end
 
-function CraftingWindow:refresh_recipe_list()
+function CraftingWindow:_append_recipe_page_rows_until_full(row_w)
+    self:_refresh_recipe_page_controls()
+
+    local start_index = ((self.recipe_page_index - 1) * self.recipe_page_size) + 1
+    local end_index = math.min(#self.visible_recipes, start_index + self.recipe_page_size - 1)
+    if self._recipe_page_rendered_start ~= start_index then
+        self:_refresh_recipe_page_rows(row_w)
+        return true
+    end
+
+    local rendered_end = tonumber(self._recipe_page_rendered_end) or (start_index - 1)
+    if rendered_end < start_index - 1 then
+        rendered_end = start_index - 1
+    end
+    if rendered_end >= end_index then
+        self._recipe_list_page_size = self.recipe_page_size
+        return false
+    end
+
+    for i = rendered_end + 1, end_index do
+        self:_append_recipe_row(self.visible_recipes[i], row_w)
+    end
+    self._recipe_page_rendered_end = end_index
+    self._recipe_list_page_size = self.recipe_page_size
+    return true
+end
+
+function CraftingWindow:refresh_recipe_list(options)
+    local should_refresh_selected = type(options) ~= "table" or options.refresh_selected ~= false
     local previous_selected = self.selected_recipe_id
     local row_w = self:_current_recipe_list_width()
     local loading = self.store:is_loading() == true
     local signature = self:_recipe_filter_signature()
     local loaded_count = #self.store.recipes
     local pages_mode = self.display_mode == DISPLAY_PAGES
+    local page_size = pages_mode == true and self:_recipe_page_capacity() or 0
+    local needs_status = self:_recipe_filter_needs_status()
+    local state = {
+        selection_changed = false,
+        rows_changed = false,
+        full_refresh = false,
+    }
     local can_incremental = loading == true and
         self._recipe_list_loading == true and
         self._recipe_list_signature == signature and
         self._recipe_list_row_width == row_w and
+        (pages_mode ~= true or self._recipe_list_page_size == page_size) and
         loaded_count >= self._recipe_list_loaded_count
 
     if can_incremental ~= true then
         self.visible_recipes = {}
         for i = 1, loaded_count do
             local recipe = self.store.recipes[i]
-            local status = self.store:get_recipe_status(recipe, self.scope_key)
+            local status = needs_status == true and self.store:get_recipe_status(recipe, self.scope_key) or nil
             if self:_recipe_matches_filters(recipe, status) == true then
                 self.visible_recipes[#self.visible_recipes + 1] = recipe
             end
@@ -2729,10 +2840,13 @@ function CraftingWindow:refresh_recipe_list()
                 self:_append_recipe_row(self.visible_recipes[i], row_w)
             end
         end
+        state.rows_changed = true
+        state.full_refresh = true
     elseif loaded_count > self._recipe_list_loaded_count then
+        local visible_count_before = #self.visible_recipes
         for i = self._recipe_list_loaded_count + 1, loaded_count do
             local recipe = self.store.recipes[i]
-            local status = self.store:get_recipe_status(recipe, self.scope_key)
+            local status = needs_status == true and self.store:get_recipe_status(recipe, self.scope_key) or nil
             if self:_recipe_matches_filters(recipe, status) == true then
                 self.visible_recipes[#self.visible_recipes + 1] = recipe
                 if self.selected_recipe_id == nil then
@@ -2740,19 +2854,31 @@ function CraftingWindow:refresh_recipe_list()
                 end
                 if pages_mode ~= true then
                     self:_append_recipe_row(recipe, row_w)
+                    state.rows_changed = true
                 end
             end
         end
         if pages_mode == true then
-            self:_refresh_recipe_page_rows(row_w)
+            if #self.visible_recipes > visible_count_before then
+                state.rows_changed = self:_append_recipe_page_rows_until_full(row_w) == true or state.rows_changed
+            else
+                self:_refresh_recipe_page_controls()
+                self._recipe_list_page_size = self.recipe_page_size
+            end
         end
     end
 
     local selection_changed = previous_selected ~= self.selected_recipe_id
+    state.selection_changed = selection_changed
     self._recipe_list_signature = signature
     self._recipe_list_loaded_count = loaded_count
     self._recipe_list_loading = loading
     self._recipe_list_row_width = row_w
+    if pages_mode ~= true then
+        self._recipe_list_page_size = 0
+        self._recipe_page_rendered_start = 1
+        self._recipe_page_rendered_end = 0
+    end
 
     local has_items = #self.visible_recipes > 0
     self.recipe_list:SetVisible(has_items)
@@ -2776,9 +2902,11 @@ function CraftingWindow:refresh_recipe_list()
         end
     end
 
-    if selection_changed == true then
+    if selection_changed == true and should_refresh_selected == true then
         self:refresh_selected_recipe()
     end
+
+    return state
 end
 
 function CraftingWindow:_ingredient_detail_text(node)
@@ -2823,6 +2951,11 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
     local path_keys = type(options) == "table" and options.path_keys or nil
     if type(path_keys) == "table" and node.key ~= nil and path_keys[node.key] == true then
         return
+    end
+
+    local watch_keys = type(options) == "table" and options.watch_keys or nil
+    if type(watch_keys) == "table" and node.key ~= nil then
+        watch_keys[node.key] = true
     end
 
     local item = self:_item(node.key)
@@ -2919,6 +3052,7 @@ end
 function CraftingWindow:refresh_selected_recipe()
     self:_hide_source_breakdown_hint()
     _clear_list_box(self.ingredients_list)
+    self._selected_recipe_watch_keys = {}
 
     local recipe = self:_selected_recipe()
     if recipe == nil then
@@ -2976,6 +3110,7 @@ function CraftingWindow:refresh_selected_recipe()
     local row_w = self:_current_detail_list_width()
     local detail_node_options = {
         path_keys = {},
+        watch_keys = self._selected_recipe_watch_keys,
     }
     if type(recipe.result_key) == "string" and recipe.result_key ~= "" then
         detail_node_options.path_keys[recipe.result_key] = true
@@ -3011,6 +3146,7 @@ function CraftingWindow:refresh_plan()
     _clear_list_box(self.queue_list)
     _clear_list_box(self.plan_list)
     _clear_list_box(self.missing_list)
+    self._plan_recipe_watch_keys = {}
 
     local draft_plan_entries = self:_build_plan_entries()
     local draft_resource_state = self.store.evaluate_plan_resources ~= nil and
@@ -3112,8 +3248,11 @@ function CraftingWindow:refresh_plan()
 
         local ingredients = entry.evaluation ~= nil and entry.evaluation.ingredients or nil
         if type(ingredients) == "table" then
+            local plan_node_options = {
+                watch_keys = self._plan_recipe_watch_keys,
+            }
             for ingredient_index = 1, #ingredients do
-                self:_append_node_rows(self.plan_list, row_w, ingredients[ingredient_index], 1)
+                self:_append_node_rows(self.plan_list, row_w, ingredients[ingredient_index], 1, plan_node_options)
             end
         end
     end
@@ -3288,10 +3427,8 @@ function CraftingWindow:refresh_loading_state()
 
     if visibility_changed == true then
         self:layout()
-        if self.display_mode == DISPLAY_PAGES then
-            self:_refresh_recipe_page_rows(self:_current_recipe_list_width())
-        end
     end
+    return visibility_changed
 end
 
 function CraftingWindow:layout()
