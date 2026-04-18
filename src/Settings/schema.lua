@@ -134,8 +134,6 @@ function _G.ensure_loaded_settings()
 
     ensure_table_at(s, { "inventory", "window" })
     ensure_table_at(s, { "crafting", "window" })
-    ensure_table_at(s, { "crafting", "tracked_plan" })
-    ensure_table_at(s, { "crafting", "tracked_plan", "entries" })
     ensure_table_at(s, { "assets", "window" })
     ensure_table_at(s, { "assets", "tile" })
     ensure_table_at(s, { "assets", "layouts" })
@@ -426,15 +424,14 @@ function _G.ensure_loaded_settings()
     if crafting.window.height == nil then
         crafting.window.height = 700
     end
-    if type(crafting.tracked_plan.entries) ~= "table" then
-        crafting.tracked_plan.entries = {}
-    end
     if crafting.enabled == nil then
         crafting.enabled = true
     end
     if crafting.display_mode ~= "scroll" and crafting.display_mode ~= "pages" then
         crafting.display_mode = "pages"
     end
+    crafting.tracked_plan = nil
+    crafting.favorites = nil
 
     local bestiary = s.bestiary
     if bestiary.window.left == nil then

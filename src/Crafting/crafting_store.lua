@@ -10,16 +10,31 @@ local SOURCE_BACKPACK = "backpack"
 local SOURCE_BANK = "bank"
 local SOURCE_VAULT = "vault"
 local SOURCE_SHARED = "shared_storage"
+local SOURCE_OTHER_CHARACTERS = "other_characters"
+local SOURCE_SCOPE_PREFIX = "sources:"
 
 local FILTER_ALL = "__all"
-local SCOPE_SERVER = "server"
-local SCOPE_INVENTORY = "inventory"
-local SCOPE_PERSONAL = "personal"
-local SCOPE_SHARED = "shared"
-local RECIPE_LOAD_BATCH_SIZE = 1
-local BACKGROUND_UPDATE_EVERY = 0.50
+local BACKGROUND_RECIPE_BATCH_SIZE = 2
+local BACKGROUND_UPDATE_EVERY = 0.20
 local FOREGROUND_UPDATE_EVERY = 0.20
-local FOREGROUND_RECIPE_BATCH_SIZE = 2
+local FOREGROUND_RECIPE_BATCH_SIZE = 10
+local RECIPE_STATUS_CRAFT_LIMIT = 999
+
+local SOURCE_ORDER = {
+    SOURCE_BACKPACK,
+    SOURCE_BANK,
+    SOURCE_VAULT,
+    SOURCE_SHARED,
+    SOURCE_OTHER_CHARACTERS,
+}
+
+local SOURCE_SET = {
+    [SOURCE_BACKPACK] = true,
+    [SOURCE_BANK] = true,
+    [SOURCE_VAULT] = true,
+    [SOURCE_SHARED] = true,
+    [SOURCE_OTHER_CHARACTERS] = true,
+}
 
 local PROFESSION_ORDER = {
     Turbine.Gameplay.Profession.Cook,
@@ -72,6 +87,71 @@ local function _copy_counts(source)
     end
 
     return out
+end
+
+local function _copy_array(source)
+    local out = {}
+    if type(source) ~= "table" then
+        return out
+    end
+    for i = 1, #source do
+        out[#out + 1] = source[i]
+    end
+    return out
+end
+
+local function _add_count(map, key, quantity)
+    local amount = tonumber(quantity) or 0
+    if type(map) ~= "table" or key == nil or key == "" or amount <= 0 then
+        return
+    end
+    map[key] = (map[key] or 0) + amount
+end
+
+local function _normalize_source_keys(source_keys)
+    local selected = {}
+    if type(source_keys) == "table" then
+        for i = 1, #source_keys do
+            local key = source_keys[i]
+            if SOURCE_SET[key] == true then
+                selected[key] = true
+            end
+        end
+    elseif type(source_keys) == "string" and string.sub(source_keys, 1, string.len(SOURCE_SCOPE_PREFIX)) == SOURCE_SCOPE_PREFIX then
+        local encoded = source_keys
+        encoded = string.sub(encoded, string.len(SOURCE_SCOPE_PREFIX) + 1)
+        for key in string.gmatch(encoded, "[^,]+") do
+            if SOURCE_SET[key] == true then
+                selected[key] = true
+            end
+        end
+    end
+
+    local out = {}
+    for i = 1, #SOURCE_ORDER do
+        local key = SOURCE_ORDER[i]
+        if selected[key] == true then
+            out[#out + 1] = key
+        end
+    end
+    return out
+end
+
+local function _source_scope_key(source_keys)
+    local normalized = _normalize_source_keys(source_keys)
+    return SOURCE_SCOPE_PREFIX .. table.concat(normalized, ",")
+end
+
+local function _is_source_scope_key(scope_key)
+    return type(scope_key) == "table" or
+        (type(scope_key) == "string" and string.sub(scope_key, 1, string.len(SOURCE_SCOPE_PREFIX)) == SOURCE_SCOPE_PREFIX)
+end
+
+local function _normalized_scope_key(scope_key)
+    if _is_source_scope_key(scope_key) == true then
+        return _source_scope_key(scope_key)
+    end
+    return _source_scope_key({})
 end
 
 local function _count_map_signature(counts)
@@ -190,20 +270,23 @@ local function _saved_plan_entry_matches_recipe(saved_entry, recipe)
     if type(saved_entry) ~= "table" or type(recipe) ~= "table" then
         return false
     end
+    if saved_entry.i == nil then
+        return false
+    end
 
-    if saved_entry.profession_key ~= nil and tostring(saved_entry.profession_key) ~= tostring(recipe.profession_key) then
+    if tostring(saved_entry.i) ~= tostring(recipe.id) then
         return false
     end
-    if saved_entry.result_key ~= nil and tostring(saved_entry.result_key) ~= tostring(recipe.result_key) then
+    if saved_entry.p ~= nil and tostring(saved_entry.p) ~= tostring(recipe.profession_key) then
         return false
     end
-    if saved_entry.recipe_name_key ~= nil and tostring(saved_entry.recipe_name_key) ~= tostring(recipe.recipe_name_key or recipe.result_key or "") then
+    if saved_entry.r ~= nil and tostring(saved_entry.r) ~= tostring(recipe.result_key) then
         return false
     end
-    if saved_entry.category_name_key ~= nil and tostring(saved_entry.category_name_key) ~= _normalize_name(recipe.category_name) then
+    if saved_entry.n ~= nil and tostring(saved_entry.n) ~= tostring(recipe.recipe_name_key or recipe.result_key or "") then
         return false
     end
-    if saved_entry.tier ~= nil and (tonumber(saved_entry.tier) or 0) ~= (tonumber(recipe.tier) or 0) then
+    if saved_entry.c ~= nil and tostring(saved_entry.c) ~= _normalize_name(recipe.category_name) then
         return false
     end
 
@@ -489,20 +572,37 @@ local function _collect_asset_entries_from_cache()
     return entries
 end
 
-local function _scope_option_labels()
+local function _source_option_labels()
     return {
-        TR["This character"],
-        TR["Backpack only"],
-        TR["Server-wide"],
+        TR["Backpack"],
+        TR["Bank"],
+        TR["Vault"],
+        TR["Shared Storage"],
+        TR["Other characters"],
     }
 end
 
-local function _scope_option_values()
-    return {
-        SCOPE_PERSONAL,
-        SCOPE_INVENTORY,
-        SCOPE_SERVER,
-    }
+local function _source_option_values()
+    return _copy_array(SOURCE_ORDER)
+end
+
+local function _source_label(source_key)
+    if source_key == SOURCE_BACKPACK then
+        return TR["Backpack"]
+    end
+    if source_key == SOURCE_BANK then
+        return TR["Bank"]
+    end
+    if source_key == SOURCE_VAULT then
+        return TR["Vault"]
+    end
+    if source_key == SOURCE_SHARED then
+        return TR["Shared Storage"]
+    end
+    if source_key == SOURCE_OTHER_CHARACTERS then
+        return TR["Other characters"]
+    end
+    return _safe_string(source_key, "")
 end
 
 local function _recipe_sort_compare(items, left, right)
@@ -581,16 +681,17 @@ function CraftingStore:Constructor()
     self.recipes = {}
     self.recipe_by_id = {}
     self.recipes_by_result = {}
-    self.ownership = {
-        [SCOPE_SERVER] = {},
-        [SCOPE_INVENTORY] = {},
-        [SCOPE_PERSONAL] = {},
-        [SCOPE_SHARED] = {},
+    self.source_ownership = {
+        [SOURCE_BACKPACK] = {},
+        [SOURCE_BANK] = {},
+        [SOURCE_VAULT] = {},
+        [SOURCE_SHARED] = {},
+        [SOURCE_OTHER_CHARACTERS] = {},
     }
     self.profession_option_labels = { TR["All professions"] }
     self.profession_option_values = { FILTER_ALL }
-    self.scope_option_labels = _scope_option_labels()
-    self.scope_option_values = _scope_option_values()
+    self.source_option_labels = _source_option_labels()
+    self.source_option_values = _source_option_values()
     self._status_cache = {}
     self._assets_token = nil
     self._recipe_token = nil
@@ -601,6 +702,7 @@ function CraftingStore:Constructor()
     self._recipe_load_done = 0
     self._recipe_load_total = 0
     self._foreground_loading = false
+    self._pending_loaded_result_keys = {}
     self._live_inventory_token = ""
     self.update_every = BACKGROUND_UPDATE_EVERY
     self.last_update_at = 0
@@ -612,8 +714,68 @@ function CraftingStore:destroy()
     self:SetVisible(false)
 end
 
-function CraftingStore:get_scope_options()
-    return self.scope_option_labels, self.scope_option_values
+function CraftingStore:get_source_options()
+    return self.source_option_labels, self.source_option_values
+end
+
+function CraftingStore:get_default_source_keys()
+    return { SOURCE_BACKPACK, SOURCE_BANK, SOURCE_VAULT, SOURCE_SHARED }
+end
+
+function CraftingStore:get_all_source_keys()
+    return _copy_array(SOURCE_ORDER)
+end
+
+function CraftingStore:normalize_source_keys(source_keys)
+    return _normalize_source_keys(source_keys)
+end
+
+function CraftingStore:scope_key_from_sources(source_keys)
+    return _source_scope_key(source_keys)
+end
+
+function CraftingStore:get_source_breakdown(item_key, required, scope_key)
+    local key = _normalize_name(item_key)
+    local needed = math.max(0, math.floor((tonumber(required) or 0) + 0.5))
+    local source_keys = _normalize_source_keys(_normalized_scope_key(scope_key))
+    local entries = {}
+    local total_owned = 0
+
+    for i = 1, #source_keys do
+        local source_key = source_keys[i]
+        local source_stock = self.source_ownership[source_key]
+        local owned = 0
+        if type(source_stock) == "table" then
+            owned = math.max(0, math.floor((tonumber(source_stock[key]) or 0) + 0.5))
+        end
+        total_owned = total_owned + owned
+        entries[#entries + 1] = {
+            key = source_key,
+            label = _source_label(source_key),
+            owned = owned,
+        }
+    end
+
+    local remaining = needed
+    local positive_count = 0
+    for i = 1, #entries do
+        local entry = entries[i]
+        entry.used = math.min(entry.owned, remaining)
+        remaining = math.max(0, remaining - entry.used)
+        if entry.owned > 0 then
+            positive_count = positive_count + 1
+        end
+    end
+
+    return {
+        key = key,
+        required = needed,
+        total_owned = total_owned,
+        missing = math.max(0, needed - total_owned),
+        complete = total_owned >= needed,
+        entries = entries,
+        positive_count = positive_count,
+    }
 end
 
 function CraftingStore:get_profession_options()
@@ -639,6 +801,15 @@ function CraftingStore:get_loading_progress()
     }
 end
 
+function CraftingStore:consume_loaded_recipe_result_keys()
+    local loaded_result_keys = self._pending_loaded_result_keys
+    self._pending_loaded_result_keys = {}
+    if type(loaded_result_keys) ~= "table" then
+        return {}
+    end
+    return loaded_result_keys
+end
+
 function CraftingStore:set_loading_priority(enabled)
     local foreground = enabled == true
     if self._foreground_loading == foreground then
@@ -651,14 +822,18 @@ function CraftingStore:set_loading_priority(enabled)
 end
 
 function CraftingStore:Update()
+    self:refresh_if_due()
+end
+
+function CraftingStore:refresh_if_due()
     local now = Turbine.Engine.GetGameTime()
     if (now - (self.last_update_at or 0)) < self.update_every then
-        return
+        return false
     end
     self.last_update_at = now
 
-    local batch_size = self._foreground_loading == true and FOREGROUND_RECIPE_BATCH_SIZE or RECIPE_LOAD_BATCH_SIZE
-    self:refresh(false, batch_size)
+    local batch_size = self._foreground_loading == true and FOREGROUND_RECIPE_BATCH_SIZE or BACKGROUND_RECIPE_BATCH_SIZE
+    return self:refresh(false, batch_size)
 end
 
 function CraftingStore:refresh(force, recipe_batch_size)
@@ -672,7 +847,7 @@ function CraftingStore:refresh(force, recipe_batch_size)
     if recipe_refresh_needed == true then
         self:_start_recipe_load(current_character)
         changed = true
-    elseif self._recipe_loading == true and self:_step_recipe_load(recipe_batch_size or RECIPE_LOAD_BATCH_SIZE) == true then
+    elseif self._recipe_loading == true and self:_step_recipe_load(recipe_batch_size or BACKGROUND_RECIPE_BATCH_SIZE) == true then
         changed = true
     end
 
@@ -685,7 +860,7 @@ function CraftingStore:refresh(force, recipe_batch_size)
 
     self.current_character_name = current_character
     if ownership_refresh_needed == true then
-        self.ownership = self:_build_ownership(current_character, live_inventory_counts)
+        self.source_ownership = self:_build_source_ownership(current_character, live_inventory_counts)
         self._status_cache = {}
         self._assets_token = assets_token
         self._live_inventory_token = live_inventory_token
@@ -695,7 +870,7 @@ function CraftingStore:refresh(force, recipe_batch_size)
 end
 
 function CraftingStore:get_recipe_status(recipe_or_id, scope_key)
-    local scope = scope_key or SCOPE_PERSONAL
+    local scope = _normalized_scope_key(scope_key)
     if type(self._status_cache[scope]) ~= "table" then
         self._status_cache[scope] = {}
     end
@@ -710,9 +885,21 @@ function CraftingStore:get_recipe_status(recipe_or_id, scope_key)
 
     local cache = self._status_cache[scope]
     if cache[recipe.id] == nil then
-        local evaluation = self:evaluate_recipe(recipe, scope, 1)
+        local stock = self:_stock_for_scope(scope)
+        local evaluation = self:_evaluate_recipe_with_stock(recipe, 1, stock)
+        local craftable_count = 0
+        local craftable_count_limited = false
+        if evaluation ~= nil and evaluation.craftable == true then
+            craftable_count = self:_max_craftable_with_stock(recipe, stock, RECIPE_STATUS_CRAFT_LIMIT)
+            if craftable_count >= RECIPE_STATUS_CRAFT_LIMIT then
+                local over_limit = self:_evaluate_recipe_with_stock(recipe, RECIPE_STATUS_CRAFT_LIMIT + 1, stock)
+                craftable_count_limited = over_limit ~= nil and over_limit.craftable == true
+            end
+        end
         local summary = {
             craftable = evaluation ~= nil and evaluation.craftable == true or false,
+            craftable_count = craftable_count,
+            craftable_count_limited = craftable_count_limited,
             used_expansion = evaluation ~= nil and evaluation.used_expansion == true or false,
             ingredients = {},
         }
@@ -807,6 +994,25 @@ function CraftingStore:recipe_matches_query(recipe, groups)
     return false
 end
 
+function CraftingStore:_stock_for_source_keys(source_keys)
+    local stock = {}
+    local normalized = _normalize_source_keys(source_keys)
+    for i = 1, #normalized do
+        local source_stock = self.source_ownership[normalized[i]]
+        if type(source_stock) == "table" then
+            for key, quantity in pairs(source_stock) do
+                _add_count(stock, key, quantity)
+            end
+        end
+    end
+    return stock
+end
+
+function CraftingStore:_stock_for_scope(scope_key)
+    local scope = _normalized_scope_key(scope_key)
+    return self:_stock_for_source_keys(_normalize_source_keys(scope))
+end
+
 function CraftingStore:evaluate_recipe(recipe_or_id, scope_key, craft_count)
     local recipe = recipe_or_id
     if type(recipe_or_id) ~= "table" then
@@ -822,14 +1028,15 @@ function CraftingStore:evaluate_recipe(recipe_or_id, scope_key, craft_count)
     end
     count = math.floor(count + 0.5)
 
-    local base_stock = _copy_counts(self.ownership[scope_key] or {})
+    local scope = _normalized_scope_key(scope_key)
+    local base_stock = self:_stock_for_scope(scope)
     local evaluation = self:_evaluate_recipe_with_stock(recipe, count, base_stock)
-    evaluation.scope_key = scope_key
+    evaluation.scope_key = scope
     return evaluation
 end
 
 function CraftingStore:evaluate_plan(plan_entries, scope_key)
-    local base_stock = _copy_counts(self.ownership[scope_key] or {})
+    local base_stock = self:_stock_for_scope(scope_key)
     local working_stock = _copy_counts(base_stock)
     local result = {
         entries = {},
@@ -882,22 +1089,27 @@ function CraftingStore:serialize_plan_entries(plan_entries)
         local count = entry ~= nil and (tonumber(entry.count) or 0) or 0
         count = math.floor(count + 0.5)
         if recipe ~= nil and count > 0 then
-            saved_entries[#saved_entries + 1] = {
-                id = recipe.id,
-                profession_key = recipe.profession_key,
-                result_key = recipe.result_key,
-                recipe_name_key = recipe.recipe_name_key,
-                category_name_key = _normalize_name(recipe.category_name),
-                result_name = self:get_recipe_result_name(recipe),
-                profession_name = recipe.profession_name,
-                category_name = recipe.category_name,
-                tier = tonumber(recipe.tier) or 0,
-                count = count,
-            }
+            local saved_entry = self:serialize_recipe_identity(recipe)
+            saved_entry.q = count
+            saved_entries[#saved_entries + 1] = saved_entry
         end
     end
 
     return saved_entries
+end
+
+function CraftingStore:serialize_recipe_identity(recipe)
+    if type(recipe) ~= "table" then
+        return nil
+    end
+
+    return {
+        i = recipe.id,
+        p = recipe.profession_key,
+        r = recipe.result_key,
+        n = recipe.recipe_name_key,
+        c = _normalize_name(recipe.category_name),
+    }
 end
 
 function CraftingStore:resolve_saved_plan_entries(saved_entries)
@@ -917,23 +1129,13 @@ function CraftingStore:resolve_saved_plan_entries(saved_entries)
     for i = 1, #saved_entries do
         local saved_entry = saved_entries[i]
         local recipe = nil
-        local count = saved_entry ~= nil and (tonumber(saved_entry.count) or 0) or 0
+        local count = saved_entry ~= nil and (tonumber(saved_entry.q) or 0) or 0
         count = math.floor(count + 0.5)
 
         if count > 0 and type(saved_entry) == "table" then
-            recipe = saved_entry.id ~= nil and self.recipe_by_id[saved_entry.id] or nil
+            recipe = saved_entry.i ~= nil and self.recipe_by_id[saved_entry.i] or nil
             if _saved_plan_entry_matches_recipe(saved_entry, recipe) ~= true then
                 recipe = nil
-            end
-
-            if recipe == nil then
-                for recipe_index = 1, #self.recipes do
-                    local candidate = self.recipes[recipe_index]
-                    if _saved_plan_entry_matches_recipe(saved_entry, candidate) == true then
-                        recipe = candidate
-                        break
-                    end
-                end
             end
         end
 
@@ -1001,6 +1203,7 @@ function CraftingStore:evaluate_plan_resources(plan_entries, scope_key)
                 required = required,
                 missing = missing,
                 complete = missing <= 0,
+                source_breakdown = self:get_source_breakdown(key, required, scope_key),
             }
             resources[#resources + 1] = resource
             if resource.complete ~= true then
@@ -1067,12 +1270,13 @@ function CraftingStore:_capture_live_backpack_counts(current_character)
     return counts
 end
 
-function CraftingStore:_build_ownership(current_character, live_inventory_counts)
-    local ownership = {
-        [SCOPE_SERVER] = {},
-        [SCOPE_INVENTORY] = {},
-        [SCOPE_PERSONAL] = {},
-        [SCOPE_SHARED] = {},
+function CraftingStore:_build_source_ownership(current_character, live_inventory_counts)
+    local source_ownership = {
+        [SOURCE_BACKPACK] = {},
+        [SOURCE_BANK] = {},
+        [SOURCE_VAULT] = {},
+        [SOURCE_SHARED] = {},
+        [SOURCE_OTHER_CHARACTERS] = {},
     }
 
     local entries
@@ -1083,7 +1287,7 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
     end
 
     if type(entries) ~= "table" then
-        return ownership
+        return source_ownership
     end
 
     for i = 1, #entries do
@@ -1093,19 +1297,17 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
         if key ~= "" and quantity > 0 then
             local is_current_backpack = record.owner == current_character and record.source_key == SOURCE_BACKPACK
             if is_current_backpack ~= true then
-                ownership[SCOPE_SERVER][key] = (ownership[SCOPE_SERVER][key] or 0) + quantity
-
-                if record.owner == current_character and record.source_key == SOURCE_BACKPACK then
-                    ownership[SCOPE_INVENTORY][key] = (ownership[SCOPE_INVENTORY][key] or 0) + quantity
-                end
-
-                if record.owner == current_character and
+                if record.owner == current_character and record.source_key == SOURCE_BANK then
+                    _add_count(source_ownership[SOURCE_BANK], key, quantity)
+                elseif record.owner == current_character and record.source_key == SOURCE_VAULT then
+                    _add_count(source_ownership[SOURCE_VAULT], key, quantity)
+                elseif record.owner ~= current_character and
                     (record.source_key == SOURCE_BACKPACK or record.source_key == SOURCE_BANK or record.source_key == SOURCE_VAULT) then
-                    ownership[SCOPE_PERSONAL][key] = (ownership[SCOPE_PERSONAL][key] or 0) + quantity
+                    _add_count(source_ownership[SOURCE_OTHER_CHARACTERS], key, quantity)
                 end
 
                 if record.source_key == SOURCE_SHARED then
-                    ownership[SCOPE_SHARED][key] = (ownership[SCOPE_SHARED][key] or 0) + quantity
+                    _add_count(source_ownership[SOURCE_SHARED], key, quantity)
                 end
             end
         end
@@ -1115,14 +1317,12 @@ function CraftingStore:_build_ownership(current_character, live_inventory_counts
         for key, quantity in pairs(live_inventory_counts) do
             local amount = tonumber(quantity) or 0
             if key ~= nil and key ~= "" and amount > 0 then
-                ownership[SCOPE_INVENTORY][key] = amount
-                ownership[SCOPE_PERSONAL][key] = (ownership[SCOPE_PERSONAL][key] or 0) + amount
-                ownership[SCOPE_SERVER][key] = (ownership[SCOPE_SERVER][key] or 0) + amount
+                source_ownership[SOURCE_BACKPACK][key] = amount
             end
         end
     end
 
-    return ownership
+    return source_ownership
 end
 
 function CraftingStore:_start_recipe_load(current_character)
@@ -1189,6 +1389,7 @@ function CraftingStore:_start_recipe_load(current_character)
     self._recipe_load_queue_index = 1
     self._recipe_load_done = 0
     self._recipe_load_total = recipe_total
+    self._pending_loaded_result_keys = {}
 end
 
 function CraftingStore:_register_recipe_record(record)
@@ -1204,14 +1405,29 @@ function CraftingStore:_register_recipe_record(record)
     end
 end
 
+function CraftingStore:_remember_loaded_recipe_result(record)
+    if type(record) ~= "table" then
+        return
+    end
+    if type(self._pending_loaded_result_keys) ~= "table" then
+        self._pending_loaded_result_keys = {}
+    end
+    if record.result_key ~= nil then
+        self._pending_loaded_result_keys[record.result_key] = true
+    end
+    if record.recipe_name_key ~= nil then
+        self._pending_loaded_result_keys[record.recipe_name_key] = true
+    end
+end
+
 function CraftingStore:_step_recipe_load(batch_size)
     if self._recipe_loading ~= true then
         return false
     end
 
-    local remaining = tonumber(batch_size) or RECIPE_LOAD_BATCH_SIZE
+    local remaining = tonumber(batch_size) or BACKGROUND_RECIPE_BATCH_SIZE
     if remaining == nil or remaining < 1 then
-        remaining = RECIPE_LOAD_BATCH_SIZE
+        remaining = BACKGROUND_RECIPE_BATCH_SIZE
     end
 
     local changed = false
@@ -1223,7 +1439,9 @@ function CraftingStore:_step_recipe_load(batch_size)
         local profession_info = queue_entry ~= nil and queue_entry.profession_info or nil
         local recipe = profession_info ~= nil and profession_info:GetRecipe(recipe_index) or nil
         if recipe ~= nil and profession ~= nil then
-            self:_register_recipe_record(self:_build_recipe_record(recipe, profession, recipe_index, self.items))
+            local record = self:_build_recipe_record(recipe, profession, recipe_index, self.items)
+            self:_register_recipe_record(record)
+            self:_remember_loaded_recipe_result(record)
         end
 
         self._recipe_load_done = self._recipe_load_done + 1
@@ -1260,6 +1478,9 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
     local result_info = recipe:GetResultItemInfo()
     local result_name = _trim(result_info ~= nil and result_info:GetName() or nil)
     local category_name = _trim(recipe:GetCategoryName())
+    local critical_result_info = nil
+    local critical_result_name = ""
+    local critical_result_key = nil
     if result_name == "" then
         result_name = recipe_name
     end
@@ -1275,6 +1496,22 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
     _remember_item(items, result_key, result_name, result_info)
     if type(items[result_key]) == "table" and items[result_key].required_level == nil then
         items[result_key].required_level = _recipe_required_level(result_info, recipe_name, category_name)
+    end
+
+    if recipe.HasCriticalResultItem ~= nil and recipe:HasCriticalResultItem() == true and
+        recipe.GetCriticalResultItemInfo ~= nil then
+        critical_result_info = recipe:GetCriticalResultItemInfo()
+        critical_result_name = _trim(critical_result_info ~= nil and critical_result_info:GetName() or nil)
+        critical_result_key = _normalize_name(critical_result_name)
+        if critical_result_key ~= "" then
+            _remember_item(items, critical_result_key, critical_result_name, critical_result_info)
+            if type(items[critical_result_key]) == "table" and items[critical_result_key].required_level == nil then
+                items[critical_result_key].required_level =
+                    _recipe_required_level(critical_result_info, recipe_name, category_name)
+            end
+        else
+            critical_result_key = nil
+        end
     end
 
     local ingredient_count = recipe:GetIngredientCount() or 0
@@ -1310,7 +1547,12 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
         category_name = category_name,
         tier = tonumber(recipe:GetTier()) or 0,
         cooldown = tonumber(recipe:GetCooldown()) or 0,
+        critical_chance = recipe.GetBaseCriticalSuccessChance ~= nil and
+            tonumber(recipe:GetBaseCriticalSuccessChance()) or nil,
         result_key = result_key,
+        critical_result_key = critical_result_key,
+        critical_result_quantity = critical_result_key ~= nil and recipe.GetCriticalResultItemQuantity ~= nil and
+            math.max(1, tonumber(recipe:GetCriticalResultItemQuantity()) or 1) or 0,
         recipe_name_key = recipe_name_key ~= "" and recipe_name_key ~= result_key and recipe_name_key or nil,
         recipe_name = recipe_name ~= "" and recipe_name ~= result_name and recipe_name or nil,
         result_quantity = math.max(1, tonumber(recipe:GetResultItemQuantity()) or 1),
@@ -1569,4 +1811,22 @@ function CraftingStore:_count_craftable_with_stock(recipe, craft_count, stock)
     end
 
     return craftable_count
+end
+
+function CraftingStore:_max_craftable_with_stock(recipe, stock, limit)
+    local max_count = math.max(1, math.floor((tonumber(limit) or RECIPE_STATUS_CRAFT_LIMIT) + 0.5))
+    local low = 0
+    local high = max_count
+
+    while low < high do
+        local mid = math.floor((low + high + 1) / 2)
+        local evaluation = self:_evaluate_recipe_with_stock(recipe, mid, stock)
+        if evaluation ~= nil and evaluation.craftable == true then
+            low = mid
+        else
+            high = mid - 1
+        end
+    end
+
+    return low
 end

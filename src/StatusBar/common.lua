@@ -3,6 +3,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.Utils.number_abbrev"
+import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.image"
 import "LUI.src.Settings.enums"
 
@@ -31,14 +32,15 @@ S.ICON_INSET = 4
 S.BACKPACK_ICON_W = 24
 S.BACKPACK_ICON_H = 30
 
-S.GOLD_ICON = 0x41007e7b
-S.SILVER_ICON = 0x41007e7c
-S.COPPER_ICON = 0x41007e7d
-S.INVENTORY_SPACE_ICON = 0x41008113
-S.DURABILITY_ICON = 0x41003061
-S.CONFIG_SHORTCUT_ICON = 0x41004D92
-S.ASSETS_SHORTCUT_ICON = 0x41003830
-S.BESTIARY_SHORTCUT_ICON = 0x410031FB
+S.GOLD_ICON = UI.AssetIds.gold_coin
+S.SILVER_ICON = UI.AssetIds.silver_coin
+S.COPPER_ICON = UI.AssetIds.copper_coin
+S.INVENTORY_SPACE_ICON = UI.AssetIds.backpack
+S.DURABILITY_ICON = UI.AssetIds.durability
+S.CONFIG_SHORTCUT_ICON = UI.AssetIds.feather
+S.CRAFT_SHORTCUT_ICON = UI.AssetIds.anvil_silver_glow
+S.ASSETS_SHORTCUT_ICON = UI.AssetIds.chest
+S.BESTIARY_SHORTCUT_ICON = UI.AssetIds.book_orange_cover
 
 S.SHORTCUT_BORDER_COLOR = Turbine.UI.Color(0.90, 0.28, 0.35, 0.45)
 S.SHORTCUT_BORDER_HOVER_COLOR = Turbine.UI.Color(0.98, 0.38, 0.46, 0.56)
@@ -1222,7 +1224,7 @@ function S.get_shortcut_icon(shortcut_key)
     if shortcut_key == "config" then
         return S.CONFIG_SHORTCUT_ICON
     elseif shortcut_key == "craft" then
-        return nil
+        return S.CRAFT_SHORTCUT_ICON
     elseif shortcut_key == "assets" then
         return S.ASSETS_SHORTCUT_ICON
     elseif shortcut_key == "bestiary" then

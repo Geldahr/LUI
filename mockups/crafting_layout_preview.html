@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUI Crafting Layout Preview</title>
+  <style>
+    :root {
+      --bg: #0c0f12;
+      --panel: #10161b;
+      --panel-2: #151d24;
+      --panel-3: #1c2630;
+      --header: #202a36;
+      --border: #536172;
+      --border-soft: #2f3a46;
+      --text: #eef3f8;
+      --muted: #a8b4c2;
+      --dim: #748294;
+      --green: #58d87a;
+      --blue: #5ac8f5;
+      --gold: #d7b84a;
+      --orange: #ef8d43;
+      --red: #e16363;
+      --purple: #bf8bf4;
+      --shadow: rgba(0, 0, 0, 0.38);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Verdana, Geneva, sans-serif;
+      color: var(--text);
+      background: #080a0d;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+
+    .window {
+      width: min(1240px, 100%);
+      min-height: 720px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      box-shadow: 0 24px 72px var(--shadow);
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+    }
+
+    .titlebar {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 10px;
+      background: #050607;
+      border-bottom: 1px solid #11161c;
+      font-size: 12px;
+    }
+
+    .preview-switch {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      background: #090c10;
+    }
+
+    .preview-switch button {
+      min-width: 150px;
+      height: 22px;
+      border: 0;
+      border-right: 1px solid var(--border-soft);
+      color: var(--muted);
+      background: transparent;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .preview-switch button:last-child {
+      border-right: 0;
+    }
+
+    .preview-switch button.active {
+      color: var(--text);
+      background: #233247;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(160px, 1.1fr) minmax(150px, 0.95fr) minmax(120px, 0.7fr) minmax(86px, 0.42fr) minmax(86px, 0.42fr);
+      gap: 12px;
+      align-items: end;
+      padding: 8px 10px;
+      background: #0a0d11;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .field label {
+      display: block;
+      margin: 0 0 3px;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: left;
+    }
+
+    .select,
+    .input {
+      height: 27px;
+      border: 1px solid var(--border);
+      background: #121820;
+      color: var(--text);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      min-width: 0;
+    }
+
+    .select::after {
+      content: "\25be";
+      margin-left: auto;
+      color: var(--gold);
+      font-size: 10px;
+    }
+
+    .input {
+      justify-content: flex-end;
+      color: var(--muted);
+    }
+
+    .content {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(450px, 1.6fr) minmax(360px, 1fr);
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .panel {
+      min-height: 0;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .left-panel {
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .right-panel {
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .tabs {
+      height: 31px;
+      display: flex;
+      align-items: end;
+      background: #060708;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      min-width: 92px;
+      height: 31px;
+      border-right: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tab.active {
+      height: 32px;
+      margin-bottom: -1px;
+      background: var(--panel);
+      color: var(--text);
+      border-bottom: 1px solid var(--panel);
+    }
+
+    .variant {
+      display: none;
+      min-height: 0;
+    }
+
+    .variant.active {
+      display: grid;
+    }
+
+    .variant-a {
+      grid-template-columns: minmax(128px, 0.28fr) minmax(300px, 1fr);
+      min-height: 0;
+    }
+
+    .profession-rail {
+      min-height: 0;
+      border-right: 1px solid var(--border-soft);
+      background: #0d1116;
+      overflow: auto;
+    }
+
+    .profession-button {
+      min-height: 42px;
+      padding: 6px 8px;
+      border-bottom: 1px solid #171f28;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .profession-button.active {
+      color: var(--text);
+      background: #223047;
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+
+    .count {
+      color: var(--green);
+      font-size: 11px;
+    }
+
+    .recipe-browser {
+      min-height: 0;
+      overflow: auto;
+      background: #0f141a;
+    }
+
+    .group-header {
+      min-height: 26px;
+      padding: 5px 10px;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      background: var(--header);
+      border-bottom: 1px solid #293544;
+      font-size: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .chevron {
+      color: var(--gold);
+      font-size: 10px;
+    }
+
+    .badge {
+      min-width: 36px;
+      text-align: right;
+      color: var(--blue);
+      font-size: 11px;
+    }
+
+    .recipe-row,
+    .plan-row,
+    .ingredient-row {
+      min-height: 42px;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) 44px;
+      gap: 8px;
+      align-items: center;
+      padding: 5px 8px;
+      border-bottom: 1px solid #141c24;
+      background: var(--panel);
+      font-size: 12px;
+    }
+
+    .recipe-row:nth-child(odd),
+    .ingredient-row:nth-child(odd) {
+      background: #121920;
+    }
+
+    .recipe-row.selected {
+      background: #243449;
+      box-shadow: inset 3px 0 0 var(--green);
+    }
+
+    .icon {
+      width: 29px;
+      height: 29px;
+      border: 1px solid #2f6844;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.34), transparent 36%),
+        linear-gradient(135deg, #b5d77a, #dca449 47%, #326b37);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
+    }
+
+    .icon.hide {
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.28), transparent 40%),
+        linear-gradient(135deg, #c29045, #7f4c1e 58%, #2d5f3a);
+    }
+
+    .icon.ingot {
+      border-color: #7a6d42;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.34), transparent 38%),
+        linear-gradient(135deg, #d8d8d1, #8d928c 53%, #443f37);
+    }
+
+    .name {
+      min-width: 0;
+    }
+
+    .primary {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+
+    .meta {
+      margin-top: 4px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .star {
+      color: #9aa2ad;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .star.on {
+      color: var(--gold);
+    }
+
+    .ready {
+      color: var(--green);
+      text-align: right;
+      font-size: 11px;
+    }
+
+    .missing {
+      color: var(--red);
+      text-align: right;
+      font-size: 11px;
+    }
+
+    .right-body {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(250px, 0.54fr) 2px minmax(190px, 0.46fr);
+      background: var(--panel);
+    }
+
+    .detail {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      overflow: hidden;
+    }
+
+    .detail-title {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .spin {
+      width: 84px;
+      height: 27px;
+      border: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 22px;
+      align-items: center;
+      text-align: center;
+      color: var(--text);
+      background: #0f141a;
+    }
+
+    .spin span:last-child {
+      height: 100%;
+      border-left: 1px solid var(--border-soft);
+      display: grid;
+      place-items: center;
+      color: var(--gold);
+    }
+
+    .section-title {
+      height: 27px;
+      padding: 6px 10px;
+      color: var(--muted);
+      background: var(--header);
+      border-bottom: 1px solid var(--border-soft);
+      font-size: 12px;
+    }
+
+    .tree {
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .ingredient-row {
+      grid-template-columns: 34px minmax(0, 1fr) 70px;
+      min-height: 38px;
+      padding-left: calc(8px + (var(--depth, 0) * 22px));
+    }
+
+    .source-line {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+      font-size: 10px;
+    }
+
+    .source-line .backpack { color: var(--green); }
+    .source-line .bank { color: var(--gold); }
+    .source-line .vault { color: var(--blue); }
+    .source-line .shared { color: var(--orange); }
+    .source-line .other { color: var(--purple); }
+
+    .splitter {
+      background: #050607;
+      border-top: 1px solid var(--border-soft);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .resources {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .variant-b {
+      grid-template-rows: auto auto 1fr;
+      min-height: 0;
+      background: #0f141a;
+    }
+
+    .overview-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(110px, 1fr));
+      gap: 6px;
+      padding: 8px;
+      border-bottom: 1px solid var(--border-soft);
+      background: #0d1116;
+    }
+
+    .profession-card {
+      min-height: 62px;
+      border: 1px solid var(--border-soft);
+      background: var(--panel-2);
+      padding: 7px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .profession-card.active {
+      border-color: var(--blue);
+      background: #1d2b3e;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .bar {
+      height: 5px;
+      background: #0b0f14;
+      border: 1px solid #26323e;
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--blue));
+    }
+
+    .tier-tabs {
+      height: 31px;
+      display: flex;
+      border-bottom: 1px solid var(--border-soft);
+      background: #090c10;
+    }
+
+    .tier-tab {
+      min-width: 82px;
+      padding: 8px 10px 0;
+      border-right: 1px solid var(--border-soft);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tier-tab.active {
+      color: var(--text);
+      background: var(--panel);
+      box-shadow: inset 0 -2px 0 var(--gold);
+    }
+
+    .two-column-browser {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(260px, 0.78fr) minmax(280px, 1fr);
+      overflow: hidden;
+    }
+
+    .category-list {
+      min-height: 0;
+      border-right: 1px solid var(--border-soft);
+      overflow: auto;
+    }
+
+    .category-item {
+      min-height: 49px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #141c24;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .category-item.active {
+      background: #243449;
+      box-shadow: inset 3px 0 0 var(--gold);
+    }
+
+    .recipe-detail-list {
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .notes {
+      padding: 8px 10px;
+      color: var(--dim);
+      font-size: 11px;
+      line-height: 1.45;
+      border-top: 1px solid var(--border-soft);
+      background: #0b0f14;
+    }
+
+    @media (max-width: 880px) {
+      .toolbar,
+      .content {
+        grid-template-columns: 1fr;
+      }
+
+      .right-body {
+        min-height: 520px;
+      }
+
+      .variant-a,
+      .two-column-browser,
+      .overview-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="window">
+    <div class="titlebar">
+      <div>LUI Crafting Preview</div>
+      <div class="preview-switch" aria-label="Layout variants">
+        <button class="active" type="button" data-variant="a">Grouped List</button>
+        <button type="button" data-variant="b">Profession Overview</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="field">
+        <label>Profession</label>
+        <div class="select">All professions</div>
+      </div>
+      <div class="field">
+        <label>Materials</label>
+        <div class="select">Backpack, Bank, Shared</div>
+      </div>
+      <div class="field">
+        <label>Show</label>
+        <div class="select">Craftable</div>
+      </div>
+      <div class="field">
+        <label>Equip lvl</label>
+        <div class="input">0</div>
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <div class="input">160</div>
+      </div>
+    </div>
+
+    <section class="content">
+      <section class="panel left-panel">
+        <div class="variant variant-a active" id="variant-a">
+          <aside class="profession-rail">
+            <div class="profession-button active"><span>Forester</span><span class="count">18</span></div>
+            <div class="profession-button"><span>Tailor</span><span class="count">11</span></div>
+            <div class="profession-button"><span>Prospector</span><span class="count">7</span></div>
+            <div class="profession-button"><span>Metalsmith</span><span class="count">4</span></div>
+            <div class="profession-button"><span>Scholar</span><span class="count">6</span></div>
+            <div class="profession-button"><span>Cook</span><span class="count">9</span></div>
+          </aside>
+
+          <div class="recipe-browser">
+            <div class="group-header">
+              <span class="chevron">&#9662;</span>
+              <span>Forester / Leather / Tier 1</span>
+              <span class="badge">2 ready</span>
+              <span class="badge">3 total</span>
+            </div>
+            <div class="recipe-row selected">
+              <div class="icon"></div>
+              <div class="name">
+                <div class="primary">Brushed Light Leather</div>
+                <div class="meta">Critical result - Makes x3 - Base crit 5%</div>
+              </div>
+              <div class="ready">2</div>
+            </div>
+            <div class="recipe-row">
+              <div class="icon hide"></div>
+              <div class="name">
+                <div class="primary">Light Leather Shaving</div>
+                <div class="meta">Tailor - Processing - Light Leather Shavings</div>
+              </div>
+              <div class="ready">1</div>
+            </div>
+            <div class="recipe-row">
+              <div class="icon"></div>
+              <div class="name">
+                <div class="primary">Cured Light Leather</div>
+                <div class="meta">Forester - Leather - Tier 1</div>
+              </div>
+              <div class="missing">0</div>
+            </div>
+
+            <div class="group-header">
+              <span class="chevron">&#9662;</span>
+              <span>Forester / Wood / Tier 1</span>
+              <span class="badge">4 ready</span>
+              <span class="badge">7 total</span>
+            </div>
+            <div class="recipe-row">
+              <div class="icon ingot"></div>
+              <div class="name">
+                <div class="primary">Treated Rowan Wood</div>
+                <div class="meta">Forester - Wood - Tier 1</div>
+              </div>
+              <div class="ready">5</div>
+            </div>
+            <div class="recipe-row">
+              <div class="icon ingot"></div>
+              <div class="name">
+                <div class="primary">Bundle of Rowan Kindling</div>
+                <div class="meta">Forester - Wood - Tier 1</div>
+              </div>
+              <div class="ready">3</div>
+            </div>
+
+            <div class="group-header">
+              <span class="chevron">&#9656;</span>
+              <span>Prospector / Ingots / Tier 1</span>
+              <span class="badge">1 ready</span>
+              <span class="badge">8 total</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="variant variant-b" id="variant-b">
+          <div class="overview-strip">
+            <div class="profession-card active">
+              <div class="card-top"><span>Forester</span><span class="count">18</span></div>
+              <div class="bar"><span style="width: 78%"></span></div>
+              <div class="meta">6 favorites / 2 planned</div>
+            </div>
+            <div class="profession-card">
+              <div class="card-top"><span>Tailor</span><span class="count">11</span></div>
+              <div class="bar"><span style="width: 54%"></span></div>
+              <div class="meta">3 favorites / 1 planned</div>
+            </div>
+            <div class="profession-card">
+              <div class="card-top"><span>Prospector</span><span class="count">7</span></div>
+              <div class="bar"><span style="width: 38%"></span></div>
+              <div class="meta">2 favorites / 0 planned</div>
+            </div>
+            <div class="profession-card">
+              <div class="card-top"><span>Scholar</span><span class="count">6</span></div>
+              <div class="bar"><span style="width: 44%"></span></div>
+              <div class="meta">1 favorite / 0 planned</div>
+            </div>
+            <div class="profession-card">
+              <div class="card-top"><span>Cook</span><span class="count">9</span></div>
+              <div class="bar"><span style="width: 62%"></span></div>
+              <div class="meta">4 favorites / 1 planned</div>
+            </div>
+          </div>
+
+          <div class="tier-tabs">
+            <div class="tier-tab active">Tier 1</div>
+            <div class="tier-tab">Tier 2</div>
+            <div class="tier-tab">Tier 3</div>
+            <div class="tier-tab">Tier 4</div>
+            <div class="tier-tab">Tier 5+</div>
+          </div>
+
+          <div class="two-column-browser">
+            <div class="category-list">
+              <div class="category-item active">
+                <div>
+                  <div class="primary">Leather</div>
+                  <div class="meta">3 ready / 5 recipes</div>
+                </div>
+                <div class="star on">&#9733;</div>
+              </div>
+              <div class="category-item">
+                <div>
+                  <div class="primary">Wood</div>
+                  <div class="meta">4 ready / 7 recipes</div>
+                </div>
+                <div class="star">&#9733;</div>
+              </div>
+              <div class="category-item">
+                <div>
+                  <div class="primary">Components</div>
+                  <div class="meta">1 ready / 4 recipes</div>
+                </div>
+                <div class="star">&#9733;</div>
+              </div>
+            </div>
+
+            <div class="recipe-detail-list">
+              <div class="recipe-row selected">
+                <div class="icon"></div>
+                <div class="name">
+                  <div class="primary">Brushed Light Leather</div>
+                  <div class="meta">Forester - Leather - Tier 1</div>
+                </div>
+                <div class="ready">2</div>
+              </div>
+              <div class="recipe-row">
+                <div class="icon hide"></div>
+                <div class="name">
+                  <div class="primary">Light Leather Shaving</div>
+                  <div class="meta">Tailor - Processing - Light Leather Shavings</div>
+                </div>
+                <div class="ready">1</div>
+              </div>
+              <div class="recipe-row">
+                <div class="icon"></div>
+                <div class="name">
+                  <div class="primary">Cured Light Leather</div>
+                  <div class="meta">Forester - Leather - Tier 1</div>
+                </div>
+                <div class="missing">0</div>
+              </div>
+              <div class="notes">
+                Overview variant tests whether profession cards plus tier tabs help scanning enough to justify the extra vertical space.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel right-panel">
+        <div class="tabs">
+          <div class="tab active">Recipe</div>
+          <div class="tab">Plan</div>
+        </div>
+
+        <div class="right-body">
+          <div class="detail">
+            <div class="detail-title">
+              <div class="icon"></div>
+              <div class="name">
+                <div class="primary">Brushed Light Leather</div>
+                <div class="meta">Forester - Leather - Tier 1</div>
+              </div>
+              <div class="spin"><span>2</span><span>+</span></div>
+            </div>
+            <div class="section-title">Ingredients</div>
+            <div class="tree">
+              <div class="ingredient-row" style="--depth: 0">
+                <div class="icon hide"></div>
+                <div class="name">
+                  <div class="primary">Light Hide</div>
+                  <div class="source-line">
+                    <span class="backpack">Backpack 0</span>
+                    <span class="shared">Shared 0</span>
+                    <span class="other">Other 5</span>
+                  </div>
+                </div>
+                <div class="ready">5/2</div>
+              </div>
+              <div class="ingredient-row" style="--depth: 0">
+                <div class="icon"></div>
+                <div class="name">
+                  <div class="primary">Light Leather Shaving</div>
+                  <div class="source-line">
+                    <span class="bank">Bank 8</span>
+                    <span class="vault">Vault 2</span>
+                  </div>
+                </div>
+                <div class="ready">10/4</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="splitter"></div>
+
+          <div class="resources">
+            <div class="section-title">Resources To Acquire</div>
+            <div class="tree">
+              <div class="ingredient-row">
+                <div class="icon hide"></div>
+                <div class="name">
+                  <div class="primary">Light Hide</div>
+                  <div class="source-line">
+                    <span class="other">Other characters 5</span>
+                  </div>
+                </div>
+                <div class="ready">5/2</div>
+              </div>
+              <div class="ingredient-row">
+                <div class="icon ingot"></div>
+                <div class="name">
+                  <div class="primary">Chunk of Low-grade Ore</div>
+                  <div class="source-line">
+                    <span class="backpack">Backpack 1</span>
+                    <span class="bank">Bank 3</span>
+                  </div>
+                </div>
+                <div class="missing">4/6</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const buttons = document.querySelectorAll("[data-variant]");
+    const variants = {
+      a: document.getElementById("variant-a"),
+      b: document.getElementById("variant-b")
+    };
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const active = button.dataset.variant;
+        buttons.forEach((item) => item.classList.toggle("active", item === button));
+        Object.keys(variants).forEach((key) => {
+          variants[key].classList.toggle("active", key === active);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

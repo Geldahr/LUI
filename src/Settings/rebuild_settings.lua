@@ -96,7 +96,7 @@ function _G.rebuild_settings()
             },
         },
         inventory = { window = {} },
-        crafting = { window = {}, tracked_plan = { entries = {} }, display_mode = "pages", enabled = true },
+        crafting = { window = {}, display_mode = "pages", enabled = true },
         assets = { window = {}, tile = {}, layouts = { icons = {}, details = {} } },
         bestiary = { window = {} },
     }
@@ -203,7 +203,6 @@ function _G.rebuild_settings()
     local raw_crafting = raw.crafting
     if raw_crafting ~= nil then
         _G.settings.crafting.window = raw_crafting.window
-        _G.settings.crafting.tracked_plan = raw_crafting.tracked_plan
         _G.settings.crafting.display_mode = raw_crafting.display_mode
         _G.settings.crafting.enabled = raw_crafting.enabled
     end

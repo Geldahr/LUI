@@ -20,17 +20,38 @@ local function _copy_tracked_plan_entries(entries)
     for i = 1, #entries do
         local entry = entries[i]
         if type(entry) == "table" then
+            local count = math.floor((tonumber(entry.q) or 0) + 0.5)
+            if entry.i ~= nil and count > 0 then
+                out[#out + 1] = {
+                    i = entry.i,
+                    p = entry.p,
+                    r = entry.r,
+                    n = entry.n,
+                    c = entry.c,
+                    q = count,
+                }
+            end
+        end
+    end
+
+    return out
+end
+
+local function _copy_favorite_entries(entries)
+    local out = {}
+    if type(entries) ~= "table" then
+        return out
+    end
+
+    for i = 1, #entries do
+        local entry = entries[i]
+        if type(entry) == "table" and entry.p ~= nil and entry.r ~= nil then
             out[#out + 1] = {
-                id = entry.id,
-                profession_key = entry.profession_key,
-                result_key = entry.result_key,
-                recipe_name_key = entry.recipe_name_key,
-                category_name_key = entry.category_name_key,
-                result_name = entry.result_name,
-                profession_name = entry.profession_name,
-                category_name = entry.category_name,
-                tier = entry.tier,
-                count = entry.count,
+                i = entry.i,
+                p = entry.p,
+                r = entry.r,
+                n = entry.n,
+                c = entry.c,
             }
         end
     end
@@ -38,20 +59,62 @@ local function _copy_tracked_plan_entries(entries)
     return out
 end
 
-local function _tracked_plan_settings()
-    if type(_G.loaded_settings) ~= "table" then
+local function _current_character_entry()
+    if _G.ensure_server_settings ~= nil then
+        _G.ensure_server_settings()
+    end
+    if type(_G.server_settings) ~= "table" or type(_G.server_settings.characters) ~= "table" then
         return nil
     end
-    if type(_G.loaded_settings.crafting) ~= "table" then
-        _G.loaded_settings.crafting = {}
+
+    local character_name = _G.current_character_name
+    if type(character_name) ~= "string" or string.len(character_name) == 0 then
+        return nil
     end
-    if type(_G.loaded_settings.crafting.tracked_plan) ~= "table" then
-        _G.loaded_settings.crafting.tracked_plan = {}
+
+    local entry = _G.server_settings.characters[character_name]
+    if type(entry) ~= "table" then
+        entry = {}
+        _G.server_settings.characters[character_name] = entry
     end
-    if type(_G.loaded_settings.crafting.tracked_plan.entries) ~= "table" then
-        _G.loaded_settings.crafting.tracked_plan.entries = {}
+    return entry
+end
+
+local function _character_crafting_settings()
+    local entry = _current_character_entry()
+    if entry == nil then
+        return nil
     end
-    return _G.loaded_settings.crafting.tracked_plan
+
+    if type(entry.crafting) ~= "table" then
+        entry.crafting = {}
+    end
+    return entry.crafting
+end
+
+local function _character_section_settings(section_key)
+    local crafting = _character_crafting_settings()
+    if crafting == nil then
+        return nil
+    end
+
+    if type(crafting[section_key]) ~= "table" then
+        crafting[section_key] = {}
+    end
+    local section = crafting[section_key]
+    if type(section.entries) ~= "table" then
+        section.entries = {}
+    end
+
+    return section
+end
+
+local function _tracked_plan_settings()
+    return _character_section_settings("tracked_plan")
+end
+
+local function _favorite_settings()
+    return _character_section_settings("favorites")
 end
 
 local function _tracked_plan_signature(entries)
@@ -63,13 +126,12 @@ local function _tracked_plan_signature(entries)
         local entry = entries[i]
         if type(entry) == "table" then
             parts[#parts + 1] = table.concat({
-                tostring(entry.id or ""),
-                tostring(entry.profession_key or ""),
-                tostring(entry.result_key or ""),
-                tostring(entry.recipe_name_key or ""),
-                tostring(entry.category_name_key or ""),
-                tostring(entry.tier or ""),
-                tostring(entry.count or ""),
+                tostring(entry.i or ""),
+                tostring(entry.p or ""),
+                tostring(entry.r or ""),
+                tostring(entry.n or ""),
+                tostring(entry.c or ""),
+                tostring(entry.q or ""),
             }, "\31")
         end
     end
@@ -117,11 +179,26 @@ function Crafting.set_tracked_plan_entries(entries, save_now)
     end
 
     tracked_plan.entries = _copy_tracked_plan_entries(entries)
-    if type(_G.settings) == "table" and type(_G.settings.crafting) == "table" then
-        _G.settings.crafting.tracked_plan = tracked_plan
-    end
     Crafting.invalidate_tracked_plan_cache()
     _tracked_plan_autoload_after = nil
+
+    if save_now == true and _G.save_settings ~= nil then
+        _G.save_settings()
+    end
+end
+
+function Crafting.get_favorite_recipe_entries()
+    local favorites = _favorite_settings()
+    return _copy_favorite_entries(favorites ~= nil and favorites.entries or nil)
+end
+
+function Crafting.set_favorite_recipe_entries(entries, save_now)
+    local favorites = _favorite_settings()
+    if favorites == nil then
+        return
+    end
+
+    favorites.entries = _copy_favorite_entries(entries)
 
     if save_now == true and _G.save_settings ~= nil then
         _G.save_settings()
@@ -139,7 +216,7 @@ function Crafting.resolve_tracked_plan_entries(store)
     end
 
     local crafting_store = store or _G.CRAFTING_STORE
-    if crafting_store == nil or crafting_store.resolve_saved_plan_entries == nil then
+    if crafting_store == nil then
         return {
             entries = {},
             unresolved_count = #entries,
@@ -207,7 +284,7 @@ function Crafting.get_tracked_plan_resource_state(store)
         end
     end
 
-    if crafting_store == nil or crafting_store.evaluate_plan_resources == nil then
+    if crafting_store == nil then
         return {
             resources = {},
             incomplete_resources = {},
@@ -229,15 +306,16 @@ function Crafting.get_tracked_plan_resource_state(store)
     end
 
     local resolved = Crafting.resolve_tracked_plan_entries(crafting_store)
-    local resource_state = crafting_store:evaluate_plan_resources(resolved.entries, "inventory")
+    local resource_scope = crafting_store:scope_key_from_sources({ "backpack" })
+    local resource_state = crafting_store:evaluate_plan_resources(resolved.entries, resource_scope)
     resource_state.saved_entry_count = #entries
     resource_state.unresolved_count = resolved.unresolved_count or 0
     resource_state.total_entry_count = resolved.total_count or #entries
-    local progress = crafting_store.get_loading_progress ~= nil and crafting_store:get_loading_progress() or nil
-    resource_state.loading = progress ~= nil and progress.loading == true
-    resource_state.loading_loaded = progress ~= nil and (tonumber(progress.loaded) or 0) or 0
-    resource_state.loading_total = progress ~= nil and (tonumber(progress.total) or 0) or 0
-    resource_state.loading_complete = progress ~= nil and progress.complete == true
+    local progress = crafting_store:get_loading_progress()
+    resource_state.loading = progress.loading == true
+    resource_state.loading_loaded = tonumber(progress.loaded) or 0
+    resource_state.loading_total = tonumber(progress.total) or 0
+    resource_state.loading_complete = progress.complete == true
 
     _tracked_plan_cache = {
         signature = signature,
