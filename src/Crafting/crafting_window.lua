@@ -277,13 +277,12 @@ local function _saved_plan_entry_signature(entry)
         return ""
     end
     return table.concat({
-        tostring(entry.id or ""),
-        tostring(entry.profession_key or ""),
-        tostring(entry.result_key or ""),
-        tostring(entry.recipe_name_key or ""),
-        tostring(entry.category_name_key or ""),
-        tostring(entry.tier or ""),
-        tostring(entry.count or ""),
+        tostring(entry.i or ""),
+        tostring(entry.p or ""),
+        tostring(entry.r or ""),
+        tostring(entry.n or ""),
+        tostring(entry.c or ""),
+        tostring(entry.q or ""),
     }, "\31")
 end
 
@@ -310,12 +309,12 @@ local function _favorite_entry_key(entry)
         return ""
     end
 
-    local result_key = entry.r or entry.result_key
+    local result_key = entry.r
     return table.concat({
-        tostring(entry.p or entry.profession_key or ""),
+        tostring(entry.p or ""),
         tostring(result_key or ""),
-        tostring(entry.n or entry.recipe_name_key or result_key or ""),
-        tostring(entry.c or entry.category_name_key or ""),
+        tostring(entry.n or result_key or ""),
+        tostring(entry.c or ""),
     }, "\31")
 end
 
@@ -324,12 +323,7 @@ local function _display_name_from_saved_entry(saved_entry)
         return ""
     end
 
-    local explicit_name = _trim(saved_entry.result_name or "")
-    if explicit_name ~= "" then
-        return explicit_name
-    end
-
-    local key = _trim(saved_entry.result_key or "")
+    local key = _trim(saved_entry.r or "")
     if key == "" then
         return ""
     end
@@ -1274,6 +1268,7 @@ function CraftingWindow:Constructor()
     self.plan_order = {}
     self.plan_counts = {}
     self._plan_dirty = false
+    self._plan_user_changed = false
     self._suppress_search_text_changed = false
     self._recipe_list_signature = nil
     self._recipe_list_loaded_count = 0
@@ -2057,17 +2052,7 @@ function CraftingWindow:_favorite_entry_for_recipe(recipe)
     if self.store == nil or self.store.serialize_recipe_identity == nil then
         return nil
     end
-    local entry = self.store:serialize_recipe_identity(recipe)
-    if type(entry) ~= "table" then
-        return nil
-    end
-    return {
-        i = entry.id,
-        p = entry.profession_key,
-        r = entry.result_key,
-        n = entry.recipe_name_key,
-        c = entry.category_name_key,
-    }
+    return self.store:serialize_recipe_identity(recipe)
 end
 
 function CraftingWindow:_favorite_key_for_recipe(recipe)
@@ -2120,11 +2105,7 @@ function CraftingWindow:_set_recipe_favorite(recipe, favorite)
     for i = 1, #self.favorite_entries do
         local saved_entry = self.favorite_entries[i]
         local saved_key = self:_favorite_key_for_entry(saved_entry)
-        local matches = saved_key == key
-        if matches ~= true and self.store ~= nil and self.store.saved_entry_matches_recipe ~= nil then
-            matches = self.store:saved_entry_matches_recipe(saved_entry, recipe) == true
-        end
-        if matches ~= true then
+        if saved_key ~= key then
             next_entries[#next_entries + 1] = saved_entry
         end
     end
@@ -2216,10 +2197,20 @@ end
 function CraftingWindow:_refresh_plan_dirty_state()
     if self.store == nil or self.store.serialize_plan_entries == nil then
         self._plan_dirty = false
+        self._plan_user_changed = false
         return
     end
+
+    if self._plan_user_changed ~= true then
+        self._plan_dirty = false
+        return
+    end
+
     local current_saved_entries = self.store:serialize_plan_entries(self:_build_plan_entries())
     self._plan_dirty = _saved_plan_entries_equal(current_saved_entries, self:_saved_plan_entries()) ~= true
+    if self._plan_dirty ~= true then
+        self._plan_user_changed = false
+    end
 end
 
 function CraftingWindow:_apply_search_query(text)
@@ -2296,6 +2287,7 @@ function CraftingWindow:open()
     if self.store ~= nil and self.store.refresh ~= nil then
         self.store:refresh(false, 2)
     end
+    self._plan_user_changed = false
     self:_sync_draft_plan_from_tracked()
     self._plan_dirty = false
     self:refresh_from_store(true)
@@ -2506,7 +2498,7 @@ function CraftingWindow:refresh_from_store(reset_filters)
         self.search_groups = _normalize_query_groups(_parse_query(self.search_box:GetText()))
     end
 
-    if self._plan_dirty ~= true then
+    if self._plan_user_changed ~= true then
         self:_sync_draft_plan_from_tracked()
     end
 
@@ -3204,6 +3196,14 @@ function CraftingWindow:set_plan_count(recipe_id, count)
         next_count = 0
     end
 
+    local previous_count = math.floor((tonumber(self.plan_counts[recipe_id]) or 0) + 0.5)
+    if previous_count < 0 then
+        previous_count = 0
+    end
+    if previous_count == next_count then
+        return
+    end
+
     if next_count == 0 then
         self.plan_counts[recipe_id] = nil
         for i = #self.plan_order, 1, -1 do
@@ -3218,6 +3218,7 @@ function CraftingWindow:set_plan_count(recipe_id, count)
         self.plan_counts[recipe_id] = next_count
     end
 
+    self._plan_user_changed = true
     self:_refresh_plan_dirty_state()
     self:refresh_selected_recipe()
     self:refresh_plan()
@@ -3231,11 +3232,13 @@ function CraftingWindow:track_plan()
 
     local saved_entries = self.store:serialize_plan_entries(self:_build_plan_entries())
     Crafting.set_tracked_plan_entries(saved_entries, true)
+    self._plan_user_changed = false
     self._plan_dirty = false
     self:refresh_plan()
 end
 
 function CraftingWindow:revert_plan()
+    self._plan_user_changed = false
     self:_sync_draft_plan_from_tracked()
     self._plan_dirty = false
     self:refresh_selected_recipe()
@@ -3248,6 +3251,7 @@ function CraftingWindow:clear_plan()
     if Crafting ~= nil and Crafting.set_tracked_plan_entries ~= nil then
         Crafting.set_tracked_plan_entries({}, true)
     end
+    self._plan_user_changed = false
     self._plan_dirty = false
     self:refresh_selected_recipe()
     self:refresh_plan()

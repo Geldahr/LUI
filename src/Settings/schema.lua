@@ -430,6 +430,8 @@ function _G.ensure_loaded_settings()
     if crafting.display_mode ~= "scroll" and crafting.display_mode ~= "pages" then
         crafting.display_mode = "pages"
     end
+    crafting.tracked_plan = nil
+    crafting.favorites = nil
 
     local bestiary = s.bestiary
     if bestiary.window.left == nil then

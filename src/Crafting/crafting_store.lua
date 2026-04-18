@@ -295,20 +295,23 @@ local function _saved_plan_entry_matches_recipe(saved_entry, recipe)
     if type(saved_entry) ~= "table" or type(recipe) ~= "table" then
         return false
     end
+    if saved_entry.i == nil then
+        return false
+    end
 
-    if saved_entry.profession_key ~= nil and tostring(saved_entry.profession_key) ~= tostring(recipe.profession_key) then
+    if tostring(saved_entry.i) ~= tostring(recipe.id) then
         return false
     end
-    if saved_entry.result_key ~= nil and tostring(saved_entry.result_key) ~= tostring(recipe.result_key) then
+    if saved_entry.p ~= nil and tostring(saved_entry.p) ~= tostring(recipe.profession_key) then
         return false
     end
-    if saved_entry.recipe_name_key ~= nil and tostring(saved_entry.recipe_name_key) ~= tostring(recipe.recipe_name_key or recipe.result_key or "") then
+    if saved_entry.r ~= nil and tostring(saved_entry.r) ~= tostring(recipe.result_key) then
         return false
     end
-    if saved_entry.category_name_key ~= nil and tostring(saved_entry.category_name_key) ~= _normalize_name(recipe.category_name) then
+    if saved_entry.n ~= nil and tostring(saved_entry.n) ~= tostring(recipe.recipe_name_key or recipe.result_key or "") then
         return false
     end
-    if saved_entry.tier ~= nil and (tonumber(saved_entry.tier) or 0) ~= (tonumber(recipe.tier) or 0) then
+    if saved_entry.c ~= nil and tostring(saved_entry.c) ~= _normalize_name(recipe.category_name) then
         return false
     end
 
@@ -1133,7 +1136,7 @@ function CraftingStore:serialize_plan_entries(plan_entries)
         count = math.floor(count + 0.5)
         if recipe ~= nil and count > 0 then
             local saved_entry = self:serialize_recipe_identity(recipe)
-            saved_entry.count = count
+            saved_entry.q = count
             saved_entries[#saved_entries + 1] = saved_entry
         end
     end
@@ -1147,17 +1150,12 @@ function CraftingStore:serialize_recipe_identity(recipe)
     end
 
     return {
-        id = recipe.id,
-        profession_key = recipe.profession_key,
-        result_key = recipe.result_key,
-        recipe_name_key = recipe.recipe_name_key,
-        category_name_key = _normalize_name(recipe.category_name),
-        tier = tonumber(recipe.tier) or 0,
+        i = recipe.id,
+        p = recipe.profession_key,
+        r = recipe.result_key,
+        n = recipe.recipe_name_key,
+        c = _normalize_name(recipe.category_name),
     }
-end
-
-function CraftingStore:saved_entry_matches_recipe(saved_entry, recipe)
-    return _saved_plan_entry_matches_recipe(saved_entry, recipe)
 end
 
 function CraftingStore:resolve_saved_plan_entries(saved_entries)
@@ -1177,23 +1175,13 @@ function CraftingStore:resolve_saved_plan_entries(saved_entries)
     for i = 1, #saved_entries do
         local saved_entry = saved_entries[i]
         local recipe = nil
-        local count = saved_entry ~= nil and (tonumber(saved_entry.count) or 0) or 0
+        local count = saved_entry ~= nil and (tonumber(saved_entry.q) or 0) or 0
         count = math.floor(count + 0.5)
 
         if count > 0 and type(saved_entry) == "table" then
-            recipe = saved_entry.id ~= nil and self.recipe_by_id[saved_entry.id] or nil
+            recipe = saved_entry.i ~= nil and self.recipe_by_id[saved_entry.i] or nil
             if _saved_plan_entry_matches_recipe(saved_entry, recipe) ~= true then
                 recipe = nil
-            end
-
-            if recipe == nil then
-                for recipe_index = 1, #self.recipes do
-                    local candidate = self.recipes[recipe_index]
-                    if _saved_plan_entry_matches_recipe(saved_entry, candidate) == true then
-                        recipe = candidate
-                        break
-                    end
-                end
             end
         end
 

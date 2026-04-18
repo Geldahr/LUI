@@ -20,18 +20,17 @@ local function _copy_tracked_plan_entries(entries)
     for i = 1, #entries do
         local entry = entries[i]
         if type(entry) == "table" then
-            out[#out + 1] = {
-                id = entry.id,
-                profession_key = entry.profession_key,
-                result_key = entry.result_key,
-                recipe_name_key = entry.recipe_name_key,
-                category_name_key = entry.category_name_key,
-                result_name = entry.result_name,
-                profession_name = entry.profession_name,
-                category_name = entry.category_name,
-                tier = entry.tier,
-                count = entry.count,
-            }
+            local count = math.floor((tonumber(entry.q) or 0) + 0.5)
+            if entry.i ~= nil and count > 0 then
+                out[#out + 1] = {
+                    i = entry.i,
+                    p = entry.p,
+                    r = entry.r,
+                    n = entry.n,
+                    c = entry.c,
+                    q = count,
+                }
+            end
         end
     end
 
@@ -46,13 +45,13 @@ local function _copy_favorite_entries(entries)
 
     for i = 1, #entries do
         local entry = entries[i]
-        if type(entry) == "table" then
+        if type(entry) == "table" and entry.p ~= nil and entry.r ~= nil then
             out[#out + 1] = {
-                i = entry.i or entry.id,
-                p = entry.p or entry.profession_key,
-                r = entry.r or entry.result_key,
-                n = entry.n or entry.recipe_name_key,
-                c = entry.c or entry.category_name_key,
+                i = entry.i,
+                p = entry.p,
+                r = entry.r,
+                n = entry.n,
+                c = entry.c,
             }
         end
     end
@@ -93,33 +92,7 @@ local function _character_crafting_settings()
     return entry.crafting
 end
 
-local function _profile_crafting_settings()
-    if type(_G.loaded_settings) ~= "table" or type(_G.loaded_settings.crafting) ~= "table" then
-        return nil
-    end
-    return _G.loaded_settings.crafting
-end
-
-local function _profile_section_entries(section_key)
-    local crafting = _profile_crafting_settings()
-    local section = crafting ~= nil and crafting[section_key] or nil
-    if type(section) ~= "table" or type(section.entries) ~= "table" then
-        return nil
-    end
-    return section.entries
-end
-
-local function _remove_profile_section(section_key)
-    local crafting = _profile_crafting_settings()
-    if crafting ~= nil then
-        crafting[section_key] = nil
-    end
-    if type(_G.settings) == "table" and type(_G.settings.crafting) == "table" then
-        _G.settings.crafting[section_key] = nil
-    end
-end
-
-local function _character_section_settings(section_key, copy_entries)
+local function _character_section_settings(section_key)
     local crafting = _character_crafting_settings()
     if crafting == nil then
         return nil
@@ -133,23 +106,15 @@ local function _character_section_settings(section_key, copy_entries)
         section.entries = {}
     end
 
-    local profile_entries = _profile_section_entries(section_key)
-    if type(profile_entries) == "table" then
-        if #section.entries <= 0 and #profile_entries > 0 then
-            section.entries = copy_entries(profile_entries)
-        end
-        _remove_profile_section(section_key)
-    end
-
     return section
 end
 
 local function _tracked_plan_settings()
-    return _character_section_settings("tracked_plan", _copy_tracked_plan_entries)
+    return _character_section_settings("tracked_plan")
 end
 
 local function _favorite_settings()
-    return _character_section_settings("favorites", _copy_favorite_entries)
+    return _character_section_settings("favorites")
 end
 
 local function _tracked_plan_signature(entries)
@@ -161,13 +126,12 @@ local function _tracked_plan_signature(entries)
         local entry = entries[i]
         if type(entry) == "table" then
             parts[#parts + 1] = table.concat({
-                tostring(entry.id or ""),
-                tostring(entry.profession_key or ""),
-                tostring(entry.result_key or ""),
-                tostring(entry.recipe_name_key or ""),
-                tostring(entry.category_name_key or ""),
-                tostring(entry.tier or ""),
-                tostring(entry.count or ""),
+                tostring(entry.i or ""),
+                tostring(entry.p or ""),
+                tostring(entry.r or ""),
+                tostring(entry.n or ""),
+                tostring(entry.c or ""),
+                tostring(entry.q or ""),
             }, "\31")
         end
     end
