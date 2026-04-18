@@ -22,6 +22,7 @@ local RECIPE_LOAD_BATCH_SIZE = 1
 local BACKGROUND_UPDATE_EVERY = 0.50
 local FOREGROUND_UPDATE_EVERY = 0.20
 local FOREGROUND_RECIPE_BATCH_SIZE = 2
+local RECIPE_STATUS_CRAFT_LIMIT = 999
 
 local SOURCE_ORDER = {
     SOURCE_BACKPACK,
@@ -623,6 +624,25 @@ local function _source_option_values()
     return _copy_array(SOURCE_ORDER)
 end
 
+local function _source_label(source_key)
+    if source_key == SOURCE_BACKPACK then
+        return TR["Backpack"]
+    end
+    if source_key == SOURCE_BANK then
+        return TR["Bank"]
+    end
+    if source_key == SOURCE_VAULT then
+        return TR["Vault"]
+    end
+    if source_key == SOURCE_SHARED then
+        return TR["Shared Storage"]
+    end
+    if source_key == SOURCE_OTHER_CHARACTERS then
+        return TR["Other characters"]
+    end
+    return _safe_string(source_key, "")
+end
+
 local function _recipe_sort_compare(items, left, right)
     local left_profession = _lower(left ~= nil and left.profession_name or nil)
     local right_profession = _lower(right ~= nil and right.profession_name or nil)
@@ -767,6 +787,50 @@ function CraftingStore:scope_key_from_sources(source_keys)
     return _source_scope_key(source_keys)
 end
 
+function CraftingStore:get_source_breakdown(item_key, required, scope_key)
+    local key = _normalize_name(item_key)
+    local needed = math.max(0, math.floor((tonumber(required) or 0) + 0.5))
+    local source_keys = _source_keys_from_scope(_normalized_scope_key(scope_key))
+    local entries = {}
+    local total_owned = 0
+
+    for i = 1, #source_keys do
+        local source_key = source_keys[i]
+        local source_stock = self.source_ownership[source_key]
+        local owned = 0
+        if type(source_stock) == "table" then
+            owned = math.max(0, math.floor((tonumber(source_stock[key]) or 0) + 0.5))
+        end
+        total_owned = total_owned + owned
+        entries[#entries + 1] = {
+            key = source_key,
+            label = _source_label(source_key),
+            owned = owned,
+        }
+    end
+
+    local remaining = needed
+    local positive_count = 0
+    for i = 1, #entries do
+        local entry = entries[i]
+        entry.used = math.min(entry.owned, remaining)
+        remaining = math.max(0, remaining - entry.used)
+        if entry.owned > 0 then
+            positive_count = positive_count + 1
+        end
+    end
+
+    return {
+        key = key,
+        required = needed,
+        total_owned = total_owned,
+        missing = math.max(0, needed - total_owned),
+        complete = total_owned >= needed,
+        entries = entries,
+        positive_count = positive_count,
+    }
+end
+
 function CraftingStore:get_profession_options()
     return self.profession_option_labels, self.profession_option_values
 end
@@ -861,9 +925,21 @@ function CraftingStore:get_recipe_status(recipe_or_id, scope_key)
 
     local cache = self._status_cache[scope]
     if cache[recipe.id] == nil then
-        local evaluation = self:evaluate_recipe(recipe, scope, 1)
+        local stock = self:_stock_for_scope(scope)
+        local evaluation = self:_evaluate_recipe_with_stock(recipe, 1, stock)
+        local craftable_count = 0
+        local craftable_count_limited = false
+        if evaluation ~= nil and evaluation.craftable == true then
+            craftable_count = self:_max_craftable_with_stock(recipe, stock, RECIPE_STATUS_CRAFT_LIMIT)
+            if craftable_count >= RECIPE_STATUS_CRAFT_LIMIT then
+                local over_limit = self:_evaluate_recipe_with_stock(recipe, RECIPE_STATUS_CRAFT_LIMIT + 1, stock)
+                craftable_count_limited = over_limit ~= nil and over_limit.craftable == true
+            end
+        end
         local summary = {
             craftable = evaluation ~= nil and evaluation.craftable == true or false,
+            craftable_count = craftable_count,
+            craftable_count_limited = craftable_count_limited,
             used_expansion = evaluation ~= nil and evaluation.used_expansion == true or false,
             ingredients = {},
         }
@@ -1185,6 +1261,7 @@ function CraftingStore:evaluate_plan_resources(plan_entries, scope_key)
                 required = required,
                 missing = missing,
                 complete = missing <= 0,
+                source_breakdown = self:get_source_breakdown(key, required, scope_key),
             }
             resources[#resources + 1] = resource
             if resource.complete ~= true then
@@ -1795,4 +1872,22 @@ function CraftingStore:_count_craftable_with_stock(recipe, craft_count, stock)
     end
 
     return craftable_count
+end
+
+function CraftingStore:_max_craftable_with_stock(recipe, stock, limit)
+    local max_count = math.max(1, math.floor((tonumber(limit) or RECIPE_STATUS_CRAFT_LIMIT) + 0.5))
+    local low = 0
+    local high = max_count
+
+    while low < high do
+        local mid = math.floor((low + high + 1) / 2)
+        local evaluation = self:_evaluate_recipe_with_stock(recipe, mid, stock)
+        if evaluation ~= nil and evaluation.craftable == true then
+            low = mid
+        else
+            high = mid - 1
+        end
+    end
+
+    return low
 end

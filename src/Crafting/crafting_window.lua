@@ -48,6 +48,13 @@ local BASE_LEVEL_DASH_W = 14
 local BASE_LOADING_PANEL_H = 34
 local BASE_LOADING_TRACK_H = 10
 local BASE_SECTION_SPLIT_H = 2
+local BASE_SOURCE_HINT_W = 94
+local BASE_SOURCE_TOOLTIP_W = 214
+local BASE_SOURCE_TOOLTIP_MIN_H = 44
+local BASE_SOURCE_TOOLTIP_MAX_H = 132
+local BASE_SOURCE_TOOLTIP_PAD_X = 12
+local BASE_SOURCE_TOOLTIP_PAD_Y = 9
+local BASE_SOURCE_TOOLTIP_LINE_H = 12
 local ITEM_INFO_CONTROL_OFFSET = -3
 local ITEM_INFO_CONTROL_EXTRA = 3
 
@@ -62,6 +69,19 @@ local TEXT_META = Turbine.UI.Color(1.00, 0.64, 0.70, 0.78)
 local STATUS_READY = Turbine.UI.Color(1.00, 0.31, 0.78, 0.43)
 local STATUS_MISSING = Turbine.UI.Color(1.00, 0.86, 0.30, 0.30)
 local STATUS_AUTO = Turbine.UI.Color(1.00, 0.35, 0.75, 0.90)
+local SOURCE_BACKPACK_COLOR = Turbine.UI.Color(1.00, 0.43, 0.88, 0.43)
+local SOURCE_BANK_COLOR = Turbine.UI.Color(1.00, 0.94, 0.78, 0.28)
+local SOURCE_VAULT_COLOR = Turbine.UI.Color(1.00, 0.42, 0.78, 0.96)
+local SOURCE_SHARED_COLOR = Turbine.UI.Color(1.00, 0.98, 0.62, 0.32)
+local SOURCE_OTHER_COLOR = Turbine.UI.Color(1.00, 0.78, 0.62, 0.98)
+
+local SOURCE_HINT_COLORS = {
+    backpack = SOURCE_BACKPACK_COLOR,
+    bank = SOURCE_BANK_COLOR,
+    vault = SOURCE_VAULT_COLOR,
+    shared_storage = SOURCE_SHARED_COLOR,
+    other_characters = SOURCE_OTHER_COLOR,
+}
 
 local FAVORITE_SCALE_BREAKPOINT = 1.5
 local FAVORITE_ICON_SMALL = 24
@@ -329,6 +349,10 @@ end
 
 local function _ratio_text(current, total)
     return _format_count(current) .. "/" .. _format_count(total)
+end
+
+local function _source_hint_color(source_key)
+    return SOURCE_HINT_COLORS[source_key] or TEXT_META
 end
 
 local function _format_percent(value)
@@ -700,7 +724,7 @@ function CraftingRecipeRow:set_data(recipe, status, result_item, required_level,
 
     self.title:SetText(title)
     self.subtitle:SetText(table.concat(subtitle_parts, " - "))
-    self.status_label:SetText(CraftingWindow._status_text(nil, status))
+    self.status_label:SetText(CraftingWindow._recipe_status_text(nil, status))
     self.status_label:SetForeColor(CraftingWindow._status_color(nil, status))
 
     if result_item ~= nil then
@@ -782,9 +806,15 @@ local CraftingIngredientRow = class(Turbine.UI.Control)
 function CraftingIngredientRow:Constructor()
     Turbine.UI.Control.Constructor(self)
 
-    self:SetMouseVisible(false)
+    self:SetMouseVisible(true)
     self._scale = 1
     self._indent_level = 0
+    self._detail_text = ""
+    self._source_hint_text = ""
+    self._source_hint_color = TEXT_META
+    self._source_breakdown = nil
+    self._show_source_breakdown = nil
+    self._hide_source_breakdown = nil
 
     self.status_strip = Turbine.UI.Control()
     self.status_strip:SetParent(self)
@@ -805,16 +835,36 @@ function CraftingIngredientRow:Constructor()
     self.detail:SetForeColor(TEXT_META)
     self.detail:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
+    self.source_hint = UI.Widgets.LuiLabel()
+    self.source_hint:SetParent(self)
+    self.source_hint:SetMouseVisible(false)
+    self.source_hint:SetForeColor(TEXT_META)
+    self.source_hint:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.source_hint:SetMultiline(false)
+    self.source_hint:SetVisible(false)
+
     self.amount = UI.Widgets.LuiLabel()
     self.amount:SetParent(self)
     self.amount:SetMouseVisible(false)
     self.amount:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+
+    self.MouseEnter = function()
+        if self._source_breakdown ~= nil and type(self._show_source_breakdown) == "function" then
+            self._show_source_breakdown(self, self._source_breakdown)
+        end
+    end
+    self.MouseLeave = function()
+        if type(self._hide_source_breakdown) == "function" then
+            self._hide_source_breakdown()
+        end
+    end
 end
 
 function CraftingIngredientRow:set_scale(scale)
     self._scale = scale
     self.name:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.detail:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.source_hint:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.amount:SetFont(_scaled_font("Verdana", BASE_META_FONT))
 end
 
@@ -823,16 +873,27 @@ function CraftingIngredientRow:set_width(width)
     self:_layout()
 end
 
-function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level)
+function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level, source_hint_text, source_hint_color)
     self._indent_level = math.max(0, math.floor((tonumber(indent_level) or 0) + 0.5))
+    self._detail_text = detail_text or ""
+    self._source_hint_text = source_hint_text or ""
+    self._source_hint_color = source_hint_color or TEXT_META
     self.icon:bind_item(item_info, icon_id, background_image_id)
     self.name:SetText(label_text or "")
-    self.detail:SetText(detail_text or "")
+    self.detail:SetText(self._detail_text)
+    self.source_hint:SetText(self._source_hint_text)
+    self.source_hint:SetForeColor(self._source_hint_color)
     self.amount:SetText(amount_text or "")
     self.amount:SetForeColor(color or TEXT_META)
     self.status_strip:SetBackColor(color or TEXT_META)
     self:SetBackColor(SECTION_BACK)
     self:_layout()
+end
+
+function CraftingIngredientRow:set_source_breakdown(breakdown, show_callback, hide_callback)
+    self._source_breakdown = breakdown
+    self._show_source_breakdown = show_callback
+    self._hide_source_breakdown = hide_callback
 end
 
 function CraftingIngredientRow:_layout()
@@ -853,6 +914,20 @@ function CraftingIngredientRow:_layout()
     local left = strip_w + gap + indent_w + icon_side + gap
     local text_w = width - left - gap - amount_w
     local title_h = math.floor(height * 0.55)
+    local source_hint_visible = type(self._source_hint_text) == "string" and string.len(self._source_hint_text) > 0 and
+        text_w >= _scaled_int(128)
+    local source_hint_w = 0
+    local detail_w = text_w
+    local has_detail_text = type(self._detail_text) == "string" and string.len(self._detail_text) > 0
+    if source_hint_visible == true then
+        if has_detail_text == true then
+            source_hint_w = math.min(_scaled_int(BASE_SOURCE_HINT_W), math.floor(text_w * 0.42))
+            detail_w = math.max(0, text_w - source_hint_w - gap)
+        else
+            source_hint_w = text_w
+            detail_w = 0
+        end
+    end
 
     self.status_strip:SetPosition(0, 0)
     self.status_strip:SetSize(strip_w, height)
@@ -863,7 +938,17 @@ function CraftingIngredientRow:_layout()
     self.name:SetPosition(left, 0)
     self.name:SetSize(math.max(0, text_w), title_h)
     self.detail:SetPosition(left, title_h)
-    self.detail:SetSize(math.max(0, text_w), height - title_h)
+    self.detail:SetSize(math.max(0, detail_w), height - title_h)
+
+    self.source_hint:SetVisible(source_hint_visible)
+    if has_detail_text == true then
+        self.source_hint:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        self.source_hint:SetPosition(left + detail_w + gap, title_h)
+    else
+        self.source_hint:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        self.source_hint:SetPosition(left, title_h)
+    end
+    self.source_hint:SetSize(math.max(0, source_hint_w), height - title_h)
 
     self.amount:SetPosition(width - amount_w - gap, 0)
     self.amount:SetSize(amount_w, height)
@@ -871,6 +956,9 @@ end
 
 function CraftingIngredientRow:destroy()
     _destroy_control(self.icon)
+    self._source_breakdown = nil
+    self._show_source_breakdown = nil
+    self._hide_source_breakdown = nil
     self:SetVisible(false)
 end
 
@@ -878,6 +966,9 @@ function CraftingIngredientRow:prepare_for_list_clear()
     if self.icon ~= nil and self.icon.prepare_for_list_clear ~= nil then
         self.icon:prepare_for_list_clear()
     end
+    self._source_breakdown = nil
+    self._show_source_breakdown = nil
+    self._hide_source_breakdown = nil
     self:SetVisible(false)
 end
 
@@ -1634,10 +1725,20 @@ function CraftingWindow:Constructor()
     self.loading_fill:SetMouseVisible(false)
     self.loading_fill:SetBackColor(STATUS_AUTO)
 
+    self.source_breakdown_hint = UI.Widgets.LuiTooltip()
+    self.source_breakdown_hint:SetScale(_G.settings.global.scale)
+    self.source_breakdown_hint:SetZOrder(2300)
+
+    self.source_breakdown_hint_inner = Turbine.UI.Control()
+    self.source_breakdown_hint_inner:SetParent(self.source_breakdown_hint:GetContentHost())
+    self.source_breakdown_hint_inner:SetMouseVisible(false)
+    self.source_breakdown_hint_rows = {}
+
     self.SizeChanged = function()
         if self._suppress_size_changed == true then
             return
         end
+        self:_hide_source_breakdown_hint()
         self:_enforce_min_size()
         self:layout()
         self:_invalidate_recipe_list()
@@ -1656,6 +1757,8 @@ function CraftingWindow:Constructor()
             self._last_store_version = nil
             self:refresh_from_store(true)
             self:bring_to_front()
+        else
+            self:_hide_source_breakdown_hint()
         end
     end
 
@@ -1675,6 +1778,181 @@ end
 
 function CraftingWindow:_item(item_key)
     return self.store ~= nil and self.store.get_item ~= nil and self.store:get_item(item_key) or nil
+end
+
+function CraftingWindow:_source_breakdown_for_item(item_key, required)
+    if self.store == nil or self.store.get_source_breakdown == nil then
+        return nil
+    end
+
+    local needed = tonumber(required) or 0
+    if item_key == nil or item_key == "" or needed <= 0 then
+        return nil
+    end
+
+    return self.store:get_source_breakdown(item_key, needed, self.scope_key)
+end
+
+function CraftingWindow:_source_breakdown_hint_text(breakdown)
+    if type(breakdown) ~= "table" or type(breakdown.entries) ~= "table" then
+        return "", TEXT_META
+    end
+
+    local positive = {}
+    for i = 1, #breakdown.entries do
+        local entry = breakdown.entries[i]
+        if type(entry) == "table" and (tonumber(entry.owned) or 0) > 0 then
+            positive[#positive + 1] = entry
+        end
+    end
+
+    if #positive == 0 then
+        return "", TEXT_META
+    end
+    if #positive == 1 then
+        local entry = positive[1]
+        local label = entry.label or ""
+        if entry.key == "shared_storage" then
+            label = TR["Shared"]
+        elseif entry.key == "other_characters" then
+            label = TR["Other"]
+        end
+        return label, _source_hint_color(entry.key)
+    end
+    return _format_count(#positive) .. " " .. TR["locations"], TEXT_META
+end
+
+function CraftingWindow:_ensure_source_breakdown_hint_rows(count)
+    if self.source_breakdown_hint_rows == nil then
+        self.source_breakdown_hint_rows = {}
+    end
+
+    while #self.source_breakdown_hint_rows < count do
+        local row = {}
+        row.holder = Turbine.UI.Control()
+        row.holder:SetParent(self.source_breakdown_hint_inner)
+        row.holder:SetMouseVisible(false)
+
+        row.source = UI.Widgets.LuiLabel()
+        row.source:SetParent(row.holder)
+        row.source:SetMouseVisible(false)
+        row.source:SetMultiline(false)
+        row.source:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        row.source:SetFont(_scaled_font("Verdana", 10))
+
+        row.quantity = UI.Widgets.LuiLabel()
+        row.quantity:SetParent(row.holder)
+        row.quantity:SetMouseVisible(false)
+        row.quantity:SetMultiline(false)
+        row.quantity:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        row.quantity:SetFont(_scaled_font("Verdana", 10))
+
+        self.source_breakdown_hint_rows[#self.source_breakdown_hint_rows + 1] = row
+    end
+end
+
+function CraftingWindow:_hide_source_breakdown_hint()
+    if self.source_breakdown_hint ~= nil then
+        self.source_breakdown_hint:Hide()
+    end
+end
+
+function CraftingWindow:_show_source_breakdown_hint(anchor_control, breakdown)
+    if anchor_control == nil or type(breakdown) ~= "table" then
+        self:_hide_source_breakdown_hint()
+        return
+    end
+
+    local lines = {}
+    local entries = type(breakdown.entries) == "table" and breakdown.entries or {}
+    for i = 1, #entries do
+        local entry = entries[i]
+        if type(entry) == "table" then
+            lines[#lines + 1] = {
+                label = entry.label or "",
+                quantity = _format_count(entry.owned),
+                color = _source_hint_color(entry.key),
+            }
+        end
+    end
+
+    local total_owned = tonumber(breakdown.total_owned) or 0
+    local required = tonumber(breakdown.required) or 0
+    local missing = tonumber(breakdown.missing) or math.max(0, required - total_owned)
+    local complete = missing <= 0
+    if required > 0 then
+        lines[#lines + 1] = {
+            label = TR["Total"],
+            quantity = _ratio_text(total_owned, required),
+            color = complete == true and STATUS_READY or STATUS_MISSING,
+        }
+    end
+    if missing > 0 then
+        lines[#lines + 1] = {
+            label = TR["Missing"],
+            quantity = _format_count(missing),
+            color = STATUS_MISSING,
+        }
+    end
+
+    if #lines == 0 then
+        self:_hide_source_breakdown_hint()
+        return
+    end
+
+    local max_width = _scaled_int(BASE_SOURCE_TOOLTIP_W)
+    local padding_x = _scaled_int(BASE_SOURCE_TOOLTIP_PAD_X)
+    local padding_y = _scaled_int(BASE_SOURCE_TOOLTIP_PAD_Y)
+    local line_height = _scaled_int(BASE_SOURCE_TOOLTIP_LINE_H)
+    local tooltip_border = math.max(0, _scaled_int(tonumber(UI.Widgets.Style.BORDER_WIDTH_THIN) or 1))
+    local content_height = math.min(
+        _scaled_int(BASE_SOURCE_TOOLTIP_MAX_H),
+        math.max(_scaled_int(BASE_SOURCE_TOOLTIP_MIN_H), (#lines * line_height) + padding_y + _scaled_int(7))
+    )
+    local desired_height = content_height + (tooltip_border * 2)
+    local inner_w = max_width - (tooltip_border * 2)
+    local inner_h = desired_height - (tooltip_border * 2)
+    local row_x = math.floor(padding_x / 2)
+    local row_w = math.max(0, inner_w - padding_x)
+    local col_gap = _scaled_int(4)
+    local quantity_w = math.max(_scaled_int(36), math.floor(row_w * 0.24))
+    local source_w = math.max(0, row_w - quantity_w - col_gap)
+
+    self:_ensure_source_breakdown_hint_rows(#lines)
+    for i = 1, #self.source_breakdown_hint_rows do
+        local row = self.source_breakdown_hint_rows[i]
+        if i <= #lines then
+            local line = lines[i]
+            local row_y = _scaled_int(4) + ((i - 1) * line_height)
+            local color = line.color or TEXT_META
+
+            row.holder:SetPosition(row_x, row_y)
+            row.holder:SetSize(row_w, line_height)
+
+            row.source:SetPosition(0, 0)
+            row.source:SetSize(source_w, line_height)
+            row.source:SetFont(_scaled_font("Verdana", 10))
+            row.source:SetForeColor(color)
+            row.source:SetText(line.label or "")
+            row.source:SetVisible(true)
+
+            row.quantity:SetPosition(source_w + col_gap, 0)
+            row.quantity:SetSize(quantity_w, line_height)
+            row.quantity:SetFont(_scaled_font("Verdana", 10))
+            row.quantity:SetForeColor(color)
+            row.quantity:SetText(line.quantity or "")
+            row.quantity:SetVisible(true)
+            row.holder:SetVisible(true)
+        else
+            row.source:SetVisible(false)
+            row.quantity:SetVisible(false)
+            row.holder:SetVisible(false)
+        end
+    end
+
+    self.source_breakdown_hint:ShowContentFor(anchor_control, max_width, desired_height)
+    self.source_breakdown_hint_inner:SetPosition(0, 0)
+    self.source_breakdown_hint_inner:SetSize(inner_w, inner_h)
 end
 
 function CraftingWindow:_recipe_result_item(recipe)
@@ -1716,6 +1994,21 @@ function CraftingWindow._status_text(_, evaluation)
     end
 
     return _ratio_text(ready, total)
+end
+
+function CraftingWindow._recipe_status_text(_, status)
+    if type(status) == "table" then
+        local craftable_count = tonumber(status.craftable_count) or 0
+        if craftable_count > 0 then
+            local text = _format_count(craftable_count)
+            if status.craftable_count_limited == true then
+                text = text .. "+"
+            end
+            return text
+        end
+    end
+
+    return "0"
 end
 
 function CraftingWindow._node_status_color(_, node)
@@ -1978,6 +2271,7 @@ function CraftingWindow:set_scope_sources(source_keys, refresh)
     local next_scope_key = self.store:scope_key_from_sources(normalized)
     local changed = next_scope_key ~= self.scope_key
 
+    self:_hide_source_breakdown_hint()
     self.scope_source_keys = normalized
     self.scope_key = next_scope_key
     if self.scope_dropdown ~= nil then
@@ -2055,6 +2349,7 @@ end
 function CraftingWindow:destroy()
     self:SetWantsUpdates(false)
     self:SetVisible(false)
+    self:_hide_source_breakdown_hint()
     self.store = nil
 end
 
@@ -2122,6 +2417,9 @@ function CraftingWindow:apply_settings()
     self.missing_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.plan_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.loading_text:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    if self.source_breakdown_hint ~= nil then
+        self.source_breakdown_hint:SetScale(_G.settings.global.scale)
+    end
 
     self:_set_scope_dropdown_options()
     self:_load_favorites()
@@ -2503,7 +2801,17 @@ function CraftingWindow:_ingredient_detail_text(node)
     return ""
 end
 
-function CraftingWindow:_node_amount_text(node)
+function CraftingWindow:_source_amount_text(breakdown, fallback_owned, required)
+    local total = tonumber(required) or 0
+    local owned = tonumber(fallback_owned) or 0
+    if type(breakdown) == "table" then
+        owned = tonumber(breakdown.total_owned) or owned
+        total = tonumber(breakdown.required) or total
+    end
+    return _ratio_text(owned, total)
+end
+
+function CraftingWindow:_node_amount_text(node, source_breakdown)
     if type(node) ~= "table" then
         return ""
     end
@@ -2512,7 +2820,7 @@ function CraftingWindow:_node_amount_text(node)
     if owned_quantity == nil then
         owned_quantity = tonumber(node.owned_in_scope) or 0
     end
-    return _ratio_text(owned_quantity, tonumber(node.required) or 0)
+    return self:_source_amount_text(source_breakdown, owned_quantity, tonumber(node.required) or 0)
 end
 
 function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, options)
@@ -2526,6 +2834,8 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
     end
 
     local item = self:_item(node.key)
+    local source_breakdown = self:_source_breakdown_for_item(node.key, node.required)
+    local source_hint_text, source_hint_color = self:_source_breakdown_hint_text(source_breakdown)
     local row = CraftingIngredientRow()
     row:set_scale(_G.settings.global.scale)
     row:set_width(row_w)
@@ -2535,9 +2845,20 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
         item ~= nil and item.background_image_id or nil,
         item ~= nil and item.name or node.key,
         self:_ingredient_detail_text(node),
-        self:_node_amount_text(node),
+        self:_node_amount_text(node, source_breakdown),
         self:_node_status_color(node),
-        indent_level
+        indent_level,
+        source_hint_text,
+        source_hint_color
+    )
+    row:set_source_breakdown(
+        source_breakdown,
+        function(anchor_control, breakdown)
+            self:_show_source_breakdown_hint(anchor_control, breakdown)
+        end,
+        function()
+            self:_hide_source_breakdown_hint()
+        end
     )
     list_box:AddItem(row)
 
@@ -2604,6 +2925,7 @@ function CraftingWindow:_refresh_critical_result_detail(recipe)
 end
 
 function CraftingWindow:refresh_selected_recipe()
+    self:_hide_source_breakdown_hint()
     _clear_list_box(self.ingredients_list)
 
     local recipe = self:_selected_recipe()
@@ -2693,6 +3015,7 @@ function CraftingWindow:_build_plan_entries()
 end
 
 function CraftingWindow:refresh_plan()
+    self:_hide_source_breakdown_hint()
     _clear_list_box(self.queue_list)
     _clear_list_box(self.plan_list)
     _clear_list_box(self.missing_list)
@@ -2810,6 +3133,8 @@ function CraftingWindow:refresh_plan()
     local missing_w = self:_current_missing_list_width()
     for i = 1, #tracked_resource_state.resources do
         local entry = tracked_resource_state.resources[i]
+        local source_breakdown = entry.source_breakdown or self:_source_breakdown_for_item(entry.key, entry.required)
+        local source_hint_text, source_hint_color = self:_source_breakdown_hint_text(source_breakdown)
         local row = CraftingIngredientRow()
         row:set_scale(_G.settings.global.scale)
         row:set_width(missing_w)
@@ -2819,8 +3144,20 @@ function CraftingWindow:refresh_plan()
             entry.background_image_id,
             entry.name,
             "",
-            _ratio_text(entry.owned, entry.required),
-            entry.complete == true and STATUS_READY or STATUS_MISSING
+            self:_source_amount_text(source_breakdown, entry.owned, entry.required),
+            entry.complete == true and STATUS_READY or STATUS_MISSING,
+            0,
+            source_hint_text,
+            source_hint_color
+        )
+        row:set_source_breakdown(
+            source_breakdown,
+            function(anchor_control, breakdown)
+                self:_show_source_breakdown_hint(anchor_control, breakdown)
+            end,
+            function()
+                self:_hide_source_breakdown_hint()
+            end
         )
         self.missing_list:AddItem(row)
     end
