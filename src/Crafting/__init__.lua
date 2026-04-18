@@ -306,7 +306,9 @@ function Crafting.get_tracked_plan_resource_state(store)
     end
 
     local resolved = Crafting.resolve_tracked_plan_entries(crafting_store)
-    local resource_state = crafting_store:evaluate_plan_resources(resolved.entries, "inventory")
+    local resource_scope = crafting_store.scope_key_from_sources ~= nil and
+        crafting_store:scope_key_from_sources({ "backpack" }) or nil
+    local resource_state = crafting_store:evaluate_plan_resources(resolved.entries, resource_scope)
     resource_state.saved_entry_count = #entries
     resource_state.unresolved_count = resolved.unresolved_count or 0
     resource_state.total_entry_count = resolved.total_count or #entries
