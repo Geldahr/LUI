@@ -451,7 +451,6 @@ function TargetVitals:_setup_effect_tracking()
     self.em = TargetEffectManager.acquire(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
     self.em_added_event = self.em:register_added_event(function(effect)
         self:_upsert_effect(effect)
-        -- self:_request_effects_resync(0.05, 6)
     end)
     self.em_removed_event = self.em:register_removed_event(function(effect)
         self:_remove_effect(effect)
@@ -477,6 +476,9 @@ function TargetVitals:_detach_effect_manager()
         self.em_removed_event = nil
     end
 
+    if self.em.restore_background_source_target ~= nil then
+        self.em:restore_background_source_target()
+    end
     self.em:delete()
     self.em = nil
 end

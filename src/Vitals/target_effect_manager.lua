@@ -12,6 +12,7 @@ import "Turbine.Gameplay"
 ---@field call_in_s number|nil
 ---@field player Turbine.Gameplay.Actor|nil
 ---@field source_target Turbine.Gameplay.Actor|nil
+---@field background_source_target Turbine.Gameplay.Actor|nil
 ---@field effects table<number, TargetEffectManagerEffectEntry>
 TargetEffectManager = class(Turbine.Object)
 
@@ -52,15 +53,6 @@ local function _target_cache_key(target)
     return name
 end
 
--- local function _log_cache_acquire(target, key, cached)
---     Turbine.Shell.WriteLine(string.format(
---         "[TargetEffectManager] acquire name=%s key=%s cache_hit=%s",
---         target ~= nil and target.GetName ~= nil and tostring(target:GetName() or "") or "<nil>",
---         tostring(key),
---         cached ~= nil and "true" or "false"
---     ))
--- end
-
 local function _acquire_manager(player, target, source_target)
     local key = _target_cache_key(target)
     local cached = nil
@@ -68,13 +60,16 @@ local function _acquire_manager(player, target, source_target)
         cached = _manager_cache[key]
         if cached ~= nil then
             cached.ref_count = (cached.ref_count or 0) + 1
-            if source_target ~= nil and cached.set_source_target ~= nil then
+            -- Party vitals passes a stable source for background tracking.
+            -- Target vitals passes nil to use player:GetTarget() while selected.
+            if source_target ~= nil then
+                cached.background_source_target = source_target
+            end
+            if cached.set_source_target ~= nil then
                 cached:set_source_target(source_target)
             end
         end
     end
-
-    -- _log_cache_acquire(target, key, cached)
 
     if cached ~= nil then
         return cached
@@ -109,6 +104,7 @@ function TargetEffectManager:Constructor(player, source_target)
     self.effects = {}
     self.player = player
     self.source_target = source_target
+    self.background_source_target = source_target
     self.ref_count = 1
     self.cache_key = nil
 
@@ -155,6 +151,7 @@ function TargetEffectManager:delete()
     self.instance_effects = nil
     self.player = nil
     self.source_target = nil
+    self.background_source_target = nil
     self.cache_key = nil
 end
 
@@ -176,8 +173,6 @@ function TargetEffectManager:register_added_event(callback)
 
     for i = 1, self.instance_effects:GetCount() do
         local effect = self.instance_effects:Get(i)
-        -- Add events to our own list and fire the event added callback
-        -- Turbine.Shell.WriteLine("Added: "..effect:GetName() .. " #"..effect:GetID())
         self.effects[effect:GetID()] = { is_refreshed = true, effect = effect }
     end
     for _, e in pairs(self.effects) do
@@ -259,6 +254,13 @@ function TargetEffectManager:set_source_target(source_target)
     self:attach_callbacks()
 end
 
+-- Return a shared party manager to its background source after target vitals releases it.
+function TargetEffectManager:restore_background_source_target()
+    if self.background_source_target ~= nil then
+        self:set_source_target(self.background_source_target)
+    end
+end
+
 function TargetEffectManager:attach_callbacks()
     if self.instance_effects == nil then
         return
@@ -303,7 +305,6 @@ function TargetEffectManager:effect_added(sender, args)
     end
 
     for i = 1, #self.added_event do
-        -- Turbine.Shell.WriteLine("Added: "..effect:GetName() .. " #"..effect:GetID())
         self.added_event[i](effect)
     end
 
@@ -323,7 +324,6 @@ function TargetEffectManager:effect_removed(sender, args)
     -- as it removes more than it adds. Worst case the event is added back.
     if count == 1 then
         local _, effect = next(self.effects)
-        -- Turbine.Shell.WriteLine("Last Removed: "..effect.effect:GetName() .. " #"..effect.effect:GetID())
         if effect ~= nil then
             for i = 1, #self.removed_event do
                 self.removed_event[i](effect.effect)
