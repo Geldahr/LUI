@@ -18,10 +18,10 @@ local SCOPE_SERVER = "server"
 local SCOPE_INVENTORY = "inventory"
 local SCOPE_PERSONAL = "personal"
 local SCOPE_SHARED = "shared"
-local RECIPE_LOAD_BATCH_SIZE = 1
-local BACKGROUND_UPDATE_EVERY = 0.50
+local BACKGROUND_RECIPE_BATCH_SIZE = 2
+local BACKGROUND_UPDATE_EVERY = 0.20
 local FOREGROUND_UPDATE_EVERY = 0.20
-local FOREGROUND_RECIPE_BATCH_SIZE = 2
+local FOREGROUND_RECIPE_BATCH_SIZE = 10
 local RECIPE_STATUS_CRAFT_LIMIT = 999
 
 local SOURCE_ORDER = {
@@ -879,14 +879,18 @@ function CraftingStore:set_loading_priority(enabled)
 end
 
 function CraftingStore:Update()
+    self:refresh_if_due()
+end
+
+function CraftingStore:refresh_if_due()
     local now = Turbine.Engine.GetGameTime()
     if (now - (self.last_update_at or 0)) < self.update_every then
-        return
+        return false
     end
     self.last_update_at = now
 
-    local batch_size = self._foreground_loading == true and FOREGROUND_RECIPE_BATCH_SIZE or RECIPE_LOAD_BATCH_SIZE
-    self:refresh(false, batch_size)
+    local batch_size = self._foreground_loading == true and FOREGROUND_RECIPE_BATCH_SIZE or BACKGROUND_RECIPE_BATCH_SIZE
+    return self:refresh(false, batch_size)
 end
 
 function CraftingStore:refresh(force, recipe_batch_size)
@@ -900,7 +904,7 @@ function CraftingStore:refresh(force, recipe_batch_size)
     if recipe_refresh_needed == true then
         self:_start_recipe_load(current_character)
         changed = true
-    elseif self._recipe_loading == true and self:_step_recipe_load(recipe_batch_size or RECIPE_LOAD_BATCH_SIZE) == true then
+    elseif self._recipe_loading == true and self:_step_recipe_load(recipe_batch_size or BACKGROUND_RECIPE_BATCH_SIZE) == true then
         changed = true
     end
 
@@ -1502,9 +1506,9 @@ function CraftingStore:_step_recipe_load(batch_size)
         return false
     end
 
-    local remaining = tonumber(batch_size) or RECIPE_LOAD_BATCH_SIZE
+    local remaining = tonumber(batch_size) or BACKGROUND_RECIPE_BATCH_SIZE
     if remaining == nil or remaining < 1 then
-        remaining = RECIPE_LOAD_BATCH_SIZE
+        remaining = BACKGROUND_RECIPE_BATCH_SIZE
     end
 
     local changed = false

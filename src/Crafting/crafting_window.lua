@@ -2341,8 +2341,8 @@ function CraftingWindow:open()
     self:SetVisible(true)
     self:SetWantsUpdates(true)
     self:bring_to_front()
-    if self.store ~= nil and self.store.refresh ~= nil then
-        self.store:refresh(false, 2)
+    if self.store ~= nil and self.store.refresh_if_due ~= nil then
+        self.store:refresh_if_due()
     end
     self._plan_user_changed = false
     self:_sync_draft_plan_from_tracked()
@@ -2525,8 +2525,8 @@ function CraftingWindow:Update()
     self._last_update_at = now
 
     local store_changed = false
-    if self.store ~= nil and self.store.refresh ~= nil then
-        store_changed = self.store:refresh(false, 2) == true
+    if self.store ~= nil and self.store.refresh_if_due ~= nil then
+        store_changed = self.store:refresh_if_due() == true
     end
     local store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
     if store_changed == true or store_version ~= self._last_store_version then
