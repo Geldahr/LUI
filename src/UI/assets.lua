@@ -19,6 +19,9 @@ UI.AssetIds.arrow_r_yellow_inverted = 0x4110A133
 UI.AssetIds.arrow_r_yellow_dark = 0x4110A134
 UI.AssetIds.arrow_r_transparent = 0x4110A12E
 
+UI.AssetIds.x = "LUI/assets/ui/x_64.tga"
+UI.AssetIds.x_hover = "LUI/assets/ui/x_hover_64.tga"
+
 UI.AssetIds.feather = 0x41004D92
 
 UI.AssetIds.backpack = 0x41008113
