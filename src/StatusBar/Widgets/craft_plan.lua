@@ -670,7 +670,7 @@ function CraftPlanWidget:_refresh_from_state(state)
     local resources = type(state) == "table" and state.resources or {}
 
     if type(state) ~= "table" or (state.saved_entry_count or 0) <= 0 then
-        visible_specs[1] = { text = TR["No plan"], color = META_TEXT, popup = false }
+        -- No tracked plan: keep the widget blank instead of showing placeholder text.
     elseif state.ready == true then
         visible_specs[1] = { text = TR["Ready"], color = READY_TEXT, popup = true }
     else
