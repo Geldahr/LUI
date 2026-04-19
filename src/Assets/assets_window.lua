@@ -1,16 +1,15 @@
 import "Turbine.UI"
-import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Assets.assets_entry"
 
-AssetsWindow = class(Turbine.UI.Lotro.Window)
+AssetsWindow = class(LuiWindow)
 local Style = UI.Widgets.Style
 
 local BASE_MARGIN_LEFT = 15
-local BASE_MARGIN_TOP = 33
+local BASE_MARGIN_TOP = 11
 local BASE_MARGIN_RIGHT = 15
 local BASE_MARGIN_BOTTOM = 15
 local BASE_BAR_H = 21
@@ -45,6 +44,8 @@ local BASE_STACK_HINT_PAD_Y = 9
 local BASE_STACK_HINT_LINE_H = 12
 local BASE_RECIPES_BUTTON_W = 108
 local MIN_LAYOUT_COLS = 2
+local RESIZE_LEFT = 1
+local RESIZE_TOP = 4
 
 local SUMMARY_TRACK_WIDTH_FACTOR = 0.70
 
@@ -103,6 +104,10 @@ local function _clamp(value, min_value, max_value)
         return max_value
     end
     return value
+end
+
+local function _has_resize_dir(mask, dir)
+    return math.floor((mask or 0) / dir) % 2 == 1
 end
 
 local function _portion_size(count, total, size)
@@ -527,11 +532,12 @@ end
 ---------------------------------------------------------------------
 
 function AssetsWindow:Constructor()
-    Turbine.UI.Lotro.Window.Constructor(self)
+    LuiWindow.Constructor(self)
 
-    self:SetText(TR["Assets"])
-    self:SetVisible(false)
-    self:SetResizable(true)
+    self:set_title(TR["Assets"])
+    self:set_icon(UI.AssetIds.chest)
+    self:set_resizable(true)
+    self:hide()
     self:SetWantsUpdates(false)
 
     self.update_every = 1.0 / _G.settings.global.refresh_rate
@@ -560,12 +566,13 @@ function AssetsWindow:Constructor()
     self.total_record_count = 0
 
     self.entries = {}
+    local content_host = self:get_content_host()
 
     self.nav_bar = Turbine.UI.Control()
-    self.nav_bar:SetParent(self)
+    self.nav_bar:SetParent(content_host)
 
     self.page_bar = Turbine.UI.Control()
-    self.page_bar:SetParent(self)
+    self.page_bar:SetParent(content_host)
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
@@ -627,7 +634,7 @@ function AssetsWindow:Constructor()
     end
 
     self.filter_bar = Turbine.UI.Control()
-    self.filter_bar:SetParent(self)
+    self.filter_bar:SetParent(content_host)
 
     self.filter_tb = UI.Widgets.LineEdit()
     self.filter_tb:SetParent(self.filter_bar)
@@ -648,7 +655,7 @@ function AssetsWindow:Constructor()
 
     self._suppress_stack_changed = false
     self.stack_items_toggle = Turbine.UI.Control()
-    self.stack_items_toggle:SetParent(self)
+    self.stack_items_toggle:SetParent(content_host)
 
     self.stack_items_cb = UI.Widgets.LuiCheckBox()
     self.stack_items_cb:SetParent(self.stack_items_toggle)
@@ -719,7 +726,7 @@ function AssetsWindow:Constructor()
     end
 
     self.summary_bar = Turbine.UI.Control()
-    self.summary_bar:SetParent(self)
+    self.summary_bar:SetParent(content_host)
 
     self.summary_track = Turbine.UI.Control()
     self.summary_track:SetParent(self.summary_bar)
@@ -751,7 +758,7 @@ function AssetsWindow:Constructor()
     self.summary_text:SetZOrder(2)
 
     self.recipes_button = UI.Widgets.LuiButton()
-    self.recipes_button:SetParent(self)
+    self.recipes_button:SetParent(content_host)
     self.recipes_button:set_text(TR["Recipes"] .. " (0)")
     self.recipes_button.Click = function()
         if Crafting ~= nil and Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true then
@@ -813,7 +820,7 @@ function AssetsWindow:Constructor()
     end
 
     self.content = Turbine.UI.Control()
-    self.content:SetParent(self)
+    self.content:SetParent(content_host)
     self.content:SetMouseVisible(false)
 
     self.empty_label = UI.Widgets.LuiLabel()
@@ -823,7 +830,7 @@ function AssetsWindow:Constructor()
     self.empty_label:SetText(TR["No cached items yet."])
 
     self.hint_label = UI.Widgets.LuiLabel()
-    self.hint_label:SetParent(self)
+    self.hint_label:SetParent(content_host)
     self.hint_label:SetMouseVisible(false)
     self.hint_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.hint_label:SetVisible(false)
@@ -838,6 +845,7 @@ function AssetsWindow:Constructor()
     self.stack_hint_rows = {}
 
     self.SizeChanged = function()
+        LuiWindow._layout(self)
         if self._suppress_size_changed == true then
             return
         end
@@ -878,14 +886,14 @@ function AssetsWindow:bring_to_front()
 end
 
 function AssetsWindow:open()
-    self:SetVisible(true)
-    self:bring_to_front()
+    self:show()
 end
 
 function AssetsWindow:toggle()
-    self:SetVisible(not self:IsVisible())
     if self:IsVisible() == true then
-        self:bring_to_front()
+        self:hide()
+    else
+        self:show()
         self._last_generation = nil
     end
 end
@@ -1002,6 +1010,8 @@ function AssetsWindow:set_grouping_mode(mode)
 end
 
 function AssetsWindow:apply_settings()
+    LuiWindow.apply_settings(self)
+
     local s = _G.settings.assets
 
     self.update_every = 1.0 / _G.settings.global.refresh_rate
@@ -1047,6 +1057,8 @@ function AssetsWindow:apply_settings()
     if self.stack_hint ~= nil then
         self.stack_hint:SetScale(_G.settings.global.scale)
     end
+    local min_w, min_h = self:_get_min_window_size(self.view_mode, self.tile_size)
+    self:set_minimum_size(min_w, min_h)
 
     self:_apply_layout_for_mode(self.view_mode)
     self:snap_window_size()
@@ -1057,6 +1069,29 @@ end
 
 function AssetsWindow:handle_user_resize()
     self:snap_window_size()
+    self:layout()
+    self:refresh_from_store(true)
+end
+
+function AssetsWindow:_apply_resize_bounds(x, y, w, h, region, args)
+    local snapped_w, snapped_h = self:get_snap_dimensions(w, h)
+    local mask = self._resize_mask or 0
+
+    if _has_resize_dir(mask, RESIZE_LEFT) then
+        x = x + w - snapped_w
+    end
+    if _has_resize_dir(mask, RESIZE_TOP) then
+        y = y + h - snapped_h
+    end
+
+    x, y, snapped_w, snapped_h = self:_clamp_resize_to_screen(x, y, snapped_w, snapped_h)
+
+    local old_suppress = self._suppress_size_changed
+    self._suppress_size_changed = true
+    self:SetPosition(x, y)
+    self:SetSize(snapped_w, snapped_h)
+    self._suppress_size_changed = old_suppress
+
     self:layout()
     self:refresh_from_store(true)
 end
@@ -1089,6 +1124,7 @@ end
 function AssetsWindow:_enforce_min_size()
     local width, height = self:GetSize()
     local min_w, min_h = self:_get_min_window_size(self.view_mode, self.tile_size)
+    self:set_minimum_size(min_w, min_h)
 
     if width < min_w or height < min_h then
         self._suppress_size_changed = true
@@ -1191,14 +1227,15 @@ function AssetsWindow:_get_min_window_size(mode, tile_size)
         min_w = grid_min_w
     end
 
-    return min_w, min_h
+    return self:get_window_size_for_content(min_w, min_h)
 end
 
 function AssetsWindow:_get_content_size_from_window(width, height)
     local layout = self:_get_layout_numbers()
     local footer_h = self:_get_footer_height(layout)
-    local content_w = width - layout.margin_left - layout.margin_right
-    local content_h = height - layout.margin_top - layout.margin_bottom - layout.bar_h - layout.filter_h -
+    local host_w, host_h = self:get_content_size_for_window(width, height)
+    local content_w = host_w - layout.margin_left - layout.margin_right
+    local content_h = host_h - layout.margin_top - layout.margin_bottom - layout.bar_h - layout.filter_h -
         layout.summary_h - footer_h - (layout.gap * 4)
 
     if content_w < 0 then content_w = 0 end
@@ -1237,9 +1274,10 @@ function AssetsWindow:_get_window_size_for_layout_grid(mode, tile_size, cols, ro
     local content_w, content_h = self:_get_content_size_for_layout_grid(mode, tile_size, cols, rows)
     local min_w, min_h = self:_get_min_window_size(mode, tile_size)
 
-    local width = layout.margin_left + layout.margin_right + content_w
-    local height = layout.margin_top + layout.margin_bottom + layout.bar_h + layout.filter_h + layout.summary_h +
+    local host_w = layout.margin_left + layout.margin_right + content_w
+    local host_h = layout.margin_top + layout.margin_bottom + layout.bar_h + layout.filter_h + layout.summary_h +
         footer_h + (layout.gap * 4) + content_h
+    local width, height = self:get_window_size_for_content(host_w, host_h)
 
     if width < min_w then width = min_w end
     if height < min_h then height = min_h end
@@ -1261,9 +1299,10 @@ function AssetsWindow:get_snap_dimensions(width, height)
 
     local snapped_content_w, snapped_content_h = self:_get_content_size_for_layout_grid(self.view_mode, self.tile_size,
         cols, rows)
-    local snapped_w = layout.margin_left + layout.margin_right + snapped_content_w
-    local snapped_h = layout.margin_top + layout.margin_bottom + layout.bar_h + layout.filter_h + layout.summary_h +
+    local snapped_host_w = layout.margin_left + layout.margin_right + snapped_content_w
+    local snapped_host_h = layout.margin_top + layout.margin_bottom + layout.bar_h + layout.filter_h + layout.summary_h +
         footer_h + (layout.gap * 4) + snapped_content_h
+    local snapped_w, snapped_h = self:get_window_size_for_content(snapped_host_w, snapped_host_h)
 
     if snapped_w < min_w then snapped_w = min_w end
     if snapped_h < min_h then snapped_h = min_h end
@@ -1762,7 +1801,7 @@ function AssetsWindow:_set_hint(record, anchor_control, icon_hover)
 end
 
 function AssetsWindow:layout()
-    local width, height = self:GetSize()
+    local width, height = self:get_content_size()
     local layout = self:_get_layout_numbers()
     local margin_left = layout.margin_left
     local margin_top = layout.margin_top
