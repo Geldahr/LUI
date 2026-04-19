@@ -165,6 +165,31 @@ function LuiWindow:get_content_host()
     return self._content_host
 end
 
+function LuiWindow:get_content_size()
+    return self._content_host:GetSize()
+end
+
+function LuiWindow:get_content_size_for_window(width, height)
+    local border = self:_border()
+    local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
+    local divider_h = self:_divider_h()
+
+    local content_w = math.max(0, (tonumber(width) or 0) - (border * 2))
+    local content_h = math.max(0, (tonumber(height) or 0) - (border * 2) - title_h - divider_h)
+    return content_w, content_h
+end
+
+function LuiWindow:get_chrome_size()
+    local width, height = self:GetSize()
+    local content_w, content_h = self:get_content_size()
+    return math.max(0, width - content_w), math.max(0, height - content_h)
+end
+
+function LuiWindow:get_window_size_for_content(width, height)
+    local chrome_w, chrome_h = self:get_chrome_size()
+    return (tonumber(width) or 0) + chrome_w, (tonumber(height) or 0) + chrome_h
+end
+
 function LuiWindow:set_title_bar_divider_visible(visible)
     self._title_bar_divider_visible = visible == true
     self:_layout()
