@@ -262,7 +262,7 @@ function LuiWindow:Constructor()
         self:_layout()
     end
 
-    self:apply_settings()
+    LuiWindow.apply_settings(self)
     self:SetSize(_scaled_int(self._scale, BASE_DEFAULT_W), _scaled_int(self._scale, BASE_DEFAULT_H))
 end
 
@@ -379,6 +379,7 @@ function LuiWindow:set_resizable(enabled)
     self._resizable = enabled == true
     if self._resizable ~= true then
         self:_stop_resize()
+        self:_hide_resize_handle()
     end
     self:_layout_resize_regions()
 end
@@ -695,13 +696,7 @@ function LuiWindow:_start_resize(region, args)
     self:bring_to_front()
 end
 
-function LuiWindow:_resize_to(region, args)
-    if self._resizing ~= true then
-        return
-    end
-
-    self:_remember_resize_handle_cursor(region, args)
-
+function LuiWindow:_calculate_resize_bounds(region, args)
     local screen_x, screen_y = region:PointToScreen(
         args ~= nil and args.X or 0,
         args ~= nil and args.Y or 0
@@ -739,6 +734,17 @@ function LuiWindow:_resize_to(region, args)
     end
 
     x, y, w, h = self:_clamp_resize_to_screen(x, y, w, h)
+    return x, y, w, h
+end
+
+function LuiWindow:_resize_to(region, args)
+    if self._resizing ~= true then
+        return
+    end
+
+    self:_remember_resize_handle_cursor(region, args)
+
+    local x, y, w, h = self:_calculate_resize_bounds(region, args)
     self:SetPosition(x, y)
     self:SetSize(w, h)
     self:_layout_resize_handle(region)
@@ -935,6 +941,9 @@ function LuiWindow:_layout_resize_regions()
     local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
     local right_edge_top = math.min(height, title_h + edge)
     local edge_visible = self._resizable == true
+    if edge_visible ~= true then
+        self:_hide_resize_handle()
+    end
 
     local top_w = math.max(0, width - (corner * 2))
     local side_h = math.max(0, height - right_edge_top - corner)

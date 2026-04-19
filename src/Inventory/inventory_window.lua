@@ -1,6 +1,5 @@
 import "Turbine.Gameplay"
 import "Turbine.UI"
-import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.Inventory.filter"
@@ -9,23 +8,25 @@ import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Settings.enums"
 
-InventoryWindow = class(Turbine.UI.Lotro.Window)
+InventoryWindow = class(LuiWindow)
 
 local MARGIN_LEFT = 15
-local MARGIN_TOP = 33
+local MARGIN_TOP = 11
 local MARGIN_RIGHT = 15
-local MARGIN_BOTTOM = 15
+local MARGIN_BOTTOM = 6
 local FILTER_H = 21
 local BASE_MONEY_H = 24
 local MONEY_GAP = 3
 local BASE_HINT_GAP = 6
-local BASE_HINT_H = 48
+local BASE_HINT_H = 34
 -- local ACTION_H = 28 -- Lock/whitelist UI row (disabled for now)
 local BAR_GAP = 4
 local FILTER_GAP = 4
 local CLEAR_W = 52
 local MIN_WINDOW_W = 193
 local MIN_WINDOW_H = 148
+local RESIZE_LEFT = 1
+local RESIZE_TOP = 4
 
 local BASE_HINT_FONT_SIZE = 12
 local BASE_FILTER_FONT_SIZE = 10
@@ -44,6 +45,10 @@ local function _scaled_font(name, size)
         error("Missing scaled font: " .. tostring(name) .. " " .. tostring(_scaled_size(size)))
     end
     return font
+end
+
+local function _has_resize_dir(mask, dir)
+    return math.floor((mask or 0) / dir) % 2 == 1
 end
 
 local GOLD_ICON = Turbine.UI.Graphic(0x41007e7b)
@@ -129,11 +134,12 @@ end
 ---------------------------------------------------------------------
 
 function InventoryWindow:Constructor()
-    Turbine.UI.Lotro.Window.Constructor(self)
+    LuiWindow.Constructor(self)
 
-    self:SetText(TR["Inventory"])
+    self:set_title(TR["Inventory"])
+    self:set_icon(UI.AssetIds.backpack)
     self:SetVisible(false)
-    self:SetResizable(true)
+    self:set_resizable(true)
     self:SetWantsUpdates(false)
 
     self.last_update_at = 0
@@ -170,8 +176,10 @@ function InventoryWindow:Constructor()
     -- self.lock_mode = false -- disabled for now
     self._slot_bind_offset = nil
 
+    local content = self:get_content_host()
+
     self.header = Turbine.UI.Control()
-    self.header:SetParent(self)
+    self.header:SetParent(content)
 
     self.g_icon = Image(GOLD_ICON)
     self.g_icon:SetParent(self.header)
@@ -250,11 +258,11 @@ function InventoryWindow:Constructor()
     -- end)
 
     self.list = Turbine.UI.ListBox()
-    self.list:SetParent(self)
+    self.list:SetParent(content)
     self.list:SetOrientation(Turbine.UI.Orientation.Vertical)
 
     self.hint_label = UI.Widgets.LuiLabel()
-    self.hint_label:SetParent(self)
+    self.hint_label:SetParent(content)
     self.hint_label:SetMouseVisible(false)
     self.hint_label:SetSelectable(false)
     self.hint_label:SetForeColor(Turbine.UI.Color(0.65, 0.65, 0.65))
@@ -273,6 +281,7 @@ function InventoryWindow:Constructor()
     end
 
     self.SizeChanged = function()
+        LuiWindow._layout(self)
         if self._suppress_size_changed then
             return
         end
@@ -376,7 +385,7 @@ function InventoryWindow:get_item(index)
 end
 
 function InventoryWindow:layout()
-    local w, h = self:GetSize()
+    local w, h = self:get_content_size()
     local min_w = _scaled_int(MIN_WINDOW_W)
     local min_h = _scaled_int(MIN_WINDOW_H)
     if w < min_w then w = min_w end
@@ -447,9 +456,59 @@ function InventoryWindow:compute_window_size(cols, rows)
     local grid_w = cols * self.tile_size
     local grid_h = rows * self.tile_size
 
-    local w = self.margin_left + self.margin_right + grid_w
-    local h = self.margin_top + self.margin_bottom + self.header_h + self.bar_gap + self.hint_gap + self.hint_h + grid_h
-    return w, h
+    local content_w = self.margin_left + self.margin_right + grid_w
+    local content_h = self.margin_top + self.margin_bottom + self.header_h + self.bar_gap + self.hint_gap + self.hint_h + grid_h
+    return self:get_window_size_for_content(content_w, content_h)
+end
+
+function InventoryWindow:minimum_window_size()
+    return self:get_window_size_for_content(_scaled_int(MIN_WINDOW_W), _scaled_int(MIN_WINDOW_H))
+end
+
+function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, window_h)
+    local content_w = self:get_content_size_for_window(window_w, window_h)
+    local list_w = content_w - self.margin_left - self.margin_right
+
+    local cols = math.floor(list_w / self.tile_size)
+    if cols < 6 then cols = 6 end
+    if cols > 20 then cols = 20 end
+
+    local rows = self:get_needed_rows(cols)
+    local raw = _G.loaded_settings.inventory
+    local changed = cols ~= self.cols or rows ~= self.rows_visible
+
+    self.cols = cols
+    self.rows_visible = rows
+    raw.cols = cols
+
+    local desired_w, desired_h = self:compute_window_size(cols, rows)
+    local min_w, min_h = self:minimum_window_size()
+    if desired_w < min_w then desired_w = min_w end
+    if desired_h < min_h then desired_h = min_h end
+
+    local mask = self._resize_mask or 0
+    if _has_resize_dir(mask, RESIZE_LEFT) then
+        window_x = window_x + window_w - desired_w
+    end
+    if _has_resize_dir(mask, RESIZE_TOP) then
+        window_y = window_y + window_h - desired_h
+    end
+
+    window_x, window_y, desired_w, desired_h = self:_clamp_resize_to_screen(window_x, window_y, desired_w, desired_h)
+
+    local old_suppress = self._suppress_size_changed
+    self._suppress_size_changed = true
+    self:SetPosition(window_x, window_y)
+    self:SetSize(desired_w, desired_h)
+    self._suppress_size_changed = old_suppress
+
+    self:layout()
+    if changed == true then
+        self:build_grid()
+    end
+    self._dirty = true
+    self._filter_dirty = true
+    self._display_dirty = true
 end
 
 function InventoryWindow:update_money()
@@ -471,6 +530,8 @@ function InventoryWindow:update_money()
 end
 
 function InventoryWindow:apply_settings()
+    LuiWindow.apply_settings(self)
+
     local s = _G.settings.inventory
     self.update_every = 1.0 / _G.settings.global.refresh_rate
     self.tile_size = s.tile_size
@@ -522,8 +583,8 @@ function InventoryWindow:apply_settings()
     self:SetPosition(raw.window.left, raw.window.top)
 
     local w, h = self:compute_window_size(self.cols, self.rows_visible)
-    local min_w = _scaled_int(MIN_WINDOW_W)
-    local min_h = _scaled_int(MIN_WINDOW_H)
+    local min_w, min_h = self:minimum_window_size()
+    self:set_minimum_size(min_w, min_h)
     if w < min_w then w = min_w end
     if h < min_h then h = min_h end
     self._suppress_size_changed = true
@@ -539,43 +600,21 @@ function InventoryWindow:apply_settings()
 end
 
 function InventoryWindow:handle_user_resize()
-    self:layout()
+    local window_w, window_h = self:GetSize()
+    local window_x, window_y = self:GetPosition()
+    self:apply_resize_candidate(window_x, window_y, window_w, window_h)
+end
 
-    local w, h = self:GetSize()
-    local list_w = w - self.margin_left - self.margin_right
-
-    local cols = math.floor(list_w / self.tile_size)
-    if cols < 6 then cols = 6 end
-    if cols > 20 then cols = 20 end
-
-    local rows = self:get_needed_rows(cols)
-
-    local raw = _G.loaded_settings.inventory
-    local changed = cols ~= self.cols or rows ~= self.rows_visible
-
-    self.cols = cols
-    self.rows_visible = rows
-    raw.cols = cols
-
-    local desired_w, desired_h = self:compute_window_size(cols, rows)
-    local min_w = _scaled_int(MIN_WINDOW_W)
-    local min_h = _scaled_int(MIN_WINDOW_H)
-    if desired_w < min_w then desired_w = min_w end
-    if desired_h < min_h then desired_h = min_h end
-
-    if desired_w ~= w or desired_h ~= h then
-        self._suppress_size_changed = true
-        self:SetSize(desired_w, desired_h)
-        self._suppress_size_changed = false
+function InventoryWindow:_resize_to(region, args)
+    if self._resizing ~= true then
+        return
     end
 
-    self:layout()
-    if changed == true then
-        self:build_grid()
-    end
-    self._dirty = true
-    self._filter_dirty = true
-    self._display_dirty = true
+    self:_remember_resize_handle_cursor(region, args)
+
+    local x, y, w, h = self:_calculate_resize_bounds(region, args)
+    self:apply_resize_candidate(x, y, w, h)
+    self:_layout_resize_handle(region)
 end
 
 function InventoryWindow:build_grid()
@@ -830,14 +869,12 @@ function InventoryWindow:Update()
 end
 
 function InventoryWindow:open()
-    self:SetVisible(true)
-    self:bring_to_front()
+    LuiWindow.open(self)
 end
 
 function InventoryWindow:toggle()
-    self:SetVisible(not self:IsVisible())
+    LuiWindow.toggle(self)
     if self:IsVisible() then
-        self:bring_to_front()
         self._dirty = true
     end
 end
