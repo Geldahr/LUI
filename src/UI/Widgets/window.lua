@@ -1,5 +1,4 @@
 import "Turbine.UI"
-import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
@@ -41,12 +40,7 @@ local function _set_blend(control)
     control:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 end
 
-local function _make_drag_region(parent, owner)
-    local control = Turbine.UI.Control()
-    control:SetParent(parent)
-    control:SetMouseVisible(true)
-    _set_blend(control)
-
+local function _attach_drag_handlers(control, owner)
     control.MouseDown = function(_, args)
         owner:_start_drag(args)
     end
@@ -56,15 +50,23 @@ local function _make_drag_region(parent, owner)
     control.MouseUp = function()
         owner:_stop_drag()
     end
+end
+
+local function _make_drag_region(parent, owner)
+    local control = Turbine.UI.Control()
+    control:SetParent(parent)
+    control:SetMouseVisible(true)
+    _set_blend(control)
+    _attach_drag_handlers(control, owner)
 
     return control
 end
 
----@class LuiWindow : Turbine.UI.Lotro.Window
-LuiWindow = class(Turbine.UI.Lotro.Window)
+---@class LuiWindow : Turbine.UI.Window
+LuiWindow = class(Turbine.UI.Window)
 
 function LuiWindow:Constructor()
-    Turbine.UI.Lotro.Window.Constructor(self)
+    Turbine.UI.Window.Constructor(self)
 
     self._scale = _current_scale()
     self._icon_asset = nil
@@ -114,6 +116,7 @@ function LuiWindow:Constructor()
     self._title_bar_host:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     _set_blend(self._title_bar_host)
     self._title_bar_host:SetZOrder(10)
+    _attach_drag_handlers(self._title_bar_host, self)
 
     self._title_label = LuiLabel()
     self._title_label:SetParent(self._title_bar)

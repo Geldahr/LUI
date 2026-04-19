@@ -51,7 +51,6 @@ function UI.Widgets.open_lui_window_preview()
         window = LuiWindow()
         window:set_title("LuiWindow")
         window:set_icon(UI.AssetIds.feather, 18)
-        window:SetResizable(true)
         window:SetSize(_scaled_int(BASE_W), _scaled_int(BASE_H))
         _center_window(window)
 
@@ -69,7 +68,7 @@ function UI.Widgets.open_lui_window_preview()
         window.preview_body:SetSelectable(false)
         window.preview_body:SetMultiline(true)
         window.preview_body:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
-        window.preview_body:SetText("Drag the title bar. Resize with the native window edge. Close with the X.")
+        window.preview_body:SetText("Drag the title bar. Close with the X.")
 
         local menu = window:add_menu("Menu")
         menu:add_action({
