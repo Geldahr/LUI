@@ -14,6 +14,7 @@ import "LUI.src.UI.Widgets.tab_bar"
 import "LUI.src.UI.Widgets.spin_box"
 import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.window"
+import "LUI.src.UI.Widgets.window_preview"
 
 _G.LuiLabel = LuiLabel
 _G.Image = Image
