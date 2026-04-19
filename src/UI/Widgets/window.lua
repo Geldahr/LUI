@@ -452,7 +452,7 @@ function LuiWindow:_apply_style()
     self:_layout()
 end
 
-function LuiWindow:open()
+function LuiWindow:show()
     self:SetVisible(true)
     self:_bound_to_screen()
     self:bring_to_front()
@@ -463,21 +463,19 @@ function LuiWindow:request_close()
         self._close_handler(self)
         return
     end
-    self:close()
+    self:hide()
 end
 
-function LuiWindow:close()
+function LuiWindow:hide()
     self:_hide_resize_handle()
     self:SetVisible(false)
 end
 
 function LuiWindow:toggle()
-    self:SetVisible(not self:IsVisible())
     if self:IsVisible() == true then
-        self:_bound_to_screen()
-        self:bring_to_front()
+        self:hide()
     else
-        self:_hide_resize_handle()
+        self:show()
     end
 end
 

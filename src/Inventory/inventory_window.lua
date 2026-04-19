@@ -138,8 +138,8 @@ function InventoryWindow:Constructor()
 
     self:set_title(TR["Inventory"])
     self:set_icon(UI.AssetIds.backpack)
-    self:SetVisible(false)
     self:set_resizable(true)
+    self:hide()
     self:SetWantsUpdates(false)
 
     self.last_update_at = 0
@@ -861,7 +861,7 @@ function InventoryWindow:Update()
 end
 
 function InventoryWindow:open()
-    LuiWindow.open(self)
+    self:show()
 end
 
 function InventoryWindow:toggle()

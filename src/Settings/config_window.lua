@@ -75,7 +75,7 @@ function ConfigWindow:Constructor()
 
     self:set_title(TR["LUI Configuration"])
     self:set_resizable(true)
-    self:SetVisible(false)
+    self:hide()
 
     self:_update_ui_scale_metrics()
     self:set_minimum_size(_scaled_int(222), _scaled_int(185))
@@ -331,7 +331,7 @@ end
 
 function ConfigWindow:cancel()
     self:hide_confirmation_dialog()
-    self:close()
+    self:hide()
 end
 
 function ConfigWindow:open(main_key, preferred_sub_key)
@@ -340,7 +340,7 @@ function ConfigWindow:open(main_key, preferred_sub_key)
     if type(main_key) == "string" then
         self:select_main_tab(main_key, preferred_sub_key)
     end
-    LuiWindow.open(self)
+    self:show()
     self:layout()
     self:_activate_active_page()
 end
@@ -605,6 +605,6 @@ function ConfigWindow:apply_changes(close_after)
     save_settings()
 
     if close_after then
-        self:close()
+        self:hide()
     end
 end
