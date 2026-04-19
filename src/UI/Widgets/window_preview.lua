@@ -63,10 +63,12 @@ function UI.Widgets.open_lui_window_preview()
         window.preview_action = LuiButton()
         window.preview_action:SetParent(host)
         window.preview_action:set_text("Menu")
+        UI.Widgets.Style.apply_embedded_button(window.preview_action)
         window.preview_divider_visible = true
         window.preview_action.Click = function()
             window.preview_divider_visible = window.preview_divider_visible ~= true
             window:set_title_bar_divider_visible(window.preview_divider_visible)
+            window.preview_action:set_active(window.preview_divider_visible ~= true)
         end
 
         local content = window:get_content_host()

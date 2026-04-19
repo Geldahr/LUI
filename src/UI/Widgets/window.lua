@@ -12,12 +12,11 @@ local Style = UI.Widgets.Style
 
 local BASE_DEFAULT_W = 420
 local BASE_DEFAULT_H = 280
-local BASE_TITLE_BAR_H = 28
+local BASE_TITLE_BAR_H = 22
 local BASE_PAD_X = 7
 local BASE_GAP = 4
 local BASE_ICON = 20
-local BASE_CLOSE_BUTTON = 22
-local BASE_CLOSE_ICON = 16
+local BASE_CLOSE_ICON = 14
 local BASE_TITLE_FONT = 12
 
 local function _current_scale()
@@ -39,6 +38,25 @@ end
 local function _set_blend(control)
     control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     control:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+end
+
+local function _make_drag_region(parent, owner)
+    local control = Turbine.UI.Control()
+    control:SetParent(parent)
+    control:SetMouseVisible(true)
+    _set_blend(control)
+
+    control.MouseDown = function(_, args)
+        owner:_start_drag(args)
+    end
+    control.MouseMove = function(_, args)
+        owner:_drag_to(args)
+    end
+    control.MouseUp = function()
+        owner:_stop_drag()
+    end
+
+    return control
 end
 
 ---@class LuiWindow : Turbine.UI.Lotro.Window
@@ -76,17 +94,11 @@ function LuiWindow:Constructor()
 
     self._title_bar = Turbine.UI.Control()
     self._title_bar:SetParent(self._inner)
-    self._title_bar:SetMouseVisible(true)
+    self._title_bar:SetMouseVisible(false)
     _set_blend(self._title_bar)
-    self._title_bar.MouseDown = function(_, args)
-        self:_start_drag(args)
-    end
-    self._title_bar.MouseMove = function(_, args)
-        self:_drag_to(args)
-    end
-    self._title_bar.MouseUp = function()
-        self:_stop_drag()
-    end
+
+    self._title_drag_left = _make_drag_region(self._title_bar, self)
+    self._title_drag_body = _make_drag_region(self._title_bar, self)
 
     self._icon = Image()
     self._icon:SetParent(self._title_bar)
@@ -98,6 +110,7 @@ function LuiWindow:Constructor()
     self._title_bar_host:SetMouseVisible(true)
     self._title_bar_host:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     _set_blend(self._title_bar_host)
+    self._title_bar_host:SetZOrder(10)
 
     self._title_label = LuiLabel()
     self._title_label:SetParent(self._title_bar)
@@ -109,6 +122,7 @@ function LuiWindow:Constructor()
 
     self._close_button = LuiButton()
     self._close_button:SetParent(self._title_bar)
+    self._close_button:SetZOrder(10)
     self._close_button:set_text("")
     self._close_button.Click = function()
         self:request_close()
@@ -253,7 +267,17 @@ function LuiWindow:_apply_style()
     self._title_label:SetFont(_scaled_font(self._scale, BASE_TITLE_FONT))
 
     self._close_button:set_scale(self._scale)
-    Style.apply_transparent_button(self._close_button)
+    self._close_button:set_border_thickness(0)
+    self._close_button:set_padding(0)
+    self._close_button:set_back_color(Style.CONTROL_BACKGROUND)
+    self._close_button:set_hover_back_color(Style.CONTROL_BACKGROUND_HOVER)
+    self._close_button:set_pressed_back_color(Style.CONTROL_BACKGROUND_PRESSED)
+    self._close_button:set_active_back_color(Style.CONTROL_BACKGROUND_ACTIVE)
+    self._close_button:set_disabled_back_color(Style.CONTROL_BACKGROUND_DISABLED)
+    self._close_button:set_border_color(Style.CONTROL_BORDER)
+    self._close_button:set_hover_border_color(Style.CONTROL_BORDER_HOVER)
+    self._close_button:set_active_border_color(Style.CONTROL_BORDER_ACTIVE)
+    self._close_button:set_disabled_border_color(Style.CONTROL_BORDER_DISABLED)
     self._close_button:set_icon(
         UI.AssetIds.x,
         UI.AssetIds.x_hover,
@@ -305,7 +329,7 @@ function LuiWindow:_divider_h()
     if self._title_bar_divider_visible ~= true then
         return 0
     end
-    return math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH_THIN) or 1))
+    return 1
 end
 
 function LuiWindow:_start_drag(args)
@@ -354,7 +378,8 @@ function LuiWindow:_layout()
     local pad_x = _scaled_int(self._scale, BASE_PAD_X)
     local gap = _scaled_int(self._scale, BASE_GAP)
     local icon_size = _scaled_int(self._scale, self._icon_size or BASE_ICON)
-    local close_size = _scaled_int(self._scale, BASE_CLOSE_BUTTON)
+    local close_margin = math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH_THIN) or 1))
+    local close_size = math.max(0, title_h - (close_margin * 2))
     local divider_h = self:_divider_h()
 
     self._frame:SetPosition(0, 0)
@@ -368,8 +393,8 @@ function LuiWindow:_layout()
     self._title_bar:SetPosition(0, 0)
     self._title_bar:SetSize(inner_w, math.min(title_h, inner_h))
 
-    local close_x = math.max(0, inner_w - pad_x - close_size)
-    local close_y = math.max(0, math.floor((title_h - close_size) / 2))
+    local close_x = math.max(0, inner_w - close_margin - close_size)
+    local close_y = close_margin
     self._close_button:SetPosition(close_x, close_y)
     self._close_button:SetSize(close_size, close_size)
 
@@ -396,6 +421,14 @@ function LuiWindow:_layout()
     if host_w > 0 then
         left_used = host_x + host_w + gap
     end
+
+    self._title_drag_left:SetPosition(0, 0)
+    self._title_drag_left:SetSize(math.max(0, host_x), title_h)
+
+    local drag_body_x = host_x + host_w + gap
+    local drag_body_w = math.max(0, close_x - gap - drag_body_x)
+    self._title_drag_body:SetPosition(drag_body_x, 0)
+    self._title_drag_body:SetSize(drag_body_w, title_h)
 
     local right_used = math.max(0, inner_w - close_x + gap)
     local safe_margin = math.max(left_used, right_used)
