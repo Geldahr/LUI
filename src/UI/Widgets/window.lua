@@ -211,10 +211,15 @@ function LuiWindow:set_scale(scale)
     end
 
     self._scale = scale
-    self:apply_settings()
+    self:_apply_style()
 end
 
 function LuiWindow:apply_settings()
+    self._scale = _current_scale()
+    self:_apply_style()
+end
+
+function LuiWindow:_apply_style()
     self:SetBackColor(Style.CONTROL_BORDER)
     self._inner:SetBackColor(Style.BACKGROUND)
     self._title_bar:SetBackColor(Style.CONTROL_BACKGROUND)
