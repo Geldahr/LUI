@@ -22,6 +22,7 @@ local BASE_CLOSE_ICON = 14
 local BASE_TITLE_FONT = 12
 local BASE_RESIZE_EDGE = 4
 local BASE_RESIZE_CORNER = 8
+local BASE_RESIZE_HANDLE = 32
 
 local RESIZE_LEFT = 1
 local RESIZE_RIGHT = 2
@@ -83,6 +84,14 @@ local function _make_resize_region(parent, owner, mask)
     control._resize_mask = mask
     _set_blend(control)
 
+    control.MouseEnter = function(sender)
+        owner:_show_resize_handle(sender)
+    end
+    control.MouseLeave = function()
+        if owner._resizing ~= true then
+            owner:_hide_resize_handle()
+        end
+    end
     control.MouseDown = function(sender, args)
         owner:_start_resize(sender, args)
     end
@@ -94,6 +103,15 @@ local function _make_resize_region(parent, owner, mask)
     end
 
     return control
+end
+
+local function _make_resize_handle(host)
+    local image = Image()
+    image:SetParent(host)
+    image:SetMouseVisible(false)
+    image:SetPosition(0, 0)
+    image:SetVisible(false)
+    return image
 end
 
 ---@class LuiWindow : Turbine.UI.Window
@@ -127,6 +145,8 @@ function LuiWindow:Constructor()
     self._resize_start_window_y = 0
     self._resize_start_window_w = 0
     self._resize_start_window_h = 0
+    self._resize_handle_region = nil
+    self._active_resize_handle = nil
 
     self:SetVisible(false)
     self:SetMouseVisible(true)
@@ -210,6 +230,20 @@ function LuiWindow:Constructor()
             self,
             RESIZE_BOTTOM + RESIZE_LEFT
         ),
+    }
+
+    self._resize_handle_window = Turbine.UI.Window()
+    self._resize_handle_window:SetMouseVisible(false)
+    self._resize_handle_window:SetZOrder(10000)
+    self._resize_handle_window:SetVisible(false)
+    _set_blend(self._resize_handle_window)
+    self._resize_handle_window:SetBackColor(Style.TRANSPARENT_BACKGROUND)
+
+    self._resize_handles = {
+        horizontal = _make_resize_handle(self._resize_handle_window),
+        vertical = _make_resize_handle(self._resize_handle_window),
+        diagonal_tl_br = _make_resize_handle(self._resize_handle_window),
+        diagonal_tr_bl = _make_resize_handle(self._resize_handle_window),
     }
 
     self.SizeChanged = function()
@@ -378,6 +412,7 @@ function LuiWindow:_apply_style()
         menu:set_popup_host(self)
     end
     self:_sync_title_bar_host_width()
+    self:_sync_resize_handle_icons()
 
     self._close_button:set_scale(self._scale)
     self._close_button:set_border_thickness(0)
@@ -418,6 +453,7 @@ function LuiWindow:request_close()
 end
 
 function LuiWindow:close()
+    self:_hide_resize_handle()
     self:SetVisible(false)
 end
 
@@ -425,6 +461,8 @@ function LuiWindow:toggle()
     self:SetVisible(not self:IsVisible())
     if self:IsVisible() == true then
         self:bring_to_front()
+    else
+        self:_hide_resize_handle()
     end
 end
 
@@ -535,6 +573,7 @@ function LuiWindow:_start_resize(region, args)
     )
     self._resize_start_window_x, self._resize_start_window_y = self:GetPosition()
     self._resize_start_window_w, self._resize_start_window_h = self:GetSize()
+    self:_show_resize_handle(region)
     self:bring_to_front()
 end
 
@@ -586,6 +625,76 @@ end
 function LuiWindow:_stop_resize()
     self._resizing = false
     self._resize_mask = 0
+    self:_hide_resize_handle()
+end
+
+function LuiWindow:_show_resize_handle(region)
+    if self._resizable ~= true or self._resize_handles == nil then
+        return
+    end
+
+    self._resize_handle_region = region
+    local handle = self:_resize_handle_for_region(region)
+    if handle == nil then
+        return
+    end
+
+    if self._active_resize_handle ~= nil and self._active_resize_handle ~= handle then
+        self._active_resize_handle:SetVisible(false)
+    end
+    self._active_resize_handle = handle
+    self:_layout_resize_handle(region)
+    handle:SetVisible(true)
+    if self._resize_handle_window ~= nil then
+        self._resize_handle_window:SetVisible(true)
+        self._resize_handle_window:SetZOrder(10000)
+    end
+end
+
+function LuiWindow:_hide_resize_handle()
+    self._resize_handle_region = nil
+    if self._active_resize_handle ~= nil then
+        self._active_resize_handle:SetVisible(false)
+        self._active_resize_handle = nil
+    end
+    if self._resize_handle_window ~= nil then
+        self._resize_handle_window:SetVisible(false)
+    end
+end
+
+function LuiWindow:_sync_resize_handle_icons()
+    if self._resize_handles == nil then
+        return
+    end
+
+    local handle = _scaled_int(self._scale, BASE_RESIZE_HANDLE)
+    self._resize_handles.horizontal:set_icon(UI.AssetIds.resize_horizontal, handle, handle)
+    self._resize_handles.vertical:set_icon(UI.AssetIds.resize_vertical, handle, handle)
+    self._resize_handles.diagonal_tl_br:set_icon(UI.AssetIds.resize_diagonal_tl_br, handle, handle)
+    self._resize_handles.diagonal_tr_bl:set_icon(UI.AssetIds.resize_diagonal_tr_bl, handle, handle)
+    for _, resize_handle in pairs(self._resize_handles) do
+        resize_handle:SetPosition(0, 0)
+        resize_handle:SetVisible(resize_handle == self._active_resize_handle)
+    end
+    if self._resize_handle_window ~= nil then
+        self._resize_handle_window:SetSize(handle, handle)
+        self._resize_handle_window:SetVisible(self._active_resize_handle ~= nil)
+    end
+end
+
+function LuiWindow:_resize_handle_for_region(region)
+    if region == nil or self._resize_handles == nil then
+        return nil
+    end
+
+    if region._resize_mask == RESIZE_BOTTOM + RESIZE_LEFT then
+        return self._resize_handles.diagonal_tr_bl
+    elseif region._resize_mask == RESIZE_LEFT or region._resize_mask == RESIZE_RIGHT then
+        return self._resize_handles.horizontal
+    elseif region._resize_mask == RESIZE_TOP or region._resize_mask == RESIZE_BOTTOM then
+        return self._resize_handles.vertical
+    end
+    return self._resize_handles.diagonal_tl_br
 end
 
 function LuiWindow:_layout()
@@ -709,6 +818,39 @@ function LuiWindow:_layout_resize_regions()
     for _, region in pairs(self._resize_regions) do
         region:SetVisible(edge_visible)
     end
+
+    self:_layout_resize_handle(self._resize_handle_region)
+end
+
+function LuiWindow:_layout_resize_handle(region)
+    local handle_control = self._active_resize_handle
+    if handle_control == nil or region == nil or self._resize_handle_window == nil then
+        return
+    end
+
+    local width, height = self:GetSize()
+    local handle = _scaled_int(self._scale, BASE_RESIZE_HANDLE)
+    local mask = region._resize_mask or 0
+    local x = math.floor((width - handle) / 2)
+    local y = math.floor((height - handle) / 2)
+
+    if _has_resize_dir(mask, RESIZE_LEFT) then
+        x = 0
+    elseif _has_resize_dir(mask, RESIZE_RIGHT) then
+        x = width - handle
+    end
+
+    if _has_resize_dir(mask, RESIZE_TOP) then
+        y = 0
+    elseif _has_resize_dir(mask, RESIZE_BOTTOM) then
+        y = height - handle
+    end
+
+    local screen_x, screen_y = self:PointToScreen(math.max(0, x), math.max(0, y))
+    self._resize_handle_window:SetPosition(screen_x, screen_y)
+    self._resize_handle_window:SetSize(handle, handle)
+    handle_control:SetPosition(0, 0)
+    handle_control:SetSize(handle, handle)
 end
 
 UI.Widgets.LuiWindow = LuiWindow
