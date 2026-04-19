@@ -104,11 +104,7 @@ function LuiWindow:Constructor()
     self._close_button:SetParent(self._title_bar)
     self._close_button:set_text("")
     self._close_button.Click = function()
-        if type(self._close_handler) == "function" then
-            self._close_handler(self)
-        else
-            self:close()
-        end
+        self:request_close()
     end
 
     self._divider = Turbine.UI.Control()
@@ -246,6 +242,14 @@ end
 function LuiWindow:open()
     self:SetVisible(true)
     self:bring_to_front()
+end
+
+function LuiWindow:request_close()
+    if type(self._close_handler) == "function" then
+        self._close_handler(self)
+        return
+    end
+    self:close()
 end
 
 function LuiWindow:close()
