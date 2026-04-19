@@ -1,7 +1,6 @@
 import "Turbine.UI"
 
 import "LUI.src.UI.assets"
-import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.window"
 import "LUI.src.Utils.font"
@@ -10,8 +9,6 @@ local BASE_W = 360
 local BASE_H = 190
 local BASE_PAD = 10
 local BASE_ROW_H = 24
-local BASE_ACTION_W = 84
-local BASE_ACTION_H = 20
 
 local function _scale()
     local scale = _G.settings ~= nil and _G.settings.global ~= nil and tonumber(_G.settings.global.scale) or 1
@@ -54,22 +51,9 @@ function UI.Widgets.open_lui_window_preview()
         window = LuiWindow()
         window:set_title("LuiWindow")
         window:set_icon(UI.AssetIds.feather, 18)
-        window:set_title_bar_host_width(BASE_ACTION_W)
         window:SetResizable(true)
         window:SetSize(_scaled_int(BASE_W), _scaled_int(BASE_H))
         _center_window(window)
-
-        local host = window:get_title_bar_host()
-        window.preview_action = LuiButton()
-        window.preview_action:SetParent(host)
-        window.preview_action:set_text("Menu")
-        UI.Widgets.Style.apply_embedded_button(window.preview_action)
-        window.preview_divider_visible = true
-        window.preview_action.Click = function()
-            window.preview_divider_visible = window.preview_divider_visible ~= true
-            window:set_title_bar_divider_visible(window.preview_divider_visible)
-            window.preview_action:set_active(window.preview_divider_visible ~= true)
-        end
 
         local content = window:get_content_host()
         window.preview_title = LuiLabel()
@@ -87,23 +71,74 @@ function UI.Widgets.open_lui_window_preview()
         window.preview_body:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
         window.preview_body:SetText("Drag the title bar. Resize with the native window edge. Close with the X.")
 
+        local menu = window:add_menu("Menu")
+        menu:add_action({
+            title = "Action",
+            action = function()
+                window.preview_body:SetText("Action clicked.")
+            end,
+        })
+        menu:add_action({
+            title = "Checkable",
+            checkable = true,
+            checked = true,
+            action = function(action)
+                window.preview_body:SetText("Checkable is " .. tostring(action:is_checked()) .. ".")
+            end,
+        })
+        menu:add_action({
+            title = "Icon action",
+            icon = UI.AssetIds.feather,
+            action = function()
+                window.preview_body:SetText("Icon action clicked.")
+            end,
+        })
+
+        local submenu = menu:add_menu("Submenu")
+        submenu:add_action({
+            title = "Action 2.1.1",
+            action = function()
+                window.preview_body:SetText("Nested action 2.1.1 clicked.")
+            end,
+        })
+        submenu:add_action({
+            title = "Action 2.1.2",
+            action = function()
+                window.preview_body:SetText("Nested action 2.1.2 clicked.")
+            end,
+        })
+
+        local deep = submenu:add_menu("Deep")
+        deep:add_action({
+            title = "Action 2.1.1.1",
+            action = function()
+                window.preview_body:SetText("Deep action 2.1.1.1 clicked.")
+            end,
+        })
+        deep:add_action({
+            title = "Action 2.1.1.2",
+            action = function()
+                window.preview_body:SetText("Deep action 2.1.1.2 clicked.")
+            end,
+        })
+
+        local other_menu = window:add_menu("Other")
+        other_menu:add_action({
+            title = "Other action",
+            action = function()
+                window.preview_body:SetText("Other menu action clicked.")
+            end,
+        })
+
         window.SizeChanged = function()
             LuiWindow._layout(window)
             _layout_preview(window)
-            local action_w = math.max(0, window:get_title_bar_host():GetWidth())
-            local action_y = math.max(
-                0,
-                math.floor((window:get_title_bar_host():GetHeight() - _scaled_int(BASE_ACTION_H)) / 2)
-            )
-            window.preview_action:SetPosition(0, action_y)
-            window.preview_action:SetSize(action_w, _scaled_int(BASE_ACTION_H))
         end
 
         _G.LUI_WINDOW_PREVIEW = window
     end
 
     window:apply_settings()
-    window.preview_action:set_font(_scaled_font(10))
     window.preview_title:SetFont(_scaled_font(12))
     window.preview_body:SetFont(_scaled_font(10))
     window:open()

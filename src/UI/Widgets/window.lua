@@ -5,6 +5,7 @@ import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
+import "LUI.src.UI.Widgets.menu"
 import "LUI.src.UI.Widgets.style"
 import "LUI.src.Utils.font"
 
@@ -69,6 +70,8 @@ function LuiWindow:Constructor()
     self._icon_asset = nil
     self._icon_size = BASE_ICON
     self._title_bar_host_width = 0
+    self._explicit_title_bar_host_width = 0
+    self._title_menus = {}
     self._title_bar_divider_visible = true
     self._close_handler = nil
     self._draggable = true
@@ -119,6 +122,7 @@ function LuiWindow:Constructor()
     self._title_label:SetMultiline(false)
     self._title_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self._title_label:SetVisible(false)
+    self._title_label:SetZOrder(1)
 
     self._close_button = LuiButton()
     self._close_button:SetParent(self._title_bar)
@@ -189,8 +193,25 @@ function LuiWindow:set_title_bar_host_width(width)
     if width == nil or width < 0 then
         width = 0
     end
-    self._title_bar_host_width = width
+    self._explicit_title_bar_host_width = width
+    self:_sync_title_bar_host_width()
+    self:_layout_title_menus()
     self:_layout()
+end
+
+function LuiWindow:add_menu(title)
+    local menu = LuiMenu()
+    menu:SetParent(self._title_bar_host)
+    menu:set_title(title)
+    menu:set_scale(self._scale)
+    menu:set_font(_scaled_font(self._scale, BASE_TITLE_FONT))
+    menu:set_popup_host(self)
+
+    self._title_menus[#self._title_menus + 1] = menu
+    self:_sync_title_bar_host_width()
+    self:_layout_title_menus()
+    self:_layout()
+    return menu
 end
 
 function LuiWindow:get_content_host()
@@ -266,6 +287,14 @@ function LuiWindow:_apply_style()
     self._title_label:SetForeColor(Style.FOREGROUND)
     self._title_label:SetFont(_scaled_font(self._scale, BASE_TITLE_FONT))
 
+    for i = 1, #self._title_menus do
+        local menu = self._title_menus[i]
+        menu:set_scale(self._scale)
+        menu:set_font(_scaled_font(self._scale, BASE_TITLE_FONT))
+        menu:set_popup_host(self)
+    end
+    self:_sync_title_bar_host_width()
+
     self._close_button:set_scale(self._scale)
     self._close_button:set_border_thickness(0)
     self._close_button:set_padding(0)
@@ -330,6 +359,32 @@ function LuiWindow:_divider_h()
         return 0
     end
     return 1
+end
+
+function LuiWindow:_sync_title_bar_host_width()
+    local menu_width = 0
+    for i = 1, #self._title_menus do
+        menu_width = menu_width + self._title_menus[i]:preferred_width()
+    end
+    self._title_bar_host_width = math.max(self._explicit_title_bar_host_width or 0, menu_width)
+end
+
+function LuiWindow:_layout_title_menus()
+    if self._title_bar_host == nil then
+        return
+    end
+
+    local x = 0
+    local height = self._title_bar_host:GetHeight()
+    local width = self._title_bar_host:GetWidth()
+    for i = 1, #self._title_menus do
+        local menu = self._title_menus[i]
+        local menu_w = math.min(menu:preferred_width(), math.max(0, width - x))
+        menu:SetPosition(x, 0)
+        menu:SetSize(menu_w, height)
+        menu:SetVisible(menu_w > 0)
+        x = x + menu_w
+    end
 end
 
 function LuiWindow:_start_drag(args)
@@ -417,7 +472,9 @@ function LuiWindow:_layout()
     end
     self._title_bar_host:SetPosition(host_x, 0)
     self._title_bar_host:SetSize(host_w, title_h)
+    self._title_bar_host:SetZOrder(20)
     self._title_bar_host:SetVisible(host_w > 0)
+    self:_layout_title_menus()
     if host_w > 0 then
         left_used = host_x + host_w + gap
     end
