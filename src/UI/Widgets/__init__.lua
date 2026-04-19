@@ -13,6 +13,7 @@ import "LUI.src.UI.Widgets.check_dropdown"
 import "LUI.src.UI.Widgets.tab_bar"
 import "LUI.src.UI.Widgets.spin_box"
 import "LUI.src.UI.Widgets.line_edit"
+import "LUI.src.UI.Widgets.window"
 
 _G.LuiLabel = LuiLabel
 _G.Image = Image
@@ -26,6 +27,7 @@ _G.LuiSpinBox = LuiSpinBox
 _G.LuiLineEdit = LuiLineEdit
 _G.LineEdit = LuiLineEdit
 _G.LuiTooltip = LuiTooltip
+_G.LuiWindow = LuiWindow
 
 UI.Widgets.LuiLabel = LuiLabel
 UI.Widgets.Image = Image
@@ -39,3 +41,4 @@ UI.Widgets.LuiSpinBox = LuiSpinBox
 UI.Widgets.LuiLineEdit = LuiLineEdit
 UI.Widgets.LineEdit = LuiLineEdit
 UI.Widgets.LuiTooltip = LuiTooltip
+UI.Widgets.LuiWindow = LuiWindow
