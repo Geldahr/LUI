@@ -100,6 +100,12 @@ function command:Execute(_, str)
         elseif CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.toggle ~= nil then
             CRAFTING_WINDOW:toggle()
         end
+    elseif cmd == "windowpreview" then
+        if _G.open_lui_window_preview ~= nil then
+            _G.open_lui_window_preview()
+        else
+            _write_error("Window preview is not available.")
+        end
     elseif cmd == "bestiary" or cmd == "beast" or cmd == "b" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == nil then
