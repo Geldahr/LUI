@@ -48,6 +48,7 @@ function LuiWindow:Constructor()
 
     self._scale = _current_scale()
     self._icon_asset = nil
+    self._icon_size = BASE_ICON
     self._title_bar_host_width = 0
     self._title_bar_divider_visible = true
     self._close_handler = nil
@@ -132,9 +133,24 @@ function LuiWindow:set_title(text)
     self:_layout()
 end
 
-function LuiWindow:set_icon(icon)
+function LuiWindow:set_icon(icon, size)
     self._icon_asset = icon
+    if size ~= nil then
+        self:set_icon_size(size)
+        return
+    end
     self._icon:SetVisible(icon ~= nil)
+    self:_layout()
+end
+
+function LuiWindow:set_icon_size(size)
+    if type(size) ~= "number" then
+        size = tonumber(size)
+    end
+    if size == nil or size <= 0 then
+        size = BASE_ICON
+    end
+    self._icon_size = size
     self:_layout()
 end
 
@@ -330,7 +346,7 @@ function LuiWindow:_layout()
     local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
     local pad_x = _scaled_int(self._scale, BASE_PAD_X)
     local gap = _scaled_int(self._scale, BASE_GAP)
-    local icon_size = _scaled_int(self._scale, BASE_ICON)
+    local icon_size = _scaled_int(self._scale, self._icon_size or BASE_ICON)
     local close_size = _scaled_int(self._scale, BASE_CLOSE_BUTTON)
     local divider_h = self:_divider_h()
 
