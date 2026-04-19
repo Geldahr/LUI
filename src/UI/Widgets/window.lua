@@ -737,6 +737,11 @@ function LuiWindow:_calculate_resize_bounds(region, args)
     return x, y, w, h
 end
 
+function LuiWindow:_apply_resize_bounds(x, y, width, height, region, args)
+    self:SetPosition(x, y)
+    self:SetSize(width, height)
+end
+
 function LuiWindow:_resize_to(region, args)
     if self._resizing ~= true then
         return
@@ -745,8 +750,7 @@ function LuiWindow:_resize_to(region, args)
     self:_remember_resize_handle_cursor(region, args)
 
     local x, y, w, h = self:_calculate_resize_bounds(region, args)
-    self:SetPosition(x, y)
-    self:SetSize(w, h)
+    self:_apply_resize_bounds(x, y, w, h, region, args)
     self:_layout_resize_handle(region)
 end
 

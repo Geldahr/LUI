@@ -605,16 +605,8 @@ function InventoryWindow:handle_user_resize()
     self:apply_resize_candidate(window_x, window_y, window_w, window_h)
 end
 
-function InventoryWindow:_resize_to(region, args)
-    if self._resizing ~= true then
-        return
-    end
-
-    self:_remember_resize_handle_cursor(region, args)
-
-    local x, y, w, h = self:_calculate_resize_bounds(region, args)
+function InventoryWindow:_apply_resize_bounds(x, y, w, h, region, args)
     self:apply_resize_candidate(x, y, w, h)
-    self:_layout_resize_handle(region)
 end
 
 function InventoryWindow:build_grid()
