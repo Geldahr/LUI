@@ -886,11 +886,15 @@ function LuiWindow:_layout()
     local left_used = chrome_margin
     if self._icon_asset ~= nil and icon_size > 0 and chrome_square > 0 then
         local title_icon_size = math.min(icon_size, chrome_square)
-        local icon_y = chrome_margin + math.floor((chrome_square - title_icon_size) / 2)
-        self._icon:set_icon(self._icon_asset, title_icon_size, title_icon_size)
-        self._icon:SetPosition(chrome_margin, icon_y)
+        self._icon:set_icon(self._icon_asset, title_icon_size)
+        local actual_w, actual_h = self._icon:get_size()
+        actual_w = actual_w or title_icon_size
+        actual_h = actual_h or title_icon_size
+        local icon_x = chrome_margin + math.floor((chrome_square - actual_w) / 2)
+        local icon_y = chrome_margin + math.floor((chrome_square - actual_h) / 2)
+        self._icon:SetPosition(icon_x, icon_y)
         self._icon:SetVisible(true)
-        left_used = chrome_margin + title_icon_size + gap
+        left_used = chrome_margin + chrome_square + gap
     else
         self._icon:SetVisible(false)
     end
