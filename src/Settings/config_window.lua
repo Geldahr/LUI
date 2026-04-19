@@ -1,5 +1,4 @@
 import "Turbine.UI"
-import "Turbine.UI.Lotro"
 import "Turbine.Gameplay"
 
 import "LUI.src.UI.Widgets"
@@ -59,7 +58,7 @@ function Options:Constructor()
     self.help:SetText(TR["Use '/LUI config' to toggle the configuration window."])
 end
 
-ConfigWindow = class(Turbine.UI.Lotro.Window)
+ConfigWindow = class(LuiWindow)
 
 import "LUI.src.Settings.Window.window_geometry"
 import "LUI.src.Settings.Window.window_tabs"
@@ -72,16 +71,19 @@ import "LUI.src.Settings.Window.window_profiles"
 ---------------------------------------------------------------------
 
 function ConfigWindow:Constructor()
-    Turbine.UI.Lotro.Window.Constructor(self)
+    LuiWindow.Constructor(self)
 
-    self:SetText(TR["LUI Configuration"])
-    self:SetResizable(true)
+    self:set_title(TR["LUI Configuration"])
+    self:set_resizable(true)
     self:SetVisible(false)
 
     self:_update_ui_scale_metrics()
+    self:set_minimum_size(_scaled_int(222), _scaled_int(185))
+
+    local content = self:get_content_host()
 
     self.main_tab_bar = UI.Widgets.LuiTabBar()
-    self.main_tab_bar:SetParent(self)
+    self.main_tab_bar:SetParent(content)
     self.main_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.left)
     self.main_tab_bar:set_show_content_border(false)
     self.main_tab_bar.on_tab_changed = function(index, page, text)
@@ -96,7 +98,7 @@ function ConfigWindow:Constructor()
     self.tooltip:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
 
     self.confirm_overlay = Turbine.UI.Control()
-    self.confirm_overlay:SetParent(self)
+    self.confirm_overlay:SetParent(content)
     self.confirm_overlay:SetVisible(false)
     self.confirm_overlay:SetMouseVisible(true)
     self.confirm_overlay:SetZOrder(2000)
@@ -136,7 +138,7 @@ function ConfigWindow:Constructor()
     end
 
     self.button_bar = Turbine.UI.Control()
-    self.button_bar:SetParent(self)
+    self.button_bar:SetParent(content)
 
     self.cancel_button = UI.Widgets.LuiButton()
     self.cancel_button:SetParent(self.button_bar)
@@ -179,6 +181,7 @@ function ConfigWindow:Constructor()
     self:apply_ui_scale()
 
     self.SizeChanged = function()
+        LuiWindow._layout(self)
         self:layout()
     end
 
@@ -212,7 +215,7 @@ function ConfigWindow:_update_ui_scale_metrics()
     self.tab_font = _scaled_font(TAB_FONT_NAME, TAB_FONT_SIZE)
 
     self.margin_left = _scaled_int(15)
-    self.margin_top = _scaled_int(33)
+    self.margin_top = _scaled_int(11)
     self.margin_right = _scaled_int(15)
     self.margin_bottom = _scaled_int(15)
 
@@ -232,7 +235,9 @@ function ConfigWindow:_update_ui_scale_metrics()
 end
 
 function ConfigWindow:apply_ui_scale()
+    LuiWindow.apply_settings(self)
     self:_update_ui_scale_metrics()
+    self:set_minimum_size(_scaled_int(222), _scaled_int(185))
     local scale = _G.settings.global.scale
 
     if self.tooltip ~= nil then
@@ -326,7 +331,7 @@ end
 
 function ConfigWindow:cancel()
     self:hide_confirmation_dialog()
-    self:SetVisible(false)
+    self:close()
 end
 
 function ConfigWindow:open(main_key, preferred_sub_key)
@@ -335,10 +340,9 @@ function ConfigWindow:open(main_key, preferred_sub_key)
     if type(main_key) == "string" then
         self:select_main_tab(main_key, preferred_sub_key)
     end
-    self:SetVisible(true)
+    LuiWindow.open(self)
     self:layout()
     self:_activate_active_page()
-    self:bring_to_front()
 end
 
 function ConfigWindow:bring_to_front()
@@ -601,6 +605,6 @@ function ConfigWindow:apply_changes(close_after)
     save_settings()
 
     if close_after then
-        self:SetVisible(false)
+        self:close()
     end
 end

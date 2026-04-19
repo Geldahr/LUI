@@ -8,7 +8,7 @@ local function _scaled_int(value)
 end
 
 function ConfigWindow:layout()
-    local window_width, window_height = self:GetSize()
+    local window_width, window_height = self:get_content_size()
     local button_gap = _scaled_int(7)
     local min_content_h = _scaled_int(59)
     local content_gap = _scaled_int(7)
