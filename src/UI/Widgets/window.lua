@@ -51,6 +51,12 @@ function LuiWindow:Constructor()
     self._title_bar_host_width = 0
     self._title_bar_divider_visible = true
     self._close_handler = nil
+    self._draggable = true
+    self._dragging = false
+    self._drag_start_screen_x = 0
+    self._drag_start_screen_y = 0
+    self._drag_start_window_x = 0
+    self._drag_start_window_y = 0
 
     self:SetVisible(false)
     self:SetMouseVisible(true)
@@ -65,6 +71,15 @@ function LuiWindow:Constructor()
     self._title_bar:SetParent(self._inner)
     self._title_bar:SetMouseVisible(true)
     _set_blend(self._title_bar)
+    self._title_bar.MouseDown = function(_, args)
+        self:_start_drag(args)
+    end
+    self._title_bar.MouseMove = function(_, args)
+        self:_drag_to(args)
+    end
+    self._title_bar.MouseUp = function()
+        self:_stop_drag()
+    end
 
     self._icon = Image()
     self._icon:SetParent(self._title_bar)
@@ -159,6 +174,13 @@ function LuiWindow:set_close_handler(handler)
     self._close_handler = handler
 end
 
+function LuiWindow:set_draggable(enabled)
+    self._draggable = enabled == true
+    if self._draggable ~= true then
+        self:_stop_drag()
+    end
+end
+
 function LuiWindow:set_scale(scale)
     if type(scale) ~= "number" then
         scale = tonumber(scale)
@@ -227,6 +249,41 @@ function LuiWindow:_divider_h()
         return 0
     end
     return math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH_THIN) or 1))
+end
+
+function LuiWindow:_start_drag(args)
+    if self._draggable ~= true then
+        return
+    end
+    if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+        return
+    end
+
+    self._dragging = true
+    self._drag_start_screen_x, self._drag_start_screen_y = self._title_bar:PointToScreen(
+        args ~= nil and args.X or 0,
+        args ~= nil and args.Y or 0
+    )
+    self._drag_start_window_x, self._drag_start_window_y = self:GetPosition()
+    self:bring_to_front()
+end
+
+function LuiWindow:_drag_to(args)
+    if self._dragging ~= true then
+        return
+    end
+
+    local screen_x, screen_y = self._title_bar:PointToScreen(
+        args ~= nil and args.X or 0,
+        args ~= nil and args.Y or 0
+    )
+    local dx = screen_x - self._drag_start_screen_x
+    local dy = screen_y - self._drag_start_screen_y
+    self:SetPosition(self._drag_start_window_x + dx, self._drag_start_window_y + dy)
+end
+
+function LuiWindow:_stop_drag()
+    self._dragging = false
 end
 
 function LuiWindow:_layout()
