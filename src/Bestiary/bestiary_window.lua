@@ -19,7 +19,7 @@ local DATA_ACCESS = Bestiary.DataAccess
 -- Book icon hover: 0x41005F0F 25x25
 
 local BASE_MARGIN_LEFT = 15
-local BASE_MARGIN_TOP = 33
+local BASE_MARGIN_TOP = 11
 local BASE_MARGIN_RIGHT = 15
 local BASE_MARGIN_BOTTOM = 15
 local BASE_BAR_H = 21
@@ -1041,19 +1041,20 @@ function BestiaryRow:bind(record, width)
     self:SetVisible(true)
 end
 
-local BestiaryWindow = class(Turbine.UI.Lotro.Window)
+local BestiaryWindow = class(LuiWindow)
 
 function BestiaryWindow:Constructor()
-    Turbine.UI.Lotro.Window.Constructor(self)
+    LuiWindow.Constructor(self)
 
-    self:SetText(TR["Bestiary"])
-    self:SetVisible(false)
-    self:SetResizable(true)
+    self:set_title(TR["Bestiary"])
+    self:set_icon(UI.AssetIds.book_orange_cover)
+    self:set_resizable(true)
+    self:hide()
     self:SetWantsKeyEvents(true)
     self:SetWantsUpdates(false)
     self.KeyDown = function(_, args)
         if args.Action == Turbine.UI.Lotro.Action.Escape then
-            self:SetVisible(false)
+            self:hide()
         end
     end
 
@@ -1084,9 +1085,10 @@ function BestiaryWindow:Constructor()
     self.page_index = 1
     self.entries = {}
     self.column_separators = {}
+    local content_host = self:get_content_host()
 
     self.nav_bar = Turbine.UI.Control()
-    self.nav_bar:SetParent(self)
+    self.nav_bar:SetParent(content_host)
 
     self.order_label = UI.Widgets.LuiLabel()
     self.order_label:SetParent(self.nav_bar)
@@ -1110,7 +1112,7 @@ function BestiaryWindow:Constructor()
     end
 
     self.page_bar = Turbine.UI.Control()
-    self.page_bar:SetParent(self)
+    self.page_bar:SetParent(content_host)
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
@@ -1152,10 +1154,10 @@ function BestiaryWindow:Constructor()
     end
 
     self.filter_bar = Turbine.UI.Control()
-    self.filter_bar:SetParent(self)
+    self.filter_bar:SetParent(content_host)
 
     self.level_bar = Turbine.UI.Control()
-    self.level_bar:SetParent(self)
+    self.level_bar:SetParent(content_host)
 
     self.level_label = UI.Widgets.LuiLabel()
     self.level_label:SetParent(self.level_bar)
@@ -1324,7 +1326,7 @@ function BestiaryWindow:Constructor()
     end
 
     self.content = Turbine.UI.Control()
-    self.content:SetParent(self)
+    self.content:SetParent(content_host)
     self.content:SetMouseVisible(false)
 
     self.empty_label = UI.Widgets.LuiLabel()
@@ -1336,6 +1338,7 @@ function BestiaryWindow:Constructor()
     self.empty_label:SetZOrder(3)
 
     self.SizeChanged = function()
+        LuiWindow._layout(self)
         self:handle_user_resize()
     end
 
@@ -1368,7 +1371,7 @@ function BestiaryWindow:Constructor()
         end
     end
 
-    self:SetSize(_scaled_int(700), _scaled_int(520))
+    self:SetSize(self:get_window_size_for_content(_scaled_int(700), _scaled_int(520)))
     self:apply_settings()
 end
 
@@ -1379,14 +1382,14 @@ function BestiaryWindow:bring_to_front()
 end
 
 function BestiaryWindow:open()
-    self:SetVisible(true)
-    self:bring_to_front()
+    self:show()
 end
 
 function BestiaryWindow:toggle()
-    self:SetVisible(not self:IsVisible())
     if self:IsVisible() == true then
-        self:bring_to_front()
+        self:hide()
+    else
+        self:show()
     end
 end
 
@@ -1408,6 +1411,10 @@ function BestiaryWindow:persist_geometry()
     self:capture_geometry()
 end
 
+function BestiaryWindow:_minimum_window_size()
+    return self:get_window_size_for_content(_scaled_int(BASE_MIN_W), _scaled_int(BASE_MIN_H))
+end
+
 function BestiaryWindow:ensure_area_shortcut()
     if self.area_shortcut == nil or self.area_slot == nil then
         return
@@ -1419,7 +1426,10 @@ function BestiaryWindow:ensure_area_shortcut()
 end
 
 function BestiaryWindow:apply_settings()
+    LuiWindow.apply_settings(self)
     self.update_every = 1.0 / math.max(1, _to_number(_G.settings.global.refresh_rate, 30))
+    local min_w, min_h = self:_minimum_window_size()
+    self:set_minimum_size(min_w, min_h)
 
     local button_font = _scaled_font("Verdana", 10)
     self.order_label:SetFont(button_font)
@@ -1461,7 +1471,7 @@ function BestiaryWindow:apply_settings()
 
         self._suppress_size_changed = true
         self:SetPosition(left, top)
-        self:SetSize(math.max(BASE_MIN_W, width), math.max(_scaled_int(BASE_MIN_H), height))
+        self:SetSize(math.max(min_w, width), math.max(min_h, height))
         self._suppress_size_changed = false
     end
 
@@ -1502,8 +1512,8 @@ function BestiaryWindow:Update()
 end
 
 function BestiaryWindow:handle_user_resize()
-    local min_w = BASE_MIN_W
-    local min_h = _scaled_int(BASE_MIN_H)
+    local min_w, min_h = self:_minimum_window_size()
+    self:set_minimum_size(min_w, min_h)
     local cur_w, cur_h = self:GetSize()
     local next_w = cur_w
     local next_h = cur_h
@@ -1761,9 +1771,10 @@ function BestiaryWindow:_content_metrics()
     local level_h = _scaled_int(BASE_BAR_H)
     local filter_h = _scaled_int(BASE_FILTER_H)
     local gap = _scaled_int(BASE_GAP)
-    local inner_w = self:GetWidth() - margin_left - margin_right
+    local host_w, host_h = self:get_content_size()
+    local inner_w = host_w - margin_left - margin_right
     local content_top = margin_top + bar_h + gap + level_h + gap + filter_h + gap
-    local content_h = self:GetHeight() - content_top - margin_bottom - gap - bar_h
+    local content_h = host_h - content_top - margin_bottom - gap - bar_h
     return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, level_h, filter_h, gap
 end
 
@@ -1785,9 +1796,10 @@ function BestiaryWindow:layout()
     self.sort_dropdown:SetSize(sort_w, bar_h)
 
     self.page_bar:SetSize((2 * nav_w) + page_w + (2 * gap), bar_h)
+    local _, host_h = self:get_content_size()
     self.page_bar:SetPosition(
         margin_left + math.max(0, math.floor((inner_w - self.page_bar:GetWidth()) / 2)),
-        self:GetHeight() - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h
+        host_h - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h
     )
 
     self.prev_button:SetPosition(0, 0)
@@ -1919,7 +1931,8 @@ function BestiaryWindow:_measure_record_height(record, width)
 end
 
 function BestiaryWindow:_column_metrics()
-    local window_w = math.max(1, math.floor(self:GetWidth() + 0.5))
+    local host_w = self:get_content_size()
+    local window_w = math.max(1, math.floor(host_w + 0.5))
     local content_w = math.max(1, math.floor(self.content:GetWidth() + 0.5))
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)
     local margin_right = _scaled_int(BASE_MARGIN_RIGHT)
