@@ -22,6 +22,11 @@ UI.AssetIds.arrow_r_transparent = 0x4110A12E
 UI.AssetIds.x = "LUI/assets/ui/x_64.tga"
 UI.AssetIds.x_hover = "LUI/assets/ui/x_hover_64.tga"
 
+UI.AssetIds.resize_horizontal = 0x410081BF
+UI.AssetIds.resize_vertical = 0x410081C0
+UI.AssetIds.resize_diagonal_tl_br = 0x41007E20
+UI.AssetIds.resize_diagonal_tr_bl = 0x4101973F
+
 UI.AssetIds.feather = 0x41004D92
 
 UI.AssetIds.backpack = 0x41008113

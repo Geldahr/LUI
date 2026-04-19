@@ -12,12 +12,21 @@ local Style = UI.Widgets.Style
 
 local BASE_DEFAULT_W = 420
 local BASE_DEFAULT_H = 280
+local BASE_MIN_W = 160
+local BASE_MIN_H = 90
 local BASE_TITLE_BAR_H = 22
 local BASE_PAD_X = 7
 local BASE_GAP = 4
 local BASE_ICON = 20
 local BASE_CLOSE_ICON = 14
 local BASE_TITLE_FONT = 12
+local BASE_RESIZE_EDGE = 4
+local BASE_RESIZE_CORNER = 8
+
+local RESIZE_LEFT = 1
+local RESIZE_RIGHT = 2
+local RESIZE_TOP = 4
+local RESIZE_BOTTOM = 8
 
 local function _current_scale()
     local scale = _G.settings ~= nil and _G.settings.global ~= nil and tonumber(_G.settings.global.scale) or 1
@@ -33,6 +42,10 @@ end
 
 local function _scaled_font(scale, size)
     return FONT_TO_LOTRO("Verdana", size * scale)
+end
+
+local function _has_resize_dir(mask, dir)
+    return math.floor((mask or 0) / dir) % 2 == 1
 end
 
 local function _set_blend(control)
@@ -62,6 +75,27 @@ local function _make_drag_region(parent, owner)
     return control
 end
 
+local function _make_resize_region(parent, owner, mask)
+    local control = Turbine.UI.Control()
+    control:SetParent(parent)
+    control:SetMouseVisible(true)
+    control:SetZOrder(50)
+    control._resize_mask = mask
+    _set_blend(control)
+
+    control.MouseDown = function(sender, args)
+        owner:_start_resize(sender, args)
+    end
+    control.MouseMove = function(sender, args)
+        owner:_resize_to(sender, args)
+    end
+    control.MouseUp = function()
+        owner:_stop_resize()
+    end
+
+    return control
+end
+
 ---@class LuiWindow : Turbine.UI.Window
 LuiWindow = class(Turbine.UI.Window)
 
@@ -82,6 +116,17 @@ function LuiWindow:Constructor()
     self._drag_start_screen_y = 0
     self._drag_start_window_x = 0
     self._drag_start_window_y = 0
+    self._resizable = true
+    self._minimum_width = nil
+    self._minimum_height = nil
+    self._resizing = false
+    self._resize_mask = 0
+    self._resize_start_screen_x = 0
+    self._resize_start_screen_y = 0
+    self._resize_start_window_x = 0
+    self._resize_start_window_y = 0
+    self._resize_start_window_w = 0
+    self._resize_start_window_h = 0
 
     self:SetVisible(false)
     self:SetMouseVisible(true)
@@ -144,6 +189,28 @@ function LuiWindow:Constructor()
     self._content_host:SetParent(self._inner)
     self._content_host:SetMouseVisible(true)
     _set_blend(self._content_host)
+
+    self._resize_regions = {
+        top = _make_resize_region(self, self, RESIZE_TOP),
+        bottom = _make_resize_region(self, self, RESIZE_BOTTOM),
+        left = _make_resize_region(self, self, RESIZE_LEFT),
+        right = _make_resize_region(self, self, RESIZE_RIGHT),
+        top_left = _make_resize_region(
+            self,
+            self,
+            RESIZE_TOP + RESIZE_LEFT
+        ),
+        bottom_right = _make_resize_region(
+            self,
+            self,
+            RESIZE_BOTTOM + RESIZE_RIGHT
+        ),
+        bottom_left = _make_resize_region(
+            self,
+            self,
+            RESIZE_BOTTOM + RESIZE_LEFT
+        ),
+    }
 
     self.SizeChanged = function()
         self:_layout()
@@ -260,6 +327,20 @@ function LuiWindow:set_draggable(enabled)
     if self._draggable ~= true then
         self:_stop_drag()
     end
+end
+
+function LuiWindow:set_resizable(enabled)
+    self._resizable = enabled == true
+    if self._resizable ~= true then
+        self:_stop_resize()
+    end
+    self:_layout_resize_regions()
+end
+
+function LuiWindow:set_minimum_size(width, height)
+    self._minimum_width = tonumber(width)
+    self._minimum_height = tonumber(height)
+    self:_enforce_minimum_size()
 end
 
 function LuiWindow:set_scale(scale)
@@ -425,6 +506,88 @@ function LuiWindow:_stop_drag()
     self._dragging = false
 end
 
+function LuiWindow:_minimum_size()
+    local min_w = self._minimum_width or _scaled_int(self._scale, BASE_MIN_W)
+    local min_h = self._minimum_height or _scaled_int(self._scale, BASE_MIN_H)
+    return math.max(1, min_w), math.max(1, min_h)
+end
+
+function LuiWindow:_enforce_minimum_size()
+    local width, height = self:GetSize()
+    local min_w, min_h = self:_minimum_size()
+    self:SetSize(math.max(width, min_w), math.max(height, min_h))
+end
+
+function LuiWindow:_start_resize(region, args)
+    if self._resizable ~= true then
+        return
+    end
+    if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+        return
+    end
+
+    self:_stop_drag()
+    self._resizing = true
+    self._resize_mask = region._resize_mask or 0
+    self._resize_start_screen_x, self._resize_start_screen_y = region:PointToScreen(
+        args ~= nil and args.X or 0,
+        args ~= nil and args.Y or 0
+    )
+    self._resize_start_window_x, self._resize_start_window_y = self:GetPosition()
+    self._resize_start_window_w, self._resize_start_window_h = self:GetSize()
+    self:bring_to_front()
+end
+
+function LuiWindow:_resize_to(region, args)
+    if self._resizing ~= true then
+        return
+    end
+
+    local screen_x, screen_y = region:PointToScreen(
+        args ~= nil and args.X or 0,
+        args ~= nil and args.Y or 0
+    )
+    local dx = screen_x - self._resize_start_screen_x
+    local dy = screen_y - self._resize_start_screen_y
+    local min_w, min_h = self:_minimum_size()
+    local x = self._resize_start_window_x
+    local y = self._resize_start_window_y
+    local w = self._resize_start_window_w
+    local h = self._resize_start_window_h
+
+    if _has_resize_dir(self._resize_mask, RESIZE_LEFT) then
+        w = self._resize_start_window_w - dx
+        if w < min_w then
+            w = min_w
+            x = self._resize_start_window_x + self._resize_start_window_w - min_w
+        else
+            x = self._resize_start_window_x + dx
+        end
+    elseif _has_resize_dir(self._resize_mask, RESIZE_RIGHT) then
+        w = math.max(min_w, self._resize_start_window_w + dx)
+    end
+
+    if _has_resize_dir(self._resize_mask, RESIZE_TOP) then
+        h = self._resize_start_window_h - dy
+        if h < min_h then
+            h = min_h
+            y = self._resize_start_window_y + self._resize_start_window_h - min_h
+        else
+            y = self._resize_start_window_y + dy
+        end
+    elseif _has_resize_dir(self._resize_mask, RESIZE_BOTTOM) then
+        h = math.max(min_h, self._resize_start_window_h + dy)
+    end
+
+    self:SetPosition(x, y)
+    self:SetSize(w, h)
+end
+
+function LuiWindow:_stop_resize()
+    self._resizing = false
+    self._resize_mask = 0
+end
+
 function LuiWindow:_layout()
     if self._inner == nil then
         return
@@ -490,12 +653,8 @@ function LuiWindow:_layout()
     self._title_drag_body:SetPosition(drag_body_x, 0)
     self._title_drag_body:SetSize(drag_body_w, title_h)
 
-    local right_used = math.max(0, inner_w - close_x + gap)
-    local safe_margin = math.max(left_used, right_used)
-    local title_x = safe_margin
-    local title_w = math.max(0, inner_w - (safe_margin * 2))
-    self._title_label:SetPosition(title_x, 0)
-    self._title_label:SetSize(title_w, title_h)
+    self._title_label:SetPosition(0, 0)
+    self._title_label:SetSize(inner_w, title_h)
 
     local divider_y = title_h
     self._divider:SetPosition(0, divider_y)
@@ -506,6 +665,50 @@ function LuiWindow:_layout()
     local content_h = math.max(0, inner_h - content_y)
     self._content_host:SetPosition(0, content_y)
     self._content_host:SetSize(inner_w, content_h)
+
+    self:_layout_resize_regions()
+end
+
+function LuiWindow:_layout_resize_regions()
+    if self._resize_regions == nil then
+        return
+    end
+
+    local width, height = self:GetSize()
+    local edge = math.max(2, _scaled_int(self._scale, BASE_RESIZE_EDGE))
+    local corner = math.max(edge, _scaled_int(self._scale, BASE_RESIZE_CORNER))
+    local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
+    local right_edge_top = math.min(height, title_h + edge)
+    local edge_visible = self._resizable == true
+
+    local top_w = math.max(0, width - (corner * 2))
+    local side_h = math.max(0, height - right_edge_top - corner)
+    local vertical_h = math.max(0, height - (corner * 2))
+
+    self._resize_regions.top:SetPosition(corner, 0)
+    self._resize_regions.top:SetSize(top_w, edge)
+
+    self._resize_regions.bottom:SetPosition(corner, math.max(0, height - edge))
+    self._resize_regions.bottom:SetSize(top_w, edge)
+
+    self._resize_regions.left:SetPosition(0, corner)
+    self._resize_regions.left:SetSize(edge, vertical_h)
+
+    self._resize_regions.right:SetPosition(math.max(0, width - edge), right_edge_top)
+    self._resize_regions.right:SetSize(edge, side_h)
+
+    self._resize_regions.top_left:SetPosition(0, 0)
+    self._resize_regions.top_left:SetSize(corner, corner)
+
+    self._resize_regions.bottom_right:SetPosition(math.max(0, width - corner), math.max(0, height - corner))
+    self._resize_regions.bottom_right:SetSize(corner, corner)
+
+    self._resize_regions.bottom_left:SetPosition(0, math.max(0, height - corner))
+    self._resize_regions.bottom_left:SetSize(corner, corner)
+
+    for _, region in pairs(self._resize_regions) do
+        region:SetVisible(edge_visible)
+    end
 end
 
 UI.Widgets.LuiWindow = LuiWindow

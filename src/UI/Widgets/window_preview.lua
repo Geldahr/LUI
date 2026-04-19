@@ -68,7 +68,7 @@ function UI.Widgets.open_lui_window_preview()
         window.preview_body:SetSelectable(false)
         window.preview_body:SetMultiline(true)
         window.preview_body:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
-        window.preview_body:SetText("Drag the title bar. Close with the X.")
+        window.preview_body:SetText("Drag the title bar. Resize from the edges. Close with the X.")
 
         local menu = window:add_menu("Menu")
         menu:add_action({
