@@ -276,6 +276,13 @@ function apply_crafting_settings()
         return
     end
 
+    if Crafting ~= nil and Crafting.get_shared_store ~= nil then
+        local store = Crafting.get_shared_store()
+        if store ~= nil and store.refresh ~= nil then
+            store:refresh(false, 1)
+        end
+    end
+
     if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
         CRAFTING_WINDOW:apply_settings()
     end
