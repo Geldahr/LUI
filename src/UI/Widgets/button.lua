@@ -567,6 +567,9 @@ function LuiButton:_layout()
 
             self._icon:SetPosition(px, py)
             self._icon:set_icon(self:_current_icon())
+            if self._icon_render_w ~= nil then
+                self._icon:set_size(self._icon_render_w, self._icon_render_h)
+            end
             if self._icon_stretch_mode ~= nil then
                 self._icon:SetStretchMode(self._icon_stretch_mode)
             end

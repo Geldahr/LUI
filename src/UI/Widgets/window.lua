@@ -14,11 +14,10 @@ local BASE_DEFAULT_W = 420
 local BASE_DEFAULT_H = 280
 local BASE_MIN_W = 160
 local BASE_MIN_H = 90
-local BASE_TITLE_BAR_H = 22
-local BASE_PAD_X = 7
+local BASE_TITLE_BAR_H = 20
 local BASE_GAP = 4
 local BASE_ICON = 20
-local BASE_CLOSE_ICON = 14
+local BASE_CLOSE_ICON_RATIO = 0.6
 local BASE_TITLE_FONT = 12
 local BASE_RESIZE_EDGE = 4
 local BASE_RESIZE_CORNER = 8
@@ -444,8 +443,8 @@ function LuiWindow:_apply_style()
         UI.AssetIds.x_hover,
         UI.AssetIds.x_hover,
         UI.AssetIds.x,
-        BASE_CLOSE_ICON,
-        BASE_CLOSE_ICON,
+        self:_base_close_icon_size(),
+        self:_base_close_icon_size(),
         LuiButton.icon_position.RIGHT
     )
 
@@ -496,6 +495,10 @@ function LuiWindow:_divider_h()
         return 0
     end
     return 1
+end
+
+function LuiWindow:_base_close_icon_size()
+    return math.max(1, math.floor((BASE_TITLE_BAR_H * BASE_CLOSE_ICON_RATIO) + 0.5))
 end
 
 function LuiWindow:_sync_title_bar_host_width()
@@ -848,11 +851,10 @@ function LuiWindow:_layout()
     local width, height = self:GetSize()
     local border = self:_border()
     local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
-    local pad_x = _scaled_int(self._scale, BASE_PAD_X)
     local gap = _scaled_int(self._scale, BASE_GAP)
     local icon_size = _scaled_int(self._scale, self._icon_size or BASE_ICON)
-    local close_margin = math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH_THIN) or 1))
-    local close_size = math.max(0, title_h - (close_margin * 2))
+    local chrome_margin = math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH_THIN) or 1))
+    local chrome_square = math.max(0, title_h - (chrome_margin * 2))
     local divider_h = self:_divider_h()
 
     self._frame:SetPosition(0, 0)
@@ -866,18 +868,19 @@ function LuiWindow:_layout()
     self._title_bar:SetPosition(0, 0)
     self._title_bar:SetSize(inner_w, math.min(title_h, inner_h))
 
-    local close_x = math.max(0, inner_w - close_margin - close_size)
-    local close_y = close_margin
+    local close_x = math.max(0, inner_w - chrome_margin - chrome_square)
+    local close_y = chrome_margin
     self._close_button:SetPosition(close_x, close_y)
-    self._close_button:SetSize(close_size, close_size)
+    self._close_button:SetSize(chrome_square, chrome_square)
 
-    local left_used = pad_x
-    if self._icon_asset ~= nil and icon_size > 0 and title_h > 0 then
-        local icon_y = math.max(0, math.floor((title_h - icon_size) / 2))
-        self._icon:set_icon(self._icon_asset, icon_size, icon_size)
-        self._icon:SetPosition(pad_x, icon_y)
+    local left_used = chrome_margin
+    if self._icon_asset ~= nil and icon_size > 0 and chrome_square > 0 then
+        local title_icon_size = math.min(icon_size, chrome_square)
+        local icon_y = chrome_margin + math.floor((chrome_square - title_icon_size) / 2)
+        self._icon:set_icon(self._icon_asset, title_icon_size, title_icon_size)
+        self._icon:SetPosition(chrome_margin, icon_y)
         self._icon:SetVisible(true)
-        left_used = pad_x + icon_size + gap
+        left_used = chrome_margin + title_icon_size + gap
     else
         self._icon:SetVisible(false)
     end
