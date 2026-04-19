@@ -1,4 +1,5 @@
 import "Turbine.UI"
+import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
@@ -40,11 +41,11 @@ local function _set_blend(control)
     control:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 end
 
----@class LuiWindow : Turbine.UI.Window
-LuiWindow = class(Turbine.UI.Window)
+---@class LuiWindow : Turbine.UI.Lotro.Window
+LuiWindow = class(Turbine.UI.Lotro.Window)
 
 function LuiWindow:Constructor()
-    Turbine.UI.Window.Constructor(self)
+    Turbine.UI.Lotro.Window.Constructor(self)
 
     self._scale = _current_scale()
     self._icon_asset = nil
