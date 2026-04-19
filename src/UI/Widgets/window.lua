@@ -64,8 +64,13 @@ function LuiWindow:Constructor()
     self:SetMouseVisible(true)
     _set_blend(self)
 
+    self._frame = Turbine.UI.Control()
+    self._frame:SetParent(self)
+    self._frame:SetMouseVisible(false)
+    _set_blend(self._frame)
+
     self._inner = Turbine.UI.Control()
-    self._inner:SetParent(self)
+    self._inner:SetParent(self._frame)
     self._inner:SetMouseVisible(false)
     _set_blend(self._inner)
 
@@ -238,6 +243,7 @@ end
 
 function LuiWindow:_apply_style()
     self:SetBackColor(Style.CONTROL_BORDER)
+    self._frame:SetBackColor(Style.CONTROL_BORDER)
     self._inner:SetBackColor(Style.BACKGROUND)
     self._title_bar:SetBackColor(Style.CONTROL_BACKGROUND)
     self._divider:SetBackColor(Style.CONTROL_BORDER)
@@ -350,6 +356,9 @@ function LuiWindow:_layout()
     local icon_size = _scaled_int(self._scale, self._icon_size or BASE_ICON)
     local close_size = _scaled_int(self._scale, BASE_CLOSE_BUTTON)
     local divider_h = self:_divider_h()
+
+    self._frame:SetPosition(0, 0)
+    self._frame:SetSize(width, height)
 
     local inner_w = math.max(0, width - (border * 2))
     local inner_h = math.max(0, height - (border * 2))
