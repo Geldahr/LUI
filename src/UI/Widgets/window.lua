@@ -45,6 +45,13 @@ local function _scaled_font(scale, size)
     return FONT_TO_LOTRO("Verdana", size * scale)
 end
 
+local function _clamp(value, min_value, max_value)
+    if max_value < min_value then
+        return min_value
+    end
+    return math.max(min_value, math.min(max_value, value))
+end
+
 local function _has_resize_dir(mask, dir)
     return math.floor((mask or 0) / dir) % 2 == 1
 end
@@ -84,8 +91,8 @@ local function _make_resize_region(parent, owner, mask)
     control._resize_mask = mask
     _set_blend(control)
 
-    control.MouseEnter = function(sender)
-        owner:_show_resize_handle(sender)
+    control.MouseEnter = function(sender, args)
+        owner:_show_resize_handle(sender, args)
     end
     control.MouseLeave = function()
         if owner._resizing ~= true then
@@ -96,7 +103,11 @@ local function _make_resize_region(parent, owner, mask)
         owner:_start_resize(sender, args)
     end
     control.MouseMove = function(sender, args)
-        owner:_resize_to(sender, args)
+        if owner._resizing == true then
+            owner:_resize_to(sender, args)
+        else
+            owner:_move_resize_handle(sender, args)
+        end
     end
     control.MouseUp = function()
         owner:_stop_resize()
@@ -147,6 +158,8 @@ function LuiWindow:Constructor()
     self._resize_start_window_h = 0
     self._resize_handle_region = nil
     self._active_resize_handle = nil
+    self._resize_handle_screen_x = nil
+    self._resize_handle_screen_y = nil
 
     self:SetVisible(false)
     self:SetMouseVisible(true)
@@ -441,6 +454,7 @@ end
 
 function LuiWindow:open()
     self:SetVisible(true)
+    self:_bound_to_screen()
     self:bring_to_front()
 end
 
@@ -460,6 +474,7 @@ end
 function LuiWindow:toggle()
     self:SetVisible(not self:IsVisible())
     if self:IsVisible() == true then
+        self:_bound_to_screen()
         self:bring_to_front()
     else
         self:_hide_resize_handle()
@@ -537,7 +552,14 @@ function LuiWindow:_drag_to(args)
     )
     local dx = screen_x - self._drag_start_screen_x
     local dy = screen_y - self._drag_start_screen_y
-    self:SetPosition(self._drag_start_window_x + dx, self._drag_start_window_y + dy)
+    local width, height = self:GetSize()
+    local x, y = self:_clamp_position_to_screen(
+        self._drag_start_window_x + dx,
+        self._drag_start_window_y + dy,
+        width,
+        height
+    )
+    self:SetPosition(x, y)
 end
 
 function LuiWindow:_stop_drag()
@@ -554,6 +576,99 @@ function LuiWindow:_enforce_minimum_size()
     local width, height = self:GetSize()
     local min_w, min_h = self:_minimum_size()
     self:SetSize(math.max(width, min_w), math.max(height, min_h))
+    self:_bound_to_screen()
+end
+
+function LuiWindow:_display_size()
+    local display_w, display_h = Turbine.UI.Display.GetSize()
+    return tonumber(display_w) or 0, tonumber(display_h) or 0
+end
+
+function LuiWindow:_fit_size_to_screen(width, height)
+    local display_w, display_h = self:_display_size()
+    local min_w, min_h = self:_minimum_size()
+    width = tonumber(width) or 0
+    height = tonumber(height) or 0
+
+    if display_w > 0 then
+        width = math.min(width, math.max(min_w, display_w))
+    end
+    if display_h > 0 then
+        height = math.min(height, math.max(min_h, display_h))
+    end
+
+    return math.max(min_w, width), math.max(min_h, height)
+end
+
+function LuiWindow:_clamp_position_to_screen(x, y, width, height)
+    local display_w, display_h = self:_display_size()
+    x = tonumber(x) or 0
+    y = tonumber(y) or 0
+    width = tonumber(width) or 0
+    height = tonumber(height) or 0
+
+    if display_w > 0 then
+        x = _clamp(x, 0, math.max(0, display_w - width))
+    end
+    if display_h > 0 then
+        y = _clamp(y, 0, math.max(0, display_h - height))
+    end
+
+    return x, y
+end
+
+function LuiWindow:_bound_to_screen()
+    local width, height = self:GetSize()
+    local bounded_w, bounded_h = self:_fit_size_to_screen(width, height)
+    if bounded_w ~= width or bounded_h ~= height then
+        self:SetSize(bounded_w, bounded_h)
+    end
+
+    local x, y = self:GetPosition()
+    local bounded_x, bounded_y = self:_clamp_position_to_screen(x, y, bounded_w, bounded_h)
+    if bounded_x ~= x or bounded_y ~= y then
+        self:SetPosition(bounded_x, bounded_y)
+    end
+end
+
+function LuiWindow:_clamp_resize_to_screen(x, y, width, height)
+    local display_w, display_h = self:_display_size()
+    local min_w, min_h = self:_minimum_size()
+    local mask = self._resize_mask or 0
+
+    if display_w > 0 then
+        if _has_resize_dir(mask, RESIZE_LEFT) and x < 0 then
+            width = width + x
+            x = 0
+        elseif _has_resize_dir(mask, RESIZE_RIGHT) and x + width > display_w then
+            width = display_w - x
+        end
+    end
+
+    if display_h > 0 then
+        if _has_resize_dir(mask, RESIZE_TOP) and y < 0 then
+            height = height + y
+            y = 0
+        elseif _has_resize_dir(mask, RESIZE_BOTTOM) and y + height > display_h then
+            height = display_h - y
+        end
+    end
+
+    if width < min_w then
+        if _has_resize_dir(mask, RESIZE_LEFT) then
+            x = x + width - min_w
+        end
+        width = min_w
+    end
+    if height < min_h then
+        if _has_resize_dir(mask, RESIZE_TOP) then
+            y = y + height - min_h
+        end
+        height = min_h
+    end
+
+    x, y = self:_clamp_position_to_screen(x, y, width, height)
+    return x, y, width, height
 end
 
 function LuiWindow:_start_resize(region, args)
@@ -573,7 +688,7 @@ function LuiWindow:_start_resize(region, args)
     )
     self._resize_start_window_x, self._resize_start_window_y = self:GetPosition()
     self._resize_start_window_w, self._resize_start_window_h = self:GetSize()
-    self:_show_resize_handle(region)
+    self:_show_resize_handle(region, args)
     self:bring_to_front()
 end
 
@@ -581,6 +696,8 @@ function LuiWindow:_resize_to(region, args)
     if self._resizing ~= true then
         return
     end
+
+    self:_remember_resize_handle_cursor(region, args)
 
     local screen_x, screen_y = region:PointToScreen(
         args ~= nil and args.X or 0,
@@ -618,8 +735,10 @@ function LuiWindow:_resize_to(region, args)
         h = math.max(min_h, self._resize_start_window_h + dy)
     end
 
+    x, y, w, h = self:_clamp_resize_to_screen(x, y, w, h)
     self:SetPosition(x, y)
     self:SetSize(w, h)
+    self:_layout_resize_handle(region)
 end
 
 function LuiWindow:_stop_resize()
@@ -628,12 +747,13 @@ function LuiWindow:_stop_resize()
     self:_hide_resize_handle()
 end
 
-function LuiWindow:_show_resize_handle(region)
+function LuiWindow:_show_resize_handle(region, args)
     if self._resizable ~= true or self._resize_handles == nil then
         return
     end
 
     self._resize_handle_region = region
+    self:_remember_resize_handle_cursor(region, args)
     local handle = self:_resize_handle_for_region(region)
     if handle == nil then
         return
@@ -651,8 +771,20 @@ function LuiWindow:_show_resize_handle(region)
     end
 end
 
+function LuiWindow:_move_resize_handle(region, args)
+    if self._resizable ~= true or self._active_resize_handle == nil then
+        return
+    end
+
+    self._resize_handle_region = region
+    self:_remember_resize_handle_cursor(region, args)
+    self:_layout_resize_handle(region)
+end
+
 function LuiWindow:_hide_resize_handle()
     self._resize_handle_region = nil
+    self._resize_handle_screen_x = nil
+    self._resize_handle_screen_y = nil
     if self._active_resize_handle ~= nil then
         self._active_resize_handle:SetVisible(false)
         self._active_resize_handle = nil
@@ -695,6 +827,17 @@ function LuiWindow:_resize_handle_for_region(region)
         return self._resize_handles.vertical
     end
     return self._resize_handles.diagonal_tl_br
+end
+
+function LuiWindow:_remember_resize_handle_cursor(region, args)
+    if region == nil or args == nil then
+        return
+    end
+
+    self._resize_handle_screen_x, self._resize_handle_screen_y = region:PointToScreen(
+        args.X or 0,
+        args.Y or 0
+    )
 end
 
 function LuiWindow:_layout()
@@ -784,7 +927,7 @@ function LuiWindow:_layout_resize_regions()
     end
 
     local width, height = self:GetSize()
-    local edge = math.max(2, _scaled_int(self._scale, BASE_RESIZE_EDGE))
+    local edge = self:_border() + _scaled_int(self._scale, BASE_RESIZE_EDGE)
     local corner = math.max(edge, _scaled_int(self._scale, BASE_RESIZE_CORNER))
     local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
     local right_edge_top = math.min(height, title_h + edge)
@@ -831,20 +974,41 @@ function LuiWindow:_layout_resize_handle(region)
     local width, height = self:GetSize()
     local handle = _scaled_int(self._scale, BASE_RESIZE_HANDLE)
     local mask = region._resize_mask or 0
+    local has_left = _has_resize_dir(mask, RESIZE_LEFT)
+    local has_right = _has_resize_dir(mask, RESIZE_RIGHT)
+    local has_top = _has_resize_dir(mask, RESIZE_TOP)
+    local has_bottom = _has_resize_dir(mask, RESIZE_BOTTOM)
+    local has_horizontal = has_left or has_right
+    local has_vertical = has_top or has_bottom
     local x = math.floor((width - handle) / 2)
     local y = math.floor((height - handle) / 2)
+    local cursor_x = nil
+    local cursor_y = nil
 
-    if _has_resize_dir(mask, RESIZE_LEFT) then
+    if self._resize_handle_screen_x ~= nil and self._resize_handle_screen_y ~= nil then
+        local window_x, window_y = self:PointToScreen(0, 0)
+        cursor_x = self._resize_handle_screen_x - window_x
+        cursor_y = self._resize_handle_screen_y - window_y
+    end
+
+    if has_left then
         x = 0
-    elseif _has_resize_dir(mask, RESIZE_RIGHT) then
+    elseif has_right then
         x = width - handle
+    elseif cursor_x ~= nil and has_vertical then
+        x = math.floor(cursor_x - (handle / 2))
     end
 
-    if _has_resize_dir(mask, RESIZE_TOP) then
+    if has_top then
         y = 0
-    elseif _has_resize_dir(mask, RESIZE_BOTTOM) then
+    elseif has_bottom then
         y = height - handle
+    elseif cursor_y ~= nil and has_horizontal then
+        y = math.floor(cursor_y - (handle / 2))
     end
+
+    x = math.max(0, math.min(math.max(0, width - handle), x))
+    y = math.max(0, math.min(math.max(0, height - handle), y))
 
     local screen_x, screen_y = self:PointToScreen(math.max(0, x), math.max(0, y))
     self._resize_handle_window:SetPosition(screen_x, screen_y)
