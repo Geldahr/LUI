@@ -1394,12 +1394,17 @@ function BestiaryWindow:toggle()
 end
 
 function BestiaryWindow:capture_geometry()
-    local raw = _G.loaded_settings ~= nil and _G.loaded_settings.bestiary or nil
-    if type(raw) ~= "table" or type(raw.window) ~= "table" then
+    local window = _G.get_ui_window_state("bestiary")
+    if type(window) ~= "table" then
         return
     end
 
-    self:capture_window_geometry(raw.window)
+    local geometry = self:get_geometry()
+    window.left = geometry.left
+    window.top = geometry.top
+    window.width = geometry.width
+    window.height = geometry.height
+    window.tile = geometry.tile
 end
 
 function BestiaryWindow:persist_geometry()
@@ -1456,8 +1461,7 @@ function BestiaryWindow:apply_settings()
         self.entries[i]:apply_settings()
     end
 
-    local raw = _G.loaded_settings ~= nil and _G.loaded_settings.bestiary or nil
-    local window = raw ~= nil and raw.window or nil
+    local window = _G.get_ui_window_state("bestiary")
     if type(window) == "table" then
         local left = _to_number(window.left, self:GetLeft())
         local top = _to_number(window.top, self:GetTop())
@@ -1468,7 +1472,7 @@ function BestiaryWindow:apply_settings()
         self:SetPosition(left, top)
         self:SetSize(math.max(min_w, width), math.max(min_h, height))
         self._suppress_size_changed = false
-        self:apply_maximize_state(window)
+        self:set_geometry(window)
     end
 
     self:layout()

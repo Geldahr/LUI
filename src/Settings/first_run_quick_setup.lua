@@ -139,7 +139,7 @@ local function _get_preview_window_specs()
                 return PLAYER_VITAL
             end,
             get_raw_window = function()
-                return _G.loaded_settings.self.vitals.window
+                return _G.get_ui_hud_state("self_vitals")
             end,
         },
         {
@@ -147,7 +147,7 @@ local function _get_preview_window_specs()
                 return TARGET_VITAL
             end,
             get_raw_window = function()
-                return _G.loaded_settings.target.vitals.window
+                return _G.get_ui_hud_state("target_vitals")
             end,
         },
         {
@@ -155,7 +155,7 @@ local function _get_preview_window_specs()
                 return TARGET_VITAL ~= nil and TARGET_VITAL.targets_target_window or nil
             end,
             get_raw_window = function()
-                return _G.loaded_settings.target.vitals.targets_target.window
+                return _G.get_ui_hud_state("target_target_vitals")
             end,
         },
         {
@@ -163,7 +163,7 @@ local function _get_preview_window_specs()
                 return BOSS_VITAL
             end,
             get_raw_window = function()
-                return _G.loaded_settings.target.boss_vitals.window
+                return _G.get_ui_hud_state("boss_vitals")
             end,
         },
         {
@@ -171,7 +171,7 @@ local function _get_preview_window_specs()
                 return PARTY_VITALS
             end,
             get_raw_window = function()
-                return _G.loaded_settings.party.window
+                return _G.get_ui_hud_state("party_vitals")
             end,
         },
         {
@@ -179,7 +179,7 @@ local function _get_preview_window_specs()
                 return EXPIRING_SELF_EFFECTS_WINDOW
             end,
             get_raw_window = function()
-                return _G.loaded_settings.self.expiring_effects.window
+                return _G.get_ui_hud_state("self_effects")
             end,
         },
         {
@@ -187,7 +187,7 @@ local function _get_preview_window_specs()
                 return EXPIRING_TARGET_EFFECTS_WINDOW
             end,
             get_raw_window = function()
-                return _G.loaded_settings.target.expiring_effects.window
+                return _G.get_ui_hud_state("target_effects")
             end,
         },
         {
@@ -195,7 +195,7 @@ local function _get_preview_window_specs()
                 return COOLDOWNS_WINDOW
             end,
             get_raw_window = function()
-                return _G.loaded_settings.self.cooldowns.window
+                return _G.get_ui_hud_state("cooldowns")
             end,
         },
         {
@@ -203,7 +203,7 @@ local function _get_preview_window_specs()
                 return INVENTORY_WINDOW
             end,
             get_raw_window = function()
-                return _G.loaded_settings.inventory.window
+                return _G.get_ui_window_state("inventory")
             end,
         },
     }
@@ -743,7 +743,7 @@ function FirstRunQuickSetup:apply_preview_window_snapshots(snapshots)
 end
 
 function FirstRunQuickSetup:apply_preview_layout(layout_key, scale)
-    local preserved_config_window = self:get_preserved_config_window()
+    local preserved_config_geometry = self:get_preserved_config_geometry()
     local base_scale = 1.35
     if _G.DefaultLayouts ~= nil and _G.DefaultLayouts.get_base_scale ~= nil then
         base_scale = _G.DefaultLayouts.get_base_scale()
@@ -751,12 +751,12 @@ function FirstRunQuickSetup:apply_preview_layout(layout_key, scale)
 
     local snapshots = nil
     if scale ~= base_scale then
-        _G.loaded_settings = _G.DefaultLayouts.build(layout_key, base_scale, preserved_config_window)
+        _G.loaded_settings = _G.DefaultLayouts.build(layout_key, base_scale, preserved_config_geometry)
         _apply_runtime_settings()
         snapshots = self:capture_preview_window_snapshots()
     end
 
-    _G.loaded_settings = _G.DefaultLayouts.build(layout_key, scale, preserved_config_window)
+    _G.loaded_settings = _G.DefaultLayouts.build(layout_key, scale, preserved_config_geometry)
     _apply_runtime_settings()
 
     if snapshots ~= nil then
@@ -929,12 +929,12 @@ function FirstRunQuickSetup:set_selected_scale(scale)
     self:apply_ui_scale()
 end
 
-function FirstRunQuickSetup:get_preserved_config_window()
-    if _G.loaded_settings == nil or _G.loaded_settings.global == nil then
+function FirstRunQuickSetup:get_preserved_config_geometry()
+    if _G.loaded_settings == nil then
         return nil
     end
 
-    return _G.DefaultLayouts.copy_table(_G.loaded_settings.global.config_window)
+    return _G.DefaultLayouts.copy_table(_G.get_ui_window_state("config"))
 end
 
 function FirstRunQuickSetup:select_layout(layout_key)
@@ -1017,25 +1017,26 @@ end
 function FirstRunQuickSetup:commit_preview_settings()
     _G.loaded_settings.global.scale = self.selected_scale
 
-    _persist_window_position(PLAYER_VITAL, _G.loaded_settings.self.vitals.window)
-    _persist_window_position(TARGET_VITAL, _G.loaded_settings.target.vitals.window)
-    _persist_window_position(BOSS_VITAL, _G.loaded_settings.target.boss_vitals.window)
-    _persist_window_position(PARTY_VITALS, _G.loaded_settings.party.window)
-    _persist_window_position(EXPIRING_SELF_EFFECTS_WINDOW, _G.loaded_settings.self.expiring_effects.window)
-    _persist_window_position(EXPIRING_TARGET_EFFECTS_WINDOW, _G.loaded_settings.target.expiring_effects.window)
-    _persist_window_position(COOLDOWNS_WINDOW, _G.loaded_settings.self.cooldowns.window)
+    _persist_window_position(PLAYER_VITAL, _G.get_ui_hud_state("self_vitals"))
+    _persist_window_position(TARGET_VITAL, _G.get_ui_hud_state("target_vitals"))
+    _persist_window_position(BOSS_VITAL, _G.get_ui_hud_state("boss_vitals"))
+    _persist_window_position(PARTY_VITALS, _G.get_ui_hud_state("party_vitals"))
+    _persist_window_position(EXPIRING_SELF_EFFECTS_WINDOW, _G.get_ui_hud_state("self_effects"))
+    _persist_window_position(EXPIRING_TARGET_EFFECTS_WINDOW, _G.get_ui_hud_state("target_effects"))
+    _persist_window_position(COOLDOWNS_WINDOW, _G.get_ui_hud_state("cooldowns"))
 
     if TARGET_VITAL ~= nil and TARGET_VITAL.targets_target_window ~= nil then
-        _persist_window_position(TARGET_VITAL.targets_target_window, _G.loaded_settings.target.vitals.targets_target.window)
+        _persist_window_position(TARGET_VITAL.targets_target_window, _G.get_ui_hud_state("target_target_vitals"))
     end
 
     if CONFIG_WINDOW ~= nil and CONFIG_WINDOW.GetPosition ~= nil and CONFIG_WINDOW.GetSize ~= nil then
         local left, top = CONFIG_WINDOW:GetPosition()
         local width, height = CONFIG_WINDOW:GetSize()
-        _G.loaded_settings.global.config_window.left = left
-        _G.loaded_settings.global.config_window.top = top
-        _G.loaded_settings.global.config_window.width = width
-        _G.loaded_settings.global.config_window.height = height
+        local window = _G.get_ui_window_state("config")
+        window.left = left
+        window.top = top
+        window.width = width
+        window.height = height
     end
 end
 

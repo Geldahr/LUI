@@ -72,25 +72,33 @@ local function _adjust_window_positions(node, display_w, display_h)
 
     for key, value in pairs(node) do
         if type(value) == "table" then
-            if key == "window" then
-                if type(value.left) == "number" then
-                    value.left = _scale_left(value.left, display_w)
+            if key == "windows" then
+                for _, window in pairs(value) do
+                    if type(window) == "table" then
+                        if type(window.left) == "number" then
+                            window.left = _scale_left(window.left, display_w)
+                        end
+                        if type(window.top) == "number" then
+                            window.top = _scale_top(window.top, display_h)
+                        end
+                        if type(window.width) == "number" then
+                            window.width = _scale_width(window.width, display_w)
+                        end
+                        if type(window.height) == "number" then
+                            window.height = _scale_height(window.height, display_h)
+                        end
+                    end
                 end
-                if type(value.top) == "number" then
-                    value.top = _scale_top(value.top, display_h)
-                end
-            elseif key == "config_window" then
-                if type(value.left) == "number" then
-                    value.left = _scale_left(value.left, display_w)
-                end
-                if type(value.top) == "number" then
-                    value.top = _scale_top(value.top, display_h)
-                end
-                if type(value.width) == "number" then
-                    value.width = _scale_width(value.width, display_w)
-                end
-                if type(value.height) == "number" then
-                    value.height = _scale_height(value.height, display_h)
+            elseif key == "hud" then
+                for _, position in pairs(value) do
+                    if type(position) == "table" then
+                        if type(position.left) == "number" then
+                            position.left = _scale_left(position.left, display_w)
+                        end
+                        if type(position.top) == "number" then
+                            position.top = _scale_top(position.top, display_h)
+                        end
+                    end
                 end
             end
 
@@ -113,7 +121,7 @@ function DefaultLayouts.get_base_scale()
     return BASE_SCALE
 end
 
-function DefaultLayouts.build(layout_key, target_scale, preserved_config_window)
+function DefaultLayouts.build(layout_key, target_scale, preserved_config_geometry)
     local layout = _copy_table(_load_layout_source(layout_key))
     local display_w, display_h = Turbine.UI.Display.GetSize()
     _adjust_window_positions(layout, display_w, display_h)
@@ -123,8 +131,14 @@ function DefaultLayouts.build(layout_key, target_scale, preserved_config_window)
     end
     layout.global.scale = target_scale
 
-    if preserved_config_window ~= nil then
-        layout.global.config_window = _copy_table(preserved_config_window)
+    if preserved_config_geometry ~= nil then
+        if type(layout.ui) ~= "table" then
+            layout.ui = {}
+        end
+        if type(layout.ui.windows) ~= "table" then
+            layout.ui.windows = {}
+        end
+        layout.ui.windows.config = _copy_table(preserved_config_geometry)
     end
 
     return layout

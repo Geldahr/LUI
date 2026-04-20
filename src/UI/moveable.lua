@@ -271,16 +271,16 @@ local function _snapshot_position(window)
 end
 
 local function _capture_move_settings_snapshot()
-    local s = _G.loaded_settings
+    local hud = _G.loaded_settings.ui.hud
     MOVE_UI_POSITION_SNAPSHOT = {
-        self_vitals = _snapshot_position(s.self.vitals.window),
-        target_vitals = _snapshot_position(s.target.vitals.window),
-        target_targets_target = _snapshot_position(s.target.vitals.targets_target.window),
-        target_boss_vitals = _snapshot_position(s.target.boss_vitals.window),
-        party = _snapshot_position(s.party.window),
-        self_expiring_effects = _snapshot_position(s.self.expiring_effects.window),
-        target_expiring_effects = _snapshot_position(s.target.expiring_effects.window),
-        cooldowns = _snapshot_position(s.self.cooldowns.window),
+        self_vitals = _snapshot_position(hud.self_vitals),
+        target_vitals = _snapshot_position(hud.target_vitals),
+        target_target_vitals = _snapshot_position(hud.target_target_vitals),
+        boss_vitals = _snapshot_position(hud.boss_vitals),
+        party_vitals = _snapshot_position(hud.party_vitals),
+        self_effects = _snapshot_position(hud.self_effects),
+        target_effects = _snapshot_position(hud.target_effects),
+        cooldowns = _snapshot_position(hud.cooldowns),
     }
 end
 
@@ -294,15 +294,15 @@ local function _restore_saved_move_settings()
         return
     end
 
-    local s = _G.loaded_settings
-    _restore_position(s.self.vitals.window, MOVE_UI_POSITION_SNAPSHOT.self_vitals)
-    _restore_position(s.target.vitals.window, MOVE_UI_POSITION_SNAPSHOT.target_vitals)
-    _restore_position(s.target.vitals.targets_target.window, MOVE_UI_POSITION_SNAPSHOT.target_targets_target)
-    _restore_position(s.target.boss_vitals.window, MOVE_UI_POSITION_SNAPSHOT.target_boss_vitals)
-    _restore_position(s.party.window, MOVE_UI_POSITION_SNAPSHOT.party)
-    _restore_position(s.self.expiring_effects.window, MOVE_UI_POSITION_SNAPSHOT.self_expiring_effects)
-    _restore_position(s.target.expiring_effects.window, MOVE_UI_POSITION_SNAPSHOT.target_expiring_effects)
-    _restore_position(s.self.cooldowns.window, MOVE_UI_POSITION_SNAPSHOT.cooldowns)
+    local hud = _G.loaded_settings.ui.hud
+    _restore_position(hud.self_vitals, MOVE_UI_POSITION_SNAPSHOT.self_vitals)
+    _restore_position(hud.target_vitals, MOVE_UI_POSITION_SNAPSHOT.target_vitals)
+    _restore_position(hud.target_target_vitals, MOVE_UI_POSITION_SNAPSHOT.target_target_vitals)
+    _restore_position(hud.boss_vitals, MOVE_UI_POSITION_SNAPSHOT.boss_vitals)
+    _restore_position(hud.party_vitals, MOVE_UI_POSITION_SNAPSHOT.party_vitals)
+    _restore_position(hud.self_effects, MOVE_UI_POSITION_SNAPSHOT.self_effects)
+    _restore_position(hud.target_effects, MOVE_UI_POSITION_SNAPSHOT.target_effects)
+    _restore_position(hud.cooldowns, MOVE_UI_POSITION_SNAPSHOT.cooldowns)
 
     if PLAYER_VITAL ~= nil and PLAYER_VITAL.resize ~= nil then
         PLAYER_VITAL:resize()

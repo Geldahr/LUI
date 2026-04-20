@@ -19,7 +19,6 @@ local BASE_MONEY_H = 24
 local MONEY_GAP = 3
 local BASE_HINT_GAP = 6
 local BASE_HINT_H = 34
--- local ACTION_H = 28 -- Lock/whitelist UI row (disabled for now)
 local BAR_GAP = 4
 local FILTER_GAP = 4
 local CLEAR_W = 52
@@ -56,40 +55,6 @@ end
 local GOLD_ICON = Turbine.UI.Graphic(0x41007e7b)
 local SILVER_ICON = Turbine.UI.Graphic(0x41007e7c)
 local COPPER_ICON = Turbine.UI.Graphic(0x41007e7d)
-
--- Locking is intentionally disabled for now (API is unreliable/missing on some clients).
--- Keep the old code commented for future re-enable.
--- local function _is_locked(item)
---     if item == nil then
---         return false
---     end
---     if item.IsLocked ~= nil then
---         return item:IsLocked() == true
---     end
---     if item.GetLocked ~= nil then
---         return item:GetLocked() == true
---     end
---     return false
--- end
---
--- local function _set_locked(item, locked)
---     if item == nil then
---         return false
---     end
---     if item.SetLocked ~= nil then
---         item:SetLocked(locked == true)
---         return true
---     end
---     if locked == true and item.Lock ~= nil then
---         item:Lock()
---         return true
---     end
---     if locked ~= true and item.Unlock ~= nil then
---         item:Unlock()
---         return true
---     end
---     return false
--- end
 
 local function _get_item_description(item)
     if item == nil then
@@ -175,7 +140,6 @@ function InventoryWindow:Constructor()
     self._last_bp_size = nil
 
     self.filter_groups = {}
-    -- self.lock_mode = false -- disabled for now
     self._slot_bind_offset = nil
 
     local content = self:get_content_host()
@@ -222,42 +186,6 @@ function InventoryWindow:Constructor()
         self:update_filter()
         self.filter_tb:Focus()
     end
-
-    -- Lock mode + whitelist/blacklist actions are intentionally disabled for now.
-    -- Keep the old UI construction commented for future re-enable.
-    -- self.lock_cb = UI.Widgets.LuiCheckBox()
-    -- self.lock_cb:SetParent(self.header)
-    -- self.lock_cb:SetFont(LABEL_FONT)
-    -- self.lock_cb:SetText(" " .. TR["Lock mode"])
-    -- self.lock_cb.CheckedChanged = function()
-    --     self:set_lock_mode(self.lock_cb:IsChecked() == true)
-    -- end
-    --
-    -- self.action_bar = Turbine.UI.Control()
-    -- self.action_bar:SetParent(self)
-    -- self.action_bar:SetVisible(false)
-    --
-    -- local function make_action(text, fn)
-    --     local b = UI.Widgets.LuiButton()
-    --     b:SetParent(self.action_bar)
-    --     b:SetFont(BUTTON_FONT)
-    --     b:SetText(text)
-    --     b.Click = fn
-    --     return b
-    -- end
-    --
-    -- self.lock_matches = make_action(TR["Lock matches"], function()
-    --     self:apply_lock_filter(true, true)
-    -- end)
-    -- self.unlock_matches = make_action(TR["Unlock matches"], function()
-    --     self:apply_lock_filter(true, false)
-    -- end)
-    -- self.lock_nonmatches = make_action(TR["Lock non-matches"], function()
-    --     self:apply_lock_filter(false, true)
-    -- end)
-    -- self.unlock_nonmatches = make_action(TR["Unlock non-matches"], function()
-    --     self:apply_lock_filter(false, false)
-    -- end)
 
     self.list = Turbine.UI.ListBox()
     self.list:SetParent(content)
@@ -322,7 +250,13 @@ end
 
 function InventoryWindow:capture_geometry()
     local raw = _G.loaded_settings.inventory
-    self:capture_window_geometry(raw.window)
+    local window_state = _G.get_ui_window_state("inventory")
+    local geometry = self:get_geometry()
+    window_state.left = geometry.left
+    window_state.top = geometry.top
+    window_state.width = geometry.width
+    window_state.height = geometry.height
+    window_state.tile = geometry.tile
     if self:is_maximized() ~= true then
         raw.cols = self.cols
     end
@@ -602,9 +536,10 @@ function InventoryWindow:apply_settings()
     self.hint_label:SetFont(hint_font)
 
     local raw = _G.loaded_settings.inventory
-    self:SetPosition(raw.window.left, raw.window.top)
+    local window_state = _G.get_ui_window_state("inventory")
+    self:SetPosition(window_state.left, window_state.top)
 
-    local w = tonumber(raw.window.width)
+    local w = tonumber(window_state.width)
     if w ~= nil then
         self.cols = self:get_columns_for_window_width(w)
         self.rows_visible = self:get_needed_rows(self.cols)
@@ -621,11 +556,13 @@ function InventoryWindow:apply_settings()
     self._suppress_size_changed = true
     self:SetSize(w, h)
     self._suppress_size_changed = false
-    if raw.window.maximized == true then
-        raw.window.width = w
-        raw.window.height = h
+    local window_tile = window_state.tile
+    if window_tile == LuiWindow.TILE_MAXIMIZED then
+        window_state.width = w
+        window_state.height = h
+        window_state.tile = LuiWindow.TILE_MAXIMIZED
     end
-    self:apply_maximize_state(raw.window)
+    self:set_geometry(window_state)
 
     self:layout()
     self:build_grid()
@@ -685,14 +622,13 @@ function InventoryWindow:build_grid()
     for i = 1, size do
         local slot = self.slots[i]
         if slot == nil then
-            slot = InventorySlot(i, nil, function(dest_index, drag_drop_info, args)
+            slot = InventorySlot(i, function(dest_index, drag_drop_info, args)
                 self:perform_drop(dest_index, drag_drop_info, args)
             end)
             self.slots[i] = slot
         end
 
         slot:set_tile(self.tile_size)
-        -- slot:set_lock_mode(self.lock_mode) -- disabled for now
 
         local r = math.floor((i - 1) / cols) + 1
         local c = ((i - 1) % cols) + 1
@@ -922,51 +858,3 @@ function InventoryWindow:_get_total_money()
     end
     return a:GetMoney()
 end
-
--- Locking is intentionally disabled for now (API is unreliable/missing on some clients).
--- Keep the old code commented for future re-enable.
---
--- function InventoryWindow:set_lock_mode(enabled)
---     self.lock_mode = enabled == true
---     for i = 1, #self.slots do
---         local slot = self.slots[i]
---         if slot ~= nil then
---             slot:set_lock_mode(self.lock_mode)
---         end
---     end
--- end
---
--- function InventoryWindow:toggle_lock(index)
---     local item = self:get_item(index)
---     if item == nil then
---         return
---     end
---     local locked = _is_locked(item)
---     if _set_locked(item, not locked) then
---         self._display_dirty = true
---     end
--- end
---
--- function InventoryWindow:apply_lock_filter(want_match, locked)
---     local q = self.filter_tb:GetText() or ""
---     if string.len((q:gsub("%s+", ""))) == 0 then
---         return
---     end
---
---     self:update_slots()
---
---     for i = 1, #self.slots do
---         local slot = self.slots[i]
---         if slot ~= nil then
---             local is_match = slot.matched == true
---             if (want_match and is_match) or ((not want_match) and (not is_match)) then
---                 local item = self:get_item(i)
---                 if item ~= nil then
---                     _set_locked(item, locked == true)
---                 end
---             end
---         end
---     end
---     self._dirty = true
---     self._display_dirty = true
--- end

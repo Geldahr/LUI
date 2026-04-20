@@ -315,7 +315,7 @@ function CooldownEntry:update_remaining(remaining_seconds, base_seconds)
     ctx.name = name
     ctx.t = lui_format_timeout(remaining_seconds)
     ctx.s = lui_format_timeout_seconds(remaining_seconds)
-    -- Also provide short aliases (no compatibility logic needed; just extra keys).
+    -- Also provide short token aliases.
     ctx.n = name
     ctx.ts = ctx.s
     self.label:SetText(lui_format_tokenized(s.text_tokens, ctx))

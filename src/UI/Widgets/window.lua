@@ -28,6 +28,8 @@ local RESIZE_MODE_NONE = 0
 local RESIZE_MODE_HORIZONTAL = 1
 local RESIZE_MODE_VERTICAL = 2
 local RESIZE_MODE_BOTH = RESIZE_MODE_HORIZONTAL + RESIZE_MODE_VERTICAL
+local TILE_NONE = "none"
+local TILE_MAXIMIZED = "maximized"
 
 RESIZE_NONE = RESIZE_MODE_NONE
 RESIZE_HORIZONTAL = RESIZE_MODE_HORIZONTAL
@@ -141,6 +143,8 @@ LuiWindow.RESIZE_NONE = RESIZE_MODE_NONE
 LuiWindow.RESIZE_HORIZONTAL = RESIZE_MODE_HORIZONTAL
 LuiWindow.RESIZE_VERTICAL = RESIZE_MODE_VERTICAL
 LuiWindow.RESIZE_BOTH = RESIZE_MODE_BOTH
+LuiWindow.TILE_NONE = TILE_NONE
+LuiWindow.TILE_MAXIMIZED = TILE_MAXIMIZED
 
 function LuiWindow:Constructor()
     Turbine.UI.Window.Constructor(self)
@@ -162,7 +166,7 @@ function LuiWindow:Constructor()
     self._resizable = true
     self._resize_mode = RESIZE_MODE_BOTH
     self._maximize_enabled = true
-    self._maximized = false
+    self._tile_mode = TILE_NONE
     self._restore_window_x = nil
     self._restore_window_y = nil
     self._restore_window_w = nil
@@ -472,9 +476,31 @@ function LuiWindow:_resize_region_enabled(region)
     return self:_resize_mode_allows_mask(region._resize_mask or 0)
 end
 
+function LuiWindow:_normalize_tile_mode(tile)
+    if tile == TILE_MAXIMIZED then
+        return TILE_MAXIMIZED
+    end
+    return TILE_NONE
+end
+
+function LuiWindow:_tile_mode_from_geometry(geometry)
+    if type(geometry) ~= "table" then
+        return TILE_NONE
+    end
+    return self:_normalize_tile_mode(geometry.tile)
+end
+
+function LuiWindow:_set_tile_mode(tile)
+    self._tile_mode = self:_normalize_tile_mode(tile)
+end
+
+function LuiWindow:get_tile()
+    return self:_normalize_tile_mode(self._tile_mode)
+end
+
 function LuiWindow:enable_maximize(enabled)
     self._maximize_enabled = enabled ~= false
-    if self._maximize_enabled ~= true and self._maximized == true then
+    if self._maximize_enabled ~= true and self:is_maximized() == true then
         self:restore()
     end
     self:_sync_maximize_button_icon()
@@ -482,19 +508,11 @@ function LuiWindow:enable_maximize(enabled)
 end
 
 function LuiWindow:is_maximized()
-    return self._maximized == true
-end
-
-function LuiWindow:set_maximized(maximized)
-    if maximized == true then
-        self:maximize()
-    else
-        self:restore()
-    end
+    return self:get_tile() == TILE_MAXIMIZED
 end
 
 function LuiWindow:toggle_maximized()
-    if self._maximized == true then
+    if self:is_maximized() == true then
         self:restore()
     else
         self:maximize()
@@ -506,7 +524,7 @@ function LuiWindow:maximize(skip_capture)
         return
     end
 
-    if self._maximized ~= true then
+    if self:is_maximized() ~= true then
         if skip_capture ~= true then
             self:_capture_current_normal_geometry()
         else
@@ -515,70 +533,89 @@ function LuiWindow:maximize(skip_capture)
     end
 
     self:_stop_resize()
-    self._maximized = true
+    self:_set_tile_mode(TILE_MAXIMIZED)
     self:_sync_maximize_button_icon()
     self:_apply_maximized_bounds()
 end
 
 function LuiWindow:restore()
-    if self._maximized ~= true then
+    if self:is_maximized() ~= true then
         return
     end
 
-    self._maximized = false
+    self:_set_tile_mode(TILE_NONE)
     self:_sync_maximize_button_icon()
     self:_restore_normal_bounds()
 end
 
-function LuiWindow:capture_window_geometry(state)
-    if type(state) ~= "table" then
-        return
-    end
+function LuiWindow:get_geometry()
+    local tile = self:get_tile()
+    local geometry = {
+        tile = tile,
+    }
 
-    state.maximized = self._maximized == true
-
-    if self._maximized == true then
-        state.left = self._restore_window_x or state.left or self:GetLeft()
-        state.top = self._restore_window_y or state.top or self:GetTop()
-        state.width = self._restore_window_w or state.width or self:GetWidth()
-        state.height = self._restore_window_h or state.height or self:GetHeight()
-        return
+    if tile ~= TILE_NONE then
+        geometry.left = self._restore_window_x or self:GetLeft()
+        geometry.top = self._restore_window_y or self:GetTop()
+        geometry.width = self._restore_window_w or self:GetWidth()
+        geometry.height = self._restore_window_h or self:GetHeight()
+        return geometry
     end
 
     local left, top = self:GetPosition()
     local width, height = self:GetSize()
-    state.left = left
-    state.top = top
-    state.width = width
-    state.height = height
+    geometry.left = left
+    geometry.top = top
+    geometry.width = width
+    geometry.height = height
+    return geometry
 end
 
-function LuiWindow:apply_maximize_state(state)
-    if type(state) ~= "table" then
+function LuiWindow:set_geometry(geometry)
+    if type(geometry) ~= "table" then
         self:_sync_maximize_button_icon()
         return
     end
 
     local left, top = self:GetPosition()
     local width, height = self:GetSize()
-    self._restore_window_x = tonumber(state.left) or left
-    self._restore_window_y = tonumber(state.top) or top
-    self._restore_window_w = tonumber(state.width) or width
-    self._restore_window_h = tonumber(state.height) or height
+    local next_left = tonumber(geometry.left) or left
+    local next_top = tonumber(geometry.top) or top
+    local next_width = tonumber(geometry.width) or width
+    local next_height = tonumber(geometry.height) or height
+    local tile = self:_tile_mode_from_geometry(geometry)
 
-    if state.maximized == true then
+    next_width, next_height = self:_fit_size_to_screen(next_width, next_height)
+    self:_set_tile_mode(TILE_NONE)
+
+    if width ~= next_width or height ~= next_height then
+        self:SetSize(next_width, next_height)
+    end
+
+    local actual_w, actual_h = self:GetSize()
+    next_left, next_top = self:_clamp_position_to_screen(next_left, next_top, actual_w, actual_h)
+    local current_left, current_top = self:GetPosition()
+    if current_left ~= next_left or current_top ~= next_top then
+        self:SetPosition(next_left, next_top)
+    end
+
+    self._restore_window_x = next_left
+    self._restore_window_y = next_top
+    self._restore_window_w = actual_w
+    self._restore_window_h = actual_h
+
+    if tile == TILE_MAXIMIZED and self._maximize_enabled == true then
         self:maximize(true)
     else
-        self._maximized = false
         self:_sync_maximize_button_icon()
-        self:_bound_to_screen()
+        self:_layout_resize_regions()
     end
 end
 
 function LuiWindow:set_minimum_size(width, height)
     self._minimum_width = tonumber(width)
     self._minimum_height = tonumber(height)
-    if self._maximized == true then
+    if self:is_maximized() == true then
         self:_apply_maximized_bounds()
     else
         self:_enforce_minimum_size()
@@ -655,14 +692,14 @@ function LuiWindow:_apply_style()
     )
 
     self:_layout()
-    if self._maximized == true then
+    if self:is_maximized() == true then
         self:_apply_maximized_bounds()
     end
 end
 
 function LuiWindow:show()
     self:SetVisible(true)
-    if self._maximized == true then
+    if self:is_maximized() == true then
         self:_apply_maximized_bounds()
     else
         self:_bound_to_screen()
@@ -725,7 +762,7 @@ function LuiWindow:_sync_maximize_button_icon()
 
     local normal = UI.AssetIds.window_maximize
     local hover = UI.AssetIds.window_maximize_hover
-    if self._maximized == true then
+    if self:is_maximized() == true then
         normal = UI.AssetIds.window_restore
         hover = UI.AssetIds.window_restore_hover
     end
@@ -796,7 +833,7 @@ function LuiWindow:_drag_to(args)
     local dx = screen_x - self._drag_start_screen_x
     local dy = screen_y - self._drag_start_screen_y
 
-    if self._maximized == true then
+    if self:is_maximized() == true then
         local threshold = _scaled_int(self._scale, BASE_MAXIMIZE_DRAG_THRESHOLD)
         if math.max(math.abs(dx), math.abs(dy)) < threshold then
             return
@@ -907,7 +944,7 @@ function LuiWindow:_bound_to_screen()
 end
 
 function LuiWindow:_remember_restore_geometry()
-    if self._maximized == true then
+    if self:is_maximized() == true then
         return
     end
 
@@ -936,7 +973,7 @@ function LuiWindow:_capture_current_normal_geometry()
 end
 
 function LuiWindow:_apply_maximized_bounds()
-    if self._maximize_enabled ~= true or self._maximized ~= true then
+    if self._maximize_enabled ~= true or self:is_maximized() ~= true then
         return
     end
 
@@ -982,7 +1019,7 @@ function LuiWindow:_restore_for_drag(screen_x, screen_y)
     offset_x = _clamp(offset_x, 0, math.max(0, restore_w - 1))
     offset_y = _clamp(offset_y, 0, math.max(0, restore_h - 1))
 
-    self._maximized = false
+    self:_set_tile_mode(TILE_NONE)
     self:_sync_maximize_button_icon()
     self:SetSize(restore_w, restore_h)
 
@@ -1044,7 +1081,7 @@ function LuiWindow:_start_resize(region, args)
     if self:_resize_region_enabled(region) ~= true then
         return
     end
-    if self._maximized == true then
+    if self:is_maximized() == true then
         return
     end
     if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
@@ -1335,7 +1372,7 @@ function LuiWindow:_layout_resize_regions()
     local corner = math.max(edge, _scaled_int(self._scale, BASE_RESIZE_CORNER))
     local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
     local right_edge_top = math.min(height, title_h + edge)
-    local edge_visible = self._resizable == true and self._maximized ~= true
+    local edge_visible = self._resizable == true and self:is_maximized() ~= true
     if edge_visible ~= true then
         self:_hide_resize_handle()
     end

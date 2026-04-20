@@ -203,14 +203,10 @@ function CooldownsWindow:get_settings()
     return _G.settings.self.cooldowns
 end
 
-function CooldownsWindow:get_loaded_settings()
-    return _G.loaded_settings.self.cooldowns
-end
-
 function CooldownsWindow:persist_position(x, y)
-    local raw = self:get_loaded_settings()
-    raw.window.left = x
-    raw.window.top = y
+    local hud = _G.get_ui_hud_state("cooldowns")
+    hud.left = x
+    hud.top = y
 end
 
 function CooldownsWindow:is_move_mode()
@@ -234,7 +230,8 @@ function CooldownsWindow:apply_settings()
 
     self.update_every = 1.0 / _G.settings.global.refresh_rate
 
-    self:SetPosition(s.window.left, s.window.top)
+    local hud = _G.settings.ui.hud.cooldowns
+    self:SetPosition(hud.left, hud.top)
 
     local cols = s.columns
     local rows = s.rows

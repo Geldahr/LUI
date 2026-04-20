@@ -85,8 +85,9 @@ function TargetsTargetVitalsWindow:set_move_mode(enabled)
 end
 
 function TargetsTargetVitalsWindow:persist_position(x, y)
-    _G.loaded_settings.target.vitals.targets_target.window.left = x
-    _G.loaded_settings.target.vitals.targets_target.window.top = y
+    local hud = _G.get_ui_hud_state("target_target_vitals")
+    hud.left = x
+    hud.top = y
 end
 
 function TargetsTargetVitalsWindow:apply_settings()
@@ -123,7 +124,7 @@ function TargetsTargetVitalsWindow:apply_settings()
     self.targets_control:SetSize(frame_w, h)
     self.targets_control:SetPosition(0, 0)
 
-    local ww = tt.window
+    local ww = _G.settings.ui.hud.target_target_vitals
     self:SetPosition(ww.left, ww.top)
 
     if self.moveable ~= nil and self.moveable.update_size ~= nil then

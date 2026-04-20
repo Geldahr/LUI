@@ -2418,12 +2418,17 @@ function CraftingWindow:destroy()
 end
 
 function CraftingWindow:capture_geometry()
-    local raw = _G.loaded_settings ~= nil and _G.loaded_settings.crafting or nil
-    if type(raw) ~= "table" or type(raw.window) ~= "table" then
+    local window = _G.get_ui_window_state("crafting")
+    if type(window) ~= "table" then
         return
     end
 
-    self:capture_window_geometry(raw.window)
+    local geometry = self:get_geometry()
+    window.left = geometry.left
+    window.top = geometry.top
+    window.width = geometry.width
+    window.height = geometry.height
+    window.tile = geometry.tile
 end
 
 function CraftingWindow:persist_geometry()
@@ -2496,8 +2501,7 @@ function CraftingWindow:apply_settings()
 end
 
 function CraftingWindow:_load_geometry()
-    local raw = _G.loaded_settings ~= nil and _G.loaded_settings.crafting or nil
-    local window = raw ~= nil and raw.window or nil
+    local window = _G.get_ui_window_state("crafting")
     if type(window) ~= "table" then
         return
     end
@@ -2512,7 +2516,7 @@ function CraftingWindow:_load_geometry()
     self:SetPosition(left, top)
     self:SetSize(math.max(min_w, width), math.max(min_h, height))
     self._suppress_size_changed = false
-    self:apply_maximize_state(window)
+    self:set_geometry(window)
     self:_enforce_min_size()
     self:layout()
 end

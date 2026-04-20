@@ -894,10 +894,16 @@ end
 
 function AssetsWindow:capture_geometry()
     local raw = _G.loaded_settings.assets
+    local window_state = _G.get_ui_window_state("assets")
     if self:is_maximized() ~= true then
         self:_save_current_layout()
     end
-    self:capture_window_geometry(raw.window)
+    local geometry = self:get_geometry()
+    window_state.left = geometry.left
+    window_state.top = geometry.top
+    window_state.width = geometry.width
+    window_state.height = geometry.height
+    window_state.tile = geometry.tile
     raw.view_mode = self.view_mode
     raw.stack_items = self.stack_items
 end
@@ -927,14 +933,14 @@ function AssetsWindow:set_view_mode(mode, persist)
     if self:is_maximized() == true then
         local normal_left, normal_top = self:GetPosition()
         local normal_w, normal_h = self:GetSize()
-        local window_state = _G.loaded_settings.assets.window
+        local window_state = _G.get_ui_window_state("assets")
         window_state.left = normal_left
         window_state.top = normal_top
         window_state.width = normal_w
         window_state.height = normal_h
-        window_state.maximized = true
+        window_state.tile = LuiWindow.TILE_MAXIMIZED
     end
-    self:apply_maximize_state(_G.loaded_settings.assets.window)
+    self:set_geometry(_G.get_ui_window_state("assets"))
     self:_update_view_buttons()
     self:layout()
     self:refresh_from_store(true)
@@ -1070,16 +1076,18 @@ function AssetsWindow:apply_settings()
     self:set_minimum_size(min_w, min_h)
 
     self:_apply_layout_for_mode(self.view_mode)
-    if _G.loaded_settings.assets.window.maximized == true then
+    local window_state = _G.get_ui_window_state("assets")
+    local window_tile = window_state.tile
+    if window_tile == LuiWindow.TILE_MAXIMIZED then
         local normal_left, normal_top = self:GetPosition()
         local normal_w, normal_h = self:GetSize()
-        local window_state = _G.loaded_settings.assets.window
         window_state.left = normal_left
         window_state.top = normal_top
         window_state.width = normal_w
         window_state.height = normal_h
+        window_state.tile = LuiWindow.TILE_MAXIMIZED
     end
-    self:apply_maximize_state(_G.loaded_settings.assets.window)
+    self:set_geometry(window_state)
     self:_update_view_buttons()
     self:layout()
     self:refresh_from_store(true)
@@ -1153,16 +1161,6 @@ function AssetsWindow:_get_mode_tile_size(mode)
     return tile_size
 end
 
-function AssetsWindow:_sync_window_layout(layout)
-    local raw = _G.loaded_settings.assets
-    raw.window.left = layout.left
-    raw.window.top = layout.top
-    raw.window.cols = layout.cols
-    raw.window.rows = layout.rows
-    raw.window.width = layout.width
-    raw.window.height = layout.height
-end
-
 function AssetsWindow:_save_current_layout()
     local layout = self:_get_layout_store(self.view_mode)
     local left, top = self:GetPosition()
@@ -1176,7 +1174,6 @@ function AssetsWindow:_save_current_layout()
     layout.height = height
     layout.cols = cols
     layout.rows = rows
-    self:_sync_window_layout(layout)
 end
 
 function AssetsWindow:_apply_layout_for_mode(mode)
@@ -1191,7 +1188,6 @@ function AssetsWindow:_apply_layout_for_mode(mode)
     local min_w, min_h = self:_get_min_window_size(mode, tile_size)
     if width < min_w then width = min_w end
     if height < min_h then height = min_h end
-    self:_sync_window_layout(layout)
 
     self._suppress_size_changed = true
     self:SetPosition(layout.left, layout.top)

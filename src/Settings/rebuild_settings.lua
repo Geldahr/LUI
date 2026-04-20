@@ -36,8 +36,11 @@ function _G.rebuild_settings()
             number_abbrev = {},
             bestiary_capture = false,
         },
+        ui = {
+            windows = {},
+            hud = {},
+        },
         status_bar = {
-            window = {},
             bg = {},
             font = {},
             zones = { left = {}, center = {}, right = {} },
@@ -47,7 +50,6 @@ function _G.rebuild_settings()
         self = {
             vitals = {
                 frame = {},
-                window = {},
                 morale = { font = {}, color = {} },
                 power = { font = {}, color = {} },
                 effects = {
@@ -55,16 +57,15 @@ function _G.rebuild_settings()
                     debuffs = { timer_font = {} },
                 },
             },
-            expiring_effects = { font = {}, color = {}, window = {} },
-            cooldowns = { window = {}, font = {}, color = {} },
+            expiring_effects = { font = {}, color = {} },
+            cooldowns = { font = {}, color = {} },
         },
         target = {
             vitals = {
                 frame = {},
-                window = {},
                 morale = { font = {}, color = {} },
                 power = { font = {}, color = {} },
-                targets_target = { font = {}, color = {}, window = {} },
+                targets_target = { font = {}, color = {} },
                 effects = {
                     buffs = { timer_font = {} },
                     debuffs = { timer_font = {} },
@@ -72,7 +73,6 @@ function _G.rebuild_settings()
             },
             boss_vitals = {
                 frame = {},
-                window = {},
                 morale = { font = {}, color = {} },
                 power = { font = {}, color = {} },
                 effects = {
@@ -80,11 +80,10 @@ function _G.rebuild_settings()
                     debuffs = { timer_font = {} },
                 },
             },
-            expiring_effects = { font = {}, color = {}, window = {} },
+            expiring_effects = { font = {}, color = {} },
         },
         party = {
             frame = {},
-            window = {},
             morale = { font = {}, color = {} },
             power = { font = {}, color = {} },
             layout = {},
@@ -95,19 +94,20 @@ function _G.rebuild_settings()
                 debuffs = { timer_font = {} },
             },
         },
-        inventory = { window = {} },
-        crafting = { window = {}, display_mode = "pages", enabled = true },
-        assets = { window = {}, tile = {}, layouts = { icons = {}, details = {} } },
-        bestiary = { window = {} },
+        inventory = {},
+        crafting = { display_mode = "pages", enabled = true },
+        assets = { tile = {}, layouts = { icons = {}, details = {} } },
+        bestiary = {},
     }
 
     _G.settings.global.scale = scaling
     _G.settings.global.refresh_rate = refresh_rate
     _G.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
     _G.settings.global.bestiary_capture = raw.global.bestiary_capture == true
+    _G.settings.ui.windows = raw.ui.windows
+    _G.settings.ui.hud = raw.ui.hud
 
     local function build_vital(dst, src)
-        dst.window = src.window
         dst.frame.width = scaled_int(src.frame.width)
         dst.frame.border_width = scaled_border(src.frame.border_width)
         dst.frame.border_color = src.frame.border_color
@@ -181,7 +181,6 @@ function _G.rebuild_settings()
     local raw_inv = raw.inventory
     if raw_inv ~= nil then
         local inv = _G.settings.inventory
-        inv.window = raw_inv.window
         inv.enabled = raw_inv.enabled
         inv.replace = raw_inv.replace
         inv.cols = raw_inv.cols
@@ -191,7 +190,6 @@ function _G.rebuild_settings()
     local raw_assets = raw.assets
     if raw_assets ~= nil then
         local assets = _G.settings.assets
-        assets.window = raw_assets.window
         assets.layouts = raw_assets.layouts
         assets.enabled = raw_assets.enabled
         assets.view_mode = raw_assets.view_mode
@@ -202,14 +200,8 @@ function _G.rebuild_settings()
 
     local raw_crafting = raw.crafting
     if raw_crafting ~= nil then
-        _G.settings.crafting.window = raw_crafting.window
         _G.settings.crafting.display_mode = raw_crafting.display_mode
         _G.settings.crafting.enabled = raw_crafting.enabled
-    end
-
-    local raw_bestiary = raw.bestiary
-    if raw_bestiary ~= nil then
-        _G.settings.bestiary.window = raw_bestiary.window
     end
 
     local raw_party_ci = raw.party.class_icon
@@ -244,7 +236,6 @@ function _G.rebuild_settings()
     dst_tt.background_dimming = raw_tt.background_dimming
     dst_tt.text_alignment = raw_tt.text_alignment
     dst_tt.text_margin = scaled_int(raw_tt.text_margin)
-    dst_tt.window = raw_tt.window
 
     local raw_bv = raw.target.boss_vitals
     local dst_bv = _G.settings.target.boss_vitals
@@ -277,7 +268,6 @@ function _G.rebuild_settings()
     self_ee.bar_width = scaled_int(raw_self_ee.bar_width)
     self_ee.bar_height = scaled_int(raw_self_ee.bar_height)
     self_ee.border_width = scaled_border(raw_self_ee.border_width)
-    self_ee.window = raw_self_ee.window
     self_ee.color = raw_self_ee.color
 
     self_ee.font.name = raw_self_ee.font.name
@@ -306,7 +296,6 @@ function _G.rebuild_settings()
     target_ee.bar_width = scaled_int(raw_expiring_target_effects.bar_width)
     target_ee.bar_height = scaled_int(raw_expiring_target_effects.bar_height)
     target_ee.border_width = scaled_border(raw_expiring_target_effects.border_width)
-    target_ee.window = raw_expiring_target_effects.window
     target_ee.color = raw_expiring_target_effects.color
 
     target_ee.font.name = raw_expiring_target_effects.font.name
@@ -328,7 +317,6 @@ function _G.rebuild_settings()
     sb.height = scaled_int(raw_sb.height)
     sb.padding = scaled_int(raw_sb.padding)
     sb.gap = scaled_int(raw_sb.gap)
-    sb.window = raw_sb.window
     sb.bg.opacity = raw_sb.bg.opacity
     sb.bg.color = raw_sb.bg.color
 
@@ -446,7 +434,6 @@ function _G.rebuild_settings()
     cd.name_max_chars = raw_cd.name_max_chars
     cd.whitelist = raw_cd.whitelist
     cd.blacklist = raw_cd.blacklist
-    cd.window = raw_cd.window
     cd.color = raw_cd.color
 
     cd.font.name = raw_cd.font.name
