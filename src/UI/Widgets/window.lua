@@ -22,6 +22,7 @@ local BASE_TITLE_FONT = 12
 local BASE_RESIZE_EDGE = 4
 local BASE_RESIZE_CORNER = 8
 local BASE_RESIZE_HANDLE = 32
+local BASE_MAXIMIZE_DRAG_THRESHOLD = 64
 
 local RESIZE_LEFT = 1
 local RESIZE_RIGHT = 2
@@ -145,6 +146,13 @@ function LuiWindow:Constructor()
     self._drag_start_window_x = 0
     self._drag_start_window_y = 0
     self._resizable = true
+    self._maximize_enabled = true
+    self._maximized = false
+    self._restore_window_x = nil
+    self._restore_window_y = nil
+    self._restore_window_w = nil
+    self._restore_window_h = nil
+    self._capturing_normal_for_maximize = false
     self._minimum_width = nil
     self._minimum_height = nil
     self._resizing = false
@@ -203,6 +211,14 @@ function LuiWindow:Constructor()
     self._title_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self._title_label:SetVisible(false)
     self._title_label:SetZOrder(1)
+
+    self._maximize_button = LuiButton()
+    self._maximize_button:SetParent(self._title_bar)
+    self._maximize_button:SetZOrder(10)
+    self._maximize_button:set_text("")
+    self._maximize_button.Click = function()
+        self:toggle_maximized()
+    end
 
     self._close_button = LuiButton()
     self._close_button:SetParent(self._title_bar)
@@ -384,10 +400,117 @@ function LuiWindow:set_resizable(enabled)
     self:_layout_resize_regions()
 end
 
+function LuiWindow:enable_maximize(enabled)
+    self._maximize_enabled = enabled ~= false
+    if self._maximize_enabled ~= true and self._maximized == true then
+        self:restore()
+    end
+    self:_sync_maximize_button_icon()
+    self:_layout()
+end
+
+function LuiWindow:is_maximized()
+    return self._maximized == true
+end
+
+function LuiWindow:set_maximized(maximized)
+    if maximized == true then
+        self:maximize()
+    else
+        self:restore()
+    end
+end
+
+function LuiWindow:toggle_maximized()
+    if self._maximized == true then
+        self:restore()
+    else
+        self:maximize()
+    end
+end
+
+function LuiWindow:maximize(skip_capture)
+    if self._maximize_enabled ~= true then
+        return
+    end
+
+    if self._maximized ~= true then
+        if skip_capture ~= true then
+            self:_capture_current_normal_geometry()
+        else
+            self:_remember_restore_geometry()
+        end
+    end
+
+    self:_stop_resize()
+    self._maximized = true
+    self:_sync_maximize_button_icon()
+    self:_apply_maximized_bounds()
+end
+
+function LuiWindow:restore()
+    if self._maximized ~= true then
+        return
+    end
+
+    self._maximized = false
+    self:_sync_maximize_button_icon()
+    self:_restore_normal_bounds()
+end
+
+function LuiWindow:capture_window_geometry(state)
+    if type(state) ~= "table" then
+        return
+    end
+
+    state.maximized = self._maximized == true
+
+    if self._maximized == true then
+        state.left = self._restore_window_x or state.left or self:GetLeft()
+        state.top = self._restore_window_y or state.top or self:GetTop()
+        state.width = self._restore_window_w or state.width or self:GetWidth()
+        state.height = self._restore_window_h or state.height or self:GetHeight()
+        return
+    end
+
+    local left, top = self:GetPosition()
+    local width, height = self:GetSize()
+    state.left = left
+    state.top = top
+    state.width = width
+    state.height = height
+end
+
+function LuiWindow:apply_maximize_state(state)
+    if type(state) ~= "table" then
+        self:_sync_maximize_button_icon()
+        return
+    end
+
+    local left, top = self:GetPosition()
+    local width, height = self:GetSize()
+    self._restore_window_x = tonumber(state.left) or left
+    self._restore_window_y = tonumber(state.top) or top
+    self._restore_window_w = tonumber(state.width) or width
+    self._restore_window_h = tonumber(state.height) or height
+
+    if state.maximized == true then
+        self:maximize(true)
+    else
+        self._maximized = false
+        self:_sync_maximize_button_icon()
+        self:_bound_to_screen()
+    end
+end
+
 function LuiWindow:set_minimum_size(width, height)
     self._minimum_width = tonumber(width)
     self._minimum_height = tonumber(height)
-    self:_enforce_minimum_size()
+    if self._maximized == true then
+        self:_apply_maximized_bounds()
+    else
+        self:_enforce_minimum_size()
+    end
 end
 
 function LuiWindow:set_scale(scale)
@@ -405,6 +528,25 @@ end
 function LuiWindow:apply_settings()
     self._scale = _current_scale()
     self:_apply_style()
+end
+
+function LuiWindow:_style_title_button(button)
+    if button == nil then
+        return
+    end
+
+    button:set_scale(self._scale)
+    button:set_border_thickness(0)
+    button:set_padding(0)
+    button:set_back_color(Style.TRANSPARENT_BACKGROUND)
+    button:set_hover_back_color(Style.TRANSPARENT_BACKGROUND)
+    button:set_pressed_back_color(Style.TRANSPARENT_BACKGROUND)
+    button:set_active_back_color(Style.TRANSPARENT_BACKGROUND)
+    button:set_disabled_back_color(Style.TRANSPARENT_BACKGROUND)
+    button:set_border_color(Style.CONTROL_BORDER)
+    button:set_hover_border_color(Style.CONTROL_BORDER_HOVER)
+    button:set_active_border_color(Style.CONTROL_BORDER_ACTIVE)
+    button:set_disabled_border_color(Style.CONTROL_BORDER_DISABLED)
 end
 
 function LuiWindow:_apply_style()
@@ -427,18 +569,9 @@ function LuiWindow:_apply_style()
     self:_sync_title_bar_host_width()
     self:_sync_resize_handle_icons()
 
-    self._close_button:set_scale(self._scale)
-    self._close_button:set_border_thickness(0)
-    self._close_button:set_padding(0)
-    self._close_button:set_back_color(Style.TRANSPARENT_BACKGROUND)
-    self._close_button:set_hover_back_color(Style.TRANSPARENT_BACKGROUND)
-    self._close_button:set_pressed_back_color(Style.TRANSPARENT_BACKGROUND)
-    self._close_button:set_active_back_color(Style.TRANSPARENT_BACKGROUND)
-    self._close_button:set_disabled_back_color(Style.TRANSPARENT_BACKGROUND)
-    self._close_button:set_border_color(Style.CONTROL_BORDER)
-    self._close_button:set_hover_border_color(Style.CONTROL_BORDER_HOVER)
-    self._close_button:set_active_border_color(Style.CONTROL_BORDER_ACTIVE)
-    self._close_button:set_disabled_border_color(Style.CONTROL_BORDER_DISABLED)
+    self:_style_title_button(self._maximize_button)
+    self:_style_title_button(self._close_button)
+    self:_sync_maximize_button_icon()
     self._close_button:set_icon(
         UI.AssetIds.x,
         UI.AssetIds.x_hover,
@@ -450,11 +583,18 @@ function LuiWindow:_apply_style()
     )
 
     self:_layout()
+    if self._maximized == true then
+        self:_apply_maximized_bounds()
+    end
 end
 
 function LuiWindow:show()
     self:SetVisible(true)
-    self:_bound_to_screen()
+    if self._maximized == true then
+        self:_apply_maximized_bounds()
+    else
+        self:_bound_to_screen()
+    end
     self:bring_to_front()
 end
 
@@ -498,6 +638,35 @@ end
 
 function LuiWindow:_base_close_icon_size()
     return math.max(1, math.floor((BASE_TITLE_BAR_H * BASE_CLOSE_ICON_RATIO) + 0.5))
+end
+
+function LuiWindow:_sync_maximize_button_icon()
+    if self._maximize_button == nil then
+        return
+    end
+
+    local visible = self._maximize_enabled == true
+    self._maximize_button:SetVisible(visible)
+    if visible ~= true then
+        return
+    end
+
+    local normal = UI.AssetIds.window_maximize
+    local hover = UI.AssetIds.window_maximize_hover
+    if self._maximized == true then
+        normal = UI.AssetIds.window_restore
+        hover = UI.AssetIds.window_restore_hover
+    end
+
+    self._maximize_button:set_icon(
+        normal,
+        hover,
+        hover,
+        normal,
+        self:_base_close_icon_size(),
+        self:_base_close_icon_size(),
+        LuiButton.icon_position.RIGHT
+    )
 end
 
 function LuiWindow:_sync_title_bar_host_width()
@@ -554,6 +723,17 @@ function LuiWindow:_drag_to(args)
     )
     local dx = screen_x - self._drag_start_screen_x
     local dy = screen_y - self._drag_start_screen_y
+
+    if self._maximized == true then
+        local threshold = _scaled_int(self._scale, BASE_MAXIMIZE_DRAG_THRESHOLD)
+        if math.max(math.abs(dx), math.abs(dy)) < threshold then
+            return
+        end
+
+        self:_restore_for_drag(screen_x, screen_y)
+        return
+    end
+
     local width, height = self:GetSize()
     local x, y = self:_clamp_position_to_screen(
         self._drag_start_window_x + dx,
@@ -586,34 +766,55 @@ function LuiWindow:_display_size()
     return tonumber(display_w) or 0, tonumber(display_h) or 0
 end
 
-function LuiWindow:_fit_size_to_screen(width, height)
+function LuiWindow:_status_bar_reserved_height()
+    local settings_bar = _G.settings ~= nil and _G.settings.status_bar or nil
+    local status_bar = _G.STATUS_BAR
+
+    if status_bar ~= nil and status_bar.IsVisible ~= nil and status_bar:IsVisible() == true then
+        return math.max(0, tonumber(status_bar:GetHeight()) or 0)
+    end
+
+    if settings_bar ~= nil and settings_bar.enabled == true then
+        return math.max(0, tonumber(settings_bar.height) or 0)
+    end
+
+    return 0
+end
+
+function LuiWindow:_work_area()
     local display_w, display_h = self:_display_size()
+    local reserved_top = math.min(display_h, self:_status_bar_reserved_height())
+    return 0, reserved_top, display_w, math.max(0, display_h - reserved_top)
+end
+
+function LuiWindow:_fit_size_to_screen(width, height)
+    local _, _, work_w, work_h = self:_work_area()
     local min_w, min_h = self:_minimum_size()
     width = tonumber(width) or 0
     height = tonumber(height) or 0
 
-    if display_w > 0 then
-        width = math.min(width, math.max(min_w, display_w))
+    if work_w > 0 then
+        width = math.min(width, math.max(min_w, work_w))
     end
-    if display_h > 0 then
-        height = math.min(height, math.max(min_h, display_h))
+    if work_h > 0 then
+        height = math.min(height, math.max(min_h, work_h))
     end
 
     return math.max(min_w, width), math.max(min_h, height)
 end
 
 function LuiWindow:_clamp_position_to_screen(x, y, width, height)
-    local display_w, display_h = self:_display_size()
+    local work_x, work_y, work_w, work_h = self:_work_area()
     x = tonumber(x) or 0
     y = tonumber(y) or 0
     width = tonumber(width) or 0
     height = tonumber(height) or 0
 
-    if display_w > 0 then
-        x = _clamp(x, 0, math.max(0, display_w - width))
+    if work_w > 0 then
+        x = _clamp(x, work_x, math.max(work_x, work_x + work_w - width))
     end
-    if display_h > 0 then
-        y = _clamp(y, 0, math.max(0, display_h - height))
+    if work_h > 0 then
+        y = _clamp(y, work_y, math.max(work_y, work_y + work_h - height))
     end
 
     return x, y
@@ -633,26 +834,117 @@ function LuiWindow:_bound_to_screen()
     end
 end
 
+function LuiWindow:_remember_restore_geometry()
+    if self._maximized == true then
+        return
+    end
+
+    self._restore_window_x, self._restore_window_y = self:GetPosition()
+    self._restore_window_w, self._restore_window_h = self:GetSize()
+end
+
+function LuiWindow:_capture_current_normal_geometry()
+    self:_remember_restore_geometry()
+
+    if self._capturing_normal_for_maximize == true then
+        return
+    end
+    if type(self.capture_geometry) ~= "function" then
+        return
+    end
+
+    self._capturing_normal_for_maximize = true
+    local ok, err = pcall(function()
+        self:capture_geometry()
+    end)
+    self._capturing_normal_for_maximize = false
+    if ok ~= true then
+        error(err)
+    end
+end
+
+function LuiWindow:_apply_maximized_bounds()
+    if self._maximize_enabled ~= true or self._maximized ~= true then
+        return
+    end
+
+    local x, y, width, height = self:_work_area()
+    local min_w, min_h = self:_minimum_size()
+    width = math.max(min_w, width)
+    height = math.max(min_h, height)
+
+    self:SetPosition(x, y)
+    self:SetSize(width, height)
+    self:_hide_resize_handle()
+    self:_layout_resize_regions()
+end
+
+function LuiWindow:_restore_normal_bounds()
+    local width = self._restore_window_w or self:GetWidth()
+    local height = self._restore_window_h or self:GetHeight()
+    width, height = self:_fit_size_to_screen(width, height)
+
+    self:SetSize(width, height)
+
+    local actual_w, actual_h = self:GetSize()
+    local x = self._restore_window_x or self:GetLeft()
+    local y = self._restore_window_y or self:GetTop()
+    x, y = self:_clamp_position_to_screen(x, y, actual_w, actual_h)
+    self:SetPosition(x, y)
+    self:_layout_resize_regions()
+end
+
+function LuiWindow:_restore_for_drag(screen_x, screen_y)
+    local old_x, old_y = self:GetPosition()
+    local old_w, old_h = self:GetSize()
+    local restore_w = self._restore_window_w or old_w
+    local restore_h = self._restore_window_h or old_h
+    restore_w, restore_h = self:_fit_size_to_screen(restore_w, restore_h)
+
+    local offset_x = self._drag_start_screen_x - old_x
+    local offset_y = self._drag_start_screen_y - old_y
+    if old_w > 0 then
+        offset_x = math.floor((offset_x / old_w) * restore_w)
+    end
+    offset_y = math.min(offset_y, _scaled_int(self._scale, BASE_TITLE_BAR_H))
+    offset_x = _clamp(offset_x, 0, math.max(0, restore_w - 1))
+    offset_y = _clamp(offset_y, 0, math.max(0, restore_h - 1))
+
+    self._maximized = false
+    self:_sync_maximize_button_icon()
+    self:SetSize(restore_w, restore_h)
+
+    local actual_w, actual_h = self:GetSize()
+    local x, y = self:_clamp_position_to_screen(screen_x - offset_x, screen_y - offset_y, actual_w, actual_h)
+    self:SetPosition(x, y)
+    self:_layout_resize_regions()
+
+    self._drag_start_screen_x = screen_x
+    self._drag_start_screen_y = screen_y
+    self._drag_start_window_x = x
+    self._drag_start_window_y = y
+end
+
 function LuiWindow:_clamp_resize_to_screen(x, y, width, height)
-    local display_w, display_h = self:_display_size()
+    local work_x, work_y, work_w, work_h = self:_work_area()
     local min_w, min_h = self:_minimum_size()
     local mask = self._resize_mask or 0
 
-    if display_w > 0 then
-        if _has_resize_dir(mask, RESIZE_LEFT) and x < 0 then
-            width = width + x
-            x = 0
-        elseif _has_resize_dir(mask, RESIZE_RIGHT) and x + width > display_w then
-            width = display_w - x
+    if work_w > 0 then
+        if _has_resize_dir(mask, RESIZE_LEFT) and x < work_x then
+            width = width + (x - work_x)
+            x = work_x
+        elseif _has_resize_dir(mask, RESIZE_RIGHT) and x + width > work_x + work_w then
+            width = work_x + work_w - x
         end
     end
 
-    if display_h > 0 then
-        if _has_resize_dir(mask, RESIZE_TOP) and y < 0 then
-            height = height + y
-            y = 0
-        elseif _has_resize_dir(mask, RESIZE_BOTTOM) and y + height > display_h then
-            height = display_h - y
+    if work_h > 0 then
+        if _has_resize_dir(mask, RESIZE_TOP) and y < work_y then
+            height = height + (y - work_y)
+            y = work_y
+        elseif _has_resize_dir(mask, RESIZE_BOTTOM) and y + height > work_y + work_h then
+            height = work_y + work_h - y
         end
     end
 
@@ -675,6 +967,9 @@ end
 
 function LuiWindow:_start_resize(region, args)
     if self._resizable ~= true then
+        return
+    end
+    if self._maximized == true then
         return
     end
     if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
@@ -880,6 +1175,17 @@ function LuiWindow:_layout()
     local close_y = chrome_margin
     self._close_button:SetPosition(close_x, close_y)
     self._close_button:SetSize(chrome_square, chrome_square)
+    local title_actions_x = close_x
+    if self._maximize_button ~= nil then
+        local maximize_visible = self._maximize_enabled == true
+        local maximize_x = math.max(0, close_x - chrome_margin - chrome_square)
+        self._maximize_button:SetPosition(maximize_x, close_y)
+        self._maximize_button:SetSize(chrome_square, chrome_square)
+        self._maximize_button:SetVisible(maximize_visible)
+        if maximize_visible == true then
+            title_actions_x = maximize_x
+        end
+    end
 
     local left_used = chrome_margin
     if self._icon_asset ~= nil and icon_size > 0 and chrome_square > 0 then
@@ -899,7 +1205,7 @@ function LuiWindow:_layout()
 
     local host_w = _scaled_int(self._scale, self._title_bar_host_width or 0)
     local host_x = left_used
-    local max_host_w = math.max(0, close_x - gap - host_x)
+    local max_host_w = math.max(0, title_actions_x - gap - host_x)
     if host_w > max_host_w then
         host_w = max_host_w
     end
@@ -916,7 +1222,7 @@ function LuiWindow:_layout()
     self._title_drag_left:SetSize(math.max(0, host_x), title_h)
 
     local drag_body_x = host_x + host_w + gap
-    local drag_body_w = math.max(0, close_x - gap - drag_body_x)
+    local drag_body_w = math.max(0, title_actions_x - gap - drag_body_x)
     self._title_drag_body:SetPosition(drag_body_x, 0)
     self._title_drag_body:SetSize(drag_body_w, title_h)
 
@@ -946,7 +1252,7 @@ function LuiWindow:_layout_resize_regions()
     local corner = math.max(edge, _scaled_int(self._scale, BASE_RESIZE_CORNER))
     local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
     local right_edge_top = math.min(height, title_h + edge)
-    local edge_visible = self._resizable == true
+    local edge_visible = self._resizable == true and self._maximized ~= true
     if edge_visible ~= true then
         self:_hide_resize_handle()
     end

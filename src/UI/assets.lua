@@ -21,6 +21,10 @@ UI.AssetIds.arrow_r_transparent = 0x4110A12E
 
 UI.AssetIds.x = "LUI/assets/ui/x_64.tga"
 UI.AssetIds.x_hover = "LUI/assets/ui/x_hover_64.tga"
+UI.AssetIds.window_maximize = "LUI/assets/ui/maximize_64.tga"
+UI.AssetIds.window_maximize_hover = "LUI/assets/ui/maximize_hover_64.tga"
+UI.AssetIds.window_restore = "LUI/assets/ui/restore_64.tga"
+UI.AssetIds.window_restore_hover = "LUI/assets/ui/restore_hover_64.tga"
 
 UI.AssetIds.resize_horizontal = 0x410081BF
 UI.AssetIds.resize_vertical = 0x410081C0

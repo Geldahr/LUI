@@ -24,13 +24,7 @@ function ConfigWindow:update_saved_geometry()
         return
     end
 
-    local left, top = self:GetPosition()
-    local width, height = self:GetSize()
-
-    state.left = left
-    state.top = top
-    state.width = width
-    state.height = height
+    self:capture_window_geometry(state)
 end
 
 function ConfigWindow:persist_geometry()
@@ -82,5 +76,6 @@ function ConfigWindow:apply_saved_geometry()
 
     self:SetPosition(left, top)
 
+    self:apply_maximize_state(state)
     self:update_saved_geometry()
 end

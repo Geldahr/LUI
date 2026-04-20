@@ -900,7 +900,10 @@ end
 
 function AssetsWindow:capture_geometry()
     local raw = _G.loaded_settings.assets
-    self:_save_current_layout()
+    if self:is_maximized() ~= true then
+        self:_save_current_layout()
+    end
+    self:capture_window_geometry(raw.window)
     raw.view_mode = self.view_mode
     raw.stack_items = self.stack_items
 end
@@ -917,7 +920,9 @@ function AssetsWindow:set_view_mode(mode, persist)
         return
     end
 
-    self:_save_current_layout()
+    if self:is_maximized() ~= true then
+        self:_save_current_layout()
+    end
     self.view_mode = mode
     self.tile_size = self:_get_mode_tile_size(mode)
     _G.settings.assets.view_mode = mode
@@ -926,6 +931,17 @@ function AssetsWindow:set_view_mode(mode, persist)
     self.page_index = 1
     self:_apply_layout_for_mode(mode)
     self:snap_window_size()
+    if self:is_maximized() == true then
+        local normal_left, normal_top = self:GetPosition()
+        local normal_w, normal_h = self:GetSize()
+        local window_state = _G.loaded_settings.assets.window
+        window_state.left = normal_left
+        window_state.top = normal_top
+        window_state.width = normal_w
+        window_state.height = normal_h
+        window_state.maximized = true
+    end
+    self:apply_maximize_state(_G.loaded_settings.assets.window)
     self:_update_view_buttons()
     self:layout()
     self:refresh_from_store(true)
@@ -1062,6 +1078,16 @@ function AssetsWindow:apply_settings()
 
     self:_apply_layout_for_mode(self.view_mode)
     self:snap_window_size()
+    if _G.loaded_settings.assets.window.maximized == true then
+        local normal_left, normal_top = self:GetPosition()
+        local normal_w, normal_h = self:GetSize()
+        local window_state = _G.loaded_settings.assets.window
+        window_state.left = normal_left
+        window_state.top = normal_top
+        window_state.width = normal_w
+        window_state.height = normal_h
+    end
+    self:apply_maximize_state(_G.loaded_settings.assets.window)
     self:_update_view_buttons()
     self:layout()
     self:refresh_from_store(true)

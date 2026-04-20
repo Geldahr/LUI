@@ -364,6 +364,9 @@ function _G.ensure_loaded_settings()
     if inv.window.top == nil then
         inv.window.top = _pos_y(585)
     end
+    if inv.window.maximized == nil then
+        inv.window.maximized = false
+    end
     if inv.enabled == nil then
         inv.enabled = true
     end
@@ -380,6 +383,9 @@ function _G.ensure_loaded_settings()
     end
     if assets.window.top == nil then
         assets.window.top = _pos_y(180)
+    end
+    if assets.window.maximized == nil then
+        assets.window.maximized = false
     end
     if assets.enabled == nil then
         assets.enabled = true
@@ -424,6 +430,9 @@ function _G.ensure_loaded_settings()
     if crafting.window.height == nil then
         crafting.window.height = 700
     end
+    if crafting.window.maximized == nil then
+        crafting.window.maximized = false
+    end
     if crafting.enabled == nil then
         crafting.enabled = true
     end
@@ -446,12 +455,16 @@ function _G.ensure_loaded_settings()
     if bestiary.window.height == nil then
         bestiary.window.height = 520
     end
+    if bestiary.window.maximized == nil then
+        bestiary.window.maximized = false
+    end
 
     local cw = s.global.config_window
     if cw.width == nil then cw.width = 1005 end
     if cw.height == nil then cw.height = 1011 end
     if cw.left == nil then cw.left = _pos_x(450) end
     if cw.top == nil then cw.top = _pos_y(51) end
+    if cw.maximized == nil then cw.maximized = false end
 
     local tv = s.target.vitals
     if tv.morale.bubble_format == nil then

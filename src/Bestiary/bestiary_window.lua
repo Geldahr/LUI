@@ -1399,12 +1399,7 @@ function BestiaryWindow:capture_geometry()
         return
     end
 
-    local left, top = self:GetPosition()
-    local width, height = self:GetSize()
-    raw.window.left = left
-    raw.window.top = top
-    raw.window.width = width
-    raw.window.height = height
+    self:capture_window_geometry(raw.window)
 end
 
 function BestiaryWindow:persist_geometry()
@@ -1473,6 +1468,7 @@ function BestiaryWindow:apply_settings()
         self:SetPosition(left, top)
         self:SetSize(math.max(min_w, width), math.max(min_h, height))
         self._suppress_size_changed = false
+        self:apply_maximize_state(window)
     end
 
     self:layout()

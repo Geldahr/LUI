@@ -320,10 +320,10 @@ end
 
 function InventoryWindow:capture_geometry()
     local raw = _G.loaded_settings.inventory
-    local x, y = self:GetPosition()
-    raw.window.left = x
-    raw.window.top = y
-    raw.cols = self.cols
+    self:capture_window_geometry(raw.window)
+    if self:is_maximized() ~= true then
+        raw.cols = self.cols
+    end
 end
 
 function InventoryWindow:persist_geometry()
@@ -479,7 +479,9 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
 
     self.cols = cols
     self.rows_visible = rows
-    raw.cols = cols
+    if self:is_maximized() ~= true then
+        raw.cols = cols
+    end
 
     local desired_w, desired_h = self:compute_window_size(cols, rows)
     local min_w, min_h = self:minimum_window_size()
@@ -590,6 +592,11 @@ function InventoryWindow:apply_settings()
     self._suppress_size_changed = true
     self:SetSize(w, h)
     self._suppress_size_changed = false
+    if raw.window.maximized == true then
+        raw.window.width = w
+        raw.window.height = h
+    end
+    self:apply_maximize_state(raw.window)
 
     self:layout()
     self:build_grid()

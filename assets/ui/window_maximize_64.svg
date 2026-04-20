@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect
+    x="17"
+    y="17"
+    width="30"
+    height="30"
+    rx="2"
+    ry="2"
+    fill="none"
+    stroke="#D7D2C4"
+    stroke-width="6"
+    stroke-linejoin="round"
+  />
+</svg>

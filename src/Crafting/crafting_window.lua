@@ -2423,12 +2423,7 @@ function CraftingWindow:capture_geometry()
         return
     end
 
-    local left, top = self:GetPosition()
-    local width, height = self:GetSize()
-    raw.window.left = left
-    raw.window.top = top
-    raw.window.width = width
-    raw.window.height = height
+    self:capture_window_geometry(raw.window)
 end
 
 function CraftingWindow:persist_geometry()
@@ -2517,6 +2512,7 @@ function CraftingWindow:_load_geometry()
     self:SetPosition(left, top)
     self:SetSize(math.max(min_w, width), math.max(min_h, height))
     self._suppress_size_changed = false
+    self:apply_maximize_state(window)
     self:_enforce_min_size()
     self:layout()
 end
