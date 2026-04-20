@@ -1708,6 +1708,16 @@ function BestiaryCard:_measure_content_height()
     return stat_h + gap + profile_h + gap + self.drop_panel_h + gap + pair_h + gap + mitigation_h + gap + bottom_h
 end
 
+function BestiaryCard:_measure_minimum_content_height()
+    local gap = _scaled_int(BASE_SECTION_GAP)
+    return _scaled_int(BASE_STAT_BOX_H) + gap +
+        _scaled_int(BASE_PROFILE_H) + gap +
+        _scaled_int(BASE_DROP_MIN_H) + gap +
+        _scaled_int(BASE_TWO_COL_H) + gap +
+        _scaled_int(BASE_MITIGATION_H) + gap +
+        _scaled_int(BASE_NOTES_MIN_H)
+end
+
 function BestiaryCard:_measure_drop_layout(drop_texts)
     local body_pad_x = _scaled_int(BASE_PANEL_BODY_PAD_X)
     local body_pad_t = _scaled_int(BASE_PANEL_BODY_PAD_TOP)
@@ -1801,15 +1811,17 @@ end
 function BestiaryCard:_fit_window_height()
     local margin_t = _scaled_int(12)
     local margin_b = _scaled_int(12)
-    local min_window_h = _scaled_int(BASE_HEIGHT)
     local offset = _scaled_int(BASE_OFFSET)
     local _, display_h = Turbine.UI.Display.GetSize()
-    local max_window_h = math.max(min_window_h, display_h - (2 * offset))
+    local min_content_h = margin_t + margin_b + self:_measure_variant_tabs_height() + self:_measure_minimum_content_height()
     local desired_content_h = margin_t + margin_b + self:_measure_variant_tabs_height() + self:_measure_content_height()
+    local _, min_window_h = self:get_window_size_for_content(_scaled_int(BASE_WIDTH), min_content_h)
     local target_w, desired_window_h = self:get_window_size_for_content(_scaled_int(BASE_WIDTH), desired_content_h)
+    local max_window_h = math.max(min_window_h, display_h - (2 * offset))
     local target_h = math.max(min_window_h, math.min(max_window_h, desired_window_h))
 
     self:SetSize(target_w, target_h)
+    LuiWindow._layout(self)
     self:_clamp_to_display()
 end
 
