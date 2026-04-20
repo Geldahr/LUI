@@ -24,6 +24,16 @@ local BASE_RESIZE_CORNER = 8
 local BASE_RESIZE_HANDLE = 32
 local BASE_MAXIMIZE_DRAG_THRESHOLD = 64
 
+local RESIZE_MODE_NONE = 0
+local RESIZE_MODE_HORIZONTAL = 1
+local RESIZE_MODE_VERTICAL = 2
+local RESIZE_MODE_BOTH = RESIZE_MODE_HORIZONTAL + RESIZE_MODE_VERTICAL
+
+RESIZE_NONE = RESIZE_MODE_NONE
+RESIZE_HORIZONTAL = RESIZE_MODE_HORIZONTAL
+RESIZE_VERTICAL = RESIZE_MODE_VERTICAL
+RESIZE_BOTH = RESIZE_MODE_BOTH
+
 local RESIZE_LEFT = 1
 local RESIZE_RIGHT = 2
 local RESIZE_TOP = 4
@@ -127,6 +137,10 @@ end
 
 ---@class LuiWindow : Turbine.UI.Window
 LuiWindow = class(Turbine.UI.Window)
+LuiWindow.RESIZE_NONE = RESIZE_MODE_NONE
+LuiWindow.RESIZE_HORIZONTAL = RESIZE_MODE_HORIZONTAL
+LuiWindow.RESIZE_VERTICAL = RESIZE_MODE_VERTICAL
+LuiWindow.RESIZE_BOTH = RESIZE_MODE_BOTH
 
 function LuiWindow:Constructor()
     Turbine.UI.Window.Constructor(self)
@@ -146,6 +160,7 @@ function LuiWindow:Constructor()
     self._drag_start_window_x = 0
     self._drag_start_window_y = 0
     self._resizable = true
+    self._resize_mode = RESIZE_MODE_BOTH
     self._maximize_enabled = true
     self._maximized = false
     self._restore_window_x = nil
@@ -391,13 +406,70 @@ function LuiWindow:set_draggable(enabled)
     end
 end
 
-function LuiWindow:set_resizable(enabled)
-    self._resizable = enabled == true
-    if self._resizable ~= true then
+function LuiWindow:_normalize_resize_mode(mode)
+    if mode == true then
+        return RESIZE_MODE_BOTH
+    end
+    if mode == false or mode == nil then
+        return RESIZE_MODE_NONE
+    end
+    if mode == RESIZE_MODE_HORIZONTAL or mode == "horizontal" then
+        return RESIZE_MODE_HORIZONTAL
+    end
+    if mode == RESIZE_MODE_VERTICAL or mode == "vertical" then
+        return RESIZE_MODE_VERTICAL
+    end
+    if mode == RESIZE_MODE_BOTH or mode == "both" then
+        return RESIZE_MODE_BOTH
+    end
+    if mode == RESIZE_MODE_NONE or mode == "none" then
+        return RESIZE_MODE_NONE
+    end
+    return RESIZE_MODE_NONE
+end
+
+function LuiWindow:set_resizable(mode)
+    local resize_mode = self:_normalize_resize_mode(mode)
+    local changed = resize_mode ~= self._resize_mode
+
+    self._resize_mode = resize_mode
+    self._resizable = resize_mode ~= RESIZE_MODE_NONE
+
+    if changed == true or self._resizable ~= true then
         self:_stop_resize()
         self:_hide_resize_handle()
     end
     self:_layout_resize_regions()
+end
+
+function LuiWindow:_resize_mode_allows_mask(mask)
+    local resize_mode = self._resize_mode or RESIZE_MODE_BOTH
+    if resize_mode == RESIZE_MODE_BOTH then
+        return true
+    end
+    if resize_mode == RESIZE_MODE_NONE then
+        return false
+    end
+
+    local has_horizontal = _has_resize_dir(mask, RESIZE_LEFT) or _has_resize_dir(mask, RESIZE_RIGHT)
+    local has_vertical = _has_resize_dir(mask, RESIZE_TOP) or _has_resize_dir(mask, RESIZE_BOTTOM)
+    if has_horizontal == true and has_vertical == true then
+        return false
+    end
+    if resize_mode == RESIZE_MODE_HORIZONTAL then
+        return has_horizontal == true
+    end
+    if resize_mode == RESIZE_MODE_VERTICAL then
+        return has_vertical == true
+    end
+    return false
+end
+
+function LuiWindow:_resize_region_enabled(region)
+    if region == nil then
+        return false
+    end
+    return self:_resize_mode_allows_mask(region._resize_mask or 0)
 end
 
 function LuiWindow:enable_maximize(enabled)
@@ -969,6 +1041,9 @@ function LuiWindow:_start_resize(region, args)
     if self._resizable ~= true then
         return
     end
+    if self:_resize_region_enabled(region) ~= true then
+        return
+    end
     if self._maximized == true then
         return
     end
@@ -1057,6 +1132,10 @@ function LuiWindow:_show_resize_handle(region, args)
     if self._resizable ~= true or self._resize_handles == nil then
         return
     end
+    if self:_resize_region_enabled(region) ~= true then
+        self:_hide_resize_handle()
+        return
+    end
 
     self._resize_handle_region = region
     self:_remember_resize_handle_cursor(region, args)
@@ -1079,6 +1158,10 @@ end
 
 function LuiWindow:_move_resize_handle(region, args)
     if self._resizable ~= true or self._active_resize_handle == nil then
+        return
+    end
+    if self:_resize_region_enabled(region) ~= true then
+        self:_hide_resize_handle()
         return
     end
 
@@ -1283,7 +1366,11 @@ function LuiWindow:_layout_resize_regions()
     self._resize_regions.bottom_left:SetSize(corner, corner)
 
     for _, region in pairs(self._resize_regions) do
-        region:SetVisible(edge_visible)
+        region:SetVisible(edge_visible == true and self:_resize_region_enabled(region) == true)
+    end
+
+    if self._resize_handle_region ~= nil and self:_resize_region_enabled(self._resize_handle_region) ~= true then
+        self:_hide_resize_handle()
     end
 
     self:_layout_resize_handle(self._resize_handle_region)

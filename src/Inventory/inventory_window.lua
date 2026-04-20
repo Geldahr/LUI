@@ -138,7 +138,7 @@ function InventoryWindow:Constructor()
 
     self:set_title(TR["Inventory"])
     self:set_icon(UI.AssetIds.backpack)
-    self:set_resizable(true)
+    self:set_resizable(LuiWindow.RESIZE_HORIZONTAL)
     self:hide()
     self:SetWantsUpdates(false)
 
