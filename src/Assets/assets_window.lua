@@ -44,8 +44,6 @@ local BASE_STACK_HINT_PAD_Y = 9
 local BASE_STACK_HINT_LINE_H = 12
 local BASE_RECIPES_BUTTON_W = 108
 local MIN_LAYOUT_COLS = 2
-local RESIZE_LEFT = 1
-local RESIZE_TOP = 4
 
 local SUMMARY_TRACK_WIDTH_FACTOR = 0.70
 
@@ -104,10 +102,6 @@ local function _clamp(value, min_value, max_value)
         return max_value
     end
     return value
-end
-
-local function _has_resize_dir(mask, dir)
-    return math.floor((mask or 0) / dir) % 2 == 1
 end
 
 local function _portion_size(count, total, size)
@@ -930,7 +924,6 @@ function AssetsWindow:set_view_mode(mode, persist)
 
     self.page_index = 1
     self:_apply_layout_for_mode(mode)
-    self:snap_window_size()
     if self:is_maximized() == true then
         local normal_left, normal_top = self:GetPosition()
         local normal_w, normal_h = self:GetSize()
@@ -954,7 +947,7 @@ function AssetsWindow:set_page(index)
     end
 
     self.page_index = page
-    self:refresh_page()
+    self:refresh_page(true)
 end
 
 function AssetsWindow:update_filter()
@@ -1077,7 +1070,6 @@ function AssetsWindow:apply_settings()
     self:set_minimum_size(min_w, min_h)
 
     self:_apply_layout_for_mode(self.view_mode)
-    self:snap_window_size()
     if _G.loaded_settings.assets.window.maximized == true then
         local normal_left, normal_top = self:GetPosition()
         local normal_w, normal_h = self:GetSize()
@@ -1094,32 +1086,19 @@ function AssetsWindow:apply_settings()
 end
 
 function AssetsWindow:handle_user_resize()
-    self:snap_window_size()
     self:layout()
-    self:refresh_from_store(true)
 end
 
 function AssetsWindow:_apply_resize_bounds(x, y, w, h, region, args)
-    local snapped_w, snapped_h = self:get_snap_dimensions(w, h)
-    local mask = self._resize_mask or 0
-
-    if _has_resize_dir(mask, RESIZE_LEFT) then
-        x = x + w - snapped_w
-    end
-    if _has_resize_dir(mask, RESIZE_TOP) then
-        y = y + h - snapped_h
-    end
-
-    x, y, snapped_w, snapped_h = self:_clamp_resize_to_screen(x, y, snapped_w, snapped_h)
+    x, y, w, h = self:_clamp_resize_to_screen(x, y, w, h)
 
     local old_suppress = self._suppress_size_changed
     self._suppress_size_changed = true
     self:SetPosition(x, y)
-    self:SetSize(snapped_w, snapped_h)
+    self:SetSize(w, h)
     self._suppress_size_changed = old_suppress
 
     self:layout()
-    self:refresh_from_store(true)
 end
 
 function AssetsWindow:Update()
@@ -1180,6 +1159,8 @@ function AssetsWindow:_sync_window_layout(layout)
     raw.window.top = layout.top
     raw.window.cols = layout.cols
     raw.window.rows = layout.rows
+    raw.window.width = layout.width
+    raw.window.height = layout.height
 end
 
 function AssetsWindow:_save_current_layout()
@@ -1191,6 +1172,8 @@ function AssetsWindow:_save_current_layout()
 
     layout.left = left
     layout.top = top
+    layout.width = width
+    layout.height = height
     layout.cols = cols
     layout.rows = rows
     self:_sync_window_layout(layout)
@@ -1199,7 +1182,15 @@ end
 function AssetsWindow:_apply_layout_for_mode(mode)
     local layout = self:_get_layout_store(mode)
     local tile_size = self:_get_mode_tile_size(mode)
-    local width, height = self:_get_window_size_for_layout_grid(mode, tile_size, layout.cols, layout.rows)
+    local width = tonumber(layout.width)
+    local height = tonumber(layout.height)
+    if width == nil or height == nil then
+        width, height = self:_get_window_size_for_layout_grid(mode, tile_size, layout.cols, layout.rows)
+    end
+
+    local min_w, min_h = self:_get_min_window_size(mode, tile_size)
+    if width < min_w then width = min_w end
+    if height < min_h then height = min_h end
     self:_sync_window_layout(layout)
 
     self._suppress_size_changed = true
@@ -1311,52 +1302,35 @@ function AssetsWindow:_get_window_size_for_layout_grid(mode, tile_size, cols, ro
     return width, height
 end
 
-function AssetsWindow:get_snap_dimensions(width, height)
-    local content_w, content_h, layout = self:_get_content_size_from_window(width, height)
-    local footer_h = self:_get_footer_height(layout)
-    local cols, rows = self:_get_layout_grid_from_content_size(self.view_mode, self.tile_size, content_w, content_h)
-
-    local min_w, min_h = self:_get_min_window_size(self.view_mode, self.tile_size)
-    local min_content_w, min_content_h = self:_get_content_size_from_window(min_w, min_h)
-    local min_cols, min_rows = self:_get_layout_grid_from_content_size(self.view_mode, self.tile_size, min_content_w,
-        min_content_h)
-    if cols < min_cols then cols = min_cols end
-    if rows < min_rows then rows = min_rows end
-
-    local snapped_content_w, snapped_content_h = self:_get_content_size_for_layout_grid(self.view_mode, self.tile_size,
-        cols, rows)
-    local snapped_host_w = layout.margin_left + layout.margin_right + snapped_content_w
-    local snapped_host_h = layout.margin_top + layout.margin_bottom + layout.bar_h + layout.filter_h + layout.summary_h +
-        footer_h + (layout.gap * 4) + snapped_content_h
-    local snapped_w, snapped_h = self:get_window_size_for_content(snapped_host_w, snapped_host_h)
-
-    if snapped_w < min_w then snapped_w = min_w end
-    if snapped_h < min_h then snapped_h = min_h end
-
-    return snapped_w, snapped_h
-end
-
-function AssetsWindow:snap_window_size()
-    local width, height = self:GetSize()
-    local snapped_w, snapped_h = self:get_snap_dimensions(width, height)
-    if snapped_w == width and snapped_h == height then
-        return
-    end
-
-    self._suppress_size_changed = true
-    self:SetSize(snapped_w, snapped_h)
-    self._suppress_size_changed = false
-end
-
 function AssetsWindow:_get_content_metrics()
     local width, height = self.content:GetSize()
     local gap = _scaled_int(BASE_GAP)
-    local cell_w, cell_h = self:_get_cell_size()
-    local cols = math.floor((width + gap) / (cell_w + gap))
+    local min_cell_w, cell_h = self:_get_cell_size()
+    local cell_w = min_cell_w
+    local cols = math.floor((width + gap) / (min_cell_w + gap))
     local rows = math.floor((height + gap) / (cell_h + gap))
 
     if cols < 1 then cols = 1 end
     if rows < 1 then rows = 1 end
+
+    if self.view_mode == LUI_ENUMS.assets_view_mode.DETAILS then
+        cell_w = math.floor((width - ((cols - 1) * gap)) / cols)
+        if cell_w < min_cell_w then
+            cell_w = min_cell_w
+        end
+    end
+
+    local grid_w = (cols * cell_w) + ((cols - 1) * gap)
+    local grid_h = (rows * cell_h) + ((rows - 1) * gap)
+    local offset_x = 0
+    local offset_y = 0
+
+    if width > grid_w then
+        offset_x = math.floor((width - grid_w) / 2)
+    end
+    if height > grid_h then
+        offset_y = math.floor((height - grid_h) / 2)
+    end
 
     return {
         gap = gap,
@@ -1364,6 +1338,8 @@ function AssetsWindow:_get_content_metrics()
         cell_h = cell_h,
         cols = cols,
         rows = rows,
+        offset_x = offset_x,
+        offset_y = offset_y,
         page_size = cols * rows,
     }
 end
@@ -1704,7 +1680,7 @@ function AssetsWindow:_apply_record_view(reset_page)
 
     self:_refresh_recipes_button()
     self:_refresh_empty_state()
-    self:refresh_page()
+    self:refresh_page(true)
 end
 
 function AssetsWindow:_get_crafting_store()
@@ -2091,7 +2067,7 @@ function AssetsWindow:refresh_from_store(force)
     self:_apply_record_view(force == true and #self.records == 0)
 end
 
-function AssetsWindow:refresh_page()
+function AssetsWindow:refresh_page(force_bind)
     local metrics = self:_get_content_metrics()
     self.page_size = metrics.page_size
     self.page_count = math.max(1, math.ceil(#self.records / self.page_size))
@@ -2119,11 +2095,19 @@ function AssetsWindow:refresh_page()
         if i <= self.page_size then
             local row = math.floor((i - 1) / metrics.cols)
             local col = (i - 1) % metrics.cols
-            entry:SetPosition(col * (metrics.cell_w + metrics.gap), row * (metrics.cell_h + metrics.gap))
+            local record = self.records[start_index + i - 1]
+            entry:SetPosition(
+                metrics.offset_x + (col * (metrics.cell_w + metrics.gap)),
+                metrics.offset_y + (row * (metrics.cell_h + metrics.gap))
+            )
             entry:SetSize(metrics.cell_w, metrics.cell_h)
-            entry:apply_view(self.view_mode, self.tile_size)
-            entry:bind(self.records[start_index + i - 1])
-        else
+            if entry.mode ~= self.view_mode or entry.tile_size ~= self.tile_size then
+                entry:apply_view(self.view_mode, self.tile_size)
+            end
+            if force_bind == true or entry.record ~= record then
+                entry:bind(record)
+            end
+        elseif entry.record ~= nil then
             entry:bind(nil)
         end
     end
