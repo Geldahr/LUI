@@ -1263,6 +1263,11 @@ function CraftingWindow:Constructor()
     self:set_resizable(true)
     self:hide()
     self:SetWantsUpdates(false)
+
+    local content_host = Turbine.UI.Control()
+    content_host:SetMouseVisible(true)
+    self:set_central_widget(content_host)
+
     self:set_minimum_size(self:_minimum_window_size())
 
     self._suppress_size_changed = false
@@ -1307,7 +1312,6 @@ function CraftingWindow:Constructor()
     self._selected_recipe_watch_keys = {}
     self._plan_recipe_watch_keys = {}
     self._critical_result_visible = false
-    local content_host = self:get_content_host()
 
     self.top_bar = Turbine.UI.Control()
     self.top_bar:SetParent(content_host)
@@ -1791,7 +1795,12 @@ function CraftingWindow:Constructor()
         end
     end
 
-    self:SetSize(self:get_window_size_for_content(_scaled_int(1100), _scaled_int(700)))
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    self:SetSize(
+        _scaled_int(1100) + math.max(0, window_w - central_w),
+        _scaled_int(700) + math.max(0, window_h - central_h)
+    )
     self:apply_settings()
 end
 
@@ -2436,7 +2445,10 @@ function CraftingWindow:persist_geometry()
 end
 
 function CraftingWindow:_minimum_window_size()
-    return self:get_window_size_for_content(_scaled_int(BASE_MIN_W), _scaled_int(BASE_MIN_H))
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    return _scaled_int(BASE_MIN_W) + math.max(0, window_w - central_w),
+        _scaled_int(BASE_MIN_H) + math.max(0, window_h - central_h)
 end
 
 function CraftingWindow:apply_settings()
@@ -3453,7 +3465,7 @@ function CraftingWindow:refresh_loading_state()
 end
 
 function CraftingWindow:layout()
-    local width, height = self:get_content_size()
+    local width, height = self:central_widget():GetSize()
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)
     local margin_top = _scaled_int(BASE_MARGIN_TOP)
     local margin_right = _scaled_int(BASE_MARGIN_RIGHT)

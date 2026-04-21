@@ -142,7 +142,9 @@ function InventoryWindow:Constructor()
     self.filter_groups = {}
     self._slot_bind_offset = nil
 
-    local content = self:get_content_host()
+    local content = Turbine.UI.Control()
+    content:SetMouseVisible(true)
+    self:set_central_widget(content)
 
     self.header = Turbine.UI.Control()
     self.header:SetParent(content)
@@ -321,7 +323,7 @@ function InventoryWindow:get_item(index)
 end
 
 function InventoryWindow:layout()
-    local w, h = self:get_content_size()
+    local w, h = self:central_widget():GetSize()
     local min_w = _scaled_int(MIN_WINDOW_W)
     local min_h = _scaled_int(MIN_WINDOW_H)
     if w < min_w then w = min_w end
@@ -401,19 +403,24 @@ function InventoryWindow:compute_window_size(cols, rows)
 
     local content_w = self.margin_left + self.margin_right + grid_w
     local content_h = self.margin_top + self.margin_bottom + self.header_h + self.bar_gap + self.hint_gap + self.hint_h + grid_h
-    return self:get_window_size_for_content(content_w, content_h)
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    return content_w + math.max(0, window_w - central_w),
+        content_h + math.max(0, window_h - central_h)
 end
 
 function InventoryWindow:minimum_window_size()
     local content_w = self.margin_left + self.margin_right + (MIN_COLS * self.tile_size)
-    return self:get_window_size_for_content(
-        math.max(_scaled_int(MIN_WINDOW_W), content_w),
-        _scaled_int(MIN_WINDOW_H)
-    )
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    return math.max(_scaled_int(MIN_WINDOW_W), content_w) + math.max(0, window_w - central_w),
+        _scaled_int(MIN_WINDOW_H) + math.max(0, window_h - central_h)
 end
 
 function InventoryWindow:get_columns_for_window_width(window_w)
-    local content_w = self:get_content_size_for_window(window_w, self:GetHeight())
+    local current_window_w = self:GetWidth()
+    local current_central_w = self:central_widget():GetSize()
+    local content_w = math.max(0, (tonumber(window_w) or 0) - (current_window_w - current_central_w))
     local list_w = content_w - self.margin_left - self.margin_right
     local cols = math.floor(list_w / self.tile_size)
     if cols < MIN_COLS then cols = MIN_COLS end

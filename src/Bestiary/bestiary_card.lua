@@ -1396,10 +1396,14 @@ function BestiaryCard:Constructor()
     --     end
     -- end
 
+    local central = Turbine.UI.Control()
+    central:SetMouseVisible(true)
+    self:set_central_widget(central)
+
     self.variant_bar = self:_create_variant_bar()
 
     self.content = Turbine.UI.Control()
-    self.content:SetParent(self:get_content_host())
+    self.content:SetParent(central)
     self.content:SetMouseVisible(false)
 
     self.level_panel = _create_panel(self.content, TR["Level"])
@@ -1482,7 +1486,7 @@ end
 
 function BestiaryCard:_create_variant_bar()
     local bar = UI.Widgets.LuiTabBar()
-    bar:SetParent(self:get_content_host())
+    bar:SetParent(self:central_widget())
     bar:SetMouseVisible(true)
     bar:SetVisible(false)
     bar:set_scale(_G.settings.global.scale)
@@ -1637,9 +1641,9 @@ end
 function BestiaryCard:_measure_viewport_width()
     local margin_l = _scaled_int(12)
     local margin_r = _scaled_int(12)
-    local content_w = self:get_content_size()
+    local central_w = self:central_widget():GetSize()
 
-    return math.max(1, content_w - margin_l - margin_r)
+    return math.max(1, central_w - margin_l - margin_r)
 end
 
 function BestiaryCard:_measure_bottom_height()
@@ -1815,8 +1819,13 @@ function BestiaryCard:_fit_window_height()
     local _, display_h = Turbine.UI.Display.GetSize()
     local min_content_h = margin_t + margin_b + self:_measure_variant_tabs_height() + self:_measure_minimum_content_height()
     local desired_content_h = margin_t + margin_b + self:_measure_variant_tabs_height() + self:_measure_content_height()
-    local _, min_window_h = self:get_window_size_for_content(_scaled_int(BASE_WIDTH), min_content_h)
-    local target_w, desired_window_h = self:get_window_size_for_content(_scaled_int(BASE_WIDTH), desired_content_h)
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    local chrome_w = math.max(0, window_w - central_w)
+    local chrome_h = math.max(0, window_h - central_h)
+    local min_window_h = min_content_h + chrome_h
+    local target_w = _scaled_int(BASE_WIDTH) + chrome_w
+    local desired_window_h = desired_content_h + chrome_h
     local max_window_h = math.max(min_window_h, display_h - (2 * offset))
     local target_h = math.max(min_window_h, math.min(max_window_h, desired_window_h))
 
@@ -1840,7 +1849,7 @@ function BestiaryCard:_layout_content()
     local mitigation_h = _scaled_int(BASE_MITIGATION_H)
     local bottom_h = self:_measure_bottom_height()
 
-    local host_w, host_h = self:get_content_size()
+    local host_w, host_h = self:central_widget():GetSize()
     local content_w = math.max(1, host_w - margin_l - margin_r)
     local tab_offset_h = self:_layout_variant_tabs(margin_l, margin_t, content_w)
     local content_y = margin_t + tab_offset_h
@@ -2048,7 +2057,10 @@ function BestiaryCard:apply_settings()
     LuiWindow.apply_settings(self)
     self:set_resizable(false)
 
-    local w, h = self:get_window_size_for_content(_scaled_int(BASE_WIDTH), _scaled_int(BASE_HEIGHT))
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    local w = _scaled_int(BASE_WIDTH) + math.max(0, window_w - central_w)
+    local h = _scaled_int(BASE_HEIGHT) + math.max(0, window_h - central_h)
     self:SetSize(w, h)
 
     _style_panel(self.level_panel)

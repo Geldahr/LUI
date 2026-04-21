@@ -1085,7 +1085,9 @@ function BestiaryWindow:Constructor()
     self.page_index = 1
     self.entries = {}
     self.column_separators = {}
-    local content_host = self:get_content_host()
+    local content_host = Turbine.UI.Control()
+    content_host:SetMouseVisible(true)
+    self:set_central_widget(content_host)
 
     self.nav_bar = Turbine.UI.Control()
     self.nav_bar:SetParent(content_host)
@@ -1371,7 +1373,12 @@ function BestiaryWindow:Constructor()
         end
     end
 
-    self:SetSize(self:get_window_size_for_content(_scaled_int(700), _scaled_int(520)))
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    self:SetSize(
+        _scaled_int(700) + math.max(0, window_w - central_w),
+        _scaled_int(520) + math.max(0, window_h - central_h)
+    )
     self:apply_settings()
 end
 
@@ -1412,7 +1419,10 @@ function BestiaryWindow:persist_geometry()
 end
 
 function BestiaryWindow:_minimum_window_size()
-    return self:get_window_size_for_content(_scaled_int(BASE_MIN_W), _scaled_int(BASE_MIN_H))
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    return _scaled_int(BASE_MIN_W) + math.max(0, window_w - central_w),
+        _scaled_int(BASE_MIN_H) + math.max(0, window_h - central_h)
 end
 
 function BestiaryWindow:ensure_area_shortcut()
@@ -1771,7 +1781,7 @@ function BestiaryWindow:_content_metrics()
     local level_h = _scaled_int(BASE_BAR_H)
     local filter_h = _scaled_int(BASE_FILTER_H)
     local gap = _scaled_int(BASE_GAP)
-    local host_w, host_h = self:get_content_size()
+    local host_w, host_h = self:central_widget():GetSize()
     local inner_w = host_w - margin_left - margin_right
     local content_top = margin_top + bar_h + gap + level_h + gap + filter_h + gap
     local content_h = host_h - content_top - margin_bottom - gap - bar_h
@@ -1796,7 +1806,7 @@ function BestiaryWindow:layout()
     self.sort_dropdown:SetSize(sort_w, bar_h)
 
     self.page_bar:SetSize((2 * nav_w) + page_w + (2 * gap), bar_h)
-    local _, host_h = self:get_content_size()
+    local _, host_h = self:central_widget():GetSize()
     self.page_bar:SetPosition(
         margin_left + math.max(0, math.floor((inner_w - self.page_bar:GetWidth()) / 2)),
         host_h - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h
@@ -1931,7 +1941,7 @@ function BestiaryWindow:_measure_record_height(record, width)
 end
 
 function BestiaryWindow:_column_metrics()
-    local host_w = self:get_content_size()
+    local host_w = self:central_widget():GetSize()
     local window_w = math.max(1, math.floor(host_w + 0.5))
     local content_w = math.max(1, math.floor(self.content:GetWidth() + 0.5))
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)

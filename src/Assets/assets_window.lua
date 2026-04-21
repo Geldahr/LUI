@@ -560,7 +560,9 @@ function AssetsWindow:Constructor()
     self.total_record_count = 0
 
     self.entries = {}
-    local content_host = self:get_content_host()
+    local content_host = Turbine.UI.Control()
+    content_host:SetMouseVisible(true)
+    self:set_central_widget(content_host)
 
     self.nav_bar = Turbine.UI.Control()
     self.nav_bar:SetParent(content_host)
@@ -1240,13 +1242,19 @@ function AssetsWindow:_get_min_window_size(mode, tile_size)
         min_w = grid_min_w
     end
 
-    return self:get_window_size_for_content(min_w, min_h)
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    return min_w + math.max(0, window_w - central_w),
+        min_h + math.max(0, window_h - central_h)
 end
 
 function AssetsWindow:_get_content_size_from_window(width, height)
     local layout = self:_get_layout_numbers()
     local footer_h = self:_get_footer_height(layout)
-    local host_w, host_h = self:get_content_size_for_window(width, height)
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    local host_w = math.max(0, (tonumber(width) or 0) - (window_w - central_w))
+    local host_h = math.max(0, (tonumber(height) or 0) - (window_h - central_h))
     local content_w = host_w - layout.margin_left - layout.margin_right
     local content_h = host_h - layout.margin_top - layout.margin_bottom - layout.bar_h - layout.filter_h -
         layout.summary_h - footer_h - (layout.gap * 4)
@@ -1290,7 +1298,10 @@ function AssetsWindow:_get_window_size_for_layout_grid(mode, tile_size, cols, ro
     local host_w = layout.margin_left + layout.margin_right + content_w
     local host_h = layout.margin_top + layout.margin_bottom + layout.bar_h + layout.filter_h + layout.summary_h +
         footer_h + (layout.gap * 4) + content_h
-    local width, height = self:get_window_size_for_content(host_w, host_h)
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    local width = host_w + math.max(0, window_w - central_w)
+    local height = host_h + math.max(0, window_h - central_h)
 
     if width < min_w then width = min_w end
     if height < min_h then height = min_h end
@@ -1799,7 +1810,7 @@ function AssetsWindow:_set_hint(record, anchor_control, icon_hover)
 end
 
 function AssetsWindow:layout()
-    local width, height = self:get_content_size()
+    local width, height = self:central_widget():GetSize()
     local layout = self:_get_layout_numbers()
     local margin_left = layout.margin_left
     local margin_top = layout.margin_top

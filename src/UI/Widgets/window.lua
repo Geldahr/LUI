@@ -16,6 +16,7 @@ local BASE_MIN_W = 160
 local BASE_MIN_H = 90
 local BASE_TITLE_BAR_H = 20
 local BASE_GAP = 4
+local BASE_MARGIN = 8
 local BASE_ICON = 20
 local BASE_CLOSE_ICON_RATIO = 0.6
 local BASE_TITLE_FONT = 12
@@ -152,9 +153,11 @@ function LuiWindow:Constructor()
     self._scale = _current_scale()
     self._icon_asset = nil
     self._icon_size = BASE_ICON
-    self._title_bar_host_width = 0
-    self._explicit_title_bar_host_width = 0
-    self._title_menus = {}
+    self._central_widget = nil
+    self._margin_left = BASE_MARGIN
+    self._margin_top = BASE_MARGIN
+    self._margin_right = BASE_MARGIN
+    self._margin_bottom = BASE_MARGIN
     self._title_bar_divider_visible = true
     self._close_handler = nil
     self._draggable = true
@@ -214,13 +217,13 @@ function LuiWindow:Constructor()
     self._icon:SetMouseVisible(false)
     self._icon:SetVisible(false)
 
-    self._title_bar_host = Turbine.UI.Control()
-    self._title_bar_host:SetParent(self._title_bar)
-    self._title_bar_host:SetMouseVisible(true)
-    self._title_bar_host:SetBackColor(Style.TRANSPARENT_BACKGROUND)
-    _set_blend(self._title_bar_host)
-    self._title_bar_host:SetZOrder(10)
-    _attach_drag_handlers(self._title_bar_host, self)
+    self._menu_bar = LuiMenuBar()
+    self._menu_bar:SetParent(self._title_bar)
+    self._menu_bar:SetZOrder(10)
+    self._menu_bar.Changed = function()
+        self:_layout()
+    end
+    _attach_drag_handlers(self._menu_bar, self)
 
     self._title_label = LuiLabel()
     self._title_label:SetParent(self._title_bar)
@@ -251,11 +254,6 @@ function LuiWindow:Constructor()
     self._divider:SetParent(self._inner)
     self._divider:SetMouseVisible(false)
     _set_blend(self._divider)
-
-    self._content_host = Turbine.UI.Control()
-    self._content_host:SetParent(self._inner)
-    self._content_host:SetMouseVisible(true)
-    _set_blend(self._content_host)
 
     self._resize_regions = {
         top = _make_resize_region(self, self, RESIZE_TOP),
@@ -333,65 +331,50 @@ function LuiWindow:clear_icon()
     self:set_icon(nil)
 end
 
-function LuiWindow:get_title_bar_host()
-    return self._title_bar_host
+function LuiWindow:get_menu_bar()
+    return self._menu_bar
 end
 
-function LuiWindow:set_title_bar_host_width(width)
-    if type(width) ~= "number" then
-        width = tonumber(width)
+function LuiWindow:set_central_widget(widget)
+    if self._central_widget == widget then
+        self:_layout()
+        return
     end
-    if width == nil or width < 0 then
-        width = 0
+
+    if self._central_widget ~= nil and self._central_widget.SetParent ~= nil then
+        self._central_widget:SetParent(nil)
     end
-    self._explicit_title_bar_host_width = width
-    self:_sync_title_bar_host_width()
-    self:_layout_title_menus()
+
+    self._central_widget = widget
+    if widget ~= nil then
+        widget:SetParent(self._inner)
+    end
     self:_layout()
 end
 
-function LuiWindow:add_menu(title)
-    local menu = LuiMenu()
-    menu:SetParent(self._title_bar_host)
-    menu:set_title(title)
-    menu:set_scale(self._scale)
-    menu:set_font(_scaled_font(self._scale, BASE_TITLE_FONT))
-    menu:set_popup_host(self)
+function LuiWindow:central_widget()
+    return self._central_widget
+end
 
-    self._title_menus[#self._title_menus + 1] = menu
-    self:_sync_title_bar_host_width()
-    self:_layout_title_menus()
+function LuiWindow:set_margin(left, top, right, bottom)
+    local margin_left = tonumber(left)
+    if margin_left == nil then
+        margin_left = BASE_MARGIN
+    end
+
+    local margin_top = tonumber(top)
+    local margin_right = tonumber(right)
+    local margin_bottom = tonumber(bottom)
+
+    if margin_top == nil then margin_top = margin_left end
+    if margin_right == nil then margin_right = margin_left end
+    if margin_bottom == nil then margin_bottom = margin_top end
+
+    self._margin_left = math.max(0, margin_left)
+    self._margin_top = math.max(0, margin_top)
+    self._margin_right = math.max(0, margin_right)
+    self._margin_bottom = math.max(0, margin_bottom)
     self:_layout()
-    return menu
-end
-
-function LuiWindow:get_content_host()
-    return self._content_host
-end
-
-function LuiWindow:get_content_size()
-    return self._content_host:GetSize()
-end
-
-function LuiWindow:get_content_size_for_window(width, height)
-    local border = self:_border()
-    local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
-    local divider_h = self:_divider_h()
-
-    local content_w = math.max(0, (tonumber(width) or 0) - (border * 2))
-    local content_h = math.max(0, (tonumber(height) or 0) - (border * 2) - title_h - divider_h)
-    return content_w, content_h
-end
-
-function LuiWindow:get_chrome_size()
-    local width, height = self:GetSize()
-    local content_w, content_h = self:get_content_size()
-    return math.max(0, width - content_w), math.max(0, height - content_h)
-end
-
-function LuiWindow:get_window_size_for_content(width, height)
-    local chrome_w, chrome_h = self:get_chrome_size()
-    return (tonumber(width) or 0) + chrome_w, (tonumber(height) or 0) + chrome_h
 end
 
 function LuiWindow:set_title_bar_divider_visible(visible)
@@ -664,18 +647,11 @@ function LuiWindow:_apply_style()
     self._inner:SetBackColor(Style.BACKGROUND)
     self._title_bar:SetBackColor(Style.CONTROL_BACKGROUND)
     self._divider:SetBackColor(Style.CONTROL_BORDER)
-    self._content_host:SetBackColor(Style.BACKGROUND)
-    self._title_bar_host:SetBackColor(Style.TRANSPARENT_BACKGROUND)
+    self._menu_bar:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self._title_label:SetForeColor(Style.FOREGROUND)
     self._title_label:SetFont(_scaled_font(self._scale, BASE_TITLE_FONT))
-
-    for i = 1, #self._title_menus do
-        local menu = self._title_menus[i]
-        menu:set_scale(self._scale)
-        menu:set_font(_scaled_font(self._scale, BASE_TITLE_FONT))
-        menu:set_popup_host(self)
-    end
-    self:_sync_title_bar_host_width()
+    self._menu_bar:set_scale(self._scale)
+    self._menu_bar:set_font(_scaled_font(self._scale, BASE_TITLE_FONT))
     self:_sync_resize_handle_icons()
 
     self:_style_title_button(self._maximize_button)
@@ -776,32 +752,6 @@ function LuiWindow:_sync_maximize_button_icon()
         self:_base_close_icon_size(),
         LuiButton.icon_position.RIGHT
     )
-end
-
-function LuiWindow:_sync_title_bar_host_width()
-    local menu_width = 0
-    for i = 1, #self._title_menus do
-        menu_width = menu_width + self._title_menus[i]:preferred_width()
-    end
-    self._title_bar_host_width = math.max(self._explicit_title_bar_host_width or 0, menu_width)
-end
-
-function LuiWindow:_layout_title_menus()
-    if self._title_bar_host == nil then
-        return
-    end
-
-    local x = 0
-    local height = self._title_bar_host:GetHeight()
-    local width = self._title_bar_host:GetWidth()
-    for i = 1, #self._title_menus do
-        local menu = self._title_menus[i]
-        local menu_w = math.min(menu:preferred_width(), math.max(0, width - x))
-        menu:SetPosition(x, 0)
-        menu:SetSize(menu_w, height)
-        menu:SetVisible(menu_w > 0)
-        x = x + menu_w
-    end
 end
 
 function LuiWindow:_start_drag(args)
@@ -1323,25 +1273,20 @@ function LuiWindow:_layout()
         self._icon:SetVisible(false)
     end
 
-    local host_w = _scaled_int(self._scale, self._title_bar_host_width or 0)
-    local host_x = left_used
-    local max_host_w = math.max(0, title_actions_x - gap - host_x)
-    if host_w > max_host_w then
-        host_w = max_host_w
-    end
-    self._title_bar_host:SetPosition(host_x, 0)
-    self._title_bar_host:SetSize(host_w, title_h)
-    self._title_bar_host:SetZOrder(20)
-    self._title_bar_host:SetVisible(host_w > 0)
-    self:_layout_title_menus()
-    if host_w > 0 then
-        left_used = host_x + host_w + gap
+    local menu_w = math.min(self._menu_bar:preferred_width(), math.max(0, title_actions_x - gap - left_used))
+    local menu_x = left_used
+    self._menu_bar:SetPosition(menu_x, 0)
+    self._menu_bar:SetSize(menu_w, title_h)
+    self._menu_bar:SetZOrder(20)
+    self._menu_bar:SetVisible(menu_w > 0)
+    if menu_w > 0 then
+        left_used = menu_x + menu_w + gap
     end
 
     self._title_drag_left:SetPosition(0, 0)
-    self._title_drag_left:SetSize(math.max(0, host_x), title_h)
+    self._title_drag_left:SetSize(math.max(0, menu_x), title_h)
 
-    local drag_body_x = host_x + host_w + gap
+    local drag_body_x = menu_x + menu_w + gap
     local drag_body_w = math.max(0, title_actions_x - gap - drag_body_x)
     self._title_drag_body:SetPosition(drag_body_x, 0)
     self._title_drag_body:SetSize(drag_body_w, title_h)
@@ -1356,8 +1301,17 @@ function LuiWindow:_layout()
 
     local content_y = title_h + divider_h
     local content_h = math.max(0, inner_h - content_y)
-    self._content_host:SetPosition(0, content_y)
-    self._content_host:SetSize(inner_w, content_h)
+    local central = self._central_widget
+    if central ~= nil then
+        local margin_l = _scaled_int(self._scale, self._margin_left)
+        local margin_t = _scaled_int(self._scale, self._margin_top)
+        local margin_r = _scaled_int(self._scale, self._margin_right)
+        local margin_b = _scaled_int(self._scale, self._margin_bottom)
+        local central_w = math.max(0, inner_w - margin_l - margin_r)
+        local central_h = math.max(0, content_h - margin_t - margin_b)
+        central:SetPosition(margin_l, content_y + margin_t)
+        central:SetSize(central_w, central_h)
+    end
 
     self:_layout_resize_regions()
 end

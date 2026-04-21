@@ -56,7 +56,7 @@ function LuiAction:Constructor()
     Turbine.UI.Control.Constructor(self)
 
     self._scale = 1
-    self._title = ""
+    self._text = ""
     self._callback = nil
     self._icon_asset = nil
     self._checkable = false
@@ -170,9 +170,13 @@ function LuiAction:set_font(font)
     self._arrow:SetFont(font)
 end
 
+function LuiAction:set_text(text)
+    self._text = tostring(text or "")
+    self._label:SetText(self._text)
+end
+
 function LuiAction:set_title(title)
-    self._title = tostring(title or "")
-    self._label:SetText(self._title)
+    self:set_text(title)
 end
 
 function LuiAction:set_icon(icon)
@@ -207,6 +211,10 @@ function LuiAction:set_action(callback)
     self._callback = type(callback) == "function" and callback or nil
 end
 
+function LuiAction:set_triggered(callback)
+    self:set_action(callback)
+end
+
 function LuiAction:trigger()
     if self._submenu ~= nil then
         if self._owner_menu ~= nil then
@@ -230,7 +238,7 @@ end
 
 function LuiAction:preferred_width()
     local width = _scaled_int(self._scale, (BASE_POPUP_PAD_X * 2) + BASE_MARK_W + BASE_ARROW_W)
-    width = width + _text_width(self._scale, self._title)
+    width = width + _text_width(self._scale, self._text)
     return math.max(_scaled_int(self._scale, BASE_POPUP_MIN_W), width)
 end
 
@@ -294,7 +302,6 @@ function LuiMenu:Constructor()
     self._parent_menu = nil
     self._parent_action = nil
     self._open_child = nil
-    self._popup_host = nil
     self._popup_overlay = nil
 
     self.button = LuiButton()
@@ -366,19 +373,9 @@ function LuiMenu:set_font(font)
     end
 end
 
-function LuiMenu:set_popup_host(host)
-    self._popup_host = host
-    for i = 1, #self._items do
-        local submenu = self._items[i]._submenu
-        if submenu ~= nil then
-            submenu:set_popup_host(host)
-        end
-    end
-end
-
 function LuiMenu:add_action(spec)
     if type(spec) ~= "table" then
-        spec = { title = spec }
+        spec = { text = spec }
     end
 
     local action = LuiAction()
@@ -386,14 +383,14 @@ function LuiMenu:add_action(spec)
     action:_set_owner_menu(self)
     action:set_scale(self._scale)
     action:set_font(self._font)
-    action:set_title(spec.title)
+    action:set_text(spec.text or spec.title)
     action:set_checkable(spec.checkable == true)
     if spec.checkable ~= true then
         action:set_icon(spec.icon)
     end
     action:set_checked(spec.checked == true)
     action:set_enabled(spec.enabled ~= false)
-    action:set_action(spec.action)
+    action:set_triggered(spec.triggered or spec.action)
 
     self._items[#self._items + 1] = action
     self:_layout_popup()
@@ -406,9 +403,8 @@ function LuiMenu:add_menu(title)
     submenu._parent_menu = self
     submenu:set_scale(self._scale)
     submenu:set_font(self._font)
-    submenu:set_popup_host(self._popup_host)
 
-    local action = self:add_action({ title = title })
+    local action = self:add_action({ text = title })
     action:_set_submenu(submenu)
     submenu._parent_action = action
     return submenu
@@ -489,16 +485,32 @@ function LuiMenu:_root_menu()
     return menu
 end
 
+function LuiMenu:_get_root_widget()
+    local widget = self:_root_menu()
+    while widget ~= nil and widget.GetParent ~= nil do
+        local parent = widget:GetParent()
+        if parent == nil then
+            return widget
+        end
+        widget = parent
+    end
+    return widget
+end
+
 function LuiMenu:_close_root()
     self:_root_menu():close()
 end
 
 function LuiMenu:_open_host_overlay()
-    if self._parent_menu ~= nil or self._popup_host == nil or self._popup_overlay ~= nil then
+    if self._parent_menu ~= nil or self._popup_overlay ~= nil then
         return
     end
 
-    local host = self._popup_host
+    local host = self:_get_root_widget()
+    if host == nil or host == self then
+        return
+    end
+
     local overlay = Turbine.UI.Control()
     overlay:SetParent(host)
     overlay:SetPosition(0, 0)
@@ -594,5 +606,82 @@ function LuiMenu:_position_popup()
     self.popup:SetPosition(x, y)
 end
 
+---@class LuiMenuBar : Turbine.UI.Control
+LuiMenuBar = class(Turbine.UI.Control)
+
+function LuiMenuBar:Constructor()
+    Turbine.UI.Control.Constructor(self)
+
+    self._scale = 1
+    self._font = _scaled_font(self._scale)
+    self._menus = {}
+
+    self:SetMouseVisible(true)
+    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
+    _set_blend(self)
+
+    self.SizeChanged = function()
+        self:_layout()
+    end
+end
+
+function LuiMenuBar:set_scale(scale)
+    self._scale = tonumber(scale) or 1
+    self._font = _scaled_font(self._scale)
+    for i = 1, #self._menus do
+        self._menus[i]:set_scale(self._scale)
+        self._menus[i]:set_font(self._font)
+    end
+    self:_layout()
+end
+
+function LuiMenuBar:set_font(font)
+    if font == nil then
+        return
+    end
+    self._font = font
+    for i = 1, #self._menus do
+        self._menus[i]:set_font(font)
+    end
+end
+
+function LuiMenuBar:add_menu(title)
+    local menu = LuiMenu()
+    menu:SetParent(self)
+    menu:set_title(title)
+    menu:set_scale(self._scale)
+    menu:set_font(self._font)
+
+    self._menus[#self._menus + 1] = menu
+    self:_layout()
+    if type(self.Changed) == "function" then
+        self:Changed()
+    end
+    return menu
+end
+
+function LuiMenuBar:preferred_width()
+    local width = 0
+    for i = 1, #self._menus do
+        width = width + self._menus[i]:preferred_width()
+    end
+    return width
+end
+
+function LuiMenuBar:_layout()
+    local x = 0
+    local height = self:GetHeight()
+    local width = self:GetWidth()
+    for i = 1, #self._menus do
+        local menu = self._menus[i]
+        local menu_w = math.min(menu:preferred_width(), math.max(0, width - x))
+        menu:SetPosition(x, 0)
+        menu:SetSize(menu_w, height)
+        menu:SetVisible(menu_w > 0)
+        x = x + menu_w
+    end
+end
+
 UI.Widgets.LuiAction = LuiAction
 UI.Widgets.LuiMenu = LuiMenu
+UI.Widgets.LuiMenuBar = LuiMenuBar

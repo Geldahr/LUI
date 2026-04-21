@@ -80,7 +80,9 @@ function ConfigWindow:Constructor()
     self:_update_ui_scale_metrics()
     self:set_minimum_size(_scaled_int(222), _scaled_int(185))
 
-    local content = self:get_content_host()
+    local content = Turbine.UI.Control()
+    content:SetMouseVisible(true)
+    self:set_central_widget(content)
 
     self.main_tab_bar = UI.Widgets.LuiTabBar()
     self.main_tab_bar:SetParent(content)
