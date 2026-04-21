@@ -108,7 +108,7 @@ local FALLBACKS = {
 
 local Style = setmetatable({}, {
     __index = function(_, key)
-        if _G.STYLE then
+        if _G["STYLE"] then
             local fallback = FALLBACKS[key]
             return _G.STYLE[key] or (fallback ~= nil and _G.STYLE[fallback]) or DEFAULTS[key]
         end
