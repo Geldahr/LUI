@@ -105,14 +105,14 @@ function InventoryPage:apply_ui_scale()
     self.cols_label:SetFont(self.window.field_label_font)
     self.tile_size_label:SetFont(self.window.field_label_font)
 
-    self.enabled:SetScale(scale)
+    self.enabled:set_scale(scale)
     self.enabled:SetFont(self.window.field_label_font)
-    self.replace:SetScale(scale)
+    self.replace:set_scale(scale)
     self.replace:SetFont(self.window.field_label_font)
 
     self.cols_tb:SetFont(self.window.input_font)
 
-    self.tile_size:SetScale(scale)
+    self.tile_size:set_scale(scale)
     self.tile_size:SetFont(self.window.input_font)
 
     self:layout()

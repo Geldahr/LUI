@@ -236,7 +236,7 @@ function SettingsFormPage:add_text(key, label_text, is_color, help_text, full_wi
 
     if entry.is_color then
         entry.tb = UI.Widgets.LuiColorField()
-        entry.tb:SetScale(_G.settings.global.scale)
+        entry.tb:set_scale(_G.settings.global.scale)
         entry.tb:SetPickerHost(self.window)
         entry.tb:SetParent(self.form)
         entry.tb:SetFont(self.window.input_font)
@@ -312,7 +312,7 @@ function SettingsFormPage:add_dropdown(key, label_text, option_labels, option_va
 
     entry.button = UI.Widgets.LuiDropdown()
     entry.button:SetParent(self.form)
-    entry.button:SetScale(_G.settings.global.scale)
+    entry.button:set_scale(_G.settings.global.scale)
     entry.button:SetFont(self.window.input_font)
     entry.button:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     entry.button:SetPopupHost(self.window)
@@ -421,8 +421,8 @@ function SettingsFormPage:apply_ui_scale()
                 if field.label ~= nil then
                     field.label:SetFont(self.window.field_label_font)
                 end
-                if field.tb ~= nil and field.tb.SetScale ~= nil then
-                    field.tb:SetScale(scale)
+                if field.tb ~= nil and field.tb.set_scale ~= nil then
+                    field.tb:set_scale(scale)
                 end
                 if field.tb ~= nil and field.tb.SetFont ~= nil then
                     field.tb:SetFont(self.window.input_font)
@@ -431,8 +431,8 @@ function SettingsFormPage:apply_ui_scale()
                 if field.label ~= nil then
                     field.label:SetFont(self.window.field_label_font)
                 end
-                if field.button ~= nil and field.button.SetScale ~= nil then
-                    field.button:SetScale(scale)
+                if field.button ~= nil and field.button.set_scale ~= nil then
+                    field.button:set_scale(scale)
                 end
                 if field.button ~= nil and field.button.SetFont ~= nil then
                     field.button:SetFont(self.window.input_font)
@@ -443,8 +443,8 @@ function SettingsFormPage:apply_ui_scale()
                     field:apply_ui_scale()
                 end
             elseif field.kind == "checkbox" and field.cb ~= nil then
-                if field.cb.SetScale ~= nil then
-                    field.cb:SetScale(scale)
+                if field.cb.set_scale ~= nil then
+                    field.cb:set_scale(scale)
                 end
                 field.cb:SetFont(self.window.field_label_font)
             end

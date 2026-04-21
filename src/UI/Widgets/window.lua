@@ -42,14 +42,6 @@ local RESIZE_RIGHT = 2
 local RESIZE_TOP = 4
 local RESIZE_BOTTOM = 8
 
-local function _current_scale()
-    local scale = _G.settings ~= nil and _G.settings.global ~= nil and tonumber(_G.settings.global.scale) or 1
-    if scale == nil or scale <= 0 then
-        scale = 1
-    end
-    return scale
-end
-
 local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
 end
@@ -150,7 +142,7 @@ LuiWindow.TILE_MAXIMIZED = TILE_MAXIMIZED
 function LuiWindow:Constructor()
     Turbine.UI.Window.Constructor(self)
 
-    self._scale = _current_scale()
+    self._scale = 1
     self._icon_asset = nil
     self._icon_size = BASE_ICON
     self._central_widget = nil
@@ -617,8 +609,11 @@ function LuiWindow:set_scale(scale)
     self:_apply_style()
 end
 
-function LuiWindow:apply_settings()
-    self._scale = _current_scale()
+function LuiWindow:apply_settings(scale)
+    if scale ~= nil then
+        self:set_scale(scale)
+        return
+    end
     self:_apply_style()
 end
 

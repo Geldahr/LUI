@@ -547,7 +547,7 @@ function FirstRunQuickSetup:apply_ui_scale()
     self.layout_label:SetFont(hint_font)
     self.scale_box:SetFont(body_font)
     self.config_dropdown:SetFont(body_font)
-    self.config_dropdown:SetScale(_G.settings.global.scale)
+    self.config_dropdown:set_scale(_G.settings.global.scale)
 
     self.scale_minus:set_font(button_font)
     self.scale_plus:set_font(button_font)

@@ -832,7 +832,7 @@ function AssetsWindow:Constructor()
     self.hint_label:SetVisible(false)
 
     self.stack_hint = UI.Widgets.LuiTooltip()
-    self.stack_hint:SetScale(_G.settings.global.scale)
+    self.stack_hint:set_scale(_G.settings.global.scale)
     self.stack_hint:SetZOrder(2200)
 
     self.stack_hint_inner = Turbine.UI.Control()
@@ -1027,7 +1027,7 @@ function AssetsWindow:set_grouping_mode(mode)
 end
 
 function AssetsWindow:apply_settings()
-    LuiWindow.apply_settings(self)
+    LuiWindow.apply_settings(self, _G.settings.global.scale)
 
     local s = _G.settings.assets
 
@@ -1043,7 +1043,7 @@ function AssetsWindow:apply_settings()
     self.next_button:set_font(button_font)
     self.clear_button:set_font(button_font)
     self.filter_tb:SetFont(button_font)
-    self.stack_items_cb:SetScale(_G.settings.global.scale)
+    self.stack_items_cb:set_scale(_G.settings.global.scale)
     self.stack_items_cb:SetFont(button_font)
     self.stack_items_label:SetFont(button_font)
     self.owner_label:SetFont(_scaled_font("Verdana", 11))
@@ -1052,10 +1052,10 @@ function AssetsWindow:apply_settings()
     self.storage_dropdown:SetFont(button_font)
     self.sort_dropdown:SetFont(button_font)
     self.group_dropdown:SetFont(button_font)
-    self.owner_dropdown:SetScale(_G.settings.global.scale)
-    self.storage_dropdown:SetScale(_G.settings.global.scale)
-    self.sort_dropdown:SetScale(_G.settings.global.scale)
-    self.group_dropdown:SetScale(_G.settings.global.scale)
+    self.owner_dropdown:set_scale(_G.settings.global.scale)
+    self.storage_dropdown:set_scale(_G.settings.global.scale)
+    self.sort_dropdown:set_scale(_G.settings.global.scale)
+    self.group_dropdown:set_scale(_G.settings.global.scale)
     self._suppress_stack_changed = true
     self.stack_items_cb:SetChecked(self.stack_items == true)
     self._suppress_stack_changed = false
@@ -1072,7 +1072,7 @@ function AssetsWindow:apply_settings()
     self.hint_label:SetFont(_scaled_font("Verdana", 10))
     self.empty_label:SetFont(_scaled_font("Verdana", 12))
     if self.stack_hint ~= nil then
-        self.stack_hint:SetScale(_G.settings.global.scale)
+        self.stack_hint:set_scale(_G.settings.global.scale)
     end
     local min_w, min_h = self:_get_min_window_size(self.view_mode, self.tile_size)
     self:set_minimum_size(min_w, min_h)

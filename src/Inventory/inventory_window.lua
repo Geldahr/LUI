@@ -493,7 +493,7 @@ function InventoryWindow:update_money()
 end
 
 function InventoryWindow:apply_settings()
-    LuiWindow.apply_settings(self)
+    LuiWindow.apply_settings(self, _G.settings.global.scale)
 
     local s = _G.settings.inventory
     self.update_every = 1.0 / _G.settings.global.refresh_rate

@@ -96,7 +96,7 @@ function ConfigWindow:Constructor()
     end
 
     self.tooltip = UI.Widgets.LuiTooltip()
-    self.tooltip:SetScale(_G.settings.global.scale)
+    self.tooltip:set_scale(_G.settings.global.scale)
     self.tooltip:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
 
     self.confirm_overlay = Turbine.UI.Control()
@@ -237,13 +237,13 @@ function ConfigWindow:_update_ui_scale_metrics()
 end
 
 function ConfigWindow:apply_ui_scale()
-    LuiWindow.apply_settings(self)
+    LuiWindow.apply_settings(self, _G.settings.global.scale)
     self:_update_ui_scale_metrics()
     self:set_minimum_size(_scaled_int(222), _scaled_int(185))
     local scale = _G.settings.global.scale
 
     if self.tooltip ~= nil then
-        self.tooltip:SetScale(scale)
+        self.tooltip:set_scale(scale)
         self.tooltip:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
     end
 

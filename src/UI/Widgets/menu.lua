@@ -75,7 +75,7 @@ function LuiAction:Constructor()
     self._checkbox:SetParent(self)
     self._checkbox:SetText("")
     self._checkbox:SetMouseVisible(false)
-    self._checkbox:SetScale(self._scale)
+    self._checkbox:set_scale(self._scale)
     self._checkbox:SetIconScale(0.85)
 
     self._icon = Image()
@@ -154,7 +154,7 @@ end
 function LuiAction:set_scale(scale)
     self._scale = tonumber(scale) or 1
     self._font = _scaled_font(self._scale)
-    self._checkbox:SetScale(self._scale)
+    self._checkbox:set_scale(self._scale)
     self._label:SetFont(self._font)
     self._arrow:SetFont(self._font)
     self:_layout()

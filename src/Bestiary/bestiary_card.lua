@@ -2054,7 +2054,7 @@ function BestiaryCard:_apply_record(record)
 end
 
 function BestiaryCard:apply_settings()
-    LuiWindow.apply_settings(self)
+    LuiWindow.apply_settings(self, _G.settings.global.scale)
     self:set_resizable(false)
 
     local window_w, window_h = self:GetSize()
