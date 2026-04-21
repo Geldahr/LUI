@@ -820,25 +820,18 @@ function LuiWindow:_display_size()
     return tonumber(display_w) or 0, tonumber(display_h) or 0
 end
 
-function LuiWindow:_status_bar_reserved_height()
-    local settings_bar = _G.settings ~= nil and _G.settings.status_bar or nil
-    local status_bar = _G.STATUS_BAR
-
-    if status_bar ~= nil and status_bar.IsVisible ~= nil and status_bar:IsVisible() == true then
-        return math.max(0, tonumber(status_bar:GetHeight()) or 0)
-    end
-
-    if settings_bar ~= nil and settings_bar.enabled == true then
-        return math.max(0, tonumber(settings_bar.height) or 0)
-    end
-
-    return 0
-end
-
 function LuiWindow:_work_area()
+    local work_area = Style.WINDOW_WORK_AREA
+    if type(work_area) == "function" then
+        local x, y, width, height = work_area(self)
+        return tonumber(x) or 0,
+            tonumber(y) or 0,
+            math.max(0, tonumber(width) or 0),
+            math.max(0, tonumber(height) or 0)
+    end
+
     local display_w, display_h = self:_display_size()
-    local reserved_top = math.min(display_h, self:_status_bar_reserved_height())
-    return 0, reserved_top, display_w, math.max(0, display_h - reserved_top)
+    return 0, 0, display_w, display_h
 end
 
 function LuiWindow:_fit_size_to_screen(width, height)

@@ -72,6 +72,11 @@ local DEFAULTS = {
     DROPDOWN_ARROW_HOVER = 0x41007e1b,
     DROPDOWN_ARROW_PRESSED = 0x41007e19,
     DROPDOWN_ARROW_DISABLED = 0x41007e1a,
+
+    WINDOW_WORK_AREA = function()
+        local display_w, display_h = Turbine.UI.Display.GetSize()
+        return 0, 0, tonumber(display_w) or 0, tonumber(display_h) or 0
+    end,
 }
 
 local FALLBACKS = {

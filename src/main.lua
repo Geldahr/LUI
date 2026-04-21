@@ -15,6 +15,23 @@ import "LUI.src.Bestiary"
 import "LUI.src.Crafting"
 import "LUI.src.StatusBar.api_chat_bridge"
 
+_G.STYLE = _G.STYLE or {}
+_G.STYLE.WINDOW_WORK_AREA = function()
+    local display_w, display_h = Turbine.UI.Display.GetSize()
+    display_w = tonumber(display_w) or 0
+    display_h = tonumber(display_h) or 0
+
+    local reserved_top = 0
+    local status_bar = _G.STATUS_BAR
+
+    if status_bar ~= nil and status_bar.IsVisible ~= nil and status_bar:IsVisible() == true then
+        reserved_top = math.max(0, tonumber(status_bar:GetHeight()) or 0)
+    end
+
+    reserved_top = math.min(display_h, reserved_top)
+    return 0, reserved_top, display_w, math.max(0, display_h - reserved_top)
+end
+
 if _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK ~= nil then
     _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
 end
