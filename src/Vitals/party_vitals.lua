@@ -4,7 +4,7 @@ import "Turbine.UI.Lotro"
 
 import "LUI.src.Vitals.vitals_base"
 import "LUI.src.Vitals.target_effect_manager"
-import "LUI.src.UI.moveable"
+import "LUI.src.UI.Widgets.hud"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.icons"
 
@@ -203,15 +203,18 @@ function PartyMemberVitals:_resize_extra_controls()
     self:_update_leader_icon()
 end
 
----@class PartyVitals : Turbine.UI.Window
-PartyVitals = class(Turbine.UI.Window)
+---@class PartyVitals : LuiHUD
+PartyVitals = class(LuiHUD)
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function PartyVitals:Constructor()
-    Turbine.UI.Window.Constructor(self)
+    LuiHUD.Constructor(self, {
+        hud_key = "party_vitals",
+        title = TR["Party Vitals"],
+    })
 
     self.lp = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.group = nil
@@ -230,20 +233,12 @@ function PartyVitals:Constructor()
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
 
     local v = _G.settings.party
-    local hud = _G.settings.ui.hud.party_vitals
-    self:SetPosition(hud.left, hud.top)
     local bw = v.frame.border_width
     local initial_h = v.morale.height + v.power.height - bw
     if initial_h < 1 then initial_h = 1 end
     self:SetSize(v.frame.width, initial_h)
-
-    self.moveable = UI.Moveable(self, function(x, y)
-        self:SetPosition(x, y)
-    end, TR["Party Vitals"])
-
-    self.moveable:set_on_move_end(function(x, y)
-        self:persist_position(x, y)
-    end)
+    self:layout_move_chrome()
+    self:apply_hud_position()
 
     self.events.party_changed = add_callback(self.lp, "PartyChanged", function()
         self:refresh_group()
@@ -265,37 +260,18 @@ end
 -- Public functions
 ---------------------------------------------------------------------
 
-function PartyVitals:is_move_mode()
-    return self.moveable ~= nil and self.moveable:is_move_mode() or false
-end
-
 function PartyVitals:set_move_mode(enabled)
     if is_lui_hud_visible() ~= true then
         self:SetVisible(false)
-        if self.moveable ~= nil then
-            self.moveable:set_move_mode(enabled)
-        end
+        LuiHUD.set_move_mode(self, enabled)
         return
     end
 
     if enabled == true then
         self:SetVisible(true)
     end
-    if self.moveable ~= nil then
-        self.moveable:set_move_mode(enabled)
-    end
+    LuiHUD.set_move_mode(self, enabled)
     self:update_members()
-    if self.moveable ~= nil then
-        self.moveable:update_size()
-        self.moveable:sync_from_target()
-        self.moveable:sync_inputs_from_target()
-    end
-end
-
-function PartyVitals:persist_position(x, y)
-    local hud = _G.get_ui_hud_state("party_vitals")
-    hud.left = x
-    hud.top = y
 end
 
 function PartyVitals:get_placeholder_count()
@@ -411,8 +387,9 @@ function PartyVitals:layout_members(count)
         end
     end
 
-    if self:is_move_mode() and self.moveable ~= nil and self.moveable.update_size ~= nil then
-        self.moveable:update_size()
+    if self:is_move_mode() then
+        self:layout_move_chrome()
+        self:sync_move_inputs_from_position()
     end
 end
 
@@ -430,9 +407,8 @@ function PartyVitals:update_visibility(member_count)
 end
 
 function PartyVitals:apply_settings()
-    local v = _G.settings.party
-    local hud = _G.settings.ui.hud.party_vitals
-    self:SetPosition(hud.left, hud.top)
+    self:apply_native_scaling()
+    self:apply_hud_position()
 
     for i = 1, #self.members do
         local m = self.members[i]
