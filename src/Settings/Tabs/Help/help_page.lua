@@ -128,7 +128,7 @@ function HelpPage:Constructor(window)
         TR["It focuses on combat-related UI such as self vitals, target vitals, boss vitals, party vitals, expiring effects, cooldowns elements and also inventory, and status bar."],
         "",
         TR["The global LUI UI scale applies uniformly across the whole LUI interface."],
-        TR["It is separate from the built-in LotRO UI scaling."],
+        TR["By default it is separate from the built-in LotRO UI scaling; native scaling can be enabled in Global settings."],
         "",
         TR["For the best experience, set the global LUI UI scale before changing individual sizes."],
         TR["Recommended starting points: 1080p = 1.0, 1440p = 1.3 to 1.4, 2160p / 4k = 2.0."],
