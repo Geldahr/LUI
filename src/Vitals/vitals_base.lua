@@ -97,6 +97,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     LuiHUD.Constructor(self, {
         hud_key = hud_key,
         title = title,
+        hideable = opts.managed_position ~= true,
     })
 
     self.vital_key = vital_key

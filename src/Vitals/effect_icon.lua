@@ -3,14 +3,14 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.time_format"
 
-EffectIcon = class(Turbine.UI.Window)
+EffectIcon = class(LuiBaseWindow)
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function EffectIcon:Constructor(effect, size, font, font_style, font_color, outline_color)
-    Turbine.UI.Window.Constructor(self)
+    LuiBaseWindow.Constructor(self, { hideable = false })
 
     self.effect = nil
     self.ending = 0
@@ -26,6 +26,7 @@ function EffectIcon:Constructor(effect, size, font, font_style, font_color, outl
     self.icon:SetZOrder(1)
 
     self.label_back = Turbine.UI.Window()
+    self:apply_native_scaling(self.label_back)
     self.label_back:SetParent(self)
     self.label_back:SetSize(size, size)
     self.label_back:SetVisible(true)

@@ -1,6 +1,6 @@
 import "Turbine.UI"
 
-import "LUI.src.UI.native_scaling"
+import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.line_edit"
 
@@ -86,16 +86,18 @@ local function _nudge_delta(action)
     return nil, nil
 end
 
----@class LuiHUD : Turbine.UI.Window
-LuiHUD = class(Turbine.UI.Window)
+---@class LuiHUD : LuiBaseWindow
+LuiHUD = class(LuiBaseWindow)
 
 function LuiHUD:Constructor(opts)
-    Turbine.UI.Window.Constructor(self)
-    self:apply_native_scaling()
-
     if type(opts) ~= "table" then
         opts = {}
     end
+    local base_opts = {
+        hideable = opts.hideable ~= false,
+        hide_key = opts.hide_key or opts.hud_key,
+    }
+    LuiBaseWindow.Constructor(self, base_opts)
 
     self._hud_key = opts.hud_key
     self._move_title = opts.title or DEFAULT_TITLE
@@ -110,6 +112,7 @@ function LuiHUD:Constructor(opts)
     self._move_drag_start_window_y = 0
     self._move_updating_xy = false
     self._move_focused_input = nil
+    self._move_grid_shown = false
 
     self:SetMouseVisible(self._hud_mouse_visible)
 
@@ -194,13 +197,6 @@ function LuiHUD:set_hud_mouse_visible(visible)
     end
 end
 
-function LuiHUD:apply_native_scaling()
-    local native_scaling = UI ~= nil and UI.NativeScaling or _G.LUI_NATIVE_SCALING
-    if native_scaling ~= nil and native_scaling.disable ~= nil then
-        native_scaling.disable(self)
-    end
-end
-
 function LuiHUD:get_loaded_hud_settings()
     if self._hud_key == nil or _G.get_ui_hud_state == nil then
         return nil
@@ -259,6 +255,20 @@ function LuiHUD:set_move_mode(enabled)
         local nx, ny = self:_clamp_to_screen(_int(x) or 0, _int(y) or 0)
         if nx ~= _int(x) or ny ~= _int(y) then
             self:move_to(nx, ny, true)
+        end
+
+        if self._move_grid_shown ~= true then
+            self._move_grid_shown = true
+            local move_ui = _G.LUI_MOVE_UI
+            if move_ui ~= nil and move_ui.show_grid ~= nil then
+                move_ui.show_grid()
+            end
+        end
+    elseif self._move_grid_shown == true then
+        self._move_grid_shown = false
+        local move_ui = _G.LUI_MOVE_UI
+        if move_ui ~= nil and move_ui.hide_grid ~= nil then
+            move_ui.hide_grid()
         end
     end
 

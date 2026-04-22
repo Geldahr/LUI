@@ -6,7 +6,7 @@ import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.menu"
 import "LUI.src.UI.Widgets.style"
-import "LUI.src.UI.native_scaling"
+import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.Utils.font"
 
 local Style = UI.Widgets.Style
@@ -131,8 +131,8 @@ local function _make_resize_handle(host)
     return image
 end
 
----@class LuiWindow : Turbine.UI.Window
-LuiWindow = class(Turbine.UI.Window)
+---@class LuiWindow : LuiBaseWindow
+LuiWindow = class(LuiBaseWindow)
 LuiWindow.RESIZE_NONE = RESIZE_MODE_NONE
 LuiWindow.RESIZE_HORIZONTAL = RESIZE_MODE_HORIZONTAL
 LuiWindow.RESIZE_VERTICAL = RESIZE_MODE_VERTICAL
@@ -140,9 +140,14 @@ LuiWindow.RESIZE_BOTH = RESIZE_MODE_BOTH
 LuiWindow.TILE_NONE = TILE_NONE
 LuiWindow.TILE_MAXIMIZED = TILE_MAXIMIZED
 
-function LuiWindow:Constructor()
-    Turbine.UI.Window.Constructor(self)
-    self:apply_native_scaling()
+function LuiWindow:Constructor(opts)
+    if type(opts) ~= "table" then
+        opts = {}
+    end
+    if opts.hideable == nil then
+        opts.hideable = true
+    end
+    LuiBaseWindow.Constructor(self, opts)
 
     self._scale = 1
     self._icon_asset = nil
@@ -272,6 +277,7 @@ function LuiWindow:Constructor()
     }
 
     self._resize_handle_window = Turbine.UI.Window()
+    self:apply_native_scaling(self._resize_handle_window)
     self._resize_handle_window:SetMouseVisible(false)
     self._resize_handle_window:SetZOrder(10000)
     self._resize_handle_window:SetVisible(false)
@@ -596,13 +602,6 @@ function LuiWindow:set_minimum_size(width, height)
         self:_apply_maximized_bounds()
     else
         self:_enforce_minimum_size()
-    end
-end
-
-function LuiWindow:apply_native_scaling()
-    local native_scaling = UI ~= nil and UI.NativeScaling or _G.LUI_NATIVE_SCALING
-    if native_scaling ~= nil and native_scaling.disable ~= nil then
-        native_scaling.disable(self)
     end
 end
 

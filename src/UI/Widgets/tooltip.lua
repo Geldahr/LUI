@@ -1,5 +1,6 @@
 import "Turbine.UI"
 
+import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 
@@ -30,11 +31,11 @@ local function _line_count(text)
     return count
 end
 
----@class LuiTooltip : Turbine.UI.Window
-LuiTooltip = class(Turbine.UI.Window)
+---@class LuiTooltip : LuiBaseWindow
+LuiTooltip = class(LuiBaseWindow)
 
 function LuiTooltip:Constructor()
-    Turbine.UI.Window.Constructor(self)
+    LuiBaseWindow.Constructor(self, { hideable = false })
 
     self._scale = 1
     self._anchor = nil
