@@ -9,6 +9,19 @@ local DEFAULT_SCALE = 1
 local DEFAULT_ORIGIN_LEFT = 0
 local DEFAULT_ORIGIN_TOP = 0
 
+local function _global_settings(settings)
+    if type(settings) == "table" and type(settings.global) == "table" then
+        return settings.global
+    end
+    if type(_G.settings) == "table" and type(_G.settings.global) == "table" then
+        return _G.settings.global
+    end
+    if type(_G.loaded_settings) == "table" and type(_G.loaded_settings.global) == "table" then
+        return _G.loaded_settings.global
+    end
+    return nil
+end
+
 local function _safe_window_call(window, method_name, ...)
     if window == nil then
         return false
@@ -32,6 +45,36 @@ local function _to_number(value, fallback)
         return fallback
     end
     return n
+end
+
+function NativeScaling.is_enabled(settings)
+    local global = _global_settings(settings)
+    return global ~= nil and global.native_scaling == true
+end
+
+function NativeScaling.get_configured_scale(settings)
+    local global = _global_settings(settings)
+    local scale = global ~= nil and global.scale or DEFAULT_SCALE
+    local n = _to_number(scale, DEFAULT_SCALE)
+    if n <= 0 then
+        return DEFAULT_SCALE
+    end
+    return n
+end
+
+function NativeScaling.get_effective_scale(settings)
+    if NativeScaling.is_enabled(settings) then
+        return DEFAULT_SCALE
+    end
+    return NativeScaling.get_configured_scale(settings)
+end
+
+function NativeScaling.scale_value(value, settings)
+    return _to_number(value, 0) * NativeScaling.get_effective_scale(settings)
+end
+
+function NativeScaling.scaled_int(value, settings)
+    return math.floor(NativeScaling.scale_value(value, settings) + 0.5)
 end
 
 function NativeScaling.get_global_scale()
@@ -125,6 +168,18 @@ end
 
 function NativeScaling.disable(window)
     return NativeScaling.apply(window, false, DEFAULT_SCALE, DEFAULT_ORIGIN_LEFT, DEFAULT_ORIGIN_TOP)
+end
+
+function _G.lui_get_ui_scale(settings)
+    return NativeScaling.get_effective_scale(settings)
+end
+
+function _G.lui_scale_value(value, settings)
+    return NativeScaling.scale_value(value, settings)
+end
+
+function _G.lui_scaled_int(value, settings)
+    return NativeScaling.scaled_int(value, settings)
 end
 
 _G.LUI_NATIVE_SCALING = NativeScaling
