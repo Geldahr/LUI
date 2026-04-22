@@ -1,59 +1,37 @@
 GLOBAL_HUD_VISIBLE = GLOBAL_HUD_VISIBLE ~= false
-LUI_HUD_PREV = LUI_HUD_PREV or {}
 LUI_LAST_HUD_TOGGLE_AT = LUI_LAST_HUD_TOGGLE_AT or 0
 
 _G.LUI_HIDABLE = _G.LUI_HIDABLE or {}
 
 local Hidable = _G.LUI_HIDABLE
-local REGISTRY = Hidable._registry or setmetatable({}, { __mode = "k" })
-local WINDOW_PREV = Hidable._window_prev or setmetatable({}, { __mode = "k" })
-Hidable._registry = REGISTRY
-Hidable._window_prev = WINDOW_PREV
-
-local function _prev_store_for(win)
-    local key = REGISTRY[win]
-    if key ~= nil and key ~= false then
-        return LUI_HUD_PREV, key
-    end
-    return WINDOW_PREV, win
+if getmetatable(Hidable) == nil then
+    setmetatable(Hidable, { __mode = "k" })
 end
 
-local function _remember_and_hide_window(win)
+local function _is_registered_window(win, registered)
+    return registered == true
+end
+
+local function _apply_global_visibility(win, visible)
     if win == nil then
         return
     end
 
-    local store, key = _prev_store_for(win)
-    if win.IsVisible ~= nil then
-        store[key] = win:IsVisible()
-    end
-    if win.SetVisible ~= nil then
+    if win.global_hide ~= nil then
+        win:global_hide(visible)
+    elseif visible ~= true and win.SetVisible ~= nil then
         win:SetVisible(false)
     end
 end
 
-local function _restore_window(win)
-    if win == nil or win.SetVisible == nil then
-        return
-    end
-
-    local store, key = _prev_store_for(win)
-    local prev = store[key]
-    if prev == nil then
-        return
-    end
-    win:SetVisible(prev == true)
-    store[key] = nil
-end
-
-function Hidable.register(win, key)
+function Hidable.register(win)
     if win == nil then
         return
     end
 
-    REGISTRY[win] = key or false
-    if GLOBAL_HUD_VISIBLE ~= true and win.SetVisible ~= nil then
-        win:SetVisible(false)
+    Hidable[win] = true
+    if GLOBAL_HUD_VISIBLE ~= true then
+        _apply_global_visibility(win, false)
     end
 end
 
@@ -62,12 +40,7 @@ function Hidable.unregister(win)
         return
     end
 
-    local key = REGISTRY[win]
-    REGISTRY[win] = nil
-    WINDOW_PREV[win] = nil
-    if key ~= nil and key ~= false then
-        LUI_HUD_PREV[key] = nil
-    end
+    Hidable[win] = nil
 end
 
 function Hidable.set_visible(visible)
@@ -81,13 +54,9 @@ function Hidable.set_visible(visible)
         LUI_MOVE_UI.set_hud_visible(GLOBAL_HUD_VISIBLE)
     end
 
-    if GLOBAL_HUD_VISIBLE == true then
-        for win in pairs(REGISTRY) do
-            _restore_window(win)
-        end
-    else
-        for win in pairs(REGISTRY) do
-            _remember_and_hide_window(win)
+    for win, registered in pairs(Hidable) do
+        if _is_registered_window(win, registered) == true then
+            _apply_global_visibility(win, GLOBAL_HUD_VISIBLE)
         end
     end
 end

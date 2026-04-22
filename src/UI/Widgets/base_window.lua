@@ -14,12 +14,13 @@ function LuiBaseWindow:Constructor(opts)
     end
 
     self._hideable = false
-    self._hide_key = nil
+    self._global_hide_active = false
+    self._global_hide_previous_visible = nil
 
     self:apply_native_scaling()
 
     if opts.hideable == true then
-        self:set_hideable(true, opts.hide_key)
+        self:set_hideable(true)
     end
 end
 
@@ -31,11 +32,10 @@ function LuiBaseWindow:apply_native_scaling(target_window)
     end
 end
 
-function LuiBaseWindow:set_hideable(enabled, hide_key)
+function LuiBaseWindow:set_hideable(enabled)
     local registry = _G.LUI_HIDABLE
     if registry == nil then
         self._hideable = false
-        self._hide_key = nil
         return
     end
 
@@ -44,19 +44,14 @@ function LuiBaseWindow:set_hideable(enabled, hide_key)
     end
 
     self._hideable = enabled == true
-    self._hide_key = self._hideable and hide_key or nil
 
     if self._hideable == true and registry.register ~= nil then
-        registry.register(self, self._hide_key)
+        registry.register(self)
     end
 end
 
 function LuiBaseWindow:is_hideable()
     return self._hideable == true
-end
-
-function LuiBaseWindow:get_hide_key()
-    return self._hide_key
 end
 
 function LuiBaseWindow:unregister_hideable()
@@ -65,5 +60,28 @@ function LuiBaseWindow:unregister_hideable()
         registry.unregister(self)
     end
     self._hideable = false
-    self._hide_key = nil
+end
+
+function LuiBaseWindow:global_hide(visible)
+    if visible == true then
+        if self._global_hide_active == true and self._global_hide_previous_visible == true and self.SetVisible ~= nil then
+            self:SetVisible(true)
+        end
+        self._global_hide_active = false
+        self._global_hide_previous_visible = nil
+        return
+    end
+
+    if self._global_hide_active ~= true then
+        if self.IsVisible ~= nil then
+            self._global_hide_previous_visible = self:IsVisible() == true
+        else
+            self._global_hide_previous_visible = false
+        end
+    end
+
+    self._global_hide_active = true
+    if self.SetVisible ~= nil then
+        self:SetVisible(false)
+    end
 end

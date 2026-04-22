@@ -95,7 +95,6 @@ function LuiHUD:Constructor(opts)
     end
     local base_opts = {
         hideable = opts.hideable ~= false,
-        hide_key = opts.hide_key or opts.hud_key,
     }
     LuiBaseWindow.Constructor(self, base_opts)
 

@@ -517,7 +517,6 @@ end
 function StatusBarWindow:Constructor()
     LuiBaseWindow.Constructor(self, {
         hideable = true,
-        hide_key = "status_bar",
     })
 
     self.last_update_at = 0
