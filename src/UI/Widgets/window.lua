@@ -6,6 +6,7 @@ import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.menu"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.native_scaling"
 import "LUI.src.Utils.font"
 
 local Style = UI.Widgets.Style
@@ -141,6 +142,7 @@ LuiWindow.TILE_MAXIMIZED = TILE_MAXIMIZED
 
 function LuiWindow:Constructor()
     Turbine.UI.Window.Constructor(self)
+    self:apply_native_scaling()
 
     self._scale = 1
     self._icon_asset = nil
@@ -597,6 +599,13 @@ function LuiWindow:set_minimum_size(width, height)
     end
 end
 
+function LuiWindow:apply_native_scaling()
+    local native_scaling = UI ~= nil and UI.NativeScaling or _G.LUI_NATIVE_SCALING
+    if native_scaling ~= nil and native_scaling.disable ~= nil then
+        native_scaling.disable(self)
+    end
+end
+
 function LuiWindow:set_scale(scale)
     if type(scale) ~= "number" then
         scale = tonumber(scale)
@@ -610,6 +619,7 @@ function LuiWindow:set_scale(scale)
 end
 
 function LuiWindow:apply_settings(scale)
+    self:apply_native_scaling()
     if scale ~= nil then
         self:set_scale(scale)
         return

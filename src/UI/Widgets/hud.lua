@@ -1,5 +1,6 @@
 import "Turbine.UI"
 
+import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.line_edit"
 
@@ -90,6 +91,7 @@ LuiHUD = class(Turbine.UI.Window)
 
 function LuiHUD:Constructor(opts)
     Turbine.UI.Window.Constructor(self)
+    self:apply_native_scaling()
 
     if type(opts) ~= "table" then
         opts = {}
@@ -189,6 +191,13 @@ function LuiHUD:set_hud_mouse_visible(visible)
     self._hud_mouse_visible = visible == true
     if self._move_enabled ~= true then
         self:SetMouseVisible(self._hud_mouse_visible)
+    end
+end
+
+function LuiHUD:apply_native_scaling()
+    local native_scaling = UI ~= nil and UI.NativeScaling or _G.LUI_NATIVE_SCALING
+    if native_scaling ~= nil and native_scaling.disable ~= nil then
+        native_scaling.disable(self)
     end
 end
 
