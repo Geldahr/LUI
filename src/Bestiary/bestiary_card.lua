@@ -1337,7 +1337,7 @@ function BestiaryVariantTab:set_selected(selected)
     self:_apply_style()
 end
 
-BestiaryCard = class(Turbine.UI.Lotro.Window)
+BestiaryCard = class(LuiWindow)
 Bestiary.BestiaryCard = BestiaryCard
 
 local function _card_window_settings(create)
@@ -1364,7 +1364,7 @@ local function _card_window_settings(create)
 end
 
 function BestiaryCard:Constructor()
-    Turbine.UI.Lotro.Window.Constructor(self)
+    LuiWindow.Constructor(self)
 
     self.current_key = nil
     self.current_record = nil
@@ -1383,9 +1383,11 @@ function BestiaryCard:Constructor()
     self.sticky_position = false
     self._suppress_position_persist = false
 
-    self:SetText(TR["Bestiary"])
-    self:SetVisible(false)
-    self:SetResizable(false)
+    self:set_title(TR["Bestiary"])
+    self:set_icon(UI.AssetIds.book_orange_cover)
+    self:set_resizable(false)
+    self:enable_maximize(false)
+    self:hide()
     self:SetMouseVisible(true)
     self:SetWantsKeyEvents(true)
     -- self.KeyDown = function(_, args)
@@ -1394,10 +1396,14 @@ function BestiaryCard:Constructor()
     --     end
     -- end
 
+    local central = Turbine.UI.Control()
+    central:SetMouseVisible(true)
+    self:set_central_widget(central)
+
     self.variant_bar = self:_create_variant_bar()
 
     self.content = Turbine.UI.Control()
-    self.content:SetParent(self)
+    self.content:SetParent(central)
     self.content:SetMouseVisible(false)
 
     self.level_panel = _create_panel(self.content, TR["Level"])
@@ -1480,7 +1486,7 @@ end
 
 function BestiaryCard:_create_variant_bar()
     local bar = UI.Widgets.LuiTabBar()
-    bar:SetParent(self)
+    bar:SetParent(self:central_widget())
     bar:SetMouseVisible(true)
     bar:SetVisible(false)
     bar:set_scale(_G.settings.global.scale)
@@ -1559,9 +1565,9 @@ function BestiaryCard:_apply_selected_variant()
     self.current_record = record
 
     if self:_variant_tabs_visible() == true then
-        self:SetText(self.current_group_name or record.base_name or record.name or record.key or TR["Bestiary"])
+        self:set_title(self.current_group_name or record.base_name or record.name or record.key or TR["Bestiary"])
     else
-        self:SetText(record.name or record.key or TR["Bestiary"])
+        self:set_title(record.name or record.key or TR["Bestiary"])
     end
 
     self:_apply_record(record)
@@ -1635,8 +1641,9 @@ end
 function BestiaryCard:_measure_viewport_width()
     local margin_l = _scaled_int(12)
     local margin_r = _scaled_int(12)
+    local central_w = self:central_widget():GetSize()
 
-    return math.max(1, self:GetWidth() - margin_l - margin_r)
+    return math.max(1, central_w - margin_l - margin_r)
 end
 
 function BestiaryCard:_measure_bottom_height()
@@ -1703,6 +1710,16 @@ function BestiaryCard:_measure_content_height()
     local bottom_h = self:_measure_bottom_height()
 
     return stat_h + gap + profile_h + gap + self.drop_panel_h + gap + pair_h + gap + mitigation_h + gap + bottom_h
+end
+
+function BestiaryCard:_measure_minimum_content_height()
+    local gap = _scaled_int(BASE_SECTION_GAP)
+    return _scaled_int(BASE_STAT_BOX_H) + gap +
+        _scaled_int(BASE_PROFILE_H) + gap +
+        _scaled_int(BASE_DROP_MIN_H) + gap +
+        _scaled_int(BASE_TWO_COL_H) + gap +
+        _scaled_int(BASE_MITIGATION_H) + gap +
+        _scaled_int(BASE_NOTES_MIN_H)
 end
 
 function BestiaryCard:_measure_drop_layout(drop_texts)
@@ -1796,22 +1813,30 @@ function BestiaryCard:_restore_saved_position()
 end
 
 function BestiaryCard:_fit_window_height()
-    local margin_t = _scaled_int(36)
+    local margin_t = _scaled_int(12)
     local margin_b = _scaled_int(12)
-    local min_h = _scaled_int(BASE_HEIGHT)
     local offset = _scaled_int(BASE_OFFSET)
     local _, display_h = Turbine.UI.Display.GetSize()
-    local max_h = math.max(min_h, display_h - (2 * offset))
-    local desired_h = margin_t + margin_b + self:_measure_variant_tabs_height() + self:_measure_content_height()
-    local target_h = math.max(min_h, math.min(max_h, desired_h))
+    local min_content_h = margin_t + margin_b + self:_measure_variant_tabs_height() + self:_measure_minimum_content_height()
+    local desired_content_h = margin_t + margin_b + self:_measure_variant_tabs_height() + self:_measure_content_height()
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    local chrome_w = math.max(0, window_w - central_w)
+    local chrome_h = math.max(0, window_h - central_h)
+    local min_window_h = min_content_h + chrome_h
+    local target_w = _scaled_int(BASE_WIDTH) + chrome_w
+    local desired_window_h = desired_content_h + chrome_h
+    local max_window_h = math.max(min_window_h, display_h - (2 * offset))
+    local target_h = math.max(min_window_h, math.min(max_window_h, desired_window_h))
 
-    self:SetSize(_scaled_int(BASE_WIDTH), target_h)
+    self:SetSize(target_w, target_h)
+    LuiWindow._layout(self)
     self:_clamp_to_display()
 end
 
 function BestiaryCard:_layout_content()
     local margin_l = _scaled_int(12)
-    local margin_t = _scaled_int(36)
+    local margin_t = _scaled_int(12)
     local margin_r = _scaled_int(12)
     local margin_b = _scaled_int(12)
     local gap = _scaled_int(BASE_SECTION_GAP)
@@ -1824,10 +1849,11 @@ function BestiaryCard:_layout_content()
     local mitigation_h = _scaled_int(BASE_MITIGATION_H)
     local bottom_h = self:_measure_bottom_height()
 
-    local content_w = math.max(1, self:GetWidth() - margin_l - margin_r)
+    local host_w, host_h = self:central_widget():GetSize()
+    local content_w = math.max(1, host_w - margin_l - margin_r)
     local tab_offset_h = self:_layout_variant_tabs(margin_l, margin_t, content_w)
     local content_y = margin_t + tab_offset_h
-    local content_h = math.max(1, self:GetHeight() - content_y - margin_b)
+    local content_h = math.max(1, host_h - content_y - margin_b)
 
     self.content:SetPosition(margin_l, content_y)
     self.content:SetSize(content_w, content_h)
@@ -2028,9 +2054,13 @@ function BestiaryCard:_apply_record(record)
 end
 
 function BestiaryCard:apply_settings()
-    local w = _scaled_int(BASE_WIDTH)
-    local h = _scaled_int(BASE_HEIGHT)
+    LuiWindow.apply_settings(self, _G.settings.global.scale)
+    self:set_resizable(false)
 
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    local w = _scaled_int(BASE_WIDTH) + math.max(0, window_w - central_w)
+    local h = _scaled_int(BASE_HEIGHT) + math.max(0, window_h - central_h)
     self:SetSize(w, h)
 
     _style_panel(self.level_panel)
@@ -2089,7 +2119,7 @@ function BestiaryCard:close()
     self.current_group_name = nil
     self.variant_records = {}
     self.selected_variant_index = nil
-    self:SetVisible(false)
+    self:hide()
 end
 
 function BestiaryCard:on_target_changed()
@@ -2153,8 +2183,7 @@ function BestiaryCard:toggle_for_target(target, anchor)
         return false
     end
     self:_prepare_position(anchor)
-    self:SetVisible(true)
-    self:bring_to_front()
+    self:show()
     return true
 end
 
@@ -2169,7 +2198,6 @@ function BestiaryCard:show_for_name(name, anchor)
         return false
     end
     self:_prepare_position(anchor)
-    self:SetVisible(true)
-    self:bring_to_front()
+    self:show()
     return true
 end

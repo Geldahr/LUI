@@ -462,7 +462,8 @@ function BossVitals:_layout_effect_windows()
 
     self:SetSize(frame_width, total_h)
     if not self.managed_position then
-        self:SetPosition(v.window.left, v.window.top)
+        local window_settings = self:get_hud_settings()
+        self:SetPosition(window_settings.left, window_settings.top)
     end
 
     local power_left = 0

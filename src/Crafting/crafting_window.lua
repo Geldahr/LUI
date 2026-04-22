@@ -14,7 +14,7 @@ local DISPLAY_PAGES = "pages"
 local DISPLAY_SCROLL = "scroll"
 
 local BASE_MARGIN_LEFT = 15
-local BASE_MARGIN_TOP = 33
+local BASE_MARGIN_TOP = 11
 local BASE_MARGIN_RIGHT = 15
 local BASE_MARGIN_BOTTOM = 15
 local BASE_GAP = 6
@@ -1252,17 +1252,23 @@ function CraftingPlanRow:prepare_for_list_clear()
     self:SetVisible(false)
 end
 
-CraftingWindow = class(Turbine.UI.Lotro.Window)
+CraftingWindow = class(LuiWindow)
 Crafting.CraftingWindow = CraftingWindow
 
 function CraftingWindow:Constructor()
-    Turbine.UI.Lotro.Window.Constructor(self)
+    LuiWindow.Constructor(self)
 
-    self:SetText(TR["Crafting"])
-    self:SetVisible(false)
-    self:SetResizable(true)
+    self:set_title(TR["Crafting"])
+    self:set_icon(UI.AssetIds.anvil_gold)
+    self:set_resizable(true)
+    self:hide()
     self:SetWantsUpdates(false)
-    self:SetMinimumSize(_scaled_int(BASE_MIN_W), _scaled_int(BASE_MIN_H))
+
+    local content_host = Turbine.UI.Control()
+    content_host:SetMouseVisible(true)
+    self:set_central_widget(content_host)
+
+    self:set_minimum_size(self:_minimum_window_size())
 
     self._suppress_size_changed = false
     self._last_update_at = 0
@@ -1308,7 +1314,7 @@ function CraftingWindow:Constructor()
     self._critical_result_visible = false
 
     self.top_bar = Turbine.UI.Control()
-    self.top_bar:SetParent(self)
+    self.top_bar:SetParent(content_host)
 
     self.search_box = UI.Widgets.LineEdit()
     self.search_box:SetParent(self.top_bar)
@@ -1430,7 +1436,7 @@ function CraftingWindow:Constructor()
     end
 
     self.left_panel = Turbine.UI.Control()
-    self.left_panel:SetParent(self)
+    self.left_panel:SetParent(content_host)
     _set_control_border(self.left_panel, PANEL_BORDER, PANEL_BACK)
 
     self.recipe_list = Turbine.UI.ListBox()
@@ -1493,7 +1499,7 @@ function CraftingWindow:Constructor()
     self.recipe_empty:SetText(TR["No matching recipes."])
 
     self.right_panel = Turbine.UI.Control()
-    self.right_panel:SetParent(self)
+    self.right_panel:SetParent(content_host)
     self.right_panel:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
 
     self.right_tab_bar = UI.Widgets.LuiTabBar()
@@ -1726,7 +1732,7 @@ function CraftingWindow:Constructor()
     self.plan_empty:SetText(TR["Add recipes to the plan to see total shortages."])
 
     self.loading_panel = Turbine.UI.Control()
-    self.loading_panel:SetParent(self)
+    self.loading_panel:SetParent(content_host)
     _set_control_border(self.loading_panel, PANEL_BORDER, PANEL_BACK)
     self.loading_panel:SetVisible(false)
 
@@ -1752,7 +1758,7 @@ function CraftingWindow:Constructor()
     self.loading_fill:SetBackColor(STATUS_AUTO)
 
     self.source_breakdown_hint = UI.Widgets.LuiTooltip()
-    self.source_breakdown_hint:SetScale(_G.settings.global.scale)
+    self.source_breakdown_hint:set_scale(_G.settings.global.scale)
     self.source_breakdown_hint:SetZOrder(2300)
 
     self.source_breakdown_hint_inner = Turbine.UI.Control()
@@ -1761,6 +1767,7 @@ function CraftingWindow:Constructor()
     self.source_breakdown_hint_rows = {}
 
     self.SizeChanged = function()
+        LuiWindow._layout(self)
         if self._suppress_size_changed == true then
             return
         end
@@ -1788,7 +1795,12 @@ function CraftingWindow:Constructor()
         end
     end
 
-    self:SetSize(_scaled_int(1100), _scaled_int(700))
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    self:SetSize(
+        _scaled_int(1100) + math.max(0, window_w - central_w),
+        _scaled_int(700) + math.max(0, window_h - central_h)
+    )
     self:apply_settings()
 end
 
@@ -2351,9 +2363,8 @@ function CraftingWindow:set_scope_sources(source_keys, refresh)
 end
 
 function CraftingWindow:open()
-    self:SetVisible(true)
+    self:show()
     self:SetWantsUpdates(true)
-    self:bring_to_front()
     if self.store ~= nil then
         self.store:refresh_if_due()
     end
@@ -2400,7 +2411,7 @@ end
 
 function CraftingWindow:toggle()
     if self:IsVisible() == true then
-        self:SetVisible(false)
+        self:hide()
         self:SetWantsUpdates(false)
         return
     end
@@ -2410,32 +2421,40 @@ end
 
 function CraftingWindow:destroy()
     self:SetWantsUpdates(false)
-    self:SetVisible(false)
+    self:hide()
     self:_hide_source_breakdown_hint()
     self.store = nil
 end
 
 function CraftingWindow:capture_geometry()
-    local raw = _G.loaded_settings ~= nil and _G.loaded_settings.crafting or nil
-    if type(raw) ~= "table" or type(raw.window) ~= "table" then
+    local window = _G.get_ui_window_state("crafting")
+    if type(window) ~= "table" then
         return
     end
 
-    local left, top = self:GetPosition()
-    local width, height = self:GetSize()
-    raw.window.left = left
-    raw.window.top = top
-    raw.window.width = width
-    raw.window.height = height
+    local geometry = self:get_geometry()
+    window.left = geometry.left
+    window.top = geometry.top
+    window.width = geometry.width
+    window.height = geometry.height
+    window.tile = geometry.tile
 end
 
 function CraftingWindow:persist_geometry()
     self:capture_geometry()
 end
 
+function CraftingWindow:_minimum_window_size()
+    local window_w, window_h = self:GetSize()
+    local central_w, central_h = self:central_widget():GetSize()
+    return _scaled_int(BASE_MIN_W) + math.max(0, window_w - central_w),
+        _scaled_int(BASE_MIN_H) + math.max(0, window_h - central_h)
+end
+
 function CraftingWindow:apply_settings()
+    LuiWindow.apply_settings(self, _G.settings.global.scale)
     self.update_every = math.max(0.20, 1.0 / math.max(1, tonumber(_G.settings.global.refresh_rate) or 30))
-    self:SetMinimumSize(_scaled_int(BASE_MIN_W), _scaled_int(BASE_MIN_H))
+    self:set_minimum_size(self:_minimum_window_size())
     self:_enforce_min_size()
 
     self.search_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
@@ -2443,13 +2462,13 @@ function CraftingWindow:apply_settings()
     self.favorite_filter_button:set_scale(1)
     self.scope_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.scope_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.scope_dropdown:SetScale(_G.settings.global.scale)
+    self.scope_dropdown:set_scale(_G.settings.global.scale)
     self.profession_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.profession_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.profession_dropdown:SetScale(_G.settings.global.scale)
+    self.profession_dropdown:set_scale(_G.settings.global.scale)
     self.availability_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.availability_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.availability_dropdown:SetScale(_G.settings.global.scale)
+    self.availability_dropdown:set_scale(_G.settings.global.scale)
     self.level_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.level_min_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.level_dash_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
@@ -2480,7 +2499,7 @@ function CraftingWindow:apply_settings()
     self.plan_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.loading_text:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     if self.source_breakdown_hint ~= nil then
-        self.source_breakdown_hint:SetScale(_G.settings.global.scale)
+        self.source_breakdown_hint:set_scale(_G.settings.global.scale)
     end
 
     self:_set_scope_dropdown_options()
@@ -2494,8 +2513,7 @@ function CraftingWindow:apply_settings()
 end
 
 function CraftingWindow:_load_geometry()
-    local raw = _G.loaded_settings ~= nil and _G.loaded_settings.crafting or nil
-    local window = raw ~= nil and raw.window or nil
+    local window = _G.get_ui_window_state("crafting")
     if type(window) ~= "table" then
         return
     end
@@ -2504,19 +2522,21 @@ function CraftingWindow:_load_geometry()
     local top = tonumber(window.top) or self:GetTop()
     local width = tonumber(window.width) or self:GetWidth()
     local height = tonumber(window.height) or self:GetHeight()
+    local min_w, min_h = self:_minimum_window_size()
 
     self._suppress_size_changed = true
     self:SetPosition(left, top)
-    self:SetSize(width, height)
+    self:SetSize(math.max(min_w, width), math.max(min_h, height))
     self._suppress_size_changed = false
+    self:set_geometry(window)
     self:_enforce_min_size()
     self:layout()
 end
 
 function CraftingWindow:_enforce_min_size()
     local width, height = self:GetSize()
-    local min_w = _scaled_int(BASE_MIN_W)
-    local min_h = _scaled_int(BASE_MIN_H)
+    local min_w, min_h = self:_minimum_window_size()
+    self:set_minimum_size(min_w, min_h)
     if width >= min_w and height >= min_h then
         return
     end
@@ -3445,7 +3465,7 @@ function CraftingWindow:refresh_loading_state()
 end
 
 function CraftingWindow:layout()
-    local width, height = self:GetSize()
+    local width, height = self:central_widget():GetSize()
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)
     local margin_top = _scaled_int(BASE_MARGIN_TOP)
     local margin_right = _scaled_int(BASE_MARGIN_RIGHT)

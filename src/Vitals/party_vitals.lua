@@ -230,7 +230,8 @@ function PartyVitals:Constructor()
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
 
     local v = _G.settings.party
-    self:SetPosition(v.window.left, v.window.top)
+    local hud = _G.settings.ui.hud.party_vitals
+    self:SetPosition(hud.left, hud.top)
     local bw = v.frame.border_width
     local initial_h = v.morale.height + v.power.height - bw
     if initial_h < 1 then initial_h = 1 end
@@ -292,9 +293,9 @@ function PartyVitals:set_move_mode(enabled)
 end
 
 function PartyVitals:persist_position(x, y)
-    local s = _G.loaded_settings
-    s.party.window.left = x
-    s.party.window.top = y
+    local hud = _G.get_ui_hud_state("party_vitals")
+    hud.left = x
+    hud.top = y
 end
 
 function PartyVitals:get_placeholder_count()
@@ -430,7 +431,8 @@ end
 
 function PartyVitals:apply_settings()
     local v = _G.settings.party
-    self:SetPosition(v.window.left, v.window.top)
+    local hud = _G.settings.ui.hud.party_vitals
+    self:SetPosition(hud.left, hud.top)
 
     for i = 1, #self.members do
         local m = self.members[i]

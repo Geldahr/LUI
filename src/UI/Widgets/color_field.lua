@@ -217,6 +217,12 @@ function LuiColorField:SetFont(font)
 end
 
 function LuiColorField:set_scale(scale)
+    if type(scale) ~= "number" then
+        scale = tonumber(scale)
+    end
+    if scale == nil or scale <= 0 then
+        scale = 1
+    end
     self._scale = scale
     self._swatch_size = _scaled_int(self._scale, self._base_swatch_size)
     self._swatch_gap = _scaled_int(self._scale, self._base_swatch_gap)
@@ -234,10 +240,6 @@ function LuiColorField:set_scale(scale)
     end
 
     self:_layout(self:GetSize())
-end
-
-function LuiColorField:SetScale(scale)
-    self:set_scale(scale)
 end
 
 function LuiColorField:SetTextAlignment(align)

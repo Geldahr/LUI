@@ -152,7 +152,7 @@ function LuiCheckDropdown:set_scale(scale)
     end
     for i = 1, #self._items do
         if self._items[i] ~= nil then
-            self._items[i]:SetScale(self._scale)
+            self._items[i]:set_scale(self._scale)
         end
     end
 
@@ -163,10 +163,6 @@ function LuiCheckDropdown:set_scale(scale)
     if self.popup ~= nil and self.popup:IsVisible() == true then
         self:Close()
     end
-end
-
-function LuiCheckDropdown:SetScale(scale)
-    self:set_scale(scale)
 end
 
 function LuiCheckDropdown:SetTextAlignment(alignment)
@@ -396,7 +392,7 @@ function LuiCheckDropdown:_rebuild_items()
 
         local checkbox = LuiCheckBox()
         checkbox:SetParent(row)
-        checkbox:SetScale(self._scale)
+        checkbox:set_scale(self._scale)
         checkbox:SetText(tostring(self._labels[i]))
         checkbox:SetForeColor(Style.CONTROL_FOREGROUND)
         if self._item_font ~= nil then

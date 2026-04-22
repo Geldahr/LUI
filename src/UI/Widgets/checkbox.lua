@@ -153,7 +153,7 @@ function LuiCheckBox:SetTextAlignment(alignment)
     self._label:SetTextAlignment(alignment)
 end
 
-function LuiCheckBox:SetScale(scale)
+function LuiCheckBox:set_scale(scale)
     if type(scale) ~= "number" then
         scale = tonumber(scale)
     end

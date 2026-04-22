@@ -324,6 +324,12 @@ function LuiButton:set_font(font)
 end
 
 function LuiButton:set_scale(scale)
+    if type(scale) ~= "number" then
+        scale = tonumber(scale)
+    end
+    if scale == nil or scale <= 0 then
+        scale = 1
+    end
     self._scale = scale
 
     if self._uses_default_font == true then
@@ -567,6 +573,9 @@ function LuiButton:_layout()
 
             self._icon:SetPosition(px, py)
             self._icon:set_icon(self:_current_icon())
+            if self._icon_render_w ~= nil then
+                self._icon:set_size(self._icon_render_w, self._icon_render_h)
+            end
             if self._icon_stretch_mode ~= nil then
                 self._icon:SetStretchMode(self._icon_stretch_mode)
             end

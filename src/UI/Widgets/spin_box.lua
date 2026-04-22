@@ -434,10 +434,6 @@ function LuiSpinBox:set_scale(scale)
     self:_layout()
 end
 
-function LuiSpinBox:SetScale(scale)
-    self:set_scale(scale)
-end
-
 function LuiSpinBox:SetFont(font)
     if font == nil then
         return

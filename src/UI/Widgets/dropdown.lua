@@ -149,6 +149,12 @@ function LuiDropdown:SetFont(font)
 end
 
 function LuiDropdown:set_scale(scale)
+    if type(scale) ~= "number" then
+        scale = tonumber(scale)
+    end
+    if scale == nil or scale <= 0 then
+        scale = 1
+    end
     self._scale = scale
     self._item_height = _scaled_int(self._scale, BASE_ITEM_H)
 
@@ -172,10 +178,6 @@ function LuiDropdown:set_scale(scale)
     if self.popup ~= nil and self.popup:IsVisible() == true then
         self:Close()
     end
-end
-
-function LuiDropdown:SetScale(scale)
-    self:set_scale(scale)
 end
 
 function LuiDropdown:SetTextAlignment(alignment)

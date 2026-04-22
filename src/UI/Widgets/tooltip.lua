@@ -108,7 +108,7 @@ function LuiTooltip:_position_for(control, width, height)
     self:SetPosition(x, y)
 end
 
-function LuiTooltip:SetScale(scale)
+function LuiTooltip:set_scale(scale)
     if type(scale) ~= "number" then
         scale = tonumber(scale)
     end
