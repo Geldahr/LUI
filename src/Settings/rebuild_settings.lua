@@ -102,6 +102,7 @@ function _G.rebuild_settings()
 
     _G.settings.global.scale = scaling
     _G.settings.global.refresh_rate = refresh_rate
+    _G.settings.global.native_scaling = raw.global.native_scaling == true
     _G.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
     _G.settings.global.bestiary_capture = raw.global.bestiary_capture == true
     _G.settings.ui.windows = raw.ui.windows

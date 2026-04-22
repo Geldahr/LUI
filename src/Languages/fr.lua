@@ -327,6 +327,7 @@ FR = {
     ["Unlock non-matches"] = "Déverrouiller les non-correspondances",
     ["Use"] = "Utiliser",
     ["Use LotRO move mode shortcut"] = "Utiliser le raccourci du mode déplacement de LotRO",
+    ["Use native LotRO UI scaling"] = "Utiliser la mise à l'échelle native de l'interface de LotRO",
     ["Vault"] = "Coffre",
     ["View"] = "Vue",
     ["Warn color (10%)"] = "Couleur d'alerte (10%)",

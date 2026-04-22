@@ -30,6 +30,7 @@ function GlobalPage:Constructor(window)
     self:add_title(TR["Global"])
     self:add_break()
     self:add_text("scale", TR["UI Scale"])
+    self:add_checkbox("native_scaling", TR["Use native LotRO UI scaling"], true)
     self:add_text("refresh_rate", TR["Refresh rate of some UI elements (fps)"])
     self:add_checkbox("move_mode_shortcut", TR["Use LotRO move mode shortcut"])
     self:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"], true)
@@ -49,6 +50,7 @@ function GlobalPage:load(s)
     local controls = self.controls
     self.loading = true
     controls.scale.tb:SetText(tostring(s.global.scale))
+    controls.native_scaling.cb:SetChecked(s.global.native_scaling == true)
     controls.refresh_rate.tb:SetText(tostring(s.global.refresh_rate))
 
     local abbrev = s.global.number_abbrev
@@ -72,6 +74,7 @@ function GlobalPage:apply(s)
     if scale ~= nil and scale > 0 then
         s.global.scale = scale
     end
+    s.global.native_scaling = controls.native_scaling.cb:IsChecked() == true
     local refresh_rate = tonumber(controls.refresh_rate.tb:GetText())
     if refresh_rate ~= nil and refresh_rate > 0 then
         s.global.refresh_rate = refresh_rate
