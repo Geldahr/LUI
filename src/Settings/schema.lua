@@ -2,6 +2,39 @@ import "Turbine.UI"
 import "LUI.src.Settings.enums"
 import "LUI.src.StatusBar.common"
 
+local function _ensure_table(t, key)
+    if type(t[key]) ~= "table" then
+        t[key] = {}
+    end
+    return t[key]
+end
+
+function _G.get_ui_window_state(key)
+    if type(key) ~= "string" then
+        return nil
+    end
+    if type(_G.loaded_settings) ~= "table" then
+        return nil
+    end
+
+    local ui = _ensure_table(_G.loaded_settings, "ui")
+    local windows = _ensure_table(ui, "windows")
+    return _ensure_table(windows, key)
+end
+
+function _G.get_ui_hud_state(key)
+    if type(key) ~= "string" then
+        return nil
+    end
+    if type(_G.loaded_settings) ~= "table" then
+        return nil
+    end
+
+    local ui = _ensure_table(_G.loaded_settings, "ui")
+    local hud = _ensure_table(ui, "hud")
+    return _ensure_table(hud, key)
+end
+
 function _G.ensure_loaded_settings()
     if type(_G.loaded_settings) ~= "table" then
         _G.loaded_settings = {}
@@ -35,7 +68,54 @@ function _G.ensure_loaded_settings()
         return cur
     end
 
+    local function ensure_window_tile(window)
+        if type(window) ~= "table" then
+            return
+        end
+        if window.tile ~= "maximized" then
+            window.tile = "none"
+        end
+    end
+
+    local function ensure_ui_window(key, default_left, default_top, default_width, default_height)
+        local window = _G.get_ui_window_state(key)
+        if window == nil then
+            return nil
+        end
+
+        if window.left == nil then
+            window.left = default_left
+        end
+        if window.top == nil then
+            window.top = default_top
+        end
+        if window.width == nil then
+            window.width = default_width
+        end
+        if window.height == nil then
+            window.height = default_height
+        end
+        ensure_window_tile(window)
+        return window
+    end
+
+    local function ensure_ui_hud(key, default_left, default_top)
+        local hud = _G.get_ui_hud_state(key)
+        if hud == nil then
+            return nil
+        end
+
+        if hud.left == nil then
+            hud.left = default_left
+        end
+        if hud.top == nil then
+            hud.top = default_top
+        end
+        return hud
+    end
+
     ensure_table(s, "global")
+    ensure_table(s, "ui")
     ensure_table(s, "self")
     ensure_table(s, "target")
     ensure_table(s, "party")
@@ -45,9 +125,9 @@ function _G.ensure_loaded_settings()
     ensure_table(s, "bestiary")
     ensure_table(s, "status_bar")
 
-    ensure_table_at(s, { "global", "config_window" })
+    ensure_table_at(s, { "ui", "windows" })
+    ensure_table_at(s, { "ui", "hud" })
     ensure_table_at(s, { "global", "number_abbrev" })
-    ensure_table_at(s, { "status_bar", "window" })
     ensure_table_at(s, { "status_bar", "bg" })
     ensure_table_at(s, { "status_bar", "font" })
     ensure_table_at(s, { "status_bar", "layout" })
@@ -69,7 +149,6 @@ function _G.ensure_loaded_settings()
 
     ensure_table_at(s, { "self", "vitals" })
     ensure_table_at(s, { "self", "vitals", "frame" })
-    ensure_table_at(s, { "self", "vitals", "window" })
     ensure_table_at(s, { "self", "vitals", "morale" })
     ensure_table_at(s, { "self", "vitals", "morale", "font" })
     ensure_table_at(s, { "self", "vitals", "morale", "color" })
@@ -84,7 +163,6 @@ function _G.ensure_loaded_settings()
 
     ensure_table_at(s, { "target", "vitals" })
     ensure_table_at(s, { "target", "vitals", "frame" })
-    ensure_table_at(s, { "target", "vitals", "window" })
     ensure_table_at(s, { "target", "vitals", "morale" })
     ensure_table_at(s, { "target", "vitals", "morale", "font" })
     ensure_table_at(s, { "target", "vitals", "morale", "color" })
@@ -94,7 +172,6 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "target", "vitals", "targets_target" })
     ensure_table_at(s, { "target", "vitals", "targets_target", "font" })
     ensure_table_at(s, { "target", "vitals", "targets_target", "color" })
-    ensure_table_at(s, { "target", "vitals", "targets_target", "window" })
     ensure_table_at(s, { "target", "vitals", "effects" })
     ensure_table_at(s, { "target", "vitals", "effects", "buffs" })
     ensure_table_at(s, { "target", "vitals", "effects", "buffs", "timer_font" })
@@ -102,7 +179,6 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "target", "vitals", "effects", "debuffs", "timer_font" })
     ensure_table_at(s, { "target", "boss_vitals" })
     ensure_table_at(s, { "target", "boss_vitals", "frame" })
-    ensure_table_at(s, { "target", "boss_vitals", "window" })
     ensure_table_at(s, { "target", "boss_vitals", "morale" })
     ensure_table_at(s, { "target", "boss_vitals", "morale", "font" })
     ensure_table_at(s, { "target", "boss_vitals", "morale", "color" })
@@ -116,7 +192,6 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "target", "boss_vitals", "effects", "debuffs", "timer_font" })
 
     ensure_table_at(s, { "party", "frame" })
-    ensure_table_at(s, { "party", "window" })
     ensure_table_at(s, { "party", "layout" })
     ensure_table_at(s, { "party", "class_icon" })
     ensure_table_at(s, { "party", "leader_icon" })
@@ -132,27 +207,20 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "party", "effects", "debuffs" })
     ensure_table_at(s, { "party", "effects", "debuffs", "timer_font" })
 
-    ensure_table_at(s, { "inventory", "window" })
-    ensure_table_at(s, { "crafting", "window" })
-    ensure_table_at(s, { "assets", "window" })
     ensure_table_at(s, { "assets", "tile" })
     ensure_table_at(s, { "assets", "layouts" })
     ensure_table_at(s, { "assets", "layouts", "icons" })
     ensure_table_at(s, { "assets", "layouts", "details" })
-    ensure_table_at(s, { "bestiary", "window" })
     ensure_table_at(s, { "bestiary", "card_window" })
 
     ensure_table_at(s, { "self", "expiring_effects" })
-    ensure_table_at(s, { "self", "expiring_effects", "window" })
     ensure_table_at(s, { "self", "expiring_effects", "color" })
     ensure_table_at(s, { "self", "expiring_effects", "font" })
     ensure_table_at(s, { "self", "cooldowns" })
-    ensure_table_at(s, { "self", "cooldowns", "window" })
     ensure_table_at(s, { "self", "cooldowns", "font" })
     ensure_table_at(s, { "self", "cooldowns", "color" })
 
     ensure_table_at(s, { "target", "expiring_effects" })
-    ensure_table_at(s, { "target", "expiring_effects", "window" })
     ensure_table_at(s, { "target", "expiring_effects", "color" })
     ensure_table_at(s, { "target", "expiring_effects", "font" })
 
@@ -171,7 +239,7 @@ function _G.ensure_loaded_settings()
         s.global.bestiary_capture = false
     end
 
-    local function apply_vital_defaults(v, is_target, morale_default, power_default, default_left, default_top,
+    local function apply_vital_defaults(v, hud_key, is_target, morale_default, power_default, default_left, default_top,
                                         default_tt_left, default_tt_top, default_track_noncurable,
                                         default_frame_width)
         v.frame.width = v.frame.width or default_frame_width or 250
@@ -179,12 +247,7 @@ function _G.ensure_loaded_settings()
         v.frame.incombat_opacity = v.frame.incombat_opacity or 1.0
         v.frame.outcombat_opacity = v.frame.outcombat_opacity or 1.0
 
-        if v.window.left == nil then
-            v.window.left = default_left or (is_target and 600 or 200)
-        end
-        if v.window.top == nil then
-            v.window.top = default_top or 200
-        end
+        ensure_ui_hud(hud_key, default_left or (is_target and 600 or 200), default_top or 200)
 
         v.morale.height = v.morale.height or 50
         v.power.height = v.power.height or 26
@@ -295,12 +358,7 @@ function _G.ensure_loaded_settings()
             v.targets_target.width = v.targets_target.width or v.frame.width or 250
             v.targets_target.height = v.targets_target.height or v.power.height or 26
             v.targets_target.border_width = v.targets_target.border_width or v.frame.border_width
-            if v.targets_target.window.left == nil then
-                v.targets_target.window.left = default_tt_left
-            end
-            if v.targets_target.window.top == nil then
-                v.targets_target.window.top = default_tt_top
-            end
+            ensure_ui_hud("target_target_vitals", default_tt_left, default_tt_top)
             if v.targets_target.font.name == nil then
                 v.targets_target.font.name = LUI_ENUMS.font_name.VERDANA
             end
@@ -358,12 +416,7 @@ function _G.ensure_loaded_settings()
     local boss_top = math.floor((display_h * 0.10) + 0.5)
 
     local inv = s.inventory
-    if inv.window.left == nil then
-        inv.window.left = _pos_x(1980)
-    end
-    if inv.window.top == nil then
-        inv.window.top = _pos_y(585)
-    end
+    ensure_ui_window("inventory", _pos_x(1980), _pos_y(585))
     if inv.enabled == nil then
         inv.enabled = true
     end
@@ -375,12 +428,7 @@ function _G.ensure_loaded_settings()
     inv.tile_pad = nil
 
     local assets = s.assets
-    if assets.window.left == nil then
-        assets.window.left = _pos_x(860)
-    end
-    if assets.window.top == nil then
-        assets.window.top = _pos_y(180)
-    end
+    local assets_window = ensure_ui_window("assets", _pos_x(860), _pos_y(180))
     if assets.enabled == nil then
         assets.enabled = true
     end
@@ -394,8 +442,8 @@ function _G.ensure_loaded_settings()
     if assets.tile.icons == nil then assets.tile.icons = 40 end
     if assets.tile.details == nil then assets.tile.details = 40 end
     assets.tile.list = nil
-    local assets_default_left = assets.window.left
-    local assets_default_top = assets.window.top
+    local assets_default_left = assets_window.left
+    local assets_default_top = assets_window.top
     local assets_layouts = assets.layouts
     assets_layouts.list = nil
     local function ensure_assets_layout(layout, default_cols, default_rows)
@@ -412,18 +460,7 @@ function _G.ensure_loaded_settings()
     ensure_assets_layout(assets_layouts.details, 4, 10)
 
     local crafting = s.crafting
-    if crafting.window.left == nil then
-        crafting.window.left = _pos_x(720)
-    end
-    if crafting.window.top == nil then
-        crafting.window.top = _pos_y(150)
-    end
-    if crafting.window.width == nil then
-        crafting.window.width = 1100
-    end
-    if crafting.window.height == nil then
-        crafting.window.height = 700
-    end
+    ensure_ui_window("crafting", _pos_x(720), _pos_y(150), 1100, 700)
     if crafting.enabled == nil then
         crafting.enabled = true
     end
@@ -434,36 +471,22 @@ function _G.ensure_loaded_settings()
     crafting.favorites = nil
 
     local bestiary = s.bestiary
-    if bestiary.window.left == nil then
-        bestiary.window.left = _pos_x(900)
-    end
-    if bestiary.window.top == nil then
-        bestiary.window.top = _pos_y(180)
-    end
-    if bestiary.window.width == nil then
-        bestiary.window.width = 700
-    end
-    if bestiary.window.height == nil then
-        bestiary.window.height = 520
-    end
+    ensure_ui_window("bestiary", _pos_x(900), _pos_y(180), 700, 520)
 
-    local cw = s.global.config_window
-    if cw.width == nil then cw.width = 1005 end
-    if cw.height == nil then cw.height = 1011 end
-    if cw.left == nil then cw.left = _pos_x(450) end
-    if cw.top == nil then cw.top = _pos_y(51) end
+    ensure_ui_window("config", _pos_x(450), _pos_y(51), 1005, 1011)
 
     local tv = s.target.vitals
     if tv.morale.bubble_format == nil then
         tv.morale.bubble_format = " - %b"
     end
 
-    apply_vital_defaults(s.self.vitals, false, "%c / %t - %p", "%c / %t - %p", self_left, self_top, nil, nil, false,
-        250)
-    apply_vital_defaults(s.target.vitals, true, "[%level%] %name%\\n%c / %t - %p", "%c / %t - %p", target_left,
+    apply_vital_defaults(s.self.vitals, "self_vitals", false, "%c / %t - %p", "%c / %t - %p", self_left, self_top,
+        nil, nil, false, 250)
+    apply_vital_defaults(s.target.vitals, "target_vitals", true, "[%level%] %name%\\n%c / %t - %p", "%c / %t - %p",
+        target_left,
         target_top, tt_left, tt_top, true, 250)
-    apply_vital_defaults(s.target.boss_vitals, false, "[%level%] %name%\\n%c / %t", "%c / %t - %p", boss_left,
-        boss_top, nil, nil, true, 800)
+    apply_vital_defaults(s.target.boss_vitals, "boss_vitals", false, "[%level%] %name%\\n%c / %t",
+        "%c / %t - %p", boss_left, boss_top, nil, nil, true, 800)
 
     local bv = s.target.boss_vitals
     if bv.enabled == nil then
@@ -484,15 +507,14 @@ function _G.ensure_loaded_settings()
 
     local pv = s.party
     pv.frame.width = pv.frame.width or 110
-    pv.window.left = pv.window.left or party_left
-    pv.window.top = pv.window.top or party_top
     pv.morale.height = pv.morale.height or 32
     pv.power.height = pv.power.height or 16
     pv.morale.font.size = pv.morale.font.size or 12
     pv.power.font.size = pv.power.font.size or 10
     pv.effects.buffs.icon_size = pv.effects.buffs.icon_size or 32
     pv.effects.debuffs.icon_size = pv.effects.debuffs.icon_size or 36
-    apply_vital_defaults(s.party, false, "%name%\\n%c / %t", "%c / %t", party_left, party_top, nil, nil, true, 110)
+    apply_vital_defaults(s.party, "party_vitals", false, "%name%\\n%c / %t", "%c / %t", party_left, party_top, nil,
+        nil, true, 110)
 
     local pli = s.party.leader_icon
     if pli.enabled == nil then
@@ -543,12 +565,7 @@ function _G.ensure_loaded_settings()
     if se.bar_height == nil then se.bar_height = 30 end
     if se.border_width == nil then se.border_width = s.self.vitals.frame.border_width end
 
-    if se.window.left == nil then
-        se.window.left = _pos_x(1121)
-    end
-    if se.window.top == nil then
-        se.window.top = _pos_y(921)
-    end
+    ensure_ui_hud("self_effects", _pos_x(1121), _pos_y(921))
 
     se.color.bar = se.color.bar or Turbine.UI.Color(1, 0.200000, 0.333333, 0.600000)
     se.color.bar_buff = se.color.bar_buff or Turbine.UI.Color(1, 0.149020, 0.701961, 0.749020)
@@ -599,12 +616,7 @@ function _G.ensure_loaded_settings()
     if ed.bar_height == nil then ed.bar_height = 30 end
     if ed.border_width == nil then ed.border_width = s.target.vitals.frame.border_width end
 
-    if ed.window.left == nil then
-        ed.window.left = _pos_x(922)
-    end
-    if ed.window.top == nil then
-        ed.window.top = _pos_y(2)
-    end
+    ensure_ui_hud("target_effects", _pos_x(922), _pos_y(2))
 
     ed.color.bar = ed.color.bar or Turbine.UI.Color(1, 0.898039, 0.250980, 0.250980)
     ed.color.bar_buff = ed.color.bar_buff or Turbine.UI.Color(1, 0.149020, 0.701961, 0.749020)
@@ -649,8 +661,7 @@ function _G.ensure_loaded_settings()
     if sb.padding == nil then sb.padding = 6 end
     if sb.gap == nil then sb.gap = 8 end
 
-    if sb.window.left == nil then sb.window.left = _pos_x(200) end
-    if sb.window.top == nil then sb.window.top = _pos_y(20) end
+    ensure_ui_hud("status_bar", _pos_x(200), _pos_y(20))
 
     if sb.font.name == nil then
         sb.font.name = LUI_ENUMS.font_name.VERDANA
@@ -812,12 +823,7 @@ function _G.ensure_loaded_settings()
         cd.blacklist = ""
     end
 
-    if cd.window.left == nil then
-        cd.window.left = _pos_x(453)
-    end
-    if cd.window.top == nil then
-        cd.window.top = _pos_y(1054)
-    end
+    ensure_ui_hud("cooldowns", _pos_x(453), _pos_y(1054))
 
     cd.color.background = cd.color.background or Turbine.UI.Color(1, 0.0, 0.0, 0.0)
     cd.color.bar = cd.color.bar or Turbine.UI.Color(1, 0.0, 0.545098, 0.545098) -- #008B8B dark cyan

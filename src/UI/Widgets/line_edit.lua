@@ -14,6 +14,7 @@ LuiLineEdit = class(Turbine.UI.Control)
 function LuiLineEdit:Constructor()
     Turbine.UI.Control.Constructor(self)
 
+    self._scale = 1
     self._placeholder_text = ""
     self._placeholder_color = Style.PLACEHOLDER_FOREGROUND
     self._text_alignment = Turbine.UI.ContentAlignment.MiddleLeft
@@ -76,7 +77,7 @@ function LuiLineEdit:_layout()
     self.text_box:SetPosition(0, 0)
     self.text_box:SetSize(w, h)
 
-    local inset_x = DEFAULT_INSET_X + PLACEHOLDER_CURSOR_GAP
+    local inset_x = math.floor(((DEFAULT_INSET_X + PLACEHOLDER_CURSOR_GAP) * self._scale) + 0.5)
     self.placeholder_label:SetPosition(inset_x, 0)
     self.placeholder_label:SetSize(math.max(0, w - (inset_x * 2)), h)
 end
@@ -114,6 +115,17 @@ end
 
 function LuiLineEdit:SetPlaceholderColor(color)
     self:set_placeholder_color(color)
+end
+
+function LuiLineEdit:set_scale(scale)
+    if type(scale) ~= "number" then
+        scale = tonumber(scale)
+    end
+    if scale == nil or scale <= 0 then
+        scale = 1
+    end
+    self._scale = scale
+    self:_layout()
 end
 
 function LuiLineEdit:SetSize(w, h)

@@ -74,6 +74,12 @@ end
 
 local _dim_color = lui_dim_color
 local _gradient_morale_color = lui_gradient_morale_color
+local HUD_KEY_BY_VITAL = {
+    self = "self_vitals",
+    target = "target_vitals",
+    boss = "boss_vitals",
+    party = "party_vitals",
+}
 
 ---@class VitalsBase : Turbine.UI.Window
 VitalsBase = class(Turbine.UI.Window)
@@ -94,6 +100,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.show_effects = opts.show_effects ~= false
     self.show_moveable = opts.show_moveable ~= false
     self.managed_position = opts.managed_position == true
+    self.hud_key = opts.hud_key or HUD_KEY_BY_VITAL[vital_key]
 
     self.events = {
         mmc = nil,
@@ -120,7 +127,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
 
     local v = self:get_vitals_settings()
     local frame = v.frame
-    local window_settings = v.window
+    local window_settings = self:get_hud_settings()
     local frame_width = frame.width
 
     local effects_height = self:get_effects_height()
@@ -345,6 +352,14 @@ function VitalsBase:get_loaded_vitals_settings()
     return _G.loaded_settings[k]
 end
 
+function VitalsBase:get_hud_settings()
+    return _G.settings.ui.hud[self.hud_key]
+end
+
+function VitalsBase:get_loaded_hud_settings()
+    return _G.get_ui_hud_state(self.hud_key)
+end
+
 function VitalsBase:morale_color(percent)
     local c = self:get_vitals_settings().morale.color
     if c.gradient == true then
@@ -475,15 +490,12 @@ function VitalsBase:persist_position(x, y)
     if self.managed_position then
         return
     end
-    local v = self:get_loaded_vitals_settings()
-    if type(v) ~= "table" then
+    local hud = self:get_loaded_hud_settings()
+    if type(hud) ~= "table" then
         return
     end
-    if type(v.window) ~= "table" then
-        v.window = {}
-    end
-    v.window.left = x
-    v.window.top = y
+    hud.left = x
+    hud.top = y
 end
 
 function VitalsBase:on_target_changed()
@@ -859,7 +871,7 @@ end
 function VitalsBase:resize()
     local v = self:get_vitals_settings()
     local frame = v.frame
-    local window_settings = v.window
+    local window_settings = self:get_hud_settings()
     local frame_width = frame.width
     local effects_height = self:get_effects_height()
     local lower_bars_height = self:get_lower_bars_height()

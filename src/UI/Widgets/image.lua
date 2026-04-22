@@ -27,6 +27,7 @@ function Image:Constructor(icon, w, h)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
     self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
+    self._scale = 1
     self._requested_w = nil
     self._requested_h = nil
     self._requested_side = nil
@@ -100,6 +101,16 @@ function Image:set_size(w, h)
     self._real_h = new_h
 
     return new_w, new_h
+end
+
+function Image:set_scale(scale)
+    if type(scale) ~= "number" then
+        scale = tonumber(scale)
+    end
+    if scale == nil or scale <= 0 then
+        scale = 1
+    end
+    self._scale = scale
 end
 
 function Image:set_width(w)

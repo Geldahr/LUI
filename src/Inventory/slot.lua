@@ -11,11 +11,10 @@ local BORDER_THICKNESS = 2
 -- Constructor
 ---------------------------------------------------------------------
 
-function InventorySlot:Constructor(index, on_click, on_drop)
+function InventorySlot:Constructor(index, on_drop)
     Turbine.UI.Control.Constructor(self)
 
     self.index = index
-    self.on_click = on_click
     self.on_drop = on_drop
 
     self.tile_size = 40
@@ -28,7 +27,6 @@ function InventorySlot:Constructor(index, on_click, on_drop)
 
     self.item = nil
     self.matched = true
-    self.lock_mode = false
 
     self.edge_top = Turbine.UI.Control()
     self.edge_top:SetParent(self)
@@ -79,9 +77,6 @@ function InventorySlot:Constructor(index, on_click, on_drop)
         self.item_control:SetAllowDrop(true)
     end
     self.item_control.DragDrop = function(_, args)
-        if self.lock_mode == true then
-            return
-        end
         if args == nil or args.DragDropInfo == nil then
             return
         end
@@ -89,49 +84,6 @@ function InventorySlot:Constructor(index, on_click, on_drop)
             self.on_drop(self.index, args.DragDropInfo, args)
         end
     end
-    -- self.DragDrop = function(_, args)
-    --     if self.lock_mode == true then
-    --         return
-    --     end
-    --     if args == nil or args.DragDropInfo == nil then
-    --         return
-    --     end
-    --     if type(self.on_drop) == "function" then
-    --         self.on_drop(self.index, args.DragDropInfo)
-    --     end
-    -- end
-
-    -- Lock indicator + lock-mode click overlay are intentionally disabled for now.
-    -- Keep the old code commented for future re-enable.
-    --
-    -- self.lock_marker = Turbine.UI.Control()
-    -- self.lock_marker:SetParent(self)
-    -- self.lock_marker:SetMouseVisible(false)
-    -- self.lock_marker:SetBackColor(Turbine.UI.Color(0.90, 0.90, 0.15, 0.15))
-    -- self.lock_marker:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    -- self.lock_marker:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    -- self.lock_marker:SetVisible(false)
-    -- self.lock_marker:SetZOrder(15)
-    -- self.lock_marker:SetPosition(BORDER_THICKNESS, BORDER_THICKNESS)
-    -- self.lock_marker:SetSize(8, 8)
-    --
-    -- self.click_overlay = Turbine.UI.Control()
-    -- self.click_overlay:SetParent(self)
-    -- self.click_overlay:SetMouseVisible(false)
-    -- self.click_overlay:SetVisible(true)
-    -- self.click_overlay:SetZOrder(20)
-    -- self.click_overlay:SetPosition(0, 0)
-    -- self.click_overlay:SetSize(self.tile_size, self.tile_size)
-    -- self.click_overlay.MouseClick = function(_, args)
-    --     if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-    --         return
-    --     end
-    --     if type(self.on_click) == "function" then
-    --         self.on_click(self.index)
-    --     end
-    -- end
-    --
-    -- self:set_lock_mode(false)
     self:_layout()
 end
 
@@ -155,21 +107,6 @@ end
 function InventorySlot:set_tile(tile_size)
     self.tile_size = tile_size
     self:_layout()
-end
-
-function InventorySlot:set_lock_mode(enabled)
-    -- Lock mode is intentionally disabled for now.
-    -- self.lock_mode = enabled == true
-    -- if self.click_overlay ~= nil then
-    --     self.click_overlay:SetMouseVisible(self.lock_mode == true)
-    -- end
-    -- if self.item_control ~= nil then
-    --     self.item_control:SetMouseVisible(self.lock_mode ~= true)
-    -- end
-    self.lock_mode = false
-    if self.item_control ~= nil then
-        self.item_control:SetMouseVisible(true)
-    end
 end
 
 function InventorySlot:set_matched(matched)
@@ -217,7 +154,4 @@ function InventorySlot:_layout()
         self.item_control:SetPosition(0, 0)
         self.item_control:SetSize(sz + 1, sz + 1)
     end
-    -- if self.click_overlay ~= nil then
-    --     self.click_overlay:SetSize(sz, sz)
-    -- end
 end

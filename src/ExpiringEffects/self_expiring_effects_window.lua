@@ -27,8 +27,8 @@ function SelfExpiringEffectsWindow:get_settings()
     return _G.settings.self.expiring_effects
 end
 
-function SelfExpiringEffectsWindow:get_loaded_settings()
-    return _G.loaded_settings.self.expiring_effects
+function SelfExpiringEffectsWindow:get_hud_key()
+    return "self_effects"
 end
 
 function SelfExpiringEffectsWindow:get_border_width()

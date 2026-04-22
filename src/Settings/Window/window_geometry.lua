@@ -7,15 +7,7 @@ function ConfigWindow:get_geometry_state()
         return nil
     end
 
-    if _G.loaded_settings.global == nil then
-        _G.loaded_settings.global = {}
-    end
-
-    if _G.loaded_settings.global.config_window == nil then
-        _G.loaded_settings.global.config_window = {}
-    end
-
-    return _G.loaded_settings.global.config_window
+    return _G.get_ui_window_state("config")
 end
 
 function ConfigWindow:update_saved_geometry()
@@ -24,13 +16,12 @@ function ConfigWindow:update_saved_geometry()
         return
     end
 
-    local left, top = self:GetPosition()
-    local width, height = self:GetSize()
-
-    state.left = left
-    state.top = top
-    state.width = width
-    state.height = height
+    local geometry = self:get_geometry()
+    state.left = geometry.left
+    state.top = geometry.top
+    state.width = geometry.width
+    state.height = geometry.height
+    state.tile = geometry.tile
 end
 
 function ConfigWindow:persist_geometry()
@@ -43,12 +34,7 @@ function ConfigWindow:apply_saved_geometry()
 
     local display_width, display_height = Turbine.UI.Display.GetSize()
 
-    local state = nil
-    if _G.loaded_settings ~= nil then
-        if _G.loaded_settings.global ~= nil then
-            state = _G.loaded_settings.global.config_window
-        end
-    end
+    local state = self:get_geometry_state()
 
     local width = default_width
     local height = default_height
@@ -82,5 +68,6 @@ function ConfigWindow:apply_saved_geometry()
 
     self:SetPosition(left, top)
 
+    self:set_geometry(state)
     self:update_saved_geometry()
 end

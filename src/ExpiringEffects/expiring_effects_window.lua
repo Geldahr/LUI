@@ -117,7 +117,7 @@ function ExpiringEffectsWindow:get_settings()
     return nil
 end
 
-function ExpiringEffectsWindow:get_loaded_settings()
+function ExpiringEffectsWindow:get_hud_key()
     return nil
 end
 
@@ -135,12 +135,12 @@ function ExpiringEffectsWindow:get_moveable_title()
 end
 
 function ExpiringEffectsWindow:persist_position(x, y)
-    local raw = self:get_loaded_settings()
-    if raw == nil or type(raw.window) ~= "table" then
+    local hud = _G.get_ui_hud_state(self:get_hud_key())
+    if type(hud) ~= "table" then
         return
     end
-    raw.window.left = x
-    raw.window.top = y
+    hud.left = x
+    hud.top = y
 end
 
 function ExpiringEffectsWindow:is_move_mode()
@@ -167,7 +167,8 @@ function ExpiringEffectsWindow:apply_settings()
     local height = (rows * entry_height) + ((rows - 1) * spacing)
     self:SetSize(width, height)
 
-    self:SetPosition(s.window.left, s.window.top)
+    local hud = _G.settings.ui.hud[self:get_hud_key()]
+    self:SetPosition(hud.left, hud.top)
 
     local entry_class = self:get_entry_class()
     if entry_class == nil then
