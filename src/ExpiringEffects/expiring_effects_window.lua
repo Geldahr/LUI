@@ -2,7 +2,7 @@ import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
-import "LUI.src.UI.moveable"
+import "LUI.src.UI.Widgets.hud"
 
 local CURABILITY_UNKNOWN = 0
 local CURABILITY_CURABLE = 1
@@ -28,7 +28,7 @@ local function _is_valid_start(start, now)
     return true
 end
 
-ExpiringEffectsWindow = class(Turbine.UI.Window)
+ExpiringEffectsWindow = class(LuiHUD)
 
 local function _curability_state(effect)
     if effect == nil or effect.IsCurable == nil then
@@ -58,13 +58,15 @@ end
 ---------------------------------------------------------------------
 
 function ExpiringEffectsWindow:Constructor(opts)
-    Turbine.UI.Window.Constructor(self)
-
     if type(opts) ~= "table" then
         opts = {}
     end
 
     self._opts = opts
+    LuiHUD.Constructor(self, {
+        hud_key = self:get_hud_key(),
+        title = self:get_moveable_title(),
+    })
 
     self.slots = {}
     self.last_update_at = 0
@@ -76,15 +78,6 @@ function ExpiringEffectsWindow:Constructor(opts)
     self:SetVisible(false)
     self:SetMouseVisible(false)
     self:SetZOrder(20)
-
-    local title = self:get_moveable_title()
-    self.moveable = UI.Moveable(self, function(x, y)
-        self:SetPosition(x, y)
-    end, title)
-
-    self.moveable:set_on_move_end(function(x, y)
-        self:persist_position(x, y)
-    end)
 
     self:apply_settings()
 end
@@ -134,27 +127,14 @@ function ExpiringEffectsWindow:get_moveable_title()
     return (type(o.title) == "string" and o.title) or TR["Expiring Effects"]
 end
 
-function ExpiringEffectsWindow:persist_position(x, y)
-    local hud = _G.get_ui_hud_state(self:get_hud_key())
-    if type(hud) ~= "table" then
-        return
-    end
-    hud.left = x
-    hud.top = y
-end
-
-function ExpiringEffectsWindow:is_move_mode()
-    return self.moveable ~= nil and self.moveable:is_move_mode() or false
-end
-
 function ExpiringEffectsWindow:set_move_mode(enabled)
-    if self.moveable ~= nil then
-        self.moveable:set_move_mode(enabled)
-    end
+    LuiHUD.set_move_mode(self, enabled)
     self:refresh_visibility()
 end
 
 function ExpiringEffectsWindow:apply_settings()
+    self:apply_native_scaling()
+
     local s = self:get_settings()
     local cols = s.columns
     local rows = s.rows
@@ -166,9 +146,9 @@ function ExpiringEffectsWindow:apply_settings()
     local width = (cols * entry_width) + ((cols - 1) * spacing)
     local height = (rows * entry_height) + ((rows - 1) * spacing)
     self:SetSize(width, height)
+    self:layout_move_chrome()
 
-    local hud = _G.settings.ui.hud[self:get_hud_key()]
-    self:SetPosition(hud.left, hud.top)
+    self:apply_hud_position()
 
     local entry_class = self:get_entry_class()
     if entry_class == nil then
@@ -239,7 +219,7 @@ function ExpiringEffectsWindow:refresh_visibility()
         end
     end
 
-    self:SetVisible(any_visible or (self.moveable ~= nil and self.moveable:is_move_mode()))
+    self:SetVisible(any_visible or self:is_move_mode())
 end
 
 function ExpiringEffectsWindow:get_effect_objects()
