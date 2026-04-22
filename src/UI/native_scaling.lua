@@ -1,0 +1,130 @@
+import "Turbine.UI"
+
+UI = UI or {}
+
+local NativeScaling = UI.NativeScaling or {}
+UI.NativeScaling = NativeScaling
+
+local DEFAULT_SCALE = 1
+local DEFAULT_ORIGIN_LEFT = 0
+local DEFAULT_ORIGIN_TOP = 0
+
+local function _safe_window_call(window, method_name, ...)
+    if window == nil then
+        return false
+    end
+
+    local method = window[method_name]
+    if type(method) ~= "function" then
+        return false
+    end
+
+    local ok = pcall(method, window, ...)
+    return ok == true
+end
+
+local function _to_number(value, fallback)
+    local n = value
+    if type(n) ~= "number" then
+        n = tonumber(n)
+    end
+    if n == nil then
+        return fallback
+    end
+    return n
+end
+
+function NativeScaling.get_global_scale()
+    local display = Turbine ~= nil and Turbine.UI ~= nil and Turbine.UI.Display or nil
+    local method = display ~= nil and display.GetGlobalUIScale or nil
+    if type(method) ~= "function" then
+        return DEFAULT_SCALE
+    end
+
+    local ok, scale = pcall(method)
+    if ok ~= true then
+        return DEFAULT_SCALE
+    end
+
+    local n = _to_number(scale, DEFAULT_SCALE)
+    if n <= 0 then
+        return DEFAULT_SCALE
+    end
+    return n
+end
+
+function NativeScaling.has_global_scaling_api(window)
+    return window ~= nil and
+        type(window.RegisterForGlobalScaling) == "function" and
+        type(window.UnregisterForGlobalScaling) == "function"
+end
+
+function NativeScaling.set_origin(window, left, top)
+    return _safe_window_call(
+        window,
+        "SetScalingOriginPoint",
+        _to_number(left, DEFAULT_ORIGIN_LEFT),
+        _to_number(top, DEFAULT_ORIGIN_TOP)
+    )
+end
+
+function NativeScaling.get_origin(window)
+    if window == nil or type(window.GetScalingOriginPoint) ~= "function" then
+        return DEFAULT_ORIGIN_LEFT, DEFAULT_ORIGIN_TOP
+    end
+
+    local ok, left, top = pcall(window.GetScalingOriginPoint, window)
+    if ok ~= true then
+        return DEFAULT_ORIGIN_LEFT, DEFAULT_ORIGIN_TOP
+    end
+
+    return _to_number(left, DEFAULT_ORIGIN_LEFT), _to_number(top, DEFAULT_ORIGIN_TOP)
+end
+
+function NativeScaling.set_scale(window, scale)
+    local n = _to_number(scale, DEFAULT_SCALE)
+    if n <= 0 then
+        n = DEFAULT_SCALE
+    end
+    return _safe_window_call(window, "SetScale", n)
+end
+
+function NativeScaling.register(window)
+    return _safe_window_call(window, "RegisterForGlobalScaling")
+end
+
+function NativeScaling.unregister(window)
+    return _safe_window_call(window, "UnregisterForGlobalScaling")
+end
+
+function NativeScaling.apply(window, use_global_scaling, scale, origin_left, origin_top)
+    local native_enabled = use_global_scaling == true
+    local result = {
+        origin = false,
+        scale = false,
+        registered = false,
+        unregistered = false,
+    }
+
+    result.origin = NativeScaling.set_origin(window, origin_left, origin_top)
+
+    if native_enabled then
+        result.scale = NativeScaling.set_scale(window, scale)
+        result.registered = NativeScaling.register(window)
+    else
+        result.unregistered = NativeScaling.unregister(window)
+        result.scale = NativeScaling.set_scale(window, scale)
+    end
+
+    return result
+end
+
+function NativeScaling.enable(window)
+    return NativeScaling.apply(window, true, DEFAULT_SCALE, DEFAULT_ORIGIN_LEFT, DEFAULT_ORIGIN_TOP)
+end
+
+function NativeScaling.disable(window)
+    return NativeScaling.apply(window, false, DEFAULT_SCALE, DEFAULT_ORIGIN_LEFT, DEFAULT_ORIGIN_TOP)
+end
+
+_G.LUI_NATIVE_SCALING = NativeScaling
