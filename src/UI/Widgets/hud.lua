@@ -113,6 +113,9 @@ function LuiHUD:Constructor(opts)
     self._move_focused_input = nil
     self._move_grid_shown = false
 
+    self.on_move_mode_changed = nil
+    self.on_move_end = nil
+
     self:SetMouseVisible(self._hud_mouse_visible)
 
     self._move_layer = Turbine.UI.Control()
