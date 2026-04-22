@@ -27,7 +27,16 @@ end
 function LuiBaseWindow:apply_native_scaling(target_window)
     local target = target_window or self
     local native_scaling = UI ~= nil and UI.NativeScaling or _G.LUI_NATIVE_SCALING
-    if native_scaling ~= nil and native_scaling.disable ~= nil then
+    if native_scaling == nil then
+        return
+    end
+
+    local use_native = native_scaling.is_enabled ~= nil and native_scaling.is_enabled() == true and
+        native_scaling.has_global_scaling_api ~= nil and native_scaling.has_global_scaling_api(target) == true
+
+    if use_native and native_scaling.enable ~= nil then
+        native_scaling.enable(target)
+    elseif native_scaling.disable ~= nil then
         native_scaling.disable(target)
     end
 end

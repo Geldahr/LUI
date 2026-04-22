@@ -49,7 +49,7 @@ end
 
 function NativeScaling.is_enabled(settings)
     local global = _global_settings(settings)
-    return global ~= nil and global.native_scaling == true
+    return global ~= nil and global.native_scaling == true and NativeScaling.has_global_scale_api() == true
 end
 
 function NativeScaling.get_configured_scale(settings)
@@ -75,6 +75,11 @@ end
 
 function NativeScaling.scaled_int(value, settings)
     return math.floor(NativeScaling.scale_value(value, settings) + 0.5)
+end
+
+function NativeScaling.has_global_scale_api()
+    local display = Turbine ~= nil and Turbine.UI ~= nil and Turbine.UI.Display or nil
+    return display ~= nil and type(display.GetGlobalUIScale) == "function"
 end
 
 function NativeScaling.get_global_scale()

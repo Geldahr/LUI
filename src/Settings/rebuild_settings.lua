@@ -2,12 +2,14 @@ import "LUI.src.Utils.font"
 import "LUI.src.Utils.token_format"
 import "LUI.src.Settings.enums"
 import "LUI.src.StatusBar.common"
+import "LUI.src.UI.native_scaling"
 
 local S = _G.STATUS_BAR_COMMON
 
 function _G.rebuild_settings()
     local raw = _G.loaded_settings
-    local scaling = raw.global.scale
+    local configured_scaling = UI.NativeScaling.get_configured_scale(raw)
+    local scaling = UI.NativeScaling.get_effective_scale(raw)
     local refresh_rate = raw.global.refresh_rate
 
     local function scaled_int(value)
@@ -101,6 +103,7 @@ function _G.rebuild_settings()
     }
 
     _G.settings.global.scale = scaling
+    _G.settings.global.configured_scale = configured_scaling
     _G.settings.global.refresh_rate = refresh_rate
     _G.settings.global.native_scaling = raw.global.native_scaling == true
     _G.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut

@@ -569,6 +569,9 @@ function ConfigWindow:refresh_runtime_settings()
     if BESTIARY_WINDOW ~= nil and BESTIARY_WINDOW.apply_settings ~= nil then
         BESTIARY_WINDOW:apply_settings()
     end
+    if BESTIARY_CARD ~= nil and BESTIARY_CARD.apply_settings ~= nil then
+        BESTIARY_CARD:apply_settings()
+    end
     if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
         CRAFTING_WINDOW:apply_settings()
     end
