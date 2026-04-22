@@ -103,7 +103,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.vital_key = vital_key
     self.entity = entity
     self.show_effects = opts.show_effects ~= false
-    self.show_moveable = opts.show_moveable ~= false
+    self.show_move_ui = opts.move_ui ~= false
     self.managed_position = opts.managed_position == true
     self.hud_key = hud_key
 
@@ -467,11 +467,11 @@ function VitalsBase:apply_text_alignment()
 end
 
 function VitalsBase:is_move_mode()
-    return self.show_moveable == true and LuiHUD.is_move_mode(self)
+    return self.show_move_ui == true and LuiHUD.is_move_mode(self)
 end
 
 function VitalsBase:set_move_mode(enabled)
-    if self.show_moveable ~= true then
+    if self.show_move_ui ~= true then
         return
     end
     LuiHUD.set_move_mode(self, enabled)

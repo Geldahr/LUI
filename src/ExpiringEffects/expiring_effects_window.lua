@@ -65,7 +65,7 @@ function ExpiringEffectsWindow:Constructor(opts)
     self._opts = opts
     LuiHUD.Constructor(self, {
         hud_key = self:get_hud_key(),
-        title = self:get_moveable_title(),
+        title = self:get_move_title(),
     })
 
     self.slots = {}
@@ -122,7 +122,7 @@ function ExpiringEffectsWindow:get_entry_class()
     return nil
 end
 
-function ExpiringEffectsWindow:get_moveable_title()
+function ExpiringEffectsWindow:get_move_title()
     local o = self._opts
     return (type(o.title) == "string" and o.title) or TR["Expiring Effects"]
 end

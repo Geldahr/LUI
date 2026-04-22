@@ -4,9 +4,17 @@ LUI_LAST_HUD_TOGGLE_AT = LUI_LAST_HUD_TOGGLE_AT or 0
 _G.LUI_HIDABLE = _G.LUI_HIDABLE or {}
 
 local Hidable = _G.LUI_HIDABLE
-if getmetatable(Hidable) == nil then
-    setmetatable(Hidable, { __mode = "k" })
-end
+local HidableMethods = {}
+
+Hidable.register = nil
+Hidable.unregister = nil
+Hidable.set_visible = nil
+Hidable.is_visible = nil
+
+setmetatable(Hidable, {
+    __mode = "k",
+    __index = HidableMethods,
+})
 
 local function _is_registered_window(win, registered)
     return registered == true
@@ -24,7 +32,7 @@ local function _apply_global_visibility(win, visible)
     end
 end
 
-function Hidable.register(win)
+function HidableMethods.register(win)
     if win == nil then
         return
     end
@@ -35,7 +43,7 @@ function Hidable.register(win)
     end
 end
 
-function Hidable.unregister(win)
+function HidableMethods.unregister(win)
     if win == nil then
         return
     end
@@ -43,7 +51,7 @@ function Hidable.unregister(win)
     Hidable[win] = nil
 end
 
-function Hidable.set_visible(visible)
+function HidableMethods.set_visible(visible)
     if visible == nil then
         return
     end
@@ -61,7 +69,7 @@ function Hidable.set_visible(visible)
     end
 end
 
-function Hidable.is_visible()
+function HidableMethods.is_visible()
     return GLOBAL_HUD_VISIBLE == true
 end
 

@@ -32,7 +32,7 @@ function PartyMemberVitals:Constructor(entity)
     self.em_added_event = nil
     VitalsBase.Constructor(self, "party", entity, "Party Member", {
         show_effects = false,
-        show_moveable = false,
+        move_ui = false,
         managed_position = true,
     })
 end
