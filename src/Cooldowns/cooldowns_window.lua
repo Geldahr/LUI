@@ -199,7 +199,14 @@ function CooldownsWindow:get_settings()
 end
 
 function CooldownsWindow:set_move_mode(enabled)
+    local changed = (enabled == true) ~= self:is_move_mode()
     LuiHUD.set_move_mode(self, enabled)
+    if changed and enabled == true then
+        self:_hide_slots()
+    elseif changed then
+        self.last_update_at = -(self.update_every or 0)
+        self:Update()
+    end
     self:refresh_visibility()
 end
 
@@ -323,10 +330,25 @@ function CooldownsWindow:_draw_entries(now, threshold)
     self._is_updating_entries = false
 end
 
+function CooldownsWindow:_hide_slots()
+    for i = 1, #self.slots do
+        local e = self.slots[i]
+        if e ~= nil then
+            e:SetVisible(false)
+        end
+    end
+end
+
 function CooldownsWindow:Update()
     local s = self:get_settings()
     if s.enabled ~= true then
         self:SetVisible(false)
+        return
+    end
+
+    if self:is_move_mode() == true then
+        self:_hide_slots()
+        self:refresh_visibility()
         return
     end
 
@@ -342,13 +364,7 @@ function CooldownsWindow:Update()
 
     local threshold = s.threshold
     if threshold <= 0 then
-        for i = 1, #self.slots do
-            local e = self.slots[i]
-            if e ~= nil then
-                e:set_skill(nil)
-                e:SetVisible(false)
-            end
-        end
+        self:_hide_slots()
         self:refresh_visibility()
         return
     end

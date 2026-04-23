@@ -474,7 +474,11 @@ function VitalsBase:set_move_mode(enabled)
     if self.show_move_ui ~= true then
         return
     end
+    local changed = (enabled == true) ~= self:is_move_mode()
     LuiHUD.set_move_mode(self, enabled)
+    if changed and self.show_effects == true then
+        self:_set_effect_areas_visible(enabled ~= true)
+    end
 end
 
 function VitalsBase:persist_position(x, y)
@@ -994,6 +998,16 @@ function VitalsBase:_layout_effect_windows()
         self.buffs:SetTop(buffs_top)
         self.debuffs:SetTop(effects_top)
     end
+end
+
+function VitalsBase:_set_effect_areas_visible(visible)
+    if self.show_effects ~= true then
+        return
+    end
+
+    if self.debuffs ~= nil then self.debuffs:SetVisible(visible == true) end
+    if self.buffs ~= nil then self.buffs:SetVisible(visible == true) end
+    self:_layout_effect_windows()
 end
 
 function VitalsBase:_upsert_effect(effect, now)

@@ -128,7 +128,14 @@ function ExpiringEffectsWindow:get_move_title()
 end
 
 function ExpiringEffectsWindow:set_move_mode(enabled)
+    local changed = (enabled == true) ~= self:is_move_mode()
     LuiHUD.set_move_mode(self, enabled)
+    if changed and enabled == true then
+        self:_hide_slots()
+    elseif changed then
+        self.last_update_at = -(self.update_every or 0)
+        self:Update()
+    end
     self:refresh_visibility()
 end
 
@@ -226,10 +233,25 @@ function ExpiringEffectsWindow:get_effect_objects()
     return {}
 end
 
+function ExpiringEffectsWindow:_hide_slots()
+    for i = 1, #self.slots do
+        local e = self.slots[i]
+        if e ~= nil then
+            e:SetVisible(false)
+        end
+    end
+end
+
 function ExpiringEffectsWindow:Update()
     local s = self:get_settings()
     if s.enabled ~= true then
         self:SetVisible(false)
+        return
+    end
+
+    if self:is_move_mode() == true then
+        self:_hide_slots()
+        self:refresh_visibility()
         return
     end
 
@@ -248,13 +270,7 @@ function ExpiringEffectsWindow:Update()
     local show_unknown = _show_unknown_curability(show_curable, show_noncurable)
 
     if show_buffs ~= true and show_debuffs ~= true then
-        for i = 1, #self.slots do
-            local e = self.slots[i]
-            if e ~= nil then
-                if e.set_effect ~= nil then e:set_effect(nil) end
-                e:SetVisible(false)
-            end
-        end
+        self:_hide_slots()
         self:refresh_visibility()
         return
     end
