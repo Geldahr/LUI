@@ -19,7 +19,7 @@ local BASE_TITLE_BAR_H = 20
 local BASE_GAP = 4
 local BASE_MARGIN = 8
 local BASE_ICON = 20
-local BASE_CLOSE_ICON_RATIO = 0.6
+local BASE_TITLE_ACTION_ICON = 10
 local BASE_TITLE_FONT = 12
 local BASE_RESIZE_EDGE = 4
 local BASE_RESIZE_CORNER = 8
@@ -639,7 +639,7 @@ function LuiWindow:_style_title_button(button)
     button:set_border_thickness(0)
     button:set_padding(0)
     button:set_back_color(Style.TRANSPARENT_BACKGROUND)
-    button:set_hover_back_color(Style.TRANSPARENT_BACKGROUND)
+    button:set_hover_back_color(Style.ACCENT_BACKGROUND_DISABLED)
     button:set_pressed_back_color(Style.TRANSPARENT_BACKGROUND)
     button:set_active_back_color(Style.TRANSPARENT_BACKGROUND)
     button:set_disabled_back_color(Style.TRANSPARENT_BACKGROUND)
@@ -670,8 +670,8 @@ function LuiWindow:_apply_style()
         UI.AssetIds.x_hover,
         UI.AssetIds.x_hover,
         UI.AssetIds.x,
-        self:_base_close_icon_size(),
-        self:_base_close_icon_size(),
+        BASE_TITLE_ACTION_ICON,
+        BASE_TITLE_ACTION_ICON,
         LuiButton.icon_position.RIGHT
     )
 
@@ -729,10 +729,6 @@ function LuiWindow:_divider_h()
     return 1
 end
 
-function LuiWindow:_base_close_icon_size()
-    return math.max(1, math.floor((BASE_TITLE_BAR_H * BASE_CLOSE_ICON_RATIO) + 0.5))
-end
-
 function LuiWindow:_sync_maximize_button_icon()
     if self._maximize_button == nil then
         return
@@ -756,8 +752,8 @@ function LuiWindow:_sync_maximize_button_icon()
         hover,
         hover,
         normal,
-        self:_base_close_icon_size(),
-        self:_base_close_icon_size(),
+        BASE_TITLE_ACTION_ICON,
+        BASE_TITLE_ACTION_ICON,
         LuiButton.icon_position.RIGHT
     )
 end
