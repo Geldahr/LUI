@@ -112,6 +112,7 @@ function LuiHUD:Constructor(opts)
     self._move_updating_xy = false
     self._move_focused_input = nil
     self._move_grid_shown = false
+    self._move_ui_scale = nil
 
     self.on_move_mode_changed = nil
     self.on_move_end = nil
@@ -279,12 +280,22 @@ function LuiHUD:set_move_mode(enabled)
     end
 end
 
-function LuiHUD:apply_move_ui_scale()
+function LuiHUD:_sync_move_ui_scale()
+    local scale = _scale()
+    if self._move_ui_scale == scale then
+        return
+    end
+
+    self._move_ui_scale = scale
     self._move_title_label:SetFont(_scaled_font("Verdana", 12))
     self._move_x_label:SetFont(_scaled_font("Verdana", 10))
     self._move_x_box:SetFont(_scaled_font("Verdana", 10))
     self._move_y_label:SetFont(_scaled_font("Verdana", 10))
     self._move_y_box:SetFont(_scaled_font("Verdana", 10))
+end
+
+function LuiHUD:apply_move_ui_scale()
+    self:_sync_move_ui_scale()
     self:layout_move_chrome()
 end
 
@@ -292,6 +303,8 @@ function LuiHUD:layout_move_chrome()
     if self._move_layer == nil then
         return
     end
+
+    self:_sync_move_ui_scale()
 
     local w, h = self:GetSize()
     self._move_layer:SetPosition(0, 0)

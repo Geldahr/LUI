@@ -208,7 +208,7 @@ end
 
 function ExpiringEffectsWindow:refresh_visibility()
     local s = self:get_settings()
-    if s.enabled ~= true or is_lui_hud_visible() ~= true then
+    if s.enabled ~= true then
         self:SetVisible(false)
         return
     end

@@ -78,6 +78,7 @@ function CloseWindow:apply_style()
 end
 
 local function _apply_done_window_style()
+    MOVE_UI_DONE_WINDOW:apply_native_scaling()
     MOVE_UI_DONE_WINDOW:apply_style()
 end
 

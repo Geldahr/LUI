@@ -305,9 +305,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.power_label:SetVisible(true)
     self.morale_frame:SetVisible(true)
     self.power_frame:SetVisible(true)
-    if is_lui_hud_visible() ~= true then
-        self:SetVisible(false)
-    elseif self.vital_key == "target" and entity == nil then
+    if self.vital_key == "target" and entity == nil then
         self:SetVisible(false)
     else
         self:SetVisible(true)

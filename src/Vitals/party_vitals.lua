@@ -261,12 +261,6 @@ end
 ---------------------------------------------------------------------
 
 function PartyVitals:set_move_mode(enabled)
-    if is_lui_hud_visible() ~= true then
-        self:SetVisible(false)
-        LuiHUD.set_move_mode(self, enabled)
-        return
-    end
-
     if enabled == true then
         self:SetVisible(true)
     end
@@ -394,11 +388,6 @@ function PartyVitals:layout_members(count)
 end
 
 function PartyVitals:update_visibility(member_count)
-    if is_lui_hud_visible() ~= true then
-        self:SetVisible(false)
-        return
-    end
-
     if self:is_move_mode() then
         self:SetVisible(true)
         return

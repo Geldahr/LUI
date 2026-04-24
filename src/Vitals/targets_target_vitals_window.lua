@@ -66,9 +66,7 @@ end
 
 function TargetsTargetVitalsWindow:set_move_mode(enabled)
     LuiHUD.set_move_mode(self, enabled)
-    if is_lui_hud_visible() ~= true then
-        self:SetVisible(false)
-    elseif enabled == true then
+    if enabled == true then
         self:SetVisible(true)
     end
 end

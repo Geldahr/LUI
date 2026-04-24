@@ -154,7 +154,7 @@ end
 function BossVitals:set_move_mode(enabled)
     VitalsBase.set_move_mode(self, enabled)
     self:_layout_effect_windows()
-    if self:get_loaded_vitals_settings().enabled ~= true or is_lui_hud_visible() ~= true then
+    if self:get_loaded_vitals_settings().enabled ~= true then
         self:SetVisible(false)
     elseif enabled == true then
         self:SetVisible(true)
