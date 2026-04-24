@@ -623,6 +623,9 @@ end
 
 function LuiWindow:apply_settings(scale)
     self:apply_native_scaling()
+    if self._resize_handle_window ~= nil then
+        self:apply_native_scaling(self._resize_handle_window)
+    end
     if scale ~= nil then
         self:set_scale(scale)
         return
