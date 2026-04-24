@@ -1,3 +1,5 @@
+import "LUI.src.UI.popup_state"
+
 GLOBAL_HUD_VISIBLE = GLOBAL_HUD_VISIBLE ~= false
 LUI_LAST_HUD_TOGGLE_AT = LUI_LAST_HUD_TOGGLE_AT or 0
 
@@ -57,6 +59,10 @@ function HidableMethods.set_visible(visible)
     end
 
     GLOBAL_HUD_VISIBLE = visible == true
+
+    if GLOBAL_HUD_VISIBLE ~= true and _G.LUI_POPUP_STATE ~= nil and _G.LUI_POPUP_STATE.close_all ~= nil then
+        _G.LUI_POPUP_STATE.close_all()
+    end
 
     if LUI_MOVE_UI ~= nil and LUI_MOVE_UI.set_hud_visible ~= nil then
         LUI_MOVE_UI.set_hud_visible(GLOBAL_HUD_VISIBLE)
