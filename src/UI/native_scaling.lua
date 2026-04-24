@@ -107,6 +107,18 @@ function NativeScaling.has_global_scaling_api(window)
         type(window.UnregisterForGlobalScaling) == "function"
 end
 
+function NativeScaling.apply_window(window, settings)
+    if window == nil then
+        return
+    end
+
+    local use_native = NativeScaling.is_enabled(settings) and NativeScaling.has_global_scaling_api(window) == true
+    if use_native then
+        return NativeScaling.enable(window)
+    end
+    return NativeScaling.disable(window)
+end
+
 function NativeScaling.set_origin(window, left, top)
     return _safe_window_call(
         window,
