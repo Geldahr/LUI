@@ -1046,8 +1046,16 @@ function FirstRunQuickSetup:ensure_preview_mode()
         return
     end
 
+    if is_lui_hud_visible ~= nil and is_lui_hud_visible() ~= true and set_lui_hud_visible ~= nil then
+        set_lui_hud_visible(true)
+    end
+
     if PLAYER_VITAL:is_move_mode() ~= true and set_move_ui_mode ~= nil then
         set_move_ui_mode(true)
+    end
+
+    if PLAYER_VITAL:is_move_mode() ~= true then
+        return
     end
 
     if set_move_ui_preview_lock ~= nil then
