@@ -175,6 +175,9 @@ function ConfigWindow:Constructor()
     self.move_ui_button:set_font(self.settings_font)
     self.move_ui_button:set_text(TR["Move UI"])
     self.move_ui_button.Click = function()
+        if is_lui_hud_visible ~= nil and is_lui_hud_visible() ~= true and set_lui_hud_visible ~= nil then
+            set_lui_hud_visible(true)
+        end
         if set_move_ui_mode ~= nil then
             set_move_ui_mode(true, true)
         end
