@@ -106,7 +106,8 @@ local function _scaled_font(name, size)
 end
 
 local function _favorite_icon_size()
-    local scale = _G.settings ~= nil and _G.settings.global ~= nil and tonumber(_G.settings.global.scale) or 1
+    local global = _G.settings ~= nil and _G.settings.global or nil
+    local scale = global ~= nil and tonumber(global.configured_scale or global.scale) or 1
     return scale > FAVORITE_SCALE_BREAKPOINT and FAVORITE_ICON_LARGE or FAVORITE_ICON_SMALL
 end
 
