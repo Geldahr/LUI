@@ -42,6 +42,15 @@ function LuiBaseWindow:apply_native_scaling(target_window)
 end
 
 function LuiBaseWindow:set_hideable(enabled)
+    local want = enabled == true
+    if self._hideable == want then
+        return
+    end
+
+    if want ~= true and self._global_hide_active == true then
+        self:global_hide(true)
+    end
+
     local registry = _G.LUI_HIDABLE
     if registry == nil then
         self._hideable = false
@@ -52,7 +61,7 @@ function LuiBaseWindow:set_hideable(enabled)
         registry.unregister(self)
     end
 
-    self._hideable = enabled == true
+    self._hideable = want
 
     if self._hideable == true and registry.register ~= nil then
         registry.register(self)
@@ -64,21 +73,17 @@ function LuiBaseWindow:is_hideable()
 end
 
 function LuiBaseWindow:unregister_hideable()
-    local registry = _G.LUI_HIDABLE
-    if self._hideable == true and registry ~= nil and registry.unregister ~= nil then
-        registry.unregister(self)
-    end
-    self._hideable = false
+    self:set_hideable(false)
 end
 
 function LuiBaseWindow:SetVisible(visible)
     visible = visible == true
-    if self._global_hide_active == true and visible == true then
-        -- Keep the last requested visibility so HUD restore reflects current state, not pre-hide state.
-        self._global_hide_restore_visible = true
-        return
-    end
     if self._global_hide_active == true then
+        if visible == true then
+            -- Keep the last requested visibility so HUD restore reflects current state, not pre-hide state.
+            self._global_hide_restore_visible = true
+            return
+        end
         self._global_hide_restore_visible = false
     end
     Turbine.UI.Window.SetVisible(self, visible)
@@ -107,7 +112,6 @@ function LuiBaseWindow:global_hide(visible)
         end
     end
 
-    self._global_hide_active = true
     if self._global_hide_restore_visible == true then
         if self.hide ~= nil then
             self:hide()
@@ -115,4 +119,5 @@ function LuiBaseWindow:global_hide(visible)
             Turbine.UI.Window.SetVisible(self, false)
         end
     end
+    self._global_hide_active = true
 end

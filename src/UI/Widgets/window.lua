@@ -145,7 +145,7 @@ function LuiWindow:Constructor(opts)
         opts = {}
     end
     if opts.hideable == nil then
-        opts.hideable = false
+        opts.hideable = true
     end
     LuiBaseWindow.Constructor(self, opts)
 

@@ -214,7 +214,7 @@ if status_bar_pkg ~= nil then
 end
 
 function StatusBarEditWindow:Constructor(owner)
-    LuiBaseWindow.Constructor(self, { hideable = false })
+    LuiBaseWindow.Constructor(self, { hideable = true })
 
     self.owner = owner
     self.entries = {}
