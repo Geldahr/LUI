@@ -15,7 +15,7 @@ function LuiBaseWindow:Constructor(opts)
 
     self._hideable = false
     self._global_hide_active = false
-    self._global_hide_previous_visible = nil
+    self._global_hide_restore_visible = nil
 
     self:apply_native_scaling()
 
@@ -74,16 +74,21 @@ end
 function LuiBaseWindow:SetVisible(visible)
     visible = visible == true
     if self._global_hide_active == true and visible == true then
+        -- Keep the last requested visibility so HUD restore reflects current state, not pre-hide state.
+        self._global_hide_restore_visible = true
         return
+    end
+    if self._global_hide_active == true then
+        self._global_hide_restore_visible = false
     end
     Turbine.UI.Window.SetVisible(self, visible)
 end
 
 function LuiBaseWindow:global_hide(visible)
     if visible == true then
-        local restore_visible = self._global_hide_active == true and self._global_hide_previous_visible == true
+        local restore_visible = self._global_hide_active == true and self._global_hide_restore_visible == true
         self._global_hide_active = false
-        self._global_hide_previous_visible = nil
+        self._global_hide_restore_visible = nil
         if restore_visible == true then
             if self.show ~= nil then
                 self:show()
@@ -96,14 +101,14 @@ function LuiBaseWindow:global_hide(visible)
 
     if self._global_hide_active ~= true then
         if self.IsVisible ~= nil then
-            self._global_hide_previous_visible = self:IsVisible() == true
+            self._global_hide_restore_visible = self:IsVisible() == true
         else
-            self._global_hide_previous_visible = false
+            self._global_hide_restore_visible = false
         end
     end
 
     self._global_hide_active = true
-    if self._global_hide_previous_visible == true then
+    if self._global_hide_restore_visible == true then
         if self.hide ~= nil then
             self:hide()
         else
