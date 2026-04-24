@@ -71,13 +71,26 @@ function LuiBaseWindow:unregister_hideable()
     self._hideable = false
 end
 
+function LuiBaseWindow:SetVisible(visible)
+    visible = visible == true
+    if self._global_hide_active == true and visible == true then
+        return
+    end
+    Turbine.UI.Window.SetVisible(self, visible)
+end
+
 function LuiBaseWindow:global_hide(visible)
     if visible == true then
-        if self._global_hide_active == true and self._global_hide_previous_visible == true and self.SetVisible ~= nil then
-            self:SetVisible(true)
-        end
+        local restore_visible = self._global_hide_active == true and self._global_hide_previous_visible == true
         self._global_hide_active = false
         self._global_hide_previous_visible = nil
+        if restore_visible == true then
+            if self.show ~= nil then
+                self:show()
+            else
+                Turbine.UI.Window.SetVisible(self, true)
+            end
+        end
         return
     end
 
@@ -90,7 +103,11 @@ function LuiBaseWindow:global_hide(visible)
     end
 
     self._global_hide_active = true
-    if self.SetVisible ~= nil then
-        self:SetVisible(false)
+    if self._global_hide_previous_visible == true then
+        if self.hide ~= nil then
+            self:hide()
+        else
+            Turbine.UI.Window.SetVisible(self, false)
+        end
     end
 end
