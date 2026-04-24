@@ -307,7 +307,9 @@ local function _refresh_move_ui_chrome()
     end
 
     if MOVE_UI_DONE_WINDOW ~= nil then
-        local show_done = GLOBAL_MOVE_ENABLED == true and MOVE_UI_PREVIEW_LOCKED ~= true
+        local show_done = GLOBAL_MOVE_ENABLED == true and
+            GRID.hud_visible ~= false and
+            MOVE_UI_PREVIEW_LOCKED ~= true
         MOVE_UI_DONE_WINDOW:SetVisible(show_done)
         if show_done then
             _apply_done_window_style()
