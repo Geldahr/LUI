@@ -3,6 +3,7 @@
 !.gitignore
 .luarc.json
 *.svg
+*.af
 !.github/
 !.github/**
 lsp/
