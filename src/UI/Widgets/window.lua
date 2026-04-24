@@ -481,6 +481,10 @@ function LuiWindow:get_tile()
     return self:_normalize_tile_mode(self._tile_mode)
 end
 
+function LuiWindow:is_tiled()
+    return self:get_tile() ~= TILE_NONE
+end
+
 function LuiWindow:enable_maximize(enabled)
     self._maximize_enabled = enabled ~= false
     if self._maximize_enabled ~= true and self:is_maximized() == true then

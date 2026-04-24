@@ -897,7 +897,7 @@ end
 function AssetsWindow:capture_geometry()
     local raw = _G.loaded_settings.assets
     local window_state = _G.get_ui_window_state("assets")
-    if self:is_maximized() ~= true then
+    if self:is_tiled() ~= true then
         self:_save_current_layout()
     end
     local geometry = self:get_geometry()
@@ -922,7 +922,7 @@ function AssetsWindow:set_view_mode(mode, persist)
         return
     end
 
-    if self:is_maximized() ~= true then
+    if self:is_tiled() ~= true then
         self:_save_current_layout()
     end
     self.view_mode = mode
@@ -932,15 +932,14 @@ function AssetsWindow:set_view_mode(mode, persist)
 
     self.page_index = 1
     self:_apply_layout_for_mode(mode)
-    if self:is_maximized() == true then
-        local normal_left, normal_top = self:GetPosition()
-        local normal_w, normal_h = self:GetSize()
+    if self:is_tiled() == true then
+        local geometry = self:get_geometry()
         local window_state = _G.get_ui_window_state("assets")
-        window_state.left = normal_left
-        window_state.top = normal_top
-        window_state.width = normal_w
-        window_state.height = normal_h
-        window_state.tile = LuiWindow.TILE_MAXIMIZED
+        window_state.left = geometry.left
+        window_state.top = geometry.top
+        window_state.width = geometry.width
+        window_state.height = geometry.height
+        window_state.tile = geometry.tile
     end
     self:set_geometry(_G.get_ui_window_state("assets"))
     self:_update_view_buttons()
@@ -1080,14 +1079,13 @@ function AssetsWindow:apply_settings()
     self:_apply_layout_for_mode(self.view_mode)
     local window_state = _G.get_ui_window_state("assets")
     local window_tile = window_state.tile
-    if window_tile == LuiWindow.TILE_MAXIMIZED then
-        local normal_left, normal_top = self:GetPosition()
-        local normal_w, normal_h = self:GetSize()
-        window_state.left = normal_left
-        window_state.top = normal_top
-        window_state.width = normal_w
-        window_state.height = normal_h
-        window_state.tile = LuiWindow.TILE_MAXIMIZED
+    if window_tile ~= LuiWindow.TILE_NONE then
+        local geometry = self:get_geometry()
+        window_state.left = geometry.left
+        window_state.top = geometry.top
+        window_state.width = geometry.width
+        window_state.height = geometry.height
+        window_state.tile = geometry.tile
     end
     self:set_geometry(window_state)
     self:_update_view_buttons()
