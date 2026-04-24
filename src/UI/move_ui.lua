@@ -394,6 +394,10 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
         return
     end
 
+    if enabled == true and is_lui_hud_visible ~= nil and is_lui_hud_visible() ~= true then
+        return
+    end
+
     local save_changes = cancel_changes ~= true
 
     if enabled and CONFIG_WINDOW ~= nil and CONFIG_WINDOW:IsVisible() then
