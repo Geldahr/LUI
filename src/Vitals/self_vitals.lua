@@ -36,17 +36,16 @@ function SelfVitals:on_target_changed()
         return
     end
 
-    local hud_visible = is_lui_hud_visible() == true
     local boss_vitals_enabled = _G.loaded_settings.target.boss_vitals.enabled == true
 
     if self.entity == nil or self.entity.GetTarget == nil then
         if self.target_vitals ~= nil then
             self.target_vitals:set_entity(nil)
-            self.target_vitals:SetVisible(hud_visible == true and self.target_vitals:is_move_mode())
+            self.target_vitals:SetVisible(self.target_vitals:is_move_mode())
         end
         if self.boss_vitals ~= nil then
             self.boss_vitals:set_entity(nil)
-            self.boss_vitals:SetVisible(hud_visible == true and boss_vitals_enabled == true and self.boss_vitals:is_move_mode())
+            self.boss_vitals:SetVisible(boss_vitals_enabled == true and self.boss_vitals:is_move_mode())
         end
         return
     end
@@ -60,18 +59,18 @@ function SelfVitals:on_target_changed()
     if self.target_vitals ~= nil then
         self.target_vitals:set_entity(t)
         if t ~= nil and is_boss ~= true then
-            self.target_vitals:SetVisible(hud_visible)
+            self.target_vitals:SetVisible(true)
         else
-            self.target_vitals:SetVisible(hud_visible == true and self.target_vitals:is_move_mode())
+            self.target_vitals:SetVisible(self.target_vitals:is_move_mode())
         end
     end
 
     if self.boss_vitals ~= nil then
         self.boss_vitals:set_entity(is_boss == true and t or nil)
         if is_boss == true then
-            self.boss_vitals:SetVisible(hud_visible)
+            self.boss_vitals:SetVisible(true)
         else
-            self.boss_vitals:SetVisible(hud_visible == true and boss_vitals_enabled == true and self.boss_vitals:is_move_mode())
+            self.boss_vitals:SetVisible(boss_vitals_enabled == true and self.boss_vitals:is_move_mode())
         end
     end
 end

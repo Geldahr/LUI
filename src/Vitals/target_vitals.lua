@@ -168,9 +168,7 @@ end
 
 function TargetVitals:set_move_mode(enabled)
     VitalsBase.set_move_mode(self, enabled)
-    if is_lui_hud_visible() ~= true then
-        self:SetVisible(false)
-    elseif enabled == true then
+    if enabled == true then
         self:SetVisible(true)
     elseif self.entity == nil then
         self:SetVisible(false)
@@ -178,7 +176,7 @@ function TargetVitals:set_move_mode(enabled)
 
     if self.targets_target_window ~= nil then
         self.targets_target_window:set_move_mode(enabled)
-        if is_lui_hud_visible() ~= true or (enabled ~= true and self.tt == nil) then
+        if enabled ~= true and self.tt == nil then
             self.targets_target_window:SetVisible(false)
         end
     end
@@ -499,10 +497,7 @@ function TargetVitals:_build_extra_controls()
         label = self.targets_target_window.targets_target_label,
         control = self.targets_target_window.targets_control,
         set_visible = function(visible)
-            self.targets_target_window:SetVisible(
-                is_lui_hud_visible() == true and
-                (visible == true or self.targets_target_window:is_move_mode())
-            )
+            self.targets_target_window:SetVisible(visible == true or self.targets_target_window:is_move_mode())
         end,
         set_entity = function(entity)
             self.targets_target_window.targets_control:SetEntity(entity)

@@ -628,6 +628,7 @@ _G.DEFAULT_LAYOUT_TOP =
 			["digits"] = 3.000000
 		},
 		["scale"] = 1.350000,
+		["native_scaling"] = false,
 		["bestiary_capture"] = false,
 		["move_mode_shortcut"] = true
 	},

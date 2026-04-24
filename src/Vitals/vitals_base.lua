@@ -6,7 +6,7 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.Vitals.effect_icon"
 import "LUI.src.Vitals.buff_area"
 import "LUI.src.Vitals.debuff_area"
-import "LUI.src.UI.moveable"
+import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Utils.color"
 import "LUI.src.Utils.token_format"
@@ -81,26 +81,31 @@ local HUD_KEY_BY_VITAL = {
     party = "party_vitals",
 }
 
----@class VitalsBase : Turbine.UI.Window
-VitalsBase = class(Turbine.UI.Window)
+---@class VitalsBase : LuiHUD
+VitalsBase = class(LuiHUD)
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function VitalsBase:Constructor(vital_key, entity, title, opts)
-    Turbine.UI.Window.Constructor(self)
-
     if type(opts) ~= "table" then
         opts = {}
     end
 
+    local hud_key = opts.hud_key or HUD_KEY_BY_VITAL[vital_key]
+    LuiHUD.Constructor(self, {
+        hud_key = hud_key,
+        title = title,
+        hideable = opts.managed_position ~= true,
+    })
+
     self.vital_key = vital_key
     self.entity = entity
     self.show_effects = opts.show_effects ~= false
-    self.show_moveable = opts.show_moveable ~= false
+    self.show_move_ui = opts.move_ui ~= false
     self.managed_position = opts.managed_position == true
-    self.hud_key = opts.hud_key or HUD_KEY_BY_VITAL[vital_key]
+    self.hud_key = hud_key
 
     self.events = {
         mmc = nil,
@@ -127,7 +132,6 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
 
     local v = self:get_vitals_settings()
     local frame = v.frame
-    local window_settings = self:get_hud_settings()
     local frame_width = frame.width
 
     local effects_height = self:get_effects_height()
@@ -140,11 +144,12 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     local total_h = effects_height + v.morale.height + lower_bars_height - frame.border_width
     if total_h < 1 then total_h = 1 end
     self:SetSize(frame_width, total_h)
+    self:layout_move_chrome()
     self:SetMouseVisible(false)
     if self.managed_position then
         self:SetPosition(0, 0)
     else
-        self:SetPosition(window_settings.left, window_settings.top)
+        self:apply_hud_position()
     end
 
     -- self:SetBackColor(Turbine.UI.Color(0.9, 0.3, 0.3))
@@ -296,28 +301,11 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     ---------------------------------------------------------------------
     self:_build_extra_controls()
 
-    ---------------------------------------------------------------------
-    -- Moveable overlay
-    ---------------------------------------------------------------------
-    if self.show_moveable then
-        self.moveable = UI.Moveable(self, function(x, y)
-            self:SetPosition(x, y)
-        end, title)
-
-        self.moveable:set_on_move_end(function(x, y)
-            self:persist_position(x, y)
-        end)
-    else
-        self.moveable = nil
-    end
-
     self.morale_label:SetVisible(true)
     self.power_label:SetVisible(true)
     self.morale_frame:SetVisible(true)
     self.power_frame:SetVisible(true)
-    if is_lui_hud_visible() ~= true then
-        self:SetVisible(false)
-    elseif self.vital_key == "target" and entity == nil then
+    if self.vital_key == "target" and entity == nil then
         self:SetVisible(false)
     else
         self:SetVisible(true)
@@ -477,12 +465,17 @@ function VitalsBase:apply_text_alignment()
 end
 
 function VitalsBase:is_move_mode()
-    return self.moveable ~= nil and self.moveable:is_move_mode() or false
+    return self.show_move_ui == true and LuiHUD.is_move_mode(self)
 end
 
 function VitalsBase:set_move_mode(enabled)
-    if self.moveable ~= nil then
-        self.moveable:set_move_mode(enabled)
+    if self.show_move_ui ~= true then
+        return
+    end
+    local changed = (enabled == true) ~= self:is_move_mode()
+    LuiHUD.set_move_mode(self, enabled)
+    if changed and self.show_effects == true then
+        self:_set_effect_areas_visible(enabled ~= true)
     end
 end
 
@@ -490,12 +483,7 @@ function VitalsBase:persist_position(x, y)
     if self.managed_position then
         return
     end
-    local hud = self:get_loaded_hud_settings()
-    if type(hud) ~= "table" then
-        return
-    end
-    hud.left = x
-    hud.top = y
+    LuiHUD.persist_position(self, x, y)
 end
 
 function VitalsBase:on_target_changed()
@@ -869,9 +857,10 @@ function VitalsBase:set_entity(entity)
 end
 
 function VitalsBase:resize()
+    self:apply_native_scaling()
+
     local v = self:get_vitals_settings()
     local frame = v.frame
-    local window_settings = self:get_hud_settings()
     local frame_width = frame.width
     local effects_height = self:get_effects_height()
     local lower_bars_height = self:get_lower_bars_height()
@@ -882,8 +871,9 @@ function VitalsBase:resize()
     local total_h = effects_height + v.morale.height + lower_bars_height - frame.border_width
     if total_h < 1 then total_h = 1 end
     self:SetSize(frame_width, total_h)
+    self:layout_move_chrome()
     if not self.managed_position then
-        self:SetPosition(window_settings.left, window_settings.top)
+        self:apply_hud_position()
     end
 
     self.morale_frame:SetSize(frame_width, v.morale.height)
@@ -1006,6 +996,16 @@ function VitalsBase:_layout_effect_windows()
         self.buffs:SetTop(buffs_top)
         self.debuffs:SetTop(effects_top)
     end
+end
+
+function VitalsBase:_set_effect_areas_visible(visible)
+    if self.show_effects ~= true then
+        return
+    end
+
+    if self.debuffs ~= nil then self.debuffs:SetVisible(visible == true) end
+    if self.buffs ~= nil then self.buffs:SetVisible(visible == true) end
+    self:_layout_effect_windows()
 end
 
 function VitalsBase:_upsert_effect(effect, now)

@@ -259,7 +259,7 @@ function InventoryWindow:capture_geometry()
     window_state.width = geometry.width
     window_state.height = geometry.height
     window_state.tile = geometry.tile
-    if self:is_maximized() ~= true then
+    if self:is_tiled() ~= true then
         raw.cols = self.cols
     end
 end
@@ -436,7 +436,7 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
 
     self.cols = cols
     self.rows_visible = rows
-    if self:is_maximized() ~= true then
+    if self:is_tiled() ~= true then
         raw.cols = cols
     end
 
@@ -445,7 +445,7 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
     local min_w, min_h = self:minimum_window_size()
     if desired_w < min_w then desired_w = min_w end
     if desired_h < min_h then desired_h = min_h end
-    if self:is_maximized() == true then
+    if self:is_tiled() == true then
         desired_h = window_h
     end
 
@@ -564,10 +564,10 @@ function InventoryWindow:apply_settings()
     self:SetSize(w, h)
     self._suppress_size_changed = false
     local window_tile = window_state.tile
-    if window_tile == LuiWindow.TILE_MAXIMIZED then
+    if window_tile ~= LuiWindow.TILE_NONE then
         window_state.width = w
         window_state.height = h
-        window_state.tile = LuiWindow.TILE_MAXIMIZED
+        window_state.tile = window_tile
     end
     self:set_geometry(window_state)
 

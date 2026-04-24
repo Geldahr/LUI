@@ -2,19 +2,21 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
-import "LUI.src.UI.moveable"
+import "LUI.src.UI.Widgets.hud"
 
-TargetsTargetVitalsWindow = class(Turbine.UI.Window)
+TargetsTargetVitalsWindow = class(LuiHUD)
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function TargetsTargetVitalsWindow:Constructor(owner)
-    Turbine.UI.Window.Constructor(self)
+    LuiHUD.Constructor(self, {
+        hud_key = "target_target_vitals",
+        title = TR["Target's Target"],
+    })
 
     self.owner = owner
-    self.moveable = nil
 
     self:SetMouseVisible(false)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
@@ -50,13 +52,6 @@ function TargetsTargetVitalsWindow:Constructor(owner)
     self.targets_control:SetEntity(nil)
     self.targets_control:SetZOrder(4)
 
-    self.moveable = UI.Moveable(self, function(x, y)
-        self:SetPosition(x, y)
-    end, TR["Target's Target"])
-    self.moveable:set_on_move_end(function(x, y)
-        self:persist_position(x, y)
-    end)
-
     self:apply_settings()
     self:SetVisible(false)
 end
@@ -69,28 +64,16 @@ end
 -- Public functions
 ---------------------------------------------------------------------
 
-function TargetsTargetVitalsWindow:is_move_mode()
-    return self.moveable ~= nil and self.moveable:is_move_mode() or false
-end
-
 function TargetsTargetVitalsWindow:set_move_mode(enabled)
-    if self.moveable ~= nil then
-        self.moveable:set_move_mode(enabled)
-    end
-    if is_lui_hud_visible() ~= true then
-        self:SetVisible(false)
-    elseif enabled == true then
+    LuiHUD.set_move_mode(self, enabled)
+    if enabled == true then
         self:SetVisible(true)
     end
 end
 
-function TargetsTargetVitalsWindow:persist_position(x, y)
-    local hud = _G.get_ui_hud_state("target_target_vitals")
-    hud.left = x
-    hud.top = y
-end
-
 function TargetsTargetVitalsWindow:apply_settings()
+    self:apply_native_scaling()
+
     local v = _G.settings.target.vitals
     local tt = v.targets_target
 
@@ -99,6 +82,8 @@ function TargetsTargetVitalsWindow:apply_settings()
     local h = tt.height
 
     self:SetSize(frame_w, h)
+    self:layout_move_chrome()
+
     self.targets_target_border:SetSize(frame_w, h)
     self.targets_target_border:SetBackColor(tt.color.border)
 
@@ -124,10 +109,5 @@ function TargetsTargetVitalsWindow:apply_settings()
     self.targets_control:SetSize(frame_w, h)
     self.targets_control:SetPosition(0, 0)
 
-    local ww = _G.settings.ui.hud.target_target_vitals
-    self:SetPosition(ww.left, ww.top)
-
-    if self.moveable ~= nil and self.moveable.update_size ~= nil then
-        self.moveable:update_size()
-    end
+    self:apply_hud_position()
 end

@@ -1,77 +1,90 @@
-GLOBAL_HUD_VISIBLE = true
-LUI_HUD_PREV = LUI_HUD_PREV or {}
+import "LUI.src.UI.popup_state"
+
+GLOBAL_HUD_VISIBLE = GLOBAL_HUD_VISIBLE ~= false
 LUI_LAST_HUD_TOGGLE_AT = LUI_LAST_HUD_TOGGLE_AT or 0
 
-function _G.is_lui_hud_visible()
-    return GLOBAL_HUD_VISIBLE == true
+_G.LUI_HIDABLE = _G.LUI_HIDABLE or {}
+
+local Hidable = _G.LUI_HIDABLE
+local HidableMethods = {}
+
+Hidable.register = nil
+Hidable.unregister = nil
+Hidable.set_visible = nil
+Hidable.is_visible = nil
+
+setmetatable(Hidable, {
+    __mode = "k",
+    __index = HidableMethods,
+})
+
+local function _is_registered_window(win, registered)
+    return registered == true
 end
 
-local function _remember_and_hide_window(key, win)
+local function _apply_global_visibility(win, visible)
     if win == nil then
         return
     end
-    if win.IsVisible ~= nil then
-        LUI_HUD_PREV[key] = win:IsVisible()
-    end
-    if win.SetVisible ~= nil then
+
+    if win.global_hide ~= nil then
+        win:global_hide(visible)
+    elseif visible ~= true and win.SetVisible ~= nil then
         win:SetVisible(false)
     end
 end
 
-local function _restore_window(key, win)
-    if win == nil or win.SetVisible == nil then
+function HidableMethods.register(win)
+    if win == nil then
         return
     end
-    local prev = LUI_HUD_PREV[key]
-    if prev == nil then
-        return
+
+    Hidable[win] = true
+    if GLOBAL_HUD_VISIBLE ~= true then
+        _apply_global_visibility(win, false)
     end
-    win:SetVisible(prev == true)
 end
 
-function _G.set_lui_hud_visible(visible)
+function HidableMethods.unregister(win)
+    if win == nil then
+        return
+    end
+
+    Hidable[win] = nil
+end
+
+function HidableMethods.set_visible(visible)
     if visible == nil then
         return
     end
 
     GLOBAL_HUD_VISIBLE = visible == true
 
-    if UI ~= nil and UI.Moveable ~= nil and UI.Moveable.set_hud_visible ~= nil then
-        UI.Moveable.set_hud_visible(GLOBAL_HUD_VISIBLE)
-    elseif Moveable ~= nil and Moveable.set_hud_visible ~= nil then
-        Moveable.set_hud_visible(GLOBAL_HUD_VISIBLE)
+    if GLOBAL_HUD_VISIBLE ~= true and _G.LUI_POPUP_STATE ~= nil and _G.LUI_POPUP_STATE.close_all ~= nil then
+        _G.LUI_POPUP_STATE.close_all()
     end
 
-    if not GLOBAL_HUD_VISIBLE then
-        _remember_and_hide_window("player_vital", PLAYER_VITAL)
-        _remember_and_hide_window("target_vital", TARGET_VITAL)
-        _remember_and_hide_window("boss_vital", BOSS_VITAL)
-        _remember_and_hide_window("targets_target_vital",
-            TARGET_VITAL ~= nil and TARGET_VITAL.targets_target_window or nil)
-        _remember_and_hide_window("party_vitals", PARTY_VITALS)
-        _remember_and_hide_window("expiring_effects_self", EXPIRING_SELF_EFFECTS_WINDOW)
-        _remember_and_hide_window("expiring_target_effects", EXPIRING_TARGET_EFFECTS_WINDOW)
-        _remember_and_hide_window("inventory", INVENTORY_WINDOW)
-        _remember_and_hide_window("crafting", CRAFTING_WINDOW)
-        _remember_and_hide_window("status_bar", STATUS_BAR)
-        _remember_and_hide_window("cooldowns", COOLDOWNS_WINDOW)
-        _remember_and_hide_window("move_done", MOVE_UI_DONE_WINDOW)
-        _remember_and_hide_window("config", CONFIG_WINDOW)
-    else
-        _restore_window("player_vital", PLAYER_VITAL)
-        _restore_window("target_vital", TARGET_VITAL)
-        _restore_window("boss_vital", BOSS_VITAL)
-        _restore_window("targets_target_vital", TARGET_VITAL ~= nil and TARGET_VITAL.targets_target_window or nil)
-        _restore_window("party_vitals", PARTY_VITALS)
-        _restore_window("expiring_effects_self", EXPIRING_SELF_EFFECTS_WINDOW)
-        _restore_window("expiring_target_effects", EXPIRING_TARGET_EFFECTS_WINDOW)
-        _restore_window("inventory", INVENTORY_WINDOW)
-        _restore_window("crafting", CRAFTING_WINDOW)
-        _restore_window("status_bar", STATUS_BAR)
-        _restore_window("cooldowns", COOLDOWNS_WINDOW)
-        _restore_window("move_done", MOVE_UI_DONE_WINDOW)
-        _restore_window("config", CONFIG_WINDOW)
+    if LUI_MOVE_UI ~= nil and LUI_MOVE_UI.set_hud_visible ~= nil then
+        LUI_MOVE_UI.set_hud_visible(GLOBAL_HUD_VISIBLE)
     end
+
+    for win, registered in pairs(Hidable) do
+        if _is_registered_window(win, registered) == true then
+            _apply_global_visibility(win, GLOBAL_HUD_VISIBLE)
+        end
+    end
+end
+
+function HidableMethods.is_visible()
+    return GLOBAL_HUD_VISIBLE == true
+end
+
+function _G.is_lui_hud_visible()
+    return Hidable.is_visible()
+end
+
+function _G.set_lui_hud_visible(visible)
+    Hidable.set_visible(visible)
 end
 
 function _G.toggle_lui_hud_visible()

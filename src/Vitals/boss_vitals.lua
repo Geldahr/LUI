@@ -154,7 +154,7 @@ end
 function BossVitals:set_move_mode(enabled)
     VitalsBase.set_move_mode(self, enabled)
     self:_layout_effect_windows()
-    if self:get_loaded_vitals_settings().enabled ~= true or is_lui_hud_visible() ~= true then
+    if self:get_loaded_vitals_settings().enabled ~= true then
         self:SetVisible(false)
     elseif enabled == true then
         self:SetVisible(true)
@@ -273,6 +273,8 @@ function BossVitals:self_wrath_changed()
 end
 
 function BossVitals:resize()
+    self:apply_native_scaling()
+
     local v = self:get_vitals_settings()
     local frame = v.frame
     local frame_width = frame.width
@@ -461,9 +463,9 @@ function BossVitals:_layout_effect_windows()
     if total_h < 1 then total_h = 1 end
 
     self:SetSize(frame_width, total_h)
+    self:layout_move_chrome()
     if not self.managed_position then
-        local window_settings = self:get_hud_settings()
-        self:SetPosition(window_settings.left, window_settings.top)
+        self:apply_hud_position()
     end
 
     local power_left = 0

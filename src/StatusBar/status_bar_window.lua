@@ -497,7 +497,7 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
     return ctor(widget_key, widget_w, bar_h, font, widget_cfg.content_alignment or alignment, icon_path)
 end
 
-StatusBarWindow = class(Turbine.UI.Window)
+StatusBarWindow = class(LuiBaseWindow)
 
 function StatusBarWindow:_ensure_edit_window()
     local edit_window = self._edit_window or _G.STATUS_BAR_EDIT_WINDOW
@@ -515,7 +515,9 @@ function StatusBarWindow:_ensure_edit_window()
 end
 
 function StatusBarWindow:Constructor()
-    Turbine.UI.Window.Constructor(self)
+    LuiBaseWindow.Constructor(self, {
+        hideable = true,
+    })
 
     self.last_update_at = 0
     self.update_every = 1.0
@@ -533,6 +535,7 @@ function StatusBarWindow:Constructor()
     self._drag_preview_insert_index = nil
     self._edit_drag_session = nil
     self._drag_preview_window = Turbine.UI.Window()
+    self:apply_native_scaling(self._drag_preview_window)
     self._drag_preview_window:SetMouseVisible(false)
     self._drag_preview_window:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self._drag_preview_window:SetVisible(true)
@@ -568,6 +571,7 @@ function StatusBarWindow:Constructor()
     self:_ensure_edit_window()
 
     self._edit_drag_overlay = Turbine.UI.Window()
+    self:apply_native_scaling(self._edit_drag_overlay)
     self._edit_drag_overlay:SetVisible(false)
     self._edit_drag_overlay:SetMouseVisible(false)
     self._edit_drag_overlay:SetZOrder(3500)
@@ -647,6 +651,9 @@ function StatusBarWindow:apply_settings()
 
     local bg = sb.bg
     self:SetBackColor(Turbine.UI.Color(bg.opacity, bg.color.R, bg.color.G, bg.color.B))
+    self:apply_native_scaling()
+    self:apply_native_scaling(self._drag_preview_window)
+    self:apply_native_scaling(self._edit_drag_overlay)
 
     self._last_display_w = nil
     self._display_check_due_at = 0
@@ -657,8 +664,9 @@ function StatusBarWindow:apply_settings()
     self:_sync_widget_interaction_modes(self:_is_edit_mode_active() ~= true)
     local edit_window = self:_ensure_edit_window()
     if edit_window ~= nil then
-        self._edit_window:apply_scale()
-        self._edit_window:refresh_state()
+        edit_window:apply_native_scaling()
+        edit_window:apply_scale()
+        edit_window:refresh_state()
     end
     self.last_update_at = 0
 end

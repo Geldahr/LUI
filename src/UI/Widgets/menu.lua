@@ -1,6 +1,7 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.checkbox"
 import "LUI.src.UI.Widgets.image"
@@ -318,6 +319,7 @@ function LuiMenu:Constructor()
     end
 
     self.popup = Turbine.UI.Window()
+    UI.NativeScaling.apply_window(self.popup)
     self.popup:SetVisible(false)
     self.popup:SetZOrder(3100)
     self.popup:SetMouseVisible(true)
@@ -440,6 +442,7 @@ function LuiMenu:open()
 
     self:_layout_popup()
     self:_position_popup()
+    UI.NativeScaling.apply_window(self.popup)
     root:_open_host_overlay()
     self.popup:SetVisible(true)
     self.button:set_active(true)

@@ -1,6 +1,7 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.style"
 
@@ -66,6 +67,7 @@ function LuiDropdown:Constructor()
     end
 
     self.popup = Turbine.UI.Window()
+    UI.NativeScaling.apply_window(self.popup)
     self.popup:SetVisible(false)
     self.popup:SetZOrder(3000)
     self.popup:SetMouseVisible(true)
@@ -327,6 +329,7 @@ function LuiDropdown:Open()
     if x < 0 then x = 0 end
     if y < 0 then y = 0 end
 
+    UI.NativeScaling.apply_window(self.popup)
     self.popup:SetPosition(x, y)
     self.popup_inner:SetPosition(border, border)
 

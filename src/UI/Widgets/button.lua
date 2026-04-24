@@ -27,6 +27,53 @@ local function _scaled_font(scale, name, size)
     return font
 end
 
+local function _nearest_matching_parity(value, match_value, max_value)
+    local target = tonumber(value) or 0
+    local candidate = math.floor(target + 0.5)
+    local limit = tonumber(max_value)
+    local parity = math.abs(math.floor(tonumber(match_value) or 0)) % 2
+
+    if candidate < 0 then
+        candidate = 0
+    end
+    if limit ~= nil then
+        limit = math.floor(limit + 0.5)
+        if limit < 0 then
+            limit = 0
+        end
+        if candidate > limit then
+            candidate = limit
+        end
+    end
+
+    if candidate % 2 == parity then
+        return candidate
+    end
+
+    local lower = candidate - 1
+    local upper = candidate + 1
+    if lower < 0 then
+        lower = nil
+    end
+    if limit ~= nil and upper > limit then
+        upper = nil
+    end
+
+    if lower == nil then
+        return upper or candidate
+    end
+    if upper == nil then
+        return lower
+    end
+
+    local lower_dist = math.abs(target - lower)
+    local upper_dist = math.abs(upper - target)
+    if upper_dist <= lower_dist then
+        return upper
+    end
+    return lower
+end
+
 ---@class LuiButton : Turbine.UI.Control
 LuiButton = class(Turbine.UI.Control)
 
@@ -539,12 +586,18 @@ function LuiButton:_layout()
         if use_icon == true then
             self._icon:SetVisible(true)
             local current_icon = self:_current_icon()
-            local box_w = icon_slot_w
-            local box_h = content_h
+            local icon_area_x = content_x
+            local icon_area_w = content_w
+            local icon_area_h = content_h
             local render_w = 0
             local render_h = 0
 
-            if box_w < 0 then box_w = 0 end
+            if has_text == true then
+                icon_area_w = icon_slot_w
+                if self._icon_position == ICON_POSITION_RIGHT then
+                    icon_area_x = content_x + content_w - icon_slot_w
+                end
+            end
 
             if current_icon ~= nil then
                 self._icon:set_icon(current_icon)
@@ -554,22 +607,33 @@ function LuiButton:_layout()
             end
 
             if icon_slot_h ~= nil then
-                render_w, render_h = self._icon:set_size(math.min(icon_slot_w, box_w), math.min(icon_slot_h, box_h))
+                local max_render_w = icon_area_w
+                local max_render_h = icon_area_h
+                local requested_w = _nearest_matching_parity(
+                    _scaled_size(self._scale, self._icon_width or 0),
+                    icon_area_w,
+                    max_render_w
+                )
+                local requested_h = _nearest_matching_parity(
+                    _scaled_size(self._scale, self._icon_height),
+                    icon_area_h,
+                    max_render_h
+                )
+                render_w, render_h = self._icon:set_size(requested_w, requested_h)
             else
-                render_w, render_h = self._icon:set_size(math.min(box_w, box_h))
+                local max_render_side = math.min(icon_area_w, icon_area_h)
+                local requested_side = _nearest_matching_parity(
+                    _scaled_size(self._scale, self._icon_width or 0),
+                    has_text ~= true and max_render_side or icon_area_h,
+                    max_render_side
+                )
+                render_w, render_h = self._icon:set_size(requested_side)
             end
             self._icon_render_w = render_w
             self._icon_render_h = render_h
 
-            local py = content_y + math.floor((content_h - render_h) / 2)
-            local px
-            if has_text ~= true then
-                px = content_x + math.floor((content_w - render_w) / 2)
-            elseif self._icon_position == ICON_POSITION_LEFT then
-                px = content_x + math.floor((icon_slot_w - render_w) / 2)
-            else
-                px = content_x + content_w - icon_slot_w + math.floor((icon_slot_w - render_w) / 2)
-            end
+            local py = content_y + math.floor((icon_area_h - render_h) / 2)
+            local px = icon_area_x + math.floor((icon_area_w - render_w) / 2)
 
             self._icon:SetPosition(px, py)
             self._icon:set_icon(self:_current_icon())

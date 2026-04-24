@@ -3,6 +3,7 @@ UI.Widgets = UI.Widgets or {}
 
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.tooltip"
 import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.checkbox"
@@ -15,6 +16,7 @@ import "LUI.src.UI.Widgets.tab_bar"
 import "LUI.src.UI.Widgets.spin_box"
 import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.window"
+import "LUI.src.UI.Widgets.hud"
 
 _G.LuiLabel = LuiLabel
 _G.Image = Image
@@ -31,7 +33,9 @@ _G.LuiSpinBox = LuiSpinBox
 _G.LuiLineEdit = LuiLineEdit
 _G.LineEdit = LuiLineEdit
 _G.LuiTooltip = LuiTooltip
+_G.LuiBaseWindow = LuiBaseWindow
 _G.LuiWindow = LuiWindow
+_G.LuiHUD = LuiHUD
 
 UI.Widgets.LuiLabel = LuiLabel
 UI.Widgets.Image = Image
@@ -48,4 +52,6 @@ UI.Widgets.LuiSpinBox = LuiSpinBox
 UI.Widgets.LuiLineEdit = LuiLineEdit
 UI.Widgets.LineEdit = LuiLineEdit
 UI.Widgets.LuiTooltip = LuiTooltip
+UI.Widgets.LuiBaseWindow = LuiBaseWindow
 UI.Widgets.LuiWindow = LuiWindow
+UI.Widgets.LuiHUD = LuiHUD

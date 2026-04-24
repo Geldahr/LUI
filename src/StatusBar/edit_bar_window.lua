@@ -200,7 +200,7 @@ function EditBarPaletteEntry:_update_visual_state()
     end
 end
 
-local StatusBarEditWindow = class(Turbine.UI.Window)
+local StatusBarEditWindow = class(LuiBaseWindow)
 _G.StatusBarEditWindow = StatusBarEditWindow
 
 local status_bar_pkg = nil
@@ -214,7 +214,7 @@ if status_bar_pkg ~= nil then
 end
 
 function StatusBarEditWindow:Constructor(owner)
-    Turbine.UI.Window.Constructor(self)
+    LuiBaseWindow.Constructor(self, { hideable = true })
 
     self.owner = owner
     self.entries = {}

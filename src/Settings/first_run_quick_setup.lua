@@ -288,14 +288,14 @@ local function _apply_runtime_settings()
     end
 end
 
-FirstRunQuickSetup = class(Turbine.UI.Window)
+FirstRunQuickSetup = class(LuiBaseWindow)
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function FirstRunQuickSetup:Constructor(options)
-    Turbine.UI.Window.Constructor(self)
+    LuiBaseWindow.Constructor(self, { hideable = false })
 
     self:SetVisible(false)
     self:SetZOrder(1500)
@@ -316,6 +316,7 @@ function FirstRunQuickSetup:Constructor(options)
         not (options ~= nil and options.skip_existing_configurations == true) and #self.existing_config_values > 0
 
     self.preview_overlay = Turbine.UI.Window()
+    self:apply_native_scaling(self.preview_overlay)
     self.preview_overlay:SetVisible(false)
     self.preview_overlay:SetMouseVisible(true)
     self.preview_overlay:SetZOrder(1000)
@@ -1045,8 +1046,16 @@ function FirstRunQuickSetup:ensure_preview_mode()
         return
     end
 
+    if is_lui_hud_visible ~= nil and is_lui_hud_visible() ~= true and set_lui_hud_visible ~= nil then
+        set_lui_hud_visible(true)
+    end
+
     if PLAYER_VITAL:is_move_mode() ~= true and set_move_ui_mode ~= nil then
         set_move_ui_mode(true)
+    end
+
+    if PLAYER_VITAL:is_move_mode() ~= true then
+        return
     end
 
     if set_move_ui_preview_lock ~= nil then

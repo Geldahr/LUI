@@ -3,7 +3,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.Cooldowns.cooldown_entry"
-import "LUI.src.UI.moveable"
+import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
 
 ---@class RecoveringSkill
@@ -32,7 +32,7 @@ function RecoveringSkill:Constructor(skill, name_key, name, white_listed)
     self.cb_reset = nil
 end
 
-CooldownsWindow = class(Turbine.UI.Window)
+CooldownsWindow = class(LuiHUD)
 
 local SKILL_DISCOVER_EVERY = 30.0
 
@@ -154,7 +154,10 @@ end
 ---------------------------------------------------------------------
 
 function CooldownsWindow:Constructor()
-    Turbine.UI.Window.Constructor(self)
+    LuiHUD.Constructor(self, {
+        hud_key = "cooldowns",
+        title = TR["Cooldowns"],
+    })
 
     self.slots = {}
     self.last_update_at = 0
@@ -180,14 +183,6 @@ function CooldownsWindow:Constructor()
     self:SetMouseVisible(false)
     self:SetZOrder(20)
 
-    self.moveable = UI.Moveable(self, function(x, y)
-        self:SetPosition(x, y)
-    end, TR["Cooldowns"])
-
-    self.moveable:set_on_move_end(function(x, y)
-        self:persist_position(x, y)
-    end)
-
     self:apply_settings()
 end
 
@@ -203,19 +198,14 @@ function CooldownsWindow:get_settings()
     return _G.settings.self.cooldowns
 end
 
-function CooldownsWindow:persist_position(x, y)
-    local hud = _G.get_ui_hud_state("cooldowns")
-    hud.left = x
-    hud.top = y
-end
-
-function CooldownsWindow:is_move_mode()
-    return self.moveable ~= nil and self.moveable:is_move_mode() or false
-end
-
 function CooldownsWindow:set_move_mode(enabled)
-    if self.moveable ~= nil then
-        self.moveable:set_move_mode(enabled)
+    local changed = (enabled == true) ~= self:is_move_mode()
+    LuiHUD.set_move_mode(self, enabled)
+    if changed and enabled == true then
+        self:_hide_slots()
+    elseif changed then
+        self.last_update_at = -(self.update_every or 0)
+        self:Update()
     end
     self:refresh_visibility()
 end
@@ -226,12 +216,13 @@ function CooldownsWindow:destroy()
 end
 
 function CooldownsWindow:apply_settings()
+    self:apply_native_scaling()
+
     local s = self:get_settings()
 
     self.update_every = 1.0 / _G.settings.global.refresh_rate
 
-    local hud = _G.settings.ui.hud.cooldowns
-    self:SetPosition(hud.left, hud.top)
+    self:apply_hud_position()
 
     local cols = s.columns
     local rows = s.rows
@@ -245,6 +236,7 @@ function CooldownsWindow:apply_settings()
     local width = (cols * entry_width) + ((cols - 1) * spacing)
     local height = (rows * entry_height) + ((rows - 1) * spacing)
     self:SetSize(width, height)
+    self:layout_move_chrome()
 
     local capacity = cols * rows
     for i = 1, capacity do
@@ -287,7 +279,7 @@ end
 
 function CooldownsWindow:refresh_visibility()
     local s = self:get_settings()
-    if s.enabled ~= true or is_lui_hud_visible() ~= true then
+    if s.enabled ~= true then
         self:SetVisible(false)
         return
     end
@@ -305,7 +297,7 @@ function CooldownsWindow:refresh_visibility()
         end
     end
 
-    self:SetVisible(any_visible or (self.moveable ~= nil and self.moveable:is_move_mode()))
+    self:SetVisible(any_visible or self:is_move_mode())
 end
 
 function CooldownsWindow:_draw_entries(now, threshold)
@@ -338,10 +330,25 @@ function CooldownsWindow:_draw_entries(now, threshold)
     self._is_updating_entries = false
 end
 
+function CooldownsWindow:_hide_slots()
+    for i = 1, #self.slots do
+        local e = self.slots[i]
+        if e ~= nil then
+            e:SetVisible(false)
+        end
+    end
+end
+
 function CooldownsWindow:Update()
     local s = self:get_settings()
     if s.enabled ~= true then
         self:SetVisible(false)
+        return
+    end
+
+    if self:is_move_mode() == true then
+        self:_hide_slots()
+        self:refresh_visibility()
         return
     end
 
@@ -357,13 +364,7 @@ function CooldownsWindow:Update()
 
     local threshold = s.threshold
     if threshold <= 0 then
-        for i = 1, #self.slots do
-            local e = self.slots[i]
-            if e ~= nil then
-                e:set_skill(nil)
-                e:SetVisible(false)
-            end
-        end
+        self:_hide_slots()
         self:refresh_visibility()
         return
     end
