@@ -651,6 +651,9 @@ function StatusBarWindow:apply_settings()
 
     local bg = sb.bg
     self:SetBackColor(Turbine.UI.Color(bg.opacity, bg.color.R, bg.color.G, bg.color.B))
+    self:apply_native_scaling()
+    self:apply_native_scaling(self._drag_preview_window)
+    self:apply_native_scaling(self._edit_drag_overlay)
 
     self._last_display_w = nil
     self._display_check_due_at = 0
@@ -661,8 +664,9 @@ function StatusBarWindow:apply_settings()
     self:_sync_widget_interaction_modes(self:_is_edit_mode_active() ~= true)
     local edit_window = self:_ensure_edit_window()
     if edit_window ~= nil then
-        self._edit_window:apply_scale()
-        self._edit_window:refresh_state()
+        edit_window:apply_native_scaling()
+        edit_window:apply_scale()
+        edit_window:refresh_state()
     end
     self.last_update_at = 0
 end
