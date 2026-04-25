@@ -121,6 +121,7 @@ function _G.ensure_loaded_settings()
     ensure_table(s, "party")
     ensure_table(s, "inventory")
     ensure_table(s, "crafting")
+    ensure_table(s, "travel")
     ensure_table(s, "assets")
     ensure_table(s, "bestiary")
     ensure_table(s, "status_bar")
@@ -477,6 +478,7 @@ function _G.ensure_loaded_settings()
     ensure_ui_window("bestiary", _pos_x(900), _pos_y(180), 700, 520)
 
     ensure_ui_window("config", _pos_x(450), _pos_y(51), 1005, 1011)
+    ensure_ui_window("travel", _pos_x(980), _pos_y(180), 420, 520)
 
     local tv = s.target.vitals
     if tv.morale.bubble_format == nil then
@@ -683,6 +685,11 @@ function _G.ensure_loaded_settings()
         zones.right = { "inventory_space", "money" }
     end
 
+    if #zones.left == 1 and zones.left[1] == "time_local" and #zones.center == 0 and #zones.right == 3 and
+        zones.right[1] == "travel" and zones.right[2] == "inventory_space" and zones.right[3] == "money" then
+        zones.right = { "inventory_space", "money" }
+    end
+
     if sb.layout.left == nil then
         sb.layout.left = "%time%"
     end
@@ -693,6 +700,9 @@ function _G.ensure_loaded_settings()
         sb.layout.right = "%inventory% %gold%"
     end
     if sb.layout.right == "%inventory% %gold% %craft%" then
+        sb.layout.right = "%inventory% %gold%"
+    end
+    if sb.layout.right == "%travel% %inventory% %gold%" then
         sb.layout.right = "%inventory% %gold%"
     end
 
@@ -763,6 +773,13 @@ function _G.ensure_loaded_settings()
         width = craft_plan_widget.width,
         max_visible = craft_plan_widget.max_visible,
     }
+
+    if s.travel.enabled == nil then
+        s.travel.enabled = true
+    end
+    if s.travel.display_mode == nil then
+        s.travel.display_mode = "list"
+    end
 
     local cd = s.self.cooldowns
     if cd.enabled == nil then

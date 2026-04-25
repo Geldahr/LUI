@@ -7,6 +7,7 @@ import "LUI.src.Settings"
 import "LUI.src.Inventory"
 import "LUI.src.Crafting"
 import "LUI.src.Assets"
+import "LUI.src.Travel"
 import "LUI.src.StatusBar"
 
 -- Re-export into the UI namespace for callers.
@@ -83,6 +84,24 @@ if assets_window_ctor ~= nil then
 end
 if UI ~= nil then
     UI.AssetsWindow = assets_window_ctor
+end
+
+local travel_window_ctor = TravelWindow
+if travel_window_ctor == nil and type(Travel) == "table" then
+    travel_window_ctor = Travel.TravelWindow
+end
+if travel_window_ctor == nil and LUI ~= nil and type(LUI.Travel) == "table" then
+    travel_window_ctor = LUI.Travel.TravelWindow
+end
+if travel_window_ctor == nil and Geldahr ~= nil and LUI.src ~= nil and type(LUI.src.Travel) == "table" then
+    travel_window_ctor = LUI.src.Travel.TravelWindow
+end
+
+if travel_window_ctor ~= nil then
+    TravelWindow = travel_window_ctor
+end
+if UI ~= nil then
+    UI.TravelWindow = travel_window_ctor
 end
 
 local status_bar_pkg = StatusBar

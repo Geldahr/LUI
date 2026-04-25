@@ -14,7 +14,7 @@ LUI is a custom user interface plugin for The Lord of the Rings Online. It focus
 - [Limitations](#limitations)
 - [Known Issues](#known-issues)
 - [Recent fixes to verify](#recent-fixes-to-verify)
-- [Repository Notes](#repository-notes)
+- [Acknowledgements](#acknowledgements)
 - [Support](#support)
 
 ## Features
@@ -140,10 +140,9 @@ LUI uses pixel-based scaling instead of LotRO UI scaling. That keeps borders and
 
 - A recent fix addressed an edge case where targeting another player in your fellowship did not immediately populate the target effect list. In the broken state, buffs and debuffs could remain empty, fail to appear, disappear, or update only after that player gained or lost an effect. If you still see delayed or inconsistent effect initialization when switching to a fellowship target, please report it.
 
-## Repository Notes
+## Acknowledgements
 
-- `src/` contains the plugin source, assets, and localized strings.
-- `tools/build_bestiary_seed.py` regenerates the seeded bestiary data file at `src/Bestiary/data.lua`.
+- `src/Travel/travel_data.lua` uses a travel skill dataset adapted from [TravelWindowII](https://github.com/wduda/TravelWindowII). Credit goes to the TravelWindowII maintainers, including wduda / Hyoss, and to the original Travel Window authors credited upstream, including Dhor and later contributors.
 
 ## Support
 

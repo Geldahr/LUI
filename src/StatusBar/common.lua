@@ -39,6 +39,7 @@ S.INVENTORY_SPACE_ICON = UI.AssetIds.backpack
 S.DURABILITY_ICON = UI.AssetIds.durability
 S.CONFIG_SHORTCUT_ICON = UI.AssetIds.feather
 S.CRAFT_SHORTCUT_ICON = UI.AssetIds.anvil_silver_glow
+S.TRAVEL_SHORTCUT_ICON = UI.AssetIds.compass
 S.ASSETS_SHORTCUT_ICON = UI.AssetIds.chest
 S.BESTIARY_SHORTCUT_ICON = UI.AssetIds.book_orange_cover
 
@@ -54,6 +55,7 @@ S.STATUS_BAR_LAYOUT_TOKENS = {
     config = "config",
     craft = "craft",
     ["craft.plan"] = "craft_plan",
+    travel = "travel",
     assets = "assets",
     bestiary = "bestiary",
 }
@@ -66,6 +68,7 @@ S.STATUS_BAR_WIDGET_LAYOUT_TOKENS = {
     config = "%config%",
     craft = "%craft%",
     craft_plan = "%craft.plan%",
+    travel = "%travel%",
     assets = "%assets%",
     bestiary = "%bestiary%",
 }
@@ -78,6 +81,7 @@ S.STATUS_BAR_EDITABLE_WIDGET_KEYS = {
     "config",
     "craft",
     "craft_plan",
+    "travel",
     "assets",
     "bestiary",
 }
@@ -962,6 +966,8 @@ function S.get_status_bar_widget_display_name(widget_key)
         return S.get_shortcut_label("craft")
     elseif widget_key == "craft_plan" then
         return TR["Craft plan"]
+    elseif widget_key == "travel" then
+        return S.get_shortcut_label("travel")
     elseif widget_key == "assets" then
         return S.get_shortcut_label("assets")
     elseif widget_key == "bestiary" then
@@ -1225,6 +1231,8 @@ function S.get_shortcut_icon(shortcut_key)
         return S.CONFIG_SHORTCUT_ICON
     elseif shortcut_key == "craft" then
         return S.CRAFT_SHORTCUT_ICON
+    elseif shortcut_key == "travel" then
+        return S.TRAVEL_SHORTCUT_ICON
     elseif shortcut_key == "assets" then
         return S.ASSETS_SHORTCUT_ICON
     elseif shortcut_key == "bestiary" then
@@ -1249,6 +1257,8 @@ function S.get_shortcut_label(shortcut_key)
         return TR["Config"]
     elseif shortcut_key == "craft" then
         return TR["Craft"]
+    elseif shortcut_key == "travel" then
+        return TR["Travel"]
     elseif shortcut_key == "assets" then
         return TR["Assets"]
     elseif shortcut_key == "bestiary" then
@@ -1264,6 +1274,8 @@ function S.get_shortcut_state(shortcut_key)
         local enabled = Crafting == nil or Crafting.is_enabled == nil or Crafting.is_enabled() == true
         local can_open = enabled == true and (_G.CRAFTING_WINDOW ~= nil or (Crafting ~= nil and Crafting.CraftingWindow ~= nil))
         return can_open, S.window_is_visible(_G.CRAFTING_WINDOW)
+    elseif shortcut_key == "travel" then
+        return _G.settings.travel.enabled == true, S.window_is_visible(_G.TRAVEL_WINDOW)
     elseif shortcut_key == "assets" then
         return ASSETS_WINDOW ~= nil, S.window_is_visible(ASSETS_WINDOW)
     elseif shortcut_key == "bestiary" then
@@ -1282,6 +1294,8 @@ function S.activate_shortcut(shortcut_key)
         if _G.toggle_crafting_shortcut ~= nil then
             _G.toggle_crafting_shortcut()
         end
+    elseif shortcut_key == "travel" then
+        _G.toggle_travel_shortcut()
     elseif shortcut_key == "assets" then
         if _G.toggle_assets_shortcut ~= nil then
             _G.toggle_assets_shortcut()

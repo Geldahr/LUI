@@ -50,6 +50,9 @@ UI.AssetIds.chest_dark = 0x4111BE44
 UI.AssetIds.chest_alt_2 = 0x4111BE3E
 UI.AssetIds.chest_alt_3 = 0x411BA042
 
+UI.AssetIds.compass = "LUI/assets/ui/compass_64.tga"
+UI.AssetIds.compass_hover = "LUI/assets/ui/compass_hover_64.tga"
+
 UI.AssetIds.book_shortcut = 0x410031FB
 UI.AssetIds.book_open = 0x410E0435
 UI.AssetIds.parchment = 0x410E9288

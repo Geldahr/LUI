@@ -32,6 +32,8 @@ local function display_help()
     _write_help_command("/lui inventory", "  /lui inventory  - Toggle inventory window")
     _write_help_command("/lui assets", "  /lui assets      - Toggle assets window")
     _write_help_command("/lui craft", "  /lui craft      - Toggle crafting window")
+    _write_help_command("/lui travel", "  /lui travel     - Toggle travel window")
+    _write_help_command("/lui trav", "  /lui trav       - Short alias for /lui travel")
     _write_help_command("/lui bestiary", "  /lui bestiary   - Toggle bestiary window")
     _write_help_command("/lui beast", "  /lui beast      - Alias for /lui bestiary")
     _write_help_command("/lui b", "  /lui b          - Short alias for /lui bestiary")
@@ -100,6 +102,8 @@ function command:Execute(_, str)
         elseif CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.toggle ~= nil then
             CRAFTING_WINDOW:toggle()
         end
+    elseif cmd == "travel" or cmd == "trav" then
+        _G.toggle_travel_shortcut()
     elseif cmd == "bestiary" or cmd == "beast" or cmd == "b" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == nil then
