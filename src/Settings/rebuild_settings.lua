@@ -98,6 +98,7 @@ function _G.rebuild_settings()
         },
         inventory = {},
         crafting = { display_mode = "pages", enabled = true },
+        travel = { display_mode = "list", enabled = true },
         assets = { tile = {}, layouts = { icons = {}, details = {} } },
         bestiary = {},
     }
@@ -206,6 +207,12 @@ function _G.rebuild_settings()
     if raw_crafting ~= nil then
         _G.settings.crafting.display_mode = raw_crafting.display_mode
         _G.settings.crafting.enabled = raw_crafting.enabled
+    end
+
+    local raw_travel = raw.travel
+    if raw_travel ~= nil then
+        _G.settings.travel.display_mode = raw_travel.display_mode
+        _G.settings.travel.enabled = raw_travel.enabled
     end
 
     local raw_party_ci = raw.party.class_icon
@@ -415,6 +422,7 @@ function _G.rebuild_settings()
     sb.widgets.assets = build_shortcut_widget("assets")
     sb.widgets.bestiary = build_shortcut_widget("bestiary")
     sb.widgets.craft = build_shortcut_widget("craft")
+    sb.widgets.travel = build_shortcut_widget("travel")
 
     local raw_cd = raw.self.cooldowns
     local cd = _G.settings.self.cooldowns

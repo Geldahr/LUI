@@ -475,6 +475,14 @@ function _G.capture_runtime_geometry()
             CRAFTING_WINDOW:persist_geometry()
         end
     end
+
+    if _G.LUI_IS_UNLOADING ~= true and TRAVEL_WINDOW ~= nil then
+        if TRAVEL_WINDOW.capture_geometry ~= nil then
+            TRAVEL_WINDOW:capture_geometry()
+        elseif TRAVEL_WINDOW.persist_geometry ~= nil then
+            TRAVEL_WINDOW:persist_geometry()
+        end
+    end
 end
 
 function _G.save_assets_cache()

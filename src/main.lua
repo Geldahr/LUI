@@ -13,6 +13,7 @@ import "LUI.src.Cooldowns"
 import "LUI.src.Assets"
 import "LUI.src.Bestiary"
 import "LUI.src.Crafting"
+import "LUI.src.Travel"
 import "LUI.src.StatusBar.api_chat_bridge"
 
 _G.STYLE = _G.STYLE or {}
@@ -23,7 +24,6 @@ _G.STYLE.WINDOW_WORK_AREA = function()
 
     local reserved_top = 0
     local status_bar = _G.STATUS_BAR
-
     if status_bar ~= nil and status_bar.IsVisible ~= nil and status_bar:IsVisible() == true then
         reserved_top = math.max(0, tonumber(status_bar:GetHeight()) or 0)
     end
@@ -76,6 +76,7 @@ local function _release_persistent_state()
     _G.assets_cache_loaded = nil
     _G.assets_cache_loading = nil
     _G.assets_cache_dirty = nil
+    _G.TRAVEL_STORE = nil
 
     _G.bestiary_cache = nil
     _G.bestiary_cache_loaded = nil
@@ -157,6 +158,33 @@ function _G.toggle_crafting_shortcut()
     if window.clear_material_filter ~= nil then
         window:clear_material_filter()
     end
+    if window.open ~= nil then
+        window:open()
+    else
+        window:SetVisible(true)
+    end
+end
+
+function _G.toggle_travel_shortcut()
+    if Travel ~= nil and Travel.is_enabled ~= nil and Travel.is_enabled() ~= true then
+        return
+    end
+
+    local window = _G.TRAVEL_WINDOW
+    if window == nil and Travel ~= nil and Travel.TravelWindow ~= nil then
+        window = Travel.TravelWindow()
+        _G.TRAVEL_WINDOW = window
+    end
+    if window == nil then
+        return
+    end
+
+    if window:IsVisible() == true then
+        window:SetVisible(false)
+        window:SetWantsUpdates(false)
+        return
+    end
+
     if window.open ~= nil then
         window:open()
     else
@@ -305,6 +333,25 @@ function apply_crafting_settings()
     end
 end
 
+function apply_travel_settings()
+    local enabled = _G.settings.travel.enabled == true
+
+    if enabled ~= true then
+        if TRAVEL_WINDOW ~= nil then
+            TRAVEL_WINDOW:SetVisible(false)
+            TRAVEL_WINDOW.store = nil
+            TRAVEL_WINDOW = nil
+            _G.TRAVEL_WINDOW = nil
+        end
+        Travel.destroy_shared_store()
+        return
+    end
+
+    if TRAVEL_WINDOW ~= nil and TRAVEL_WINDOW.apply_settings ~= nil then
+        TRAVEL_WINDOW:apply_settings()
+    end
+end
+
 _G.LUI_IS_UNLOADING = false
 
 load_settings()
@@ -321,7 +368,7 @@ _G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = (
 BESTIARY_CARD = Bestiary.BestiaryCard()
 _G.BESTIARY_CARD = BESTIARY_CARD
 
--- Initializing TARGET_VITAL first: self vitals will drive its visibility based on current target.
+-- Initialize target vitals first: self vitals depend on them for current target state.
 TARGET_VITAL = UI.TargetVitals(nil)
 BOSS_VITAL = UI.BossVitals(nil)
 PLAYER_VITAL = UI.SelfVitals(Turbine.Gameplay.LocalPlayer.GetInstance())
@@ -337,12 +384,15 @@ _G.STATUS_BAR = nil
 COOLDOWNS_WINDOW = nil
 BESTIARY_WINDOW = nil
 CRAFTING_WINDOW = nil
+TRAVEL_WINDOW = nil
 BESTIARY_TRACKER = Bestiary.Collector()
+
 apply_inventory_settings()
 apply_assets_settings()
 apply_status_bar_settings()
 apply_cooldowns_settings()
 apply_crafting_settings()
+apply_travel_settings()
 if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.apply_settings ~= nil then
     BESTIARY_TRACKER:apply_settings()
 end
@@ -365,6 +415,7 @@ Turbine.Shell.WriteLine(string.format(
 
 Plugins["LUI"].Unload = function()
     _G.LUI_IS_UNLOADING = true
+
     if CRAFTING_WINDOW ~= nil then
         if CRAFTING_WINDOW.SetVisible ~= nil then
             CRAFTING_WINDOW:SetVisible(false)
@@ -376,12 +427,24 @@ Plugins["LUI"].Unload = function()
     if Crafting ~= nil and Crafting.destroy_shared_store ~= nil then
         Crafting.destroy_shared_store()
     end
+
+    if TRAVEL_WINDOW ~= nil then
+        TRAVEL_WINDOW:SetVisible(false)
+        TRAVEL_WINDOW.store = nil
+        TRAVEL_WINDOW = nil
+        _G.TRAVEL_WINDOW = nil
+    end
+    Travel.destroy_shared_store()
+
     _G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = nil
     save_settings()
+
     if _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK ~= nil then
         _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
     end
+
     _G.STATUS_BAR = nil
+
     if ASSETS_WINDOW ~= nil then
         if ASSETS_WINDOW.SetVisible ~= nil then
             ASSETS_WINDOW:SetVisible(false)
@@ -390,12 +453,14 @@ Plugins["LUI"].Unload = function()
         ASSETS_WINDOW._last_crafting_store_version = nil
         ASSETS_WINDOW = nil
     end
+
     if BESTIARY_WINDOW ~= nil then
         if BESTIARY_WINDOW.SetVisible ~= nil then
             BESTIARY_WINDOW:SetVisible(false)
         end
         BESTIARY_WINDOW = nil
     end
+
     if BESTIARY_CARD ~= nil then
         if BESTIARY_CARD.SetVisible ~= nil then
             BESTIARY_CARD:SetVisible(false)
@@ -403,6 +468,7 @@ Plugins["LUI"].Unload = function()
         BESTIARY_CARD = nil
         _G.BESTIARY_CARD = nil
     end
+
     if BESTIARY_TRACKER ~= nil then
         if BESTIARY_TRACKER.save ~= nil then
             BESTIARY_TRACKER:save()
@@ -412,10 +478,12 @@ Plugins["LUI"].Unload = function()
         end
         BESTIARY_TRACKER = nil
     end
+
     if ASSETS_STORE ~= nil then
         ASSETS_STORE:destroy()
         ASSETS_STORE = nil
     end
+
     save_assets_cache()
     _release_persistent_state()
 end

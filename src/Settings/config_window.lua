@@ -538,6 +538,7 @@ function ConfigWindow:refresh_runtime_settings()
     apply_status_bar_settings()
     apply_cooldowns_settings()
     apply_crafting_settings()
+    apply_travel_settings()
 
     self:apply_ui_scale()
     self:layout()
