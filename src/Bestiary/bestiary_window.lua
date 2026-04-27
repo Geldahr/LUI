@@ -74,8 +74,9 @@ local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
 local COLOR_DROP_CHIP_TEXT = Turbine.UI.Color(1, 0.76, 0.88, 0.79)
 local COLOR_CHEST_CHIP_BORDER = Turbine.UI.Color(1, 0.45, 0.32, 0.12)
-local COLOR_CHEST_CHIP_BG = Turbine.UI.Color(1, 0.14, 0.10, 0.04)
-local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.98, 0.86, 0.52)
+local COLOR_CHEST_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
+local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.95, 0.83, 0.49)
+local COLOR_DROP_MATCH_CHIP_BORDER = Turbine.UI.Color(1, 0.18, 0.66, 0.82)
 
 local function _push_filter_term(cur_group, term)
     if term ~= nil and term ~= "" then
@@ -160,30 +161,41 @@ local function _normalize_groups(groups)
     return out
 end
 
-local function _matches_groups(groups, haystack_lower)
-    if groups == nil or #groups == 0 then
-        return true
-    end
-    if type(haystack_lower) ~= "string" then
+local function _group_matches_haystack(group, haystack_lower)
+    if type(group) ~= "table" or #group == 0 or type(haystack_lower) ~= "string" then
         return false
     end
 
-    for gi = 1, #groups do
-        local group = groups[gi]
-        local ok = true
-        for ti = 1, #group do
-            local term = group[ti]
-            if term ~= "" and string.find(haystack_lower, term, 1, true) == nil then
-                ok = false
-                break
-            end
-        end
-        if ok then
-            return true
+    for ti = 1, #group do
+        local term = group[ti]
+        if term ~= "" and string.find(haystack_lower, term, 1, true) == nil then
+            return false
         end
     end
 
-    return false
+    return true
+end
+
+local function _matching_groups(groups, haystack_lower)
+    if groups == nil or #groups == 0 then
+        return nil
+    end
+    if type(haystack_lower) ~= "string" then
+        return nil
+    end
+
+    local matched = nil
+    for gi = 1, #groups do
+        local group = groups[gi]
+        if _group_matches_haystack(group, haystack_lower) == true then
+            if matched == nil then
+                matched = {}
+            end
+            matched[#matched + 1] = group
+        end
+    end
+
+    return matched
 end
 
 local function _scaled_int(value)
@@ -569,6 +581,48 @@ local function _build_records()
     return out
 end
 
+local function _drop_match_key(drop_name, chest)
+    if type(drop_name) ~= "string" or drop_name == "" then
+        return nil
+    end
+
+    return (chest == true and "c:" or "d:") .. _lower_text(drop_name)
+end
+
+local function _build_matched_drop_lookup(record, matched_groups)
+    if type(record) ~= "table" or type(record.drops) ~= "table" or matched_groups == nil or #matched_groups == 0 then
+        return nil
+    end
+
+    local matched = nil
+    for di = 1, #record.drops do
+        local drop = record.drops[di]
+        local drop_name_lower = _lower_text(drop ~= nil and drop.name or nil)
+        if drop_name_lower ~= "" then
+            local is_match = false
+            for gi = 1, #matched_groups do
+                local group = matched_groups[gi]
+                is_match = _group_matches_haystack(group, drop_name_lower)
+                if is_match == true then
+                    break
+                end
+            end
+
+            if is_match == true then
+                local key = _drop_match_key(drop.name, drop.chest == true)
+                if key ~= nil then
+                    if matched == nil then
+                        matched = {}
+                    end
+                    matched[key] = true
+                end
+            end
+        end
+    end
+
+    return matched
+end
+
 local function _compare_records(sort_mode, left, right)
     if sort_mode == SORT_LEVEL_ASC then
         if left.level_min ~= right.level_min then
@@ -642,6 +696,7 @@ local function _build_chip_layout(texts, max_width)
         layout[#layout + 1] = {
             text = text,
             chest = type(item) == "table" and item.chest == true,
+            match_key = type(item) == "table" and item.match_key or nil,
             x = x,
             y = y,
             w = width,
@@ -724,7 +779,11 @@ local function _ensure_record_drop_texts(record)
         else
             text = drop.name
         end
-        chip_texts[#chip_texts + 1] = { text = text, chest = drop.chest == true }
+        chip_texts[#chip_texts + 1] = {
+            text = text,
+            chest = drop.chest == true,
+            match_key = _drop_match_key(drop.name, drop.chest == true),
+        }
     end
 
     if #chip_texts == 0 then
@@ -799,17 +858,22 @@ function DropChip:Constructor()
     self:apply_settings()
 end
 
-function DropChip:apply_settings(chest)
+function DropChip:apply_settings(chest, matched)
     local border_w = _scaled_int(BASE_CHIP_BORDER)
     self.inner:SetPosition(border_w, border_w)
     self.label:SetFont(_scaled_font("Verdana", BASE_TEXT_FONT_SIZE))
     self.label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    if chest == true then
+    if matched == true then
+        self:SetBackColor(COLOR_DROP_MATCH_CHIP_BORDER)
+    elseif chest == true then
         self:SetBackColor(COLOR_CHEST_CHIP_BORDER)
+    else
+        self:SetBackColor(COLOR_DROP_CHIP_BORDER)
+    end
+    if chest == true then
         self.inner:SetBackColor(COLOR_CHEST_CHIP_BG)
         self.label:SetForeColor(COLOR_CHEST_CHIP_TEXT)
     else
-        self:SetBackColor(COLOR_DROP_CHIP_BORDER)
         self.inner:SetBackColor(COLOR_DROP_CHIP_BG)
         self.label:SetForeColor(COLOR_DROP_CHIP_TEXT)
     end
@@ -1030,8 +1094,11 @@ function BestiaryRow:bind(record, width)
     for i = 1, #drop_layout do
         local chip_info = drop_layout[i]
         local chip = self.drop_chips[i]
+        local matched = type(record._matched_drop_lookup) == "table"
+            and chip_info.match_key ~= nil
+            and record._matched_drop_lookup[chip_info.match_key] == true
         chip:SetPosition(chip_info.x, chip_info.y)
-        chip:apply_settings(chip_info.chest == true)
+        chip:apply_settings(chip_info.chest == true, matched)
         chip:bind(chip_info.text, chip_info.w, chip_h)
     end
     for i = #drop_layout + 1, #self.drop_chips do
@@ -2063,7 +2130,13 @@ function BestiaryWindow:apply_view()
         local genus_ok = self.genus_filter == FILTER_ALL or record.genus == self.genus_filter
         local subcategory_ok = self.subcategory_filter == FILTER_NONE or self.subcategory_filter == FILTER_ALL or record.subcategory == self.subcategory_filter
         local level_ok = _matches_level_range(record, filter_level_min, filter_level_max)
-        if genus_ok == true and subcategory_ok == true and level_ok == true and _matches_groups(self.filter_groups, record.haystack_lower) == true then
+        local matched_groups = _matching_groups(self.filter_groups, record.haystack_lower)
+        local query_ok = self.filter_groups == nil or #self.filter_groups == 0 or matched_groups ~= nil
+        record._matched_drop_lookup = nil
+        if query_ok == true then
+            record._matched_drop_lookup = _build_matched_drop_lookup(record, matched_groups)
+        end
+        if genus_ok == true and subcategory_ok == true and level_ok == true and query_ok == true then
             filtered[#filtered + 1] = record
         end
     end
