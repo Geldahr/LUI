@@ -176,28 +176,6 @@ local function _group_matches_haystack(group, haystack_lower)
     return true
 end
 
-local function _matching_groups(groups, haystack_lower)
-    if groups == nil or #groups == 0 then
-        return nil
-    end
-    if type(haystack_lower) ~= "string" then
-        return nil
-    end
-
-    local matched = nil
-    for gi = 1, #groups do
-        local group = groups[gi]
-        if _group_matches_haystack(group, haystack_lower) == true then
-            if matched == nil then
-                matched = {}
-            end
-            matched[#matched + 1] = group
-        end
-    end
-
-    return matched
-end
-
 local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
 end
@@ -541,7 +519,13 @@ local function _build_records()
             _lower_text(entry.monster_type),
         }
         for i = 1, #drop_records do
-            filter_parts[#filter_parts + 1] = _lower_text(drop_records[i].name)
+            local drop = drop_records[i]
+            local drop_name_lower = _lower_text(drop ~= nil and drop.name or nil)
+            if type(drop) == "table" then
+                drop._name_lower = drop_name_lower
+                drop._match_key = drop_name_lower ~= "" and ((drop.chest == true and "c:" or "d:") .. drop_name_lower) or nil
+            end
+            filter_parts[#filter_parts + 1] = drop_name_lower
         end
         _append_filter_values(filter_parts, entry.combat_effectiveness)
         _append_filter_values(filter_parts, entry.resistances)
@@ -589,38 +573,92 @@ local function _drop_match_key(drop_name, chest)
     return (chest == true and "c:" or "d:") .. _lower_text(drop_name)
 end
 
-local function _build_matched_drop_lookup(record, matched_groups)
-    if type(record) ~= "table" or type(record.drops) ~= "table" or matched_groups == nil or #matched_groups == 0 then
+local function _build_group_matched_drop_lookup(record, group)
+    if type(record) ~= "table" or type(record.drops) ~= "table" or type(group) ~= "table" or #group == 0 then
         return nil
     end
 
-    local matched = nil
+    local full_matches = nil
+    local partial_matches = nil
     for di = 1, #record.drops do
         local drop = record.drops[di]
-        local drop_name_lower = _lower_text(drop ~= nil and drop.name or nil)
-        if drop_name_lower ~= "" then
-            local is_match = false
-            for gi = 1, #matched_groups do
-                local group = matched_groups[gi]
-                is_match = _group_matches_haystack(group, drop_name_lower)
-                if is_match == true then
-                    break
+        local drop_name_lower = type(drop) == "table" and drop._name_lower or nil
+        local key = type(drop) == "table" and drop._match_key or nil
+
+        if type(drop_name_lower) ~= "string" then
+            drop_name_lower = _lower_text(drop ~= nil and drop.name or nil)
+            if type(drop) == "table" then
+                drop._name_lower = drop_name_lower
+            end
+        end
+        if key == nil and drop_name_lower ~= "" then
+            key = _drop_match_key(drop ~= nil and drop.name or nil, drop ~= nil and drop.chest == true)
+            if type(drop) == "table" then
+                drop._match_key = key
+            end
+        end
+
+        if drop_name_lower ~= "" and key ~= nil then
+            local full_match = true
+            local partial_match = false
+            for ti = 1, #group do
+                local term = group[ti]
+                if term ~= "" then
+                    if string.find(drop_name_lower, term, 1, true) ~= nil then
+                        partial_match = true
+                    else
+                        full_match = false
+                        if full_matches ~= nil or partial_match == true then
+                            break
+                        end
+                    end
                 end
             end
 
-            if is_match == true then
-                local key = _drop_match_key(drop.name, drop.chest == true)
-                if key ~= nil then
-                    if matched == nil then
-                        matched = {}
-                    end
+            if full_match == true then
+                if full_matches == nil then
+                    full_matches = {}
+                end
+                full_matches[key] = true
+            elseif full_matches == nil and partial_match == true then
+                if partial_matches == nil then
+                    partial_matches = {}
+                end
+                partial_matches[key] = true
+            end
+        end
+    end
+
+    return full_matches or partial_matches
+end
+
+local function _match_record_query(record, groups)
+    if groups == nil or #groups == 0 then
+        return true, nil
+    end
+    if type(record) ~= "table" or type(record.drops) ~= "table" or type(record.haystack_lower) ~= "string" then
+        return false, nil
+    end
+
+    local matched = nil
+    local query_ok = false
+    for gi = 1, #groups do
+        local group = groups[gi]
+        if _group_matches_haystack(group, record.haystack_lower) == true then
+            query_ok = true
+            local group_matches = _build_group_matched_drop_lookup(record, group)
+            if type(group_matches) == "table" then
+                if matched == nil then
+                    matched = {}
+                end
+                for key in pairs(group_matches) do
                     matched[key] = true
                 end
             end
         end
     end
 
-    return matched
+    return query_ok, matched
 end
 
 local function _compare_records(sort_mode, left, right)
@@ -782,7 +820,7 @@ local function _ensure_record_drop_texts(record)
         chip_texts[#chip_texts + 1] = {
             text = text,
             chest = drop.chest == true,
-            match_key = _drop_match_key(drop.name, drop.chest == true),
+            match_key = drop._match_key or _drop_match_key(drop.name, drop.chest == true),
         }
     end
 
@@ -2124,20 +2162,25 @@ end
 
 function BestiaryWindow:apply_view()
     local filtered = {}
+    local filter_groups = self.filter_groups
+    local has_query = type(filter_groups) == "table" and #filter_groups > 0
     local filter_level_min, filter_level_max = _read_level_filter_range(self)
     for i = 1, #self.all_records do
         local record = self.all_records[i]
         local genus_ok = self.genus_filter == FILTER_ALL or record.genus == self.genus_filter
         local subcategory_ok = self.subcategory_filter == FILTER_NONE or self.subcategory_filter == FILTER_ALL or record.subcategory == self.subcategory_filter
         local level_ok = _matches_level_range(record, filter_level_min, filter_level_max)
-        local matched_groups = _matching_groups(self.filter_groups, record.haystack_lower)
-        local query_ok = self.filter_groups == nil or #self.filter_groups == 0 or matched_groups ~= nil
         record._matched_drop_lookup = nil
-        if query_ok == true then
-            record._matched_drop_lookup = _build_matched_drop_lookup(record, matched_groups)
-        end
-        if genus_ok == true and subcategory_ok == true and level_ok == true and query_ok == true then
-            filtered[#filtered + 1] = record
+        if genus_ok == true and subcategory_ok == true and level_ok == true then
+            local query_ok = true
+            local matched_drop_lookup = nil
+            if has_query == true then
+                query_ok, matched_drop_lookup = _match_record_query(record, filter_groups)
+            end
+            record._matched_drop_lookup = matched_drop_lookup
+            if query_ok == true then
+                filtered[#filtered + 1] = record
+            end
         end
     end
 
