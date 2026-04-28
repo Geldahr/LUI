@@ -149,7 +149,6 @@ local function _apply_bestiary_icon(button)
     end
 
     local side = math.max(14, _scaled_int(16))
-    button:set_text("")
     button:set_icon(
         BESTIARY_ACTION_ICON,
         BESTIARY_ACTION_ICON,
@@ -159,8 +158,6 @@ local function _apply_bestiary_icon(button)
         side,
         UI.Widgets.LuiButton.icon_position.LEFT
     )
-    button:set_icon_stretch_mode(0)
-    button:set_active(false)
 end
 
 local function _fixed_int(value)
