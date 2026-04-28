@@ -143,6 +143,23 @@ function _G.toggle_bestiary_shortcut()
     end
 end
 
+function _G.open_bestiary_item_search(item_name)
+    local window = _ensure_bestiary_window()
+    if window == nil then
+        return false
+    end
+
+    if window.open_item_search ~= nil then
+        window:open_item_search(item_name)
+    elseif window.open ~= nil then
+        window:open()
+    else
+        window:SetVisible(true)
+    end
+
+    return true
+end
+
 function _G.toggle_crafting_shortcut()
     local window = _ensure_crafting_window()
     if window == nil then

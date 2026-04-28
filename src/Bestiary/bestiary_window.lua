@@ -1698,6 +1698,43 @@ function BestiaryWindow:set_area_filter_query(query)
     self:apply_current_area_filter(true)
 end
 
+function BestiaryWindow:open_item_search(item_name)
+    local query = _trim_text(item_name)
+    if query == "" then
+        return
+    end
+
+    self.current_area = nil
+    self.last_applied_area_query = nil
+    _G.bestiary_area_filter_query = nil
+
+    self._suppress_level_text_changed = true
+    self.level_min_box:SetText("")
+    self.level_max_box:SetText("")
+    self._suppress_level_text_changed = false
+
+    self:set_taxonomy_filters(FILTER_ALL, FILTER_NONE)
+
+    if string.find(query, "\"", 1, true) == nil then
+        query = "\"" .. query .. "\""
+    end
+
+    local current_query = self.filter_tb:GetText() or ""
+    if current_query ~= query then
+        self._suppress_area_text_changed = true
+        self.filter_tb:SetText(query)
+        self._suppress_area_text_changed = false
+    else
+        self:update_filter()
+    end
+
+    self:open()
+    self:bring_to_front()
+    if self.filter_tb ~= nil and self.filter_tb.Focus ~= nil then
+        self.filter_tb:Focus()
+    end
+end
+
 function BestiaryWindow:_refresh_genus_dropdown()
     local labels = { TR["All"] }
     local values = { FILTER_ALL }
