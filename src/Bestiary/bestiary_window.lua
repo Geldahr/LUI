@@ -1698,8 +1698,8 @@ function BestiaryWindow:set_area_filter_query(query)
     self:apply_current_area_filter(true)
 end
 
-function BestiaryWindow:open_item_search(item_name)
-    local query = _trim_text(item_name)
+function BestiaryWindow:open_query_search(query)
+    query = _trim_text(query)
     if query == "" then
         return
     end
@@ -1715,10 +1715,6 @@ function BestiaryWindow:open_item_search(item_name)
 
     self:set_taxonomy_filters(FILTER_ALL, FILTER_NONE)
 
-    if string.find(query, "\"", 1, true) == nil then
-        query = "\"" .. query .. "\""
-    end
-
     self._suppress_area_text_changed = true
     self.filter_tb:SetText(query)
     self._suppress_area_text_changed = false
@@ -1729,6 +1725,19 @@ function BestiaryWindow:open_item_search(item_name)
     if self.filter_tb ~= nil and self.filter_tb.Focus ~= nil then
         self.filter_tb:Focus()
     end
+end
+
+function BestiaryWindow:open_item_search(item_name)
+    local query = _trim_text(item_name)
+    if query == "" then
+        return
+    end
+
+    if string.find(query, "\"", 1, true) == nil then
+        query = "\"" .. query .. "\""
+    end
+
+    self:open_query_search(query)
 end
 
 function BestiaryWindow:_refresh_genus_dropdown()

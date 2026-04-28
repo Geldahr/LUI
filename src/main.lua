@@ -160,6 +160,23 @@ function _G.open_bestiary_item_search(item_name)
     return true
 end
 
+function _G.open_bestiary_query_search(query)
+    local window = _ensure_bestiary_window()
+    if window == nil then
+        return false
+    end
+
+    if window.open_query_search ~= nil then
+        window:open_query_search(query)
+    elseif window.open ~= nil then
+        window:open()
+    else
+        window:SetVisible(true)
+    end
+
+    return true
+end
+
 function _G.toggle_crafting_shortcut()
     local window = _ensure_crafting_window()
     if window == nil then
