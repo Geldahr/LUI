@@ -1,4 +1,10 @@
 import "LUI.src.Bestiary.data"
+import "LUI.src.Bestiary.drop_table"
+pcall(import, "LUI.src.Bestiary.data_de")
+pcall(import, "LUI.src.Bestiary.data_fr")
+pcall(import, "LUI.src.Bestiary.drop_table_de")
+pcall(import, "LUI.src.Bestiary.drop_table_fr")
+import "LUI.src.Bestiary.data_resolver"
 import "LUI.src.Bestiary.data_access"
 import "LUI.src.Bestiary.bestiary_card"
 import "LUI.src.Bestiary.bestiary_tracker"
