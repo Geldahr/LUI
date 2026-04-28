@@ -3912,21 +3912,25 @@ function CraftingWindow:layout()
     self.missing_header_bar:SetPosition(0, missing_top)
     self.missing_header_bar:SetSize(plan_inner:GetWidth(), section_bar_h)
     local missing_title_x = _scaled_int(8)
+    local missing_title_right_pad = _scaled_int(8)
     if type(self._missing_bestiary_query) == "string" and self._missing_bestiary_query ~= "" then
         local missing_button_side = math.max(0, section_bar_h - _scaled_int(4))
-        local missing_button_x = _scaled_int(6)
+        local missing_button_x = plan_inner:GetWidth() - missing_button_side - _scaled_int(6)
         self.missing_bestiary_button:SetPosition(
             missing_button_x,
             missing_top + math.max(0, math.floor((section_bar_h - missing_button_side) / 2))
         )
         self.missing_bestiary_button:SetSize(missing_button_side, missing_button_side)
         self.missing_bestiary_button:SetVisible(true)
-        missing_title_x = missing_button_x + missing_button_side + _scaled_int(6)
+        missing_title_right_pad = plan_inner:GetWidth() - missing_button_x + _scaled_int(4)
     else
         self.missing_bestiary_button:SetVisible(false)
     end
     self.missing_title:SetPosition(missing_title_x, missing_top)
-    self.missing_title:SetSize(math.max(0, plan_inner:GetWidth() - missing_title_x - _scaled_int(8)), section_bar_h)
+    self.missing_title:SetSize(
+        math.max(0, plan_inner:GetWidth() - missing_title_x - missing_title_right_pad),
+        section_bar_h
+    )
     local missing_list_top = missing_top + section_bar_h
     local missing_list_h = plan_inner:GetHeight() - missing_list_top
     if missing_list_h < 0 then
