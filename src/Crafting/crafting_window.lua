@@ -160,6 +160,21 @@ local function _apply_bestiary_icon(button)
     )
 end
 
+local function _quote_bestiary_query_term(term)
+    local value = tostring(term or "")
+    value = value:gsub("^%s+", ""):gsub("%s+$", "")
+    if value == "" then
+        return nil
+    end
+
+    value = value:gsub("\"", "")
+    if value == "" then
+        return nil
+    end
+
+    return "\"" .. value .. "\""
+end
+
 local function _fixed_int(value)
     return math.floor(value + 0.5)
 end
@@ -1759,12 +1774,24 @@ function CraftingWindow:Constructor()
     self.missing_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.missing_title:SetText(TR["Resources"])
 
+    self.missing_bestiary_button = UI.Widgets.LuiButton()
+    self.missing_bestiary_button:SetParent(self.plan_panel.inner)
+    self.missing_bestiary_button:set_scale(1)
+    _apply_bestiary_icon(self.missing_bestiary_button)
+    self.missing_bestiary_button:SetVisible(false)
+    self.missing_bestiary_button.Click = function()
+        if type(self._missing_bestiary_query) == "string" and type(_G.open_bestiary_query_search) == "function" then
+            _G.open_bestiary_query_search(self._missing_bestiary_query)
+        end
+    end
+
     self.missing_header_bar = Turbine.UI.Control()
     self.missing_header_bar:SetParent(self.plan_panel.inner)
     self.missing_header_bar:SetMouseVisible(false)
     self.missing_header_bar:SetBackColor(SECTION_HEADER_BACK)
     self.missing_header_bar:SetZOrder(1)
     self.missing_title:SetZOrder(2)
+    self.missing_bestiary_button:SetZOrder(2)
 
     self.plan_resources_border = Turbine.UI.Control()
     self.plan_resources_border:SetParent(self.plan_panel.inner)
@@ -1920,6 +1947,53 @@ function CraftingWindow:_bind_bestiary_action(row, item_key, item_name)
     row:set_bestiary_action(function()
         _G.open_bestiary_item_search(search_name)
     end)
+end
+
+function CraftingWindow:_build_plan_bestiary_query(resources)
+    if type(resources) ~= "table" then
+        return nil
+    end
+
+    local seen = {}
+    local parts = {}
+    for i = 1, #resources do
+        local entry = resources[i]
+        local key = type(entry) == "table" and entry.key or nil
+        if type(key) == "string" and key ~= "" and seen[key] ~= true and self:_can_open_bestiary_for_item(key) == true then
+            local search_name = _trim(type(entry.name) == "string" and entry.name or key)
+            if search_name == "" then
+                search_name = key
+            end
+
+            local term = _quote_bestiary_query_term(search_name)
+            if term ~= nil then
+                seen[key] = true
+                parts[#parts + 1] = term
+            end
+        end
+    end
+
+    if #parts == 0 then
+        return nil
+    end
+
+    return table.concat(parts, "|")
+end
+
+function CraftingWindow:_set_missing_bestiary_query(query)
+    if type(query) ~= "string" or query == "" then
+        query = nil
+    end
+
+    local previous = self._missing_bestiary_query
+    self._missing_bestiary_query = query
+    if self.missing_bestiary_button ~= nil then
+        self.missing_bestiary_button:SetVisible(query ~= nil)
+    end
+
+    if previous ~= query then
+        self:layout()
+    end
 end
 
 function CraftingWindow:_source_breakdown_hint_text(breakdown)
@@ -2584,6 +2658,8 @@ function CraftingWindow:apply_settings()
     self.plan_revert_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
     self.plan_clear_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
     self.missing_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.missing_bestiary_button:set_scale(1)
+    _apply_bestiary_icon(self.missing_bestiary_button)
     self.plan_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
     self.loading_text:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     if self.source_breakdown_hint ~= nil then
@@ -3403,6 +3479,7 @@ function CraftingWindow:refresh_plan()
     end
 
     local missing_w = self:_current_missing_list_width()
+    self:_set_missing_bestiary_query(self:_build_plan_bestiary_query(draft_resource_state.resources))
     for i = 1, #draft_resource_state.resources do
         local entry = draft_resource_state.resources[i]
         local source_breakdown = entry.source_breakdown or self:_source_breakdown_for_item(entry.key, entry.required)
@@ -3834,8 +3911,22 @@ function CraftingWindow:layout()
     local missing_top = missing_split_y + split_gap
     self.missing_header_bar:SetPosition(0, missing_top)
     self.missing_header_bar:SetSize(plan_inner:GetWidth(), section_bar_h)
-    self.missing_title:SetPosition(_scaled_int(8), missing_top)
-    self.missing_title:SetSize(plan_inner:GetWidth() - _scaled_int(16), section_bar_h)
+    local missing_title_x = _scaled_int(8)
+    if type(self._missing_bestiary_query) == "string" and self._missing_bestiary_query ~= "" then
+        local missing_button_side = math.max(0, section_bar_h - _scaled_int(4))
+        local missing_button_x = _scaled_int(6)
+        self.missing_bestiary_button:SetPosition(
+            missing_button_x,
+            missing_top + math.max(0, math.floor((section_bar_h - missing_button_side) / 2))
+        )
+        self.missing_bestiary_button:SetSize(missing_button_side, missing_button_side)
+        self.missing_bestiary_button:SetVisible(true)
+        missing_title_x = missing_button_x + missing_button_side + _scaled_int(6)
+    else
+        self.missing_bestiary_button:SetVisible(false)
+    end
+    self.missing_title:SetPosition(missing_title_x, missing_top)
+    self.missing_title:SetSize(math.max(0, plan_inner:GetWidth() - missing_title_x - _scaled_int(8)), section_bar_h)
     local missing_list_top = missing_top + section_bar_h
     local missing_list_h = plan_inner:GetHeight() - missing_list_top
     if missing_list_h < 0 then
