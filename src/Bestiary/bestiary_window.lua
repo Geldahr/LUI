@@ -1719,14 +1719,10 @@ function BestiaryWindow:open_item_search(item_name)
         query = "\"" .. query .. "\""
     end
 
-    local current_query = self.filter_tb:GetText() or ""
-    if current_query ~= query then
-        self._suppress_area_text_changed = true
-        self.filter_tb:SetText(query)
-        self._suppress_area_text_changed = false
-    else
-        self:update_filter()
-    end
+    self._suppress_area_text_changed = true
+    self.filter_tb:SetText(query)
+    self._suppress_area_text_changed = false
+    self:update_filter()
 
     self:open()
     self:bring_to_front()
