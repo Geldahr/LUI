@@ -1,5 +1,4 @@
-_G.SearchQuery = _G.SearchQuery or {}
-SearchQuery = _G.SearchQuery
+SearchQuery = SearchQuery or {}
 
 local function _trim_text(text)
     if type(text) ~= "string" then
