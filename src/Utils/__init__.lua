@@ -1,6 +1,7 @@
 import "LUI.src.Utils.i18n"
 import "LUI.src.Utils.class"
 import "LUI.src.Utils.font"
+import "LUI.src.Utils.search_query"
 import "LUI.src.Utils.color"
 import "LUI.src.Utils.math"
 import "LUI.src.Utils.callbacks"
