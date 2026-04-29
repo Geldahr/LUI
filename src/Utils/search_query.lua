@@ -101,7 +101,7 @@ local function _serialize_token_value(value)
         return nil
     end
 
-    if text:find("[\">|%s]") ~= nil then
+    if text:find("[\"|%s]") ~= nil then
         return "\"" .. text:gsub("\"", "") .. "\""
     end
 
