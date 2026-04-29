@@ -3,6 +3,7 @@ import "Turbine.UI"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
+import "LUI.src.Utils.search_query"
 import "LUI.src.Assets.assets_entry"
 
 AssetsWindow = class(LuiWindow)
@@ -66,6 +67,10 @@ local GROUP_CHARACTER = "character"
 local STORAGE_ALL = "all"
 local OWNER_ALL = "__all__"
 local STACK_ITEMS_LABEL = "Stack items"
+local ASSETS_QUERY_TOKENS = {
+    owner = true,
+    store = true,
+}
 
 local VIEW_DETAILS_UP = Turbine.UI.Graphic(0x4110C76F)
 local VIEW_DETAILS_DOWN = Turbine.UI.Graphic(0x4110C76D)
@@ -131,6 +136,17 @@ local function _trim_text(text)
     value = value:gsub("^%s+", "")
     value = value:gsub("%s+$", "")
     return value
+end
+
+local function _normalize_storage_filter_value(value)
+    local normalized = _lower_text(_trim_text(value))
+    if normalized == "vault" or normalized == "bank" or normalized == "backpack" then
+        return normalized
+    end
+    if normalized == "shared" or normalized == "sharedstorage" or normalized == "shared_storage" then
+        return "shared_storage"
+    end
+    return STORAGE_ALL
 end
 
 local function _source_rank(source_key)
@@ -405,115 +421,6 @@ local function _compare_display_records(left, right, sort_mode, grouping_mode)
     return _compare_display_fallback(left, right)
 end
 
-local function _push_filter_term(cur_group, term)
-    if term ~= nil and term ~= "" then
-        cur_group[#cur_group + 1] = term
-    end
-end
-
-local function _end_filter_group(groups, cur_group)
-    if #cur_group > 0 then
-        groups[#groups + 1] = cur_group
-    end
-end
-
-local function _parse_filter_query(query)
-    if type(query) ~= "string" then
-        return {}
-    end
-
-    local groups = {}
-    local cur_group = {}
-    local i = 1
-    local n = #query
-
-    while i <= n do
-        local c = query:sub(i, i)
-        if c == "\"" then
-            local j = i + 1
-            while j <= n and query:sub(j, j) ~= "\"" do
-                j = j + 1
-            end
-            _push_filter_term(cur_group, query:sub(i + 1, j - 1))
-            i = (j <= n) and (j + 1) or (n + 1)
-        elseif c == "|" then
-            _end_filter_group(groups, cur_group)
-            cur_group = {}
-            i = i + 1
-        elseif c:match("%s") then
-            i = i + 1
-        else
-            local j = i
-            while j <= n do
-                local cj = query:sub(j, j)
-                if cj == "|" or cj == "\"" or cj:match("%s") then
-                    break
-                end
-                j = j + 1
-            end
-            _push_filter_term(cur_group, query:sub(i, j - 1))
-            i = j
-        end
-    end
-
-    _end_filter_group(groups, cur_group)
-    return groups
-end
-
-local function _normalize_filter_groups(groups)
-    if groups == nil or #groups == 0 then
-        return {}
-    end
-
-    local out = {}
-    for gi = 1, #groups do
-        local group = groups[gi]
-        if group ~= nil and #group > 0 then
-            local normalized = {}
-            for ti = 1, #group do
-                local term = group[ti]
-                if type(term) == "string" then
-                    term = string.lower(term)
-                    if term ~= "" then
-                        normalized[#normalized + 1] = term
-                    end
-                end
-            end
-            if #normalized > 0 then
-                out[#out + 1] = normalized
-            end
-        end
-    end
-
-    return out
-end
-
-local function _matches_filter_groups(groups, haystack_lower)
-    if groups == nil or #groups == 0 then
-        return true
-    end
-    if type(haystack_lower) ~= "string" then
-        return false
-    end
-
-    for gi = 1, #groups do
-        local group = groups[gi]
-        local ok = true
-        for ti = 1, #group do
-            local term = group[ti]
-            if term ~= "" and string.find(haystack_lower, term, 1, true) == nil then
-                ok = false
-                break
-            end
-        end
-        if ok == true then
-            return true
-        end
-    end
-
-    return false
-end
-
 local function _mode_key(mode)
     if mode == LUI_ENUMS.assets_view_mode.ICONS then
         return "icons"
@@ -552,10 +459,13 @@ function AssetsWindow:Constructor()
     self.all_records = {}
     self.records = {}
     self.filter_groups = {}
+    self.filter_query_state = SearchQuery.parse("", ASSETS_QUERY_TOKENS)
     self.sort_mode = SORT_NAME_ASC
     self.grouping_mode = GROUP_NONE
     self.storage_filter = STORAGE_ALL
     self.owner_filter = OWNER_ALL
+    self.query_storage_filter = STORAGE_ALL
+    self.query_owner_filter = OWNER_ALL
     self.stack_items = false
     self.total_record_count = 0
 
@@ -957,7 +867,14 @@ end
 
 function AssetsWindow:update_filter()
     local query = self.filter_tb:GetText() or ""
-    self.filter_groups = _normalize_filter_groups(_parse_filter_query(query))
+    local state = SearchQuery.parse(query, ASSETS_QUERY_TOKENS)
+    self.filter_query_state = state
+    self.filter_groups = state.normalized_groups
+    self.query_owner_filter = _trim_text(state.token_map.owner)
+    if self.query_owner_filter == "" then
+        self.query_owner_filter = OWNER_ALL
+    end
+    self.query_storage_filter = _normalize_storage_filter_value(state.token_map.store)
     self:_apply_record_view(true)
 end
 
@@ -1661,7 +1578,9 @@ function AssetsWindow:_apply_record_view(reset_page)
         local record = self.all_records[i]
         if (self.storage_filter == STORAGE_ALL or record.source_key == self.storage_filter) and
             (self.owner_filter == OWNER_ALL or record.owner == self.owner_filter) and
-            _matches_filter_groups(self.filter_groups, record.haystack_lower or "") == true then
+            (self.query_storage_filter == STORAGE_ALL or record.source_key == self.query_storage_filter) and
+            (self.query_owner_filter == OWNER_ALL or record.owner == self.query_owner_filter) and
+            SearchQuery.matches_groups(self.filter_groups, record.haystack_lower or "") == true then
             filtered[#filtered + 1] = record
         end
     end

@@ -3,6 +3,7 @@ import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
+import "LUI.src.Utils.search_query"
 
 Crafting = Crafting or {}
 
@@ -12,6 +13,12 @@ local AVAILABILITY_READY = "ready"
 local AVAILABILITY_MISSING = "missing"
 local DISPLAY_PAGES = "pages"
 local DISPLAY_SCROLL = "scroll"
+local CRAFTING_QUERY_TOKENS = {
+    prof = true,
+    lvl = true,
+    avail = true,
+    fav = true,
+}
 
 local BASE_MARGIN_LEFT = 15
 local BASE_MARGIN_TOP = 11
@@ -195,115 +202,6 @@ end
 
 local function _lower(text)
     return string.lower(_safe_string(text, ""))
-end
-
-local function _push_query_term(group, term)
-    if type(term) ~= "string" then
-        return
-    end
-    local trimmed = _trim(term)
-    if trimmed == "" then
-        return
-    end
-    group[#group + 1] = trimmed
-end
-
-local function _end_query_group(groups, group)
-    if type(group) ~= "table" or #group == 0 then
-        return
-    end
-    groups[#groups + 1] = group
-end
-
-local function _parse_query(text)
-    local query = _safe_string(text, "")
-    local groups = {}
-    local current_group = {}
-    local index = 1
-    local length = #query
-
-    while index <= length do
-        local char = query:sub(index, index)
-        if char == "\"" then
-            local end_index = index + 1
-            while end_index <= length and query:sub(end_index, end_index) ~= "\"" do
-                end_index = end_index + 1
-            end
-            _push_query_term(current_group, query:sub(index + 1, end_index - 1))
-            index = (end_index <= length) and (end_index + 1) or (length + 1)
-        elseif char == "|" then
-            _end_query_group(groups, current_group)
-            current_group = {}
-            index = index + 1
-        elseif char:match("%s") then
-            index = index + 1
-        else
-            local end_index = index
-            while end_index <= length do
-                local next_char = query:sub(end_index, end_index)
-                if next_char == "|" or next_char == "\"" or next_char:match("%s") then
-                    break
-                end
-                end_index = end_index + 1
-            end
-            _push_query_term(current_group, query:sub(index, end_index - 1))
-            index = end_index
-        end
-    end
-
-    _end_query_group(groups, current_group)
-    return groups
-end
-
-local function _normalize_query_groups(groups)
-    if type(groups) ~= "table" or #groups == 0 then
-        return {}
-    end
-
-    local normalized_groups = {}
-    for group_index = 1, #groups do
-        local group = groups[group_index]
-        if type(group) == "table" and #group > 0 then
-            local normalized_terms = {}
-            for term_index = 1, #group do
-                local term = group[term_index]
-                if type(term) == "string" then
-                    term = _lower(term)
-                    if term ~= "" then
-                        normalized_terms[#normalized_terms + 1] = term
-                    end
-                end
-            end
-            if #normalized_terms > 0 then
-                normalized_groups[#normalized_groups + 1] = normalized_terms
-            end
-        end
-    end
-
-    return normalized_groups
-end
-
-local function _matches_query_groups(groups, haystack)
-    if type(groups) ~= "table" or #groups == 0 then
-        return true
-    end
-
-    local text = _lower(haystack)
-    for group_index = 1, #groups do
-        local group = groups[group_index]
-        local matched = true
-        for term_index = 1, #group do
-            if string.find(text, group[term_index], 1, true) == nil then
-                matched = false
-                break
-            end
-        end
-        if matched == true then
-            return true
-        end
-    end
-
-    return false
 end
 
 local function _saved_plan_entry_signature(entry)
@@ -1350,16 +1248,22 @@ function CraftingWindow:Constructor()
     end
     self._last_store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
     self.search_groups = {}
+    self.search_query_state = SearchQuery.parse("", CRAFTING_QUERY_TOKENS)
     self.scope_source_keys = self.store:get_default_source_keys()
     self.scope_key = self.store:scope_key_from_sources(self.scope_source_keys)
     self.profession_filter = FILTER_ALL
     self.availability_filter = AVAILABILITY_ALL
     self.favorite_filter_active = false
+    self.query_profession_filter = FILTER_ALL
+    self.query_availability_filter = AVAILABILITY_ALL
+    self.query_favorite_filter_active = false
     self.favorite_entries = {}
     self.favorite_keys = {}
     self.display_mode = _normalize_display_mode(_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE)
     self.level_min_filter = nil
     self.level_max_filter = nil
+    self.query_level_min_filter = nil
+    self.query_level_max_filter = nil
     self.selected_recipe_id = nil
     self.visible_recipes = {}
     self.recipe_page_index = 1
@@ -1394,7 +1298,7 @@ function CraftingWindow:Constructor()
         if self._suppress_search_text_changed == true then
             return
         end
-        self.search_groups = _normalize_query_groups(_parse_query(self.search_box:GetText()))
+        self:_sync_search_query_state()
         self.recipe_page_index = 1
         self:_invalidate_recipe_list()
         self:refresh_recipe_list()
@@ -2326,6 +2230,30 @@ function CraftingWindow:_refresh_favorite_filter_button()
     _apply_favorite_icon(self.favorite_filter_button, self.favorite_filter_active == true)
 end
 
+function CraftingWindow:_profession_filter_from_query_value(value)
+    local token = _lower(_trim(value))
+    local labels, values = self.store:get_profession_options()
+    for index = 1, #values do
+        if _lower(tostring(values[index])) == token or _lower(labels[index]) == token then
+            return values[index]
+        end
+    end
+
+    return FILTER_ALL
+end
+
+function CraftingWindow:_sync_search_query_state()
+    local state = SearchQuery.parse(self.search_box:GetText(), CRAFTING_QUERY_TOKENS)
+    local level_filter = SearchQuery.read_level_filter(state, "lvl")
+    self.search_query_state = state
+    self.search_groups = state.normalized_groups
+    self.query_profession_filter = self:_profession_filter_from_query_value(state.token_map.prof)
+    self.query_availability_filter = _parse_availability_query_value(state.token_map.avail)
+    self.query_favorite_filter_active = _parse_favorite_query_value(state.token_map.fav)
+    self.query_level_min_filter = level_filter.min
+    self.query_level_max_filter = level_filter.max
+end
+
 function CraftingWindow:set_favorite_filter(active)
     self.favorite_filter_active = active == true
     self:_refresh_favorite_filter_button()
@@ -2411,7 +2339,7 @@ function CraftingWindow:_apply_search_query(text)
     self._suppress_search_text_changed = true
     self.search_box:SetText(query_text)
     self._suppress_search_text_changed = false
-    self.search_groups = _normalize_query_groups(_parse_query(query_text))
+    self:_sync_search_query_state()
 end
 
 function CraftingWindow:_scope_source_summary(selected_values)
@@ -2725,7 +2653,7 @@ function CraftingWindow:refresh_from_store(reset_filters)
     self:_refresh_profession_options()
 
     if reset_filters == true then
-        self.search_groups = _normalize_query_groups(_parse_query(self.search_box:GetText()))
+        self:_sync_search_query_state()
     end
 
     local loaded_result_keys = self.store:consume_loaded_recipe_result_keys()
@@ -2837,28 +2765,48 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
     if self.profession_filter ~= FILTER_ALL and recipe.profession_key ~= self.profession_filter then
         return false
     end
+    if self.query_profession_filter ~= FILTER_ALL and recipe.profession_key ~= self.query_profession_filter then
+        return false
+    end
     if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
         return false
     end
-    if self.favorite_filter_active == true and self:_is_recipe_favorite(recipe) ~= true then
+    if (self.favorite_filter_active == true or self.query_favorite_filter_active == true) and
+        self:_is_recipe_favorite(recipe) ~= true then
         return false
     end
-    if self.level_min_filter ~= nil or self.level_max_filter ~= nil then
+
+    local filter_min = self.level_min_filter
+    local filter_max = self.level_max_filter
+    if self.query_level_min_filter ~= nil and (filter_min == nil or self.query_level_min_filter > filter_min) then
+        filter_min = self.query_level_min_filter
+    end
+    if self.query_level_max_filter ~= nil and (filter_max == nil or self.query_level_max_filter < filter_max) then
+        filter_max = self.query_level_max_filter
+    end
+    if filter_min ~= nil or filter_max ~= nil then
         local required_level = tonumber(self:_recipe_required_level(recipe))
         if required_level == nil then
             return false
         end
-        if self.level_min_filter ~= nil and required_level < self.level_min_filter then
+        if filter_min ~= nil and required_level < filter_min then
             return false
         end
-        if self.level_max_filter ~= nil and required_level > self.level_max_filter then
+        if filter_max ~= nil and required_level > filter_max then
             return false
         end
     end
 
-    if self.availability_filter == AVAILABILITY_READY then
+    local require_ready = self.availability_filter == AVAILABILITY_READY or
+        self.query_availability_filter == AVAILABILITY_READY
+    local require_missing = self.availability_filter == AVAILABILITY_MISSING or
+        self.query_availability_filter == AVAILABILITY_MISSING
+    if require_ready == true and require_missing == true then
+        return false
+    end
+    if require_ready == true then
         return status ~= nil and status.craftable == true
-    elseif self.availability_filter == AVAILABILITY_MISSING then
+    elseif require_missing == true then
         return status ~= nil and status.craftable ~= true
     end
 
