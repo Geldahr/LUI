@@ -7,13 +7,11 @@
 - Highlight matching bestiary drops in search results, including split matches across multiple drop chips.
 - Added Crafting to Bestiary links for ingredients and planned resources.
 - Added locale-aware Bestiary data loading with localized drop table support.
-- Added shared structured search tokens for Bestiary, Crafting, and Assets so filters can be copied and reused from the search box.
 
 ### Changed
 
 - Use a distinct border color for matched drops and align chest chip backgrounds with the standard drop chip style.
 - Improved Bestiary search opening for item and multi-resource queries from Crafting.
-- Synced Bestiary location/genus/level filters, Crafting profession/availability/favorite/level filters, and Assets owner/storage filters into their search queries.
 - Removed silent internal fallbacks across plugin wiring so missing internal modules, methods, and state now fail loudly instead of being masked.
 
 ### Fixed
