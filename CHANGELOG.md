@@ -5,14 +5,19 @@
 ### Added
 
 - Highlight matching bestiary drops in search results, including split matches across multiple drop chips.
+- Added Crafting to Bestiary links for ingredients and planned resources.
+- Added locale-aware Bestiary data loading with localized drop table support.
 
 ### Changed
 
 - Use a distinct border color for matched drops and align chest chip backgrounds with the standard drop chip style.
+- Improved Bestiary search opening for item and multi-resource queries from Crafting.
 
 ### Fixed
 
 - Fixed empty drop highlight states when a bestiary row matched the active search.
+
+### Removed
 
 ## v0.5.0
 

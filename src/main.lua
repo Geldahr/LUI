@@ -143,6 +143,20 @@ function _G.toggle_bestiary_shortcut()
     end
 end
 
+function _G.open_bestiary_item_search(item_name)
+    local window = _ensure_bestiary_window()
+    window:open_item_search(item_name)
+
+    return true
+end
+
+function _G.open_bestiary_query_search(query)
+    local window = _ensure_bestiary_window()
+    window:open_query_search(query)
+
+    return true
+end
+
 function _G.toggle_crafting_shortcut()
     local window = _ensure_crafting_window()
     if window == nil then
