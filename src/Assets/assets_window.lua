@@ -149,6 +149,15 @@ local function _normalize_storage_filter_value(value)
     return STORAGE_ALL
 end
 
+local function _normalize_owner_query_value(value)
+    local normalized = _lower_text(_trim_text(value))
+    if normalized == "" then
+        return OWNER_ALL
+    end
+
+    return normalized
+end
+
 local function _source_rank(source_key)
     return SOURCE_ORDER[source_key] or 99
 end
@@ -870,10 +879,7 @@ function AssetsWindow:update_filter()
     local state = SearchQuery.parse(query, ASSETS_QUERY_TOKENS)
     self.filter_query_state = state
     self.filter_groups = state.normalized_groups
-    self.query_owner_filter = _trim_text(state.token_map.owner)
-    if self.query_owner_filter == "" then
-        self.query_owner_filter = OWNER_ALL
-    end
+    self.query_owner_filter = _normalize_owner_query_value(state.token_map.owner)
     self.query_storage_filter = _normalize_storage_filter_value(state.token_map.store)
     self:_apply_record_view(true)
 end
@@ -1579,7 +1585,7 @@ function AssetsWindow:_apply_record_view(reset_page)
         if (self.storage_filter == STORAGE_ALL or record.source_key == self.storage_filter) and
             (self.owner_filter == OWNER_ALL or record.owner == self.owner_filter) and
             (self.query_storage_filter == STORAGE_ALL or record.source_key == self.query_storage_filter) and
-            (self.query_owner_filter == OWNER_ALL or record.owner == self.query_owner_filter) and
+            (self.query_owner_filter == OWNER_ALL or _lower_text(record.owner) == self.query_owner_filter) and
             SearchQuery.matches_groups(self.filter_groups, record.haystack_lower) == true then
             filtered[#filtered + 1] = record
         end

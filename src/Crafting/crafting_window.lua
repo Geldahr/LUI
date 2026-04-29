@@ -2673,10 +2673,7 @@ function CraftingWindow:refresh_from_store(reset_filters)
     self._store_loading = loading
     self:refresh_loading_state()
     self:_refresh_profession_options()
-
-    if reset_filters == true then
-        self:_sync_search_query_state()
-    end
+    self:_sync_search_query_state()
 
     local loaded_result_keys = self.store:consume_loaded_recipe_result_keys()
     local selected_recipe_discovered =
