@@ -313,6 +313,28 @@ local function _normalize_availability_filter(value)
     return AVAILABILITY_ALL
 end
 
+local function _parse_availability_query_value(value)
+    local normalized = _lower(_trim(value))
+    if normalized == "ready" or normalized == "craftable" then
+        return AVAILABILITY_READY
+    end
+    if normalized == "missing" or normalized == "unavailable" then
+        return AVAILABILITY_MISSING
+    end
+    return AVAILABILITY_ALL
+end
+
+local function _parse_favorite_query_value(value)
+    local normalized = _lower(_trim(value))
+    if normalized == "" or normalized == "on" or normalized == "true" or normalized == "yes" or normalized == "1" then
+        return true
+    end
+    if normalized == "off" or normalized == "false" or normalized == "no" or normalized == "0" then
+        return false
+    end
+    return false
+end
+
 local function _normalize_display_mode(value)
     if value == DISPLAY_SCROLL then
         return DISPLAY_SCROLL

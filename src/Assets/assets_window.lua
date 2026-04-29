@@ -1580,7 +1580,7 @@ function AssetsWindow:_apply_record_view(reset_page)
             (self.owner_filter == OWNER_ALL or record.owner == self.owner_filter) and
             (self.query_storage_filter == STORAGE_ALL or record.source_key == self.query_storage_filter) and
             (self.query_owner_filter == OWNER_ALL or record.owner == self.query_owner_filter) and
-            SearchQuery.matches_groups(self.filter_groups, record.haystack_lower or "") == true then
+            SearchQuery.matches_groups(self.filter_groups, record.haystack_lower) == true then
             filtered[#filtered + 1] = record
         end
     end

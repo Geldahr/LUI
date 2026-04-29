@@ -1610,9 +1610,14 @@ function BestiaryWindow:_set_filter_query_text(query)
 end
 
 function BestiaryWindow:_apply_location_query_value(value)
-    local location_value = SearchQuery.format_path(_parse_location_token_value(value))
+    local location_parts = _parse_location_token_value(value)
+    if location_parts == nil then
+        error("Invalid bestiary location query value")
+    end
+
+    local location_value = SearchQuery.format_path(location_parts)
     if location_value == nil then
-        return
+        error("Invalid bestiary location query path")
     end
 
     local tokens = SearchQuery.copy_tokens_except(self.query_state, { loc = true })
@@ -1636,9 +1641,14 @@ function BestiaryWindow:apply_current_area_filter(force)
         return
     end
 
-    local location_value = SearchQuery.format_path(_parse_location_token_value(query))
+    local location_parts = _parse_location_token_value(query)
+    if location_parts == nil then
+        error("Invalid bestiary area filter query")
+    end
+
+    local location_value = SearchQuery.format_path(location_parts)
     if location_value == nil then
-        return
+        error("Invalid bestiary area filter path")
     end
 
     local state = SearchQuery.parse(self.filter_tb:GetText() or "", BESTIARY_QUERY_TOKENS)

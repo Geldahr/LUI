@@ -50,10 +50,6 @@ local function _is_bestiary_open()
 end
 
 local function _build_location_filter_query(location)
-    if type(location) ~= "table" then
-        return ""
-    end
-
     local parts = {}
 
     if type(location.region) == "string" and location.region ~= "" then
@@ -63,7 +59,12 @@ local function _build_location_filter_query(location)
         parts[#parts + 1] = location.area
     end
 
-    return SearchQuery.format_path(parts) or ""
+    local query = SearchQuery.format_path(parts)
+    if query == nil then
+        error("Invalid bestiary location query path")
+    end
+
+    return query
 end
 
 function Bestiary.get_current_location()
@@ -92,9 +93,6 @@ function Bestiary.set_current_location(location)
         region_id = location.region_id,
     }
     local query = _build_location_filter_query(current_location)
-    if query == "" then
-        return
-    end
 
     Bestiary.current_location = current_location
     _G.bestiary_area_filter_query = query

@@ -109,22 +109,29 @@ local function _serialize_token_value(value)
 end
 
 function SearchQuery.normalize_groups(groups)
-    if type(groups) ~= "table" or #groups == 0 then
+    if type(groups) ~= "table" then
+        error("SearchQuery.normalize_groups requires groups table")
+    end
+    if #groups == 0 then
         return {}
     end
 
     local out = {}
     for group_index = 1, #groups do
         local group = groups[group_index]
-        if type(group) == "table" and #group > 0 then
+        if type(group) ~= "table" then
+            error("SearchQuery.normalize_groups requires group table")
+        end
+        if #group > 0 then
             local normalized_group = {}
             for term_index = 1, #group do
                 local term = group[term_index]
-                if type(term) == "string" then
-                    term = _lower_text(term)
-                    if term ~= "" then
-                        normalized_group[#normalized_group + 1] = term
-                    end
+                if type(term) ~= "string" then
+                    error("SearchQuery.normalize_groups requires term string")
+                end
+                term = _lower_text(term)
+                if term ~= "" then
+                    normalized_group[#normalized_group + 1] = term
                 end
             end
             if #normalized_group > 0 then
@@ -137,12 +144,21 @@ function SearchQuery.normalize_groups(groups)
 end
 
 function SearchQuery.group_matches(group, haystack_lower)
-    if type(group) ~= "table" or #group == 0 or type(haystack_lower) ~= "string" then
+    if type(group) ~= "table" then
+        error("SearchQuery.group_matches requires group table")
+    end
+    if type(haystack_lower) ~= "string" then
+        error("SearchQuery.group_matches requires haystack string")
+    end
+    if #group == 0 then
         return false
     end
 
     for term_index = 1, #group do
         local term = group[term_index]
+        if type(term) ~= "string" then
+            error("SearchQuery.group_matches requires term string")
+        end
         if term ~= "" and string.find(haystack_lower, term, 1, true) == nil then
             return false
         end
@@ -152,11 +168,14 @@ function SearchQuery.group_matches(group, haystack_lower)
 end
 
 function SearchQuery.matches_groups(groups, haystack_lower)
-    if type(groups) ~= "table" or #groups == 0 then
-        return true
+    if type(groups) ~= "table" then
+        error("SearchQuery.matches_groups requires groups table")
     end
     if type(haystack_lower) ~= "string" then
-        return false
+        error("SearchQuery.matches_groups requires haystack string")
+    end
+    if #groups == 0 then
+        return true
     end
 
     for group_index = 1, #groups do
@@ -169,7 +188,11 @@ function SearchQuery.matches_groups(groups, haystack_lower)
 end
 
 function SearchQuery.parse(query, token_keys)
-    local text = type(query) == "string" and query or ""
+    if type(query) ~= "string" then
+        error("SearchQuery.parse requires query string")
+    end
+
+    local text = query
     local groups = {}
     local current_group = {}
     local tokens = {}
@@ -225,47 +248,71 @@ function SearchQuery.parse(query, token_keys)
 end
 
 function SearchQuery.serialize(text_groups, token_entries, token_keys)
-    local parts = {}
-
-    if type(text_groups) == "table" then
-        local group_parts = {}
-        for group_index = 1, #text_groups do
-            local group = text_groups[group_index]
-            if type(group) == "table" and #group > 0 then
-                local term_parts = {}
-                for term_index = 1, #group do
-                    local rendered = _serialize_term(group[term_index], token_keys)
-                    if rendered ~= nil then
-                        term_parts[#term_parts + 1] = rendered
-                    end
-                end
-                if #term_parts > 0 then
-                    group_parts[#group_parts + 1] = table.concat(term_parts, " ")
-                end
-            end
-        end
-        if #group_parts > 0 then
-            parts[#parts + 1] = table.concat(group_parts, "|")
-        end
+    if type(text_groups) ~= "table" then
+        error("SearchQuery.serialize requires text_groups table")
+    end
+    if type(token_entries) ~= "table" then
+        error("SearchQuery.serialize requires token_entries table")
     end
 
-    if type(token_entries) == "table" then
-        for index = 1, #token_entries do
-            local entry = token_entries[index]
-            local rendered = _serialize_token_value(entry.value)
-            if type(entry.key) == "string" and rendered ~= nil then
-                parts[#parts + 1] = entry.key .. ":" .. rendered
+    local parts = {}
+
+    local group_parts = {}
+    for group_index = 1, #text_groups do
+        local group = text_groups[group_index]
+        if type(group) ~= "table" then
+            error("SearchQuery.serialize requires group table")
+        end
+        if #group > 0 then
+            local term_parts = {}
+            for term_index = 1, #group do
+                local rendered = _serialize_term(group[term_index], token_keys)
+                if rendered == nil then
+                    error("SearchQuery.serialize requires non-empty term")
+                end
+                term_parts[#term_parts + 1] = rendered
+            end
+            if #term_parts > 0 then
+                group_parts[#group_parts + 1] = table.concat(term_parts, " ")
             end
         end
+    end
+    if #group_parts > 0 then
+        parts[#parts + 1] = table.concat(group_parts, "|")
+    end
+
+    for index = 1, #token_entries do
+        local entry = token_entries[index]
+        if type(entry) ~= "table" then
+            error("SearchQuery.serialize requires token entry table")
+        end
+        if type(entry.key) ~= "string" or entry.key == "" then
+            error("SearchQuery.serialize requires token entry key string")
+        end
+        local rendered = _serialize_token_value(entry.value)
+        if rendered == nil then
+            error("SearchQuery.serialize requires non-empty token entry value")
+        end
+        parts[#parts + 1] = entry.key .. ":" .. rendered
     end
 
     return table.concat(parts, " ")
 end
 
 function SearchQuery.add_token(token_entries, key, value)
+    if type(token_entries) ~= "table" then
+        error("SearchQuery.add_token requires token_entries table")
+    end
+    if type(key) ~= "string" or key == "" then
+        error("SearchQuery.add_token requires token key string")
+    end
+    if type(value) ~= "string" then
+        error("SearchQuery.add_token requires token value string")
+    end
+
     local text = _trim_text(value)
     if text == "" then
-        return
+        error("SearchQuery.add_token requires non-empty token value")
     end
 
     token_entries[#token_entries + 1] = {
@@ -275,14 +322,30 @@ function SearchQuery.add_token(token_entries, key, value)
 end
 
 function SearchQuery.copy_tokens_except(state, excluded_keys)
-    local copied = {}
-    local entries = type(state) == "table" and state.tokens or nil
-    if type(entries) ~= "table" then
-        return copied
+    if type(state) ~= "table" then
+        error("SearchQuery.copy_tokens_except requires state table")
     end
+    if type(state.tokens) ~= "table" then
+        error("SearchQuery.copy_tokens_except requires state.tokens table")
+    end
+    if type(excluded_keys) ~= "table" then
+        error("SearchQuery.copy_tokens_except requires excluded_keys table")
+    end
+
+    local copied = {}
+    local entries = state.tokens
 
     for index = 1, #entries do
         local entry = entries[index]
+        if type(entry) ~= "table" then
+            error("SearchQuery.copy_tokens_except requires token entry table")
+        end
+        if type(entry.key) ~= "string" or entry.key == "" then
+            error("SearchQuery.copy_tokens_except requires token entry key string")
+        end
+        if type(entry.value) ~= "string" then
+            error("SearchQuery.copy_tokens_except requires token entry value string")
+        end
         if excluded_keys[entry.key] ~= true then
             copied[#copied + 1] = {
                 key = entry.key,
@@ -338,6 +401,16 @@ function SearchQuery.format_path(parts)
 end
 
 function SearchQuery.read_level_filter(state, key)
+    if type(state) ~= "table" then
+        error("SearchQuery.read_level_filter requires state table")
+    end
+    if type(state.tokens) ~= "table" then
+        error("SearchQuery.read_level_filter requires state.tokens table")
+    end
+    if type(key) ~= "string" or key == "" then
+        error("SearchQuery.read_level_filter requires token key string")
+    end
+
     local filter = {
         min = nil,
         max = nil,
@@ -346,13 +419,19 @@ function SearchQuery.read_level_filter(state, key)
         impossible = false,
     }
 
-    local entries = type(state) == "table" and state.tokens or nil
-    if type(entries) ~= "table" then
-        return filter
-    end
+    local entries = state.tokens
 
     for index = 1, #entries do
         local entry = entries[index]
+        if type(entry) ~= "table" then
+            error("SearchQuery.read_level_filter requires token entry table")
+        end
+        if type(entry.key) ~= "string" or entry.key == "" then
+            error("SearchQuery.read_level_filter requires token entry key string")
+        end
+        if type(entry.value) ~= "string" then
+            error("SearchQuery.read_level_filter requires token entry value string")
+        end
         if entry.key == key then
             local raw = _trim_text(entry.value)
             local range_min_text, range_max_text = raw:match("^(%d+)%s*%-%s*(%d+)$")
