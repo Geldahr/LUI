@@ -125,28 +125,17 @@ end
 
 local function _refresh_status_bar_after_api_change()
     local edit_window_state = nil
-    if _G.STATUS_BAR ~= nil and _G.STATUS_BAR.capture_edit_window_state ~= nil then
+    if _G.STATUS_BAR ~= nil then
         edit_window_state = _G.STATUS_BAR:capture_edit_window_state()
     end
 
-    if _G.rebuild_settings ~= nil then
-        _G.rebuild_settings()
+    _G.rebuild_settings()
+    if _G.STATUS_BAR ~= nil then
+        _G.STATUS_BAR:apply_settings()
+    else
+        _G.apply_status_bar_settings()
     end
-    if _G.STATUS_BAR ~= nil and _G.STATUS_BAR.apply_settings ~= nil then
-        local ok, err = pcall(function()
-            _G.STATUS_BAR:apply_settings()
-        end)
-        if ok ~= true then
-            _log_status_bar_api("Live status bar apply failed: " .. tostring(err))
-        end
-    elseif _G.apply_status_bar_settings ~= nil then
-        local ok, err = pcall(_G.apply_status_bar_settings)
-        if ok ~= true then
-            _log_status_bar_api("Status bar rebuild failed: " .. tostring(err))
-        end
-    end
-    if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil and
-        _G.STATUS_BAR.restore_edit_window_state ~= nil then
+    if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil then
         _G.STATUS_BAR:restore_edit_window_state(edit_window_state)
     end
     if _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP ~= nil then

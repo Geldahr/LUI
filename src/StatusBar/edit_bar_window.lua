@@ -504,9 +504,7 @@ function StatusBarEditWindow:open()
     self:refresh_state()
     self:position_near_bar()
     self:SetVisible(true)
-    if self.Activate ~= nil then
-        self:Activate()
-    end
+    self:Activate()
 end
 
 function StatusBarEditWindow:close_manually()

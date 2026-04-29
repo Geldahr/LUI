@@ -716,7 +716,7 @@ function LuiWindow:toggle()
 end
 
 function LuiWindow:bring_to_front()
-    if self:IsVisible() == true and self.Activate ~= nil then
+    if self:IsVisible() == true then
         self:Activate()
     end
 end

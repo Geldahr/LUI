@@ -757,19 +757,17 @@ function AssetsWindow:Constructor()
     self.recipes_button:SetParent(content_host)
     self.recipes_button:set_text(TR["Recipes"] .. " (0)")
     self.recipes_button.Click = function()
-        if Crafting ~= nil and Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true then
+        if Crafting.is_enabled() ~= true then
             return
         end
 
         local window = _G.CRAFTING_WINDOW
-        if window == nil and Crafting ~= nil and Crafting.CraftingWindow ~= nil then
+        if window == nil then
             window = Crafting.CraftingWindow()
             _G.CRAFTING_WINDOW = window
         end
-        if window ~= nil and window.open_from_asset_materials ~= nil then
+        if window ~= nil then
             window:open_from_asset_materials(nil)
-        elseif window ~= nil and window.open ~= nil then
-            window:open()
         end
     end
 
@@ -855,7 +853,7 @@ function AssetsWindow:Constructor()
             self.last_update_at = 0
             self._last_generation = nil
             self:bring_to_front()
-            if ASSETS_STORE ~= nil and ASSETS_STORE.refresh_now ~= nil then
+            if ASSETS_STORE ~= nil then
                 ASSETS_STORE:refresh_now(nil, true)
             end
             self:refresh_from_store(true)
@@ -876,7 +874,7 @@ end
 ---------------------------------------------------------------------
 
 function AssetsWindow:bring_to_front()
-    if self:IsVisible() == true and self.Activate ~= nil then
+    if self:IsVisible() == true then
         self:Activate()
     end
 end
@@ -1689,7 +1687,7 @@ function AssetsWindow:_apply_record_view(reset_page)
 end
 
 function AssetsWindow:_get_crafting_store()
-    if _G.LUI_IS_UNLOADING == true or Crafting == nil or (Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true) then
+    if _G.LUI_IS_UNLOADING == true or Crafting.is_enabled() ~= true then
         self._crafting_store = nil
         return nil
     end
@@ -1701,11 +1699,7 @@ end
 function AssetsWindow:_refresh_recipes_button()
     local count = 0
     local loading = false
-    local store = nil
-    local crafting_enabled = Crafting == nil or Crafting.is_enabled == nil or Crafting.is_enabled() == true
-    if crafting_enabled == true then
-        store = self:_get_crafting_store()
-    end
+    local store = self:_get_crafting_store()
     if store ~= nil then
         store:refresh(false, 1)
         for i = 1, #store.recipes do
@@ -2051,17 +2045,13 @@ function AssetsWindow:layout()
 end
 
 function AssetsWindow:refresh_from_store(force)
-    local generation = ASSETS_STORE ~= nil and ASSETS_STORE.generation or 0
+    local generation = ASSETS_STORE.generation or 0
     if force ~= true and generation == self._last_generation then
         return
     end
 
     self._last_generation = generation
-    if ASSETS_STORE ~= nil and ASSETS_STORE.get_entries ~= nil then
-        self.all_records = ASSETS_STORE:get_entries()
-    else
-        self.all_records = {}
-    end
+    self.all_records = ASSETS_STORE:get_entries()
 
     for i = 1, #self.all_records do
         local record = self.all_records[i]

@@ -351,7 +351,7 @@ function ConfigWindow:open(main_key, preferred_sub_key)
 end
 
 function ConfigWindow:bring_to_front()
-    if self:IsVisible() == true and self.Activate ~= nil then
+    if self:IsVisible() == true then
         self:Activate()
     end
 end
@@ -546,43 +546,43 @@ function ConfigWindow:refresh_runtime_settings()
     if PLAYER_VITAL ~= nil and PLAYER_VITAL.resize ~= nil then
         PLAYER_VITAL:resize()
     end
-    if TARGET_VITAL ~= nil and TARGET_VITAL.resize ~= nil then
+    if TARGET_VITAL ~= nil then
         TARGET_VITAL:resize()
     end
-    if BOSS_VITAL ~= nil and BOSS_VITAL.resize ~= nil then
+    if BOSS_VITAL ~= nil then
         BOSS_VITAL:resize()
     end
-    if PARTY_VITALS ~= nil and PARTY_VITALS.apply_settings ~= nil then
+    if PARTY_VITALS ~= nil then
         PARTY_VITALS:apply_settings()
     end
-    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil and EXPIRING_SELF_EFFECTS_WINDOW.apply_settings ~= nil then
+    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
         EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()
     end
-    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil and EXPIRING_TARGET_EFFECTS_WINDOW.apply_settings ~= nil then
+    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil then
         EXPIRING_TARGET_EFFECTS_WINDOW:apply_settings()
     end
-    if INVENTORY_WINDOW ~= nil and INVENTORY_WINDOW.apply_settings ~= nil then
+    if INVENTORY_WINDOW ~= nil then
         INVENTORY_WINDOW:apply_settings()
     end
-    if ASSETS_WINDOW ~= nil and ASSETS_WINDOW.apply_settings ~= nil then
+    if ASSETS_WINDOW ~= nil then
         ASSETS_WINDOW:apply_settings()
     end
-    if COOLDOWNS_WINDOW ~= nil and COOLDOWNS_WINDOW.apply_settings ~= nil then
+    if COOLDOWNS_WINDOW ~= nil then
         COOLDOWNS_WINDOW:apply_settings()
     end
-    if BESTIARY_WINDOW ~= nil and BESTIARY_WINDOW.apply_settings ~= nil then
+    if BESTIARY_WINDOW ~= nil then
         BESTIARY_WINDOW:apply_settings()
     end
-    if BESTIARY_CARD ~= nil and BESTIARY_CARD.apply_settings ~= nil then
+    if BESTIARY_CARD ~= nil then
         BESTIARY_CARD:apply_settings()
     end
-    if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
+    if CRAFTING_WINDOW ~= nil then
         CRAFTING_WINDOW:apply_settings()
     end
-    if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.apply_settings ~= nil then
+    if BESTIARY_TRACKER ~= nil then
         BESTIARY_TRACKER:apply_settings()
     end
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.on_target_changed ~= nil then
+    if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:on_target_changed()
     end
 

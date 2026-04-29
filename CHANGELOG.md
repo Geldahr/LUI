@@ -12,10 +12,13 @@
 
 - Use a distinct border color for matched drops and align chest chip backgrounds with the standard drop chip style.
 - Improved Bestiary search opening for item and multi-resource queries from Crafting.
+- Removed silent internal fallbacks across plugin wiring so missing internal modules, methods, and state now fail loudly instead of being masked.
 
 ### Fixed
 
 - Fixed empty drop highlight states when a bestiary row matched the active search.
+- Fixed Bestiary tracker global wiring and unload/update ordering issues that could crash Bestiary window updates.
+- Fixed crafting dependency expansion to ignore obsolete item conversion recipes, preventing obsolete ingredients from polluting material chains.
 
 ### Removed
 

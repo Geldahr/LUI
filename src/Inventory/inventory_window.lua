@@ -245,7 +245,7 @@ end
 ---------------------------------------------------------------------
 
 function InventoryWindow:bring_to_front()
-    if self:IsVisible() == true and self.Activate ~= nil then
+    if self:IsVisible() == true then
         self:Activate()
     end
 end
@@ -642,9 +642,7 @@ function InventoryWindow:build_grid()
 
         local parent = self.rows[r]
         slot:SetParent(parent)
-        if slot.set_grid_edges ~= nil then
-            slot:set_grid_edges(r == 1, c == 1)
-        end
+        slot:set_grid_edges(r == 1, c == 1)
         slot:SetPosition((c - 1) * self.tile_size, 0)
     end
 

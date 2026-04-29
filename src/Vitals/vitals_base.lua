@@ -928,10 +928,10 @@ function VitalsBase:resize()
     )
     self.entity_control:SetPosition(self.morale_frame:GetPosition())
 
-    if self.show_effects and self.debuffs ~= nil and self.debuffs.apply_settings ~= nil then
+    if self.show_effects and self.debuffs ~= nil then
         self.debuffs:apply_settings(frame_width, v.effects, frame.effects_height)
     end
-    if self.show_effects and self.buffs ~= nil and self.buffs.apply_settings ~= nil then
+    if self.show_effects and self.buffs ~= nil then
         self.buffs:apply_settings(frame_width, v.effects, frame.effects_height)
     end
     self:_layout_effect_windows()
@@ -975,9 +975,7 @@ function VitalsBase:_layout_effect_windows()
     if debuffs_h < 0 then
         debuffs_h = 0
     end
-    if self.debuffs.set_max_height ~= nil then
-        self.debuffs:set_max_height(debuffs_h)
-    end
+    self.debuffs:set_max_height(debuffs_h)
 
     if below == true then
         local effects_top = self.power_frame:GetTop() + self.power_frame:GetHeight()
@@ -1047,13 +1045,9 @@ function VitalsBase:_upsert_effect(effect, now)
     elseif existing ~= effect then
         self.effects_objects[key] = effect
         if effect:IsDebuff() then
-            if self.debuffs.add_effect ~= nil then
-                self.debuffs:add_effect(effect)
-            end
+            self.debuffs:add_effect(effect)
         else
-            if self.buffs.add_effect ~= nil then
-                self.buffs:add_effect(effect)
-            end
+            self.buffs:add_effect(effect)
         end
     end
 end
@@ -1243,13 +1237,9 @@ function VitalsBase:_sync_effects_from_list(now)
                     -- Same key but different wrapper (e.g., refreshed effects). Update icon binding/timer.
                     self.effects_objects[key] = effect
                     if effect:IsDebuff() then
-                        if self.debuffs.add_effect ~= nil then
-                            self.debuffs:add_effect(effect)
-                        end
+                        self.debuffs:add_effect(effect)
                     else
-                        if self.buffs.add_effect ~= nil then
-                            self.buffs:add_effect(effect)
-                        end
+                        self.buffs:add_effect(effect)
                     end
                 end
             end

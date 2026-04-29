@@ -210,56 +210,40 @@ local function _get_preview_window_specs()
 end
 
 local function _apply_runtime_settings()
-    if ensure_loaded_settings ~= nil then
-        ensure_loaded_settings()
-    end
-    if fix_colors ~= nil then
-        fix_colors()
-    end
-    if rebuild_settings ~= nil then
-        rebuild_settings()
-    end
-    if apply_inventory_settings ~= nil then
-        apply_inventory_settings()
-    end
-    if apply_status_bar_settings ~= nil then
-        apply_status_bar_settings()
-    end
-    if apply_cooldowns_settings ~= nil then
-        apply_cooldowns_settings()
-    end
+    ensure_loaded_settings()
+    fix_colors()
+    rebuild_settings()
+    apply_inventory_settings()
+    apply_status_bar_settings()
+    apply_cooldowns_settings()
 
     if CONFIG_WINDOW ~= nil then
-        if CONFIG_WINDOW.apply_ui_scale ~= nil then
-            CONFIG_WINDOW:apply_ui_scale()
-        end
-        if CONFIG_WINDOW.layout ~= nil then
-            CONFIG_WINDOW:layout()
-        end
+        CONFIG_WINDOW:apply_ui_scale()
+        CONFIG_WINDOW:layout()
     end
 
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.resize ~= nil then
+    if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:resize()
     end
-    if TARGET_VITAL ~= nil and TARGET_VITAL.resize ~= nil then
+    if TARGET_VITAL ~= nil then
         TARGET_VITAL:resize()
     end
-    if BOSS_VITAL ~= nil and BOSS_VITAL.resize ~= nil then
+    if BOSS_VITAL ~= nil then
         BOSS_VITAL:resize()
     end
-    if PARTY_VITALS ~= nil and PARTY_VITALS.apply_settings ~= nil then
+    if PARTY_VITALS ~= nil then
         PARTY_VITALS:apply_settings()
     end
-    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil and EXPIRING_SELF_EFFECTS_WINDOW.apply_settings ~= nil then
+    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
         EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()
     end
-    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil and EXPIRING_TARGET_EFFECTS_WINDOW.apply_settings ~= nil then
+    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil then
         EXPIRING_TARGET_EFFECTS_WINDOW:apply_settings()
     end
-    if COOLDOWNS_WINDOW ~= nil and COOLDOWNS_WINDOW.apply_settings ~= nil then
+    if COOLDOWNS_WINDOW ~= nil then
         COOLDOWNS_WINDOW:apply_settings()
     end
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.on_target_changed ~= nil then
+    if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:on_target_changed()
     end
 

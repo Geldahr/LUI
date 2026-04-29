@@ -9,7 +9,7 @@ HUD_ACTION_SINK:SetVisible(false)
 HUD_ACTION_SINK.KeyDown = function(_, args)
     if args.Action == BACKPACK_ACTION then
         local inv = _G.settings ~= nil and _G.settings.inventory or nil
-        if inv ~= nil and inv.enabled == true and inv.replace == true and INVENTORY_WINDOW ~= nil and INVENTORY_WINDOW.toggle ~= nil then
+        if inv ~= nil and inv.enabled == true and inv.replace == true and INVENTORY_WINDOW ~= nil then
             INVENTORY_WINDOW:toggle()
             return
         end

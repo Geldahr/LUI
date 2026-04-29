@@ -26,17 +26,14 @@ end
 
 function LuiBaseWindow:apply_native_scaling(target_window)
     local target = target_window or self
-    local native_scaling = UI ~= nil and UI.NativeScaling or _G.LUI_NATIVE_SCALING
-    if native_scaling == nil then
-        return
-    end
+    local native_scaling = UI.NativeScaling or _G.LUI_NATIVE_SCALING
 
-    local use_native = native_scaling.is_enabled ~= nil and native_scaling.is_enabled() == true and
-        native_scaling.has_global_scaling_api ~= nil and native_scaling.has_global_scaling_api(target) == true
+    local use_native = native_scaling.is_enabled() == true and
+        native_scaling.has_global_scaling_api(target) == true
 
-    if use_native and native_scaling.enable ~= nil then
+    if use_native then
         native_scaling.enable(target)
-    elseif native_scaling.disable ~= nil then
+    else
         native_scaling.disable(target)
     end
 end
@@ -57,13 +54,13 @@ function LuiBaseWindow:set_hideable(enabled)
         return
     end
 
-    if self._hideable == true and registry.unregister ~= nil then
+    if self._hideable == true then
         registry.unregister(self)
     end
 
     self._hideable = want
 
-    if self._hideable == true and registry.register ~= nil then
+    if self._hideable == true then
         registry.register(self)
     end
 end

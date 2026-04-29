@@ -60,9 +60,7 @@ local function _copy_favorite_entries(entries)
 end
 
 local function _current_character_entry()
-    if _G.ensure_server_settings ~= nil then
-        _G.ensure_server_settings()
-    end
+    _G.ensure_server_settings()
     if type(_G.server_settings) ~= "table" or type(_G.server_settings.characters) ~= "table" then
         return nil
     end
@@ -158,7 +156,7 @@ function Crafting.get_shared_store()
 end
 
 function Crafting.destroy_shared_store()
-    if _shared_store ~= nil and _shared_store.destroy ~= nil then
+    if _shared_store ~= nil then
         _shared_store:destroy()
     end
     _shared_store = nil
@@ -182,7 +180,7 @@ function Crafting.set_tracked_plan_entries(entries, save_now)
     Crafting.invalidate_tracked_plan_cache()
     _tracked_plan_autoload_after = nil
 
-    if save_now == true and _G.save_settings ~= nil then
+    if save_now == true then
         _G.save_settings()
     end
 end
@@ -200,7 +198,7 @@ function Crafting.set_favorite_recipe_entries(entries, save_now)
 
     favorites.entries = _copy_favorite_entries(entries)
 
-    if save_now == true and _G.save_settings ~= nil then
+    if save_now == true then
         _G.save_settings()
     end
 end

@@ -45,9 +45,7 @@ end
 
 local function _is_bestiary_open()
     local window = _G.BESTIARY_WINDOW
-    return window ~= nil
-        and window.IsVisible ~= nil
-        and window:IsVisible() == true
+    return window ~= nil and window:IsVisible() == true
 end
 
 local function _quote_filter_term(term)
@@ -111,7 +109,7 @@ function Bestiary.set_current_location(location)
     _G.bestiary_area_filter_query = query
 
     local window = _G.BESTIARY_WINDOW
-    if window ~= nil and window.on_location_resolved ~= nil then
+    if window ~= nil then
         window:on_location_resolved()
     end
 end
@@ -132,27 +130,11 @@ local function _to_number(value, fallback)
 end
 
 local function _normalize_bestiary_name(name)
-    if DATA_ACCESS ~= nil and DATA_ACCESS.normalize_name ~= nil then
-        return DATA_ACCESS.normalize_name(name)
-    end
-
-    return _trim(name)
+    return DATA_ACCESS.normalize_name(name)
 end
 
 local function _ensure_bestiary_cache()
-    if DATA_ACCESS ~= nil and DATA_ACCESS.ensure_cache ~= nil then
-        return DATA_ACCESS.ensure_cache()
-    end
-
-    if ensure_bestiary_cache ~= nil then
-        return ensure_bestiary_cache()
-    end
-
-    if type(_G.bestiary_cache) ~= "table" then
-        _G.bestiary_cache = {}
-    end
-
-    return _G.bestiary_cache
+    return DATA_ACCESS.ensure_cache()
 end
 
 local function _touch_generation()
@@ -162,9 +144,7 @@ end
 
 local function _ensure_entry(name)
     name = _normalize_bestiary_name(name) or name
-    if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_builtin_name ~= nil then
-        name = DATA_ACCESS.resolve_builtin_name(name) or name
-    end
+    name = DATA_ACCESS.resolve_builtin_name(name) or name
     local cache = _ensure_bestiary_cache()
     if type(cache[name]) ~= "table" then
         cache[name] = {
@@ -275,9 +255,7 @@ end
 
 function Bestiary.Collector:save()
     self:_flush_pending_kills(true)
-    if save_bestiary_cache ~= nil then
-        save_bestiary_cache()
-    end
+    save_bestiary_cache()
 end
 
 function Bestiary.Collector:flush_expired()

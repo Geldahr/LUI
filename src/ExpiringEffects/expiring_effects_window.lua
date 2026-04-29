@@ -169,14 +169,10 @@ function ExpiringEffectsWindow:apply_settings()
             entry:SetParent(self)
             entry:SetVisible(false)
             entry:SetZOrder(10)
-            if entry.apply_settings ~= nil then
-                entry:apply_settings()
-            end
+            entry:apply_settings()
             self.slots[i] = entry
         else
-            if self.slots[i].apply_settings ~= nil then
-                self.slots[i]:apply_settings()
-            end
+            self.slots[i]:apply_settings()
         end
 
         local x, y = self:get_slot_position(i, cols, rows, entry_width, entry_height, spacing)

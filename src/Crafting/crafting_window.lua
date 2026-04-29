@@ -2222,19 +2222,19 @@ function CraftingWindow._node_status_color(_, node)
 end
 
 function CraftingWindow:bring_to_front()
-    if self:IsVisible() == true and self.Activate ~= nil then
+    if self:IsVisible() == true then
         self:Activate()
     end
 end
 
 function CraftingWindow:show_recipe_tab()
-    if self.right_tab_bar ~= nil and self.right_tab_bar.select_tab ~= nil then
+    if self.right_tab_bar ~= nil then
         self.right_tab_bar:select_tab(1)
     end
 end
 
 function CraftingWindow:show_plan_tab()
-    if self.right_tab_bar ~= nil and self.right_tab_bar.select_tab ~= nil then
+    if self.right_tab_bar ~= nil then
         self.right_tab_bar:select_tab(2)
     end
 end
@@ -3768,9 +3768,7 @@ function CraftingWindow:layout()
 
     self.right_tab_bar:SetPosition(0, 0)
     self.right_tab_bar:SetSize(right_w, content_h)
-    if self.right_tab_bar._layout ~= nil then
-        self.right_tab_bar:_layout()
-    end
+    self.right_tab_bar:_layout()
 
     local recipe_page_w = 0
     local recipe_page_h = 0

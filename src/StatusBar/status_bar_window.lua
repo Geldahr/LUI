@@ -55,20 +55,17 @@ end
 
 local function _sync_status_bar_after_raw_edit(edit_window_state_override)
     local edit_window_state = edit_window_state_override
-    if edit_window_state == nil and _G.STATUS_BAR ~= nil and _G.STATUS_BAR.capture_edit_window_state ~= nil then
+    if edit_window_state == nil and _G.STATUS_BAR ~= nil then
         edit_window_state = _G.STATUS_BAR:capture_edit_window_state()
     end
 
-    if _G.rebuild_settings ~= nil then
-        _G.rebuild_settings()
-    end
-    if _G.STATUS_BAR ~= nil and _G.STATUS_BAR.apply_settings ~= nil then
+    _G.rebuild_settings()
+    if _G.STATUS_BAR ~= nil then
         _G.STATUS_BAR:apply_settings()
-    elseif apply_status_bar_settings ~= nil then
+    else
         apply_status_bar_settings()
     end
-    if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil and
-        _G.STATUS_BAR.restore_edit_window_state ~= nil then
+    if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil then
         _G.STATUS_BAR:restore_edit_window_state(edit_window_state)
     end
     if _G.CONFIG_WINDOW ~= nil and _G.CONFIG_WINDOW.IsVisible ~= nil and _G.CONFIG_WINDOW:IsVisible() == true then
@@ -396,13 +393,7 @@ local function _zone_insertion_index(widgets, mouse_x)
 end
 
 local function _widgets_pkg()
-    if StatusBar ~= nil and StatusBar.Widgets ~= nil then
-        return StatusBar.Widgets
-    end
-    if LUI ~= nil and LUI.src ~= nil and LUI.src.StatusBar ~= nil then
-        return LUI.src.StatusBar.Widgets
-    end
-    return nil
+    return StatusBar.Widgets
 end
 
 local function _widget_ctor(name)
@@ -736,14 +727,8 @@ function StatusBarWindow:_clear_widgets()
     for i = 1, #self._widgets do
         local w = self._widgets[i]
         if w ~= nil then
-            if w.SetVisible ~= nil then
-                w:SetVisible(false)
-            end
-            if w.destroy ~= nil then
-                w:destroy()
-            elseif w.SetParent ~= nil then
-                w:SetParent(nil)
-            end
+            w:SetVisible(false)
+            w:destroy()
         end
     end
     self._widgets = {}
@@ -800,9 +785,7 @@ function StatusBarWindow:restore_edit_window_state(state)
     else
         edit_window:position_near_bar()
     end
-    if edit_window.Activate ~= nil then
-        edit_window:Activate()
-    end
+    edit_window:Activate()
 end
 
 function StatusBarWindow:is_palette_widget_available(widget_key)

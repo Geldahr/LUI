@@ -76,6 +76,25 @@ local function _normalize_name(name)
     return _lower(value)
 end
 
+local function _is_obsolete_conversion_category(category_name)
+    local key = _normalize_name(category_name)
+    if key == "" then
+        return false
+    end
+
+    if string.find(key, "obsolete", 1, true) ~= nil and string.find(key, "conversion", 1, true) ~= nil then
+        return true
+    end
+    if string.find(key, "obsol", 1, true) ~= nil and string.find(key, "conversion", 1, true) ~= nil then
+        return true
+    end
+    if string.find(key, "veraltet", 1, true) ~= nil then
+        return string.find(key, "umwand", 1, true) ~= nil or string.find(key, "konvert", 1, true) ~= nil
+    end
+
+    return false
+end
+
 local function _copy_counts(source)
     local out = {}
     if type(source) ~= "table" then
@@ -1478,6 +1497,9 @@ function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, it
     local result_info = recipe:GetResultItemInfo()
     local result_name = _trim(result_info ~= nil and result_info:GetName() or nil)
     local category_name = _trim(recipe:GetCategoryName())
+    if _is_obsolete_conversion_category(category_name) == true then
+        return nil
+    end
     local critical_result_info = nil
     local critical_result_name = ""
     local critical_result_key = nil

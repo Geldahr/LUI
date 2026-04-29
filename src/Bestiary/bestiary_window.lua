@@ -208,15 +208,9 @@ local function _area_compass_icon(hovered)
 end
 
 local function _set_area_slot_icon_background(window, target_w, target_h)
-    if type(window) ~= "table" or window.area_slot_icon == nil then
-        return
-    end
-
     local background = _area_compass_icon(window._area_slot_hovered == true)
     if type(target_w) ~= "number" or target_w < 1 or type(target_h) ~= "number" or target_h < 1 then
-        if window.area_slot ~= nil and window.area_slot.GetSize ~= nil then
-            target_w, target_h = window.area_slot:GetSize()
-        end
+        target_w, target_h = window.area_slot:GetSize()
     end
 
     if type(target_w) ~= "number" or target_w < 1 then
@@ -278,7 +272,7 @@ local function _merged_bestiary()
 
         for name, entry in pairs(source) do
             if type(name) == "string" and type(entry) == "table" then
-                if DATA_ACCESS == nil or DATA_ACCESS.is_alias_entry == nil or DATA_ACCESS.is_alias_entry(entry) ~= true then
+                if DATA_ACCESS.is_alias_entry(entry) ~= true then
                     if type(merged[name]) ~= "table" then
                         merged[name] = DATA_ACCESS.new_merged_entry(name)
                     end
@@ -290,7 +284,7 @@ local function _merged_bestiary()
     end
 
     merge_source(BUILTIN_BESTIARY)
-    local cache = DATA_ACCESS ~= nil and DATA_ACCESS.ensure_cache ~= nil and DATA_ACCESS.ensure_cache() or _G.bestiary_cache
+    local cache = DATA_ACCESS.ensure_cache()
     merge_source(cache)
 
     return merged
@@ -397,8 +391,8 @@ local function _read_level_filter_range(window)
         return nil, nil
     end
 
-    local filter_min = _parse_level_filter_value(window.level_min_box ~= nil and window.level_min_box:GetText() or nil)
-    local filter_max = _parse_level_filter_value(window.level_max_box ~= nil and window.level_max_box:GetText() or nil)
+    local filter_min = _parse_level_filter_value(window.level_min_box:GetText())
+    local filter_max = _parse_level_filter_value(window.level_max_box:GetText())
     if filter_min ~= nil and filter_max ~= nil and filter_min > filter_max then
         filter_min, filter_max = filter_max, filter_min
     end
@@ -941,9 +935,7 @@ function BestiaryRow:Constructor(owner_window)
         if args == nil or args.Button ~= Turbine.UI.MouseButton.Left then
             return
         end
-        if self.owner_window ~= nil and self.owner_window.open_card_for_record ~= nil then
-            self.owner_window:open_card_for_record(self._record, self)
-        end
+        self.owner_window:open_card_for_record(self._record, self)
     end
 
     self.name_label = UI.Widgets.LuiLabel()
@@ -1454,11 +1446,7 @@ function BestiaryWindow:Constructor()
         self:SetWantsUpdates(visible)
         if visible == true then
             local tracker = _G.BESTIARY_TRACKER
-            if tracker ~= nil and tracker.flush_pending ~= nil then
-                tracker:flush_pending()
-            elseif tracker ~= nil and tracker.flush_expired ~= nil then
-                tracker:flush_expired()
-            end
+            tracker:flush_pending()
             self.last_update_at = 0
             self._last_generation = nil
             self:bring_to_front()
@@ -1466,15 +1454,9 @@ function BestiaryWindow:Constructor()
             self:sync_area_filter_query()
             self:apply_current_area_filter(true)
         else
-            if self.sort_dropdown ~= nil and self.sort_dropdown.Close ~= nil then
-                self.sort_dropdown:Close()
-            end
-            if self.genus_dropdown ~= nil and self.genus_dropdown.Close ~= nil then
-                self.genus_dropdown:Close()
-            end
-            if self.subcategory_dropdown ~= nil and self.subcategory_dropdown.Close ~= nil then
-                self.subcategory_dropdown:Close()
-            end
+            self.sort_dropdown:Close()
+            self.genus_dropdown:Close()
+            self.subcategory_dropdown:Close()
         end
     end
 
@@ -1488,7 +1470,7 @@ function BestiaryWindow:Constructor()
 end
 
 function BestiaryWindow:bring_to_front()
-    if self:IsVisible() == true and self.Activate ~= nil then
+    if self:IsVisible() == true then
         self:Activate()
     end
 end
@@ -1595,6 +1577,11 @@ function BestiaryWindow:apply_settings()
 end
 
 function BestiaryWindow:Update()
+    if _G.LUI_IS_UNLOADING == true then
+        self:SetWantsUpdates(false)
+        return
+    end
+
     if self:IsVisible() ~= true then
         return
     end
@@ -1610,9 +1597,7 @@ function BestiaryWindow:Update()
     self:apply_current_area_filter(false)
 
     local tracker = _G.BESTIARY_TRACKER
-    if tracker ~= nil and tracker.flush_expired ~= nil then
-        tracker:flush_expired()
-    end
+    tracker:flush_expired()
 
     local generation = _G.bestiary_cache_generation or 0
     if self._last_generation ~= generation then
@@ -1722,9 +1707,7 @@ function BestiaryWindow:open_query_search(query)
 
     self:open()
     self:bring_to_front()
-    if self.filter_tb ~= nil and self.filter_tb.Focus ~= nil then
-        self.filter_tb:Focus()
-    end
+    self.filter_tb:Focus()
 end
 
 function BestiaryWindow:open_item_search(item_name)
@@ -1879,19 +1862,9 @@ function BestiaryWindow:set_page(index)
 end
 
 function BestiaryWindow:open_card_for_record(record, anchor)
-    if type(record) ~= "table" then
-        return false
-    end
-
-    local name = nil
-    if type(record.key) == "string" and record.key ~= "" then
-        name = record.key
-    elseif type(record.name) == "string" and record.name ~= "" then
+    local name = record.key
+    if type(name) ~= "string" or name == "" then
         name = record.name
-    end
-
-    if name == nil or BESTIARY_CARD == nil or BESTIARY_CARD.show_for_name == nil then
-        return false
     end
 
     return BESTIARY_CARD:show_for_name(name, anchor)
@@ -2329,12 +2302,8 @@ end
 function BestiaryWindow:render_page()
     local page_count = #self.pages
     self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, page_count)))
-    if self.prev_button.set_enabled ~= nil then
-        self.prev_button:set_enabled(page_count > 0 and self.page_index > 1)
-    end
-    if self.next_button.set_enabled ~= nil then
-        self.next_button:set_enabled(page_count > 0 and self.page_index < page_count)
-    end
+    self.prev_button:set_enabled(page_count > 0 and self.page_index > 1)
+    self.next_button:set_enabled(page_count > 0 and self.page_index < page_count)
 
     if #self.records == 0 then
         if #self.all_records == 0 then
