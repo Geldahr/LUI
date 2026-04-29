@@ -2,6 +2,7 @@ import "Turbine.Gameplay"
 
 import "LUI.src.Utils.callbacks"
 import "LUI.src.Utils.coords"
+import "LUI.src.Utils.search_query"
 
 Bestiary = Bestiary or {}
 Bestiary.Collector = class()
@@ -48,31 +49,20 @@ local function _is_bestiary_open()
     return window ~= nil and window:IsVisible() == true
 end
 
-local function _quote_filter_term(term)
-    if type(term) ~= "string" or term == "" then
-        return nil
-    end
-
-    return "\"" .. term:gsub("\"", "") .. "\""
-end
-
 local function _build_location_filter_query(location)
     if type(location) ~= "table" then
         return ""
     end
 
-    local terms = {}
-    local quoted_region = _quote_filter_term(location.region)
-    local quoted_area = _quote_filter_term(location.area)
-
-    if quoted_region ~= nil then
-        terms[#terms + 1] = quoted_region
+    local parts = {}
+    if type(location.region) == "string" and location.region ~= "" then
+        parts[#parts + 1] = location.region
     end
-    if quoted_area ~= nil and location.area ~= location.region then
-        terms[#terms + 1] = quoted_area
+    if type(location.area) == "string" and location.area ~= "" and location.area ~= location.region then
+        parts[#parts + 1] = location.area
     end
 
-    return table.concat(terms, " ")
+    return SearchQuery.format_path(parts) or ""
 end
 
 function Bestiary.get_current_location()

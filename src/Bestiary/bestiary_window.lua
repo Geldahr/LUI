@@ -2,8 +2,8 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
-import "LUI.src.Inventory.filter"
 import "LUI.src.Utils.font"
+import "LUI.src.Utils.search_query"
 
 Bestiary = Bestiary or {}
 
@@ -69,6 +69,11 @@ local SORT_LEVEL_DESC = "level_desc"
 
 local FILTER_ALL = "__all"
 local FILTER_NONE = "__none"
+local BESTIARY_QUERY_TOKENS = {
+    loc = true,
+    gen = true,
+    lvl = true,
+}
 
 local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
@@ -77,104 +82,6 @@ local COLOR_CHEST_CHIP_BORDER = Turbine.UI.Color(1, 0.45, 0.32, 0.12)
 local COLOR_CHEST_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
 local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.95, 0.83, 0.49)
 local COLOR_DROP_MATCH_CHIP_BORDER = Turbine.UI.Color(1, 0.18, 0.66, 0.82)
-
-local function _push_filter_term(cur_group, term)
-    if term ~= nil and term ~= "" then
-        cur_group[#cur_group + 1] = term
-    end
-end
-
-local function _end_filter_group(groups, cur_group)
-    if #cur_group > 0 then
-        groups[#groups + 1] = cur_group
-    end
-end
-
-local function _parse_query(query)
-    if type(query) ~= "string" then
-        return {}
-    end
-
-    local groups = {}
-    local cur_group = {}
-    local i = 1
-    local n = #query
-
-    while i <= n do
-        local c = query:sub(i, i)
-        if c == "\"" then
-            local j = i + 1
-            while j <= n and query:sub(j, j) ~= "\"" do
-                j = j + 1
-            end
-            _push_filter_term(cur_group, query:sub(i + 1, j - 1))
-            i = (j <= n) and (j + 1) or (n + 1)
-        elseif c == "|" then
-            _end_filter_group(groups, cur_group)
-            cur_group = {}
-            i = i + 1
-        elseif c:match("%s") then
-            i = i + 1
-        else
-            local j = i
-            while j <= n do
-                local cj = query:sub(j, j)
-                if cj == "|" or cj == "\"" or cj:match("%s") then
-                    break
-                end
-                j = j + 1
-            end
-            _push_filter_term(cur_group, query:sub(i, j - 1))
-            i = j
-        end
-    end
-
-    _end_filter_group(groups, cur_group)
-    return groups
-end
-
-local function _normalize_groups(groups)
-    if groups == nil or #groups == 0 then
-        return {}
-    end
-
-    local out = {}
-    for gi = 1, #groups do
-        local group = groups[gi]
-        if group ~= nil and #group > 0 then
-            local normalized = {}
-            for ti = 1, #group do
-                local term = group[ti]
-                if type(term) == "string" then
-                    term = string.lower(term)
-                    if term ~= "" then
-                        normalized[#normalized + 1] = term
-                    end
-                end
-            end
-            if #normalized > 0 then
-                out[#out + 1] = normalized
-            end
-        end
-    end
-
-    return out
-end
-
-local function _group_matches_haystack(group, haystack_lower)
-    if type(group) ~= "table" or #group == 0 or type(haystack_lower) ~= "string" then
-        return false
-    end
-
-    for ti = 1, #group do
-        local term = group[ti]
-        if term ~= "" and string.find(haystack_lower, term, 1, true) == nil then
-            return false
-        end
-    end
-
-    return true
-end
 
 local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
@@ -197,6 +104,49 @@ local function _trim_text(text)
     end
 
     return text:gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function _same_text(left, right)
+    return _lower_text(_trim_text(left)) == _lower_text(_trim_text(right))
+end
+
+local function _parse_location_token_value(value)
+    local parts = SearchQuery.parse_path(value)
+    if type(parts) ~= "table" or #parts == 0 or #parts > 3 then
+        return nil
+    end
+
+    return parts
+end
+
+local function _parse_genus_token_value(value)
+    local parts = SearchQuery.parse_path(value)
+    if type(parts) ~= "table" or #parts == 0 or #parts > 2 then
+        return FILTER_ALL, FILTER_NONE
+    end
+
+    if #parts == 1 then
+        return parts[1], FILTER_ALL
+    end
+
+    return parts[1], parts[2]
+end
+
+local function _record_matches_location_parts(record, parts)
+    if type(parts) ~= "table" or #parts == 0 then
+        return true
+    end
+    if _same_text(record.region, parts[1]) ~= true then
+        return false
+    end
+    if #parts >= 2 and _same_text(record.area, parts[2]) ~= true then
+        return false
+    end
+    if #parts >= 3 and _same_text(record.instance, parts[3]) ~= true then
+        return false
+    end
+
+    return true
 end
 
 local function _area_compass_icon(hovered)
@@ -384,20 +334,6 @@ local function _parse_level_filter_value(text)
     end
 
     return value
-end
-
-local function _read_level_filter_range(window)
-    if type(window) ~= "table" then
-        return nil, nil
-    end
-
-    local filter_min = _parse_level_filter_value(window.level_min_box:GetText())
-    local filter_max = _parse_level_filter_value(window.level_max_box:GetText())
-    if filter_min ~= nil and filter_max ~= nil and filter_min > filter_max then
-        filter_min, filter_max = filter_max, filter_min
-    end
-
-    return filter_min, filter_max
 end
 
 local function _matches_level_range(record, filter_min, filter_max)
@@ -638,7 +574,7 @@ local function _match_record_query(record, groups)
     local query_ok = false
     for gi = 1, #groups do
         local group = groups[gi]
-        if _group_matches_haystack(group, record.haystack_lower) == true then
+        if SearchQuery.group_matches(group, record.haystack_lower) == true then
             query_ok = true
             local group_matches = _build_group_matched_drop_lookup(record, group)
             if type(group_matches) == "table" then
@@ -1165,9 +1101,12 @@ function BestiaryWindow:Constructor()
     self._prepared_content_w = 0
     self._prepared_content_h = 0
     self._prepared_record_key = 0
-    self.current_area = nil
-    self.last_applied_area_query = nil
-    self._suppress_area_text_changed = false
+    self.query_state = SearchQuery.parse("", BESTIARY_QUERY_TOKENS)
+    self.query_genus_filter = FILTER_ALL
+    self.query_subcategory_filter = FILTER_NONE
+    self.query_level_min = nil
+    self.query_level_max = nil
+    self._suppress_filter_text_changed = false
     self._suppress_level_text_changed = false
 
     self.sort_mode = SORT_NAME_ASC
@@ -1297,8 +1236,13 @@ function BestiaryWindow:Constructor()
             self._suppress_level_text_changed = false
         end
 
-        self.page_index = 1
-        self:apply_view()
+        local filter_min = _parse_level_filter_value(self.level_min_box:GetText())
+        local filter_max = _parse_level_filter_value(self.level_max_box:GetText())
+        if filter_min ~= nil and filter_max ~= nil and filter_min > filter_max then
+            filter_min, filter_max = filter_max, filter_min
+        end
+
+        self:_rewrite_filter_query({ lvl = true }, SearchQuery.build_level_tokens("lvl", filter_min, filter_max))
     end
 
     self.level_min_box.TextChanged = function()
@@ -1313,10 +1257,8 @@ function BestiaryWindow:Constructor()
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.filter_tb:set_placeholder_text(TR["Search..."])
     self.filter_tb.TextChanged = function()
-        if self._suppress_area_text_changed ~= true then
-            self.current_area = nil
-            self.last_applied_area_query = nil
-            _G.bestiary_area_filter_query = nil
+        if self._suppress_filter_text_changed == true then
+            return
         end
         self:update_filter()
     end
@@ -1325,15 +1267,8 @@ function BestiaryWindow:Constructor()
     self.clear_button:SetParent(self.filter_bar)
     self.clear_button:set_text(TR["Clear"])
     self.clear_button.Click = function()
-        self.current_area = nil
-        self.last_applied_area_query = nil
         _G.bestiary_area_filter_query = nil
-        self._suppress_level_text_changed = true
-        self.level_min_box:SetText("")
-        self.level_max_box:SetText("")
-        self._suppress_level_text_changed = false
-        self.filter_tb:SetText("")
-        self:update_filter()
+        self:_set_filter_query_text("")
         self.filter_tb:Focus()
     end
 
@@ -1451,8 +1386,7 @@ function BestiaryWindow:Constructor()
             self._last_generation = nil
             self:bring_to_front()
             self:refresh_from_store(true)
-            self:sync_area_filter_query()
-            self:apply_current_area_filter(true)
+            self:on_location_resolved()
         else
             self.sort_dropdown:Close()
             self.genus_dropdown:Close()
@@ -1593,8 +1527,6 @@ function BestiaryWindow:Update()
     self.last_update_at = now
 
     self:ensure_area_shortcut()
-    self:sync_area_filter_query()
-    self:apply_current_area_filter(false)
 
     local tracker = _G.BESTIARY_TRACKER
     tracker:flush_expired()
@@ -1633,44 +1565,68 @@ function BestiaryWindow:handle_user_resize()
     self._last_resize_at = Turbine.Engine.GetGameTime()
 end
 
+function BestiaryWindow:_sync_level_controls_from_query()
+    local min_text = self.query_level_min ~= nil and tostring(self.query_level_min) or ""
+    local max_text = self.query_level_max ~= nil and tostring(self.query_level_max) or ""
+    self._suppress_level_text_changed = true
+    self.level_min_box:SetText(min_text)
+    self.level_max_box:SetText(max_text)
+    self._suppress_level_text_changed = false
+end
+
+function BestiaryWindow:_sync_taxonomy_controls_from_query()
+    self.genus_filter = self.query_genus_filter
+    self.subcategory_filter = self.query_subcategory_filter
+    self:refresh_taxonomy_filters()
+end
+
+function BestiaryWindow:_sync_query_state()
+    local state = SearchQuery.parse(self.filter_tb:GetText(), BESTIARY_QUERY_TOKENS)
+    local level_filter = SearchQuery.read_level_filter(state, "lvl")
+    self.query_state = state
+    self.filter_groups = state.normalized_groups
+    self.query_level_min = level_filter.min
+    self.query_level_max = level_filter.max
+    self.query_genus_filter, self.query_subcategory_filter = _parse_genus_token_value(state.token_map.gen)
+    self:_sync_level_controls_from_query()
+    self:_sync_taxonomy_controls_from_query()
+end
+
+function BestiaryWindow:_set_filter_query_text(query)
+    self._suppress_filter_text_changed = true
+    self.filter_tb:SetText(query)
+    self._suppress_filter_text_changed = false
+    self:update_filter()
+end
+
+function BestiaryWindow:_rewrite_filter_query(excluded_keys, extra_tokens)
+    local tokens = SearchQuery.copy_tokens_except(self.query_state, excluded_keys)
+    for index = 1, #extra_tokens do
+        tokens[#tokens + 1] = extra_tokens[index]
+    end
+
+    self:_set_filter_query_text(SearchQuery.serialize(self.query_state.text_groups, tokens, BESTIARY_QUERY_TOKENS))
+end
+
+function BestiaryWindow:_apply_location_query_value(value)
+    local tokens = {}
+    SearchQuery.add_token(tokens, "loc", SearchQuery.format_path(_parse_location_token_value(value)))
+    self:_rewrite_filter_query({ loc = true }, tokens)
+end
+
 function BestiaryWindow:update_filter()
-    local query = self.filter_tb:GetText() or ""
-    self.filter_groups = _normalize_groups(_parse_query(query))
+    self:_sync_query_state()
     self.page_index = 1
     self:apply_view()
 end
 
-function BestiaryWindow:sync_area_filter_query()
+function BestiaryWindow:on_location_resolved()
     local query = _G.bestiary_area_filter_query
     if type(query) ~= "string" or query == "" then
-        self.current_area = nil
         return
     end
 
-    self.current_area = query
-end
-
-function BestiaryWindow:apply_current_area_filter(force)
-    local query = self.current_area
-    if type(query) ~= "string" or query == "" then
-        return
-    end
-
-    local current = self.filter_tb:GetText() or ""
-    if force ~= true and self.last_applied_area_query == query and current == query then
-        return
-    end
-
-    self._suppress_area_text_changed = true
-    self.filter_tb:SetText(query)
-    self._suppress_area_text_changed = false
-    self.last_applied_area_query = query
-    self:update_filter()
-end
-
-function BestiaryWindow:on_location_resolved()
-    self:sync_area_filter_query()
-    self:apply_current_area_filter(true)
+    self:_apply_location_query_value(query)
 end
 
 function BestiaryWindow:set_area_filter_query(query)
@@ -1679,8 +1635,7 @@ function BestiaryWindow:set_area_filter_query(query)
     end
 
     _G.bestiary_area_filter_query = query
-    self.current_area = query
-    self:apply_current_area_filter(true)
+    self:_apply_location_query_value(query)
 end
 
 function BestiaryWindow:open_query_search(query)
@@ -1689,21 +1644,8 @@ function BestiaryWindow:open_query_search(query)
         return
     end
 
-    self.current_area = nil
-    self.last_applied_area_query = nil
     _G.bestiary_area_filter_query = nil
-
-    self._suppress_level_text_changed = true
-    self.level_min_box:SetText("")
-    self.level_max_box:SetText("")
-    self._suppress_level_text_changed = false
-
-    self:set_taxonomy_filters(FILTER_ALL, FILTER_NONE)
-
-    self._suppress_area_text_changed = true
-    self.filter_tb:SetText(query)
-    self._suppress_area_text_changed = false
-    self:update_filter()
+    self:_set_filter_query_text(query)
 
     self:open()
     self:bring_to_front()
@@ -1791,46 +1733,44 @@ function BestiaryWindow:set_taxonomy_filters(genus_value, subcategory_value)
         subcategory_value = FILTER_ALL
     end
 
-    if self.genus_filter == genus_value and self.subcategory_filter == subcategory_value then
+    if self.query_genus_filter == genus_value and self.query_subcategory_filter == subcategory_value then
         return
     end
 
-    self.genus_filter = genus_value
-    self.subcategory_filter = subcategory_value
-    self:refresh_taxonomy_filters()
-    self.page_index = 1
-    self:apply_view()
+    local tokens = {}
+    if genus_value ~= FILTER_ALL then
+        local value = genus_value
+        if subcategory_value ~= FILTER_ALL and subcategory_value ~= FILTER_NONE then
+            value = SearchQuery.format_path({ genus_value, subcategory_value })
+        end
+        SearchQuery.add_token(tokens, "gen", value)
+    end
+    self:_rewrite_filter_query({ gen = true }, tokens)
 end
 
 function BestiaryWindow:set_genus_filter(value)
     if type(value) ~= "string" or value == "" then
         value = FILTER_ALL
     end
-    if self.genus_filter == value then
+    if self.query_genus_filter == value and (value == FILTER_ALL or self.query_subcategory_filter == FILTER_ALL) then
         return
     end
 
-    self.genus_filter = value
-    self.subcategory_filter = value == FILTER_ALL and FILTER_NONE or FILTER_ALL
-    self:refresh_taxonomy_filters()
-    self.page_index = 1
-    self:apply_view()
+    self:set_taxonomy_filters(value, value == FILTER_ALL and FILTER_NONE or FILTER_ALL)
 end
 
 function BestiaryWindow:set_subcategory_filter(value)
-    if self.genus_filter == FILTER_ALL then
+    if self.query_genus_filter == FILTER_ALL then
         value = FILTER_NONE
     elseif type(value) ~= "string" or value == "" then
         value = FILTER_ALL
     end
 
-    if self.subcategory_filter == value then
+    if self.query_subcategory_filter == value then
         return
     end
 
-    self.subcategory_filter = value
-    self.page_index = 1
-    self:apply_view()
+    self:set_taxonomy_filters(self.query_genus_filter, value)
 end
 
 function BestiaryWindow:set_sort_mode(mode)
@@ -2179,14 +2119,18 @@ function BestiaryWindow:apply_view()
     local filtered = {}
     local filter_groups = self.filter_groups
     local has_query = type(filter_groups) == "table" and #filter_groups > 0
-    local filter_level_min, filter_level_max = _read_level_filter_range(self)
+    local filter_level_min = self.query_level_min
+    local filter_level_max = self.query_level_max
+    local location_parts = _parse_location_token_value(self.query_state.token_map.loc)
     for i = 1, #self.all_records do
         local record = self.all_records[i]
-        local genus_ok = self.genus_filter == FILTER_ALL or record.genus == self.genus_filter
-        local subcategory_ok = self.subcategory_filter == FILTER_NONE or self.subcategory_filter == FILTER_ALL or record.subcategory == self.subcategory_filter
+        local genus_ok = self.query_genus_filter == FILTER_ALL or record.genus == self.query_genus_filter
+        local subcategory_ok = self.query_subcategory_filter == FILTER_NONE or
+            self.query_subcategory_filter == FILTER_ALL or record.subcategory == self.query_subcategory_filter
         local level_ok = _matches_level_range(record, filter_level_min, filter_level_max)
+        local location_ok = _record_matches_location_parts(record, location_parts)
         record._matched_drop_lookup = nil
-        if genus_ok == true and subcategory_ok == true and level_ok == true then
+        if genus_ok == true and subcategory_ok == true and level_ok == true and location_ok == true then
             local query_ok = true
             local matched_drop_lookup = nil
             if has_query == true then
