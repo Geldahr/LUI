@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Temporary workspace for staged release files.
+tmpdir=
+trap 'rm -rf -- "${tmpdir:-}"' EXIT
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./release vX.Y.Z [--dry-run] [--remote origin]
+  ./release notes vX.Y.Z
+EOF
+}
+
+die() { printf 'release: %s\n' "$*" >&2; exit 1; }
+
+# Shared notes extraction for local previews and GitHub release notes.
+extract_notes_file() {
+  local version=$1 file=$2 version_rx=${1//./\\.}
+  grep -Fqx "## $version" "$file" || die "$file does not contain a section for $version."
+  sed -n "/^## $version_rx\$/,/^## /{
+/^## /d
+p
+}" "$file" | sed '1{/^$/d;}; ${/^$/d;}'
+}
+
+# Parse command line and resolve mode/version inputs.
+cmd=release
+version=
+remote=origin
+dry_run=0
+[ $# -gt 0 ] || { usage; exit 1; }
+case ${1-} in
+  notes) cmd=$1; shift ;;
+  run) die "The 'run' subcommand was removed. Use './release vX.Y.Z'." ;;
+  -h|--help) usage; exit 0 ;;
+esac
+while [ $# -gt 0 ]; do
+  case $1 in
+    --dry-run) dry_run=1 ;;
+    --remote) shift; [ $# -gt 0 ] || die "--remote requires a value."; remote=$1 ;;
+    -h|--help) usage; exit 0 ;;
+    -*) die "Unknown option '$1'." ;;
+    *) [ -z "$version" ] || die "Unexpected argument '$1'."; version=$1 ;;
+  esac
+  shift
+done
+[ -n "$version" ] || die "Missing version. Expected vX.Y.Z."
+[[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Invalid version '$version'. Expected vX.Y.Z."
+CDPATH= cd -- "$(dirname -- "$0")"
+
+# Notes mode is used by the GitHub workflow to populate release text.
+if [ "$cmd" = notes ]; then
+  [ "$dry_run" = 0 ] || die "--dry-run is not valid with notes."
+  extract_notes_file "$version" CHANGELOG.md
+  exit 0
+fi
+
+# Guard against ambiguous releases from dirty tracked state.
+git rev-parse -q --verify "refs/tags/$version" >/dev/null 2>&1 && die "Local tag $version already exists."
+if [ "$dry_run" != 1 ]; then
+  other=$(git status --porcelain --untracked-files=no | grep -Ev '^.. (CHANGELOG\.md|LUI\.plugin)$' || true)
+  [ -z "$other" ] || die "Tracked changes outside CHANGELOG.md and LUI.plugin would make this release ambiguous."
+fi
+b=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || die "Release automation must run from a branch."
+tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/lui-release.XXXXXX" 2>/dev/null || mktemp -d -t lui-release)
+changelog=$tmpdir/CHANGELOG.md
+plugin=$tmpdir/LUI.plugin
+current=$tmpdir/current.md
+
+# Stage the next changelog state: new placeholder + released content below it.
+grep -qx '## Unreleased' CHANGELOG.md || die "CHANGELOG.md does not contain an Unreleased section."
+! grep -Fqx "## $version" CHANGELOG.md || die "CHANGELOG.md already contains a section for $version."
+sed '1,2d' CHANGELOG.md | sed "1s/^## Unreleased$/## $version/" >"$current"
+{
+  cat <<'EOF'
+# Changelog
+
+## Unreleased
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+EOF
+  lines=()
+  while IFS= read -r line || [ -n "$line" ]; do lines[${#lines[@]}]=$line; done <"$current"
+  i=0
+  while [ $i -lt ${#lines[@]} ]; do
+    line=${lines[$i]}
+    if [[ $line == '### '* ]]; then
+      j=$((i + 1))
+      while [ $j -lt ${#lines[@]} ] && [ -z "${lines[$j]}" ]; do j=$((j + 1)); done
+      if [ $j -ge ${#lines[@]} ] || [[ ${lines[$j]} == '### '* ]] || [[ ${lines[$j]} == '## '* ]]; then
+        i=$j
+        continue
+      fi
+    fi
+    printf '%s\n' "$line"
+    i=$((i + 1))
+  done
+} >"$changelog"
+
+# Update the plugin manifest version independently of changelog processing.
+sed "s#<Version>[^<]*</Version>#<Version>${version#v}</Version>#" LUI.plugin >"$plugin"
+notes=$(extract_notes_file "$version" "$changelog")
+[ -n "$notes" ] || die "The Unreleased changelog section has no entries to release."
+
+printf 'Prepared release %s\n- Updated CHANGELOG.md\n- Updated LUI.plugin -> %s\n- Release notes:\n%s\n' \
+  "$version" "${version#v}" "$notes"
+
+# Dry-run prints the exact write and git steps without mutating the repo.
+if [ "$dry_run" = 1 ]; then
+  printf '[dry-run] cp %s CHANGELOG.md\n' "$changelog"
+  printf '[dry-run] cp %s LUI.plugin\n' "$plugin"
+  printf '[dry-run] git add CHANGELOG.md LUI.plugin\n'
+  printf '[dry-run] git commit -m %s\n' "$version"
+  printf '[dry-run] git tag -a %s -m %s\n' "$version" "$version"
+  printf '[dry-run] git push %s HEAD:refs/heads/%s refs/tags/%s\n' "$remote" "$b" "$version"
+  exit 0
+fi
+
+# Apply staged files, commit the release, tag it, and push branch plus tag.
+cp "$changelog" CHANGELOG.md
+cp "$plugin" LUI.plugin
+git add CHANGELOG.md LUI.plugin
+git commit -m "$version"
+git tag -a "$version" -m "$version"
+git push "$remote" "HEAD:refs/heads/$b" "refs/tags/$version"
