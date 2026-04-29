@@ -76,12 +76,19 @@ jobs:
             --bat-path "${{ steps.vars.outputs.bat_path }}" \
             --target-root '%USERPROFILE%\Documents\The Lord of the Rings Online\Plugins'
 
+      - name: Extract release notes
+        shell: bash
+        run: |
+          bash ./release notes "${{ steps.vars.outputs.version }}" > dist/release-notes.md
+
       - name: Create GitHub release
         shell: bash
         run: |
           gh release create "${{ steps.vars.outputs.version }}" \
             "${{ steps.vars.outputs.zip_path }}" \
             "${{ steps.vars.outputs.bat_path }}" \
-            --target "${{ github.sha }}"
+            --target "${{ github.sha }}" \
+            --title "${{ steps.vars.outputs.version }}" \
+            --notes-file dist/release-notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
