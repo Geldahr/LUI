@@ -27,11 +27,7 @@ local function _apply_global_visibility(win, visible)
         return
     end
 
-    if win.global_hide ~= nil then
-        win:global_hide(visible)
-    elseif visible ~= true and win.SetVisible ~= nil then
-        win:SetVisible(false)
-    end
+    win:global_hide(visible)
 end
 
 function HidableMethods.register(win)
@@ -60,11 +56,11 @@ function HidableMethods.set_visible(visible)
 
     GLOBAL_HUD_VISIBLE = visible == true
 
-    if GLOBAL_HUD_VISIBLE ~= true and _G.LUI_POPUP_STATE ~= nil and _G.LUI_POPUP_STATE.close_all ~= nil then
+    if GLOBAL_HUD_VISIBLE ~= true then
         _G.LUI_POPUP_STATE.close_all()
     end
 
-    if LUI_MOVE_UI ~= nil and LUI_MOVE_UI.set_hud_visible ~= nil then
+    if LUI_MOVE_UI ~= nil then
         LUI_MOVE_UI.set_hud_visible(GLOBAL_HUD_VISIBLE)
     end
 

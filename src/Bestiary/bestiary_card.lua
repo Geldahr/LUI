@@ -190,31 +190,7 @@ local function _mitigation_value_color(_, value)
 end
 
 local function _normalize_bestiary_name(name)
-    if DATA_ACCESS ~= nil and DATA_ACCESS.normalize_name ~= nil then
-        return DATA_ACCESS.normalize_name(name)
-    end
-
-    return _trim(name)
-end
-
-local function _lookup_named_entry(source, normalized)
-    if type(source) ~= "table" or type(normalized) ~= "string" then
-        return nil, nil
-    end
-
-    local direct = source[normalized]
-    if type(direct) == "table" then
-        return normalized, direct
-    end
-
-    local lowered = string.lower(normalized)
-    for key, value in pairs(source) do
-        if type(key) == "string" and type(value) == "table" and string.lower(key) == lowered then
-            return key, value
-        end
-    end
-
-    return nil, nil
+    return DATA_ACCESS.normalize_name(name)
 end
 
 local function _merged_entry_for_name(name)
@@ -226,12 +202,7 @@ local function _merged_entry_for_name(name)
     local merged = DATA_ACCESS.new_merged_entry(normalized)
 
     local resolved_name = normalized
-    local builtin_name, builtin = nil, nil
-    if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_entry ~= nil and DATA_ACCESS.get_builtin_index ~= nil then
-        builtin_name, builtin = DATA_ACCESS.resolve_entry(BUILTIN_BESTIARY, DATA_ACCESS.get_builtin_index(), normalized)
-    else
-        builtin_name, builtin = _lookup_named_entry(BUILTIN_BESTIARY, normalized)
-    end
+    local builtin_name, builtin = DATA_ACCESS.resolve_entry(BUILTIN_BESTIARY, DATA_ACCESS.get_builtin_index(), normalized)
     if type(builtin) ~= "table" then
         return nil
     end
@@ -239,19 +210,9 @@ local function _merged_entry_for_name(name)
     resolved_name = builtin_name or resolved_name
     DATA_ACCESS.merge_entry(merged, builtin, resolved_name)
 
-    local cache = nil
-    if DATA_ACCESS ~= nil and DATA_ACCESS.ensure_cache ~= nil then
-        cache = DATA_ACCESS.ensure_cache()
-    else
-        cache = _G.bestiary_cache
-    end
+    local cache = DATA_ACCESS.ensure_cache()
     if type(cache) == "table" then
-        local cached_name, cached = nil, nil
-        if DATA_ACCESS ~= nil and DATA_ACCESS.resolve_entry ~= nil and DATA_ACCESS.get_cache_index ~= nil then
-            cached_name, cached = DATA_ACCESS.resolve_entry(cache, DATA_ACCESS.get_cache_index(), normalized)
-        else
-            cached_name, cached = _lookup_named_entry(cache, normalized)
-        end
+        local cached_name, cached = DATA_ACCESS.resolve_entry(cache, DATA_ACCESS.get_cache_index(), normalized)
         if type(cached) == "table" then
             resolved_name = cached_name or resolved_name
             DATA_ACCESS.merge_entry(merged, cached, resolved_name)
@@ -621,15 +582,13 @@ local function _collect_variant_group(selected_record)
             return
         end
 
-        if DATA_ACCESS ~= nil and DATA_ACCESS.get_group_keys ~= nil then
-            local index = type(index_getter) == "function" and index_getter() or nil
-            local group_keys = DATA_ACCESS.get_group_keys(source, index, base_name)
-            if type(group_keys) == "table" then
-                for i = 1, #group_keys do
-                    append_record(_build_record_for_name(group_keys[i]))
-                end
-                return
+        local index = index_getter()
+        local group_keys = DATA_ACCESS.get_group_keys(source, index, base_name)
+        if type(group_keys) == "table" then
+            for i = 1, #group_keys do
+                append_record(_build_record_for_name(group_keys[i]))
             end
+            return
         end
 
         for entry_name, entry in pairs(source) do
@@ -642,9 +601,9 @@ local function _collect_variant_group(selected_record)
         end
     end
 
-    collect_from_source(BUILTIN_BESTIARY, DATA_ACCESS ~= nil and DATA_ACCESS.get_builtin_index or nil)
-    local cache = DATA_ACCESS ~= nil and DATA_ACCESS.ensure_cache ~= nil and DATA_ACCESS.ensure_cache() or _G.bestiary_cache
-    collect_from_source(cache, DATA_ACCESS ~= nil and DATA_ACCESS.get_cache_index or nil)
+    collect_from_source(BUILTIN_BESTIARY, DATA_ACCESS.get_builtin_index)
+    local cache = DATA_ACCESS.ensure_cache()
+    collect_from_source(cache, DATA_ACCESS.get_cache_index)
 
     table.sort(records, _compare_variant_records)
     _assign_variant_tab_labels(records)
@@ -968,9 +927,7 @@ local function _create_scroll_label_area(parent)
         color = nil,
     }
 
-    if parent ~= nil and parent.SetMouseVisible ~= nil then
-        parent:SetMouseVisible(true)
-    end
+    parent:SetMouseVisible(true)
 
     area.label = UI.Widgets.LuiLabel()
     area.label:SetParent(parent)
@@ -1075,20 +1032,16 @@ local function _style_variant_tab_bar(tab_bar)
     if type(tab_bar._tabs) == "table" then
         for i = 1, #tab_bar._tabs do
             local entry = tab_bar._tabs[i]
-            if entry ~= nil and entry.button ~= nil and entry.button.set_theme ~= nil then
-                entry.button:set_theme(
-                    tab_bar._tab_text,
-                    tab_bar._tab_text_hover,
-                    tab_bar._tab_text_selected,
-                    tab_bar._tab_text_disabled
-                )
-            end
+            entry.button:set_theme(
+                tab_bar._tab_text,
+                tab_bar._tab_text_hover,
+                tab_bar._tab_text_selected,
+                tab_bar._tab_text_disabled
+            )
         end
     end
 
-    if tab_bar.refresh_layout ~= nil then
-        tab_bar:refresh_layout()
-    end
+    tab_bar:refresh_layout()
 end
 
 local function _create_panel(parent, title_text)
@@ -1291,9 +1244,7 @@ function BestiaryVariantTab:Constructor(owner)
         self:_apply_style()
     end
     self.MouseClick = function()
-        if self.owner ~= nil and self.owner.on_variant_tab_clicked ~= nil then
-            self.owner:on_variant_tab_clicked(self.index)
-        end
+        self.owner:on_variant_tab_clicked(self.index)
     end
 
     self:_apply_style()
@@ -1588,7 +1539,7 @@ function BestiaryCard:_select_variant_index(index, sync_variant_bar)
 
     self.selected_variant_index = index
     if sync_variant_bar ~= false and self.variant_bar ~= nil and self:_variant_tabs_visible() == true then
-        local current_index = self.variant_bar.get_selected_index ~= nil and self.variant_bar:get_selected_index() or nil
+        local current_index = self.variant_bar:get_selected_index()
         if current_index ~= index then
             self._variant_bar_updating = true
             self.variant_bar:set_selected_index(index, false)
@@ -2011,10 +1962,8 @@ function BestiaryCard:_apply_drop_layout(drop_texts)
 
     local chip_h = _scaled_int(BASE_CHIP_H)
     self.drop_content:SetSize(self.drop_list:GetWidth(), math.max(self.drop_list:GetHeight(), chip_content_h))
-    if self.drop_list ~= nil and self.drop_list.ClearItems ~= nil and self.drop_list.AddItem ~= nil then
-        self.drop_list:ClearItems()
-        self.drop_list:AddItem(self.drop_content)
-    end
+    self.drop_list:ClearItems()
+    self.drop_list:AddItem(self.drop_content)
 
     for i = 1, #layout do
         local chip_info = layout[i]
@@ -2108,7 +2057,7 @@ function BestiaryCard:apply_settings()
 end
 
 function BestiaryCard:bring_to_front()
-    if self:IsVisible() == true and self.Activate ~= nil then
+    if self:IsVisible() == true then
         self:Activate()
     end
 end

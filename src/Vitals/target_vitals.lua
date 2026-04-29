@@ -135,8 +135,7 @@ function TargetVitals:apply_text_alignment()
         end
     end
 
-    apply_targets_target_alignment(self.targets_target_window ~= nil and self.targets_target_window.targets_target_label or
-    nil)
+    apply_targets_target_alignment(self.targets_target_window.targets_target_label)
 end
 
 function TargetVitals:apply_fonts()
@@ -158,8 +157,7 @@ function TargetVitals:apply_fonts()
         label:SetForeColor(font.color)
     end
 
-    apply_targets_target_font(self.targets_target_window ~= nil and self.targets_target_window.targets_target_label or
-    nil)
+    apply_targets_target_font(self.targets_target_window.targets_target_label)
 end
 
 function TargetVitals:on_target_changed()
@@ -174,11 +172,9 @@ function TargetVitals:set_move_mode(enabled)
         self:SetVisible(false)
     end
 
-    if self.targets_target_window ~= nil then
-        self.targets_target_window:set_move_mode(enabled)
-        if enabled ~= true and self.tt == nil then
-            self.targets_target_window:SetVisible(false)
-        end
+    self.targets_target_window:set_move_mode(enabled)
+    if enabled ~= true and self.tt == nil then
+        self.targets_target_window:SetVisible(false)
     end
 end
 
@@ -253,10 +249,7 @@ function TargetVitals:targets_bubble_changed()
     end
     if bubble_w > inner_w then bubble_w = inner_w end
 
-    local morale_w = 0
-    if w.morale ~= nil and w.morale.GetWidth ~= nil then
-        morale_w = w.morale:GetWidth() or 0
-    end
+    local morale_w = w.morale:GetWidth() or 0
     if morale_w < 0 then morale_w = 0 end
     if morale_w > inner_w then morale_w = inner_w end
     morale_w = math.floor(morale_w + 0.5)
@@ -375,13 +368,13 @@ function TargetVitals:update_targets_target()
 
     if self.entity ~= nil and self.entity.GetTarget ~= nil and self.entity:GetTarget() ~= nil then
         self.tt = self.entity:GetTarget()
-        if w ~= nil and w.set_entity ~= nil then
+        if w ~= nil then
             w.set_entity(self.tt)
         end
-        if w ~= nil and w.label ~= nil then
+        if w ~= nil then
             w.label:SetText(self:get_targets_target_text())
         end
-        if w ~= nil and w.set_visible ~= nil then
+        if w ~= nil then
             w.set_visible(true)
         end
 
@@ -395,13 +388,13 @@ function TargetVitals:update_targets_target()
         self:targets_morale_changed()
         self:targets_bubble_changed()
     else
-        if w ~= nil and w.set_entity ~= nil then
+        if w ~= nil then
             w.set_entity(self.tt)
         end
-        if w ~= nil and w.set_visible ~= nil then
+        if w ~= nil then
             w.set_visible(false)
         end
-        if w ~= nil and w.bubble ~= nil then
+        if w ~= nil then
             w.bubble:SetVisible(false)
         end
     end
@@ -465,18 +458,16 @@ function TargetVitals:_detach_effect_manager()
         return
     end
 
-    if self.em_added_event ~= nil and self.em.unregister_added_event ~= nil then
+    if self.em_added_event ~= nil then
         self.em:unregister_added_event(self.em_added_event)
         self.em_added_event = nil
     end
-    if self.em_removed_event ~= nil and self.em.unregister_removed_event ~= nil then
+    if self.em_removed_event ~= nil then
         self.em:unregister_removed_event(self.em_removed_event)
         self.em_removed_event = nil
     end
 
-    if self.em.restore_background_source_target ~= nil then
-        self.em:restore_background_source_target()
-    end
+    self.em:restore_background_source_target()
     self.em:delete()
     self.em = nil
 end
@@ -526,9 +517,7 @@ function TargetVitals:_resize_extra_controls()
     if inner_w < 1 then inner_w = 1 end
     self.targets_target_inner_w = inner_w
 
-    if self.targets_target_window ~= nil and self.targets_target_window.apply_settings ~= nil then
-        self.targets_target_window:apply_settings()
-    end
+    self.targets_target_window:apply_settings()
 
     self:apply_fonts()
     self:apply_text_alignment()

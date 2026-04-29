@@ -24,7 +24,7 @@ _G.STYLE.WINDOW_WORK_AREA = function()
 
     local reserved_top = 0
     local status_bar = _G.STATUS_BAR
-    if status_bar ~= nil and status_bar.IsVisible ~= nil and status_bar:IsVisible() == true then
+    if status_bar ~= nil and status_bar:IsVisible() == true then
         reserved_top = math.max(0, tonumber(status_bar:GetHeight()) or 0)
     end
 
@@ -32,9 +32,7 @@ _G.STYLE.WINDOW_WORK_AREA = function()
     return 0, reserved_top, display_w, math.max(0, display_h - reserved_top)
 end
 
-if _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK ~= nil then
-    _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
-end
+_G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
 
 local function set_backpacks_enabled(enabled)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Backpack1, enabled == true)
@@ -47,7 +45,7 @@ end
 
 local function _ensure_bestiary_window()
     local window = _G.BESTIARY_WINDOW
-    if window == nil and Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil then
+    if window == nil then
         window = Bestiary.BestiaryWindow()
         _G.BESTIARY_WINDOW = window
     end
@@ -56,10 +54,10 @@ end
 
 local function _ensure_crafting_window()
     local window = _G.CRAFTING_WINDOW
-    if Crafting ~= nil and Crafting.is_enabled ~= nil and Crafting.is_enabled() ~= true then
+    if Crafting.is_enabled() ~= true then
         return nil
     end
-    if window == nil and Crafting ~= nil and Crafting.CraftingWindow ~= nil then
+    if window == nil then
         window = Crafting.CraftingWindow()
         _G.CRAFTING_WINDOW = window
     end
@@ -95,17 +93,11 @@ function _G.toggle_config_shortcut()
     end
 
     if CONFIG_WINDOW:IsVisible() == true then
-        if CONFIG_WINDOW.cancel ~= nil then
-            CONFIG_WINDOW:cancel()
-        else
-            CONFIG_WINDOW:SetVisible(false)
-        end
+        CONFIG_WINDOW:cancel()
         return
     end
 
-    if CONFIG_WINDOW.open ~= nil then
-        CONFIG_WINDOW:open()
-    end
+    CONFIG_WINDOW:open()
 end
 
 function _G.toggle_assets_shortcut()
@@ -118,11 +110,7 @@ function _G.toggle_assets_shortcut()
         return
     end
 
-    if ASSETS_WINDOW.open ~= nil then
-        ASSETS_WINDOW:open()
-    else
-        ASSETS_WINDOW:SetVisible(true)
-    end
+    ASSETS_WINDOW:open()
 end
 
 function _G.toggle_bestiary_shortcut()
@@ -136,11 +124,7 @@ function _G.toggle_bestiary_shortcut()
         return
     end
 
-    if window.open ~= nil then
-        window:open()
-    else
-        window:SetVisible(true)
-    end
+    window:open()
 end
 
 function _G.open_bestiary_item_search(item_name)
@@ -169,23 +153,17 @@ function _G.toggle_crafting_shortcut()
         return
     end
 
-    if window.clear_material_filter ~= nil then
-        window:clear_material_filter()
-    end
-    if window.open ~= nil then
-        window:open()
-    else
-        window:SetVisible(true)
-    end
+    window:clear_material_filter()
+    window:open()
 end
 
 function _G.toggle_travel_shortcut()
-    if Travel ~= nil and Travel.is_enabled ~= nil and Travel.is_enabled() ~= true then
+    if Travel.is_enabled() ~= true then
         return
     end
 
     local window = _G.TRAVEL_WINDOW
-    if window == nil and Travel ~= nil and Travel.TravelWindow ~= nil then
+    if window == nil then
         window = Travel.TravelWindow()
         _G.TRAVEL_WINDOW = window
     end
@@ -199,11 +177,7 @@ function _G.toggle_travel_shortcut()
         return
     end
 
-    if window.open ~= nil then
-        window:open()
-    else
-        window:SetVisible(true)
-    end
+    window:open()
 end
 
 function _G.open_crafting_plan_shortcut()
@@ -212,16 +186,8 @@ function _G.open_crafting_plan_shortcut()
         return
     end
 
-    if window.clear_material_filter ~= nil then
-        window:clear_material_filter()
-    end
-    if window.open_plan ~= nil then
-        window:open_plan()
-    elseif window.open ~= nil then
-        window:open()
-    else
-        window:SetVisible(true)
-    end
+    window:clear_material_filter()
+    window:open_plan()
 end
 
 function apply_inventory_settings()
@@ -231,7 +197,7 @@ function apply_inventory_settings()
     if enabled then
         if INVENTORY_WINDOW == nil then
             INVENTORY_WINDOW = UI.InventoryWindow()
-        elseif INVENTORY_WINDOW ~= nil and INVENTORY_WINDOW.apply_settings ~= nil then
+        else
             INVENTORY_WINDOW:apply_settings()
         end
     else
@@ -254,24 +220,22 @@ function apply_assets_settings()
     if enabled then
         if ASSETS_STORE == nil then
             ASSETS_STORE = Assets.AssetsStore()
-        elseif ASSETS_STORE.refresh_bindings ~= nil then
+        else
             ASSETS_STORE:refresh_bindings()
         end
 
         if ASSETS_WINDOW == nil then
             ASSETS_WINDOW = UI.AssetsWindow()
-        elseif ASSETS_WINDOW.apply_settings ~= nil then
+        else
             ASSETS_WINDOW:apply_settings()
         end
     else
         if ASSETS_WINDOW ~= nil then
-            if ASSETS_WINDOW.SetVisible ~= nil then
-                ASSETS_WINDOW:SetVisible(false)
-            end
+            ASSETS_WINDOW:SetVisible(false)
         end
         ASSETS_WINDOW = nil
 
-        if ASSETS_STORE ~= nil and ASSETS_STORE.destroy ~= nil then
+        if ASSETS_STORE ~= nil then
             ASSETS_STORE:destroy()
         end
         ASSETS_STORE = nil
@@ -281,11 +245,7 @@ end
 function apply_status_bar_settings()
     local sb = _G.settings.status_bar
     if STATUS_BAR ~= nil then
-        if STATUS_BAR.destroy ~= nil then
-            STATUS_BAR:destroy()
-        else
-            STATUS_BAR:SetVisible(false)
-        end
+        STATUS_BAR:destroy()
         STATUS_BAR = nil
         _G.STATUS_BAR = nil
     end
@@ -293,9 +253,7 @@ function apply_status_bar_settings()
     if sb.enabled == true then
         STATUS_BAR = UI.StatusBarWindow()
         _G.STATUS_BAR = STATUS_BAR
-        if _G.LUI_STATUS_BAR_API_FLUSH_PENDING_ITEMS ~= nil then
-            _G.LUI_STATUS_BAR_API_FLUSH_PENDING_ITEMS()
-        end
+        _G.LUI_STATUS_BAR_API_FLUSH_PENDING_ITEMS()
     end
 end
 
@@ -307,42 +265,32 @@ function apply_cooldowns_settings()
         end
     else
         if COOLDOWNS_WINDOW ~= nil then
-            if COOLDOWNS_WINDOW.destroy ~= nil then
-                COOLDOWNS_WINDOW:destroy()
-            else
-                COOLDOWNS_WINDOW:SetVisible(false)
-            end
+            COOLDOWNS_WINDOW:destroy()
         end
         COOLDOWNS_WINDOW = nil
     end
 end
 
 function apply_crafting_settings()
-    local enabled = _G.settings ~= nil and _G.settings.crafting ~= nil and _G.settings.crafting.enabled == true
+    local enabled = _G.settings.crafting.enabled == true
 
     if enabled ~= true then
         if CRAFTING_WINDOW ~= nil then
-            if CRAFTING_WINDOW.SetVisible ~= nil then
-                CRAFTING_WINDOW:SetVisible(false)
-            end
+            CRAFTING_WINDOW:SetVisible(false)
             CRAFTING_WINDOW.store = nil
             CRAFTING_WINDOW = nil
             _G.CRAFTING_WINDOW = nil
         end
-        if Crafting ~= nil and Crafting.destroy_shared_store ~= nil then
-            Crafting.destroy_shared_store()
-        end
+        Crafting.destroy_shared_store()
         return
     end
 
-    if Crafting ~= nil and Crafting.get_shared_store ~= nil then
-        local store = Crafting.get_shared_store()
-        if store ~= nil and store.refresh ~= nil then
-            store:refresh(false, 1)
-        end
+    local store = Crafting.get_shared_store()
+    if store ~= nil then
+        store:refresh(false, 1)
     end
 
-    if CRAFTING_WINDOW ~= nil and CRAFTING_WINDOW.apply_settings ~= nil then
+    if CRAFTING_WINDOW ~= nil then
         CRAFTING_WINDOW:apply_settings()
     end
 end
@@ -361,7 +309,7 @@ function apply_travel_settings()
         return
     end
 
-    if TRAVEL_WINDOW ~= nil and TRAVEL_WINDOW.apply_settings ~= nil then
+    if TRAVEL_WINDOW ~= nil then
         TRAVEL_WINDOW:apply_settings()
     end
 end
@@ -376,7 +324,7 @@ if _G.loaded_settings_was_new == true then
     _G.rebuild_settings()
 end
 _G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = (
-    _G.settings ~= nil and _G.settings.crafting ~= nil and _G.settings.crafting.display_mode
+    _G.settings.crafting.display_mode
 ) or "pages"
 
 BESTIARY_CARD = Bestiary.BestiaryCard()
@@ -400,6 +348,7 @@ BESTIARY_WINDOW = nil
 CRAFTING_WINDOW = nil
 TRAVEL_WINDOW = nil
 BESTIARY_TRACKER = Bestiary.Collector()
+_G.BESTIARY_TRACKER = BESTIARY_TRACKER
 
 apply_inventory_settings()
 apply_assets_settings()
@@ -407,9 +356,7 @@ apply_status_bar_settings()
 apply_cooldowns_settings()
 apply_crafting_settings()
 apply_travel_settings()
-if BESTIARY_TRACKER ~= nil and BESTIARY_TRACKER.apply_settings ~= nil then
-    BESTIARY_TRACKER:apply_settings()
-end
+BESTIARY_TRACKER:apply_settings()
 
 Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Vitals, false)
 Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Target, false)
@@ -431,16 +378,12 @@ Plugins["LUI"].Unload = function()
     _G.LUI_IS_UNLOADING = true
 
     if CRAFTING_WINDOW ~= nil then
-        if CRAFTING_WINDOW.SetVisible ~= nil then
-            CRAFTING_WINDOW:SetVisible(false)
-        end
+        CRAFTING_WINDOW:SetVisible(false)
         CRAFTING_WINDOW.store = nil
         CRAFTING_WINDOW = nil
         _G.CRAFTING_WINDOW = nil
     end
-    if Crafting ~= nil and Crafting.destroy_shared_store ~= nil then
-        Crafting.destroy_shared_store()
-    end
+    Crafting.destroy_shared_store()
 
     if TRAVEL_WINDOW ~= nil then
         TRAVEL_WINDOW:SetVisible(false)
@@ -453,44 +396,34 @@ Plugins["LUI"].Unload = function()
     _G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = nil
     save_settings()
 
-    if _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK ~= nil then
-        _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
-    end
+    _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
 
     _G.STATUS_BAR = nil
 
     if ASSETS_WINDOW ~= nil then
-        if ASSETS_WINDOW.SetVisible ~= nil then
-            ASSETS_WINDOW:SetVisible(false)
-        end
+        ASSETS_WINDOW:SetVisible(false)
         ASSETS_WINDOW._crafting_store = nil
         ASSETS_WINDOW._last_crafting_store_version = nil
         ASSETS_WINDOW = nil
     end
 
     if BESTIARY_WINDOW ~= nil then
-        if BESTIARY_WINDOW.SetVisible ~= nil then
-            BESTIARY_WINDOW:SetVisible(false)
-        end
+        BESTIARY_WINDOW:SetWantsUpdates(false)
+        BESTIARY_WINDOW:SetVisible(false)
         BESTIARY_WINDOW = nil
     end
 
     if BESTIARY_CARD ~= nil then
-        if BESTIARY_CARD.SetVisible ~= nil then
-            BESTIARY_CARD:SetVisible(false)
-        end
+        BESTIARY_CARD:SetVisible(false)
         BESTIARY_CARD = nil
         _G.BESTIARY_CARD = nil
     end
 
     if BESTIARY_TRACKER ~= nil then
-        if BESTIARY_TRACKER.save ~= nil then
-            BESTIARY_TRACKER:save()
-        end
-        if BESTIARY_TRACKER.destroy ~= nil then
-            BESTIARY_TRACKER:destroy()
-        end
+        BESTIARY_TRACKER:save()
+        BESTIARY_TRACKER:destroy()
         BESTIARY_TRACKER = nil
+        _G.BESTIARY_TRACKER = nil
     end
 
     if ASSETS_STORE ~= nil then

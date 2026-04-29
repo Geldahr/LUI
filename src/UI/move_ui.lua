@@ -36,10 +36,8 @@ local function _scaled_font(name, size)
 end
 
 local function _disable_native_scaling(window)
-    local native_scaling = UI ~= nil and UI.NativeScaling or _G.LUI_NATIVE_SCALING
-    if native_scaling ~= nil and native_scaling.disable ~= nil then
-        native_scaling.disable(window)
-    end
+    local native_scaling = UI.NativeScaling or _G.LUI_NATIVE_SCALING
+    native_scaling.disable(window)
 end
 
 ---@class CloseWindow: LuiBaseWindow
@@ -268,28 +266,28 @@ local function _restore_saved_move_settings()
     _restore_position(hud.target_effects, MOVE_UI_POSITION_SNAPSHOT.target_effects)
     _restore_position(hud.cooldowns, MOVE_UI_POSITION_SNAPSHOT.cooldowns)
 
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.resize ~= nil then
+    if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:resize()
     end
-    if TARGET_VITAL ~= nil and TARGET_VITAL.resize ~= nil then
+    if TARGET_VITAL ~= nil then
         TARGET_VITAL:resize()
     end
-    if BOSS_VITAL ~= nil and BOSS_VITAL.resize ~= nil then
+    if BOSS_VITAL ~= nil then
         BOSS_VITAL:resize()
     end
-    if PARTY_VITALS ~= nil and PARTY_VITALS.apply_settings ~= nil then
+    if PARTY_VITALS ~= nil then
         PARTY_VITALS:apply_settings()
     end
-    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil and EXPIRING_SELF_EFFECTS_WINDOW.apply_settings ~= nil then
+    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
         EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()
     end
-    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil and EXPIRING_TARGET_EFFECTS_WINDOW.apply_settings ~= nil then
+    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil then
         EXPIRING_TARGET_EFFECTS_WINDOW:apply_settings()
     end
-    if COOLDOWNS_WINDOW ~= nil and COOLDOWNS_WINDOW.apply_settings ~= nil then
+    if COOLDOWNS_WINDOW ~= nil then
         COOLDOWNS_WINDOW:apply_settings()
     end
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.on_target_changed ~= nil then
+    if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:on_target_changed()
     end
 
@@ -347,7 +345,6 @@ end
 
 function _G.toggle_move_mode()
     if FIRST_RUN_QUICK_SETUP_WINDOW ~= nil and
-        FIRST_RUN_QUICK_SETUP_WINDOW.IsVisible ~= nil and
         FIRST_RUN_QUICK_SETUP_WINDOW:IsVisible() == true and
         FIRST_RUN_QUICK_SETUP_WINDOW.closing ~= true then
         return
@@ -361,12 +358,9 @@ end
 
 function _G.cancel_move_mode()
     if FIRST_RUN_QUICK_SETUP_WINDOW ~= nil and
-        FIRST_RUN_QUICK_SETUP_WINDOW.IsVisible ~= nil and
         FIRST_RUN_QUICK_SETUP_WINDOW:IsVisible() == true and
         FIRST_RUN_QUICK_SETUP_WINDOW.closing ~= true then
-        if FIRST_RUN_QUICK_SETUP_WINDOW.cancel_setup ~= nil then
-            FIRST_RUN_QUICK_SETUP_WINDOW:cancel_setup()
-        end
+        FIRST_RUN_QUICK_SETUP_WINDOW:cancel_setup()
         return
     end
 
@@ -378,7 +372,7 @@ function _G.cancel_move_mode()
 end
 
 function _G.refresh_move_mode_snapshot()
-    if PLAYER_VITAL == nil or PLAYER_VITAL.is_move_mode == nil or PLAYER_VITAL:is_move_mode() ~= true then
+    if PLAYER_VITAL == nil or PLAYER_VITAL:is_move_mode() ~= true then
         return
     end
 
@@ -395,7 +389,7 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
         return
     end
 
-    if enabled == true and is_lui_hud_visible ~= nil and is_lui_hud_visible() ~= true then
+    if enabled == true and is_lui_hud_visible() ~= true then
         return
     end
 
@@ -416,10 +410,10 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
 
     PLAYER_VITAL:set_move_mode(enabled)
     TARGET_VITAL:set_move_mode(enabled)
-    if BOSS_VITAL ~= nil and BOSS_VITAL.set_move_mode ~= nil then
+    if BOSS_VITAL ~= nil then
         BOSS_VITAL:set_move_mode(enabled)
     end
-    if PARTY_VITALS ~= nil and PARTY_VITALS.set_move_mode ~= nil then
+    if PARTY_VITALS ~= nil then
         PARTY_VITALS:set_move_mode(enabled)
     end
     if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
@@ -428,7 +422,7 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
     if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil then
         EXPIRING_TARGET_EFFECTS_WINDOW:set_move_mode(enabled)
     end
-    if COOLDOWNS_WINDOW ~= nil and COOLDOWNS_WINDOW.set_move_mode ~= nil then
+    if COOLDOWNS_WINDOW ~= nil then
         COOLDOWNS_WINDOW:set_move_mode(enabled)
     end
 
