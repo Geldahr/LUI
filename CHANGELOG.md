@@ -17,6 +17,8 @@
 
 - Fixed empty drop highlight states when a bestiary row matched the active search.
 
+### Removed
+
 ## v0.5.0
 
 ### Added
