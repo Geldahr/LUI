@@ -897,9 +897,7 @@ function CraftingIngredientRow:Constructor()
     _apply_bestiary_icon(self.bestiary_button)
     self.bestiary_button:SetVisible(false)
     self.bestiary_button.Click = function()
-        if type(self._open_bestiary) == "function" then
-            self._open_bestiary()
-        end
+        self._open_bestiary()
     end
 
     local function show_source_breakdown(anchor_control)
@@ -963,7 +961,7 @@ function CraftingIngredientRow:set_source_breakdown(breakdown, show_callback, hi
 end
 
 function CraftingIngredientRow:set_bestiary_action(on_click)
-    self._open_bestiary = type(on_click) == "function" and on_click or nil
+    self._open_bestiary = on_click
     self.bestiary_button:SetVisible(self._open_bestiary ~= nil)
     self:_layout()
 end
@@ -973,7 +971,7 @@ function CraftingIngredientRow:_layout()
     local gap = _scaled_int(BASE_GAP)
     local strip_w = _scaled_int(3)
     local amount_w = _scaled_int(86)
-    local bestiary_visible = type(self._open_bestiary) == "function"
+    local bestiary_visible = self._open_bestiary ~= nil
     local bestiary_w = bestiary_visible == true and math.min(_scaled_int(BASE_SMALL_BUTTON_W), math.max(0, height - gap)) or 0
     local indent_w = _scaled_int(BASE_TREE_INDENT_W) * self._indent_level
     local icon_side = _fixed_int(BASE_ICON_SIDE)
@@ -1780,9 +1778,7 @@ function CraftingWindow:Constructor()
     _apply_bestiary_icon(self.missing_bestiary_button)
     self.missing_bestiary_button:SetVisible(false)
     self.missing_bestiary_button.Click = function()
-        if type(self._missing_bestiary_query) == "string" and type(_G.open_bestiary_query_search) == "function" then
-            _G.open_bestiary_query_search(self._missing_bestiary_query)
-        end
+        _G.open_bestiary_query_search(self._missing_bestiary_query)
     end
 
     self.missing_header_bar = Turbine.UI.Control()
@@ -1919,21 +1915,10 @@ function CraftingWindow:_source_breakdown_for_item(item_key, required)
 end
 
 function CraftingWindow:_can_open_bestiary_for_item(item_key)
-    if type(_G.open_bestiary_item_search) ~= "function" then
-        return false
-    end
-    if Bestiary == nil or type(Bestiary.has_droppable_item) ~= "function" then
-        return false
-    end
-
     return Bestiary.has_droppable_item(item_key) == true
 end
 
 function CraftingWindow:_bind_bestiary_action(row, item_key, item_name)
-    if row == nil or row.set_bestiary_action == nil then
-        return
-    end
-
     if self:_can_open_bestiary_for_item(item_key) ~= true then
         row:set_bestiary_action(nil)
         return

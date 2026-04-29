@@ -145,34 +145,14 @@ end
 
 function _G.open_bestiary_item_search(item_name)
     local window = _ensure_bestiary_window()
-    if window == nil then
-        return false
-    end
-
-    if window.open_item_search ~= nil then
-        window:open_item_search(item_name)
-    elseif window.open ~= nil then
-        window:open()
-    else
-        window:SetVisible(true)
-    end
+    window:open_item_search(item_name)
 
     return true
 end
 
 function _G.open_bestiary_query_search(query)
     local window = _ensure_bestiary_window()
-    if window == nil then
-        return false
-    end
-
-    if window.open_query_search ~= nil then
-        window:open_query_search(query)
-    elseif window.open ~= nil then
-        window:open()
-    else
-        window:SetVisible(true)
-    end
+    window:open_query_search(query)
 
     return true
 end

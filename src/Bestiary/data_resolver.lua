@@ -122,13 +122,18 @@ Bestiary.RequestedLocale = requested_locale
 Bestiary.Data, Bestiary.DataLocale = _resolve_locale_table(requested_locale, "bestiary")
 Bestiary.DropTable, Bestiary.DropTableLocale = _resolve_locale_table(requested_locale, "drop_table")
 
-function Bestiary.uses_requested_locale()
+function Bestiary.supports_target_name_lookup()
+    local requested = Bestiary.RequestedLocale or "en"
+    return Bestiary.DataLocale == requested
+end
+
+function Bestiary.supports_drop_name_lookup()
     local requested = Bestiary.RequestedLocale or "en"
     return Bestiary.DataLocale == requested and Bestiary.DropTableLocale == requested
 end
 
 function Bestiary.has_droppable_item(name)
-    if Bestiary.uses_requested_locale() ~= true then
+    if Bestiary.supports_drop_name_lookup() ~= true then
         return false
     end
 

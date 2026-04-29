@@ -512,6 +512,9 @@ function TargetVitals:_on_entity_control_double_click(args)
     if self.entity == nil or _target_is_player(self.entity) == true then
         return
     end
+    if Bestiary.supports_target_name_lookup() ~= true then
+        return
+    end
 
     BESTIARY_CARD:toggle_for_target(self.entity, self)
 end
