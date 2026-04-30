@@ -2,6 +2,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
+import "LUI.src.UI.Widgets.base_window"
 
 local BASE_ROW_PADDING = 4
 local BASE_GAP = 6
@@ -28,10 +29,10 @@ local function _set_alpha_backdrop(control)
     control:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 end
 
-DropEntry = class(Turbine.UI.Control)
+DropEntry = class(LuiBaseWindow)
 
 function DropEntry:Constructor()
-    Turbine.UI.Control.Constructor(self)
+    LuiBaseWindow.Constructor(self, { hideable = true })
 
     self.record = nil
     self._item_bound = nil
@@ -43,9 +44,11 @@ function DropEntry:Constructor()
     self._qty_width = 0
     self._width = 0
 
+    self:SetZOrder(0)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetMouseVisible(false)
+    self:SetVisible(false)
 
     self.background = Turbine.UI.Control()
     self.background:SetParent(self)
@@ -150,15 +153,11 @@ function DropEntry:set_opacity(opacity)
     self._opacity = opacity
 
     self:SetOpacity(opacity)
-    self.background:SetOpacity(opacity)
-    self.name_label:SetOpacity(opacity)
-    self.qty_label:SetOpacity(opacity)
-    self.icon_host:SetOpacity(opacity)
-    self.item_control:SetOpacity(opacity)
 end
 
 function DropEntry:destroy()
     self:set_record(nil)
+    self:unregister_hideable()
     self:SetVisible(false)
     self:SetParent(nil)
 end

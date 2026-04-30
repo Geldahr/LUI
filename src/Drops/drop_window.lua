@@ -2,6 +2,7 @@ import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
 
@@ -9,7 +10,6 @@ local CHAT_DISPLAY_DELAY = 0.25
 local ITEM_MATCH_WINDOW = 1.00
 local KILL_ATTRIBUTION_WINDOW = 0.20
 local EXIT_FADE_DURATION = 1.00
-local COLLAPSE_DURATION = 1.00
 
 local BASE_ROW_PADDING = 4
 local BASE_SPACING = 0
@@ -151,16 +151,6 @@ local function _safe_item_name(item)
     return nil
 end
 
-local function _ease_out_quad(t)
-    if t <= 0 then
-        return 0
-    end
-    if t >= 1 then
-        return 1
-    end
-    return 1 - ((1 - t) * (1 - t))
-end
-
 local function _row_padding()
     return lui_scaled_int(BASE_ROW_PADDING)
 end
@@ -173,13 +163,35 @@ local function _row_spacing()
     return lui_scaled_int(BASE_SPACING)
 end
 
+local DropBackgroundWindow = class(LuiBaseWindow)
+
+function DropBackgroundWindow:Constructor()
+    LuiBaseWindow.Constructor(self, { hideable = true })
+
+    self:SetVisible(false)
+    self:SetMouseVisible(false)
+    self:SetZOrder(0)
+    _set_alpha_backdrop(self)
+end
+
+function DropBackgroundWindow:apply_settings()
+    local s = _G.settings.drops
+    self:SetBackColor(_with_alpha(s.hud.background_color, s.hud.background_opacity))
+end
+
+function DropBackgroundWindow:destroy()
+    self:unregister_hideable()
+    self:SetVisible(false)
+    self:SetParent(nil)
+end
+
 DropsWindow = class(LuiHUD)
 
 function DropsWindow:Constructor()
     LuiHUD.Constructor(self, {
         hud_key = "drops",
         title = TR["Drops"],
-        mouse_visible = true,
+        mouse_visible = false,
     })
 
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
@@ -201,12 +213,15 @@ function DropsWindow:Constructor()
 
     self:SetWantsUpdates(true)
     self:SetVisible(false)
-    self:SetZOrder(20)
+    self:SetZOrder(0)
 
     self.background = Turbine.UI.Control()
     self.background:SetParent(self)
     self.background:SetMouseVisible(false)
+    self.background:SetVisible(false)
     _set_alpha_backdrop(self.background)
+
+    self.content_background = DropBackgroundWindow()
 
     self:_bind_events()
     self:apply_settings()
@@ -231,6 +246,7 @@ function DropsWindow:destroy()
         end
     end
     self._entry_pool = {}
+    self:_destroy_content_background()
     self:_detach_background()
     self:SetWantsUpdates(false)
     self:SetVisible(false)
@@ -247,6 +263,7 @@ function DropsWindow:set_move_mode(enabled)
         self:_show_entries()
         self:Update()
     end
+    self:_refresh_background(enabled == true)
     self:refresh_visibility()
 end
 
@@ -267,6 +284,7 @@ function DropsWindow:apply_settings()
     self:SetSize(width, height)
     self.background:SetSize(width, height)
     self.background:SetBackColor(_with_alpha(s.hud.background_color, s.hud.background_opacity))
+    self.content_background:apply_settings()
     self:layout_move_chrome()
     self:apply_hud_position()
     self:_bind_events()
@@ -317,6 +335,13 @@ function DropsWindow:_detach_background()
         self.background:SetVisible(false)
         self.background:SetParent(nil)
         self.background = nil
+    end
+end
+
+function DropsWindow:_destroy_content_background()
+    if self.content_background ~= nil then
+        self.content_background:destroy()
+        self.content_background = nil
     end
 end
 
@@ -603,7 +628,6 @@ function DropsWindow:_promote_pending_chat_drops(now)
             record.shown_at = now
             record.expire_at = now + duration
             record.entry = self:_acquire_entry()
-            record.entry:SetParent(self)
             record.entry:apply_settings()
             record.entry:set_record(record)
             record.entry:SetVisible(true)
@@ -657,13 +681,13 @@ function DropsWindow:_force_remove_oldest_active()
 end
 
 function DropsWindow:_expire_active_drops(now)
-    local mode = _G.settings.drops.animation_mode
+    local animations_enabled = _G.settings.drops.animations_enabled == true
     local removed = false
 
     for i = #self._active_drops, 1, -1 do
         local record = self._active_drops[i]
         if record ~= nil and record.removing ~= true and now >= (record.expire_at or 0) then
-            if mode == LUI_ENUMS.drop_animation_mode.FADE_THEN_COLLAPSE then
+            if animations_enabled == true then
                 record.removing = true
                 record.fade_end_at = now + EXIT_FADE_DURATION
             else
@@ -675,7 +699,7 @@ function DropsWindow:_expire_active_drops(now)
     end
 
     if removed == true then
-        self:_layout_active_drops(now, mode ~= LUI_ENUMS.drop_animation_mode.OFF)
+        self:_layout_active_drops(now, false)
     end
 
     local faded = false
@@ -689,11 +713,12 @@ function DropsWindow:_expire_active_drops(now)
     end
 
     if faded == true then
-        self:_layout_active_drops(now, true)
+        self:_layout_active_drops(now, false)
     end
 end
 
 function DropsWindow:_layout_active_drops(now, animate)
+    local anchor_x, anchor_y = self:GetPosition()
     local width, height = self:GetSize()
     local active_count = #self._active_drops
     local row_h = _row_height()
@@ -724,31 +749,18 @@ function DropsWindow:_layout_active_drops(now, animate)
         end
     end
 
-    local allow_motion = animate == true and
-        _G.settings.drops.animation_mode ~= LUI_ENUMS.drop_animation_mode.OFF
-
     for i = 1, #ordered do
         local record = ordered[i]
         local target_y = base_y + ((i - 1) * step)
         record.target_y = target_y
 
         if record.entry ~= nil then
-            if record.current_y == nil then
-                record.current_y = target_y
-                record.entry:SetPosition(0, target_y)
-            elseif allow_motion == true and record.current_y ~= target_y then
-                record.move_start_at = now
-                record.move_end_at = now + COLLAPSE_DURATION
-                record.move_from_y = record.current_y
-                record.move_to_y = target_y
-            else
-                record.current_y = target_y
-                record.move_start_at = nil
-                record.move_end_at = nil
-                record.move_from_y = nil
-                record.move_to_y = nil
-                record.entry:SetPosition(0, target_y)
-            end
+            record.current_y = target_y
+            record.move_start_at = nil
+            record.move_end_at = nil
+            record.move_from_y = nil
+            record.move_to_y = nil
+            record.entry:SetPosition(anchor_x, anchor_y + target_y)
         end
     end
 
@@ -756,27 +768,12 @@ function DropsWindow:_layout_active_drops(now, animate)
 end
 
 function DropsWindow:_update_entry_positions(now)
+    local anchor_x, anchor_y = self:GetPosition()
     for i = 1, #self._active_drops do
         local record = self._active_drops[i]
         local entry = record ~= nil and record.entry or nil
         if entry ~= nil then
             local y = record.current_y or record.target_y or 0
-            if record.move_end_at ~= nil and record.move_start_at ~= nil and record.move_to_y ~= nil and record.move_from_y ~= nil then
-                local duration = record.move_end_at - record.move_start_at
-                if duration <= 0 or now >= record.move_end_at then
-                    y = record.move_to_y
-                    record.current_y = y
-                    record.move_start_at = nil
-                    record.move_end_at = nil
-                    record.move_from_y = nil
-                    record.move_to_y = nil
-                else
-                    local progress = (now - record.move_start_at) / duration
-                    local eased = _ease_out_quad(progress)
-                    y = record.move_from_y + ((record.move_to_y - record.move_from_y) * eased)
-                    record.current_y = y
-                end
-            end
 
             local opacity = 1
             if record.removing == true and record.fade_end_at ~= nil then
@@ -789,13 +786,13 @@ function DropsWindow:_update_entry_positions(now)
             end
 
             entry:set_opacity(opacity)
-            entry:SetPosition(0, math.floor(y + 0.5))
+            entry:SetPosition(anchor_x, anchor_y + math.floor(y + 0.5))
         end
     end
 end
 
 function DropsWindow:_refresh_background(move_mode)
-    if self.background == nil then
+    if self.background == nil or self.content_background == nil then
         return
     end
 
@@ -804,12 +801,15 @@ function DropsWindow:_refresh_background(move_mode)
         self.background:SetVisible(true)
         self.background:SetPosition(0, 0)
         self.background:SetSize(width, height)
+        self.content_background:SetVisible(false)
         return
     end
 
+    self.background:SetVisible(false)
+
     local active_count = #self._active_drops
     if active_count <= 0 then
-        self.background:SetVisible(false)
+        self.content_background:SetVisible(false)
         return
     end
 
@@ -825,9 +825,10 @@ function DropsWindow:_refresh_background(move_mode)
         end
     end
 
-    self.background:SetVisible(true)
-    self.background:SetPosition(0, base_y)
-    self.background:SetSize(width, block_h)
+    local anchor_x, anchor_y = self:GetPosition()
+    self.content_background:SetVisible(true)
+    self.content_background:SetPosition(anchor_x, anchor_y + base_y)
+    self.content_background:SetSize(width, block_h)
 end
 
 function DropsWindow:_hide_entries()

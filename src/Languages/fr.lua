@@ -374,6 +374,7 @@ FR = {
     ["Latest at bottom"] = "Le plus récent en bas", -- NOTE: new!
     ["Large (40)"] = "Grand (40)", -- NOTE: new!
     ["Visible duration (s)"] = "Durée visible (s)", -- NOTE: new!
+    ["Animations"] = "Animations", -- NOTE: new!
     ["Animation mode"] = "Mode d'animation", -- NOTE: new!
     ["Fade then collapse"] = "Fondu puis repli", -- NOTE: new!
     ["Instant then collapse"] = "Disparition immédiate puis repli", -- NOTE: new!

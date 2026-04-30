@@ -374,6 +374,7 @@ DE = {
     ["Latest at bottom"] = "Neuester unten", -- NOTE: new!
     ["Large (40)"] = "Groß (40)", -- NOTE: new!
     ["Visible duration (s)"] = "Sichtbare Dauer (s)", -- NOTE: new!
+    ["Animations"] = "Animationen", -- NOTE: new!
     ["Animation mode"] = "Animationsmodus", -- NOTE: new!
     ["Fade then collapse"] = "Ausblenden, dann zusammenziehen", -- NOTE: new!
     ["Instant then collapse"] = "Sofort entfernen, dann zusammenziehen", -- NOTE: new!

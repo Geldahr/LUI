@@ -640,7 +640,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 		["icon_size"] = 32.000000,
 		["width"] = 180.000000,
 		["flow"] = 2.000000,
-		["animation_mode"] = 1.000000,
+		["animations_enabled"] = true,
 		["hud"] =
 		{
 				["background_opacity"] = 0.000000,

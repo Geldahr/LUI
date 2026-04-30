@@ -883,8 +883,12 @@ function _G.ensure_loaded_settings()
     if dd.flow == nil then
         dd.flow = LUI_ENUMS.list_flow.BOTTOM_TO_TOP
     end
-    if dd.animation_mode == nil then
-        dd.animation_mode = LUI_ENUMS.drop_animation_mode.FADE_THEN_COLLAPSE
+    if dd.animations_enabled == nil then
+        if dd.animation_mode == nil then
+            dd.animations_enabled = true
+        else
+            dd.animations_enabled = dd.animation_mode ~= LUI_ENUMS.drop_animation_mode.OFF
+        end
     end
 
     ensure_ui_hud("drops", _pos_x(1830), _pos_y(1054))
