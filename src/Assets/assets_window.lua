@@ -3,6 +3,7 @@ import "Turbine.UI"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
+import "LUI.src.Utils.search_query"
 import "LUI.src.Assets.assets_entry"
 
 AssetsWindow = class(LuiWindow)
@@ -66,6 +67,10 @@ local GROUP_CHARACTER = "character"
 local STORAGE_ALL = "all"
 local OWNER_ALL = "__all__"
 local STACK_ITEMS_LABEL = "Stack items"
+local ASSETS_QUERY_TOKENS = {
+    owner = true,
+    store = true,
+}
 
 local VIEW_DETAILS_UP = Turbine.UI.Graphic(0x4110C76F)
 local VIEW_DETAILS_DOWN = Turbine.UI.Graphic(0x4110C76D)
@@ -131,6 +136,71 @@ local function _trim_text(text)
     value = value:gsub("^%s+", "")
     value = value:gsub("%s+$", "")
     return value
+end
+
+local function _compact_text(text)
+    return (_lower_text(_trim_text(text)):gsub("[%s_%-]", ""))
+end
+
+local function _parse_storage_filter_value(value)
+    local normalized = _compact_text(value)
+    if normalized == "" then
+        return STORAGE_ALL, false
+    end
+
+    local candidates = {
+        { key = STORAGE_ALL, aliases = { STORAGE_ALL, TR["All"] } },
+        { key = "backpack", aliases = { "backpack", TR["Backpack"] } },
+        { key = "bank", aliases = { "bank", TR["Bank"] } },
+        { key = "shared_storage", aliases = { "shared", "sharedstorage", "shared_storage", "shared-storage", TR["Shared Storage"] } },
+        { key = "vault", aliases = { "vault", TR["Vault"] } },
+    }
+
+    for candidate_index = 1, #candidates do
+        local candidate = candidates[candidate_index]
+        for alias_index = 1, #candidate.aliases do
+            if _compact_text(candidate.aliases[alias_index]) == normalized then
+                return candidate.key, true
+            end
+        end
+    end
+
+    local prefix_match = nil
+    for candidate_index = 1, #candidates do
+        local candidate = candidates[candidate_index]
+        local matched = false
+        for alias_index = 1, #candidate.aliases do
+            local alias = _compact_text(candidate.aliases[alias_index])
+            if alias ~= "" and string.find(alias, normalized, 1, true) == 1 then
+                matched = true
+                break
+            end
+        end
+        if matched == true then
+            if prefix_match ~= nil and prefix_match ~= candidate.key then
+                return STORAGE_ALL, false
+            end
+            prefix_match = candidate.key
+        end
+    end
+
+    if prefix_match ~= nil then
+        return prefix_match, true
+    end
+
+    return STORAGE_ALL, false
+end
+
+local function _parse_owner_query_value(value)
+    local normalized = _lower_text(_trim_text(value))
+    if normalized == "" then
+        return OWNER_ALL, false
+    end
+    if normalized == "all" or normalized == _lower_text(_trim_text(TR["All"])) then
+        return OWNER_ALL, true
+    end
+
+    return normalized, true
 end
 
 local function _source_rank(source_key)
@@ -405,115 +475,6 @@ local function _compare_display_records(left, right, sort_mode, grouping_mode)
     return _compare_display_fallback(left, right)
 end
 
-local function _push_filter_term(cur_group, term)
-    if term ~= nil and term ~= "" then
-        cur_group[#cur_group + 1] = term
-    end
-end
-
-local function _end_filter_group(groups, cur_group)
-    if #cur_group > 0 then
-        groups[#groups + 1] = cur_group
-    end
-end
-
-local function _parse_filter_query(query)
-    if type(query) ~= "string" then
-        return {}
-    end
-
-    local groups = {}
-    local cur_group = {}
-    local i = 1
-    local n = #query
-
-    while i <= n do
-        local c = query:sub(i, i)
-        if c == "\"" then
-            local j = i + 1
-            while j <= n and query:sub(j, j) ~= "\"" do
-                j = j + 1
-            end
-            _push_filter_term(cur_group, query:sub(i + 1, j - 1))
-            i = (j <= n) and (j + 1) or (n + 1)
-        elseif c == "|" then
-            _end_filter_group(groups, cur_group)
-            cur_group = {}
-            i = i + 1
-        elseif c:match("%s") then
-            i = i + 1
-        else
-            local j = i
-            while j <= n do
-                local cj = query:sub(j, j)
-                if cj == "|" or cj == "\"" or cj:match("%s") then
-                    break
-                end
-                j = j + 1
-            end
-            _push_filter_term(cur_group, query:sub(i, j - 1))
-            i = j
-        end
-    end
-
-    _end_filter_group(groups, cur_group)
-    return groups
-end
-
-local function _normalize_filter_groups(groups)
-    if groups == nil or #groups == 0 then
-        return {}
-    end
-
-    local out = {}
-    for gi = 1, #groups do
-        local group = groups[gi]
-        if group ~= nil and #group > 0 then
-            local normalized = {}
-            for ti = 1, #group do
-                local term = group[ti]
-                if type(term) == "string" then
-                    term = string.lower(term)
-                    if term ~= "" then
-                        normalized[#normalized + 1] = term
-                    end
-                end
-            end
-            if #normalized > 0 then
-                out[#out + 1] = normalized
-            end
-        end
-    end
-
-    return out
-end
-
-local function _matches_filter_groups(groups, haystack_lower)
-    if groups == nil or #groups == 0 then
-        return true
-    end
-    if type(haystack_lower) ~= "string" then
-        return false
-    end
-
-    for gi = 1, #groups do
-        local group = groups[gi]
-        local ok = true
-        for ti = 1, #group do
-            local term = group[ti]
-            if term ~= "" and string.find(haystack_lower, term, 1, true) == nil then
-                ok = false
-                break
-            end
-        end
-        if ok == true then
-            return true
-        end
-    end
-
-    return false
-end
-
 local function _mode_key(mode)
     if mode == LUI_ENUMS.assets_view_mode.ICONS then
         return "icons"
@@ -552,10 +513,17 @@ function AssetsWindow:Constructor()
     self.all_records = {}
     self.records = {}
     self.filter_groups = {}
+    self.filter_query_state = SearchQuery.parse("", ASSETS_QUERY_TOKENS)
     self.sort_mode = SORT_NAME_ASC
     self.grouping_mode = GROUP_NONE
     self.storage_filter = STORAGE_ALL
     self.owner_filter = OWNER_ALL
+    self.query_storage_filter = STORAGE_ALL
+    self.query_owner_filter = OWNER_ALL
+    self.query_storage_filter_active = false
+    self.query_owner_filter_active = false
+    self.query_storage_filter_valid = false
+    self.query_owner_filter_valid = false
     self.stack_items = false
     self.total_record_count = 0
 
@@ -957,7 +925,13 @@ end
 
 function AssetsWindow:update_filter()
     local query = self.filter_tb:GetText() or ""
-    self.filter_groups = _normalize_filter_groups(_parse_filter_query(query))
+    local state = SearchQuery.parse(query, ASSETS_QUERY_TOKENS)
+    self.filter_query_state = state
+    self.filter_groups = state.normalized_groups
+    self.query_owner_filter_active = state.token_map.owner ~= nil
+    self.query_storage_filter_active = state.token_map.store ~= nil
+    self.query_owner_filter, self.query_owner_filter_valid = _parse_owner_query_value(state.token_map.owner)
+    self.query_storage_filter, self.query_storage_filter_valid = _parse_storage_filter_value(state.token_map.store)
     self:_apply_record_view(true)
 end
 
@@ -1656,12 +1630,30 @@ end
 function AssetsWindow:_apply_record_view(reset_page)
     local filtered = {}
     local total_record_count = #self.all_records
+    local use_query_storage_filter = self.query_storage_filter_active == true
+    local use_query_owner_filter = self.query_owner_filter_active == true
+    local storage_filter = use_query_storage_filter == true and self.query_storage_filter or self.storage_filter
+    local owner_filter = use_query_owner_filter == true and self.query_owner_filter or self.owner_filter
 
     for i = 1, #self.all_records do
         local record = self.all_records[i]
-        if (self.storage_filter == STORAGE_ALL or record.source_key == self.storage_filter) and
-            (self.owner_filter == OWNER_ALL or record.owner == self.owner_filter) and
-            _matches_filter_groups(self.filter_groups, record.haystack_lower or "") == true then
+        local owner_matches = false
+        if use_query_owner_filter == true then
+            owner_matches = self.query_owner_filter_valid == true and
+                (owner_filter == OWNER_ALL or _lower_text(record.owner) == owner_filter)
+        else
+            owner_matches = owner_filter == OWNER_ALL or record.owner == owner_filter
+        end
+        local storage_matches = false
+        if use_query_storage_filter == true then
+            storage_matches = self.query_storage_filter_valid == true and
+                (storage_filter == STORAGE_ALL or record.source_key == storage_filter)
+        else
+            storage_matches = storage_filter == STORAGE_ALL or record.source_key == storage_filter
+        end
+        if storage_matches and
+            owner_matches and
+            SearchQuery.matches_groups(self.filter_groups, record.haystack_lower) == true then
             filtered[#filtered + 1] = record
         end
     end
