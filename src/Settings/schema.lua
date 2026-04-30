@@ -875,7 +875,7 @@ function _G.ensure_loaded_settings()
         dd.rows = 4
     end
     if dd.icon_size == nil then
-        dd.icon_size = 32
+        dd.icon_size = 24
     end
     if dd.width == nil then
         dd.width = 180

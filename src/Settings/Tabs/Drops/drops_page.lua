@@ -4,13 +4,13 @@ local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHAR
     SettingsFormPage
 
 local ICON_SIZE_LABELS = {
-    TR["Small (32)"],
-    TR["Large (40)"],
+    TR["Small (24)"],
+    TR["Large (30)"],
 }
 
 local ICON_SIZE_VALUES = {
-    32,
-    40,
+    24,
+    30,
 }
 
 DropsPage = class(SettingsFormPage)
