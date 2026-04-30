@@ -383,6 +383,9 @@ function SearchQuery.parse_path(value)
         if separator_index == nil then
             break
         end
+        if separator_index == #text then
+            return nil
+        end
         start_index = separator_index + 1
     end
 
