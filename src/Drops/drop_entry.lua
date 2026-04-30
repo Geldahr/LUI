@@ -8,6 +8,18 @@ local BASE_ROW_PADDING = 4
 local BASE_GAP = 6
 local BASE_QTY_WIDTH = 46
 local BASE_FONT_SIZE = 12
+local ITEM_INFO_CONTROL_OFFSET = -3
+local ITEM_INFO_CONTROL_EXTRA = 3
+
+local function _sanitize_image_id(value)
+    if type(value) ~= "number" then
+        value = tonumber(value)
+    end
+    if value == nil or value == 0 then
+        return nil
+    end
+    return value
+end
 
 local function _scaled_font(name, size)
     local font = FONT_TO_LOTRO(name, size * _G.settings.global.scale)
@@ -27,6 +39,12 @@ end
 local function _set_alpha_backdrop(control)
     control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     control:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+end
+
+local function _set_stretch_mode_fit(control)
+    if control ~= nil and control.SetStretchMode ~= nil then
+        control:SetStretchMode(1)
+    end
 end
 
 DropEntry = class(LuiBaseWindow)
@@ -61,18 +79,31 @@ function DropEntry:Constructor()
     self.icon_host:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.icon_host:SetMouseVisible(false)
 
-    self.item_control = Turbine.UI.Lotro.ItemControl()
-    self.item_control:SetParent(self.icon_host)
-    self.item_control:SetVisible(false)
-    self.item_control:SetMouseVisible(false)
-    self.item_control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.item_control:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    if self.item_control.SetStretchMode ~= nil then
-        self.item_control:SetStretchMode(1)
+    self.icon_background = Image()
+    self.icon_background:SetParent(self.icon_host)
+    self.icon_background:SetMouseVisible(false)
+    self.icon_background:SetZOrder(1)
+    if self.icon_background.SetBlendMode ~= nil then
+        self.icon_background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     end
-    if self.item_control.SetAllowDrop ~= nil then
-        self.item_control:SetAllowDrop(false)
+    _set_stretch_mode_fit(self.icon_background)
+
+    self.icon_foreground = Image()
+    self.icon_foreground:SetParent(self.icon_host)
+    self.icon_foreground:SetMouseVisible(false)
+    self.icon_foreground:SetZOrder(2)
+    if self.icon_foreground.SetBlendMode ~= nil then
+        self.icon_foreground:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     end
+    _set_stretch_mode_fit(self.icon_foreground)
+
+    self.item_info_control = Turbine.UI.Lotro.ItemInfoControl()
+    self.item_info_control:SetParent(self.icon_host)
+    self.item_info_control:SetVisible(false)
+    self.item_info_control:SetMouseVisible(false)
+    self.item_info_control:SetZOrder(0)
+    self.item_info_control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    _set_stretch_mode_fit(self.item_info_control)
 
     self.name_label = UI.Widgets.LuiLabel()
     self.name_label:SetParent(self)
@@ -106,8 +137,12 @@ function DropEntry:apply_settings()
     self.icon_host:SetPosition(self._padding, self._padding)
     self.icon_host:SetSize(self._icon_side, self._icon_side)
 
-    self.item_control:SetPosition(0, 0)
-    self.item_control:SetSize(self._icon_side + 1, self._icon_side + 1)
+    self.icon_background:SetPosition(0, 0)
+    self.icon_background:set_size(self._icon_side, self._icon_side)
+    self.icon_foreground:SetPosition(0, 0)
+    self.icon_foreground:set_size(self._icon_side, self._icon_side)
+    self.item_info_control:SetPosition(ITEM_INFO_CONTROL_OFFSET, ITEM_INFO_CONTROL_OFFSET)
+    self.item_info_control:SetSize(self._icon_side + ITEM_INFO_CONTROL_EXTRA, self._icon_side + ITEM_INFO_CONTROL_EXTRA)
 
     local font = _scaled_font("Verdana", BASE_FONT_SIZE)
     self.name_label:SetFont(font)
@@ -198,21 +233,47 @@ function DropEntry:_bind_item(item)
     if item == nil then
         self:SetMouseVisible(false)
         self.icon_host:SetMouseVisible(false)
-        self.item_control:SetMouseVisible(false)
-        self.item_control:SetVisible(false)
-        -- LotRO item handles can go stale while the row is still visible.
-        pcall(function()
-            self.item_control:SetItem(nil)
-        end)
+        self.icon_background:set_icon(nil, self._icon_side)
+        self.icon_background:SetVisible(false)
+        self.icon_foreground:set_icon(nil, self._icon_side)
+        self.icon_foreground:SetVisible(false)
+        self.item_info_control:SetMouseVisible(false)
+        self.item_info_control:SetVisible(false)
+        self.item_info_control:SetItemInfo(nil)
+        if self.item_info_control.SetQuantity ~= nil then
+            self.item_info_control:SetQuantity(1)
+        end
         return
+    end
+
+    local item_info = item:GetItemInfo()
+    local background_image_id = nil
+    local icon_id = nil
+    if item_info ~= nil then
+        if item_info.GetBackgroundImageID ~= nil then
+            background_image_id = _sanitize_image_id(item_info:GetBackgroundImageID())
+        end
+        if background_image_id == nil and item_info.GetQualityImageID ~= nil then
+            background_image_id = _sanitize_image_id(item_info:GetQualityImageID())
+        end
+        if item_info.GetIconImageID ~= nil then
+            icon_id = _sanitize_image_id(item_info:GetIconImageID())
+        end
     end
 
     self:SetMouseVisible(true)
     self.icon_host:SetMouseVisible(true)
-    self.item_control:SetMouseVisible(true)
-    self.item_control:SetVisible(true)
-    -- Bind through the game control directly so hover/tooltip behavior matches inventory.
-    pcall(function()
-        self.item_control:SetItem(item)
-    end)
+    self.icon_background:set_icon(background_image_id, self._icon_side)
+    self.icon_background:SetVisible(background_image_id ~= nil)
+    self.icon_foreground:set_icon(icon_id, self._icon_side)
+    self.icon_foreground:SetVisible(icon_id ~= nil)
+    self.item_info_control:SetMouseVisible(true)
+    self.item_info_control:SetVisible(true)
+    self.item_info_control:SetItemInfo(item_info)
+    if self.item_info_control.SetQuantity ~= nil then
+        self.item_info_control:SetQuantity(1)
+    end
+    _set_stretch_mode_fit(self.icon_background)
+    _set_stretch_mode_fit(self.icon_foreground)
+    _set_stretch_mode_fit(self.item_info_control)
 end
