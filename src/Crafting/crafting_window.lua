@@ -424,17 +424,20 @@ end
 
 local function _parse_rank_query_value(value)
     local normalized = _normalize_rank_match_value(value)
-    if normalized == "" or normalized == "all" then
-        return FILTER_ALL
+    if normalized == "" then
+        return FILTER_ALL, false
+    end
+    if normalized == "all" then
+        return FILTER_ALL, true
     end
 
     local numeric_tier = tonumber(normalized)
     if numeric_tier ~= nil then
         numeric_tier = math.floor(numeric_tier)
         if numeric_tier > 0 then
-            return numeric_tier
+            return numeric_tier, true
         end
-        return FILTER_ALL
+        return FILTER_ALL, false
     end
 
     local exact_match = nil
@@ -451,7 +454,7 @@ local function _parse_rank_query_value(value)
             end
         end
         if exact_match ~= nil then
-            return exact_match
+            return exact_match, true
         end
     end
 
@@ -473,36 +476,45 @@ local function _parse_rank_query_value(value)
 
         if matched == true then
             if prefix_match ~= nil and prefix_match ~= tier then
-                return FILTER_ALL
+                return FILTER_ALL, false
             end
             prefix_match = tier
         end
     end
 
-    return prefix_match or FILTER_ALL
+    if prefix_match ~= nil then
+        return prefix_match, true
+    end
+    return FILTER_ALL, false
 end
 
 local function _parse_availability_query_value(value)
     local normalized = _lower(_trim(value))
-    if normalized == "craftable" then
-        return AVAILABILITY_READY
+    if normalized == "" then
+        return AVAILABILITY_ALL, false
     end
-    return AVAILABILITY_ALL
+    if normalized == "all" or normalized == _lower(TR["All"]) then
+        return AVAILABILITY_ALL, true
+    end
+    if normalized == "craftable" or normalized == _lower(TR["Craftable"]) then
+        return AVAILABILITY_READY, true
+    end
+    return AVAILABILITY_ALL, false
 end
 
 local function _parse_favorite_query_value(value)
     if value == nil then
-        return false
+        return false, false
     end
 
     local normalized = _lower(_trim(value))
     if normalized == "" or normalized == "on" or normalized == "true" or normalized == "yes" or normalized == "1" then
-        return true
+        return true, true
     end
     if normalized == "off" or normalized == "false" or normalized == "no" or normalized == "0" then
-        return false
+        return false, true
     end
-    return false
+    return false, false
 end
 
 local function _normalize_display_mode(value)
@@ -1451,6 +1463,14 @@ function CraftingWindow:Constructor()
     self.query_rank_filter = FILTER_ALL
     self.query_availability_filter = AVAILABILITY_ALL
     self.query_favorite_filter_active = false
+    self.query_profession_filter_active = false
+    self.query_rank_filter_active = false
+    self.query_availability_filter_active = false
+    self.query_favorite_filter_explicit = false
+    self.query_profession_filter_valid = false
+    self.query_rank_filter_valid = false
+    self.query_availability_filter_valid = false
+    self.query_favorite_filter_valid = false
     self.favorite_entries = {}
     self.favorite_keys = {}
     self.display_mode = _normalize_display_mode(_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE)
@@ -1458,6 +1478,8 @@ function CraftingWindow:Constructor()
     self.level_max_filter = nil
     self.query_level_min_filter = nil
     self.query_level_max_filter = nil
+    self.query_level_filter_active = false
+    self.query_level_filter_valid = false
     self.selected_recipe_id = nil
     self.visible_recipes = {}
     self.recipe_page_index = 1
@@ -2443,14 +2465,20 @@ end
 
 function CraftingWindow:_profession_filter_from_query_value(value)
     local token = _lower(_trim(value))
+    if token == "" then
+        return FILTER_ALL, false
+    end
+    if token == "all" then
+        return FILTER_ALL, true
+    end
     local labels, values = self.store:get_profession_options()
     for index = 1, #values do
         if _lower(tostring(values[index])) == token or _lower(labels[index]) == token then
-            return values[index]
+            return values[index], true
         end
     end
 
-    return FILTER_ALL
+    return FILTER_ALL, false
 end
 
 function CraftingWindow:_sync_search_query_state()
@@ -2458,12 +2486,21 @@ function CraftingWindow:_sync_search_query_state()
     local level_filter = SearchQuery.read_level_filter(state, "lvl")
     self.search_query_state = state
     self.search_groups = state.normalized_groups
-    self.query_profession_filter = self:_profession_filter_from_query_value(state.token_map.prof)
-    self.query_rank_filter = _parse_rank_query_value(state.token_map.rank)
-    self.query_availability_filter = _parse_availability_query_value(state.token_map.avail)
-    self.query_favorite_filter_active = _parse_favorite_query_value(state.token_map.fav)
+    self.query_profession_filter_active = state.token_map.prof ~= nil
+    self.query_rank_filter_active = state.token_map.rank ~= nil
+    self.query_availability_filter_active = state.token_map.avail ~= nil
+    self.query_favorite_filter_explicit = state.token_map.fav ~= nil
+    self.query_profession_filter, self.query_profession_filter_valid =
+        self:_profession_filter_from_query_value(state.token_map.prof)
+    self.query_rank_filter, self.query_rank_filter_valid = _parse_rank_query_value(state.token_map.rank)
+    self.query_availability_filter, self.query_availability_filter_valid =
+        _parse_availability_query_value(state.token_map.avail)
+    self.query_favorite_filter_active, self.query_favorite_filter_valid =
+        _parse_favorite_query_value(state.token_map.fav)
     self.query_level_min_filter = level_filter.min
     self.query_level_max_filter = level_filter.max
+    self.query_level_filter_active = state.token_map.lvl ~= nil
+    self.query_level_filter_valid = level_filter.active == true
 end
 
 function CraftingWindow:set_favorite_filter(active)
@@ -3041,38 +3078,47 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
     if recipe == nil then
         return false
     end
+    if self.query_profession_filter_active == true and self.query_profession_filter_valid ~= true then
+        return false
+    end
+    if self.query_rank_filter_active == true and self.query_rank_filter_valid ~= true then
+        return false
+    end
+    if self.query_availability_filter_active == true and self.query_availability_filter_valid ~= true then
+        return false
+    end
+    if self.query_favorite_filter_explicit == true and self.query_favorite_filter_valid ~= true then
+        return false
+    end
+    if self.query_level_filter_active == true and self.query_level_filter_valid ~= true then
+        return false
+    end
 
-    if self.profession_filter ~= FILTER_ALL and recipe.profession_key ~= self.profession_filter then
+    local profession_filter = self.query_profession_filter_active == true and
+        self.query_profession_filter or self.profession_filter
+    if profession_filter ~= FILTER_ALL and recipe.profession_key ~= profession_filter then
         return false
     end
-    if self.query_profession_filter ~= FILTER_ALL and recipe.profession_key ~= self.query_profession_filter then
-        return false
-    end
-    local required_rank = self.rank_filter
-    if self.query_rank_filter ~= FILTER_ALL then
-        if required_rank ~= FILTER_ALL and required_rank ~= self.query_rank_filter then
-            return false
-        end
-        required_rank = self.query_rank_filter
-    end
+    local required_rank = self.query_rank_filter_active == true and self.query_rank_filter or self.rank_filter
     if required_rank ~= FILTER_ALL and tonumber(recipe.tier) ~= required_rank then
         return false
     end
     if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
         return false
     end
-    if (self.favorite_filter_active == true or self.query_favorite_filter_active == true) and
-        self:_is_recipe_favorite(recipe) ~= true then
+    local require_favorite = self.favorite_filter_active
+    if self.query_favorite_filter_explicit == true then
+        require_favorite = self.query_favorite_filter_active
+    end
+    if require_favorite == true and self:_is_recipe_favorite(recipe) ~= true then
         return false
     end
 
-    local filter_min = self.level_min_filter
-    local filter_max = self.level_max_filter
-    if self.query_level_min_filter ~= nil and (filter_min == nil or self.query_level_min_filter > filter_min) then
-        filter_min = self.query_level_min_filter
-    end
-    if self.query_level_max_filter ~= nil and (filter_max == nil or self.query_level_max_filter < filter_max) then
-        filter_max = self.query_level_max_filter
+    local filter_min = self.query_level_min_filter
+    local filter_max = self.query_level_max_filter
+    if self.query_level_filter_active ~= true then
+        filter_min = self.level_min_filter
+        filter_max = self.level_max_filter
     end
     if filter_min ~= nil or filter_max ~= nil then
         local required_level = tonumber(self:_recipe_required_level(recipe))
@@ -3087,16 +3133,11 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
         end
     end
 
-    local require_ready = self.availability_filter == AVAILABILITY_READY or
-        self.query_availability_filter == AVAILABILITY_READY
-    local require_missing = self.availability_filter == AVAILABILITY_MISSING or
-        self.query_availability_filter == AVAILABILITY_MISSING
-    if require_ready == true and require_missing == true then
-        return false
-    end
-    if require_ready == true then
+    local availability_filter = self.query_availability_filter_active == true and
+        self.query_availability_filter or self.availability_filter
+    if availability_filter == AVAILABILITY_READY then
         return status ~= nil and status.craftable == true
-    elseif require_missing == true then
+    elseif availability_filter == AVAILABILITY_MISSING then
         return status ~= nil and status.craftable ~= true
     end
 
@@ -3159,10 +3200,9 @@ function CraftingWindow:_recipe_page_capacity()
 end
 
 function CraftingWindow:_recipe_filter_needs_status()
-    return self.availability_filter == AVAILABILITY_READY or
-        self.availability_filter == AVAILABILITY_MISSING or
-        self.query_availability_filter == AVAILABILITY_READY or
-        self.query_availability_filter == AVAILABILITY_MISSING
+    local availability_filter = self.query_availability_filter_active == true and
+        self.query_availability_filter or self.availability_filter
+    return availability_filter == AVAILABILITY_READY or availability_filter == AVAILABILITY_MISSING
 end
 
 function CraftingWindow:_refresh_recipe_page_controls()

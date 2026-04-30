@@ -111,6 +111,10 @@ local function _same_text(left, right)
     return _lower_text(_trim_text(left)) == _lower_text(_trim_text(right))
 end
 
+local function _is_all_filter_token(value)
+    return _same_text(value, "all") == true or _same_text(value, TR["All"]) == true
+end
+
 local function _parse_location_token_value(value)
     local parts = SearchQuery.parse_path(value)
     if type(parts) ~= "table" or #parts == 0 or #parts > 3 then
@@ -123,14 +127,24 @@ end
 local function _parse_genus_token_value(value)
     local parts = SearchQuery.parse_path(value)
     if type(parts) ~= "table" or #parts == 0 or #parts > 2 then
-        return FILTER_ALL, FILTER_NONE
+        return FILTER_ALL, FILTER_NONE, false
+    end
+
+    local genus = _trim_text(parts[1])
+    if genus == "" or _is_all_filter_token(genus) == true then
+        return FILTER_ALL, FILTER_NONE, true
     end
 
     if #parts == 1 then
-        return parts[1], FILTER_ALL
+        return genus, FILTER_ALL, true
     end
 
-    return parts[1], parts[2]
+    local subcategory = _trim_text(parts[2])
+    if subcategory == "" or _is_all_filter_token(subcategory) == true then
+        return genus, FILTER_ALL, true
+    end
+
+    return genus, subcategory, true
 end
 
 local function _record_matches_location_parts(record, parts)
@@ -1125,8 +1139,15 @@ function BestiaryWindow:Constructor()
     self.query_state = SearchQuery.parse("", BESTIARY_QUERY_TOKENS)
     self.query_level_min = nil
     self.query_level_max = nil
+    self.query_level_filter_active = false
+    self.query_level_filter_valid = false
     self.query_genus_filter = FILTER_ALL
     self.query_subcategory_filter = FILTER_NONE
+    self.query_genus_filter_active = false
+    self.query_genus_filter_valid = false
+    self.query_location_filter_active = false
+    self.query_location_filter_valid = false
+    self.query_location_parts = nil
     self.filter_groups = {}
     self.genus_filter = FILTER_ALL
     self.subcategory_filter = FILTER_NONE
@@ -1593,11 +1614,19 @@ function BestiaryWindow:update_filter()
     local query = self.filter_tb:GetText() or ""
     local state = SearchQuery.parse(query, BESTIARY_QUERY_TOKENS)
     local level_filter = SearchQuery.read_level_filter(state, "lvl")
+    local location_parts = _parse_location_token_value(state.token_map.loc)
     self.query_state = state
     self.filter_groups = state.normalized_groups
     self.query_level_min = level_filter.min
     self.query_level_max = level_filter.max
-    self.query_genus_filter, self.query_subcategory_filter = _parse_genus_token_value(state.token_map.gen)
+    self.query_level_filter_active = state.token_map.lvl ~= nil
+    self.query_level_filter_valid = level_filter.active == true
+    self.query_genus_filter, self.query_subcategory_filter, self.query_genus_filter_valid =
+        _parse_genus_token_value(state.token_map.gen)
+    self.query_genus_filter_active = state.token_map.gen ~= nil
+    self.query_location_filter_active = state.token_map.loc ~= nil
+    self.query_location_filter_valid = location_parts ~= nil
+    self.query_location_parts = location_parts
     self.page_index = 1
     self:apply_view()
 end
@@ -2172,26 +2201,38 @@ function BestiaryWindow:apply_view()
     local filtered = {}
     local filter_groups = self.filter_groups
     local has_query = type(filter_groups) == "table" and #filter_groups > 0
-    local filter_level_min, filter_level_max = _read_level_filter_range(self)
-    if self.query_level_min ~= nil and (filter_level_min == nil or self.query_level_min > filter_level_min) then
-        filter_level_min = self.query_level_min
+    local filter_level_min = self.query_level_min
+    local filter_level_max = self.query_level_max
+    if self.query_level_filter_active ~= true then
+        filter_level_min, filter_level_max = _read_level_filter_range(self)
     end
-    if self.query_level_max ~= nil and (filter_level_max == nil or self.query_level_max < filter_level_max) then
-        filter_level_max = self.query_level_max
-    end
-    local location_parts = _parse_location_token_value(self.query_state.token_map.loc)
-    local impossible_level_range = filter_level_min ~= nil and filter_level_max ~= nil and filter_level_min > filter_level_max
+    local location_parts = self.query_location_parts
+    local impossible_level_range = (self.query_level_filter_active == true and self.query_level_filter_valid ~= true) or
+        (filter_level_min ~= nil and filter_level_max ~= nil and filter_level_min > filter_level_max)
+    local use_query_taxonomy = self.query_genus_filter_active == true
+    local genus_filter = use_query_taxonomy == true and self.query_genus_filter or self.genus_filter
+    local subcategory_filter = use_query_taxonomy == true and self.query_subcategory_filter or self.subcategory_filter
     for i = 1, #self.all_records do
         local record = self.all_records[i]
-        local genus_ok = (self.genus_filter == FILTER_ALL or record.genus == self.genus_filter) and
-            (self.query_genus_filter == FILTER_ALL or _same_text(record.genus, self.query_genus_filter) == true)
-        local subcategory_ok = (self.subcategory_filter == FILTER_NONE or
-            self.subcategory_filter == FILTER_ALL or record.subcategory == self.subcategory_filter) and
-            (self.query_subcategory_filter == FILTER_NONE or
-            self.query_subcategory_filter == FILTER_ALL or
-            _same_text(record.subcategory, self.query_subcategory_filter) == true)
+        local genus_ok = self.query_genus_filter_active ~= true or self.query_genus_filter_valid == true
+        if genus_ok == true and genus_filter == FILTER_ALL then
+            genus_ok = true
+        elseif genus_ok == true and use_query_taxonomy == true then
+            genus_ok = _same_text(record.genus, genus_filter) == true
+        elseif genus_ok == true then
+            genus_ok = record.genus == genus_filter
+        end
+        local subcategory_ok = self.query_genus_filter_active ~= true or self.query_genus_filter_valid == true
+        if subcategory_ok == true and (subcategory_filter == FILTER_NONE or subcategory_filter == FILTER_ALL) then
+            subcategory_ok = true
+        elseif subcategory_ok == true and use_query_taxonomy == true then
+            subcategory_ok = _same_text(record.subcategory, subcategory_filter) == true
+        elseif subcategory_ok == true then
+            subcategory_ok = record.subcategory == subcategory_filter
+        end
         local level_ok = impossible_level_range ~= true and _matches_level_range(record, filter_level_min, filter_level_max)
-        local location_ok = _record_matches_location_parts(record, location_parts)
+        local location_ok = self.query_location_filter_active ~= true or
+            (self.query_location_filter_valid == true and _record_matches_location_parts(record, location_parts))
         record._matched_drop_lookup = nil
         if genus_ok == true and subcategory_ok == true and level_ok == true and location_ok == true then
             local query_ok = true

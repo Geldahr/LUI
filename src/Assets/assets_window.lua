@@ -138,24 +138,69 @@ local function _trim_text(text)
     return value
 end
 
-local function _normalize_storage_filter_value(value)
-    local normalized = _lower_text(_trim_text(value))
-    if normalized == "vault" or normalized == "bank" or normalized == "backpack" then
-        return normalized
-    end
-    if normalized == "shared" or normalized == "sharedstorage" or normalized == "shared_storage" then
-        return "shared_storage"
-    end
-    return STORAGE_ALL
+local function _compact_text(text)
+    return (_lower_text(_trim_text(text)):gsub("[%s_%-]", ""))
 end
 
-local function _normalize_owner_query_value(value)
-    local normalized = _lower_text(_trim_text(value))
+local function _parse_storage_filter_value(value)
+    local normalized = _compact_text(value)
     if normalized == "" then
-        return OWNER_ALL
+        return STORAGE_ALL, false
     end
 
-    return normalized
+    local candidates = {
+        { key = STORAGE_ALL, aliases = { STORAGE_ALL, TR["All"] } },
+        { key = "backpack", aliases = { "backpack", TR["Backpack"] } },
+        { key = "bank", aliases = { "bank", TR["Bank"] } },
+        { key = "shared_storage", aliases = { "shared", "sharedstorage", "shared_storage", "shared-storage", TR["Shared Storage"] } },
+        { key = "vault", aliases = { "vault", TR["Vault"] } },
+    }
+
+    for candidate_index = 1, #candidates do
+        local candidate = candidates[candidate_index]
+        for alias_index = 1, #candidate.aliases do
+            if _compact_text(candidate.aliases[alias_index]) == normalized then
+                return candidate.key, true
+            end
+        end
+    end
+
+    local prefix_match = nil
+    for candidate_index = 1, #candidates do
+        local candidate = candidates[candidate_index]
+        local matched = false
+        for alias_index = 1, #candidate.aliases do
+            local alias = _compact_text(candidate.aliases[alias_index])
+            if alias ~= "" and string.find(alias, normalized, 1, true) == 1 then
+                matched = true
+                break
+            end
+        end
+        if matched == true then
+            if prefix_match ~= nil and prefix_match ~= candidate.key then
+                return STORAGE_ALL, false
+            end
+            prefix_match = candidate.key
+        end
+    end
+
+    if prefix_match ~= nil then
+        return prefix_match, true
+    end
+
+    return STORAGE_ALL, false
+end
+
+local function _parse_owner_query_value(value)
+    local normalized = _lower_text(_trim_text(value))
+    if normalized == "" then
+        return OWNER_ALL, false
+    end
+    if normalized == "all" or normalized == _lower_text(_trim_text(TR["All"])) then
+        return OWNER_ALL, true
+    end
+
+    return normalized, true
 end
 
 local function _source_rank(source_key)
@@ -475,6 +520,10 @@ function AssetsWindow:Constructor()
     self.owner_filter = OWNER_ALL
     self.query_storage_filter = STORAGE_ALL
     self.query_owner_filter = OWNER_ALL
+    self.query_storage_filter_active = false
+    self.query_owner_filter_active = false
+    self.query_storage_filter_valid = false
+    self.query_owner_filter_valid = false
     self.stack_items = false
     self.total_record_count = 0
 
@@ -879,8 +928,10 @@ function AssetsWindow:update_filter()
     local state = SearchQuery.parse(query, ASSETS_QUERY_TOKENS)
     self.filter_query_state = state
     self.filter_groups = state.normalized_groups
-    self.query_owner_filter = _normalize_owner_query_value(state.token_map.owner)
-    self.query_storage_filter = _normalize_storage_filter_value(state.token_map.store)
+    self.query_owner_filter_active = state.token_map.owner ~= nil
+    self.query_storage_filter_active = state.token_map.store ~= nil
+    self.query_owner_filter, self.query_owner_filter_valid = _parse_owner_query_value(state.token_map.owner)
+    self.query_storage_filter, self.query_storage_filter_valid = _parse_storage_filter_value(state.token_map.store)
     self:_apply_record_view(true)
 end
 
@@ -1579,13 +1630,29 @@ end
 function AssetsWindow:_apply_record_view(reset_page)
     local filtered = {}
     local total_record_count = #self.all_records
+    local use_query_storage_filter = self.query_storage_filter_active == true
+    local use_query_owner_filter = self.query_owner_filter_active == true
+    local storage_filter = use_query_storage_filter == true and self.query_storage_filter or self.storage_filter
+    local owner_filter = use_query_owner_filter == true and self.query_owner_filter or self.owner_filter
 
     for i = 1, #self.all_records do
         local record = self.all_records[i]
-        if (self.storage_filter == STORAGE_ALL or record.source_key == self.storage_filter) and
-            (self.owner_filter == OWNER_ALL or record.owner == self.owner_filter) and
-            (self.query_storage_filter == STORAGE_ALL or record.source_key == self.query_storage_filter) and
-            (self.query_owner_filter == OWNER_ALL or _lower_text(record.owner) == self.query_owner_filter) and
+        local owner_matches = false
+        if use_query_owner_filter == true then
+            owner_matches = self.query_owner_filter_valid == true and
+                (owner_filter == OWNER_ALL or _lower_text(record.owner) == owner_filter)
+        else
+            owner_matches = owner_filter == OWNER_ALL or record.owner == owner_filter
+        end
+        local storage_matches = false
+        if use_query_storage_filter == true then
+            storage_matches = self.query_storage_filter_valid == true and
+                (storage_filter == STORAGE_ALL or record.source_key == storage_filter)
+        else
+            storage_matches = storage_filter == STORAGE_ALL or record.source_key == storage_filter
+        end
+        if storage_matches and
+            owner_matches and
             SearchQuery.matches_groups(self.filter_groups, record.haystack_lower) == true then
             filtered[#filtered + 1] = record
         end
