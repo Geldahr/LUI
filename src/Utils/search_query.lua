@@ -364,12 +364,26 @@ function SearchQuery.parse_path(value)
     end
 
     local parts = {}
-    for segment in string.gmatch(text, "([^>]+)") do
+    local start_index = 1
+    while start_index <= #text do
+        local separator_index = string.find(text, ">", start_index, true)
+        local segment
+        if separator_index == nil then
+            segment = text:sub(start_index)
+        else
+            segment = text:sub(start_index, separator_index - 1)
+        end
+
         local part = _trim_text(segment)
         if part == "" then
             return nil
         end
         parts[#parts + 1] = part
+
+        if separator_index == nil then
+            break
+        end
+        start_index = separator_index + 1
     end
 
     if #parts == 0 then
