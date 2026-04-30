@@ -9,7 +9,7 @@ import "LUI.src.Utils.callbacks"
 local CHAT_DISPLAY_DELAY = 0.25
 local ITEM_MATCH_WINDOW = 1.00
 local KILL_ATTRIBUTION_WINDOW = 0.20
-local EXIT_FADE_DURATION = 1.00
+local EXIT_FADE_DURATION = 0.50
 
 local BASE_ROW_PADDING = 4
 local BASE_SPACING = 0
@@ -145,6 +145,25 @@ local function _safe_item_name(item)
         local item_info = item:GetItemInfo()
         if item_info ~= nil and item_info.GetName ~= nil then
             return item_info:GetName()
+        end
+    end
+
+    return nil
+end
+
+local function _find_backpack_item_by_name(backpack, normalized_name)
+    if backpack == nil or normalized_name == nil then
+        return nil
+    end
+    if backpack.GetSize == nil or backpack.GetItem == nil then
+        return nil
+    end
+
+    local size = tonumber(backpack:GetSize()) or 0
+    for index = 1, size do
+        local item = backpack:GetItem(index)
+        if item ~= nil and _normalize_item_name(_safe_item_name(item)) == normalized_name then
+            return item
         end
     end
 
@@ -471,6 +490,8 @@ function DropsWindow:_queue_chat_drop(name, quantity, now)
     local pending_item = self:_take_pending_item_event(normalized_name, now)
     if pending_item ~= nil then
         record.live_item = pending_item.item
+    elseif self.backpack ~= nil then
+        record.live_item = _find_backpack_item_by_name(self.backpack, normalized_name)
     end
 
     self._pending_chat_drops[#self._pending_chat_drops + 1] = record
@@ -627,6 +648,9 @@ function DropsWindow:_promote_pending_chat_drops(now)
 
             record.shown_at = now
             record.expire_at = now + duration
+            if record.live_item == nil and self.backpack ~= nil then
+                record.live_item = _find_backpack_item_by_name(self.backpack, record.normalized_name)
+            end
             record.entry = self:_acquire_entry()
             record.entry:apply_settings()
             record.entry:set_record(record)
