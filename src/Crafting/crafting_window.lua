@@ -2887,7 +2887,10 @@ function CraftingWindow:_recipe_page_capacity()
 end
 
 function CraftingWindow:_recipe_filter_needs_status()
-    return self.availability_filter == AVAILABILITY_READY or self.availability_filter == AVAILABILITY_MISSING
+    return self.availability_filter == AVAILABILITY_READY or
+        self.availability_filter == AVAILABILITY_MISSING or
+        self.query_availability_filter == AVAILABILITY_READY or
+        self.query_availability_filter == AVAILABILITY_MISSING
 end
 
 function CraftingWindow:_refresh_recipe_page_controls()

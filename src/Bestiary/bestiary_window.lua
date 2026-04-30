@@ -2184,11 +2184,12 @@ function BestiaryWindow:apply_view()
     for i = 1, #self.all_records do
         local record = self.all_records[i]
         local genus_ok = (self.genus_filter == FILTER_ALL or record.genus == self.genus_filter) and
-            (self.query_genus_filter == FILTER_ALL or record.genus == self.query_genus_filter)
+            (self.query_genus_filter == FILTER_ALL or _same_text(record.genus, self.query_genus_filter) == true)
         local subcategory_ok = (self.subcategory_filter == FILTER_NONE or
             self.subcategory_filter == FILTER_ALL or record.subcategory == self.subcategory_filter) and
             (self.query_subcategory_filter == FILTER_NONE or
-            self.query_subcategory_filter == FILTER_ALL or record.subcategory == self.query_subcategory_filter)
+            self.query_subcategory_filter == FILTER_ALL or
+            _same_text(record.subcategory, self.query_subcategory_filter) == true)
         local level_ok = impossible_level_range ~= true and _matches_level_range(record, filter_level_min, filter_level_max)
         local location_ok = _record_matches_location_parts(record, location_parts)
         record._matched_drop_lookup = nil
