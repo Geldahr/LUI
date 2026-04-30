@@ -182,6 +182,14 @@ local function _row_spacing()
     return lui_scaled_int(BASE_SPACING)
 end
 
+local function _move_duration()
+    local duration_ms = tonumber(_G.settings.drops.move_duration)
+    if duration_ms == nil or duration_ms <= 0 then
+        return 0
+    end
+    return duration_ms / 1000
+end
+
 local DropBackgroundWindow = class(LuiBaseWindow)
 
 function DropBackgroundWindow:Constructor()
@@ -479,10 +487,13 @@ function DropsWindow:_queue_chat_drop(name, quantity, now)
         fade_end_at = nil,
         opacity = 1,
         current_y = nil,
+        target_y = nil,
+        pinned_y = nil,
         move_start_at = nil,
         move_end_at = nil,
         move_from_y = nil,
         move_to_y = nil,
+        layout_excluded = false,
         entry = nil,
         live_item = nil,
     }
@@ -642,8 +653,8 @@ function DropsWindow:_promote_pending_chat_drops(now)
         local record = self._pending_chat_drops[i]
         if record ~= nil and now >= (record.display_after or 0) then
             table.remove(self._pending_chat_drops, i)
-            if #self._active_drops >= self:_rows_capacity() then
-                self:_force_remove_oldest_active()
+            while self:_layout_record_count() >= self:_rows_capacity() do
+                self:_remove_oldest_visible_for_overflow(now)
             end
 
             record.shown_at = now
@@ -695,13 +706,106 @@ function DropsWindow:_recycle_entry(record)
     record.entry = nil
 end
 
-function DropsWindow:_force_remove_oldest_active()
-    if #self._active_drops == 0 then
+function DropsWindow:_layout_record_count()
+    local count = 0
+    for i = 1, #self._active_drops do
+        local record = self._active_drops[i]
+        if record ~= nil and record.layout_excluded ~= true then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function DropsWindow:_layout_block_height(count)
+    if count <= 0 then
+        return 0
+    end
+
+    local row_h = _row_height()
+    local spacing = _row_spacing()
+    return (count * row_h) + ((count - 1) * spacing)
+end
+
+function DropsWindow:_layout_base_y(count)
+    local _, height = self:GetSize()
+    local base_y = 0
+    if _G.settings.drops.align == LUI_ENUMS.vertical_align.BOTTOM then
+        base_y = height - self:_layout_block_height(count)
+        if base_y < 0 then
+            base_y = 0
+        end
+    end
+    return base_y
+end
+
+function DropsWindow:_ordered_layout_records()
+    local ordered = {}
+    local flow = _G.settings.drops.flow
+
+    if flow == LUI_ENUMS.list_flow.TOP_TO_BOTTOM then
+        for i = #self._active_drops, 1, -1 do
+            local record = self._active_drops[i]
+            if record ~= nil and record.layout_excluded ~= true then
+                ordered[#ordered + 1] = record
+            end
+        end
+    else
+        for i = 1, #self._active_drops do
+            local record = self._active_drops[i]
+            if record ~= nil and record.layout_excluded ~= true then
+                ordered[#ordered + 1] = record
+            end
+        end
+    end
+
+    return ordered
+end
+
+function DropsWindow:_clear_move_state(record)
+    record.move_start_at = nil
+    record.move_end_at = nil
+    record.move_from_y = nil
+    record.move_to_y = nil
+end
+
+function DropsWindow:_set_entry_y(record, anchor_x, anchor_y, y)
+    record.current_y = y
+    if record.entry ~= nil then
+        record.entry:SetPosition(anchor_x, anchor_y + math.floor(y + 0.5))
+    end
+end
+
+function DropsWindow:_find_oldest_visible_record_index()
+    for i = 1, #self._active_drops do
+        local record = self._active_drops[i]
+        if record ~= nil and record.layout_excluded ~= true then
+            return i
+        end
+    end
+    return nil
+end
+
+function DropsWindow:_remove_oldest_visible_for_overflow(now)
+    local index = self:_find_oldest_visible_record_index()
+    if index == nil then
         return
     end
 
-    local record = table.remove(self._active_drops, 1)
-    self:_recycle_entry(record)
+    local record = self._active_drops[index]
+    if _G.settings.drops.animations_enabled == true then
+        record.removing = true
+        if record.fade_end_at == nil or now > record.fade_end_at then
+            record.fade_end_at = now + EXIT_FADE_DURATION
+        end
+        record.layout_excluded = true
+        record.pinned_y = record.current_y or record.target_y or 0
+        record.target_y = record.pinned_y
+        self:_clear_move_state(record)
+    else
+        table.remove(self._active_drops, index)
+        self:_recycle_entry(record)
+    end
 end
 
 function DropsWindow:_expire_active_drops(now)
@@ -737,54 +841,50 @@ function DropsWindow:_expire_active_drops(now)
     end
 
     if faded == true then
-        self:_layout_active_drops(now, false)
+        self:_layout_active_drops(now, animations_enabled)
     end
 end
 
 function DropsWindow:_layout_active_drops(now, animate)
     local anchor_x, anchor_y = self:GetPosition()
-    local width, height = self:GetSize()
-    local active_count = #self._active_drops
+    local active_count = self:_layout_record_count()
     local row_h = _row_height()
     local spacing = _row_spacing()
     local step = row_h + spacing
-    local block_h = 0
-    if active_count > 0 then
-        block_h = (active_count * row_h) + ((active_count - 1) * spacing)
-    end
-
-    local flow = _G.settings.drops.flow
-    local base_y = 0
-    if flow == LUI_ENUMS.list_flow.BOTTOM_TO_TOP then
-        base_y = height - block_h
-        if base_y < 0 then
-            base_y = 0
-        end
-    end
-
-    local ordered = {}
-    if flow == LUI_ENUMS.list_flow.TOP_TO_BOTTOM then
-        for i = active_count, 1, -1 do
-            ordered[#ordered + 1] = self._active_drops[i]
-        end
-    else
-        for i = 1, active_count do
-            ordered[#ordered + 1] = self._active_drops[i]
-        end
-    end
+    local base_y = self:_layout_base_y(active_count)
+    local ordered = self:_ordered_layout_records()
+    local move_duration = _move_duration()
 
     for i = 1, #ordered do
         local record = ordered[i]
         local target_y = base_y + ((i - 1) * step)
         record.target_y = target_y
+        record.layout_excluded = false
+        record.pinned_y = nil
 
         if record.entry ~= nil then
+            if animate == true and move_duration > 0 and record.current_y ~= nil and math.abs(record.current_y - target_y) > 0.01 then
+                record.move_start_at = now
+                record.move_end_at = now + move_duration
+                record.move_from_y = record.current_y
+                record.move_to_y = target_y
+            else
+                self:_clear_move_state(record)
+                self:_set_entry_y(record, anchor_x, anchor_y, target_y)
+            end
+        else
             record.current_y = target_y
-            record.move_start_at = nil
-            record.move_end_at = nil
-            record.move_from_y = nil
-            record.move_to_y = nil
-            record.entry:SetPosition(anchor_x, anchor_y + target_y)
+        end
+    end
+
+    for i = 1, #self._active_drops do
+        local record = self._active_drops[i]
+        if record ~= nil and record.layout_excluded == true then
+            local pinned_y = record.pinned_y or record.current_y or record.target_y or 0
+            record.pinned_y = pinned_y
+            record.target_y = pinned_y
+            self:_clear_move_state(record)
+            self:_set_entry_y(record, anchor_x, anchor_y, pinned_y)
         end
     end
 
@@ -798,6 +898,26 @@ function DropsWindow:_update_entry_positions(now)
         local entry = record ~= nil and record.entry or nil
         if entry ~= nil then
             local y = record.current_y or record.target_y or 0
+
+            if record.move_end_at ~= nil and record.move_start_at ~= nil and record.move_from_y ~= nil and record.move_to_y ~= nil then
+                if now >= record.move_end_at then
+                    y = record.move_to_y
+                    self:_clear_move_state(record)
+                else
+                    local duration = record.move_end_at - record.move_start_at
+                    local progress = 1
+                    if duration > 0 then
+                        progress = (now - record.move_start_at) / duration
+                    end
+                    if progress < 0 then
+                        progress = 0
+                    elseif progress > 1 then
+                        progress = 1
+                    end
+                    y = record.move_from_y + ((record.move_to_y - record.move_from_y) * progress)
+                end
+                record.current_y = y
+            end
 
             local opacity = 1
             if record.removing == true and record.fade_end_at ~= nil then
@@ -831,23 +951,14 @@ function DropsWindow:_refresh_background(move_mode)
 
     self.background:SetVisible(false)
 
-    local active_count = #self._active_drops
+    local active_count = self:_layout_record_count()
     if active_count <= 0 then
         self.content_background:SetVisible(false)
         return
     end
 
-    local row_h = _row_height()
-    local spacing = _row_spacing()
-    local block_h = (active_count * row_h) + ((active_count - 1) * spacing)
-    local flow = _G.settings.drops.flow
-    local base_y = 0
-    if flow == LUI_ENUMS.list_flow.BOTTOM_TO_TOP then
-        base_y = height - block_h
-        if base_y < 0 then
-            base_y = 0
-        end
-    end
+    local block_h = self:_layout_block_height(active_count)
+    local base_y = self:_layout_base_y(active_count)
 
     local anchor_x, anchor_y = self:GetPosition()
     self.content_background:SetVisible(true)

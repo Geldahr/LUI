@@ -883,12 +883,22 @@ function _G.ensure_loaded_settings()
     if dd.flow == nil then
         dd.flow = LUI_ENUMS.list_flow.BOTTOM_TO_TOP
     end
+    if dd.align == nil then
+        if dd.flow == LUI_ENUMS.list_flow.TOP_TO_BOTTOM then
+            dd.align = LUI_ENUMS.vertical_align.TOP
+        else
+            dd.align = LUI_ENUMS.vertical_align.BOTTOM
+        end
+    end
     if dd.animations_enabled == nil then
         if dd.animation_mode == nil then
             dd.animations_enabled = true
         else
             dd.animations_enabled = dd.animation_mode ~= LUI_ENUMS.drop_animation_mode.OFF
         end
+    end
+    if dd.move_duration == nil then
+        dd.move_duration = 500
     end
 
     ensure_ui_hud("drops", _pos_x(1830), _pos_y(1054))

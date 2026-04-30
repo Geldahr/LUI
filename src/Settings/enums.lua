@@ -84,6 +84,11 @@ e.list_flow = {
     BOTTOM_TO_TOP = 2,
 }
 
+e.vertical_align = {
+    TOP = 1,
+    BOTTOM = 2,
+}
+
 e.drop_animation_mode = {
     FADE_THEN_COLLAPSE = 1,
     INSTANT_THEN_COLLAPSE = 2,

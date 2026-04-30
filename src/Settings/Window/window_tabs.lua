@@ -106,10 +106,6 @@ function ConfigWindow:build_tabs()
     self_page._tab_key = "self"
     self.main_tab_bar:add_tab(TR["Self"], self_page)
 
-    local drops_page = DropsPage(self)
-    drops_page._tab_key = "drops"
-    self.main_tab_bar:add_tab(TR["Drops"], drops_page)
-
     local target_page = TargetPage(self)
     target_page._tab_key = "target"
     self.main_tab_bar:add_tab(TR["Target"], target_page)
@@ -117,6 +113,10 @@ function ConfigWindow:build_tabs()
     local party_page = PartyPage(self)
     party_page._tab_key = "party"
     self.main_tab_bar:add_tab(TR["Party"], party_page)
+
+    local drops_page = DropsPage(self)
+    drops_page._tab_key = "drops"
+    self.main_tab_bar:add_tab(TR["Drops"], drops_page)
 
     local inventory_page = InventoryPage(self)
     inventory_page._tab_key = "inventory"

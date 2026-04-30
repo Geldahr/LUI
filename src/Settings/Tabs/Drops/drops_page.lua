@@ -3,16 +3,6 @@ import "LUI.src.Settings.Tabs.form_page"
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
 
-local ICON_SIZE_LABELS = {
-    TR["Small (24)"],
-    TR["Large (30)"],
-}
-
-local ICON_SIZE_VALUES = {
-    24,
-    30,
-}
-
 DropsPage = class(SettingsFormPage)
 
 function DropsPage:Constructor(window)
@@ -21,6 +11,8 @@ function DropsPage:Constructor(window)
 
     local flow_labels = { TR["Latest at top"], TR["Latest at bottom"] }
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
+    local align_labels = { TR["Top"], TR["Bottom"] }
+    local align_values = { LUI_ENUMS.vertical_align.TOP, LUI_ENUMS.vertical_align.BOTTOM }
 
     self.refresh_preview = function()
         self.window:update_drops_preview()
@@ -34,9 +26,11 @@ function DropsPage:Constructor(window)
     self:add_text("drops_visible_duration", TR["Visible duration (s)"])
     self:add_text("drops_width", TR["Width"])
     self:add_text("drops_rows", TR["Rows"])
-    self:add_dropdown("drops_icon_size", TR["Icon Size"], ICON_SIZE_LABELS, ICON_SIZE_VALUES)
+    self:add_text("drops_icon_size", TR["Icon Size"])
     self:add_dropdown("drops_flow", TR["Order"], flow_labels, flow_values)
+    self:add_dropdown("drops_align", TR["Align"], align_labels, align_values)
     self:add_checkbox("drops_animations_enabled", TR["Animations"], true)
+    self:add_text("drops_move_duration", TR["Move duration (ms)"])
 
     self:add_break()
     self:add_info(TR["Carry-alls may bypass inventory item events. Those drops can appear without icon or hover and will be shown as text only."], 42)
@@ -62,9 +56,11 @@ function DropsPage:load(drops, ui)
     self.controls.drops_visible_duration.tb:SetText(tostring(drops.visible_duration))
     self.controls.drops_width.tb:SetText(tostring(drops.width))
     self.controls.drops_rows.tb:SetText(tostring(drops.rows))
-    self.controls.drops_icon_size:set_value(drops.icon_size)
+    self.controls.drops_icon_size.tb:SetText(tostring(drops.icon_size))
     self.controls.drops_flow:set_value(drops.flow)
+    self.controls.drops_align:set_value(drops.align)
     self.controls.drops_animations_enabled.cb:SetChecked(drops.animations_enabled == true)
+    self.controls.drops_move_duration.tb:SetText(tostring(drops.move_duration))
     self.controls.drops_hud_background_opacity.tb:SetText(tostring(drops.hud.background_opacity))
     self.controls.drops_hud_background_color.tb:SetText(ui.color_to_hex(drops.hud.background_color))
     self.controls.drops_item_background_opacity.tb:SetText(tostring(drops.item.background_opacity))
@@ -97,9 +93,17 @@ function DropsPage:apply(drops, ui)
         drops.rows = rows
     end
 
-    drops.icon_size = self.controls.drops_icon_size:get_value()
+    local icon_size = tonumber(self.controls.drops_icon_size.tb:GetText())
+    if icon_size ~= nil then
+        drops.icon_size = icon_size
+    end
     drops.flow = self.controls.drops_flow:get_value()
+    drops.align = self.controls.drops_align:get_value()
     drops.animations_enabled = self.controls.drops_animations_enabled.cb:IsChecked() == true
+    local move_duration = tonumber(self.controls.drops_move_duration.tb:GetText())
+    if move_duration ~= nil then
+        drops.move_duration = move_duration
+    end
 
     local hud_opacity = tonumber(self.controls.drops_hud_background_opacity.tb:GetText())
     if hud_opacity ~= nil then

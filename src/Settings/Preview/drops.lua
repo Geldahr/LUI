@@ -1,4 +1,5 @@
 local Common = SettingsPreviewCommon
+local _apply_preview_border = Common.apply_preview_border
 local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
 local _sync_preview_holder_height = Common.sync_preview_holder_height
@@ -8,6 +9,7 @@ local BASE_GAP = 6
 local BASE_QTY_WIDTH = 46
 local BASE_FONT_SIZE = 12
 local BASE_SPACING = 0
+local PREVIEW_MARGIN = 4
 
 local function _with_alpha(color, alpha)
     if color == nil then
@@ -68,6 +70,26 @@ function ConfigWindow:init_drops_preview()
     p.background:SetMouseVisible(false)
     _set_alpha_backdrop(p.background)
 
+    p.border_top = Turbine.UI.Control()
+    p.border_top:SetParent(p.container)
+    p.border_top:SetMouseVisible(false)
+    p.border_top:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+
+    p.border_bottom = Turbine.UI.Control()
+    p.border_bottom:SetParent(p.container)
+    p.border_bottom:SetMouseVisible(false)
+    p.border_bottom:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+
+    p.border_left = Turbine.UI.Control()
+    p.border_left:SetParent(p.container)
+    p.border_left:SetMouseVisible(false)
+    p.border_left:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+
+    p.border_right = Turbine.UI.Control()
+    p.border_right:SetParent(p.container)
+    p.border_right:SetMouseVisible(false)
+    p.border_right:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+
     p.rows = {
         _create_row(p.container),
         _create_row(p.container),
@@ -107,8 +129,10 @@ function ConfigWindow:update_drops_preview()
     end
     local rows = tonumber(self.controls.drops_rows.tb:GetText()) or s.drops.rows or 4
     rows = math.max(1, math.floor(rows + 0.5))
-    local icon_size = self.controls.drops_icon_size.get_value and self.controls.drops_icon_size:get_value() or
-        s.drops.icon_size or 32
+    local icon_size = tonumber(self.controls.drops_icon_size.tb:GetText()) or s.drops.icon_size or 24
+    if icon_size < 1 then
+        icon_size = 1
+    end
     local row_pad = scaled_int(BASE_ROW_PADDING)
     local row_h = scaled_int(icon_size) + (2 * row_pad)
     local icon_side = scaled_int(icon_size)
@@ -117,8 +141,9 @@ function ConfigWindow:update_drops_preview()
     local spacing = scaled_int(BASE_SPACING)
     local preview_rows = math.min(3, rows)
     local block_h = (preview_rows * row_h) + ((preview_rows - 1) * spacing)
+    local capacity_h = (rows * row_h) + ((rows - 1) * spacing)
 
-    _sync_preview_holder_height(self, self.controls.drops_preview, block_h + 8)
+    _sync_preview_holder_height(self, self.controls.drops_preview, capacity_h + (2 * PREVIEW_MARGIN))
 
     local holder_w, holder_h = p.container:GetSize()
     if holder_w < width then
@@ -129,6 +154,7 @@ function ConfigWindow:update_drops_preview()
     end
 
     local flow = self.controls.drops_flow.get_value and self.controls.drops_flow:get_value() or s.drops.flow
+    local align = self.controls.drops_align.get_value and self.controls.drops_align:get_value() or s.drops.align
     local hud_color = _hex_to_color(self.controls.drops_hud_background_color.tb:GetText()) or
         s.drops.hud.background_color or Turbine.UI.Color(1, 0, 0, 0)
     local hud_opacity = tonumber(self.controls.drops_hud_background_opacity.tb:GetText()) or
@@ -139,29 +165,35 @@ function ConfigWindow:update_drops_preview()
         s.drops.item.background_opacity or 0.3
 
     local font = _require_font(LUI_ENUMS.font_name.VERDANA, BASE_FONT_SIZE * raw_scale)
-    local y0 = 4
-    if flow == LUI_ENUMS.list_flow.BOTTOM_TO_TOP then
-        y0 = math.max(0, holder_h - block_h)
+    local frame_y = PREVIEW_MARGIN
+    local y0 = PREVIEW_MARGIN
+    if align == LUI_ENUMS.vertical_align.BOTTOM then
+        y0 = math.max(PREVIEW_MARGIN, frame_y + capacity_h - block_h)
     end
 
     p.background:SetVisible(true)
     p.background:SetPosition(0, y0)
     p.background:SetSize(width, block_h)
     p.background:SetBackColor(_with_alpha(hud_color, hud_opacity))
+    _apply_preview_border(p, width, capacity_h, 0, frame_y)
 
-    local samples = nil
+    local samples = {}
     if flow == LUI_ENUMS.list_flow.TOP_TO_BOTTOM then
-        samples = {
-            { name = "Exceptional Hide", qty = "1", icon = true },
-            { name = "Traveller's Steel-bound Lootbox", qty = "1", icon = false },
-            { name = "Calenard Hide", qty = "3", icon = true },
-        }
+        for i = preview_rows, 1, -1 do
+            samples[#samples + 1] = {
+                name = "Drop " .. tostring(i),
+                qty = tostring(i),
+                icon = (i % 2) == 1,
+            }
+        end
     else
-        samples = {
-            { name = "Traveller's Steel-bound Lootbox", qty = "1", icon = false },
-            { name = "Exceptional Hide", qty = "1", icon = true },
-            { name = "Calenard Hide", qty = "3", icon = true },
-        }
+        for i = 1, preview_rows do
+            samples[#samples + 1] = {
+                name = "Drop " .. tostring(i),
+                qty = tostring(i),
+                icon = (i % 2) == 1,
+            }
+        end
     end
 
     for i = 1, #p.rows do
@@ -172,10 +204,10 @@ function ConfigWindow:update_drops_preview()
         else
             local y = y0 + ((i - 1) * (row_h + spacing))
             row.root:SetVisible(true)
-            row.root:SetPosition(0, y)
-            row.root:SetSize(width, row_h)
+            row.root:SetPosition(1, y)
+            row.root:SetSize(math.max(1, width - 2), row_h)
             row.background:SetPosition(0, 0)
-            row.background:SetSize(width, row_h)
+            row.background:SetSize(math.max(1, width - 2), row_h)
             row.background:SetBackColor(_with_alpha(item_color, item_opacity))
             row.icon:SetPosition(row_pad, row_pad)
             row.icon:SetSize(icon_side, icon_side)
@@ -187,15 +219,16 @@ function ConfigWindow:update_drops_preview()
             row.name:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
             row.name:SetText(sample.name)
             row.name:SetPosition(row_pad + icon_side + gap, row_pad)
-            local qty_x = width - row_pad - qty_w
-            row.name:SetSize(math.max(1, qty_x - (row_pad + icon_side + gap) - gap), row_h - (2 * row_pad))
+            local content_width = math.max(1, width - 2)
+            local qty_x = content_width - row_pad - qty_w
+            row.name:SetSize(math.max(1, qty_x - (row_pad + icon_side + gap) - gap), math.max(1, row_h - (2 * row_pad)))
             row.qty:SetFont(font)
             row.qty:SetFontStyle(Turbine.UI.FontStyle.Outline)
             row.qty:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
             row.qty:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
             row.qty:SetText(sample.qty)
             row.qty:SetPosition(qty_x, row_pad)
-            row.qty:SetSize(qty_w, row_h - (2 * row_pad))
+            row.qty:SetSize(qty_w, math.max(1, row_h - (2 * row_pad)))
         end
     end
 end

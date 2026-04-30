@@ -640,7 +640,9 @@ _G.DEFAULT_LAYOUT_TOP =
 		["icon_size"] = 24.000000,
 		["width"] = 180.000000,
 		["flow"] = 2.000000,
+		["align"] = 2.000000,
 		["animations_enabled"] = true,
+		["move_duration"] = 500.000000,
 		["hud"] =
 		{
 				["background_opacity"] = 0.000000,
