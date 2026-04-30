@@ -188,6 +188,10 @@ function DropEntry:set_opacity(opacity)
     self._opacity = opacity
 
     self:SetOpacity(opacity)
+    self.icon_host:SetOpacity(opacity)
+    self.icon_background:SetOpacity(opacity)
+    self.icon_foreground:SetOpacity(opacity)
+    self.item_info_control:SetOpacity(opacity)
 end
 
 function DropEntry:destroy()
