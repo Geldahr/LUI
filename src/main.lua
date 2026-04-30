@@ -10,6 +10,7 @@ import "LUI.src.Settings.default_layouts"
 import "LUI.src.UI"
 import "LUI.src.ExpiringEffects"
 import "LUI.src.Cooldowns"
+import "LUI.src.Drops"
 import "LUI.src.Assets"
 import "LUI.src.Bestiary"
 import "LUI.src.Crafting"
@@ -271,6 +272,20 @@ function apply_cooldowns_settings()
     end
 end
 
+function apply_drops_settings()
+    local drops = _G.settings.drops
+    if drops.enabled == true then
+        if DROPS_WINDOW == nil then
+            DROPS_WINDOW = Drops.DropsWindow()
+        end
+    else
+        if DROPS_WINDOW ~= nil then
+            DROPS_WINDOW:destroy()
+        end
+        DROPS_WINDOW = nil
+    end
+end
+
 function apply_crafting_settings()
     local enabled = _G.settings.crafting.enabled == true
 
@@ -344,6 +359,7 @@ ASSETS_WINDOW = nil
 STATUS_BAR = nil
 _G.STATUS_BAR = nil
 COOLDOWNS_WINDOW = nil
+DROPS_WINDOW = nil
 BESTIARY_WINDOW = nil
 CRAFTING_WINDOW = nil
 TRAVEL_WINDOW = nil
@@ -354,6 +370,7 @@ apply_inventory_settings()
 apply_assets_settings()
 apply_status_bar_settings()
 apply_cooldowns_settings()
+apply_drops_settings()
 apply_crafting_settings()
 apply_travel_settings()
 BESTIARY_TRACKER:apply_settings()
@@ -424,6 +441,11 @@ Plugins["LUI"].Unload = function()
         BESTIARY_TRACKER:destroy()
         BESTIARY_TRACKER = nil
         _G.BESTIARY_TRACKER = nil
+    end
+
+    if DROPS_WINDOW ~= nil then
+        DROPS_WINDOW:destroy()
+        DROPS_WINDOW = nil
     end
 
     if ASSETS_STORE ~= nil then

@@ -632,6 +632,38 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 		["bestiary_capture"] = false,
 		["move_mode_shortcut"] = true
 	},
+	["drops"] =
+	{
+		["enabled"] = false,
+		["visible_duration"] = 4.000000,
+		["rows"] = 4.000000,
+		["icon_size"] = 32.000000,
+		["width"] = 180.000000,
+		["flow"] = 2.000000,
+		["animation_mode"] = 1.000000,
+		["hud"] =
+		{
+				["background_opacity"] = 0.000000,
+			["background_color"] =
+			{
+				["A"] = 1.000000,
+				["R"] = 0.000000,
+				["G"] = 0.000000,
+				["B"] = 0.000000
+			}
+		},
+		["item"] =
+		{
+				["background_opacity"] = 0.300000,
+			["background_color"] =
+			{
+				["A"] = 1.000000,
+				["R"] = 0.000000,
+				["G"] = 0.000000,
+				["B"] = 0.000000
+			}
+		}
+	},
 	["target"] =
 	{
 		["boss_vitals"] =
@@ -1427,6 +1459,11 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			["cooldowns"] =
 			{
 				["left"] = 453.000000,
+				["top"] = 1054.000000
+			},
+			["drops"] =
+			{
+				["left"] = 1830.000000,
 				["top"] = 1054.000000
 			},
 			["status_bar"] =

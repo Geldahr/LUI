@@ -84,6 +84,12 @@ e.list_flow = {
     BOTTOM_TO_TOP = 2,
 }
 
+e.drop_animation_mode = {
+    FADE_THEN_COLLAPSE = 1,
+    INSTANT_THEN_COLLAPSE = 2,
+    OFF = 3,
+}
+
 e.assets_view_mode = {
     ICONS = 1,
     DETAILS = 2,

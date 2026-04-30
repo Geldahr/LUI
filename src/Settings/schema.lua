@@ -125,6 +125,7 @@ function _G.ensure_loaded_settings()
     ensure_table(s, "assets")
     ensure_table(s, "bestiary")
     ensure_table(s, "status_bar")
+    ensure_table(s, "drops")
 
     ensure_table_at(s, { "ui", "windows" })
     ensure_table_at(s, { "ui", "hud" })
@@ -220,6 +221,8 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "self", "cooldowns" })
     ensure_table_at(s, { "self", "cooldowns", "font" })
     ensure_table_at(s, { "self", "cooldowns", "color" })
+    ensure_table_at(s, { "drops", "hud" })
+    ensure_table_at(s, { "drops", "item" })
 
     ensure_table_at(s, { "target", "expiring_effects" })
     ensure_table_at(s, { "target", "expiring_effects", "color" })
@@ -860,4 +863,39 @@ function _G.ensure_loaded_settings()
     end
     cd.font.color = cd.font.color or Turbine.UI.Color(1, 1, 1, 1) -- #FFFFFF
     cd.font.outline_color = cd.font.outline_color or Turbine.UI.Color(1, 0, 0, 0) -- #000000
+
+    local dd = s.drops
+    if dd.enabled == nil then
+        dd.enabled = false
+    end
+    if dd.visible_duration == nil then
+        dd.visible_duration = 4.0
+    end
+    if dd.rows == nil then
+        dd.rows = 4
+    end
+    if dd.icon_size == nil then
+        dd.icon_size = 32
+    end
+    if dd.width == nil then
+        dd.width = 180
+    end
+    if dd.flow == nil then
+        dd.flow = LUI_ENUMS.list_flow.BOTTOM_TO_TOP
+    end
+    if dd.animation_mode == nil then
+        dd.animation_mode = LUI_ENUMS.drop_animation_mode.FADE_THEN_COLLAPSE
+    end
+
+    ensure_ui_hud("drops", _pos_x(1830), _pos_y(1054))
+
+    if dd.hud.background_opacity == nil then
+        dd.hud.background_opacity = 0.0
+    end
+    dd.hud.background_color = dd.hud.background_color or Turbine.UI.Color(1, 0, 0, 0)
+
+    if dd.item.background_opacity == nil then
+        dd.item.background_opacity = 0.3
+    end
+    dd.item.background_color = dd.item.background_color or Turbine.UI.Color(1, 0, 0, 0)
 end

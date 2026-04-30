@@ -1,5 +1,6 @@
 import "LUI.src.Settings.Tabs.Global.global_page"
 import "LUI.src.Settings.Tabs.Self.self_page"
+import "LUI.src.Settings.Tabs.Drops.drops_page"
 import "LUI.src.Settings.Tabs.Target.target_page"
 import "LUI.src.Settings.Tabs.Party.party_page"
 import "LUI.src.Settings.Tabs.Inventory.inventory_page"
@@ -12,6 +13,7 @@ import "LUI.src.Settings.Tabs.Help.help_page"
 
 local GlobalPage = LUI.src.Settings.Tabs.Global.GlobalPage
 local SelfPage = LUI.src.Settings.Tabs.Self.SelfPage
+local DropsPage = LUI.src.Settings.Tabs.Drops.DropsPage
 local TargetPage = LUI.src.Settings.Tabs.Target.TargetPage
 local PartyPage = LUI.src.Settings.Tabs.Party.PartyPage
 local InventoryPage = LUI.src.Settings.Tabs.Inventory.InventoryPage
@@ -103,6 +105,10 @@ function ConfigWindow:build_tabs()
     local self_page = SelfPage(self)
     self_page._tab_key = "self"
     self.main_tab_bar:add_tab(TR["Self"], self_page)
+
+    local drops_page = DropsPage(self)
+    drops_page._tab_key = "drops"
+    self.main_tab_bar:add_tab(TR["Drops"], drops_page)
 
     local target_page = TargetPage(self)
     target_page._tab_key = "target"

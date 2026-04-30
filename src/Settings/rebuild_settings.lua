@@ -61,6 +61,7 @@ function _G.rebuild_settings()
             },
             expiring_effects = { font = {}, color = {} },
             cooldowns = { font = {}, color = {} },
+            drops = { hud = {}, item = {} },
         },
         target = {
             vitals = {
@@ -97,6 +98,7 @@ function _G.rebuild_settings()
             },
         },
         inventory = {},
+        drops = { hud = {}, item = {} },
         crafting = { display_mode = "pages", enabled = true },
         travel = { display_mode = "list", enabled = true },
         assets = { tile = {}, layouts = { icons = {}, details = {} } },
@@ -454,6 +456,20 @@ function _G.rebuild_settings()
     cd.font.style = raw_cd.font.style
     cd.font.color = raw_cd.font.color
     cd.font.outline_color = raw_cd.font.outline_color
+
+    local raw_drops = raw.drops
+    local drops = _G.settings.drops
+    drops.enabled = raw_drops.enabled
+    drops.visible_duration = raw_drops.visible_duration
+    drops.rows = raw_drops.rows
+    drops.icon_size = scaled_int(raw_drops.icon_size)
+    drops.width = scaled_int(raw_drops.width)
+    drops.flow = raw_drops.flow
+    drops.animation_mode = raw_drops.animation_mode
+    drops.hud.background_opacity = raw_drops.hud.background_opacity
+    drops.hud.background_color = raw_drops.hud.background_color
+    drops.item.background_opacity = raw_drops.item.background_opacity
+    drops.item.background_color = raw_drops.item.background_color
 end
 
 rebuild_settings = _G.rebuild_settings

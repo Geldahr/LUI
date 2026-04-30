@@ -1,6 +1,7 @@
 import "LUI.src.Settings.Preview.common"
 import "LUI.src.Settings.Preview.self_expiring_effects"
 import "LUI.src.Settings.Preview.cooldowns"
+import "LUI.src.Settings.Preview.drops"
 import "LUI.src.Settings.Preview.expiring_target_effects"
 import "LUI.src.Settings.Preview.target_boss_vitals"
 import "LUI.src.Settings.Preview.target_targets_target"
