@@ -22,100 +22,68 @@ local CRAFTING_QUERY_TOKENS = {
 }
 local CRAFT_RANKS = {
     [1] = {
-        en = "Apprentice",
-        fr = "Apprenti",
-        de = "Lehrling",
-        aliases = { "Apprentice", "Apprenti", "Lehrling" },
+        key = "Apprentice",
+        aliases = { "Apprenti", "Lehrling" },
     },
     [2] = {
-        en = "Journeyman",
-        fr = "Compagnon",
-        de = "Geselle",
-        aliases = { "Journeyman", "Compagnon", "Geselle" },
+        key = "Journeyman",
+        aliases = { "Compagnon", "Geselle" },
     },
     [3] = {
-        en = "Expert",
-        fr = "Expert",
-        de = "Experte",
-        aliases = { "Expert", "Experte" },
+        key = "Expert",
+        aliases = { "Experte" },
     },
     [4] = {
-        en = "Artisan",
-        fr = "Artisan",
-        de = "Virtuose",
-        aliases = { "Artisan", "Virtuose" },
+        key = "Artisan",
+        aliases = { "Virtuose" },
     },
     [5] = {
-        en = "Master",
-        fr = "Maître",
-        de = "Meister",
-        aliases = { "Master", "Maître", "Maitre", "Meister" },
+        key = "Master",
+        aliases = { "Maître", "Maitre", "Meister" },
     },
     [6] = {
-        en = "Supreme",
-        fr = "Suprême",
-        de = "Überragend",
-        aliases = { "Supreme", "Suprême", "Uberragend", "Überragend" },
+        key = "Supreme",
+        aliases = { "Suprême", "Uberragend", "Überragend" },
     },
     [7] = {
-        en = "Westfold",
-        fr = "Ouestfolde",
-        de = "Westfold",
-        aliases = { "Westfold", "Ouestfolde" },
+        key = "Westfold",
+        aliases = { "Ouestfolde" },
     },
     [8] = {
-        en = "Eastemnet",
-        fr = "Estemnet",
-        de = "Ost-Emnet",
-        aliases = { "Eastemnet", "Estemnet", "Ost-Emnet", "Ostemnet" },
+        key = "Eastemnet",
+        aliases = { "Estemnet", "Ost-Emnet", "Ostemnet" },
     },
     [9] = {
-        en = "Westemnet",
-        fr = "Ouestemnet",
-        de = "West-Emnet",
-        aliases = { "Westemnet", "Ouestemnet", "West-Emnet", "Westemnet" },
+        key = "Westemnet",
+        aliases = { "Ouestemnet", "West-Emnet" },
     },
     [10] = {
-        en = "Anorien",
-        fr = "Anórien",
-        de = "Anórien",
-        aliases = { "Anorien", "Anórien" },
+        key = "Anórien",
+        aliases = { "Anorien" },
     },
     [11] = {
-        en = "Doomfold",
-        fr = "Folde du Destin",
-        de = "Unheilskluft",
-        aliases = { "Doomfold", "Folde du Destin", "Unheilskluft" },
+        key = "Doomfold",
+        aliases = { "Folde du Destin", "Unheilskluft" },
     },
     [12] = {
-        en = "Ironfold",
-        fr = "Crevasse de Fer",
-        de = "Eisenbruch",
-        aliases = { "Ironfold", "Crevasse de Fer", "Eisenbruch" },
+        key = "Ironfold",
+        aliases = { "Crevasse de Fer", "Eisenbruch" },
     },
     [13] = {
-        en = "Minas Ithil",
-        fr = "Minas Ithil",
-        de = "Minas Ithil",
-        aliases = { "Minas Ithil" },
+        key = "Minas Ithil",
+        aliases = {},
     },
     [14] = {
-        en = "Gundabad",
-        fr = "Gundabad",
-        de = "Gundabad",
-        aliases = { "Gundabad" },
+        key = "Gundabad",
+        aliases = {},
     },
     [15] = {
-        en = "Umbar",
-        fr = "Umbar",
-        de = "Umbar",
-        aliases = { "Umbar" },
+        key = "Umbar",
+        aliases = {},
     },
     [16] = {
-        en = "Sul Madash",
-        fr = "Sul Madash",
-        de = "Sul Madash",
-        aliases = { "Sul Madash", "Sul Madásh" },
+        key = "Sul Madásh",
+        aliases = { "Sul Madash" },
     },
 }
 
@@ -303,33 +271,6 @@ local function _lower(text)
     return string.lower(_safe_string(text, ""))
 end
 
-local function _craft_rank_locale_code()
-    local lang = Turbine.Engine.GetLanguage()
-
-    if type(lang) == "number" then
-        local language_enum = Turbine.Language
-        if (language_enum ~= nil and lang == language_enum.German) or lang == 3 then
-            return "de"
-        end
-        if (language_enum ~= nil and lang == language_enum.French) or lang == 2 then
-            return "fr"
-        end
-        return "en"
-    end
-
-    if type(lang) == "string" then
-        local normalized = _lower(lang):gsub("_", "-")
-        if normalized == "de" or normalized:find("^de%-") == 1 then
-            return "de"
-        end
-        if normalized == "fr" or normalized:find("^fr%-") == 1 then
-            return "fr"
-        end
-    end
-
-    return "en"
-end
-
 local function _saved_plan_entry_signature(entry)
     if type(entry) ~= "table" then
         return ""
@@ -475,8 +416,7 @@ local function _craft_rank_name(tier)
 
     local definition = CRAFT_RANKS[numeric_tier]
     if definition ~= nil then
-        local locale = _craft_rank_locale_code()
-        return definition[locale] or definition.en
+        return TR[definition.key]
     end
 
     return TR["Tier "] .. tostring(numeric_tier)
@@ -499,7 +439,11 @@ local function _parse_rank_query_value(value)
 
     local exact_match = nil
     for tier = 1, #CRAFT_RANKS do
-        local aliases = CRAFT_RANKS[tier].aliases
+        local definition = CRAFT_RANKS[tier]
+        local aliases = { definition.key, TR[definition.key] }
+        for index = 1, #definition.aliases do
+            aliases[#aliases + 1] = definition.aliases[index]
+        end
         for index = 1, #aliases do
             if _normalize_rank_match_value(aliases[index]) == normalized then
                 exact_match = tier
@@ -513,7 +457,11 @@ local function _parse_rank_query_value(value)
 
     local prefix_match = nil
     for tier = 1, #CRAFT_RANKS do
-        local aliases = CRAFT_RANKS[tier].aliases
+        local definition = CRAFT_RANKS[tier]
+        local aliases = { definition.key, TR[definition.key] }
+        for index = 1, #definition.aliases do
+            aliases[#aliases + 1] = definition.aliases[index]
+        end
         local matched = false
         for index = 1, #aliases do
             local alias = _normalize_rank_match_value(aliases[index])
@@ -543,6 +491,10 @@ local function _parse_availability_query_value(value)
 end
 
 local function _parse_favorite_query_value(value)
+    if value == nil then
+        return false
+    end
+
     local normalized = _lower(_trim(value))
     if normalized == "" or normalized == "on" or normalized == "true" or normalized == "yes" or normalized == "1" then
         return true
