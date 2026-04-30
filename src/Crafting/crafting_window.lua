@@ -15,9 +15,108 @@ local DISPLAY_PAGES = "pages"
 local DISPLAY_SCROLL = "scroll"
 local CRAFTING_QUERY_TOKENS = {
     prof = true,
+    rank = true,
     lvl = true,
     avail = true,
     fav = true,
+}
+local CRAFT_RANKS = {
+    [1] = {
+        en = "Apprentice",
+        fr = "Apprenti",
+        de = "Lehrling",
+        aliases = { "Apprentice", "Apprenti", "Lehrling" },
+    },
+    [2] = {
+        en = "Journeyman",
+        fr = "Compagnon",
+        de = "Geselle",
+        aliases = { "Journeyman", "Compagnon", "Geselle" },
+    },
+    [3] = {
+        en = "Expert",
+        fr = "Expert",
+        de = "Experte",
+        aliases = { "Expert", "Experte" },
+    },
+    [4] = {
+        en = "Artisan",
+        fr = "Artisan",
+        de = "Virtuose",
+        aliases = { "Artisan", "Virtuose" },
+    },
+    [5] = {
+        en = "Master",
+        fr = "Maître",
+        de = "Meister",
+        aliases = { "Master", "Maître", "Maitre", "Meister" },
+    },
+    [6] = {
+        en = "Supreme",
+        fr = "Suprême",
+        de = "Überragend",
+        aliases = { "Supreme", "Suprême", "Uberragend", "Überragend" },
+    },
+    [7] = {
+        en = "Westfold",
+        fr = "Ouestfolde",
+        de = "Westfold",
+        aliases = { "Westfold", "Ouestfolde" },
+    },
+    [8] = {
+        en = "Eastemnet",
+        fr = "Estemnet",
+        de = "Ost-Emnet",
+        aliases = { "Eastemnet", "Estemnet", "Ost-Emnet", "Ostemnet" },
+    },
+    [9] = {
+        en = "Westemnet",
+        fr = "Ouestemnet",
+        de = "West-Emnet",
+        aliases = { "Westemnet", "Ouestemnet", "West-Emnet", "Westemnet" },
+    },
+    [10] = {
+        en = "Anorien",
+        fr = "Anórien",
+        de = "Anórien",
+        aliases = { "Anorien", "Anórien" },
+    },
+    [11] = {
+        en = "Doomfold",
+        fr = "Folde du Destin",
+        de = "Unheilskluft",
+        aliases = { "Doomfold", "Folde du Destin", "Unheilskluft" },
+    },
+    [12] = {
+        en = "Ironfold",
+        fr = "Crevasse de Fer",
+        de = "Eisenbruch",
+        aliases = { "Ironfold", "Crevasse de Fer", "Eisenbruch" },
+    },
+    [13] = {
+        en = "Minas Ithil",
+        fr = "Minas Ithil",
+        de = "Minas Ithil",
+        aliases = { "Minas Ithil" },
+    },
+    [14] = {
+        en = "Gundabad",
+        fr = "Gundabad",
+        de = "Gundabad",
+        aliases = { "Gundabad" },
+    },
+    [15] = {
+        en = "Umbar",
+        fr = "Umbar",
+        de = "Umbar",
+        aliases = { "Umbar" },
+    },
+    [16] = {
+        en = "Sul Madash",
+        fr = "Sul Madash",
+        de = "Sul Madash",
+        aliases = { "Sul Madash", "Sul Madásh" },
+    },
 }
 
 local BASE_MARGIN_LEFT = 15
@@ -204,6 +303,33 @@ local function _lower(text)
     return string.lower(_safe_string(text, ""))
 end
 
+local function _craft_rank_locale_code()
+    local lang = Turbine.Engine.GetLanguage()
+
+    if type(lang) == "number" then
+        local language_enum = Turbine.Language
+        if (language_enum ~= nil and lang == language_enum.German) or lang == 3 then
+            return "de"
+        end
+        if (language_enum ~= nil and lang == language_enum.French) or lang == 2 then
+            return "fr"
+        end
+        return "en"
+    end
+
+    if type(lang) == "string" then
+        local normalized = _lower(lang):gsub("_", "-")
+        if normalized == "de" or normalized:find("^de%-") == 1 then
+            return "de"
+        end
+        if normalized == "fr" or normalized:find("^fr%-") == 1 then
+            return "fr"
+        end
+    end
+
+    return "en"
+end
+
 local function _saved_plan_entry_signature(entry)
     if type(entry) ~= "table" then
         return ""
@@ -311,6 +437,101 @@ local function _normalize_availability_filter(value)
         return AVAILABILITY_READY
     end
     return AVAILABILITY_ALL
+end
+
+local function _normalize_rank_filter_value(value)
+    if value == FILTER_ALL then
+        return FILTER_ALL
+    end
+
+    local tier = tonumber(value)
+    if tier == nil then
+        return FILTER_ALL
+    end
+
+    tier = math.floor(tier)
+    if tier < 1 then
+        return FILTER_ALL
+    end
+    return tier
+end
+
+local function _normalize_rank_match_value(value)
+    local normalized = _lower(_trim(value))
+    normalized = normalized:gsub("[%s%-%_'\"]+", "")
+    return normalized
+end
+
+local function _craft_rank_name(tier)
+    local numeric_tier = tonumber(tier)
+    if numeric_tier == nil then
+        return ""
+    end
+
+    numeric_tier = math.floor(numeric_tier)
+    if numeric_tier < 1 then
+        return ""
+    end
+
+    local definition = CRAFT_RANKS[numeric_tier]
+    if definition ~= nil then
+        local locale = _craft_rank_locale_code()
+        return definition[locale] or definition.en
+    end
+
+    return TR["Tier "] .. tostring(numeric_tier)
+end
+
+local function _parse_rank_query_value(value)
+    local normalized = _normalize_rank_match_value(value)
+    if normalized == "" or normalized == "all" then
+        return FILTER_ALL
+    end
+
+    local numeric_tier = tonumber(normalized)
+    if numeric_tier ~= nil then
+        numeric_tier = math.floor(numeric_tier)
+        if numeric_tier > 0 then
+            return numeric_tier
+        end
+        return FILTER_ALL
+    end
+
+    local exact_match = nil
+    for tier = 1, #CRAFT_RANKS do
+        local aliases = CRAFT_RANKS[tier].aliases
+        for index = 1, #aliases do
+            if _normalize_rank_match_value(aliases[index]) == normalized then
+                exact_match = tier
+                break
+            end
+        end
+        if exact_match ~= nil then
+            return exact_match
+        end
+    end
+
+    local prefix_match = nil
+    for tier = 1, #CRAFT_RANKS do
+        local aliases = CRAFT_RANKS[tier].aliases
+        local matched = false
+        for index = 1, #aliases do
+            local alias = _normalize_rank_match_value(aliases[index])
+            if alias ~= "" and string.find(alias, normalized, 1, true) == 1 then
+                matched = true
+                break
+            end
+        end
+
+        if matched == true then
+            if prefix_match ~= nil and prefix_match ~= tier then
+                return FILTER_ALL
+            end
+            prefix_match = tier
+        end
+    end
+
+    return prefix_match or FILTER_ALL
 end
 
 local function _parse_availability_query_value(value)
@@ -1271,9 +1492,11 @@ function CraftingWindow:Constructor()
     self.scope_source_keys = self.store:get_default_source_keys()
     self.scope_key = self.store:scope_key_from_sources(self.scope_source_keys)
     self.profession_filter = FILTER_ALL
+    self.rank_filter = FILTER_ALL
     self.availability_filter = AVAILABILITY_ALL
     self.favorite_filter_active = false
     self.query_profession_filter = FILTER_ALL
+    self.query_rank_filter = FILTER_ALL
     self.query_availability_filter = AVAILABILITY_ALL
     self.query_favorite_filter_active = false
     self.favorite_entries = {}
@@ -1301,6 +1524,7 @@ function CraftingWindow:Constructor()
     self._recipe_page_rendered_start = 1
     self._recipe_page_rendered_end = 0
     self._profession_options_signature = nil
+    self._rank_options_signature = nil
     self._store_loading = self.store:is_loading() == true
     self._selected_recipe_watch_keys = {}
     self._plan_recipe_watch_keys = {}
@@ -1377,6 +1601,22 @@ function CraftingWindow:Constructor()
         self.profession_filter = value or FILTER_ALL
         self.recipe_page_index = 1
         self:refresh_recipe_list()
+    end
+
+    self.rank_label = UI.Widgets.LuiLabel()
+    self.rank_label:SetParent(self.top_bar)
+    self.rank_label:SetMouseVisible(false)
+    self.rank_label:SetForeColor(TEXT_META)
+    self.rank_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.rank_label:SetText(TR["Rank"])
+
+    self.rank_dropdown = UI.Widgets.LuiDropdown()
+    self.rank_dropdown:SetParent(self.top_bar)
+    self.rank_dropdown:SetPopupHost(self)
+    self.rank_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.rank_dropdown:SetMappedOptions({ TR["All"] }, { FILTER_ALL })
+    self.rank_dropdown.ValueChanged = function(_, value)
+        self:set_rank_filter(value)
     end
 
     self.availability_label = UI.Widgets.LuiLabel()
@@ -2267,6 +2507,7 @@ function CraftingWindow:_sync_search_query_state()
     self.search_query_state = state
     self.search_groups = state.normalized_groups
     self.query_profession_filter = self:_profession_filter_from_query_value(state.token_map.prof)
+    self.query_rank_filter = _parse_rank_query_value(state.token_map.rank)
     self.query_availability_filter = _parse_availability_query_value(state.token_map.avail)
     self.query_favorite_filter_active = _parse_favorite_query_value(state.token_map.fav)
     self.query_level_min_filter = level_filter.min
@@ -2280,6 +2521,17 @@ function CraftingWindow:set_favorite_filter(active)
     self:_invalidate_recipe_list()
     self:refresh_recipe_list()
     self:refresh_selected_recipe()
+end
+
+function CraftingWindow:set_rank_filter(value)
+    local normalized = _normalize_rank_filter_value(value)
+    if normalized == self.rank_filter then
+        return
+    end
+
+    self.rank_filter = normalized
+    self.recipe_page_index = 1
+    self:refresh_recipe_list()
 end
 
 function CraftingWindow:_set_runtime_plan_entries(plan_entries)
@@ -2421,6 +2673,58 @@ function CraftingWindow:_refresh_profession_options()
     end
 end
 
+function CraftingWindow:_refresh_rank_options()
+    local labels = { TR["All"] }
+    local values = { FILTER_ALL }
+    local seen = {}
+
+    for index = 1, #self.store.recipes do
+        local recipe = self.store.recipes[index]
+        local tier = recipe ~= nil and _normalize_rank_filter_value(recipe.tier) or FILTER_ALL
+        if tier ~= FILTER_ALL and seen[tier] ~= true then
+            seen[tier] = true
+            values[#values + 1] = tier
+        end
+    end
+
+    table.sort(values, function(left, right)
+        if left == FILTER_ALL then
+            return true
+        end
+        if right == FILTER_ALL then
+            return false
+        end
+        return left < right
+    end)
+
+    for index = 2, #values do
+        labels[#labels + 1] = _craft_rank_name(values[index])
+    end
+
+    local options_signature = _option_list_signature(labels, values)
+    if options_signature ~= self._rank_options_signature then
+        self.rank_dropdown:SetMappedOptions(labels, values)
+        self._rank_options_signature = options_signature
+    end
+
+    local rank_found = self.rank_filter == FILTER_ALL
+    if rank_found ~= true then
+        for index = 2, #values do
+            if values[index] == self.rank_filter then
+                rank_found = true
+                break
+            end
+        end
+    end
+    if rank_found ~= true then
+        self.rank_filter = FILTER_ALL
+    end
+
+    if self.rank_dropdown:GetValue() ~= self.rank_filter then
+        self.rank_dropdown:SetValue(self.rank_filter)
+    end
+end
+
 function CraftingWindow:_loaded_recipe_matches_watch(watch_keys, loaded_result_keys)
     if type(watch_keys) ~= "table" or type(loaded_result_keys) ~= "table" then
         return false
@@ -2470,6 +2774,7 @@ end
 
 function CraftingWindow:open_from_asset_materials(_)
     self.profession_filter = FILTER_ALL
+    self.rank_filter = FILTER_ALL
     self:set_scope_sources(self.store:get_all_source_keys(), false)
     self.availability_filter = AVAILABILITY_READY
     self.level_min_filter = nil
@@ -2480,6 +2785,9 @@ function CraftingWindow:open_from_asset_materials(_)
 
     if self.profession_dropdown ~= nil then
         self.profession_dropdown:SetValue(self.profession_filter)
+    end
+    if self.rank_dropdown ~= nil then
+        self.rank_dropdown:SetValue(self.rank_filter)
     end
     if self.scope_dropdown ~= nil then
         self.scope_dropdown:SetSelectedValues(self.scope_source_keys, false)
@@ -2560,6 +2868,9 @@ function CraftingWindow:apply_settings()
     self.profession_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.profession_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.profession_dropdown:set_scale(_G.settings.global.scale)
+    self.rank_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.rank_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.rank_dropdown:set_scale(_G.settings.global.scale)
     self.availability_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.availability_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
     self.availability_dropdown:set_scale(_G.settings.global.scale)
@@ -2670,6 +2981,7 @@ function CraftingWindow:refresh_from_store(reset_filters)
     self._store_loading = loading
     self:refresh_loading_state()
     self:_refresh_profession_options()
+    self:_refresh_rank_options()
     self:_sync_search_query_state()
 
     local loaded_result_keys = self.store:consume_loaded_recipe_result_keys()
@@ -2784,6 +3096,16 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
     if self.query_profession_filter ~= FILTER_ALL and recipe.profession_key ~= self.query_profession_filter then
         return false
     end
+    local required_rank = self.rank_filter
+    if self.query_rank_filter ~= FILTER_ALL then
+        if required_rank ~= FILTER_ALL and required_rank ~= self.query_rank_filter then
+            return false
+        end
+        required_rank = self.query_rank_filter
+    end
+    if required_rank ~= FILTER_ALL and tonumber(recipe.tier) ~= required_rank then
+        return false
+    end
     if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
         return false
     end
@@ -2843,6 +3165,7 @@ function CraftingWindow:_recipe_filter_signature()
     return table.concat({
         _safe_string(self.scope_key, ""),
         _safe_string(self.profession_filter, ""),
+        _safe_string(self.rank_filter, ""),
         _safe_string(self.availability_filter, ""),
         self.favorite_filter_active == true and "favorites" or "",
         _safe_string(self.level_min_filter, ""),
@@ -3249,7 +3572,7 @@ function CraftingWindow:refresh_selected_recipe()
         meta_parts[#meta_parts + 1] = recipe.category_name
     end
     if recipe.tier > 0 then
-        meta_parts[#meta_parts + 1] = TR["Tier "] .. _format_count(recipe.tier)
+        meta_parts[#meta_parts + 1] = _craft_rank_name(recipe.tier)
     end
     if recipe.result_quantity > 1 then
         meta_parts[#meta_parts + 1] = TR["Makes x"] .. _format_count(recipe.result_quantity)
@@ -3640,11 +3963,13 @@ function CraftingWindow:layout()
 
     local row2_y = top_row_h + gap
     local label_gap = _scaled_int(4)
-    local group_gap = _scaled_int(18)
+    local group_gap = _scaled_int(12)
     local scope_label_w = _scaled_int(56)
-    local scope_w = _scaled_int(152)
+    local scope_w = _scaled_int(140)
     local profession_label_w = _scaled_int(54)
-    local profession_w = _scaled_int(140)
+    local profession_w = _scaled_int(126)
+    local rank_label_w = _scaled_int(34)
+    local rank_w = _scaled_int(112)
     local availability_label_w = _scaled_int(34)
     local availability_w = _scaled_int(78)
     local level_label_w = _scaled_int(54)
@@ -3667,6 +3992,13 @@ function CraftingWindow:layout()
     self.profession_dropdown:SetPosition(row2_left, row2_y)
     self.profession_dropdown:SetSize(profession_w, bar_h)
     row2_left = row2_left + profession_w + group_gap
+
+    self.rank_label:SetPosition(row2_left, row2_y)
+    self.rank_label:SetSize(rank_label_w, bar_h)
+    row2_left = row2_left + rank_label_w + label_gap
+    self.rank_dropdown:SetPosition(row2_left, row2_y)
+    self.rank_dropdown:SetSize(rank_w, bar_h)
+    row2_left = row2_left + rank_w + group_gap
 
     self.scope_label:SetPosition(row2_left, row2_y)
     self.scope_label:SetSize(scope_label_w, bar_h)

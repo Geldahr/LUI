@@ -275,6 +275,7 @@ FR = {
     ["Profiles"] = "Profils",
     ["Qty <"] = "Qté <",
     ["Qty >"] = "Qté >",
+    ["Rank"] = "Rang",
     ["Recommended starting points: 1080p = 1.0, 1440p = 1.3 to 1.4, 2160p / 4k = 2.0."] = "Points de départ recommandés : 1080p = 1.0, 1440p = 1.3 à 1.4, 2160p / 4k = 2.0.",
     ["Refresh rate of some UI elements (fps)"] = "Taux de rafraîchissement de certains éléments d'interface (fps)",
     ["Rename"] = "Renommer",
