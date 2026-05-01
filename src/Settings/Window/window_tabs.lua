@@ -1,6 +1,7 @@
 import "LUI.src.Settings.Tabs.Global.global_page"
 import "LUI.src.Settings.Tabs.Vitals.vitals_page"
 import "LUI.src.Settings.Tabs.ExpiringEffects.expiring_effects_page"
+import "LUI.src.Settings.Tabs.Cooldowns.cooldowns_page"
 import "LUI.src.Settings.Tabs.Self.self_page"
 import "LUI.src.Settings.Tabs.Drops.drops_page"
 import "LUI.src.Settings.Tabs.Target.target_page"
@@ -15,6 +16,7 @@ import "LUI.src.Settings.Tabs.Help.help_page"
 local GlobalPage = LUI.src.Settings.Tabs.Global.GlobalPage
 local VitalsPage = LUI.src.Settings.Tabs.Vitals.VitalsPage
 local ExpiringEffectsPage = LUI.src.Settings.Tabs.ExpiringEffects.ExpiringEffectsPage
+local CooldownsFeaturePage = LUI.src.Settings.Tabs.Cooldowns.CooldownsFeaturePage
 local SelfPage = LUI.src.Settings.Tabs.Self.SelfPage
 local DropsPage = LUI.src.Settings.Tabs.Drops.DropsPage
 local TargetPage = LUI.src.Settings.Tabs.Target.TargetPage
@@ -38,7 +40,7 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
         return "expiring_effects", "self"
     end
     if main_key == "cooldowns" then
-        return "self", main_key
+        return "cooldowns", preferred_sub_key
     end
     if main_key == "target_vitals" then
         return "vitals", "target"
@@ -125,6 +127,10 @@ function ConfigWindow:build_tabs()
     local expiring_effects_page = ExpiringEffectsPage(self)
     expiring_effects_page._tab_key = "expiring_effects"
     self.main_tab_bar:add_tab(TR["Expiring Effects"], expiring_effects_page)
+
+    local cooldowns_page = CooldownsFeaturePage(self)
+    cooldowns_page._tab_key = "cooldowns"
+    self.main_tab_bar:add_tab(TR["Cooldowns"], cooldowns_page)
 
     local self_page = SelfPage(self)
     self_page._tab_key = "self"
