@@ -53,6 +53,10 @@ function SettingsFormPage:Constructor(window)
     self.side_values = ui.side_values or {}
     self.text_alignment_labels = ui.text_alignment_labels or {}
     self.text_alignment_values = ui.text_alignment_values or {}
+    self.vitals_label_anchor_labels = ui.vitals_label_anchor_labels or {}
+    self.vitals_label_anchor_values = ui.vitals_label_anchor_values or {}
+    self.vitals_label_width_mode_labels = ui.vitals_label_width_mode_labels or {}
+    self.vitals_label_width_mode_values = ui.vitals_label_width_mode_values or {}
     self.abbrev_digits_labels = ui.abbrev_digits_labels or {}
     self.abbrev_digits_values = ui.abbrev_digits_values or {}
     self.abbrev_width_labels = ui.abbrev_width_labels or {}

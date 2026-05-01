@@ -35,6 +35,23 @@ e.text_alignment = {
     RIGHT = 3,
 }
 
+e.vitals_label_anchor = {
+    TOP_LEFT = 1,
+    TOP = 2,
+    TOP_RIGHT = 3,
+    LEFT = 4,
+    CENTER = 5,
+    RIGHT = 6,
+    BOTTOM_LEFT = 7,
+    BOTTOM = 8,
+    BOTTOM_RIGHT = 9,
+}
+
+e.vitals_label_width_mode = {
+    AUTO = 1,
+    FILL = 2,
+}
+
 e.time_format = {
     H24 = 1,
     AMPM = 2,

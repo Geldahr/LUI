@@ -1,3 +1,4 @@
+import "Turbine.UI"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.token_format"
 import "LUI.src.Settings.enums"
@@ -114,6 +115,32 @@ function _G.rebuild_settings()
     _G.settings.ui.windows = raw.ui.windows
     _G.settings.ui.hud = raw.ui.hud
 
+    local function build_color(value)
+        if value.A ~= nil and value.R ~= nil and value.G ~= nil and value.B ~= nil then
+            return Turbine.UI.Color(value.A, value.R, value.G, value.B)
+        end
+        return value
+    end
+
+    local function build_vital_label(src)
+        local dst = { font = {} }
+        dst.enabled = src.enabled == true
+        dst.text = src.text
+        dst.tokens = lui_tokenize_format(dst.text)
+        dst.anchor = src.anchor
+        dst.width_mode = src.width_mode
+        dst.text_alignment = src.text_alignment
+        dst.x_offset = scaled_int(src.x_offset)
+        dst.y_offset = scaled_int(src.y_offset)
+        dst.font.name = src.font.name
+        dst.font.size = scaled_number(src.font.size)
+        dst.font.lotro = FONT_TO_LOTRO(dst.font.name, dst.font.size)
+        dst.font.style = src.font.style
+        dst.font.color = build_color(src.font.color)
+        dst.font.outline_color = build_color(src.font.outline_color)
+        return dst
+    end
+
     local function build_vital(dst, src)
         dst.frame.width = scaled_int(src.frame.width)
         dst.frame.border_width = scaled_border(src.frame.border_width)
@@ -153,6 +180,18 @@ function _G.rebuild_settings()
         dst.power.text_alignment = src.power.text_alignment
         dst.morale.text_margin = scaled_int(src.morale.text_margin)
         dst.power.text_margin = scaled_int(src.power.text_margin)
+        if src.morale.labels ~= nil then
+            dst.morale.labels = {
+                build_vital_label(src.morale.labels[1]),
+                build_vital_label(src.morale.labels[2]),
+            }
+        end
+        if src.power.labels ~= nil then
+            dst.power.labels = {
+                build_vital_label(src.power.labels[1]),
+                build_vital_label(src.power.labels[2]),
+            }
+        end
 
         dst.frame.effects_height = scaled_int(src.frame.effects_height)
         dst.frame.effects_position = src.frame.effects_position
@@ -247,12 +286,24 @@ function _G.rebuild_settings()
     dst_tt.bubble_tokens = lui_tokenize_format(dst_tt.bubble_format)
     dst_tt.background_matches_missing = raw_tt.background_matches_missing
     dst_tt.background_dimming = raw_tt.background_dimming
+    dst_tt.anchor = raw_tt.anchor
+    dst_tt.width_mode = raw_tt.width_mode
     dst_tt.text_alignment = raw_tt.text_alignment
+    dst_tt.x_offset = scaled_int(raw_tt.x_offset)
+    dst_tt.y_offset = scaled_int(raw_tt.y_offset)
     dst_tt.text_margin = scaled_int(raw_tt.text_margin)
 
     local raw_bv = raw.target.boss_vitals
     local dst_bv = _G.settings.target.boss_vitals
     dst_bv.enabled = raw_bv.enabled
+    dst_bv.morale.anchor = raw_bv.morale.anchor
+    dst_bv.morale.width_mode = raw_bv.morale.width_mode
+    dst_bv.morale.x_offset = scaled_int(raw_bv.morale.x_offset)
+    dst_bv.morale.y_offset = scaled_int(raw_bv.morale.y_offset)
+    dst_bv.power.anchor = raw_bv.power.anchor
+    dst_bv.power.width_mode = raw_bv.power.width_mode
+    dst_bv.power.x_offset = scaled_int(raw_bv.power.x_offset)
+    dst_bv.power.y_offset = scaled_int(raw_bv.power.y_offset)
     dst_bv.power.width = scaled_int(raw_bv.power.width)
     dst_bv.power.hide = raw_bv.power.hide
     dst_bv.power.side = raw_bv.power.side

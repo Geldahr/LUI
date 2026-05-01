@@ -154,9 +154,19 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "self", "vitals", "morale" })
     ensure_table_at(s, { "self", "vitals", "morale", "font" })
     ensure_table_at(s, { "self", "vitals", "morale", "color" })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels" })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels", 1 })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels", 1, "font" })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels", 2 })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels", 2, "font" })
     ensure_table_at(s, { "self", "vitals", "power" })
     ensure_table_at(s, { "self", "vitals", "power", "font" })
     ensure_table_at(s, { "self", "vitals", "power", "color" })
+    ensure_table_at(s, { "self", "vitals", "power", "labels" })
+    ensure_table_at(s, { "self", "vitals", "power", "labels", 1 })
+    ensure_table_at(s, { "self", "vitals", "power", "labels", 1, "font" })
+    ensure_table_at(s, { "self", "vitals", "power", "labels", 2 })
+    ensure_table_at(s, { "self", "vitals", "power", "labels", 2, "font" })
     ensure_table_at(s, { "self", "vitals", "effects" })
     ensure_table_at(s, { "self", "vitals", "effects", "buffs" })
     ensure_table_at(s, { "self", "vitals", "effects", "buffs", "timer_font" })
@@ -168,9 +178,19 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "target", "vitals", "morale" })
     ensure_table_at(s, { "target", "vitals", "morale", "font" })
     ensure_table_at(s, { "target", "vitals", "morale", "color" })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels" })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels", 1 })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels", 1, "font" })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels", 2 })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels", 2, "font" })
     ensure_table_at(s, { "target", "vitals", "power" })
     ensure_table_at(s, { "target", "vitals", "power", "font" })
     ensure_table_at(s, { "target", "vitals", "power", "color" })
+    ensure_table_at(s, { "target", "vitals", "power", "labels" })
+    ensure_table_at(s, { "target", "vitals", "power", "labels", 1 })
+    ensure_table_at(s, { "target", "vitals", "power", "labels", 1, "font" })
+    ensure_table_at(s, { "target", "vitals", "power", "labels", 2 })
+    ensure_table_at(s, { "target", "vitals", "power", "labels", 2, "font" })
     ensure_table_at(s, { "target", "vitals", "targets_target" })
     ensure_table_at(s, { "target", "vitals", "targets_target", "font" })
     ensure_table_at(s, { "target", "vitals", "targets_target", "color" })
@@ -244,6 +264,79 @@ function _G.ensure_loaded_settings()
     end
     if is_lui_english_language ~= nil and is_lui_english_language() ~= true then
         s.global.bestiary_capture = false
+    end
+
+    local function default_label_x_offset(text_alignment, text_margin)
+        if text_alignment == LUI_ENUMS.text_alignment.LEFT then
+            return text_margin or 0
+        end
+        if text_alignment == LUI_ENUMS.text_alignment.RIGHT then
+            return -(text_margin or 0)
+        end
+        return 0
+    end
+
+    local function default_label_anchor(text_alignment)
+        if text_alignment == LUI_ENUMS.text_alignment.LEFT then
+            return LUI_ENUMS.vitals_label_anchor.LEFT
+        end
+        if text_alignment == LUI_ENUMS.text_alignment.RIGHT then
+            return LUI_ENUMS.vitals_label_anchor.RIGHT
+        end
+        return LUI_ENUMS.vitals_label_anchor.CENTER
+    end
+
+    local function ensure_vitals_label_defaults(label, default_enabled, default_text, source_font, source_alignment,
+                                                source_margin)
+        if label.enabled == nil then
+            label.enabled = default_enabled == true
+        end
+        if label.text == nil then
+            label.text = default_text or ""
+        end
+
+        if label.font.name == nil then
+            label.font.name = source_font.name
+        end
+        if label.font.size == nil then
+            label.font.size = source_font.size
+        end
+        if label.font.style == nil then
+            label.font.style = source_font.style
+        end
+        label.font.color = label.font.color or source_font.color
+        label.font.outline_color = label.font.outline_color or source_font.outline_color
+
+        if label.text_alignment == nil then
+            label.text_alignment = source_alignment or LUI_ENUMS.text_alignment.CENTER
+        end
+        if label.anchor == nil then
+            label.anchor = default_label_anchor(source_alignment)
+        end
+        if label.width_mode == nil then
+            label.width_mode = LUI_ENUMS.vitals_label_width_mode.FILL
+        end
+        if label.x_offset == nil then
+            label.x_offset = default_label_x_offset(source_alignment, source_margin)
+        end
+        if label.y_offset == nil then
+            label.y_offset = 0
+        end
+    end
+
+    local function ensure_single_vital_label_defaults(vital, source_font, source_alignment, source_margin)
+        if vital.anchor == nil then
+            vital.anchor = default_label_anchor(source_alignment)
+        end
+        if vital.width_mode == nil then
+            vital.width_mode = LUI_ENUMS.vitals_label_width_mode.FILL
+        end
+        if vital.x_offset == nil then
+            vital.x_offset = default_label_x_offset(source_alignment, source_margin)
+        end
+        if vital.y_offset == nil then
+            vital.y_offset = 0
+        end
     end
 
     local function apply_vital_defaults(v, hud_key, is_target, morale_default, power_default, default_left, default_top,
@@ -323,6 +416,54 @@ function _G.ensure_loaded_settings()
         v.morale.text_margin = v.morale.text_margin or 4
         v.power.text_margin = v.power.text_margin or 4
 
+        if hud_key == "self_vitals" or hud_key == "target_vitals" then
+            ensure_vitals_label_defaults(
+                v.morale.labels[1],
+                true,
+                v.morale.string_format,
+                v.morale.font,
+                v.morale.text_alignment,
+                v.morale.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.morale.labels[2],
+                false,
+                "",
+                v.morale.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[1],
+                true,
+                v.power.string_format,
+                v.power.font,
+                v.power.text_alignment,
+                v.power.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[2],
+                false,
+                "",
+                v.power.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
+        elseif hud_key == "boss_vitals" then
+            ensure_single_vital_label_defaults(
+                v.morale,
+                v.morale.font,
+                v.morale.text_alignment,
+                v.morale.text_margin
+            )
+            ensure_single_vital_label_defaults(
+                v.power,
+                v.power.font,
+                v.power.text_alignment,
+                v.power.text_margin
+            )
+        end
+
         v.effects.buffs.icon_size = v.effects.buffs.icon_size or 22
         if v.effects.buffs.timer_font.name == nil then
             v.effects.buffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
@@ -391,6 +532,12 @@ function _G.ensure_loaded_settings()
                 v.targets_target.text_alignment = LUI_ENUMS.text_alignment.CENTER
             end
             v.targets_target.text_margin = v.targets_target.text_margin or 4
+            ensure_single_vital_label_defaults(
+                v.targets_target,
+                v.targets_target.font,
+                v.targets_target.text_alignment,
+                v.targets_target.text_margin
+            )
 
             local tc = v.targets_target.color
             if tc.background == nil then tc.background = v.morale.color.background end

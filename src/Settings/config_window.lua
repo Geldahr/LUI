@@ -415,6 +415,35 @@ function ConfigWindow:build_controls()
         LUI_ENUMS.text_alignment.RIGHT,
     }
 
+    local vitals_label_anchor_labels = {
+        TR["Top Left"],
+        TR["Top"],
+        TR["Top Right"],
+        TR["Left"],
+        TR["Center"],
+        TR["Right"],
+        TR["Bottom Left"],
+        TR["Bottom"],
+        TR["Bottom Right"],
+    }
+    local vitals_label_anchor_values = {
+        LUI_ENUMS.vitals_label_anchor.TOP_LEFT,
+        LUI_ENUMS.vitals_label_anchor.TOP,
+        LUI_ENUMS.vitals_label_anchor.TOP_RIGHT,
+        LUI_ENUMS.vitals_label_anchor.LEFT,
+        LUI_ENUMS.vitals_label_anchor.CENTER,
+        LUI_ENUMS.vitals_label_anchor.RIGHT,
+        LUI_ENUMS.vitals_label_anchor.BOTTOM_LEFT,
+        LUI_ENUMS.vitals_label_anchor.BOTTOM,
+        LUI_ENUMS.vitals_label_anchor.BOTTOM_RIGHT,
+    }
+
+    local vitals_label_width_mode_labels = { TR["Auto"], TR["Fill"] }
+    local vitals_label_width_mode_values = {
+        LUI_ENUMS.vitals_label_width_mode.AUTO,
+        LUI_ENUMS.vitals_label_width_mode.FILL,
+    }
+
     local abbrev_digits_labels = { "3", "4" }
     local abbrev_digits_values = { LUI_ENUMS.abbrev_digits.DIGITS_3, LUI_ENUMS.abbrev_digits.DIGITS_4 }
     local abbrev_width_labels = { "3", "4" }
@@ -473,6 +502,10 @@ function ConfigWindow:build_controls()
         side_values = side_values,
         text_alignment_labels = text_alignment_labels,
         text_alignment_values = text_alignment_values,
+        vitals_label_anchor_labels = vitals_label_anchor_labels,
+        vitals_label_anchor_values = vitals_label_anchor_values,
+        vitals_label_width_mode_labels = vitals_label_width_mode_labels,
+        vitals_label_width_mode_values = vitals_label_width_mode_values,
         abbrev_digits_labels = abbrev_digits_labels,
         abbrev_digits_values = abbrev_digits_values,
         abbrev_width_labels = abbrev_width_labels,

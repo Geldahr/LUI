@@ -12,6 +12,77 @@ local function _apply_color(ui, dest, hex)
     end
 end
 
+local function _load_vital_label(controls, prefix, bar_key, label_index, label, ui)
+    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+    controls[key .. "_enabled"].cb:SetChecked(label.enabled == true)
+    controls[key .. "_text"].tb:SetText(tostring(label.text))
+    controls[key .. "_anchor"]:set_value(label.anchor)
+    controls[key .. "_width_mode"]:set_value(label.width_mode)
+    controls[key .. "_text_alignment"]:set_value(label.text_alignment)
+    controls[key .. "_x_offset"].tb:SetText(tostring(label.x_offset))
+    controls[key .. "_y_offset"].tb:SetText(tostring(label.y_offset))
+    controls[key .. "_font_name"]:set_value(label.font.name)
+    controls[key .. "_font_size"].tb:SetText(tostring(label.font.size))
+    controls[key .. "_font_color"].tb:SetText(ui.color_to_hex(label.font.color))
+    controls[key .. "_font_style"]:set_value(label.font.style)
+    controls[key .. "_font_outline_color"].tb:SetText(ui.color_to_hex(label.font.outline_color))
+end
+
+local function _apply_vital_label(controls, prefix, bar_key, label_index, label, ui)
+    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+
+    label.enabled = controls[key .. "_enabled"].cb:IsChecked() == true
+
+    local text = controls[key .. "_text"].tb:GetText()
+    if type(text) == "string" then
+        label.text = text
+    end
+
+    local text_alignment = controls[key .. "_text_alignment"]:get_value()
+    if type(text_alignment) == "number" then
+        label.text_alignment = text_alignment
+    end
+
+    local anchor = controls[key .. "_anchor"]:get_value()
+    if type(anchor) == "number" then
+        label.anchor = anchor
+    end
+
+    local width_mode = controls[key .. "_width_mode"]:get_value()
+    if type(width_mode) == "number" then
+        label.width_mode = width_mode
+    end
+
+    local x_offset = tonumber(controls[key .. "_x_offset"].tb:GetText())
+    if x_offset ~= nil then
+        label.x_offset = x_offset
+    end
+
+    local y_offset = tonumber(controls[key .. "_y_offset"].tb:GetText())
+    if y_offset ~= nil then
+        label.y_offset = y_offset
+    end
+
+    local font_name = controls[key .. "_font_name"]:get_value()
+    if type(font_name) == "number" then
+        label.font.name = font_name
+    end
+
+    local font_size = tonumber(controls[key .. "_font_size"].tb:GetText())
+    if font_size ~= nil then
+        label.font.size = font_size
+    end
+
+    _apply_color(ui, label.font.color, controls[key .. "_font_color"].tb:GetText())
+
+    local font_style = controls[key .. "_font_style"]:get_value()
+    if type(font_style) == "number" then
+        label.font.style = font_style
+    end
+
+    _apply_color(ui, label.font.outline_color, controls[key .. "_font_outline_color"].tb:GetText())
+end
+
 function SelfVitals.create_page(window)
     return SelfVitalsPage(window)
 end
@@ -32,12 +103,6 @@ function SelfVitals.load(page, s, ui)
     controls.self_effects_position:set_value(v.frame.effects_position)
 
     controls.self_morale_height.tb:SetText(tostring(v.morale.height))
-    controls.self_morale_font_name:set_value(v.morale.font.name)
-    controls.self_morale_font_size.tb:SetText(tostring(v.morale.font.size))
-    controls.self_morale_font_color.tb:SetText(ui.color_to_hex(v.morale.font.color))
-    controls.self_morale_font_style:set_value(v.morale.font.style)
-    controls.self_morale_font_outline_color.tb:SetText(ui.color_to_hex(v.morale.font.outline_color))
-
     controls.self_morale_background_color.tb:SetText(ui.color_to_hex(v.morale.color.background))
     controls.self_ressource_background_matches_missing.cb:SetChecked(v.background_matches_missing == true)
     controls.self_ressource_background_dimming.tb:SetText(tostring(v.background_dimming))
@@ -52,24 +117,15 @@ function SelfVitals.load(page, s, ui)
     controls.self_morale_color_medium.tb:SetText(ui.color_to_hex(v.morale.color.medium))
     controls.self_morale_color_low.tb:SetText(ui.color_to_hex(v.morale.color.low))
     controls.self_morale_color_critical.tb:SetText(ui.color_to_hex(v.morale.color.critical))
-
-    controls.self_morale_text.tb:SetText(tostring(v.morale.string_format))
-    controls.self_morale_text_alignment:set_value(v.morale.text_alignment)
     controls.self_morale_bubble_text.tb:SetText(tostring(v.morale.bubble_format))
-    controls.self_morale_text_margin.tb:SetText(tostring(v.morale.text_margin))
+    _load_vital_label(controls, "self", "morale", 1, v.morale.labels[1], ui)
+    _load_vital_label(controls, "self", "morale", 2, v.morale.labels[2], ui)
 
     controls.self_power_height.tb:SetText(tostring(v.power.height))
-    controls.self_power_font_name:set_value(v.power.font.name)
-    controls.self_power_font_size.tb:SetText(tostring(v.power.font.size))
-    controls.self_power_font_color.tb:SetText(ui.color_to_hex(v.power.font.color))
-    controls.self_power_font_style:set_value(v.power.font.style)
-    controls.self_power_font_outline_color.tb:SetText(ui.color_to_hex(v.power.font.outline_color))
-
     controls.self_power_color.tb:SetText(ui.color_to_hex(v.power.color.power))
     controls.self_wrath_color.tb:SetText(ui.color_to_hex(v.power.color.wrath))
-    controls.self_power_text.tb:SetText(tostring(v.power.string_format))
-    controls.self_power_text_alignment:set_value(v.power.text_alignment)
-    controls.self_power_text_margin.tb:SetText(tostring(v.power.text_margin))
+    _load_vital_label(controls, "self", "power", 1, v.power.labels[1], ui)
+    _load_vital_label(controls, "self", "power", 2, v.power.labels[2], ui)
 
     controls.self_buff_size.tb:SetText(tostring(v.effects.buffs.icon_size))
     controls.self_effects_height.tb:SetText(tostring(v.frame.effects_height))
@@ -124,21 +180,6 @@ function SelfVitals.apply(page, s, ui)
         v.morale.height = mh
     end
 
-    local morale_font_name = controls.self_morale_font_name:get_value()
-    if type(morale_font_name) == "number" then
-        v.morale.font.name = morale_font_name
-    end
-    local morale_font_size = tonumber(controls.self_morale_font_size.tb:GetText())
-    if morale_font_size ~= nil then
-        v.morale.font.size = morale_font_size
-    end
-    _apply_color(ui, v.morale.font.color, controls.self_morale_font_color.tb:GetText())
-    local morale_font_style = controls.self_morale_font_style:get_value()
-    if type(morale_font_style) == "number" then
-        v.morale.font.style = morale_font_style
-    end
-    _apply_color(ui, v.morale.font.outline_color, controls.self_morale_font_outline_color.tb:GetText())
-
     _apply_color(ui, v.morale.color.background, controls.self_morale_background_color.tb:GetText())
     v.background_matches_missing = controls.self_ressource_background_matches_missing.cb:IsChecked() == true
     local ressource_background_dimming = tonumber(controls.self_ressource_background_dimming.tb:GetText())
@@ -156,59 +197,22 @@ function SelfVitals.apply(page, s, ui)
     _apply_color(ui, v.morale.color.medium, controls.self_morale_color_medium.tb:GetText())
     _apply_color(ui, v.morale.color.low, controls.self_morale_color_low.tb:GetText())
     _apply_color(ui, v.morale.color.critical, controls.self_morale_color_critical.tb:GetText())
-
-    local self_morale_text = controls.self_morale_text.tb:GetText()
-    if type(self_morale_text) == "string" then
-        v.morale.string_format = self_morale_text
-    end
-    local self_morale_text_alignment = controls.self_morale_text_alignment:get_value()
-    if type(self_morale_text_alignment) == "number" then
-        v.morale.text_alignment = self_morale_text_alignment
-    end
-    local self_morale_text_margin = tonumber(controls.self_morale_text_margin.tb:GetText())
-    if self_morale_text_margin ~= nil then
-        v.morale.text_margin = self_morale_text_margin
-    end
     local self_bubble_text = controls.self_morale_bubble_text.tb:GetText()
     if type(self_bubble_text) == "string" then
         v.morale.bubble_format = self_bubble_text
     end
+    _apply_vital_label(controls, "self", "morale", 1, v.morale.labels[1], ui)
+    _apply_vital_label(controls, "self", "morale", 2, v.morale.labels[2], ui)
 
     local ph = tonumber(controls.self_power_height.tb:GetText())
     if ph ~= nil then
         v.power.height = ph
     end
 
-    local power_font_name = controls.self_power_font_name:get_value()
-    if type(power_font_name) == "number" then
-        v.power.font.name = power_font_name
-    end
-    local power_font_size = tonumber(controls.self_power_font_size.tb:GetText())
-    if power_font_size ~= nil then
-        v.power.font.size = power_font_size
-    end
-    _apply_color(ui, v.power.font.color, controls.self_power_font_color.tb:GetText())
-    local power_font_style = controls.self_power_font_style:get_value()
-    if type(power_font_style) == "number" then
-        v.power.font.style = power_font_style
-    end
-    _apply_color(ui, v.power.font.outline_color, controls.self_power_font_outline_color.tb:GetText())
-
     _apply_color(ui, v.power.color.power, controls.self_power_color.tb:GetText())
     _apply_color(ui, v.power.color.wrath, controls.self_wrath_color.tb:GetText())
-
-    local self_power_text = controls.self_power_text.tb:GetText()
-    if type(self_power_text) == "string" then
-        v.power.string_format = self_power_text
-    end
-    local self_power_text_alignment = controls.self_power_text_alignment:get_value()
-    if type(self_power_text_alignment) == "number" then
-        v.power.text_alignment = self_power_text_alignment
-    end
-    local self_power_text_margin = tonumber(controls.self_power_text_margin.tb:GetText())
-    if self_power_text_margin ~= nil then
-        v.power.text_margin = self_power_text_margin
-    end
+    _apply_vital_label(controls, "self", "power", 1, v.power.labels[1], ui)
+    _apply_vital_label(controls, "self", "power", 2, v.power.labels[2], ui)
 
     local effects_h = tonumber(controls.self_effects_height.tb:GetText())
     if effects_h ~= nil then

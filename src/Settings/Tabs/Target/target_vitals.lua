@@ -12,6 +12,77 @@ local function _apply_color(ui, dest, hex)
     end
 end
 
+local function _load_vital_label(controls, prefix, bar_key, label_index, label, ui)
+    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+    controls[key .. "_enabled"].cb:SetChecked(label.enabled == true)
+    controls[key .. "_text"].tb:SetText(tostring(label.text))
+    controls[key .. "_anchor"]:set_value(label.anchor)
+    controls[key .. "_width_mode"]:set_value(label.width_mode)
+    controls[key .. "_text_alignment"]:set_value(label.text_alignment)
+    controls[key .. "_x_offset"].tb:SetText(tostring(label.x_offset))
+    controls[key .. "_y_offset"].tb:SetText(tostring(label.y_offset))
+    controls[key .. "_font_name"]:set_value(label.font.name)
+    controls[key .. "_font_size"].tb:SetText(tostring(label.font.size))
+    controls[key .. "_font_color"].tb:SetText(ui.color_to_hex(label.font.color))
+    controls[key .. "_font_style"]:set_value(label.font.style)
+    controls[key .. "_font_outline_color"].tb:SetText(ui.color_to_hex(label.font.outline_color))
+end
+
+local function _apply_vital_label(controls, prefix, bar_key, label_index, label, ui)
+    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+
+    label.enabled = controls[key .. "_enabled"].cb:IsChecked() == true
+
+    local text = controls[key .. "_text"].tb:GetText()
+    if type(text) == "string" then
+        label.text = text
+    end
+
+    local text_alignment = controls[key .. "_text_alignment"]:get_value()
+    if type(text_alignment) == "number" then
+        label.text_alignment = text_alignment
+    end
+
+    local anchor = controls[key .. "_anchor"]:get_value()
+    if type(anchor) == "number" then
+        label.anchor = anchor
+    end
+
+    local width_mode = controls[key .. "_width_mode"]:get_value()
+    if type(width_mode) == "number" then
+        label.width_mode = width_mode
+    end
+
+    local x_offset = tonumber(controls[key .. "_x_offset"].tb:GetText())
+    if x_offset ~= nil then
+        label.x_offset = x_offset
+    end
+
+    local y_offset = tonumber(controls[key .. "_y_offset"].tb:GetText())
+    if y_offset ~= nil then
+        label.y_offset = y_offset
+    end
+
+    local font_name = controls[key .. "_font_name"]:get_value()
+    if type(font_name) == "number" then
+        label.font.name = font_name
+    end
+
+    local font_size = tonumber(controls[key .. "_font_size"].tb:GetText())
+    if font_size ~= nil then
+        label.font.size = font_size
+    end
+
+    _apply_color(ui, label.font.color, controls[key .. "_font_color"].tb:GetText())
+
+    local font_style = controls[key .. "_font_style"]:get_value()
+    if type(font_style) == "number" then
+        label.font.style = font_style
+    end
+
+    _apply_color(ui, label.font.outline_color, controls[key .. "_font_outline_color"].tb:GetText())
+end
+
 function TargetVitals.create_page(window)
     return TargetVitalsPage(window)
 end
@@ -32,12 +103,6 @@ function TargetVitals.load(page, s, ui)
     controls.target_effects_position:set_value(v.frame.effects_position)
 
     controls.target_morale_height.tb:SetText(tostring(v.morale.height))
-    controls.target_morale_font_name:set_value(v.morale.font.name)
-    controls.target_morale_font_size.tb:SetText(tostring(v.morale.font.size))
-    controls.target_morale_font_color.tb:SetText(ui.color_to_hex(v.morale.font.color))
-    controls.target_morale_font_style:set_value(v.morale.font.style)
-    controls.target_morale_font_outline_color.tb:SetText(ui.color_to_hex(v.morale.font.outline_color))
-
     controls.target_morale_background_color.tb:SetText(ui.color_to_hex(v.morale.color.background))
     controls.target_ressource_background_matches_missing.cb:SetChecked(v.background_matches_missing == true)
     controls.target_ressource_background_dimming.tb:SetText(tostring(v.background_dimming))
@@ -52,24 +117,15 @@ function TargetVitals.load(page, s, ui)
     controls.target_morale_color_medium.tb:SetText(ui.color_to_hex(v.morale.color.medium))
     controls.target_morale_color_low.tb:SetText(ui.color_to_hex(v.morale.color.low))
     controls.target_morale_color_critical.tb:SetText(ui.color_to_hex(v.morale.color.critical))
-
-    controls.target_morale_text.tb:SetText(tostring(v.morale.string_format))
-    controls.target_morale_text_alignment:set_value(v.morale.text_alignment)
     controls.target_morale_bubble_text.tb:SetText(tostring(v.morale.bubble_format))
-    controls.target_morale_text_margin.tb:SetText(tostring(v.morale.text_margin))
+    _load_vital_label(controls, "target", "morale", 1, v.morale.labels[1], ui)
+    _load_vital_label(controls, "target", "morale", 2, v.morale.labels[2], ui)
 
     controls.target_power_height.tb:SetText(tostring(v.power.height))
-    controls.target_power_font_name:set_value(v.power.font.name)
-    controls.target_power_font_size.tb:SetText(tostring(v.power.font.size))
-    controls.target_power_font_color.tb:SetText(ui.color_to_hex(v.power.font.color))
-    controls.target_power_font_style:set_value(v.power.font.style)
-    controls.target_power_font_outline_color.tb:SetText(ui.color_to_hex(v.power.font.outline_color))
-
     controls.target_power_color.tb:SetText(ui.color_to_hex(v.power.color.power))
     controls.target_wrath_color.tb:SetText(ui.color_to_hex(v.power.color.wrath))
-    controls.target_power_text.tb:SetText(tostring(v.power.string_format))
-    controls.target_power_text_alignment:set_value(v.power.text_alignment)
-    controls.target_power_text_margin.tb:SetText(tostring(v.power.text_margin))
+    _load_vital_label(controls, "target", "power", 1, v.power.labels[1], ui)
+    _load_vital_label(controls, "target", "power", 2, v.power.labels[2], ui)
 
     controls.target_buff_size.tb:SetText(tostring(v.effects.buffs.icon_size))
     controls.target_effects_height.tb:SetText(tostring(v.frame.effects_height))
@@ -124,21 +180,6 @@ function TargetVitals.apply(page, s, ui)
         v.morale.height = mh
     end
 
-    local morale_font_name = controls.target_morale_font_name:get_value()
-    if type(morale_font_name) == "number" then
-        v.morale.font.name = morale_font_name
-    end
-    local morale_font_size = tonumber(controls.target_morale_font_size.tb:GetText())
-    if morale_font_size ~= nil then
-        v.morale.font.size = morale_font_size
-    end
-    _apply_color(ui, v.morale.font.color, controls.target_morale_font_color.tb:GetText())
-    local morale_font_style = controls.target_morale_font_style:get_value()
-    if type(morale_font_style) == "number" then
-        v.morale.font.style = morale_font_style
-    end
-    _apply_color(ui, v.morale.font.outline_color, controls.target_morale_font_outline_color.tb:GetText())
-
     _apply_color(ui, v.morale.color.background, controls.target_morale_background_color.tb:GetText())
     v.background_matches_missing = controls.target_ressource_background_matches_missing.cb:IsChecked() == true
     local ressource_background_dimming = tonumber(controls.target_ressource_background_dimming.tb:GetText())
@@ -156,59 +197,22 @@ function TargetVitals.apply(page, s, ui)
     _apply_color(ui, v.morale.color.medium, controls.target_morale_color_medium.tb:GetText())
     _apply_color(ui, v.morale.color.low, controls.target_morale_color_low.tb:GetText())
     _apply_color(ui, v.morale.color.critical, controls.target_morale_color_critical.tb:GetText())
-
-    local target_morale_text = controls.target_morale_text.tb:GetText()
-    if type(target_morale_text) == "string" then
-        v.morale.string_format = target_morale_text
-    end
-    local target_morale_text_alignment = controls.target_morale_text_alignment:get_value()
-    if type(target_morale_text_alignment) == "number" then
-        v.morale.text_alignment = target_morale_text_alignment
-    end
-    local target_morale_text_margin = tonumber(controls.target_morale_text_margin.tb:GetText())
-    if target_morale_text_margin ~= nil then
-        v.morale.text_margin = target_morale_text_margin
-    end
     local target_bubble_text = controls.target_morale_bubble_text.tb:GetText()
     if type(target_bubble_text) == "string" then
         v.morale.bubble_format = target_bubble_text
     end
+    _apply_vital_label(controls, "target", "morale", 1, v.morale.labels[1], ui)
+    _apply_vital_label(controls, "target", "morale", 2, v.morale.labels[2], ui)
 
     local ph = tonumber(controls.target_power_height.tb:GetText())
     if ph ~= nil then
         v.power.height = ph
     end
 
-    local power_font_name = controls.target_power_font_name:get_value()
-    if type(power_font_name) == "number" then
-        v.power.font.name = power_font_name
-    end
-    local power_font_size = tonumber(controls.target_power_font_size.tb:GetText())
-    if power_font_size ~= nil then
-        v.power.font.size = power_font_size
-    end
-    _apply_color(ui, v.power.font.color, controls.target_power_font_color.tb:GetText())
-    local power_font_style = controls.target_power_font_style:get_value()
-    if type(power_font_style) == "number" then
-        v.power.font.style = power_font_style
-    end
-    _apply_color(ui, v.power.font.outline_color, controls.target_power_font_outline_color.tb:GetText())
-
     _apply_color(ui, v.power.color.power, controls.target_power_color.tb:GetText())
     _apply_color(ui, v.power.color.wrath, controls.target_wrath_color.tb:GetText())
-
-    local target_power_text = controls.target_power_text.tb:GetText()
-    if type(target_power_text) == "string" then
-        v.power.string_format = target_power_text
-    end
-    local target_power_text_alignment = controls.target_power_text_alignment:get_value()
-    if type(target_power_text_alignment) == "number" then
-        v.power.text_alignment = target_power_text_alignment
-    end
-    local target_power_text_margin = tonumber(controls.target_power_text_margin.tb:GetText())
-    if target_power_text_margin ~= nil then
-        v.power.text_margin = target_power_text_margin
-    end
+    _apply_vital_label(controls, "target", "power", 1, v.power.labels[1], ui)
+    _apply_vital_label(controls, "target", "power", 2, v.power.labels[2], ui)
 
     local effects_h = tonumber(controls.target_effects_height.tb:GetText())
     if effects_h ~= nil then
