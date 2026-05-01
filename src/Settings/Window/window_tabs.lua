@@ -2,9 +2,7 @@ import "LUI.src.Settings.Tabs.Global.global_page"
 import "LUI.src.Settings.Tabs.Vitals.vitals_page"
 import "LUI.src.Settings.Tabs.ExpiringEffects.expiring_effects_page"
 import "LUI.src.Settings.Tabs.Cooldowns.cooldowns_page"
-import "LUI.src.Settings.Tabs.Self.self_page"
 import "LUI.src.Settings.Tabs.Drops.drops_page"
-import "LUI.src.Settings.Tabs.Target.target_page"
 import "LUI.src.Settings.Tabs.Inventory.inventory_page"
 import "LUI.src.Settings.Tabs.Crafting.crafting_page"
 import "LUI.src.Settings.Tabs.Travel.travel_page"
@@ -17,9 +15,7 @@ local GlobalPage = LUI.src.Settings.Tabs.Global.GlobalPage
 local VitalsPage = LUI.src.Settings.Tabs.Vitals.VitalsPage
 local ExpiringEffectsPage = LUI.src.Settings.Tabs.ExpiringEffects.ExpiringEffectsPage
 local CooldownsFeaturePage = LUI.src.Settings.Tabs.Cooldowns.CooldownsFeaturePage
-local SelfPage = LUI.src.Settings.Tabs.Self.SelfPage
 local DropsPage = LUI.src.Settings.Tabs.Drops.DropsPage
-local TargetPage = LUI.src.Settings.Tabs.Target.TargetPage
 local InventoryPage = LUI.src.Settings.Tabs.Inventory.InventoryPage
 local CraftingPage = LUI.src.Settings.Tabs.Crafting.CraftingPage
 local TravelPage = LUI.src.Settings.Tabs.Travel.TravelPage
@@ -131,14 +127,6 @@ function ConfigWindow:build_tabs()
     local cooldowns_page = CooldownsFeaturePage(self)
     cooldowns_page._tab_key = "cooldowns"
     self.main_tab_bar:add_tab(TR["Cooldowns"], cooldowns_page)
-
-    local self_page = SelfPage(self)
-    self_page._tab_key = "self"
-    self.main_tab_bar:add_tab(TR["Self"], self_page)
-
-    local target_page = TargetPage(self)
-    target_page._tab_key = "target"
-    self.main_tab_bar:add_tab(TR["Target"], target_page)
 
     local drops_page = DropsPage(self)
     drops_page._tab_key = "drops"
