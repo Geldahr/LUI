@@ -119,7 +119,7 @@ function ConfigWindow:init_cooldowns_preview()
         row.name_label = UI.Widgets.LuiLabel()
         row.name_label:SetParent(row.bar_background)
         row.name_label:SetMouseVisible(false)
-        row.name_label:SetMultiline(false)
+        row.name_label:SetMultiline(true)
         row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
         row.name_label:SetText("")
 
@@ -259,7 +259,15 @@ function ConfigWindow:update_cooldowns_preview()
     if threshold <= 0 then threshold = 30 end
 
     local raw_item_w = tonumber(self.controls.cd_item_w.tb:GetText()) or cd.item_w or 150
-    local min_item_w = lui_cooldown_min_item_width(item_h, border, text_margin, font_size, threshold, time_format)
+    local min_item_w = lui_cooldown_min_item_width(
+        item_h,
+        border,
+        text_margin,
+        font_name,
+        font_size,
+        threshold,
+        time_format
+    )
     local item_w = scaled_int(raw_item_w, 150)
     if item_w < 10 then item_w = 10 end
     if item_w < min_item_w then
@@ -417,16 +425,13 @@ function ConfigWindow:update_cooldowns_preview()
     row.bar_fill:SetSize(fill_width, bar_inner_h)
     row.bar_fill:SetBackColor(bar)
 
-    local time_width = lui_cooldown_time_label_width(font_size, threshold, time_format)
+    local time_width = lui_cooldown_time_label_width(font_name, font_size, threshold, time_format)
     local text_gap = lui_cooldown_text_gap(font_size)
-    local time_x = bar_inner_w - text_margin - time_width
-    if time_x < text_margin then
-        time_x = text_margin
+    local title_width = inner_w - icon_size - sep_w - (2 * text_margin) - time_width - text_gap
+    if title_width < 1 then
+        title_width = 1
     end
-    local name_width = time_x - text_margin - text_gap
-    if name_width < 1 then
-        name_width = 1
-    end
+    local time_x = text_margin + title_width + text_gap
 
     row.name_label:SetFont(font)
     row.name_label:SetFontStyle(font_style_lotro)
@@ -434,7 +439,7 @@ function ConfigWindow:update_cooldowns_preview()
     row.name_label:SetOutlineColor(outline_color)
     row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     row.name_label:SetPosition(text_margin, 0)
-    row.name_label:SetSize(name_width, inner_h)
+    row.name_label:SetSize(title_width, inner_h)
 
     row.time_label:SetFont(font)
     row.time_label:SetFontStyle(font_style_lotro)

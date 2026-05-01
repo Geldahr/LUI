@@ -81,7 +81,7 @@ function CooldownEntry:Constructor()
     self.name_label:SetParent(self.bar_background)
     self.name_label:SetMouseVisible(false)
     self.name_label:SetSelectable(false)
-    self.name_label:SetMultiline(false)
+    self.name_label:SetMultiline(true)
     self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.name_label:SetText("")
 
@@ -119,7 +119,7 @@ function CooldownEntry:apply_settings()
     if w < 1 then w = 1 end
     if h < 1 then h = 1 end
 
-    local min_w = lui_cooldown_min_item_width(h, bw, s.text_margin, s.font.size, s.threshold, s.time_format)
+    local min_w = lui_cooldown_min_item_width(h, bw, s.text_margin, s.font.name, s.font.size, s.threshold, s.time_format)
     if w < min_w then
         w = min_w
     end
@@ -207,20 +207,16 @@ function CooldownEntry:apply_settings()
     self.bar_fill:SetBackColor(s.color.bar)
 
     local pad = s.text_margin
-    local time_width = lui_cooldown_time_label_width(s.font.size, s.threshold, s.time_format)
+    local time_width = lui_cooldown_time_label_width(s.font.name, s.font.size, s.threshold, s.time_format)
     local text_gap = lui_cooldown_text_gap(s.font.size)
-    local time_x = bar_width - pad - time_width
-    if time_x < pad then
-        time_x = pad
+    local title_width = inner_w - icon_size - sep_w - (2 * pad) - time_width - text_gap
+    if title_width < 1 then
+        title_width = 1
     end
-
-    local name_width = time_x - pad - text_gap
-    if name_width < 1 then
-        name_width = 1
-    end
+    local time_x = pad + title_width + text_gap
 
     self.name_label:SetPosition(pad, 0)
-    self.name_label:SetSize(name_width, inner_h)
+    self.name_label:SetSize(title_width, inner_h)
     self.name_label:SetFont(s.font.lotro)
     self.name_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
     self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)

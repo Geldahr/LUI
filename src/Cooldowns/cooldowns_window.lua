@@ -237,6 +237,7 @@ function CooldownsWindow:apply_settings()
         entry_height,
         s.border_width,
         s.text_margin,
+        s.font.name,
         s.font.size,
         s.threshold,
         s.time_format
