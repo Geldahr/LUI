@@ -235,9 +235,19 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "party", "morale" })
     ensure_table_at(s, { "party", "morale", "font" })
     ensure_table_at(s, { "party", "morale", "color" })
+    ensure_table_at(s, { "party", "morale", "labels" })
+    ensure_table_at(s, { "party", "morale", "labels", 1 })
+    ensure_table_at(s, { "party", "morale", "labels", 1, "font" })
+    ensure_table_at(s, { "party", "morale", "labels", 2 })
+    ensure_table_at(s, { "party", "morale", "labels", 2, "font" })
     ensure_table_at(s, { "party", "power" })
     ensure_table_at(s, { "party", "power", "font" })
     ensure_table_at(s, { "party", "power", "color" })
+    ensure_table_at(s, { "party", "power", "labels" })
+    ensure_table_at(s, { "party", "power", "labels", 1 })
+    ensure_table_at(s, { "party", "power", "labels", 1, "font" })
+    ensure_table_at(s, { "party", "power", "labels", 2 })
+    ensure_table_at(s, { "party", "power", "labels", 2, "font" })
     ensure_table_at(s, { "party", "effects" })
     ensure_table_at(s, { "party", "effects", "buffs" })
     ensure_table_at(s, { "party", "effects", "buffs", "timer_font" })
@@ -436,6 +446,39 @@ function _G.ensure_loaded_settings()
             ensure_vitals_label_defaults(
                 v.power.labels[1],
                 true,
+                v.power.string_format,
+                v.power.font,
+                v.power.text_alignment,
+                v.power.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[2],
+                false,
+                "",
+                v.power.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
+        elseif hud_key == "party_vitals" then
+            ensure_vitals_label_defaults(
+                v.morale.labels[1],
+                true,
+                v.morale.string_format,
+                v.morale.font,
+                v.morale.text_alignment,
+                v.morale.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.morale.labels[2],
+                false,
+                "",
+                v.morale.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[1],
+                false,
                 v.power.string_format,
                 v.power.font,
                 v.power.text_alignment,

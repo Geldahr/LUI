@@ -453,7 +453,7 @@ function VitalsBase:get_empty_morale_text()
 end
 
 function VitalsBase:_uses_configurable_bar_labels()
-    return self.vital_key == "self" or self.vital_key == "target"
+    return self.vital_key == "self" or self.vital_key == "target" or self.vital_key == "party"
 end
 
 function VitalsBase:_bar_label_controls(bar_key)

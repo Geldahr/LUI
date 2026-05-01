@@ -1,4 +1,5 @@
 import "LUI.src.UI.Widgets"
+import "LUI.src.Utils.vitals_labels"
 
 local Common = SettingsPreviewCommon
 local _hex_to_color = Common.hex_to_color
@@ -9,11 +10,84 @@ local _morale_color_preview = Common.morale_color_preview
 local _preview_scaled_int = Common.preview_scaled_int
 local _preview_scaled_border = Common.preview_scaled_border
 local _preview_scaled_number = Common.preview_scaled_number
-local _preview_text_align = Common.preview_text_align
 local _preview_resource_background = Common.preview_resource_background
-local _apply_preview_label_bounds = Common.apply_preview_label_bounds
 local _sync_preview_holder_height = Common.sync_preview_holder_height
 local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
+
+local function _label_text_is_blank(text)
+    return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
+end
+
+local function _render_preview_vital_label(window, prefix, bar_key, label_index, label, raw_scale, width, height,
+                                           default_font_size, context)
+    local controls = window.controls
+    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+    local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
+    local text = controls[key .. "_text"].tb:GetText() or ""
+
+    if enabled ~= true or _label_text_is_blank(text) == true then
+        label:SetText("")
+        label:SetVisible(false)
+        return
+    end
+
+    local text_alignment = controls[key .. "_text_alignment"]:get_value()
+    if type(text_alignment) ~= "number" then
+        text_alignment = LUI_ENUMS.text_alignment.CENTER
+    end
+
+    local anchor = controls[key .. "_anchor"]:get_value()
+    if type(anchor) ~= "number" then
+        anchor = LUI_ENUMS.vitals_label_anchor.CENTER
+    end
+
+    local width_mode = controls[key .. "_width_mode"]:get_value()
+    if type(width_mode) ~= "number" then
+        width_mode = LUI_ENUMS.vitals_label_width_mode.FILL
+    end
+
+    local font_name = controls[key .. "_font_name"]:get_value()
+    if type(font_name) ~= "number" then
+        font_name = LUI_ENUMS.font_name.VERDANA
+    end
+
+    local font_size = _preview_scaled_number(raw_scale, controls[key .. "_font_size"].tb:GetText(), default_font_size)
+    local font_style_enum = controls[key .. "_font_style"]:get_value()
+    if type(font_style_enum) ~= "number" then
+        font_style_enum = LUI_ENUMS.font_style.OUTLINE
+    end
+
+    local rendered_text = lui_format_tokenized(lui_tokenize_format(text), context)
+
+    label:SetFont(_require_font(font_name, font_size))
+    label:SetFontStyle(LUI_TO_LOTRO.font_style[font_style_enum])
+    label:SetForeColor(_hex_to_color(controls[key .. "_font_color"].tb:GetText()) or Turbine.UI.Color(1, 1, 1))
+    label:SetOutlineColor(_hex_to_color(controls[key .. "_font_outline_color"].tb:GetText()) or Turbine.UI.Color(0, 0, 0))
+
+    lui_vitals_layout_label(
+        label,
+        width,
+        height,
+        anchor,
+        width_mode,
+        text_alignment,
+        _preview_scaled_int(raw_scale, controls[key .. "_x_offset"].tb:GetText(), 0),
+        _preview_scaled_int(raw_scale, controls[key .. "_y_offset"].tb:GetText(), 0),
+        font_name,
+        font_size,
+        rendered_text
+    )
+    label:SetText(rendered_text)
+    label:SetVisible(true)
+end
+
+local function _render_preview_vital_labels(window, prefix, bar_key, labels, raw_scale, width, height,
+                                            default_font_size, context)
+    for i = 1, #labels do
+        _render_preview_vital_label(window, prefix, bar_key, i, labels[i], raw_scale, width, height,
+            default_font_size, context)
+    end
+end
 
 function ConfigWindow:init_party_vitals_preview()
     local holder = self.controls.party_vitals_preview
@@ -93,11 +167,16 @@ function ConfigWindow:init_party_vitals_preview()
         m.bubble_bar:SetMouseVisible(false)
         m.bubble_bar:SetZOrder(2)
 
-        m.morale_label = UI.Widgets.LuiLabel()
-        m.morale_label:SetParent(m.morale_border)
-        m.morale_label:SetMouseVisible(false)
-        m.morale_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-        m.morale_label:SetZOrder(10)
+        m.morale_labels = {}
+        for j = 1, 2 do
+            local label = UI.Widgets.LuiLabel()
+            label:SetParent(m.morale_border)
+            label:SetMouseVisible(false)
+            label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+            label:SetMultiline(true)
+            label:SetZOrder(9 + j)
+            m.morale_labels[j] = label
+        end
 
         m.power_border = Turbine.UI.Control()
         m.power_border:SetParent(m.root)
@@ -111,10 +190,16 @@ function ConfigWindow:init_party_vitals_preview()
         m.power_bar:SetParent(m.power_background)
         m.power_bar:SetMouseVisible(false)
 
-        m.power_label = UI.Widgets.LuiLabel()
-        m.power_label:SetParent(m.power_border)
-        m.power_label:SetMouseVisible(false)
-        m.power_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        m.power_labels = {}
+        for j = 1, 2 do
+            local label = UI.Widgets.LuiLabel()
+            label:SetParent(m.power_border)
+            label:SetMouseVisible(false)
+            label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+            label:SetMultiline(true)
+            label:SetZOrder(9 + j)
+            m.power_labels[j] = label
+        end
 
         table.insert(p.members, m)
     end
@@ -228,74 +313,9 @@ function ConfigWindow:update_party_vitals_preview()
     local power_color = _hex_to_color(self.controls.party_power_color.tb:GetText()) or Turbine.UI.Color(0.2, 0.6, 0.98)
     local wrath_color = _hex_to_color(self.controls.party_wrath_color.tb:GetText()) or Turbine.UI.Color(1, 0.33, 0.13)
 
-    local morale_font_name = self.controls.party_morale_font_name:get_value()
-    if type(morale_font_name) ~= "number" then
-        morale_font_name = (s.party and s.party.morale and s.party.morale.font and s.party.morale.font.name) or
-            LUI_ENUMS.font_name.VERDANA
-    end
-    local morale_font_size = _preview_scaled_number(raw_scale,
-        tonumber(self.controls.party_morale_font_size.tb:GetText()) or s.party.morale.font.size or 16, 16)
-    local morale_font = _require_font(morale_font_name, morale_font_size)
-    local morale_style_enum = self.controls.party_morale_font_style:get_value()
-        or (s.party and s.party.morale and s.party.morale.font and s.party.morale.font.style)
-        or LUI_ENUMS.font_style.OUTLINE
-    local morale_font_style = LUI_TO_LOTRO.font_style[morale_style_enum] or Turbine.UI.FontStyle.None
-    local morale_font_color = _hex_to_color(self.controls.party_morale_font_color.tb:GetText()) or
-        Turbine.UI.Color(1, 1, 1)
-    local morale_outline_color = _hex_to_color(self.controls.party_morale_font_outline_color.tb:GetText()) or
-        Turbine.UI.Color(0, 0, 0)
-
-    local power_font_name = self.controls.party_power_font_name:get_value()
-    if type(power_font_name) ~= "number" then
-        power_font_name = (s.party and s.party.power and s.party.power.font and s.party.power.font.name) or
-            LUI_ENUMS.font_name.VERDANA
-    end
-    local power_font_size = _preview_scaled_number(raw_scale,
-        tonumber(self.controls.party_power_font_size.tb:GetText()) or s.party.power.font.size or 14, 14)
-    local power_font = _require_font(power_font_name, power_font_size)
-    local power_style_enum = self.controls.party_power_font_style:get_value()
-        or (s.party and s.party.power and s.party.power.font and s.party.power.font.style)
-        or LUI_ENUMS.font_style.OUTLINE
-    local power_font_style = LUI_TO_LOTRO.font_style[power_style_enum] or Turbine.UI.FontStyle.None
-    local power_font_color = _hex_to_color(self.controls.party_power_font_color.tb:GetText()) or
-        Turbine.UI.Color(1, 1, 1)
-    local power_outline_color = _hex_to_color(self.controls.party_power_font_outline_color.tb:GetText()) or
-        Turbine.UI.Color(0, 0, 0)
-
-    local morale_fmt = self.controls.party_morale_text.tb:GetText()
-    if type(morale_fmt) ~= "string" then morale_fmt = "" end
     local bubble_fmt = self.controls.party_morale_bubble_text.tb:GetText()
     if type(bubble_fmt) ~= "string" then bubble_fmt = "" end
-    local power_fmt = self.controls.party_power_text.tb:GetText()
-    if type(power_fmt) ~= "string" then power_fmt = "" end
-    local morale_fmt_tokens = lui_tokenize_format(morale_fmt)
     local bubble_fmt_tokens = lui_tokenize_format(bubble_fmt)
-    local power_fmt_tokens = lui_tokenize_format(power_fmt)
-    local morale_align_text = nil
-    if self.controls.party_morale_text_alignment ~= nil and self.controls.party_morale_text_alignment.get_value ~= nil then
-        morale_align_text = self.controls.party_morale_text_alignment:get_value()
-    end
-    if type(morale_align_text) ~= "number" then
-        morale_align_text = (s.party and s.party.morale and s.party.morale.text_alignment) or
-            LUI_ENUMS.text_alignment.CENTER
-    end
-    local power_align_text = nil
-    if self.controls.party_power_text_alignment ~= nil and self.controls.party_power_text_alignment.get_value ~= nil then
-        power_align_text = self.controls.party_power_text_alignment:get_value()
-    end
-    if type(power_align_text) ~= "number" then
-        power_align_text = (s.party and s.party.power and s.party.power.text_alignment) or
-            LUI_ENUMS.text_alignment.CENTER
-    end
-
-    local morale_margin = border +
-        _preview_scaled_int(raw_scale,
-            tonumber(self.controls.party_morale_text_margin.tb:GetText()) or
-            (s.party and s.party.morale and s.party.morale.text_margin) or 4, 4)
-    local power_margin = border +
-        _preview_scaled_int(raw_scale,
-            tonumber(self.controls.party_power_text_margin.tb:GetText()) or
-            (s.party and s.party.power and s.party.power.text_margin) or 4, 4)
 
     local preview_count = 24
     local columns = math.ceil(preview_count / rows)
@@ -455,13 +475,6 @@ function ConfigWindow:update_party_vitals_preview()
                 m.bubble_bar:SetVisible(false)
             end
 
-            _apply_preview_label_bounds(m.morale_label, morale_align_text, morale_margin, frame_w, morale_h)
-            m.morale_label:SetFont(morale_font)
-            m.morale_label:SetFontStyle(morale_font_style)
-            m.morale_label:SetForeColor(morale_font_color)
-            m.morale_label:SetOutlineColor(morale_outline_color)
-            m.morale_label:SetTextAlignment(_preview_text_align(morale_align_text))
-
             local bubble_text = ""
             if bubble_cur > 0 then
                 bubble_text = lui_abbrev_number(bubble_cur)
@@ -481,7 +494,8 @@ function ConfigWindow:update_party_vitals_preview()
                 ctx.B = lui_format_tokenized(bubble_fmt_tokens, { b = ctx.b })
             end
 
-            m.morale_label:SetText(lui_format_tokenized(morale_fmt_tokens, ctx))
+            _render_preview_vital_labels(self, "party", "morale", m.morale_labels, raw_scale, frame_w, morale_h, 12,
+                ctx)
 
             m.power_border:SetPosition(0, power_y)
             m.power_border:SetSize(frame_w, power_h)
@@ -511,23 +525,16 @@ function ConfigWindow:update_party_vitals_preview()
             m.power_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing,
                 ressource_bg_dimming, morale_bg, power_fill_color))
 
-            _apply_preview_label_bounds(m.power_label, power_align_text, power_margin, frame_w, power_h)
-            m.power_label:SetFont(power_font)
-            m.power_label:SetFontStyle(power_font_style)
-            m.power_label:SetForeColor(power_font_color)
-            m.power_label:SetOutlineColor(power_outline_color)
-            m.power_label:SetTextAlignment(_preview_text_align(power_align_text))
-
             local power_max = 30000
             local power_cur = math.floor(power_max * power_percent + 0.5)
             local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
-            m.power_label:SetText(lui_format_tokenized(power_fmt_tokens, {
+            _render_preview_vital_labels(self, "party", "power", m.power_labels, raw_scale, frame_w, power_h, 10, {
                 c = lui_abbrev_number(power_cur),
                 t = lui_abbrev_number(power_max),
                 p = power_pct_text,
                 name = TR["Player "] .. tostring(i),
                 level = "150",
-            }))
+            })
         end
     end
 
