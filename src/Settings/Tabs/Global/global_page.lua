@@ -1,13 +1,16 @@
+import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Tabs.form_page"
 
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
+local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local SettingsFeatureSectionPage = FeatureShell.section_page_class
+local configure_compact_form = FeatureShell.configure_compact_form
 
-GlobalPage = class(SettingsFormPage)
+GlobalPage = class(SettingsFeatureSectionPage)
 
 function GlobalPage:Constructor(window)
-    SettingsFormPage.Constructor(self, window)
-    self.show_main_content_border = true
+    SettingsFeatureSectionPage.Constructor(self, window)
 
     local digits_help = table.concat({
         TR["How many digits are shown before shortening."],
@@ -27,23 +30,23 @@ function GlobalPage:Constructor(window)
         TR["e3 / e6 / e9: 2500000000 -> 2.5e9"],
     }, "\n")
 
-    self:add_title(TR["Global"])
-    self:add_break()
-    self:add_text("scale", TR["UI Scale"])
-    self:add_checkbox("native_scaling", TR["Use native LotRO UI scaling"], true)
-    self:add_text("refresh_rate", TR["Refresh rate of some UI elements (fps)"])
-    self:add_checkbox("move_mode_shortcut", TR["Use LotRO move mode shortcut"])
-    self:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"], true)
+    local general = configure_compact_form(SettingsFormPage(window), 4, nil)
+    general:add_text("scale", TR["UI Scale"])
+    general:add_checkbox("native_scaling", TR["Use native LotRO UI scaling"], true)
+    general:add_text("refresh_rate", TR["Refresh rate of some UI elements (fps)"])
+    general:add_checkbox("move_mode_shortcut", TR["Use LotRO move mode shortcut"])
+    general:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"], true)
+    self:add_section(TR["General"], "general", general)
 
-    self:add_hr()
-    self:add_title(TR["Numbers"])
-    self:add_checkbox("abbrev_enabled", TR["Shorten large numbers"])
-    self:add_dropdown("abbrev_digits", TR["Digits Before Shortening"], self.abbrev_digits_labels,
-        self.abbrev_digits_values, digits_help)
-    self:add_dropdown("abbrev_width", TR["Max Shortened Width"], self.abbrev_width_labels, self.abbrev_width_values,
-        width_help)
-    self:add_dropdown("abbrev_method", TR["Shortening Style"], self.abbrev_method_labels, self.abbrev_method_values,
-        method_help)
+    local numbers = configure_compact_form(SettingsFormPage(window), 4, nil)
+    numbers:add_checkbox("abbrev_enabled", TR["Shorten large numbers"])
+    numbers:add_dropdown("abbrev_digits", TR["Digits Before Shortening"], numbers.abbrev_digits_labels,
+        numbers.abbrev_digits_values, digits_help)
+    numbers:add_dropdown("abbrev_width", TR["Max Shortened Width"], numbers.abbrev_width_labels,
+        numbers.abbrev_width_values, width_help)
+    numbers:add_dropdown("abbrev_method", TR["Shortening Style"], numbers.abbrev_method_labels,
+        numbers.abbrev_method_values, method_help)
+    self:add_section(TR["Numbers"], "numbers", numbers)
 end
 
 function GlobalPage:load(s)
