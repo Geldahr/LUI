@@ -13,6 +13,8 @@ function DropsPage:Constructor(window)
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
     local align_labels = { TR["Top"], TR["Bottom"] }
     local align_values = { LUI_ENUMS.vertical_align.TOP, LUI_ENUMS.vertical_align.BOTTOM }
+    local side_labels = { TR["Left"], TR["Right"] }
+    local side_values = { LUI_ENUMS.side.LEFT, LUI_ENUMS.side.RIGHT }
 
     self.refresh_preview = function()
         self.window:update_drops_preview()
@@ -29,6 +31,7 @@ function DropsPage:Constructor(window)
     self:add_text("drops_icon_size", TR["Icon Size"])
     self:add_dropdown("drops_flow", TR["Order"], flow_labels, flow_values)
     self:add_dropdown("drops_align", TR["Align"], align_labels, align_values)
+    self:add_dropdown("drops_icon_side", TR["Icon position"], side_labels, side_values)
     self:add_checkbox("drops_animations_enabled", TR["Animations"], true)
     self:add_text("drops_move_duration", TR["Move duration (ms)"])
 
@@ -59,6 +62,7 @@ function DropsPage:load(drops, ui)
     self.controls.drops_icon_size.tb:SetText(tostring(drops.icon_size))
     self.controls.drops_flow:set_value(drops.flow)
     self.controls.drops_align:set_value(drops.align)
+    self.controls.drops_icon_side:set_value(drops.icon_side)
     self.controls.drops_animations_enabled.cb:SetChecked(drops.animations_enabled == true)
     self.controls.drops_move_duration.tb:SetText(tostring(drops.move_duration))
     self.controls.drops_hud_background_opacity.tb:SetText(tostring(drops.hud.background_opacity))
@@ -99,6 +103,7 @@ function DropsPage:apply(drops, ui)
     end
     drops.flow = self.controls.drops_flow:get_value()
     drops.align = self.controls.drops_align:get_value()
+    drops.icon_side = self.controls.drops_icon_side:get_value()
     drops.animations_enabled = self.controls.drops_animations_enabled.cb:IsChecked() == true
     local move_duration = tonumber(self.controls.drops_move_duration.tb:GetText())
     if move_duration ~= nil then

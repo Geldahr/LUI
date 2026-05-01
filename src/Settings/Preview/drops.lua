@@ -135,7 +135,7 @@ function ConfigWindow:update_drops_preview()
     end
     local row_pad = scaled_int(BASE_ROW_PADDING)
     local row_h = scaled_int(icon_size) + (2 * row_pad)
-    local icon_side = scaled_int(icon_size)
+    local icon_pixels = scaled_int(icon_size)
     local gap = scaled_int(BASE_GAP)
     local qty_w = scaled_int(BASE_QTY_WIDTH)
     local spacing = scaled_int(BASE_SPACING)
@@ -155,6 +155,8 @@ function ConfigWindow:update_drops_preview()
 
     local flow = self.controls.drops_flow.get_value and self.controls.drops_flow:get_value() or s.drops.flow
     local align = self.controls.drops_align.get_value and self.controls.drops_align:get_value() or s.drops.align
+    local icon_position = self.controls.drops_icon_side.get_value and self.controls.drops_icon_side:get_value() or
+        s.drops.icon_side
     local hud_color = _hex_to_color(self.controls.drops_hud_background_color.tb:GetText()) or
         s.drops.hud.background_color or Turbine.UI.Color(1, 0, 0, 0)
     local hud_opacity = tonumber(self.controls.drops_hud_background_opacity.tb:GetText()) or
@@ -209,8 +211,7 @@ function ConfigWindow:update_drops_preview()
             row.background:SetPosition(0, 0)
             row.background:SetSize(math.max(1, width - 2), row_h)
             row.background:SetBackColor(_with_alpha(item_color, item_opacity))
-            row.icon:SetPosition(row_pad, row_pad)
-            row.icon:SetSize(icon_side, icon_side)
+            row.icon:SetSize(icon_pixels, icon_pixels)
             row.icon:SetBackColor(Turbine.UI.Color(1, 0.65, 0.65, 0.65))
             row.icon:SetVisible(sample.icon == true)
             row.name:SetFont(font)
@@ -218,17 +219,33 @@ function ConfigWindow:update_drops_preview()
             row.name:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
             row.name:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
             row.name:SetText(sample.name)
-            row.name:SetPosition(row_pad + icon_side + gap, row_pad)
             local content_width = math.max(1, width - 2)
-            local qty_x = content_width - row_pad - qty_w
-            row.name:SetSize(math.max(1, qty_x - (row_pad + icon_side + gap) - gap), math.max(1, row_h - (2 * row_pad)))
             row.qty:SetFont(font)
             row.qty:SetFontStyle(Turbine.UI.FontStyle.Outline)
             row.qty:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
             row.qty:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
             row.qty:SetText(sample.qty)
-            row.qty:SetPosition(qty_x, row_pad)
-            row.qty:SetSize(qty_w, math.max(1, row_h - (2 * row_pad)))
+            if icon_position == LUI_ENUMS.side.RIGHT then
+                local preview_icon_x = content_width - row_pad - icon_pixels
+                row.icon:SetPosition(preview_icon_x, row_pad)
+                row.qty:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+                row.qty:SetPosition(row_pad, row_pad)
+                row.qty:SetSize(qty_w, math.max(1, row_h - (2 * row_pad)))
+                local text_x = row_pad + qty_w + gap
+                row.name:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+                row.name:SetPosition(text_x, row_pad)
+                row.name:SetSize(math.max(1, preview_icon_x - text_x - gap), math.max(1, row_h - (2 * row_pad)))
+            else
+                local qty_x = content_width - row_pad - qty_w
+                row.icon:SetPosition(row_pad, row_pad)
+                row.name:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+                row.name:SetPosition(row_pad + icon_pixels + gap, row_pad)
+                row.name:SetSize(math.max(1, qty_x - (row_pad + icon_pixels + gap) - gap),
+                    math.max(1, row_h - (2 * row_pad)))
+                row.qty:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+                row.qty:SetPosition(qty_x, row_pad)
+                row.qty:SetSize(qty_w, math.max(1, row_h - (2 * row_pad)))
+            end
         end
     end
 end

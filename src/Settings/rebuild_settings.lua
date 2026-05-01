@@ -466,6 +466,7 @@ function _G.rebuild_settings()
     drops.width = scaled_int(raw_drops.width)
     drops.flow = raw_drops.flow
     drops.align = raw_drops.align
+    drops.icon_side = raw_drops.icon_side
     drops.animations_enabled = raw_drops.animations_enabled
     drops.move_duration = raw_drops.move_duration
     drops.hud.background_opacity = raw_drops.hud.background_opacity

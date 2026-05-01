@@ -156,17 +156,39 @@ function DropEntry:apply_settings()
     self.qty_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
 
     local content_h = self._row_height - (2 * self._padding)
-    local qty_x = self._width - self._padding - self._qty_width
-    self.qty_label:SetPosition(qty_x, self._padding)
-    self.qty_label:SetSize(self._qty_width, content_h)
+    if s.icon_side == LUI_ENUMS.side.RIGHT then
+        local icon_x = self._width - self._padding - self._icon_side
+        self.icon_host:SetPosition(icon_x, self._padding)
 
-    local text_x = self._padding + self._icon_side + self._gap
-    local text_w = qty_x - text_x - self._gap
-    if text_w < 1 then
-        text_w = 1
+        self.qty_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        self.qty_label:SetPosition(self._padding, self._padding)
+        self.qty_label:SetSize(self._qty_width, content_h)
+
+        local text_x = self._padding + self._qty_width + self._gap
+        local text_w = icon_x - text_x - self._gap
+        if text_w < 1 then
+            text_w = 1
+        end
+        self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        self.name_label:SetPosition(text_x, self._padding)
+        self.name_label:SetSize(text_w, content_h)
+    else
+        self.icon_host:SetPosition(self._padding, self._padding)
+
+        local qty_x = self._width - self._padding - self._qty_width
+        self.qty_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        self.qty_label:SetPosition(qty_x, self._padding)
+        self.qty_label:SetSize(self._qty_width, content_h)
+
+        local text_x = self._padding + self._icon_side + self._gap
+        local text_w = qty_x - text_x - self._gap
+        if text_w < 1 then
+            text_w = 1
+        end
+        self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        self.name_label:SetPosition(text_x, self._padding)
+        self.name_label:SetSize(text_w, content_h)
     end
-    self.name_label:SetPosition(text_x, self._padding)
-    self.name_label:SetSize(text_w, content_h)
 
     self:_apply_record()
 end

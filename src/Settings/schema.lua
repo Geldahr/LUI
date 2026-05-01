@@ -890,6 +890,9 @@ function _G.ensure_loaded_settings()
             dd.align = LUI_ENUMS.vertical_align.BOTTOM
         end
     end
+    if dd.icon_side ~= LUI_ENUMS.side.LEFT and dd.icon_side ~= LUI_ENUMS.side.RIGHT then
+        dd.icon_side = LUI_ENUMS.side.LEFT
+    end
     if dd.animations_enabled == nil then
         if dd.animation_mode == nil then
             dd.animations_enabled = true
