@@ -445,17 +445,15 @@ function PartyVitals:update_members()
             if m.entity_control ~= nil then
                 m.entity_control:SetMouseVisible(not self:is_move_mode())
             end
-            if i <= party_count then
+            if self:is_move_mode() and i <= desired then
+                m:SetVisible(false)
+            elseif i <= party_count then
                 m:set_entity(entities[i])
                 if leader_name ~= nil and entities[i].GetName ~= nil then
                     m:set_is_leader(entities[i]:GetName() == leader_name)
                 else
                     m:set_is_leader(false)
                 end
-                m:SetVisible(true)
-            elseif self:is_move_mode() and i <= desired then
-                m:set_entity(nil)
-                m:set_is_leader(i == 1)
                 m:SetVisible(true)
             else
                 m:set_entity(nil)

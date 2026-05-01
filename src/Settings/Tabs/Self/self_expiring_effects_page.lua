@@ -22,15 +22,6 @@ SelfExpiringEffectsPage = class(SettingsFormPage)
 function SelfExpiringEffectsPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
 
-    local template_help = table.concat({
-        TR["Text template tokens:"],
-        TR["  %n = effect name"],
-        TR["  %t = remaining time"],
-        "",
-        TR["You can use \\n for a new line."],
-        TR["Example: %n  %t"],
-    }, "\n")
-
     self.refresh_preview = function()
         self.window:update_expiring_effects_preview()
     end
@@ -71,9 +62,6 @@ function SelfExpiringEffectsPage:Constructor(window)
     self:add_text("expiring_effects_border_color", TR["Border Color"], true)
     self:add_break()
     self:add_text("expiring_effects_name_max_chars", TR["Max name characters"])
-    self:add_text("expiring_effects_text_template", TR["Text template"], false, template_help, true)
-    self:add_dropdown("expiring_effects_text_alignment", TR["Text alignment"], self.text_alignment_labels,
-        self.text_alignment_values)
     self:add_break()
     self:add_dropdown("expiring_effects_font_name", TR["Font"], self.font_name_labels, self.font_name_values)
     self:add_text("expiring_effects_font_size", TR["Font Size"])

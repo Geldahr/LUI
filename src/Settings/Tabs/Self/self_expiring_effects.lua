@@ -50,8 +50,6 @@ function SelfExpiringEffects.load(page, s, ui)
     controls.expiring_effects_border_color.tb:SetText(ui.color_to_hex(b.color.border))
 
     controls.expiring_effects_name_max_chars.tb:SetText(tostring(b.name_max_chars))
-    controls.expiring_effects_text_template.tb:SetText(tostring(b.text_template))
-    controls.expiring_effects_text_alignment:set_value(b.text_alignment)
 
     controls.expiring_effects_font_name:set_value(b.font.name)
     controls.expiring_effects_font_size.tb:SetText(tostring(b.font.size))
@@ -132,15 +130,6 @@ function SelfExpiringEffects.apply(page, s, ui)
     local name_max_chars = tonumber(controls.expiring_effects_name_max_chars.tb:GetText())
     if name_max_chars ~= nil then
         b.name_max_chars = name_max_chars
-    end
-
-    local text_template = controls.expiring_effects_text_template.tb:GetText()
-    if type(text_template) == "string" then
-        b.text_template = text_template
-    end
-    local text_alignment = controls.expiring_effects_text_alignment:get_value()
-    if type(text_alignment) == "number" then
-        b.text_alignment = text_alignment
     end
 
     local font_name = controls.expiring_effects_font_name:get_value()
