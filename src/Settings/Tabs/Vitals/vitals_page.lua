@@ -118,6 +118,7 @@ local function _add_targets_target_label_controls(page, label_index)
 end
 
 local function _build_standard_frame_colors_form(page, prefix)
+    page:add_text(prefix .. "_morale_background_color", TR["Background Color"], true)
     page:add_text(prefix .. "_border_color", TR["Border Color"], true)
 end
 
@@ -128,7 +129,6 @@ local function _build_standard_morale_form(page, prefix)
 end
 
 local function _build_standard_morale_colors_form(page, prefix)
-    page:add_text(prefix .. "_morale_background_color", TR["Background Color"], true)
     page:add_text(prefix .. "_morale_bubble_color", TR["Bubble Color"], true)
     page:add_text(prefix .. "_morale_color_neutral", TR["Neutral Color"], true)
     _add_compact_row_break(page)
@@ -247,12 +247,14 @@ local function _new_standard_colors_section(window, refresh_preview_fn, prefix, 
 end
 
 local function _new_targets_target_colors_section(window, refresh_preview_fn)
+    local frame = _configure_compact_form(SettingsFormPage(window), 3, refresh_preview_fn)
+    frame:add_text("target_targets_target_background_color", TR["Background Color"], true)
+    frame:add_text("target_targets_target_border_color", TR["Border Color"], true)
+
     local morale = _configure_compact_form(SettingsFormPage(window), 3, refresh_preview_fn)
-    morale:add_text("target_targets_target_background_color", TR["Background Color"], true)
-    morale:add_text("target_targets_target_border_color", TR["Border Color"], true)
     morale:add_text("target_targets_target_bubble_color", TR["Bubble Color"], true)
-    _add_compact_row_break(morale)
     morale:add_text("target_targets_target_color_neutral", TR["Neutral Color"], true)
+    _add_compact_row_break(morale)
     morale:add_break()
     morale:add_title(TR["Step Colors"])
     morale:add_text("target_targets_target_color_high", TR["High Color"], true)
@@ -275,6 +277,7 @@ local function _new_targets_target_colors_section(window, refresh_preview_fn)
 
     local page = CompactNestedTabbedPage(window, UI.Widgets.LuiTabBar.position.left, NESTED_TAB_SCALE,
         NESTED_TAB_FONT_SIZE)
+    page:add_sub_page(TR["Frame"], _module_for_page("frame", frame))
     page:add_sub_page(TR["Morale"], _module_for_page("morale", morale))
     page:add_sub_page(TR["Text"], _module_for_page("text", text))
     return page
