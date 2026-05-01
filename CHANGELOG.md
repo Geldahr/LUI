@@ -21,6 +21,10 @@
 - Fixed empty drop highlight states when a bestiary row matched the active search.
 - Fixed Bestiary tracker global wiring and unload/update ordering issues that could crash Bestiary window updates.
 - Fixed crafting dependency expansion to ignore obsolete item conversion recipes, preventing obsolete ingredients from polluting material chains.
+- Fixed cooldown rows so long skill names no longer hide timers by giving the timer its own reserved column and wrapping long titles.
+- Fixed self and target expiring effect rows to use the same reserved timer column layout, width clamping, and title wrapping behavior.
+- Fixed party vitals move mode to keep the move overlay inside the real widget footprint while clearing live member content and stale bindings.
+- Fixed timed row and drop row width calculations to reserve space from real timer and quantity text widths instead of fixed guesses.
 
 ### Removed
 
