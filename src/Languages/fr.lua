@@ -191,6 +191,7 @@ FR = {
     ["Shortcut buttons"] = "Boutons de raccourci",
     ["Cooldowns"] = "Temps de recharge",
     ["Filters"] = "Filtres",
+    ["Motion"] = "Mouvement",
     ["Create"] = "Créer",
     ["Curable Debuff"] = "Affaiblissement dissipable",
     ["Curable Debuff Bar Color"] = "Couleur de la barre des affaiblissements dissipables",

@@ -1,13 +1,21 @@
+import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Tabs.form_page"
 
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
+local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local SettingsFeatureSectionPage = FeatureShell.section_page_class
+local SettingsFeatureNestedPage = FeatureShell.nested_page_class
+local configure_compact_form = FeatureShell.configure_compact_form
+local add_compact_row_break = FeatureShell.add_compact_row_break
+local module_for_page = FeatureShell.module_for_page
 
-DropsPage = class(SettingsFormPage)
+DropsPage = class(SettingsFeatureSectionPage)
 
 function DropsPage:Constructor(window)
-    SettingsFormPage.Constructor(self, window)
-    self.show_main_content_border = true
+    SettingsFeatureSectionPage.Constructor(self, window, "drops_preview", 136, function(win)
+        win:update_drops_preview()
+    end)
 
     local flow_labels = { TR["Latest at top"], TR["Latest at bottom"] }
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
@@ -16,41 +24,42 @@ function DropsPage:Constructor(window)
     local side_labels = { TR["Left"], TR["Right"] }
     local side_values = { LUI_ENUMS.side.LEFT, LUI_ENUMS.side.RIGHT }
 
-    self.refresh_preview = function()
-        self.window:update_drops_preview()
-    end
+    local general = configure_compact_form(SettingsFormPage(window), 4, self.refresh_preview)
+    general:add_checkbox("drops_enabled", TR["Enabled"], true)
+    add_compact_row_break(general)
+    general:add_text("drops_visible_duration", TR["Visible duration (s)"])
+    general:add_info(TR["Carry-alls may bypass inventory item events. Those drops can appear without icon or hover and will be shown as text only."], 42)
+    self:add_section(TR["General"], "general", general)
 
-    self:add_title(TR["Drops"])
+    local layout = configure_compact_form(SettingsFormPage(window), 4, self.refresh_preview)
+    layout:add_text("drops_width", TR["Width"])
+    layout:add_text("drops_rows", TR["Rows"])
+    layout:add_text("drops_icon_size", TR["Icon Size"])
+    add_compact_row_break(layout)
+    layout:add_dropdown("drops_flow", TR["Order"], flow_labels, flow_values)
+    layout:add_dropdown("drops_align", TR["Align"], align_labels, align_values)
+    layout:add_dropdown("drops_icon_side", TR["Icon position"], side_labels, side_values)
+    self:add_section(TR["Layout"], "layout", layout)
 
-    self:add_hr()
-    self:add_title(TR["General"])
-    self:add_checkbox("drops_enabled", TR["Enabled"], true)
-    self:add_text("drops_visible_duration", TR["Visible duration (s)"])
-    self:add_text("drops_width", TR["Width"])
-    self:add_text("drops_rows", TR["Rows"])
-    self:add_text("drops_icon_size", TR["Icon Size"])
-    self:add_dropdown("drops_flow", TR["Order"], flow_labels, flow_values)
-    self:add_dropdown("drops_align", TR["Align"], align_labels, align_values)
-    self:add_dropdown("drops_icon_side", TR["Icon position"], side_labels, side_values)
-    self:add_checkbox("drops_animations_enabled", TR["Animations"], true)
-    self:add_text("drops_move_duration", TR["Move duration (ms)"])
+    local hud = configure_compact_form(SettingsFormPage(window), 3, self.refresh_preview)
+    hud:add_text("drops_hud_background_opacity", TR["Background opacity (0..1)"])
+    hud:add_text("drops_hud_background_color", TR["Background color"], true)
 
-    self:add_break()
-    self:add_info(TR["Carry-alls may bypass inventory item events. Those drops can appear without icon or hover and will be shown as text only."], 42)
+    local item = configure_compact_form(SettingsFormPage(window), 3, self.refresh_preview)
+    item:add_text("drops_item_background_opacity", TR["Background opacity (0..1)"])
+    item:add_text("drops_item_background_color", TR["Background color"], true)
 
-    self:add_hr()
-    self:add_title(TR["HUD"])
-    self:add_text("drops_hud_background_opacity", TR["Background opacity (0..1)"])
-    self:add_text("drops_hud_background_color", TR["Background color"], true)
+    local colors = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.left,
+        FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
+    colors:add_sub_page(TR["HUD"], module_for_page("hud", hud))
+    colors:add_sub_page(TR["Item"], module_for_page("item", item))
+    self:add_section(TR["Colors"], "colors", colors)
 
-    self:add_hr()
-    self:add_title(TR["Item"])
-    self:add_text("drops_item_background_opacity", TR["Background opacity (0..1)"])
-    self:add_text("drops_item_background_color", TR["Background color"], true)
-
-    self:add_hr()
-    self:add_title(TR["Preview"])
-    self:add_custom("drops_preview", 136)
+    local motion = configure_compact_form(SettingsFormPage(window), 4, self.refresh_preview)
+    motion:add_checkbox("drops_animations_enabled", TR["Animations"], true)
+    add_compact_row_break(motion)
+    motion:add_text("drops_move_duration", TR["Move duration (ms)"])
+    self:add_section(TR["Motion"], "motion", motion)
 end
 
 function DropsPage:load(drops, ui)
@@ -70,6 +79,7 @@ function DropsPage:load(drops, ui)
     self.controls.drops_item_background_opacity.tb:SetText(tostring(drops.item.background_opacity))
     self.controls.drops_item_background_color.tb:SetText(ui.color_to_hex(drops.item.background_color))
     self.loading = false
+    self:layout()
 end
 
 local function _apply_color(ui, dest, hex)

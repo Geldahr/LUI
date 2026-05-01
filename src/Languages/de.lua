@@ -191,6 +191,7 @@ DE = {
     ["Shortcut buttons"] = "Kurzschaltflächen",
     ["Cooldowns"] = "Abklingzeiten",
     ["Filters"] = "Filter",
+    ["Motion"] = "Bewegung",
     ["Create"] = "Erstellen",
     ["Curable Debuff"] = "Heilbare Schwächung",
     ["Curable Debuff Bar Color"] = "Balkenfarbe heilbarer Schwächungen",
