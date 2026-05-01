@@ -56,7 +56,6 @@ function TargetExpiringEffectEntry:Constructor()
 
     self.effect = nil
     self.effect_key = 0
-    self.border_width = 0
     self.bar_inner_w = 0
 
     self:SetMouseVisible(false)
@@ -146,13 +145,8 @@ function TargetExpiringEffectEntry:apply_settings()
     if border < 0 then border = 0 end
     local max_border = math.floor(math.min(bar_width, height) / 2)
     if border > max_border then border = max_border end
-    self.border_width = border
-
     local inner_height = height - (2 * border)
     if inner_height < 1 then inner_height = 1 end
-
-    local inner_width = bar_width - (2 * border)
-    if inner_width < 1 then inner_width = 1 end
 
     -- Avoid a double border between bar and icon:
     -- keep the separator from the icon border, and extend the bar background to cover its adjacent border.
@@ -214,9 +208,7 @@ function TargetExpiringEffectEntry:set_effect(effect)
         self.effect = nil
         self.effect_key = 0
         self.bar_fill:SetBackColor(self:_resolve_bar_color())
-        if self.icon ~= nil and self.icon.SetEffect ~= nil then
-            self.icon:SetEffect(nil)
-        end
+        self.icon:SetEffect(nil)
         self.icon:SetVisible(false)
         return
     end
@@ -226,9 +218,7 @@ function TargetExpiringEffectEntry:set_effect(effect)
         -- Same underlying effect (possibly new wrapper) -> avoid EffectDisplay rebinding.
         self.effect = effect
         self.bar_fill:SetBackColor(self:_resolve_bar_color())
-        if self.icon ~= nil then
-            self.icon:SetVisible(true)
-        end
+        self.icon:SetVisible(true)
         return
     end
 
@@ -294,22 +284,19 @@ end
 
 function TargetExpiringEffectEntry:_resolve_bar_color()
     local s = _G.settings.target.expiring_effects
-    if s == nil or s.color == nil then
-        return Turbine.UI.Color(0.9, 0.25, 0.25)
-    end
 
     if self.effect == nil then
-        return s.color.bar_debuff_curable or s.color.bar or Turbine.UI.Color(0.9, 0.25, 0.25)
+        return s.color.bar_debuff_curable
     end
 
     local is_debuff = self.effect.IsDebuff ~= nil and self.effect:IsDebuff()
     if is_debuff then
         local is_curable = self.effect.IsCurable ~= nil and self.effect:IsCurable()
         if is_curable then
-            return s.color.bar_debuff_curable or s.color.bar or Turbine.UI.Color(0.9, 0.25, 0.25)
+            return s.color.bar_debuff_curable
         end
-        return s.color.bar_debuff_noncurable or s.color.bar or Turbine.UI.Color(0.9, 0.25, 0.25)
+        return s.color.bar_debuff_noncurable
     end
 
-    return s.color.bar_buff or s.color.bar or Turbine.UI.Color(0.9, 0.7, 0.2)
+    return s.color.bar_buff
 end

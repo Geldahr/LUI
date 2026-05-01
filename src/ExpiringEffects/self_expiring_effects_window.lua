@@ -31,10 +31,6 @@ function SelfExpiringEffectsWindow:get_hud_key()
     return "self_effects"
 end
 
-function SelfExpiringEffectsWindow:get_border_width()
-    return _G.settings.self.expiring_effects.border_width
-end
-
 function SelfExpiringEffectsWindow:get_entry_class()
     return SelfExpiringEffectEntry
 end

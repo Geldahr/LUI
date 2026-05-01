@@ -154,7 +154,7 @@ function PartyMemberVitals:_update_leader_icon()
         return
     end
 
-    local icon = _G.get_party_leader_icon ~= nil and _G.get_party_leader_icon() or nil
+    local icon = _G.get_party_leader_icon()
     if icon == nil then
         self.leader_icon:SetVisible(false)
         return
@@ -422,32 +422,49 @@ function PartyVitals:update_members()
     end
 
     local party_count = #entities
+    local move_mode = self:is_move_mode()
     local desired = party_count
-    if self:is_move_mode() and desired == 0 then
+    if move_mode == true and desired == 0 then
         desired = self:get_placeholder_count()
     end
 
-    local leader_name = nil
-    if self.group ~= nil then
-        if self.group.GetLeader ~= nil then
-            local leader = self.group:GetLeader()
-            if leader ~= nil and leader.GetName ~= nil then
-                leader_name = leader:GetName()
+    self:ensure_member_windows(desired)
+
+    if move_mode == true then
+        for i = 1, #self.members do
+            local m = self.members[i]
+            if m ~= nil then
+                if m.entity_control ~= nil then
+                    m.entity_control:SetMouseVisible(false)
+                end
+                if i <= desired then
+                    m:set_entity(nil)
+                    m:set_is_leader(false)
+                end
+                m:SetVisible(false)
             end
         end
+
+        self:layout_members(desired)
+        self:update_visibility(party_count)
+        return
     end
 
-    self:ensure_member_windows(desired)
+    local leader_name = nil
+    if self.group ~= nil and self.group.GetLeader ~= nil then
+        local leader = self.group:GetLeader()
+        if leader ~= nil and leader.GetName ~= nil then
+            leader_name = leader:GetName()
+        end
+    end
 
     for i = 1, #self.members do
         local m = self.members[i]
         if m ~= nil then
             if m.entity_control ~= nil then
-                m.entity_control:SetMouseVisible(not self:is_move_mode())
+                m.entity_control:SetMouseVisible(true)
             end
-            if self:is_move_mode() and i <= desired then
-                m:SetVisible(false)
-            elseif i <= party_count then
+            if i <= party_count then
                 m:set_entity(entities[i])
                 if leader_name ~= nil and entities[i].GetName ~= nil then
                     m:set_is_leader(entities[i]:GetName() == leader_name)

@@ -116,10 +116,6 @@ function ExpiringEffectsWindow:get_hud_key()
     return nil
 end
 
-function ExpiringEffectsWindow:get_border_width()
-    return 0
-end
-
 function ExpiringEffectsWindow:get_entry_class()
     return nil
 end

@@ -45,10 +45,6 @@ function TargetExpiringEffectsWindow:get_hud_key()
     return "target_effects"
 end
 
-function TargetExpiringEffectsWindow:get_border_width()
-    return _G.settings.target.expiring_effects.border_width
-end
-
 function TargetExpiringEffectsWindow:get_entry_class()
     return TargetExpiringEffectEntry
 end
