@@ -7,6 +7,8 @@
 - Highlight matching bestiary drops in search results, including split matches across multiple drop chips.
 - Added Crafting to Bestiary links for ingredients and planned resources.
 - Added locale-aware Bestiary data loading with localized drop table support.
+- Added shared structured search filters across Bestiary, Crafting, and Assets, including Bestiary `loc:` / `gen:` / `lvl:` filters, Crafting rank filters, and Assets `owner:` / `store:` filters.
+- Added the Drops HUD with chat-driven loot rows, move-mode support, preview, and layout settings.
 
 ### Changed
 
