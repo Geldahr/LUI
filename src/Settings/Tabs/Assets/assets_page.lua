@@ -1,7 +1,11 @@
+import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Tabs.form_page"
 
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
+local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local SettingsFeatureSectionPage = FeatureShell.section_page_class
+local configure_compact_form = FeatureShell.configure_compact_form
 
 local TILE_SIZE_LABELS = {
     TR["Small (32)"],
@@ -21,43 +25,33 @@ local VIEW_MODE_VALUES = {
     LUI_ENUMS.assets_view_mode.DETAILS,
 }
 
-AssetsPage = class(SettingsFormPage)
+AssetsPage = class(SettingsFeatureSectionPage)
 
 function AssetsPage:Constructor(window)
-    SettingsFormPage.Constructor(self, window)
-    self.show_main_content_border = true
+    SettingsFeatureSectionPage.Constructor(self, window)
 
-    self:add_title(TR["Assets"])
+    local general = configure_compact_form(SettingsFormPage(window), 4, nil)
+    general:add_checkbox("assets_enabled", TR["Enabled"])
+    general:add_dropdown("assets_view_mode", TR["View"], VIEW_MODE_LABELS, VIEW_MODE_VALUES)
+    self:add_section(TR["General"], "general", general)
 
-    self:add_hr()
-    self:add_title(TR["General"])
-    self:add_checkbox("assets_enabled", TR["Enabled"])
-    self:add_dropdown("assets_view_mode", TR["View"], VIEW_MODE_LABELS, VIEW_MODE_VALUES)
-
-    self:add_hr()
-    self:add_title(TR["Tiles"])
-    self:add_dropdown("assets_tile_icons", TR["Icons"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
-    self:add_dropdown("assets_tile_details", TR["Details"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
+    local tiles = configure_compact_form(SettingsFormPage(window), 4, nil)
+    tiles:add_dropdown("assets_tile_icons", TR["Icons"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
+    tiles:add_dropdown("assets_tile_details", TR["Details"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
+    self:add_section(TR["Tiles"], "tiles", tiles)
 end
 
 function AssetsPage:load(assets)
-    if assets == nil then
-        return
-    end
-
     self.loading = true
     self.controls.assets_enabled.cb:SetChecked(assets.enabled == true)
     self.controls.assets_view_mode:set_value(assets.view_mode)
     self.controls.assets_tile_icons:set_value(assets.tile.icons)
     self.controls.assets_tile_details:set_value(assets.tile.details)
     self.loading = false
+    self:layout()
 end
 
 function AssetsPage:apply(assets)
-    if assets == nil then
-        return
-    end
-
     assets.enabled = self.controls.assets_enabled.cb:IsChecked() == true
     assets.view_mode = self.controls.assets_view_mode:get_value()
     assets.tile.icons = self.controls.assets_tile_icons:get_value()
