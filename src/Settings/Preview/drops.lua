@@ -1,3 +1,5 @@
+import "LUI.src.Utils.timed_row_layout"
+
 local Common = SettingsPreviewCommon
 local _apply_preview_border = Common.apply_preview_border
 local _hex_to_color = Common.hex_to_color
@@ -6,10 +8,19 @@ local _sync_preview_holder_height = Common.sync_preview_holder_height
 
 local BASE_ROW_PADDING = 4
 local BASE_GAP = 6
-local BASE_QTY_WIDTH = 46
 local BASE_FONT_SIZE = 12
 local BASE_SPACING = 0
 local PREVIEW_MARGIN = 4
+
+local function _drops_qty_width(font_size)
+    return lui_timed_row_estimate_text_width("999", "Verdana", font_size)
+end
+
+local function _drops_min_width(icon_size, padding, gap, font_size)
+    local qty_width = _drops_qty_width(font_size)
+    local name_width = lui_timed_row_min_name_width("Verdana", font_size)
+    return math.max(140, (2 * padding) + icon_size + gap + qty_width + gap + name_width)
+end
 
 local function _with_alpha(color, alpha)
     if color == nil then
@@ -43,6 +54,7 @@ local function _create_row(parent)
     row.name = UI.Widgets.LuiLabel()
     row.name:SetParent(row.root)
     row.name:SetMouseVisible(false)
+    row.name:SetMultiline(true)
     row.name:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     row.qty = UI.Widgets.LuiLabel()
@@ -122,11 +134,6 @@ function ConfigWindow:update_drops_preview()
         return math.floor((raw_value * raw_scale) + 0.5)
     end
 
-    local width = tonumber(self.controls.drops_width.tb:GetText()) or s.drops.width or 180
-    width = scaled_int(width)
-    if width < 140 then
-        width = 140
-    end
     local rows = tonumber(self.controls.drops_rows.tb:GetText()) or s.drops.rows or 4
     rows = math.max(1, math.floor(rows + 0.5))
     local icon_size = tonumber(self.controls.drops_icon_size.tb:GetText()) or s.drops.icon_size or 24
@@ -137,7 +144,14 @@ function ConfigWindow:update_drops_preview()
     local row_h = scaled_int(icon_size) + (2 * row_pad)
     local icon_pixels = scaled_int(icon_size)
     local gap = scaled_int(BASE_GAP)
-    local qty_w = scaled_int(BASE_QTY_WIDTH)
+    local qty_font_size = BASE_FONT_SIZE * raw_scale
+    local qty_w = _drops_qty_width(qty_font_size)
+    local width = tonumber(self.controls.drops_width.tb:GetText()) or s.drops.width or 180
+    width = scaled_int(width)
+    local min_width = _drops_min_width(icon_pixels, row_pad, gap, qty_font_size)
+    if width < min_width then
+        width = min_width
+    end
     local spacing = scaled_int(BASE_SPACING)
     local preview_rows = math.min(3, rows)
     local block_h = (preview_rows * row_h) + ((preview_rows - 1) * spacing)
