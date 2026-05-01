@@ -826,11 +826,14 @@ function _G.ensure_loaded_settings()
         cd.bar_mode = LUI_ENUMS.bar_mode.UNLOAD
     end
 
-    if cd.text_template == nil or cd.text_template == "" then
-        cd.text_template = "%name%\\n%t"
-    end
-    if cd.text_alignment == nil then
-        cd.text_alignment = LUI_ENUMS.text_alignment.CENTER
+    if cd.time_format == nil then
+        local template = cd.text_template
+        if type(template) == "string" and string.find(template, "%%s", 1, true) ~= nil and
+            string.find(template, "%%t", 1, true) == nil then
+            cd.time_format = LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS
+        else
+            cd.time_format = LUI_ENUMS.cooldown_time_format.AUTO
+        end
     end
     if cd.text_margin == nil then
         cd.text_margin = 4

@@ -35,8 +35,7 @@ function Cooldowns.load(page, s, ui)
     controls.cd_bar_color.tb:SetText(ui.color_to_hex(cd.color.bar))
     controls.cd_border_color.tb:SetText(ui.color_to_hex(cd.color.border))
 
-    controls.cd_text_template.tb:SetText(tostring(cd.text_template))
-    controls.cd_text_alignment:set_value(cd.text_alignment)
+    controls.cd_time_format:set_value(cd.time_format)
     controls.cd_text_margin.tb:SetText(tostring(cd.text_margin))
     controls.cd_name_max_chars.tb:SetText(tostring(cd.name_max_chars))
 
@@ -114,11 +113,7 @@ function Cooldowns.apply(page, s, ui)
         cd.color.border = border_color
     end
 
-    local text_template = controls.cd_text_template.tb:GetText()
-    if text_template ~= nil then
-        cd.text_template = text_template
-    end
-    cd.text_alignment = controls.cd_text_alignment:get_value()
+    cd.time_format = controls.cd_time_format:get_value()
     local text_margin = tonumber(controls.cd_text_margin.tb:GetText())
     if text_margin ~= nil then
         cd.text_margin = text_margin

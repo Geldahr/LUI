@@ -3,6 +3,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.Cooldowns.cooldown_entry"
+import "LUI.src.Cooldowns.time_display"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
 
@@ -232,6 +233,17 @@ function CooldownsWindow:apply_settings()
     local entry_height = s.item_h
     if entry_width < 1 then entry_width = 1 end
     if entry_height < 1 then entry_height = 1 end
+    local min_entry_width = lui_cooldown_min_item_width(
+        entry_height,
+        s.border_width,
+        s.text_margin,
+        s.font.size,
+        s.threshold,
+        s.time_format
+    )
+    if entry_width < min_entry_width then
+        entry_width = min_entry_width
+    end
 
     local width = (cols * entry_width) + ((cols - 1) * spacing)
     local height = (rows * entry_height) + ((rows - 1) * spacing)

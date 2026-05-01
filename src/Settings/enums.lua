@@ -40,6 +40,11 @@ e.time_format = {
     AMPM = 2,
 }
 
+e.cooldown_time_format = {
+    AUTO = 1,
+    WHOLE_SECONDS = 2,
+}
+
 e.font_style = {
     NONE = 1,
     OUTLINE = 2,

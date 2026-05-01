@@ -441,9 +441,7 @@ function _G.rebuild_settings()
     cd.icon_side = raw_cd.icon_side
     cd.bar_expire_towards = raw_cd.bar_expire_towards
     cd.bar_mode = raw_cd.bar_mode
-    cd.text_template = raw_cd.text_template
-    cd.text_tokens = lui_tokenize_format(cd.text_template)
-    cd.text_alignment = raw_cd.text_alignment
+    cd.time_format = raw_cd.time_format
     cd.text_margin = scaled_int(raw_cd.text_margin)
     cd.name_max_chars = raw_cd.name_max_chars
     cd.whitelist = raw_cd.whitelist

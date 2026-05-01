@@ -147,8 +147,7 @@ _G.DEFAULT_LAYOUT_TOP =
 			},
 			["flow"] = 2.000000,
 			["bar_expire_towards"] = 2.000000,
-			["text_template"] = "%name%\\n%t",
-			["text_alignment"] = 2.000000,
+			["time_format"] = 1.000000,
 			["threshold"] = 90.000000,
 			["min_base_cooldown"] = 1.000000
 		},
