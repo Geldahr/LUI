@@ -60,6 +60,7 @@ FR = {
     ["Low Color"] = "Couleur basse",
     ["Critical Color"] = "Couleur critique",
     ["Text"] = "Texte",
+    ["Bars"] = "Barres",
     ["Text height"] = "Hauteur du texte",
     ["Text width"] = "Largeur du texte",
     ["Bubble Format (%B)"] = "Format de bulle (%B)",

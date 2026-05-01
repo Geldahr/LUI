@@ -1,5 +1,6 @@
 import "LUI.src.Settings.Tabs.Global.global_page"
 import "LUI.src.Settings.Tabs.Vitals.vitals_page"
+import "LUI.src.Settings.Tabs.ExpiringEffects.expiring_effects_page"
 import "LUI.src.Settings.Tabs.Self.self_page"
 import "LUI.src.Settings.Tabs.Drops.drops_page"
 import "LUI.src.Settings.Tabs.Target.target_page"
@@ -13,6 +14,7 @@ import "LUI.src.Settings.Tabs.Help.help_page"
 
 local GlobalPage = LUI.src.Settings.Tabs.Global.GlobalPage
 local VitalsPage = LUI.src.Settings.Tabs.Vitals.VitalsPage
+local ExpiringEffectsPage = LUI.src.Settings.Tabs.ExpiringEffects.ExpiringEffectsPage
 local SelfPage = LUI.src.Settings.Tabs.Self.SelfPage
 local DropsPage = LUI.src.Settings.Tabs.Drops.DropsPage
 local TargetPage = LUI.src.Settings.Tabs.Target.TargetPage
@@ -32,7 +34,10 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
     if main_key == "self_vitals" then
         return "vitals", "self"
     end
-    if main_key == "expiring_effects" or main_key == "cooldowns" then
+    if main_key == "expiring_effects" then
+        return "expiring_effects", "self"
+    end
+    if main_key == "cooldowns" then
         return "self", main_key
     end
     if main_key == "target_vitals" then
@@ -45,7 +50,7 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
         return "vitals", "target_targets_target"
     end
     if main_key == "expiring_target_effects" then
-        return "target", main_key
+        return "expiring_effects", "target"
     end
     if main_key == "party_layout" or main_key == "party_vitals" then
         return "vitals", "party"
@@ -116,6 +121,10 @@ function ConfigWindow:build_tabs()
     local vitals_page = VitalsPage(self)
     vitals_page._tab_key = "vitals"
     self.main_tab_bar:add_tab(TR["Vitals"], vitals_page)
+
+    local expiring_effects_page = ExpiringEffectsPage(self)
+    expiring_effects_page._tab_key = "expiring_effects"
+    self.main_tab_bar:add_tab(TR["Expiring Effects"], expiring_effects_page)
 
     local self_page = SelfPage(self)
     self_page._tab_key = "self"

@@ -60,6 +60,7 @@ DE = {
     ["Low Color"] = "Niedrige Farbe",
     ["Critical Color"] = "Kritische Farbe",
     ["Text"] = "Text",
+    ["Bars"] = "Balken",
     ["Text height"] = "Texthöhe",
     ["Text width"] = "Textbreite",
     ["Bubble Format (%B)"] = "Blasenformat (%B)",
