@@ -1,3 +1,4 @@
+import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Tabs.form_page"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_wallet_selector"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_layout_help"
@@ -8,103 +9,206 @@ local CreateStatusBarWalletSelector = LUI.src.Settings.Tabs.StatusBar.CreateStat
     CreateStatusBarWalletSelector
 local BuildStatusBarLayoutHelp = LUI.src.Settings.Tabs.StatusBar.BuildStatusBarLayoutHelp or
     BuildStatusBarLayoutHelp
+local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local SettingsFeatureSectionPage = FeatureShell.section_page_class
+local SettingsFeatureNestedPage = FeatureShell.nested_page_class
+local configure_compact_form = FeatureShell.configure_compact_form
+local add_compact_row_break = FeatureShell.add_compact_row_break
+local module_for_page = FeatureShell.module_for_page
 
-StatusBarPage = class(SettingsFormPage)
+local function _is_outline(control)
+    return control:get_value() == LUI_ENUMS.font_style.OUTLINE
+end
 
-function StatusBarPage:Constructor(window)
-    SettingsFormPage.Constructor(self, window)
-    self.show_main_content_border = true
-
-    local time_format_labels = { TR["24-hour"], TR["AM/PM"] }
-    local time_format_values = { LUI_ENUMS.time_format.H24, LUI_ENUMS.time_format.AMPM }
-    local layout_help = BuildStatusBarLayoutHelp()
-
-    self:add_title(TR["Status Bar"])
-
-    self:add_hr()
-    self:add_title(TR["General"])
-    self:add_checkbox("sb_enabled", TR["Enabled"], true)
-
-    self:add_hr()
-    self:add_title(TR["Background"])
-    self:add_text("sb_bg_opacity", TR["Background opacity (0..1)"])
-    self:add_text("sb_bg_color", TR["Background color"], true)
-
-    self:add_hr()
-    self:add_title(TR["Font"])
-    self:add_dropdown("sb_font_name", TR["Font"], self.font_name_labels, self.font_name_values)
-    self:add_text("sb_font_size", TR["Font size"])
-    self:add_text("sb_font_color", TR["Font color"], true)
-    self:add_dropdown("sb_font_style", TR["Font style"], self.font_style_labels, self.font_style_values)
-    self:add_text("sb_font_outline_color", TR["Outline color"], true)
-
-    self:add_hr()
-    self:add_title(TR["Layout"])
-    self:add_text("sb_height", TR["Height"])
-
-    self:add_hr()
-    self:add_title(TR["Widgets order"])
-    self:add_text("sb_layout_left", TR["Left layout"], false, layout_help, true)
-    self:add_text("sb_layout_center", TR["Center layout"], false, layout_help, true)
-    self:add_text("sb_layout_right", TR["Right layout"], false, layout_help, true)
-
-    self:add_hr()
-    self:add_title(TR["Widgets"])
-
-    self:add_hr()
-    self:add_title(TR["Time (local)"])
-    self:add_text("sb_time_width", TR["Width"])
-    self:add_dropdown("sb_time_format", TR["Time format"], time_format_labels, time_format_values)
-    self:add_dropdown("sb_time_text_alignment", TR["Text alignment"], self.text_alignment_labels, self.text_alignment_values)
-
-    self:add_hr()
-    self:add_title(TR["Inventory space"])
-    self:add_text("sb_inv_width", TR["Width"])
-    self:add_checkbox("sb_inv_icon", TR["Icon"])
-    self:add_dropdown("sb_inv_text_alignment", TR["Text alignment"], self.text_alignment_labels, self.text_alignment_values)
-    self:add_text("sb_inv_yellow", TR["Warn color (30%)"], true)
-    self:add_text("sb_inv_orange", TR["Warn color (20%)"], true)
-    self:add_text("sb_inv_red", TR["Warn color (10%)"], true)
-
-    self:add_hr()
-    self:add_title(TR["Equipment wear"])
-    self:add_text("sb_durability_width", TR["Width"])
-    self:add_checkbox("sb_durability_icon", TR["Icon"])
-    self:add_dropdown("sb_durability_text_alignment", TR["Text alignment"], self.text_alignment_labels, self.text_alignment_values)
-    self:add_checkbox("sb_durability_coloring", TR["Enable rich-text coloring"], true)
-    self:add_text("sb_durability_green", TR["Green color"], true)
-    self:add_text("sb_durability_yellow", TR["Yellow color"], true)
-    self:add_text("sb_durability_red", TR["Red color"], true)
-
-    self:add_hr()
-    self:add_title(TR["Money"])
-    self:add_text("sb_money_width", TR["Width"])
-    self:add_dropdown("sb_money_text_alignment", TR["Text alignment"], self.text_alignment_labels, self.text_alignment_values)
-
-    self:add_hr()
-    self:add_title(TR["Wallet"])
-    self:add_text("sb_wallet_width", TR["Width"])
-    self:add_dropdown("sb_wallet_text_alignment", TR["Text alignment"], self.text_alignment_labels, self.text_alignment_values)
-    CreateStatusBarWalletSelector(self, "sb_wallet_items")
-
-    self:add_hr()
-    self:add_title(TR["Tracked item"])
-    self:add_text("sb_item_width", TR["Width"])
-
-    self:add_hr()
-    self:add_title(TR["Shortcut buttons"])
-    self:add_text("sb_shortcut_width", TR["Width"])
-    self:add_text("sb_shortcut_height", TR["Height"])
-
-    self:add_hr()
-    self:add_title(TR["Crafting plan"])
-    self:add_text("sb_craft_plan_width", TR["Width"])
-    self:add_text("sb_craft_plan_max_visible", TR["Max visible resources"])
-
-    self.controls.sb_font_outline_color.visible_if = function()
-        return self.controls.sb_font_style:get_value() == LUI_ENUMS.font_style.OUTLINE
+local function _bind_outline_visibility(owner_page, colors_font_page, style_key, outline_key)
+    owner_page.controls[outline_key].visible_if = function()
+        return _is_outline(owner_page.controls[style_key])
     end
 
+    local prev = owner_page.controls[style_key].on_changed
+    owner_page.controls[style_key].on_changed = function(value)
+        if prev ~= nil then
+            prev(value)
+        end
+        colors_font_page:layout()
+        owner_page:layout()
+    end
+end
+
+local function _new_general_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_checkbox("sb_enabled", TR["Enabled"], true)
+    return page
+end
+
+local function _new_background_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_bg_opacity", TR["Background opacity (0..1)"])
+    return page
+end
+
+local function _new_font_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_dropdown("sb_font_name", TR["Font"], page.font_name_labels, page.font_name_values)
+    page:add_text("sb_font_size", TR["Font size"])
+    page:add_dropdown("sb_font_style", TR["Font style"], page.font_style_labels, page.font_style_values)
+    return page
+end
+
+local function _new_layout_page(window)
+    local layout_help = BuildStatusBarLayoutHelp()
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_height", TR["Height"])
+    add_compact_row_break(page)
+    page:add_text("sb_layout_left", TR["Left layout"], false, layout_help, true)
+    add_compact_row_break(page)
+    page:add_text("sb_layout_center", TR["Center layout"], false, layout_help, true)
+    add_compact_row_break(page)
+    page:add_text("sb_layout_right", TR["Right layout"], false, layout_help, true)
+    return page
+end
+
+local function _new_color_background_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 3, nil)
+    page:add_text("sb_bg_color", TR["Background color"], true)
+    return page
+end
+
+local function _new_color_font_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 3, nil)
+    page:add_text("sb_font_color", TR["Font color"], true)
+    page:add_text("sb_font_outline_color", TR["Outline color"], true)
+    return page
+end
+
+local function _new_color_inventory_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 3, nil)
+    page:add_text("sb_inv_yellow", TR["Warn color (30%)"], true)
+    page:add_text("sb_inv_orange", TR["Warn color (20%)"], true)
+    page:add_text("sb_inv_red", TR["Warn color (10%)"], true)
+    return page
+end
+
+local function _new_color_durability_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 3, nil)
+    page:add_text("sb_durability_green", TR["Green color"], true)
+    page:add_text("sb_durability_yellow", TR["Yellow color"], true)
+    page:add_text("sb_durability_red", TR["Red color"], true)
+    return page
+end
+
+local function _new_colors_section(window)
+    local background = _new_color_background_page(window)
+    local font = _new_color_font_page(window)
+    local inventory = _new_color_inventory_page(window)
+    local durability = _new_color_durability_page(window)
+
+    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.left,
+        FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
+    page:add_sub_page(TR["Background"], module_for_page("background", background))
+    page:add_sub_page(TR["Font"], module_for_page("font", font))
+    page:add_sub_page(TR["Inventory"], module_for_page("inventory", inventory))
+    page:add_sub_page(TR["Equipment wear"], module_for_page("durability", durability))
+    return page, font
+end
+
+local function _new_widget_time_page(window)
+    local time_format_labels = { TR["24-hour"], TR["AM/PM"] }
+    local time_format_values = { LUI_ENUMS.time_format.H24, LUI_ENUMS.time_format.AMPM }
+
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_time_width", TR["Width"])
+    page:add_dropdown("sb_time_format", TR["Time format"], time_format_labels, time_format_values)
+    page:add_dropdown("sb_time_text_alignment", TR["Text alignment"], page.text_alignment_labels,
+        page.text_alignment_values)
+    return page
+end
+
+local function _new_widget_inventory_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_inv_width", TR["Width"])
+    page:add_checkbox("sb_inv_icon", TR["Icon"])
+    page:add_dropdown("sb_inv_text_alignment", TR["Text alignment"], page.text_alignment_labels,
+        page.text_alignment_values)
+    return page
+end
+
+local function _new_widget_durability_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_durability_width", TR["Width"])
+    page:add_checkbox("sb_durability_icon", TR["Icon"])
+    page:add_dropdown("sb_durability_text_alignment", TR["Text alignment"], page.text_alignment_labels,
+        page.text_alignment_values)
+    add_compact_row_break(page)
+    page:add_checkbox("sb_durability_coloring", TR["Enable rich-text coloring"], true)
+    return page
+end
+
+local function _new_widget_money_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_money_width", TR["Width"])
+    page:add_dropdown("sb_money_text_alignment", TR["Text alignment"], page.text_alignment_labels,
+        page.text_alignment_values)
+    return page
+end
+
+local function _new_widget_wallet_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_wallet_width", TR["Width"])
+    page:add_dropdown("sb_wallet_text_alignment", TR["Text alignment"], page.text_alignment_labels,
+        page.text_alignment_values)
+    add_compact_row_break(page)
+    CreateStatusBarWalletSelector(page, "sb_wallet_items")
+    return page
+end
+
+local function _new_widget_item_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_item_width", TR["Width"])
+    return page
+end
+
+local function _new_widget_shortcuts_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_shortcut_width", TR["Width"])
+    page:add_text("sb_shortcut_height", TR["Height"])
+    return page
+end
+
+local function _new_widget_crafting_plan_page(window)
+    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    page:add_text("sb_craft_plan_width", TR["Width"])
+    page:add_text("sb_craft_plan_max_visible", TR["Max visible resources"])
+    return page
+end
+
+local function _new_widgets_section(window)
+    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.left,
+        FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
+    page:add_sub_page(TR["Time (local)"], module_for_page("time", _new_widget_time_page(window)))
+    page:add_sub_page(TR["Inventory"], module_for_page("inventory", _new_widget_inventory_page(window)))
+    page:add_sub_page(TR["Equipment wear"], module_for_page("durability", _new_widget_durability_page(window)))
+    page:add_sub_page(TR["Money"], module_for_page("money", _new_widget_money_page(window)))
+    page:add_sub_page(TR["Wallet"], module_for_page("wallet", _new_widget_wallet_page(window)))
+    page:add_sub_page(TR["Tracked item"], module_for_page("item", _new_widget_item_page(window)))
+    page:add_sub_page(TR["Shortcut buttons"], module_for_page("shortcuts", _new_widget_shortcuts_page(window)))
+    page:add_sub_page(TR["Crafting plan"], module_for_page("craft_plan", _new_widget_crafting_plan_page(window)))
+    return page
+end
+
+StatusBarPage = class(SettingsFeatureSectionPage)
+
+function StatusBarPage:Constructor(window)
+    SettingsFeatureSectionPage.Constructor(self, window)
+
+    self:add_section(TR["General"], "general", _new_general_page(window))
+    self:add_section(TR["Background"], "background", _new_background_page(window))
+    self:add_section(TR["Font"], "font", _new_font_page(window))
+    self:add_section(TR["Layout"], "layout", _new_layout_page(window))
+    local colors, colors_font = _new_colors_section(window)
+    self:add_section(TR["Colors"], "colors", colors)
+    self:add_section(TR["Widgets"], "widgets", _new_widgets_section(window))
+    _bind_outline_visibility(self, colors_font, "sb_font_style", "sb_font_outline_color")
     self:refresh_layout_help()
 end
 
@@ -112,18 +216,11 @@ function StatusBarPage:refresh_layout_help()
     local help_text = BuildStatusBarLayoutHelp()
     local keys = { "sb_layout_left", "sb_layout_center", "sb_layout_right" }
     for i = 1, #keys do
-        local entry = self.controls[keys[i]]
-        if entry ~= nil then
-            entry.help_text = help_text
-        end
+        self.controls[keys[i]].help_text = help_text
     end
 end
 
 function StatusBarPage:load(sb)
-    if sb == nil then
-        return
-    end
-
     self.loading = true
     self:refresh_layout_help()
 
@@ -185,13 +282,10 @@ function StatusBarPage:load(sb)
 
     self:update_all_swatches()
     self.loading = false
+    self:layout()
 end
 
 function StatusBarPage:apply(sb)
-    if sb == nil then
-        return
-    end
-
     sb.enabled = self.controls.sb_enabled.cb:IsChecked() == true
 
     local bg_opacity = tonumber(self.controls.sb_bg_opacity.tb:GetText())
@@ -278,10 +372,6 @@ end
 
 _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP = function()
     local window = _G.CONFIG_WINDOW
-    if window == nil or window.main_tab_bar == nil then
-        return
-    end
-
     local _, page = window.main_tab_bar:find_index(function(_, candidate)
         return candidate ~= nil and candidate._tab_key == "status_bar"
     end)
