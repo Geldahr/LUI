@@ -537,6 +537,7 @@ function ConfigWindow:refresh_runtime_settings()
     apply_assets_settings()
     apply_status_bar_settings()
     apply_cooldowns_settings()
+    apply_drops_settings()
     apply_crafting_settings()
     apply_travel_settings()
 
@@ -569,6 +570,9 @@ function ConfigWindow:refresh_runtime_settings()
     end
     if COOLDOWNS_WINDOW ~= nil then
         COOLDOWNS_WINDOW:apply_settings()
+    end
+    if DROPS_WINDOW ~= nil then
+        DROPS_WINDOW:apply_settings()
     end
     if BESTIARY_WINDOW ~= nil then
         BESTIARY_WINDOW:apply_settings()

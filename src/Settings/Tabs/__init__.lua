@@ -1,6 +1,7 @@
 import "LUI.src.Settings.Tabs.Global"
 import "LUI.src.Settings.Tabs.ProfileManager"
 import "LUI.src.Settings.Tabs.Self"
+import "LUI.src.Settings.Tabs.Drops"
 import "LUI.src.Settings.Tabs.Target"
 import "LUI.src.Settings.Tabs.Party"
 import "LUI.src.Settings.Tabs.Inventory"

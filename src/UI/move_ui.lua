@@ -243,6 +243,7 @@ local function _capture_move_settings_snapshot()
         self_effects = _snapshot_position(hud.self_effects),
         target_effects = _snapshot_position(hud.target_effects),
         cooldowns = _snapshot_position(hud.cooldowns),
+        drops = _snapshot_position(hud.drops),
     }
 end
 
@@ -265,6 +266,7 @@ local function _restore_saved_move_settings()
     _restore_position(hud.self_effects, MOVE_UI_POSITION_SNAPSHOT.self_effects)
     _restore_position(hud.target_effects, MOVE_UI_POSITION_SNAPSHOT.target_effects)
     _restore_position(hud.cooldowns, MOVE_UI_POSITION_SNAPSHOT.cooldowns)
+    _restore_position(hud.drops, MOVE_UI_POSITION_SNAPSHOT.drops)
 
     if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:resize()
@@ -286,6 +288,9 @@ local function _restore_saved_move_settings()
     end
     if COOLDOWNS_WINDOW ~= nil then
         COOLDOWNS_WINDOW:apply_settings()
+    end
+    if DROPS_WINDOW ~= nil then
+        DROPS_WINDOW:apply_settings()
     end
     if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:on_target_changed()
@@ -424,6 +429,9 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
     end
     if COOLDOWNS_WINDOW ~= nil then
         COOLDOWNS_WINDOW:set_move_mode(enabled)
+    end
+    if DROPS_WINDOW ~= nil then
+        DROPS_WINDOW:set_move_mode(enabled)
     end
 
     if enabled then
