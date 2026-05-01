@@ -51,7 +51,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			},
 			["rows"] = 3.000000,
 			["spacing"] = 4.000000,
-			["bar_width"] = 100.000000,
+			["bar_width"] = 120.000000,
 			["show_noncurable_debuffs"] = false,
 			["enabled"] = true,
 			["columns"] = 2.000000,
@@ -83,8 +83,6 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			["show_curable_debuffs"] = false,
 			["bar_expire_towards"] = 2.000000,
 			["threshold"] = 5.000000,
-			["text_alignment"] = 1.000000,
-			["text_template"] = "%n  %t"
 		},
 		["cooldowns"] =
 		{
@@ -148,8 +146,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			},
 			["flow"] = 2.000000,
 			["bar_expire_towards"] = 2.000000,
-			["text_template"] = "%name%\\n%t",
-			["text_alignment"] = 2.000000,
+			["time_format"] = 1.000000,
 			["border_width"] = 1.000000
 		},
 		["vitals"] =
@@ -1278,7 +1275,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			},
 			["rows"] = 2.000000,
 			["spacing"] = 4.000000,
-			["bar_width"] = 100.000000,
+			["bar_width"] = 120.000000,
 			["show_noncurable_debuffs"] = true,
 			["enabled"] = true,
 			["columns"] = 4.000000,
@@ -1310,8 +1307,6 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			["show_buffs"] = false,
 			["bar_expire_towards"] = 2.000000,
 			["threshold"] = 5.000000,
-			["text_alignment"] = 1.000000,
-			["text_template"] = "%n  %t"
 		}
 	},
 	["status_bar"] =
@@ -1455,8 +1450,8 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			},
 			["target_effects"] =
 			{
-				["left"] = 922.000000,
-				["top"] = 28.000000
+				["left"] = 866.000000,
+				["top"] = 30.000000
 			},
 			["cooldowns"] =
 			{

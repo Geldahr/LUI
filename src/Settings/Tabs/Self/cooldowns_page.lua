@@ -108,19 +108,14 @@ function CooldownsPage:Constructor(window)
 
     local bar_mode_labels = { TR["Load"], TR["Unload"] }
     local bar_mode_values = { LUI_ENUMS.bar_mode.LOAD, LUI_ENUMS.bar_mode.UNLOAD }
+    local time_format_labels = { TR["Auto precision"], TR["Whole seconds"] }
+    local time_format_values = {
+        LUI_ENUMS.cooldown_time_format.AUTO,
+        LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS,
+    }
     local flow_labels = { TR["Top to bottom"], TR["Bottom to top"] }
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
     local min_base_help = TR["Skills whose base cooldown is below this value are ignored."]
-    local fmt_help = table.concat({
-        TR["Tokens:"],
-        TR["  %name% - skill name"],
-        TR["  %t - remaining time with tenths (X.Ys)"],
-        TR["  %s - remaining time without tenths (Xs)"],
-        "",
-        TR["Examples:"],
-        TR["  %name% - %t"],
-        TR["  %name% - %s"],
-    }, "\n")
     local list_help = TR["One skill name per line or comma-separated. Case-insensitive. Exact match or prefix with trailing *."]
 
     self.refresh_preview = function()
@@ -153,8 +148,7 @@ function CooldownsPage:Constructor(window)
 
     self:add_hr()
     self:add_title(TR["Text"])
-    self:add_text("cd_text_template", TR["Text template"], false, fmt_help, true)
-    self:add_dropdown("cd_text_alignment", TR["Text alignment"], self.text_alignment_labels, self.text_alignment_values)
+    self:add_dropdown("cd_time_format", TR["Time format"], time_format_labels, time_format_values)
     self:add_text("cd_text_margin", TR["Text margin (px)"])
     self:add_text("cd_name_max_chars", TR["Max name chars"])
 

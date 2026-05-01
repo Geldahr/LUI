@@ -1,6 +1,34 @@
+import "LUI.src.Cooldowns.time_display"
+
 local Common = SettingsPreviewCommon
 local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
+
+local function _truncate_name(name, max_chars)
+    if type(name) ~= "string" then
+        name = tostring(name or "")
+    end
+
+    local m = tonumber(max_chars)
+    if m == nil or m <= 0 then
+        return name
+    end
+
+    m = math.floor(m + 0.5)
+    if m < 1 then
+        return ""
+    end
+
+    if string.len(name) <= m then
+        return name
+    end
+
+    if m >= 4 then
+        return string.sub(name, 1, m - 3) .. "..."
+    end
+
+    return string.sub(name, 1, m)
+end
 
 function ConfigWindow:init_cooldowns_preview()
     local holder = self.controls.cooldowns_preview
@@ -88,11 +116,19 @@ function ConfigWindow:init_cooldowns_preview()
         row.bar_fill:SetParent(row.bar_background)
         row.bar_fill:SetMouseVisible(false)
 
-        row.label = UI.Widgets.LuiLabel()
-        row.label:SetParent(row.bar_background)
-        row.label:SetMouseVisible(false)
-        row.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-        row.label:SetText("")
+        row.name_label = UI.Widgets.LuiLabel()
+        row.name_label:SetParent(row.bar_background)
+        row.name_label:SetMouseVisible(false)
+        row.name_label:SetMultiline(true)
+        row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        row.name_label:SetText("")
+
+        row.time_label = UI.Widgets.LuiLabel()
+        row.time_label:SetParent(row.bar_background)
+        row.time_label:SetMouseVisible(false)
+        row.time_label:SetMultiline(false)
+        row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        row.time_label:SetText("")
 
         row.icon_background = Turbine.UI.Control()
         row.icon_background:SetParent(row.entry)
@@ -149,11 +185,8 @@ function ConfigWindow:update_cooldowns_preview()
 
     local cd = s.self.cooldowns
 
-    local raw_item_w = tonumber(self.controls.cd_item_w.tb:GetText()) or cd.item_w or 150
     local raw_item_h = tonumber(self.controls.cd_item_h.tb:GetText()) or cd.item_h or 26
-    local item_w = scaled_int(raw_item_w, 150)
     local item_h = scaled_int(raw_item_h, 26)
-    if item_w < 10 then item_w = 10 end
     if item_h < 10 then item_h = 10 end
 
     local bg = _hex_to_color(self.controls.cd_bg_color.tb:GetText())
@@ -187,20 +220,19 @@ function ConfigWindow:update_cooldowns_preview()
         bar_mode = cd.bar_mode or LUI_ENUMS.bar_mode.UNLOAD
     end
 
-    local text_template = self.controls.cd_text_template.tb:GetText()
-    if type(text_template) ~= "string" or text_template == "" then
-        text_template = cd.text_template or "%name% - %t"
-    end
-    local text_template_tokens = lui_tokenize_format(text_template)
-
-    local text_alignment = self.controls.cd_text_alignment.get_value and self.controls.cd_text_alignment:get_value() or nil
-    if type(text_alignment) ~= "number" then
-        text_alignment = cd.text_alignment or LUI_ENUMS.text_alignment.CENTER
+    local time_format = self.controls.cd_time_format.get_value and self.controls.cd_time_format:get_value() or nil
+    if type(time_format) ~= "number" then
+        time_format = cd.time_format or LUI_ENUMS.cooldown_time_format.AUTO
     end
 
     local raw_text_margin = tonumber(self.controls.cd_text_margin.tb:GetText()) or cd.text_margin or 4
     local text_margin = scaled_int(raw_text_margin, 4)
     if text_margin < 0 then text_margin = 0 end
+
+    local name_max_chars = tonumber(self.controls.cd_name_max_chars.tb:GetText())
+    if name_max_chars == nil then
+        name_max_chars = cd.name_max_chars
+    end
 
     local font_name = self.controls.cd_font_name.get_value and self.controls.cd_font_name:get_value() or nil
     if type(font_name) ~= "number" then
@@ -222,6 +254,25 @@ function ConfigWindow:update_cooldowns_preview()
     local outline_color = _hex_to_color(self.controls.cd_font_outline_color.tb:GetText())
         or (cd.font and cd.font.outline_color)
         or Turbine.UI.Color(1, 0, 0, 0)
+
+    local threshold = tonumber(self.controls.cd_threshold.tb:GetText()) or cd.threshold or 30
+    if threshold <= 0 then threshold = 30 end
+
+    local raw_item_w = tonumber(self.controls.cd_item_w.tb:GetText()) or cd.item_w or 150
+    local min_item_w = lui_cooldown_min_item_width(
+        item_h,
+        border,
+        text_margin,
+        font_name,
+        font_size,
+        threshold,
+        time_format
+    )
+    local item_w = scaled_int(raw_item_w, 150)
+    if item_w < 10 then item_w = 10 end
+    if item_w < min_item_w then
+        item_w = min_item_w
+    end
 
     local row = self.cooldowns_preview.row
     local p = self.cooldowns_preview
@@ -338,9 +389,6 @@ function ConfigWindow:update_cooldowns_preview()
     local bar_inner_w = bar_width
     local bar_inner_h = inner_h
 
-    local threshold = tonumber(self.controls.cd_threshold.tb:GetText()) or cd.threshold or 30
-    if threshold <= 0 then threshold = 30 end
-
     local total = threshold * 1.4
     if total < 3 then total = 3 end
 
@@ -377,27 +425,34 @@ function ConfigWindow:update_cooldowns_preview()
     row.bar_fill:SetSize(fill_width, bar_inner_h)
     row.bar_fill:SetBackColor(bar)
 
-    row.label:SetFont(font)
-    row.label:SetFontStyle(font_style_lotro)
-    row.label:SetForeColor(font_color)
-    row.label:SetOutlineColor(outline_color)
-    row.label:SetTextAlignment(LUI_TO_LOTRO.text_alignment[text_alignment] or Turbine.UI.ContentAlignment.MiddleCenter)
+    local time_width = lui_cooldown_time_label_width(font_name, font_size, threshold, time_format)
+    local text_gap = lui_cooldown_text_gap(font_size)
+    local title_width = inner_w - icon_size - sep_w - (2 * text_margin) - time_width - text_gap
+    if title_width < 1 then
+        title_width = 1
+    end
+    local time_x = text_margin + title_width + text_gap
 
-    row.label:SetPosition(text_margin, 0)
-    row.label:SetSize(math.max(1, bar_inner_w - (2 * text_margin)), inner_h)
+    row.name_label:SetFont(font)
+    row.name_label:SetFontStyle(font_style_lotro)
+    row.name_label:SetForeColor(font_color)
+    row.name_label:SetOutlineColor(outline_color)
+    row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    row.name_label:SetPosition(text_margin, 0)
+    row.name_label:SetSize(title_width, inner_h)
+
+    row.time_label:SetFont(font)
+    row.time_label:SetFontStyle(font_style_lotro)
+    row.time_label:SetForeColor(font_color)
+    row.time_label:SetOutlineColor(outline_color)
+    row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    row.time_label:SetPosition(time_x, 0)
+    row.time_label:SetSize(time_width, inner_h)
 
     row.icon:SetPosition(0, 0)
     row.icon:SetSize(icon_size, icon_size)
 
-    local time_t = lui_format_timeout(remaining)
-    local time_s = lui_format_timeout_seconds(remaining)
-    local ctx = {
-        name = TR["Example skill"],
-        t = time_t,
-        s = time_s,
-        n = TR["Example skill"],
-        ts = time_s,
-    }
-
-    row.label:SetText(lui_format_tokenized(text_template_tokens, ctx))
+    local example_name = table.concat({ TR["Example skill"], TR["Example skill"], TR["Example skill"] }, " ")
+    row.name_label:SetText(_truncate_name(example_name, name_max_chars))
+    row.time_label:SetText(lui_format_cooldown_time(remaining, time_format))
 end

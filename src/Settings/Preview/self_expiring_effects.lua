@@ -1,7 +1,35 @@
+import "LUI.src.Utils.timed_row_layout"
+
 local Common = SettingsPreviewCommon
 local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
 local _sync_preview_holder_height = Common.sync_preview_holder_height
+
+local LABEL_PAD = 3
+local EFFECT_TIME_FORMAT = lui_timed_row_time_format.AUTO
+
+local function _truncate_name(name, max_chars)
+    local value = tostring(name or "")
+    local m = max_chars
+    if type(m) ~= "number" then
+        m = tonumber(m)
+    end
+    if m == nil or m <= 0 then
+        return value
+    end
+
+    m = math.floor(m + 0.5)
+    if m < 1 then
+        return ""
+    end
+    if string.len(value) <= m then
+        return value
+    end
+    if m >= 4 then
+        return string.sub(value, 1, m - 3) .. "..."
+    end
+    return string.sub(value, 1, m)
+end
 
 local function _create_row(container)
     local row = {}
@@ -46,10 +74,19 @@ local function _create_row(container)
     row.bar_fill:SetParent(row.bar_background)
     row.bar_fill:SetMouseVisible(false)
 
-    row.label = UI.Widgets.LuiLabel()
-    row.label:SetParent(row.bar_background)
-    row.label:SetMouseVisible(false)
-    row.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    row.name_label = UI.Widgets.LuiLabel()
+    row.name_label:SetParent(row.bar_background)
+    row.name_label:SetMouseVisible(false)
+    row.name_label:SetMultiline(true)
+    row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    row.name_label:SetText("")
+
+    row.time_label = UI.Widgets.LuiLabel()
+    row.time_label:SetParent(row.bar_background)
+    row.time_label:SetMouseVisible(false)
+    row.time_label:SetMultiline(false)
+    row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    row.time_label:SetText("")
 
     row.icon_border = Turbine.UI.Control()
     row.icon_border:SetParent(row.entry)
@@ -174,22 +211,6 @@ function ConfigWindow:update_expiring_effects_preview()
     end
     local expire_towards_right = bar_expire_towards == LUI_ENUMS.side.RIGHT
 
-    local text_template = self.controls.expiring_effects_text_template and
-        self.controls.expiring_effects_text_template.tb and self.controls.expiring_effects_text_template.tb:GetText() or
-        nil
-    if type(text_template) ~= "string" then
-        text_template = s.self.expiring_effects.text_template or "%n  %t"
-    end
-    if string.len(text_template) == 0 then
-        text_template = "%n  %t"
-    end
-    local text_template_tokens = lui_tokenize_format(text_template)
-    local text_alignment = self.controls.expiring_effects_text_alignment.get_value and
-        self.controls.expiring_effects_text_alignment:get_value() or nil
-    if type(text_alignment) ~= "number" then
-        text_alignment = s.self.expiring_effects.text_alignment or LUI_ENUMS.text_alignment.LEFT
-    end
-
     local name_max_chars = tonumber(self.controls.expiring_effects_name_max_chars and
             self.controls.expiring_effects_name_max_chars.tb and
             self.controls.expiring_effects_name_max_chars.tb:GetText() or
@@ -220,6 +241,18 @@ function ConfigWindow:update_expiring_effects_preview()
     if threshold <= 0 then threshold = 5 end
     local remaining = threshold / 2
 
+    local min_bar_width = lui_timed_row_min_timed_bar_width(
+        border,
+        LABEL_PAD,
+        font_name,
+        font_size,
+        threshold,
+        EFFECT_TIME_FORMAT
+    )
+    if bar_width < min_bar_width then
+        bar_width = min_bar_width
+    end
+
     local icon_size = bar_height
     local entry_width = bar_width + icon_size
     local entry_height = bar_height
@@ -237,31 +270,8 @@ function ConfigWindow:update_expiring_effects_preview()
     if desired_height < 80 then desired_height = 80 end
     _sync_preview_holder_height(self, holder, desired_height)
 
-    local function text_align(value)
-        return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
-    end
-
-    local function truncate_name(name, max_chars)
-        local n = tostring(name or "")
-        local m = max_chars
-        if type(m) ~= "number" then
-            m = tonumber(m)
-        end
-        if m == nil or m <= 0 then
-            return n
-        end
-        m = math.floor(m + 0.5)
-        if m < 1 then
-            return ""
-        end
-        if string.len(n) <= m then
-            return n
-        end
-        if m >= 4 then
-            return string.sub(n, 1, m - 3) .. "..."
-        end
-        return string.sub(n, 1, m)
-    end
+    local time_width = lui_timed_row_time_label_width(font_name, font_size, threshold, EFFECT_TIME_FORMAT)
+    local text_gap = lui_timed_row_text_gap(font_size)
 
     local function apply_row(row, x, y, effect_name, row_bar_color)
         row.border:SetSize(bw, bh)
@@ -311,18 +321,27 @@ function ConfigWindow:update_expiring_effects_preview()
         row.bar_fill:SetSize(preview_fill_width, inner_height)
         row.bar_fill:SetBackColor(row_bar_color)
 
-        local label_pad = 3
-        local label_width = bar_inner_w - (2 * label_pad)
-        if label_width < 1 then label_width = 1 end
-        row.label:SetPosition(label_pad, 0)
-        row.label:SetSize(label_width, inner_height)
-        row.label:SetFont(font)
-        row.label:SetFontStyle(font_style)
-        row.label:SetTextAlignment(text_align(text_alignment))
-        row.label:SetForeColor(font_color)
-        row.label:SetOutlineColor(outline_color)
-        local truncated = truncate_name(effect_name, name_max_chars)
-        row.label:SetText(lui_format_tokenized(text_template_tokens, { n = truncated, t = lui_format_timeout(remaining) }))
+        local title_width = bar_inner_w - (2 * LABEL_PAD) - time_width - text_gap
+        if title_width < 1 then title_width = 1 end
+        local time_x = LABEL_PAD + title_width + text_gap
+
+        row.name_label:SetPosition(LABEL_PAD, 0)
+        row.name_label:SetSize(title_width, inner_height)
+        row.name_label:SetFont(font)
+        row.name_label:SetFontStyle(font_style)
+        row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        row.name_label:SetForeColor(font_color)
+        row.name_label:SetOutlineColor(outline_color)
+        row.name_label:SetText(_truncate_name(effect_name, name_max_chars))
+
+        row.time_label:SetPosition(time_x, 0)
+        row.time_label:SetSize(time_width, inner_height)
+        row.time_label:SetFont(font)
+        row.time_label:SetFontStyle(font_style)
+        row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        row.time_label:SetForeColor(font_color)
+        row.time_label:SetOutlineColor(outline_color)
+        row.time_label:SetText(lui_timed_row_format_time(remaining, EFFECT_TIME_FORMAT))
 
         local icon_inner = icon_size - (2 * border)
         if icon_inner < 1 then icon_inner = 1 end

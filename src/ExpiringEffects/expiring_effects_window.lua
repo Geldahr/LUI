@@ -2,6 +2,8 @@ import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.Settings.enums"
+import "LUI.src.Utils.timed_row_layout"
 import "LUI.src.UI.Widgets.hud"
 
 local CURABILITY_UNKNOWN = 0
@@ -114,10 +116,6 @@ function ExpiringEffectsWindow:get_hud_key()
     return nil
 end
 
-function ExpiringEffectsWindow:get_border_width()
-    return 0
-end
-
 function ExpiringEffectsWindow:get_entry_class()
     return nil
 end
@@ -147,7 +145,20 @@ function ExpiringEffectsWindow:apply_settings()
     local rows = s.rows
     local spacing = s.spacing
 
-    local entry_width = s.bar_width + s.bar_height
+    local bar_width = s.bar_width
+    local min_bar_width = lui_timed_row_min_timed_bar_width(
+        s.border_width,
+        3,
+        s.font.name,
+        s.font.size,
+        s.threshold,
+        lui_timed_row_time_format.AUTO
+    )
+    if bar_width < min_bar_width then
+        bar_width = min_bar_width
+    end
+
+    local entry_width = bar_width + s.bar_height
     local entry_height = s.bar_height
 
     local width = (cols * entry_width) + ((cols - 1) * spacing)

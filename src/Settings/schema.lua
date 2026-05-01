@@ -560,16 +560,12 @@ function _G.ensure_loaded_settings()
     if se.bar_expire_towards == nil then
         se.bar_expire_towards = LUI_ENUMS.side.RIGHT
     end
-    if se.text_template == nil then se.text_template = "%n  %t" end
-    if se.text_alignment == nil then
-        se.text_alignment = LUI_ENUMS.text_alignment.LEFT
-    end
     if se.name_max_chars == nil then se.name_max_chars = 24 end
     if se.threshold == nil then se.threshold = 5 end
     if se.columns == nil then se.columns = 2 end
     if se.rows == nil then se.rows = 3 end
     if se.spacing == nil then se.spacing = 4 end
-    if se.bar_width == nil then se.bar_width = 100 end
+    if se.bar_width == nil then se.bar_width = 120 end
     if se.bar_height == nil then se.bar_height = 30 end
     if se.border_width == nil then se.border_width = s.self.vitals.frame.border_width end
 
@@ -611,20 +607,16 @@ function _G.ensure_loaded_settings()
     if ed.bar_expire_towards == nil then
         ed.bar_expire_towards = LUI_ENUMS.side.RIGHT
     end
-    if ed.text_template == nil then ed.text_template = "%n  %t" end
-    if ed.text_alignment == nil then
-        ed.text_alignment = LUI_ENUMS.text_alignment.LEFT
-    end
     if ed.name_max_chars == nil then ed.name_max_chars = 24 end
     if ed.threshold == nil then ed.threshold = 5 end
     if ed.columns == nil then ed.columns = 4 end
     if ed.rows == nil then ed.rows = 2 end
     if ed.spacing == nil then ed.spacing = 4 end
-    if ed.bar_width == nil then ed.bar_width = 100 end
+    if ed.bar_width == nil then ed.bar_width = 120 end
     if ed.bar_height == nil then ed.bar_height = 30 end
     if ed.border_width == nil then ed.border_width = s.target.vitals.frame.border_width end
 
-    ensure_ui_hud("target_effects", _pos_x(922), _pos_y(2))
+    ensure_ui_hud("target_effects", _pos_x(866), _pos_y(30))
 
     ed.color.bar = ed.color.bar or Turbine.UI.Color(1, 0.898039, 0.250980, 0.250980)
     ed.color.bar_buff = ed.color.bar_buff or Turbine.UI.Color(1, 0.149020, 0.701961, 0.749020)
@@ -826,11 +818,14 @@ function _G.ensure_loaded_settings()
         cd.bar_mode = LUI_ENUMS.bar_mode.UNLOAD
     end
 
-    if cd.text_template == nil or cd.text_template == "" then
-        cd.text_template = "%name%\\n%t"
-    end
-    if cd.text_alignment == nil then
-        cd.text_alignment = LUI_ENUMS.text_alignment.CENTER
+    if cd.time_format == nil then
+        local template = cd.text_template
+        if type(template) == "string" and string.find(template, "%%s", 1, true) ~= nil and
+            string.find(template, "%%t", 1, true) == nil then
+            cd.time_format = LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS
+        else
+            cd.time_format = LUI_ENUMS.cooldown_time_format.AUTO
+        end
     end
     if cd.text_margin == nil then
         cd.text_margin = 4

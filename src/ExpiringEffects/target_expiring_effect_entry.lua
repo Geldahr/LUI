@@ -2,8 +2,10 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Settings.enums"
-import "LUI.src.Utils.time_format"
-import "LUI.src.Utils.token_format"
+import "LUI.src.Utils.timed_row_layout"
+
+local LABEL_PAD = 3
+local EFFECT_TIME_FORMAT = lui_timed_row_time_format.AUTO
 
 local function _stable_effect_key(effect)
     if effect == nil then
@@ -15,10 +17,6 @@ local function _stable_effect_key(effect)
         id = tonumber(id) or 0
     end
     return id
-end
-
-local function _text_alignment(value)
-    return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
 end
 
 local function _truncate_name(name, max_chars)
@@ -58,7 +56,6 @@ function TargetExpiringEffectEntry:Constructor()
 
     self.effect = nil
     self.effect_key = 0
-    self.border_width = 0
     self.bar_inner_w = 0
 
     self:SetMouseVisible(false)
@@ -75,10 +72,21 @@ function TargetExpiringEffectEntry:Constructor()
     self.bar_fill:SetParent(self.bar_background)
     self.bar_fill:SetMouseVisible(false)
 
-    self.label = UI.Widgets.LuiLabel()
-    self.label:SetParent(self.bar_background)
-    self.label:SetMouseVisible(false)
-    self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.name_label = UI.Widgets.LuiLabel()
+    self.name_label:SetParent(self.bar_background)
+    self.name_label:SetMouseVisible(false)
+    self.name_label:SetSelectable(false)
+    self.name_label:SetMultiline(true)
+    self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.name_label:SetText("")
+
+    self.time_label = UI.Widgets.LuiLabel()
+    self.time_label:SetParent(self.bar_background)
+    self.time_label:SetMouseVisible(false)
+    self.time_label:SetSelectable(false)
+    self.time_label:SetMultiline(false)
+    self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.time_label:SetText("")
 
     self.icon_border = Turbine.UI.Control()
     self.icon_border:SetParent(self)
@@ -110,6 +118,17 @@ function TargetExpiringEffectEntry:apply_settings()
 
     local height = s.bar_height
     local bar_width = s.bar_width
+    local min_bar_width = lui_timed_row_min_timed_bar_width(
+        border,
+        LABEL_PAD,
+        s.font.name,
+        s.font.size,
+        s.threshold,
+        EFFECT_TIME_FORMAT
+    )
+    if bar_width < min_bar_width then
+        bar_width = min_bar_width
+    end
     local icon_size = height
 
     self:SetSize(bar_width + icon_size, height)
@@ -126,13 +145,8 @@ function TargetExpiringEffectEntry:apply_settings()
     if border < 0 then border = 0 end
     local max_border = math.floor(math.min(bar_width, height) / 2)
     if border > max_border then border = max_border end
-    self.border_width = border
-
     local inner_height = height - (2 * border)
     if inner_height < 1 then inner_height = 1 end
-
-    local inner_width = bar_width - (2 * border)
-    if inner_width < 1 then inner_width = 1 end
 
     -- Avoid a double border between bar and icon:
     -- keep the separator from the icon border, and extend the bar background to cover its adjacent border.
@@ -149,16 +163,32 @@ function TargetExpiringEffectEntry:apply_settings()
     self.bar_fill:SetSize(bar_inner_w, inner_height)
     self.bar_fill:SetBackColor(self:_resolve_bar_color())
 
-    local label_pad = 3
-    self.label:SetPosition(label_pad, 0)
-    local label_width = bar_inner_w - (2 * label_pad)
-    if label_width < 1 then label_width = 1 end
-    self.label:SetSize(label_width, inner_height)
-    self.label:SetFont(s.font.lotro)
-    self.label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
-    self.label:SetTextAlignment(_text_alignment(s.text_alignment))
-    self.label:SetOutlineColor(s.font.outline_color)
-    self.label:SetForeColor(s.font.color)
+    local time_width = lui_timed_row_time_label_width(
+        s.font.name,
+        s.font.size,
+        s.threshold,
+        EFFECT_TIME_FORMAT
+    )
+    local text_gap = lui_timed_row_text_gap(s.font.size)
+    local title_width = bar_inner_w - (2 * LABEL_PAD) - time_width - text_gap
+    if title_width < 1 then title_width = 1 end
+    local time_x = LABEL_PAD + title_width + text_gap
+
+    self.name_label:SetPosition(LABEL_PAD, 0)
+    self.name_label:SetSize(title_width, inner_height)
+    self.name_label:SetFont(s.font.lotro)
+    self.name_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
+    self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.name_label:SetOutlineColor(s.font.outline_color)
+    self.name_label:SetForeColor(s.font.color)
+
+    self.time_label:SetPosition(time_x, 0)
+    self.time_label:SetSize(time_width, inner_height)
+    self.time_label:SetFont(s.font.lotro)
+    self.time_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
+    self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.time_label:SetOutlineColor(s.font.outline_color)
+    self.time_label:SetForeColor(s.font.color)
 
     local icon_inner = icon_size
     if icon_inner < 1 then icon_inner = 1 end
@@ -178,9 +208,7 @@ function TargetExpiringEffectEntry:set_effect(effect)
         self.effect = nil
         self.effect_key = 0
         self.bar_fill:SetBackColor(self:_resolve_bar_color())
-        if self.icon ~= nil and self.icon.SetEffect ~= nil then
-            self.icon:SetEffect(nil)
-        end
+        self.icon:SetEffect(nil)
         self.icon:SetVisible(false)
         return
     end
@@ -190,9 +218,7 @@ function TargetExpiringEffectEntry:set_effect(effect)
         -- Same underlying effect (possibly new wrapper) -> avoid EffectDisplay rebinding.
         self.effect = effect
         self.bar_fill:SetBackColor(self:_resolve_bar_color())
-        if self.icon ~= nil then
-            self.icon:SetVisible(true)
-        end
+        self.icon:SetVisible(true)
         return
     end
 
@@ -205,7 +231,8 @@ end
 
 function TargetExpiringEffectEntry:update_remaining(remaining_seconds, initial_seconds)
     if self.effect == nil then
-        self.label:SetText("")
+        self.name_label:SetText("")
+        self.time_label:SetText("")
         self.bar_fill:SetWidth(0)
         return
     end
@@ -217,7 +244,8 @@ function TargetExpiringEffectEntry:update_remaining(remaining_seconds, initial_s
         self.bar_fill:SetPosition(0, 0)
         self.bar_fill:SetWidth(inner_width)
         local name = _truncate_name(tostring(self.effect:GetName() or ""), s.name_max_chars)
-        self.label:SetText(lui_format_tokenized(s.text_tokens, { n = name, t = "" }))
+        self.name_label:SetText(name)
+        self.time_label:SetText("")
         return
     end
 
@@ -246,8 +274,8 @@ function TargetExpiringEffectEntry:update_remaining(remaining_seconds, initial_s
     self.bar_fill:SetWidth(fill_width)
 
     local name = _truncate_name(tostring(self.effect:GetName() or ""), s.name_max_chars)
-    local time_text = lui_format_timeout(remaining_seconds)
-    self.label:SetText(lui_format_tokenized(s.text_tokens, { n = name, t = time_text }))
+    self.name_label:SetText(name)
+    self.time_label:SetText(lui_timed_row_format_time(remaining_seconds, EFFECT_TIME_FORMAT))
 end
 
 ---------------------------------------------------------------------
@@ -256,22 +284,19 @@ end
 
 function TargetExpiringEffectEntry:_resolve_bar_color()
     local s = _G.settings.target.expiring_effects
-    if s == nil or s.color == nil then
-        return Turbine.UI.Color(0.9, 0.25, 0.25)
-    end
 
     if self.effect == nil then
-        return s.color.bar_debuff_curable or s.color.bar or Turbine.UI.Color(0.9, 0.25, 0.25)
+        return s.color.bar_debuff_curable
     end
 
     local is_debuff = self.effect.IsDebuff ~= nil and self.effect:IsDebuff()
     if is_debuff then
         local is_curable = self.effect.IsCurable ~= nil and self.effect:IsCurable()
         if is_curable then
-            return s.color.bar_debuff_curable or s.color.bar or Turbine.UI.Color(0.9, 0.25, 0.25)
+            return s.color.bar_debuff_curable
         end
-        return s.color.bar_debuff_noncurable or s.color.bar or Turbine.UI.Color(0.9, 0.25, 0.25)
+        return s.color.bar_debuff_noncurable
     end
 
-    return s.color.bar_buff or s.color.bar or Turbine.UI.Color(0.9, 0.7, 0.2)
+    return s.color.bar_buff
 end

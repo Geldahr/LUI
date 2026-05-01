@@ -3,10 +3,10 @@ import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.UI.Widgets.base_window"
+import "LUI.src.Utils.timed_row_layout"
 
 local BASE_ROW_PADDING = 4
 local BASE_GAP = 6
-local BASE_QTY_WIDTH = 46
 local BASE_FONT_SIZE = 12
 local MIN_WIDTH = 140
 local ITEM_INFO_CONTROL_OFFSET = -3
@@ -28,6 +28,20 @@ local function _scaled_font(name, size)
         error("Missing scaled font: " .. tostring(name) .. " " .. tostring(size * _G.settings.global.scale))
     end
     return font
+end
+
+local function _drops_font_size()
+    return BASE_FONT_SIZE * _G.settings.global.scale
+end
+
+local function _drops_qty_width()
+    return lui_timed_row_estimate_text_width("999", "Verdana", _drops_font_size())
+end
+
+local function _drops_min_width(icon_size, padding, gap)
+    local qty_width = _drops_qty_width()
+    local name_width = lui_timed_row_min_name_width("Verdana", _drops_font_size())
+    return math.max(MIN_WIDTH, (2 * padding) + icon_size + gap + qty_width + gap + name_width)
 end
 
 local function _with_alpha(color, alpha)
@@ -110,6 +124,7 @@ function DropEntry:Constructor()
     self.name_label:SetParent(self)
     self.name_label:SetMouseVisible(false)
     self.name_label:SetSelectable(false)
+    self.name_label:SetMultiline(true)
     self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.qty_label = UI.Widgets.LuiLabel()
@@ -127,10 +142,11 @@ function DropEntry:apply_settings()
     self._row_height = s.icon_size + (2 * self._padding)
     self._icon_side = s.icon_size
     self._gap = lui_scaled_int(BASE_GAP)
-    self._qty_width = lui_scaled_int(BASE_QTY_WIDTH)
+    self._qty_width = _drops_qty_width()
     self._width = s.width
-    if self._width < MIN_WIDTH then
-        self._width = MIN_WIDTH
+    local min_width = _drops_min_width(self._icon_side, self._padding, self._gap)
+    if self._width < min_width then
+        self._width = min_width
     end
 
     self:SetSize(self._width, self._row_height)

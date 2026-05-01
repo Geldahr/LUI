@@ -3,14 +3,9 @@ import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.Settings.enums"
-import "LUI.src.Utils.time_format"
-import "LUI.src.Utils.token_format"
+import "LUI.src.Cooldowns.time_display"
 
 CooldownEntry = class(Turbine.UI.Control)
-
-local function _text_alignment(value)
-    return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
-end
 
 local function _truncate_name(name, max_chars)
     if type(name) ~= "string" then
@@ -48,7 +43,6 @@ function CooldownEntry:Constructor()
     self.skill = nil
     self.expired_event = nil
     self._expired_sent = false
-    self._ctx = {}
     self.bar_inner_w = 0
     self.bar_anchor_right = false
     self._icon_size = nil
@@ -83,11 +77,21 @@ function CooldownEntry:Constructor()
     self.bar_fill:SetParent(self.bar_background)
     self.bar_fill:SetMouseVisible(false)
 
-    self.label = UI.Widgets.LuiLabel()
-    self.label:SetParent(self.bar_background)
-    self.label:SetMouseVisible(false)
-    self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.label:SetText("")
+    self.name_label = UI.Widgets.LuiLabel()
+    self.name_label:SetParent(self.bar_background)
+    self.name_label:SetMouseVisible(false)
+    self.name_label:SetSelectable(false)
+    self.name_label:SetMultiline(true)
+    self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.name_label:SetText("")
+
+    self.time_label = UI.Widgets.LuiLabel()
+    self.time_label:SetParent(self.bar_background)
+    self.time_label:SetMouseVisible(false)
+    self.time_label:SetSelectable(false)
+    self.time_label:SetMultiline(false)
+    self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.time_label:SetText("")
 
     self.icon_background = Turbine.UI.Control()
     self.icon_background:SetParent(self)
@@ -114,6 +118,11 @@ function CooldownEntry:apply_settings()
     local h = s.item_h
     if w < 1 then w = 1 end
     if h < 1 then h = 1 end
+
+    local min_w = lui_cooldown_min_item_width(h, bw, s.text_margin, s.font.name, s.font.size, s.threshold, s.time_format)
+    if w < min_w then
+        w = min_w
+    end
 
     self:SetSize(w, h)
 
@@ -198,15 +207,29 @@ function CooldownEntry:apply_settings()
     self.bar_fill:SetBackColor(s.color.bar)
 
     local pad = s.text_margin
-    self.label:SetPosition(pad, 0)
-    local label_width = bar_width - (2 * pad)
-    if label_width < 1 then label_width = 1 end
-    self.label:SetSize(label_width, inner_h)
-    self.label:SetFont(s.font.lotro)
-    self.label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
-    self.label:SetTextAlignment(_text_alignment(s.text_alignment))
-    self.label:SetOutlineColor(s.font.outline_color)
-    self.label:SetForeColor(s.font.color)
+    local time_width = lui_cooldown_time_label_width(s.font.name, s.font.size, s.threshold, s.time_format)
+    local text_gap = lui_cooldown_text_gap(s.font.size)
+    local title_width = inner_w - icon_size - sep_w - (2 * pad) - time_width - text_gap
+    if title_width < 1 then
+        title_width = 1
+    end
+    local time_x = pad + title_width + text_gap
+
+    self.name_label:SetPosition(pad, 0)
+    self.name_label:SetSize(title_width, inner_h)
+    self.name_label:SetFont(s.font.lotro)
+    self.name_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
+    self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.name_label:SetOutlineColor(s.font.outline_color)
+    self.name_label:SetForeColor(s.font.color)
+
+    self.time_label:SetPosition(time_x, 0)
+    self.time_label:SetSize(time_width, inner_h)
+    self.time_label:SetFont(s.font.lotro)
+    self.time_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
+    self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.time_label:SetOutlineColor(s.font.outline_color)
+    self.time_label:SetForeColor(s.font.color)
 
     self.icon:SetPosition(0, 0)
     self.icon:set_size(icon_size, icon_size)
@@ -232,7 +255,8 @@ function CooldownEntry:set_skill(skill)
             self.icon:set_icon(nil)
         end
         self.icon:SetVisible(false)
-        self.label:SetText("")
+        self.name_label:SetText("")
+        self.time_label:SetText("")
         self.bar_fill:SetWidth(0)
         self:SetVisible(false)
         return
@@ -267,7 +291,8 @@ function CooldownEntry:update_remaining(remaining_seconds, base_seconds)
     local s = _G.settings.self.cooldowns
 
     if self.skill == nil then
-        self.label:SetText("")
+        self.name_label:SetText("")
+        self.time_label:SetText("")
         self.bar_fill:SetWidth(0)
         return
     end
@@ -311,12 +336,6 @@ function CooldownEntry:update_remaining(remaining_seconds, base_seconds)
     self.bar_fill:SetWidth(fill_width)
 
     local name = _truncate_name(self.skill.name or "", s.name_max_chars)
-    local ctx = self._ctx
-    ctx.name = name
-    ctx.t = lui_format_timeout(remaining_seconds)
-    ctx.s = lui_format_timeout_seconds(remaining_seconds)
-    -- Also provide short token aliases.
-    ctx.n = name
-    ctx.ts = ctx.s
-    self.label:SetText(lui_format_tokenized(s.text_tokens, ctx))
+    self.name_label:SetText(name)
+    self.time_label:SetText(lui_format_cooldown_time(remaining_seconds, s.time_format))
 end
