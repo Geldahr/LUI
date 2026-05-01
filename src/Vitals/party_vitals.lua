@@ -437,10 +437,8 @@ function PartyVitals:update_members()
                 if m.entity_control ~= nil then
                     m.entity_control:SetMouseVisible(false)
                 end
-                if i <= desired then
-                    m:set_entity(nil)
-                    m:set_is_leader(false)
-                end
+                m:set_entity(nil)
+                m:set_is_leader(false)
                 m:SetVisible(false)
             end
         end

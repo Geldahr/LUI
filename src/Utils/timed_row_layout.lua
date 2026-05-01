@@ -171,81 +171,46 @@ local function _normalized_threshold(threshold)
     return value
 end
 
-local function _widest_char(chars, normalized_font_name)
-    local widest = string.sub(chars, 1, 1)
-    local widest_units = _char_width_units(widest, normalized_font_name)
-
-    for i = 2, string.len(chars) do
-        local ch = string.sub(chars, i, i)
-        local units = _char_width_units(ch, normalized_font_name)
-        if units > widest_units then
-            widest = ch
-            widest_units = units
-        end
+local function _wider_text(current, candidate, normalized_font_name)
+    if candidate == nil then
+        return current
     end
-
-    return widest
-end
-
-local function _integer_digits(value)
-    local count = 1
-    local whole = math.floor(value)
-    while whole >= 10 do
-        count = count + 1
-        whole = math.floor(whole / 10)
+    if current == nil then
+        return candidate
     end
-    return count
-end
-
-local function _tenths_sample(normalized_font_name)
-    local widest_digit = _widest_char("0123456789", normalized_font_name)
-    return widest_digit .. "." .. widest_digit .. "s"
-end
-
-local function _whole_seconds_sample(normalized_font_name, digit_count)
-    if digit_count <= 1 then
-        return _widest_char("0123456789", normalized_font_name) .. "s"
+    if _text_width_units(candidate, normalized_font_name) > _text_width_units(current, normalized_font_name) then
+        return candidate
     end
-
-    local tens = _widest_char("12345", normalized_font_name)
-    local ones = _widest_char("0123456789", normalized_font_name)
-    return tens .. ones .. "s"
-end
-
-local function _minutes_seconds_sample(normalized_font_name, minute_digits)
-    local minutes = string.rep(_widest_char("0123456789", normalized_font_name), minute_digits)
-    local seconds_tens = _widest_char("012345", normalized_font_name)
-    local seconds_ones = _widest_char("0123456789", normalized_font_name)
-    return minutes .. ":" .. seconds_tens .. seconds_ones
+    return current
 end
 
 local function _max_time_width_sample(limit, normalized_font_name, time_format)
     local widest = lui_timed_row_format_time(limit, time_format)
 
     if time_format ~= LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS then
-        local tenths = _tenths_sample(normalized_font_name)
-        if _text_width_units(tenths, normalized_font_name) > _text_width_units(widest, normalized_font_name) then
-            widest = tenths
+        local max_hundredths = math.floor((math.min(limit, 10) * 100) + 0.0001)
+        for hundredths = 1, max_hundredths do
+            widest = _wider_text(
+                widest,
+                lui_timed_row_format_time(hundredths / 100, time_format),
+                normalized_font_name
+            )
         end
     end
 
-    if limit >= 10 then
-        local whole_seconds = _whole_seconds_sample(normalized_font_name, _integer_digits(math.min(59, math.floor(limit))))
-        if _text_width_units(whole_seconds, normalized_font_name) > _text_width_units(widest, normalized_font_name) then
-            widest = whole_seconds
-        end
-    elseif time_format == LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS then
-        local single_digit = _whole_seconds_sample(normalized_font_name, 1)
-        if _text_width_units(single_digit, normalized_font_name) > _text_width_units(widest, normalized_font_name) then
-            widest = single_digit
-        end
+    local max_whole = math.floor(limit + 0.0001)
+    local seconds_start = 1
+    if time_format ~= LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS then
+        seconds_start = 10
+    end
+    local seconds_end = math.min(59, max_whole)
+    for total = seconds_start, seconds_end do
+        widest = _wider_text(widest, lui_timed_row_format_time(total, time_format), normalized_font_name)
     end
 
-    if limit >= 60 then
-        local minutes = _integer_digits(math.floor(limit / 60))
-        local mm_ss = _minutes_seconds_sample(normalized_font_name, minutes)
-        if _text_width_units(mm_ss, normalized_font_name) > _text_width_units(widest, normalized_font_name) then
-            widest = mm_ss
+    if max_whole >= 60 then
+        for total = 60, max_whole do
+            widest = _wider_text(widest, lui_timed_row_format_time(total, time_format), normalized_font_name)
         end
     end
 
@@ -256,7 +221,7 @@ local function _time_width_cache_key(font_name, font_size, threshold, time_forma
     return table.concat({
         tostring(_normalize_font_name(font_name)),
         tostring(_normalize_font_size(font_size)),
-        string.format("%.1f", _normalized_threshold(threshold)),
+        tostring(_normalized_threshold(threshold)),
         tostring(time_format),
     }, "|")
 end
