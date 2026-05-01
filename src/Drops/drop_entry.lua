@@ -8,6 +8,7 @@ local BASE_ROW_PADDING = 4
 local BASE_GAP = 6
 local BASE_QTY_WIDTH = 46
 local BASE_FONT_SIZE = 12
+local MIN_WIDTH = 140
 local ITEM_INFO_CONTROL_OFFSET = -3
 local ITEM_INFO_CONTROL_EXTRA = 3
 
@@ -128,6 +129,9 @@ function DropEntry:apply_settings()
     self._gap = lui_scaled_int(BASE_GAP)
     self._qty_width = lui_scaled_int(BASE_QTY_WIDTH)
     self._width = s.width
+    if self._width < MIN_WIDTH then
+        self._width = MIN_WIDTH
+    end
 
     self:SetSize(self._width, self._row_height)
     self.background:SetPosition(0, 0)

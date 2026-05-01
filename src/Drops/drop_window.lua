@@ -8,7 +8,6 @@ import "LUI.src.Utils.callbacks"
 
 local CHAT_DISPLAY_DELAY = 0.25
 local ITEM_MATCH_WINDOW = 1.00
-local KILL_ATTRIBUTION_WINDOW = 0.20
 local EXIT_FADE_DURATION = 0.50
 
 local BASE_ROW_PADDING = 4
@@ -39,6 +38,21 @@ local function _trim(text)
     return trimmed
 end
 
+local function _drops_tr(key, fallback)
+    local value = TR[key]
+    if value == key then
+        return fallback
+    end
+    return value
+end
+
+local function _starts_with(text, prefix)
+    if type(text) ~= "string" or type(prefix) ~= "string" then
+        return false
+    end
+    return string.sub(text, 1, string.len(prefix)) == prefix
+end
+
 local function _normalize_item_name(name)
     local trimmed = _trim(name)
     if trimmed == nil then
@@ -54,18 +68,6 @@ local function _strip_timestamp(message)
         return ""
     end
     return message:gsub("^%[%d%d/%d%d .-%]%s*", "")
-end
-
-local function _parse_kill_name(message)
-    if type(message) ~= "string" or string.find(message, " defeated ", 1, true) == nil then
-        return nil
-    end
-
-    local victim = message:match("^.- defeated the (.+)%.?$")
-    if victim == nil then
-        victim = message:match("^.- defeated (.+)%.?$")
-    end
-    return victim
 end
 
 local function _parse_quantity_prefix(text)
@@ -101,31 +103,39 @@ local function _parse_drop_message(message)
         return nil, nil
     end
 
-    local prefix = nil
-    local bracketed = nil
-    if string.find(message, "You have acquired:", 1, true) == 1 then
-        bracketed = message:match("%b[]")
-        if bracketed ~= nil then
-            prefix = message:match("^You have acquired:%s*(.-)%s*%b[]")
-        end
-    elseif string.find(message, "Gathered ", 1, true) == 1 and
-        string.find(message, " into the ", 1, true) ~= nil then
-        bracketed = message:match("%b[]")
-        if bracketed ~= nil then
-            prefix = message:match("^Gathered%s*(.-)%s*%b[]")
-        end
-    end
-
-    if bracketed == nil then
+    local bracket_start, bracket_end = string.find(message, "%b[]")
+    if bracket_start == nil or bracket_end == nil then
         return nil, nil
     end
 
-    local name = _trim(string.sub(bracketed, 2, -2))
+    local acquired_prefix = _drops_tr("__drops_chat_acquired_prefix", "You have acquired")
+    local gathered_prefix = _drops_tr("__drops_chat_gathered_prefix", "Gathered")
+    local quantity_prefix = nil
+    local gathered_message = false
+    if _starts_with(message, acquired_prefix) == true then
+        quantity_prefix = string.sub(message, string.len(acquired_prefix) + 1, bracket_start - 1)
+    elseif _starts_with(message, gathered_prefix) == true then
+        gathered_message = true
+        quantity_prefix = string.sub(message, string.len(gathered_prefix) + 1, bracket_start - 1)
+    else
+        return nil, nil
+    end
+
+    local name = _trim(string.sub(message, bracket_start + 1, bracket_end - 1))
     if name == nil then
         return nil, nil
     end
 
-    return name, _parse_quantity_prefix(prefix)
+    quantity_prefix = quantity_prefix:gsub("^%s*[:%-]*%s*", "")
+    local quantity = _parse_quantity_prefix(quantity_prefix)
+    if gathered_message == true and quantity == 1 then
+        local bracket_quantity, bracket_name = name:match("^(%d+)%s+(.+)$")
+        if bracket_quantity ~= nil and _trim(bracket_name) ~= nil then
+            quantity = tonumber(bracket_quantity) or 1
+            name = _trim(bracket_name)
+        end
+    end
+    return name, quantity
 end
 
 local function _safe_item_name(item)
@@ -228,7 +238,6 @@ function DropsWindow:Constructor()
     self.update_every = 1.0 / _G.settings.global.refresh_rate
 
     self._callbacks = {}
-    self._pending_kills = {}
     self._pending_chat_drops = {}
     self._pending_item_events = {}
     self._active_drops = {}
@@ -265,7 +274,6 @@ function DropsWindow:destroy()
     self._active_drops = {}
     self._pending_chat_drops = {}
     self._pending_item_events = {}
-    self._pending_kills = {}
     for i = 1, #self._entry_pool do
         local entry = self._entry_pool[i]
         if entry ~= nil then
@@ -348,7 +356,6 @@ function DropsWindow:Update()
         return
     end
 
-    self:_expire_pending_kills(now)
     self:_expire_pending_item_events(now)
     self:_promote_pending_chat_drops(now)
     self:_expire_active_drops(now)
@@ -433,8 +440,7 @@ function DropsWindow:_on_chat_received(args)
         return
     end
 
-    local chat_type = args.ChatType
-    if chat_type ~= Turbine.ChatType.Death and chat_type ~= Turbine.ChatType.SelfLoot then
+    if args.ChatType ~= Turbine.ChatType.SelfLoot then
         return
     end
 
@@ -443,28 +449,12 @@ function DropsWindow:_on_chat_received(args)
         return
     end
 
-    local now = Turbine.Engine.GetGameTime()
-
-    if chat_type == Turbine.ChatType.Death then
-        self:_expire_pending_kills(now)
-        if _parse_kill_name(message) ~= nil then
-            self._pending_kills[#self._pending_kills + 1] = {
-                at = now,
-            }
-        end
-        return
-    end
-
-    self:_expire_pending_kills(now)
-    if #self._pending_kills == 0 then
-        return
-    end
-
     local item_name, quantity = _parse_drop_message(message)
     if item_name == nil then
         return
     end
 
+    local now = Turbine.Engine.GetGameTime()
     self:_queue_chat_drop(item_name, quantity, now)
 end
 
@@ -624,16 +614,6 @@ function DropsWindow:_take_pending_item_event(normalized_name, now)
     return best_event
 end
 
-function DropsWindow:_expire_pending_kills(now)
-    while #self._pending_kills > 0 do
-        local record = self._pending_kills[1]
-        if record ~= nil and (now - (record.at or now)) < KILL_ATTRIBUTION_WINDOW then
-            break
-        end
-        table.remove(self._pending_kills, 1)
-    end
-end
-
 function DropsWindow:_expire_pending_item_events(now)
     for i = #self._pending_item_events, 1, -1 do
         local event = self._pending_item_events[i]
@@ -649,26 +629,32 @@ function DropsWindow:_promote_pending_chat_drops(now)
         duration = 4
     end
 
+    local matured = {}
     for i = #self._pending_chat_drops, 1, -1 do
         local record = self._pending_chat_drops[i]
         if record ~= nil and now >= (record.display_after or 0) then
             table.remove(self._pending_chat_drops, i)
-            while self:_layout_record_count() >= self:_rows_capacity() do
-                self:_remove_oldest_visible_for_overflow(now)
-            end
-
-            record.shown_at = now
-            record.expire_at = now + duration
-            if record.live_item == nil and self.backpack ~= nil then
-                record.live_item = _find_backpack_item_by_name(self.backpack, record.normalized_name)
-            end
-            record.entry = self:_acquire_entry()
-            record.entry:apply_settings()
-            record.entry:set_record(record)
-            record.entry:SetVisible(true)
-            self._active_drops[#self._active_drops + 1] = record
-            self:_layout_active_drops(now, false)
+            matured[#matured + 1] = record
         end
+    end
+
+    for i = #matured, 1, -1 do
+        local record = matured[i]
+        while self:_layout_record_count() >= self:_rows_capacity() do
+            self:_remove_oldest_visible_for_overflow(now)
+        end
+
+        record.shown_at = now
+        record.expire_at = now + duration
+        if record.live_item == nil and self.backpack ~= nil then
+            record.live_item = _find_backpack_item_by_name(self.backpack, record.normalized_name)
+        end
+        record.entry = self:_acquire_entry()
+        record.entry:apply_settings()
+        record.entry:set_record(record)
+        record.entry:SetVisible(true)
+        self._active_drops[#self._active_drops + 1] = record
+        self:_layout_active_drops(now, false)
     end
 end
 
