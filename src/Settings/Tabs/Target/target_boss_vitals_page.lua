@@ -20,6 +20,38 @@ end
 local STEP_COLORS_INFO = TR["Used when gradient colors are disabled. High, Medium, Low and Critical apply by thresholds."]
 local GRADIENT_COLORS_INFO = TR["When enabled, this bypasses the step colors and blends between Full, Mid and Low."]
 
+local function _add_vitals_label_controls(page, prefix, bar_key, label_index, title)
+    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+
+    page:add_title(title)
+    page:add_checkbox(key .. "_enabled", TR["Enabled"])
+    page:add_break()
+    page:add_text(key .. "_text", TR["Text"], false, page.vital_format_help, true)
+    page:add_dropdown(key .. "_anchor", TR["Anchor"], page.vitals_label_anchor_labels,
+        page.vitals_label_anchor_values)
+    page:add_dropdown(key .. "_width_mode", TR["Width mode"], page.vitals_label_width_mode_labels,
+        page.vitals_label_width_mode_values)
+    page:add_break()
+    page:add_dropdown(key .. "_text_alignment", TR["Text alignment"], page.text_alignment_labels,
+        page.text_alignment_values)
+    page:add_break()
+    page:add_text(key .. "_x_offset", TR["X offset"])
+    page:add_text(key .. "_y_offset", TR["Y offset"])
+    page:add_break()
+    page:add_dropdown(key .. "_font_name", TR["Font"], page.font_name_labels, page.font_name_values)
+    page:add_text(key .. "_font_size", TR["Font Size"])
+    page:add_text(key .. "_font_color", TR["Font Color"], true)
+    page:add_dropdown(key .. "_font_style", TR["Font Style"], page.font_style_labels, page.font_style_values)
+    page:add_text(key .. "_font_outline_color", TR["Outline Color"], true)
+end
+
+local function _hook_outline_control(page, style_key, outline_key)
+    page.controls[outline_key].visible_if = function()
+        return _is_outline(page.controls[style_key])
+    end
+    _hook_layout_on_change(page, page.controls[style_key])
+end
+
 TargetBossVitalsPage = class(SettingsFormPage)
 
 function TargetBossVitalsPage:Constructor(window)
@@ -49,13 +81,6 @@ function TargetBossVitalsPage:Constructor(window)
     self:add_title(TR["Morale"])
     self:add_text("target_boss_morale_height", TR["Bar Height"])
     self:add_break()
-    self:add_dropdown("target_boss_morale_font_name", TR["Font"], self.font_name_labels, self.font_name_values)
-    self:add_text("target_boss_morale_font_size", TR["Font Size"])
-    self:add_text("target_boss_morale_font_color", TR["Font Color"], true)
-    self:add_dropdown("target_boss_morale_font_style", TR["Font Style"], self.font_style_labels,
-        self.font_style_values)
-    self:add_text("target_boss_morale_font_outline_color", TR["Outline Color"], true)
-    self:add_break()
     self:add_text("target_boss_morale_background_color", TR["Background Color"], true)
     self:add_text("target_boss_border_color", TR["Border Color"], true)
     self:add_text("target_boss_morale_bubble_color", TR["Bubble Color"], true)
@@ -79,11 +104,7 @@ function TargetBossVitalsPage:Constructor(window)
     self:add_text("target_boss_morale_gradient_low", TR["Low Color"], true)
     self:add_custom("target_boss_morale_gradient_preview", 30)
     self:add_break()
-    self:add_text("target_boss_morale_text", TR["Text"], false, self.vital_format_help, true)
     self:add_text("target_boss_morale_bubble_text", TR["Bubble Format (%B)"], false, self.bubble_format_help, true)
-    self:add_dropdown("target_boss_morale_text_alignment", TR["Text alignment"], self.text_alignment_labels,
-        self.text_alignment_values)
-    self:add_text("target_boss_morale_text_margin", TR["Text margin"])
 
     self:add_hr()
     self:add_title(TR["Power / Wrath"])
@@ -93,19 +114,18 @@ function TargetBossVitalsPage:Constructor(window)
     self:add_text("target_boss_power_width", TR["Width"])
     self:add_dropdown("target_boss_power_side", TR["Side"], self.side_labels, self.side_values)
     self:add_break()
-    self:add_dropdown("target_boss_power_font_name", TR["Font"], self.font_name_labels, self.font_name_values)
-    self:add_text("target_boss_power_font_size", TR["Font Size"])
-    self:add_text("target_boss_power_font_color", TR["Font Color"], true)
-    self:add_dropdown("target_boss_power_font_style", TR["Font Style"], self.font_style_labels, self.font_style_values)
-    self:add_text("target_boss_power_font_outline_color", TR["Outline Color"], true)
-    self:add_break()
     self:add_text("target_boss_power_color", TR["Power Color"], true)
     self:add_text("target_boss_wrath_color", TR["Wrath Color"], true)
+
+    self:add_hr()
+    self:add_title(TR["Texts"])
+    _add_vitals_label_controls(self, "target_boss", "morale", 1, TR["Morale Label 1"])
     self:add_break()
-    self:add_text("target_boss_power_text", TR["Text"], false, self.vital_format_help, true)
-    self:add_dropdown("target_boss_power_text_alignment", TR["Text alignment"], self.text_alignment_labels,
-        self.text_alignment_values)
-    self:add_text("target_boss_power_text_margin", TR["Text margin"])
+    _add_vitals_label_controls(self, "target_boss", "morale", 2, TR["Morale Label 2"])
+    self:add_break()
+    _add_vitals_label_controls(self, "target_boss", "power", 1, TR["Power Label 1"])
+    self:add_break()
+    _add_vitals_label_controls(self, "target_boss", "power", 2, TR["Power Label 2"])
 
     self:add_hr()
     self:add_title(TR["Buffs"])
@@ -138,21 +158,10 @@ function TargetBossVitalsPage:Constructor(window)
     self:add_title(TR["Preview"])
     self:add_custom("target_boss_vitals_preview", 178)
 
-    self.controls.target_boss_morale_font_outline_color.visible_if = function()
-        return _is_outline(self.controls.target_boss_morale_font_style)
-    end
-    self.controls.target_boss_power_font_outline_color.visible_if = function()
-        return _is_outline(self.controls.target_boss_power_font_style)
-    end
-    self.controls.target_boss_buff_timer_font_outline_color.visible_if = function()
-        return _is_outline(self.controls.target_boss_buff_timer_font_style)
-    end
-    self.controls.target_boss_debuff_timer_font_outline_color.visible_if = function()
-        return _is_outline(self.controls.target_boss_debuff_timer_font_style)
-    end
-
-    _hook_layout_on_change(self, self.controls.target_boss_morale_font_style)
-    _hook_layout_on_change(self, self.controls.target_boss_power_font_style)
-    _hook_layout_on_change(self, self.controls.target_boss_buff_timer_font_style)
-    _hook_layout_on_change(self, self.controls.target_boss_debuff_timer_font_style)
+    _hook_outline_control(self, "target_boss_morale_label1_font_style", "target_boss_morale_label1_font_outline_color")
+    _hook_outline_control(self, "target_boss_morale_label2_font_style", "target_boss_morale_label2_font_outline_color")
+    _hook_outline_control(self, "target_boss_power_label1_font_style", "target_boss_power_label1_font_outline_color")
+    _hook_outline_control(self, "target_boss_power_label2_font_style", "target_boss_power_label2_font_outline_color")
+    _hook_outline_control(self, "target_boss_buff_timer_font_style", "target_boss_buff_timer_font_outline_color")
+    _hook_outline_control(self, "target_boss_debuff_timer_font_style", "target_boss_debuff_timer_font_outline_color")
 end

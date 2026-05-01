@@ -12,6 +12,53 @@ local function _apply_color(ui, dest, hex)
     end
 end
 
+local function _load_targets_target_label(controls, label_index, label, ui)
+    local key = "target_targets_target_label" .. tostring(label_index)
+    controls[key .. "_enabled"].cb:SetChecked(label.enabled == true)
+    controls[key .. "_text"].tb:SetText(tostring(label.text))
+    controls[key .. "_anchor"]:set_value(label.anchor)
+    controls[key .. "_width_mode"]:set_value(label.width_mode)
+    controls[key .. "_text_alignment"]:set_value(label.text_alignment)
+    controls[key .. "_x_offset"].tb:SetText(tostring(label.x_offset))
+    controls[key .. "_y_offset"].tb:SetText(tostring(label.y_offset))
+    controls[key .. "_font_name"]:set_value(label.font.name)
+    controls[key .. "_font_size"].tb:SetText(tostring(label.font.size))
+    controls[key .. "_font_color"].tb:SetText(ui.color_to_hex(label.font.color))
+    controls[key .. "_font_style"]:set_value(label.font.style)
+    controls[key .. "_font_outline_color"].tb:SetText(ui.color_to_hex(label.font.outline_color))
+end
+
+local function _apply_targets_target_label(controls, label_index, label, ui)
+    local key = "target_targets_target_label" .. tostring(label_index)
+
+    label.enabled = controls[key .. "_enabled"].cb:IsChecked() == true
+    label.text = controls[key .. "_text"].tb:GetText()
+    label.anchor = controls[key .. "_anchor"]:get_value()
+    label.width_mode = controls[key .. "_width_mode"]:get_value()
+    label.text_alignment = controls[key .. "_text_alignment"]:get_value()
+
+    local x_offset = tonumber(controls[key .. "_x_offset"].tb:GetText())
+    if x_offset ~= nil then
+        label.x_offset = x_offset
+    end
+
+    local y_offset = tonumber(controls[key .. "_y_offset"].tb:GetText())
+    if y_offset ~= nil then
+        label.y_offset = y_offset
+    end
+
+    label.font.name = controls[key .. "_font_name"]:get_value()
+
+    local font_size = tonumber(controls[key .. "_font_size"].tb:GetText())
+    if font_size ~= nil then
+        label.font.size = font_size
+    end
+
+    _apply_color(ui, label.font.color, controls[key .. "_font_color"].tb:GetText())
+    label.font.style = controls[key .. "_font_style"]:get_value()
+    _apply_color(ui, label.font.outline_color, controls[key .. "_font_outline_color"].tb:GetText())
+end
+
 function TargetTargetsTarget.create_page(window)
     return TargetTargetsTargetPage(window)
 end
@@ -28,16 +75,9 @@ function TargetTargetsTarget.load(page, s, ui)
     controls.target_targets_target_width.tb:SetText(tostring(v.width))
     controls.target_targets_target_height.tb:SetText(tostring(v.height))
     controls.target_targets_target_border_width.tb:SetText(tostring(v.border_width))
-    controls.target_targets_target_font_name:set_value(v.font.name)
-    controls.target_targets_target_font_size.tb:SetText(tostring(v.font.size))
-    controls.target_targets_target_font_color.tb:SetText(ui.color_to_hex(v.font.color))
-    controls.target_targets_target_font_style:set_value(v.font.style)
-    controls.target_targets_target_font_outline_color.tb:SetText(ui.color_to_hex(v.font.outline_color))
-
-    controls.target_targets_target_text.tb:SetText(tostring(v.text))
     controls.target_targets_target_bubble_text.tb:SetText(tostring(v.bubble_format))
-    controls.target_targets_target_text_alignment:set_value(v.text_alignment)
-    controls.target_targets_target_text_margin.tb:SetText(tostring(v.text_margin))
+    _load_targets_target_label(controls, 1, v.labels[1], ui)
+    _load_targets_target_label(controls, 2, v.labels[2], ui)
 
     controls.target_targets_target_background_color.tb:SetText(ui.color_to_hex(v.color.background))
     controls.target_targets_target_background_matches_missing.cb:SetChecked(v.background_matches_missing == true)
@@ -80,22 +120,9 @@ function TargetTargetsTarget.apply(page, s, ui)
         v.border_width = tt_border_width
     end
 
-    v.font.name = controls.target_targets_target_font_name:get_value()
-    local tt_font_size = tonumber(controls.target_targets_target_font_size.tb:GetText())
-    if tt_font_size ~= nil then
-        v.font.size = tt_font_size
-    end
-    _apply_color(ui, v.font.color, controls.target_targets_target_font_color.tb:GetText())
-    v.font.style = controls.target_targets_target_font_style:get_value()
-    _apply_color(ui, v.font.outline_color, controls.target_targets_target_font_outline_color.tb:GetText())
-
-    v.text = controls.target_targets_target_text.tb:GetText()
     v.bubble_format = controls.target_targets_target_bubble_text.tb:GetText()
-    v.text_alignment = controls.target_targets_target_text_alignment:get_value()
-    local tt_text_margin = tonumber(controls.target_targets_target_text_margin.tb:GetText())
-    if tt_text_margin ~= nil then
-        v.text_margin = tt_text_margin
-    end
+    _apply_targets_target_label(controls, 1, v.labels[1], ui)
+    _apply_targets_target_label(controls, 2, v.labels[2], ui)
 
     _apply_color(ui, v.color.background, controls.target_targets_target_background_color.tb:GetText())
     v.background_matches_missing = controls.target_targets_target_background_matches_missing.cb:IsChecked() == true

@@ -40,11 +40,16 @@ function TargetsTargetVitalsWindow:Constructor(owner)
     self.targets_target_bubble:SetZOrder(3)
     self.targets_target_bubble:SetVisible(false)
 
-    self.targets_target_label = UI.Widgets.LuiLabel()
-    self.targets_target_label:SetParent(self.targets_target_border)
-    self.targets_target_label:SetMouseVisible(false)
-    self.targets_target_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.targets_target_label:SetZOrder(50)
+    self.targets_target_labels = {}
+    for i = 1, 2 do
+        local label = UI.Widgets.LuiLabel()
+        label:SetParent(self.targets_target_border)
+        label:SetMouseVisible(false)
+        label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        label:SetMultiline(true)
+        label:SetZOrder(49 + i)
+        self.targets_target_labels[i] = label
+    end
 
     self.targets_control = Turbine.UI.Lotro.EntityControl()
     self.targets_control:SetParent(self)
@@ -102,9 +107,6 @@ function TargetsTargetVitalsWindow:apply_settings()
     self.targets_target_bubble:SetBackColor(tt.color.bubble)
     self.targets_target_bubble:SetTop(0)
     self.targets_target_bubble:SetHeight(inner_h)
-
-    self.targets_target_label:SetPosition(0, 0)
-    self.targets_target_label:SetSize(frame_w, h)
 
     self.targets_control:SetSize(frame_w, h)
     self.targets_control:SetPosition(0, 0)

@@ -70,10 +70,14 @@ function _G.fix_colors()
 
     if s.target ~= nil and s.target.vitals ~= nil and s.target.vitals.targets_target ~= nil then
         local tt = s.target.vitals.targets_target
-        local target_morale = s.target.vitals.morale
 
-        tt.font.color = to_color(tt.font.color)
-        tt.font.outline_color = to_color(tt.font.outline_color)
+        if tt.labels ~= nil then
+            for i = 1, #tt.labels do
+                local label = tt.labels[i]
+                label.font.color = to_color(label.font.color)
+                label.font.outline_color = to_color(label.font.outline_color)
+            end
+        end
 
         local c = tt.color
         c.background = to_color(c.background)

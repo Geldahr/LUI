@@ -69,7 +69,7 @@ function _G.rebuild_settings()
                 frame = {},
                 morale = { font = {}, color = {} },
                 power = { font = {}, color = {} },
-                targets_target = { font = {}, color = {} },
+                targets_target = { font = {}, color = {}, labels = {} },
                 effects = {
                     buffs = { timer_font = {} },
                     debuffs = { timer_font = {} },
@@ -273,37 +273,19 @@ function _G.rebuild_settings()
     dst_tt.width = scaled_int(raw_tt.width)
     dst_tt.height = scaled_int(raw_tt.height)
     dst_tt.border_width = scaled_border(raw_tt.border_width)
-    dst_tt.font.name = raw_tt.font.name
-    dst_tt.font.size = scaled_number(raw_tt.font.size)
-    dst_tt.font.lotro = FONT_TO_LOTRO(dst_tt.font.name, dst_tt.font.size)
-    dst_tt.font.style = raw_tt.font.style
-    dst_tt.font.color = raw_tt.font.color
-    dst_tt.font.outline_color = raw_tt.font.outline_color
     dst_tt.color = raw_tt.color
-    dst_tt.text = raw_tt.text
     dst_tt.bubble_format = raw_tt.bubble_format
-    dst_tt.text_tokens = lui_tokenize_format(dst_tt.text)
     dst_tt.bubble_tokens = lui_tokenize_format(dst_tt.bubble_format)
     dst_tt.background_matches_missing = raw_tt.background_matches_missing
     dst_tt.background_dimming = raw_tt.background_dimming
-    dst_tt.anchor = raw_tt.anchor
-    dst_tt.width_mode = raw_tt.width_mode
-    dst_tt.text_alignment = raw_tt.text_alignment
-    dst_tt.x_offset = scaled_int(raw_tt.x_offset)
-    dst_tt.y_offset = scaled_int(raw_tt.y_offset)
-    dst_tt.text_margin = scaled_int(raw_tt.text_margin)
+    dst_tt.labels = {
+        build_vital_label(raw_tt.labels[1]),
+        build_vital_label(raw_tt.labels[2]),
+    }
 
     local raw_bv = raw.target.boss_vitals
     local dst_bv = _G.settings.target.boss_vitals
     dst_bv.enabled = raw_bv.enabled
-    dst_bv.morale.anchor = raw_bv.morale.anchor
-    dst_bv.morale.width_mode = raw_bv.morale.width_mode
-    dst_bv.morale.x_offset = scaled_int(raw_bv.morale.x_offset)
-    dst_bv.morale.y_offset = scaled_int(raw_bv.morale.y_offset)
-    dst_bv.power.anchor = raw_bv.power.anchor
-    dst_bv.power.width_mode = raw_bv.power.width_mode
-    dst_bv.power.x_offset = scaled_int(raw_bv.power.x_offset)
-    dst_bv.power.y_offset = scaled_int(raw_bv.power.y_offset)
     dst_bv.power.width = scaled_int(raw_bv.power.width)
     dst_bv.power.hide = raw_bv.power.hide
     dst_bv.power.side = raw_bv.power.side
