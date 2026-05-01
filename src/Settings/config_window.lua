@@ -19,6 +19,8 @@ local FIELD_FONT_NAME = "Verdana"
 local FIELD_FONT_SIZE = 12
 local HINT_FONT_NAME = "Verdana"
 local HINT_FONT_SIZE = 10
+local CONFIG_MIN_WIDTH = 1000
+local CONFIG_MIN_HEIGHT = 720
 local function _scaled_size(value)
     return value * _G.settings.global.scale
 end
@@ -78,7 +80,16 @@ function ConfigWindow:Constructor()
     self:hide()
 
     self:_update_ui_scale_metrics()
-    self:set_minimum_size(_scaled_int(222), _scaled_int(185))
+    local display_width, display_height = Turbine.UI.Display.GetSize()
+    local minimum_width = _scaled_int(CONFIG_MIN_WIDTH)
+    local minimum_height = _scaled_int(CONFIG_MIN_HEIGHT)
+    if minimum_width > display_width then
+        minimum_width = display_width
+    end
+    if minimum_height > display_height then
+        minimum_height = display_height
+    end
+    self:set_minimum_size(minimum_width, minimum_height)
 
     local content = Turbine.UI.Control()
     content:SetMouseVisible(true)
@@ -188,6 +199,7 @@ function ConfigWindow:Constructor()
     self.SizeChanged = function()
         LuiWindow._layout(self)
         self:layout()
+        self:_refresh_active_preview()
     end
 
     self.VisibleChanged = function()
@@ -242,7 +254,16 @@ end
 function ConfigWindow:apply_ui_scale()
     LuiWindow.apply_settings(self, _G.settings.global.scale)
     self:_update_ui_scale_metrics()
-    self:set_minimum_size(_scaled_int(222), _scaled_int(185))
+    local display_width, display_height = Turbine.UI.Display.GetSize()
+    local minimum_width = _scaled_int(CONFIG_MIN_WIDTH)
+    local minimum_height = _scaled_int(CONFIG_MIN_HEIGHT)
+    if minimum_width > display_width then
+        minimum_width = display_width
+    end
+    if minimum_height > display_height then
+        minimum_height = display_height
+    end
+    self:set_minimum_size(minimum_width, minimum_height)
     local scale = _G.settings.global.scale
 
     if self.tooltip ~= nil then

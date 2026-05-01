@@ -43,6 +43,8 @@ function SettingsFormPage:Constructor(window)
     self.controls = {}
     self.fields = {}
     self._color_fields = {}
+    self.grid_columns = 2
+    self.compact_fields = false
 
     local ui = window._ui or {}
     self.font_name_labels = ui.font_name_labels or {}
@@ -91,6 +93,18 @@ function SettingsFormPage:Constructor(window)
     self.SizeChanged = function()
         self:layout()
     end
+end
+
+function SettingsFormPage:set_grid_columns(columns)
+    local value = tonumber(columns)
+    if value == nil or value < 1 then
+        value = 1
+    end
+    self.grid_columns = math.floor(value + 0.5)
+end
+
+function SettingsFormPage:set_compact_fields(enabled)
+    self.compact_fields = enabled == true
 end
 
 function SettingsFormPage:_refresh_preview()
@@ -501,6 +515,9 @@ function SettingsFormPage:layout()
     local custom_min_h = _scaled_int(7)
     local custom_gap = _scaled_int(4)
     local form_pad = _scaled_int(4)
+    local compact_label_h = _scaled_int(14)
+    local compact_field_gap = _scaled_int(2)
+    local compact_row_gap = _scaled_int(8)
 
     if page_width == nil or page_height == nil or page_width < 1 or page_height < 1 then
         return
@@ -522,7 +539,12 @@ function SettingsFormPage:layout()
         inner_width = _scaled_int(74)
     end
 
-    local col_width = math.floor((inner_width - self.window.col_gap) / 2)
+    local grid_columns = self.grid_columns or 2
+    if grid_columns < 1 then
+        grid_columns = 1
+    end
+    local grid_gaps = (grid_columns - 1) * self.window.col_gap
+    local col_width = math.floor((inner_width - grid_gaps) / grid_columns)
     local label_width = math.floor(col_width * 0.55)
     local input_width = col_width - label_width - self.window.inner_gap
 
@@ -557,7 +579,10 @@ function SettingsFormPage:layout()
         end
 
         if is_visible and field.kind == "title" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -567,7 +592,10 @@ function SettingsFormPage:layout()
             y = y + title_gap
             col = 0
         elseif is_visible and field.kind == "info" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -578,7 +606,10 @@ function SettingsFormPage:layout()
             y = y + h
             col = 0
         elseif is_visible and field.kind == "hr" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -588,7 +619,10 @@ function SettingsFormPage:layout()
             y = y + hr_gap
             col = 0
         elseif is_visible and field.kind == "break" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -598,7 +632,10 @@ function SettingsFormPage:layout()
             y = y + field.height
             col = 0
         elseif is_visible and field.kind == "custom" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -615,6 +652,57 @@ function SettingsFormPage:layout()
             field.control:SetSize(inner_width, h)
             y = y + h + custom_gap
             col = 0
+        elseif is_visible and self.compact_fields == true then
+            if field.full_width == true then
+                if col ~= 0 then
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                    col = 0
+                end
+
+                local full_x = self.window.content_padding
+                local full_w = inner_width
+
+                if field.kind == "checkbox" then
+                    field.cb:SetPosition(full_x, y + compact_label_h + compact_field_gap)
+                    field.cb:SetSize(full_w, self.window.field_label_height)
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                elseif field.kind == "text" then
+                    field.label:SetPosition(full_x, y)
+                    field.label:SetSize(full_w, compact_label_h)
+                    field.tb:SetPosition(full_x, y + compact_label_h + compact_field_gap)
+                    field.tb:SetSize(full_w, self.window.input_height)
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                elseif field.kind == "dropdown" then
+                    field.label:SetPosition(full_x, y)
+                    field.label:SetSize(full_w, compact_label_h)
+                    field.button:SetPosition(full_x, y + compact_label_h + compact_field_gap + self.window.dropdown_y_offset)
+                    field.button:SetSize(full_w, self.window.input_height)
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                end
+            else
+                local x = self.window.content_padding + (col * (col_width + self.window.col_gap))
+
+                if field.kind == "checkbox" then
+                    field.cb:SetPosition(x, y + compact_label_h + compact_field_gap)
+                    field.cb:SetSize(col_width, self.window.field_label_height)
+                elseif field.kind == "text" then
+                    field.label:SetPosition(x, y)
+                    field.label:SetSize(col_width, compact_label_h)
+                    field.tb:SetPosition(x, y + compact_label_h + compact_field_gap)
+                    field.tb:SetSize(col_width, self.window.input_height)
+                elseif field.kind == "dropdown" then
+                    field.label:SetPosition(x, y)
+                    field.label:SetSize(col_width, compact_label_h)
+                    field.button:SetPosition(x, y + compact_label_h + compact_field_gap + self.window.dropdown_y_offset)
+                    field.button:SetSize(col_width, self.window.input_height)
+                end
+
+                col = col + 1
+                if col >= grid_columns then
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                    col = 0
+                end
+            end
         elseif is_visible then
             if field.kind == "checkbox" and field.full_width == true then
                 if col == 1 then
@@ -687,7 +775,11 @@ function SettingsFormPage:layout()
         end
     end
 
-    if col == 1 then
+    if self.compact_fields == true then
+        if col ~= 0 then
+            y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+        end
+    elseif col == 1 then
         y = y + self.window.row_height
     end
 

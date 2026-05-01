@@ -2,6 +2,11 @@ local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
 end
 
+local CONFIG_DEFAULT_WIDTH = 1260
+local CONFIG_DEFAULT_HEIGHT = 820
+local CONFIG_MIN_WIDTH = 1000
+local CONFIG_MIN_HEIGHT = 720
+
 function ConfigWindow:get_geometry_state()
     if _G.loaded_settings == nil then
         return nil
@@ -29,10 +34,14 @@ function ConfigWindow:persist_geometry()
 end
 
 function ConfigWindow:apply_saved_geometry()
-    local default_width = _scaled_int(459)
-    local default_height = _scaled_int(385)
+    local default_width = _scaled_int(CONFIG_DEFAULT_WIDTH)
+    local default_height = _scaled_int(CONFIG_DEFAULT_HEIGHT)
+    local min_width = _scaled_int(CONFIG_MIN_WIDTH)
+    local min_height = _scaled_int(CONFIG_MIN_HEIGHT)
 
     local display_width, display_height = Turbine.UI.Display.GetSize()
+    if min_width > display_width then min_width = display_width end
+    if min_height > display_height then min_height = display_height end
 
     local state = self:get_geometry_state()
 
@@ -45,8 +54,8 @@ function ConfigWindow:apply_saved_geometry()
 
     if width > display_width then width = display_width end
     if height > display_height then height = display_height end
-    if width < _scaled_int(222) then width = _scaled_int(222) end
-    if height < _scaled_int(185) then height = _scaled_int(185) end
+    if width < min_width then width = min_width end
+    if height < min_height then height = min_height end
 
     self:SetSize(width, height)
 

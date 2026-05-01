@@ -1,5 +1,4 @@
 import "LUI.src.Settings.Tabs.tabbed_page"
-import "LUI.src.Settings.Tabs.Self.self_vitals"
 import "LUI.src.Settings.Tabs.Self.self_expiring_effects"
 import "LUI.src.Settings.Tabs.Self.cooldowns"
 
@@ -12,7 +11,6 @@ function SelfPage:Constructor(window)
     SettingsTabbedPage.Constructor(self, window)
     self.show_main_content_border = false
 
-    self:add_sub_page(TR["Vitals"], SelfVitals)
     self:add_sub_page(TR["Expiring Effects"], SelfExpiringEffects)
     self:add_sub_page(TR["Cooldowns"], Cooldowns)
 end

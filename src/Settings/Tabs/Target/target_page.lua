@@ -1,7 +1,4 @@
 import "LUI.src.Settings.Tabs.tabbed_page"
-import "LUI.src.Settings.Tabs.Target.target_vitals"
-import "LUI.src.Settings.Tabs.Target.target_boss_vitals"
-import "LUI.src.Settings.Tabs.Target.target_targets_target"
 import "LUI.src.Settings.Tabs.Target.expiring_target_effects"
 
 local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
@@ -13,9 +10,6 @@ function TargetPage:Constructor(window)
     SettingsTabbedPage.Constructor(self, window)
     self.show_main_content_border = false
 
-    self:add_sub_page(TR["Vitals"], TargetVitals)
-    self:add_sub_page(TR["Boss vitals"], TargetBossVitals)
-    self:add_sub_page(TR["Target's Target"], TargetTargetsTarget)
     self:add_sub_page(TR["Expiring Effects"], ExpiringTargetEffects)
 end
 

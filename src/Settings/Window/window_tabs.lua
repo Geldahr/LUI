@@ -1,8 +1,8 @@
 import "LUI.src.Settings.Tabs.Global.global_page"
+import "LUI.src.Settings.Tabs.Vitals.vitals_page"
 import "LUI.src.Settings.Tabs.Self.self_page"
 import "LUI.src.Settings.Tabs.Drops.drops_page"
 import "LUI.src.Settings.Tabs.Target.target_page"
-import "LUI.src.Settings.Tabs.Party.party_page"
 import "LUI.src.Settings.Tabs.Inventory.inventory_page"
 import "LUI.src.Settings.Tabs.Crafting.crafting_page"
 import "LUI.src.Settings.Tabs.Travel.travel_page"
@@ -12,10 +12,10 @@ import "LUI.src.Settings.Tabs.ProfileManager.profile_manager_page"
 import "LUI.src.Settings.Tabs.Help.help_page"
 
 local GlobalPage = LUI.src.Settings.Tabs.Global.GlobalPage
+local VitalsPage = LUI.src.Settings.Tabs.Vitals.VitalsPage
 local SelfPage = LUI.src.Settings.Tabs.Self.SelfPage
 local DropsPage = LUI.src.Settings.Tabs.Drops.DropsPage
 local TargetPage = LUI.src.Settings.Tabs.Target.TargetPage
-local PartyPage = LUI.src.Settings.Tabs.Party.PartyPage
 local InventoryPage = LUI.src.Settings.Tabs.Inventory.InventoryPage
 local CraftingPage = LUI.src.Settings.Tabs.Crafting.CraftingPage
 local TravelPage = LUI.src.Settings.Tabs.Travel.TravelPage
@@ -29,15 +29,26 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
         return "global", preferred_sub_key
     end
 
-    if main_key == "self_vitals" or main_key == "expiring_effects" or main_key == "cooldowns" then
+    if main_key == "self_vitals" then
+        return "vitals", "self"
+    end
+    if main_key == "expiring_effects" or main_key == "cooldowns" then
         return "self", main_key
     end
-    if main_key == "target_vitals" or main_key == "target_boss_vitals" or
-        main_key == "target_targets_target" or main_key == "expiring_target_effects" then
+    if main_key == "target_vitals" then
+        return "vitals", "target"
+    end
+    if main_key == "target_boss_vitals" then
+        return "vitals", "boss"
+    end
+    if main_key == "target_targets_target" then
+        return "vitals", "target_targets_target"
+    end
+    if main_key == "expiring_target_effects" then
         return "target", main_key
     end
     if main_key == "party_layout" or main_key == "party_vitals" then
-        return "party", main_key
+        return "vitals", "party"
     end
 
     return main_key, preferred_sub_key
@@ -102,6 +113,10 @@ function ConfigWindow:build_tabs()
     global_page._tab_key = "global"
     self.main_tab_bar:add_tab(TR["Global"], global_page)
 
+    local vitals_page = VitalsPage(self)
+    vitals_page._tab_key = "vitals"
+    self.main_tab_bar:add_tab(TR["Vitals"], vitals_page)
+
     local self_page = SelfPage(self)
     self_page._tab_key = "self"
     self.main_tab_bar:add_tab(TR["Self"], self_page)
@@ -109,10 +124,6 @@ function ConfigWindow:build_tabs()
     local target_page = TargetPage(self)
     target_page._tab_key = "target"
     self.main_tab_bar:add_tab(TR["Target"], target_page)
-
-    local party_page = PartyPage(self)
-    party_page._tab_key = "party"
-    self.main_tab_bar:add_tab(TR["Party"], party_page)
 
     local drops_page = DropsPage(self)
     drops_page._tab_key = "drops"
