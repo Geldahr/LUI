@@ -145,15 +145,16 @@ function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_hei
     self.section_tab_bar = UI.Widgets.LuiTabBar()
     self.section_tab_bar:SetParent(self)
     self.section_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
-    self.section_tab_bar:set_show_content_border(false)
     self.section_tab_bar:set_show_border_left(false)
     if self._section_use_button_tabs == true then
+        self.section_tab_bar:set_show_content_border(false)
         self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.button)
         self.section_tab_bar:set_content_padding(0)
         _apply_button_tab_bar_theme(self.section_tab_bar)
     else
+        self.section_tab_bar:set_show_content_border(true)
         self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.connected)
-        self.section_tab_bar:set_content_padding(_scaled_int(4))
+        self.section_tab_bar:set_content_padding(_scaled_int(8))
     end
     self.section_tab_bar.on_tab_changed = function(_, page)
         self:_on_section_changed(page)
@@ -203,17 +204,21 @@ function SettingsFeatureSectionPage:_merge_page_controls(page)
 end
 
 function SettingsFeatureSectionPage:add_section(text, key, page)
-    local tab = Turbine.UI.Control()
-    tab._tab_key = key
-
     page._tab_key = key
-    page:SetParent(self.section_frame_body)
-    page:SetVisible(false)
 
     self._section_order[#self._section_order + 1] = key
     self._sections[key] = page
-    self._section_tabs[key] = tab
-    self.section_tab_bar:add_tab(text, tab)
+    if self._section_use_button_tabs == true then
+        local tab = Turbine.UI.Control()
+        tab._tab_key = key
+        page:SetParent(self.section_frame_body)
+        page:SetVisible(false)
+        self._section_tabs[key] = tab
+        self.section_tab_bar:add_tab(text, tab)
+    else
+        self._section_tabs[key] = page
+        self.section_tab_bar:add_tab(text, page)
+    end
     self:_merge_page_controls(page)
 
     if self._active_section_key == nil then
@@ -222,6 +227,9 @@ function SettingsFeatureSectionPage:add_section(text, key, page)
 end
 
 function SettingsFeatureSectionPage:_sync_active_section_visibility()
+    if self._section_use_button_tabs ~= true then
+        return
+    end
     for i = 1, #self._section_order do
         local key = self._section_order[i]
         local page = self._sections[key]
@@ -270,17 +278,18 @@ end
 
 function SettingsFeatureSectionPage:apply_ui_scale()
     self.section_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
-    self.section_tab_bar:set_show_content_border(false)
     self.section_tab_bar:set_show_border_left(false)
     if self._section_use_button_tabs == true then
+        self.section_tab_bar:set_show_content_border(false)
         self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.button)
         self.section_tab_bar:set_content_padding(0)
         self.section_tab_bar:set_scale(_G.settings.global.scale * SECTION_TAB_SCALE)
         self.section_tab_bar:set_font(_scaled_font("Verdana", SECTION_TAB_FONT_SIZE))
         _apply_button_tab_bar_theme(self.section_tab_bar)
     else
+        self.section_tab_bar:set_show_content_border(true)
         self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.connected)
-        self.section_tab_bar:set_content_padding(_scaled_int(4))
+        self.section_tab_bar:set_content_padding(_scaled_int(8))
         self.section_tab_bar:set_scale(_G.settings.global.scale)
         self.section_tab_bar:set_font(self.window.tab_font)
     end
@@ -342,39 +351,47 @@ function SettingsFeatureSectionPage:layout()
         top_h = 1
     end
 
-    local frame_x = 0
-    local frame_y = section_tab_h + section_gap
-    local frame_w = width
-    local frame_h = top_h - frame_y
-    if frame_w < 1 then
-        frame_w = 1
-    end
-    if frame_h < 1 then
-        frame_h = 1
-    end
+    if self._section_use_button_tabs == true then
+        local frame_x = 0
+        local frame_y = section_tab_h + section_gap
+        local frame_w = width
+        local frame_h = top_h - frame_y
+        if frame_w < 1 then
+            frame_w = 1
+        end
+        if frame_h < 1 then
+            frame_h = 1
+        end
 
-    self.section_tab_bar:SetPosition(0, 0)
-    self.section_tab_bar:SetSize(width, section_tab_h)
-    self.section_tab_bar:refresh_layout()
+        self.section_tab_bar:SetPosition(0, 0)
+        self.section_tab_bar:SetSize(width, section_tab_h)
+        self.section_tab_bar:refresh_layout()
 
-    local border = math.max(1, _scaled_int(tonumber(Style.BORDER_WIDTH) or 1))
-    local body_pad = frame_margin
+        local border = math.max(1, _scaled_int(tonumber(Style.BORDER_WIDTH) or 1))
+        local body_pad = frame_margin
 
-    self.section_frame:SetPosition(frame_x, frame_y)
-    self.section_frame:SetSize(frame_w, frame_h)
+        self.section_frame:SetVisible(true)
+        self.section_frame:SetPosition(frame_x, frame_y)
+        self.section_frame:SetSize(frame_w, frame_h)
 
-    self.section_frame_inner:SetPosition(border, border)
-    self.section_frame_inner:SetSize(math.max(0, frame_w - (border * 2)), math.max(0, frame_h - (border * 2)))
+        self.section_frame_inner:SetPosition(border, border)
+        self.section_frame_inner:SetSize(math.max(0, frame_w - (border * 2)), math.max(0, frame_h - (border * 2)))
 
-    local inner_w, inner_h = self.section_frame_inner:GetSize()
-    self.section_frame_body:SetPosition(body_pad, body_pad)
-    self.section_frame_body:SetSize(math.max(0, inner_w - (body_pad * 2)), math.max(0, inner_h - (body_pad * 2)))
+        local inner_w, inner_h = self.section_frame_inner:GetSize()
+        self.section_frame_body:SetPosition(body_pad, body_pad)
+        self.section_frame_body:SetSize(math.max(0, inner_w - (body_pad * 2)), math.max(0, inner_h - (body_pad * 2)))
 
-    local body_w, body_h = self.section_frame_body:GetSize()
-    for i = 1, #self._section_order do
-        local page = self._sections[self._section_order[i]]
-        page:SetPosition(0, 0)
-        page:SetSize(body_w, body_h)
+        local body_w, body_h = self.section_frame_body:GetSize()
+        for i = 1, #self._section_order do
+            local page = self._sections[self._section_order[i]]
+            page:SetPosition(0, 0)
+            page:SetSize(body_w, body_h)
+        end
+    else
+        self.section_frame:SetVisible(false)
+        self.section_tab_bar:SetPosition(0, 0)
+        self.section_tab_bar:SetSize(width, top_h)
+        self.section_tab_bar:refresh_layout()
     end
 
     if self.preview_holder ~= nil then

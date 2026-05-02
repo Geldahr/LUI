@@ -167,6 +167,8 @@ function ConfigWindow:update_drops_preview()
         width = 1
     end
 
+    local frame_x = math.max(0, math.floor((holder_w - width) / 2))
+
     local flow = self.controls.drops_flow.get_value and self.controls.drops_flow:get_value() or s.drops.flow
     local align = self.controls.drops_align.get_value and self.controls.drops_align:get_value() or s.drops.align
     local icon_position = self.controls.drops_icon_side.get_value and self.controls.drops_icon_side:get_value() or
@@ -188,10 +190,10 @@ function ConfigWindow:update_drops_preview()
     end
 
     p.background:SetVisible(true)
-    p.background:SetPosition(0, y0)
+    p.background:SetPosition(frame_x, y0)
     p.background:SetSize(width, block_h)
     p.background:SetBackColor(_with_alpha(hud_color, hud_opacity))
-    _apply_preview_border(p, width, capacity_h, 0, frame_y)
+    _apply_preview_border(p, width, capacity_h, frame_x, frame_y)
 
     local samples = {}
     if flow == LUI_ENUMS.list_flow.TOP_TO_BOTTOM then
@@ -220,7 +222,7 @@ function ConfigWindow:update_drops_preview()
         else
             local y = y0 + ((i - 1) * (row_h + spacing))
             row.root:SetVisible(true)
-            row.root:SetPosition(1, y)
+            row.root:SetPosition(frame_x + 1, y)
             row.root:SetSize(math.max(1, width - 2), row_h)
             row.background:SetPosition(0, 0)
             row.background:SetSize(math.max(1, width - 2), row_h)
