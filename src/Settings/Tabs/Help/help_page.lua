@@ -1,17 +1,13 @@
 import "Turbine.UI"
 
 import "LUI.src.Settings.Tabs.feature_shell"
-import "LUI.src.Settings.Tabs.tabbed_page"
-import "LUI.src.Settings.Tabs.form_page"
+import "LUI.src.Settings.Content.content"
+import "LUI.src.Settings.Content.tabs"
 import "LUI.src.UI.Widgets"
 
-local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
-    _G.SettingsTabbedPage or SettingsTabbedPage
-local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
-    SettingsFormPage
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local configure_compact_form = FeatureShell.configure_compact_form
-local module_for_page = FeatureShell.module_for_page
+local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
+local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
 local scaled_int = FeatureShell.scaled_int
 
 local HELP_FONT_NAME = "Verdana"
@@ -119,7 +115,7 @@ local function _create_link_box(page, key, label_text, link_text, height)
 end
 
 local function _new_about_section(window)
-    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    local page = ConfigContent(window, 4)
 
     local about_text = table.concat({
         TR["LUI replaces and extends key LotRO UI elements with a cleaner and more configurable layout."],
@@ -141,7 +137,7 @@ local function _new_about_section(window)
 end
 
 local function _new_commands_section(window)
-    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+    local page = ConfigContent(window, 4)
 
     local commands_text = table.concat({
         TR["/lui config - Toggle the configuration window."],
@@ -162,18 +158,18 @@ local function _new_commands_section(window)
     return page
 end
 
-HelpPage = class(SettingsTabbedPage)
+HelpPage = class(ConfigTabs)
 
 function HelpPage:Constructor(window)
-    SettingsTabbedPage.Constructor(self, window)
+    ConfigTabs.Constructor(self, window)
     self.show_main_content_border = false
     self.sub_tab_bar:set_content_padding(scaled_int(8))
-    self:add_sub_page(TR["About LUI"], module_for_page("about", _new_about_section(window)))
-    self:add_sub_page(TR["Commands"], module_for_page("commands", _new_commands_section(window)))
+    self:add_tab(TR["About LUI"], "about", _new_about_section(window))
+    self:add_tab(TR["Commands"], "commands", _new_commands_section(window))
 end
 
 function HelpPage:apply_ui_scale()
-    SettingsTabbedPage.apply_ui_scale(self)
+    ConfigTabs.apply_ui_scale(self)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 

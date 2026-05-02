@@ -1,10 +1,9 @@
 import "Turbine.UI"
 
-import "LUI.src.Settings.Tabs.form_page"
+import "LUI.src.Settings.Content.content"
 import "LUI.src.UI.Widgets"
 
-local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
-    SettingsFormPage
+local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
 
 local PROFILE_INFO_FONT_NAME = "Verdana"
 local PROFILE_INFO_FONT_SIZE = 13
@@ -109,13 +108,11 @@ local function _refresh_profile_manager(page, selected_profile_id)
     page.window.profile_manager_refreshing = false
 end
 
-ProfileManagerPage = class(SettingsFormPage)
+ProfileManagerPage = class(ConfigContent)
 
 function ProfileManagerPage:Constructor(window)
-    SettingsFormPage.Constructor(self, window)
+    ConfigContent.Constructor(self, window, PROFILE_COLUMNS)
     self.show_main_content_border = false
-    self:set_compact_fields(true)
-    self:set_grid_columns(PROFILE_COLUMNS)
 
     local info_entry = self:add_custom("profile_manager_info", INFO_HEIGHT)
     info_entry.body = UI.Widgets.LuiLabel()

@@ -24,17 +24,13 @@ end
 function ConfigSectionPage:load()
     for i = 1, #self._section_order do
         local page = self._sections[self._section_order[i]]
-        if page.load ~= nil then
-            page:load()
-        end
+        page:load()
     end
 end
 
 function ConfigSectionPage:save()
     for i = 1, #self._section_order do
         local page = self._sections[self._section_order[i]]
-        if page.save ~= nil then
-            page:save()
-        end
+        page:save()
     end
 end

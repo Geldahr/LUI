@@ -1,12 +1,13 @@
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.tabs"
+import "LUI.src.Settings.Content.nested_tabs"
 
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
 local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
 local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
-local SettingsFeatureNestedPage = FeatureShell.nested_page_class
-local module_for_page = FeatureShell.module_for_page
+local ConfigNestedTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_nested_tabs) or
+    ConfigNestedTabs
 local scaled_int = FeatureShell.scaled_int
 local PREVIEW_GAP = 10
 local PREVIEW_MIN_TOP_HEIGHT = 120
@@ -58,20 +59,10 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
             entry.tb:SetText(ui.color_to_hex(settings_getter().item.background_color))
         end)
 
-    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.top,
+    local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.top,
         FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
-    page:add_sub_page(TR["HUD"], module_for_page("hud", hud))
-    page:add_sub_page(TR["Item"], module_for_page("item", item))
-
-    function page:load()
-        hud:load()
-        item:load()
-    end
-
-    function page:save()
-        hud:save()
-        item:save()
-    end
+    page:add_tab(TR["HUD"], "hud", hud)
+    page:add_tab(TR["Item"], "item", item)
 
     return page
 end

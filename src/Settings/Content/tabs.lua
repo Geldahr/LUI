@@ -39,17 +39,13 @@ end
 function ConfigTabs:load()
     for i = 1, #self._sub_page_order do
         local page = self._sub_pages[self._sub_page_order[i]]
-        if page.load ~= nil then
-            page:load()
-        end
+        page:load()
     end
 end
 
 function ConfigTabs:save()
     for i = 1, #self._sub_page_order do
         local page = self._sub_pages[self._sub_page_order[i]]
-        if page.save ~= nil then
-            page:save()
-        end
+        page:save()
     end
 end
