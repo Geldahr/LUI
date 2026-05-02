@@ -8,6 +8,18 @@ import "LUI.src.Settings.Preview.target_targets_target"
 import "LUI.src.Settings.Preview.party_vitals"
 import "LUI.src.Settings.Preview.vitals"
 
+local function _selected_leaf_page(page)
+    local current = page
+    while current ~= nil and current.sub_tab_bar ~= nil do
+        local child = current.sub_tab_bar:get_selected_widget()
+        if child == nil then
+            break
+        end
+        current = child
+    end
+    return current
+end
+
 function ConfigWindow:_refresh_active_preview()
     if self.main_tab_bar == nil then
         return
@@ -18,12 +30,7 @@ function ConfigWindow:_refresh_active_preview()
         return
     end
 
-    if page.sub_tab_bar ~= nil then
-        local sub_page = page.sub_tab_bar:get_selected_widget()
-        if sub_page ~= nil then
-            page = sub_page
-        end
-    end
+    page = _selected_leaf_page(page)
 
     if page.refresh_preview ~= nil then
         page:refresh_preview()

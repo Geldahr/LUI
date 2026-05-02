@@ -138,9 +138,7 @@ local function _refresh_status_bar_after_api_change()
     if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil then
         _G.STATUS_BAR:restore_edit_window_state(edit_window_state)
     end
-    if _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP ~= nil then
-        _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP()
-    end
+    _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP()
 end
 
 local function _replace_status_bar_layout_token(text, old_token, new_token)

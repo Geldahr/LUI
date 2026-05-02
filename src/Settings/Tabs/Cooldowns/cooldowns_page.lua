@@ -27,26 +27,7 @@ local function _bind_hint(window, target, help_text)
         return
     end
 
-    if window.bind_tooltip ~= nil then
-        window:bind_tooltip(target, help_text)
-        return
-    end
-
-    local prev_enter = target.MouseEnter
-    target.MouseEnter = function(sender, args)
-        if prev_enter ~= nil then
-            prev_enter(sender, args)
-        end
-        window:show_hint_for(target, help_text)
-    end
-
-    local prev_leave = target.MouseLeave
-    target.MouseLeave = function(sender, args)
-        if prev_leave ~= nil then
-            prev_leave(sender, args)
-        end
-        window:hide_hint()
-    end
+    window:bind_tooltip(target, help_text)
 end
 
 local function _layout_text_area(entry)
