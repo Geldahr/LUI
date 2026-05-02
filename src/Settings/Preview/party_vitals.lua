@@ -2,8 +2,11 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.vitals_labels"
 
 local Common = SettingsPreviewCommon
-local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
+local _require_control_color = Common.require_control_color
+local _require_control_enum = Common.require_control_enum
+local _require_control_number = Common.require_control_number
+local _require_positive_scale = Common.require_positive_scale
 local _apply_preview_border = Common.apply_preview_border
 local _preview_number_abbrev_settings = Common.preview_number_abbrev_settings
 local _morale_color_preview = Common.morale_color_preview
@@ -12,8 +15,6 @@ local _preview_scaled_border = Common.preview_scaled_border
 local _preview_scaled_number = Common.preview_scaled_number
 local _preview_resource_background = Common.preview_resource_background
 local _sync_preview_holder_height = Common.sync_preview_holder_height
-local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
-
 local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
@@ -23,7 +24,7 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
     local controls = window.controls
     local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
     local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
-    local text = controls[key .. "_text"].tb:GetText() or ""
+    local text = controls[key .. "_text"].tb:GetText()
 
     if enabled ~= true or _label_text_is_blank(text) == true then
         label:SetText("")
@@ -31,38 +32,19 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
         return
     end
 
-    local text_alignment = controls[key .. "_text_alignment"]:get_value()
-    if type(text_alignment) ~= "number" then
-        text_alignment = LUI_ENUMS.text_alignment.CENTER
-    end
-
-    local anchor = controls[key .. "_anchor"]:get_value()
-    if type(anchor) ~= "number" then
-        anchor = LUI_ENUMS.vitals_label_anchor.CENTER
-    end
-
-    local width_mode = controls[key .. "_width_mode"]:get_value()
-    if type(width_mode) ~= "number" then
-        width_mode = LUI_ENUMS.vitals_label_width_mode.FILL
-    end
-
-    local font_name = controls[key .. "_font_name"]:get_value()
-    if type(font_name) ~= "number" then
-        font_name = LUI_ENUMS.font_name.VERDANA
-    end
-
-    local font_size = _preview_scaled_number(raw_scale, controls[key .. "_font_size"].tb:GetText(), default_font_size)
-    local font_style_enum = controls[key .. "_font_style"]:get_value()
-    if type(font_style_enum) ~= "number" then
-        font_style_enum = LUI_ENUMS.font_style.OUTLINE
-    end
+    local text_alignment = _require_control_enum(controls, key .. "_text_alignment")
+    local anchor = _require_control_enum(controls, key .. "_anchor")
+    local width_mode = _require_control_enum(controls, key .. "_width_mode")
+    local font_name = _require_control_enum(controls, key .. "_font_name")
+    local font_size = _preview_scaled_number(raw_scale, _require_control_number(controls, key .. "_font_size"))
+    local font_style_enum = _require_control_enum(controls, key .. "_font_style")
 
     local rendered_text = lui_format_tokenized(lui_tokenize_format(text), context)
 
     label:SetFont(_require_font(font_name, font_size))
     label:SetFontStyle(LUI_TO_LOTRO.font_style[font_style_enum])
-    label:SetForeColor(_hex_to_color(controls[key .. "_font_color"].tb:GetText()) or Turbine.UI.Color(1, 1, 1))
-    label:SetOutlineColor(_hex_to_color(controls[key .. "_font_outline_color"].tb:GetText()) or Turbine.UI.Color(0, 0, 0))
+    label:SetForeColor(_require_control_color(controls, key .. "_font_color"))
+    label:SetOutlineColor(_require_control_color(controls, key .. "_font_outline_color"))
 
     lui_vitals_layout_label(
         label,
@@ -71,8 +53,8 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
         anchor,
         width_mode,
         text_alignment,
-        _preview_scaled_int(raw_scale, controls[key .. "_x_offset"].tb:GetText(), 0),
-        _preview_scaled_int(raw_scale, controls[key .. "_y_offset"].tb:GetText(), 0),
+        _preview_scaled_int(raw_scale, _require_control_number(controls, key .. "_x_offset")),
+        _preview_scaled_int(raw_scale, _require_control_number(controls, key .. "_y_offset")),
         font_name,
         font_size,
         rendered_text
@@ -215,70 +197,57 @@ function ConfigWindow:update_party_vitals_preview()
         return
     end
 
-    local s = _G.loaded_settings
-
-    local raw_scale = tonumber(self.controls.scale.tb:GetText()) or s.global.scale or 1
-    if raw_scale <= 0 then raw_scale = 1 end
+    local raw_scale = _require_positive_scale(self)
 
     lui_set_number_abbrev_preview_settings(_preview_number_abbrev_settings(self))
 
-    local raw_rows = tonumber(self.controls.party_rows.tb:GetText()) or s.party.layout.rows or 6
+    local raw_rows = _require_control_number(self.controls, "party_rows")
     local rows = raw_rows
     if rows < 1 then rows = 1 end
 
-    local raw_spacing_x = tonumber(self.controls.party_spacing_x.tb:GetText()) or s.party.layout.spacing_x or 6
-    local raw_spacing_y = tonumber(self.controls.party_spacing_y.tb:GetText()) or s.party.layout.spacing_y or 6
-    local spacing_x = _preview_scaled_int(raw_scale, raw_spacing_x, 6)
-    local spacing_y = _preview_scaled_int(raw_scale, raw_spacing_y, 6)
+    local raw_spacing_x = _require_control_number(self.controls, "party_spacing_x")
+    local raw_spacing_y = _require_control_number(self.controls, "party_spacing_y")
+    local spacing_x = _preview_scaled_int(raw_scale, raw_spacing_x)
+    local spacing_y = _preview_scaled_int(raw_scale, raw_spacing_y)
     if spacing_x < 0 then spacing_x = 0 end
     if spacing_y < 0 then spacing_y = 0 end
 
-    local raw_frame_w = tonumber(self.controls.party_width.tb:GetText()) or s.party.frame.width or 250
-    local raw_border = tonumber(self.controls.party_border_width.tb:GetText()) or s.party.frame.border_width or 1
-    local frame_w = _preview_scaled_int(raw_scale, raw_frame_w, 250)
-    local border = _preview_scaled_border(raw_scale, raw_border, 1)
+    local raw_frame_w = _require_control_number(self.controls, "party_width")
+    local raw_border = _require_control_number(self.controls, "party_border_width")
+    local frame_w = _preview_scaled_int(raw_scale, raw_frame_w)
+    local border = _preview_scaled_border(raw_scale, raw_border)
     if frame_w < 40 then frame_w = 40 end
     if border < 0 then border = 0 end
     if border > math.floor(frame_w / 4) then
         border = math.floor(frame_w / 4)
     end
 
-    local raw_morale_h = tonumber(self.controls.party_morale_height.tb:GetText()) or s.party.morale.height or 50
-    local raw_power_h = tonumber(self.controls.party_power_height.tb:GetText()) or s.party.power.height or 26
-    local morale_h = _preview_scaled_int(raw_scale, raw_morale_h, 50)
-    local power_h = _preview_scaled_int(raw_scale, raw_power_h, 26)
+    local raw_morale_h = _require_control_number(self.controls, "party_morale_height")
+    local raw_power_h = _require_control_number(self.controls, "party_power_height")
+    local morale_h = _preview_scaled_int(raw_scale, raw_morale_h)
+    local power_h = _preview_scaled_int(raw_scale, raw_power_h)
     if morale_h < 10 then morale_h = 10 end
     if power_h < 10 then power_h = 10 end
 
-    local icon_enabled = true
-    if self.controls.party_class_icon_enabled ~= nil then
-        icon_enabled = self.controls.party_class_icon_enabled.cb:IsChecked()
-    else
-        icon_enabled = s.party.class_icon.enabled ~= false
-    end
+    local icon_enabled = self.controls.party_class_icon_enabled.cb:IsChecked()
 
-    local raw_icon_size = tonumber(self.controls.party_class_icon_size.tb:GetText()) or s.party.class_icon.size or 24
-    local raw_icon_x = tonumber(self.controls.party_class_icon_x.tb:GetText()) or s.party.class_icon.x or 2
-    local raw_icon_y = tonumber(self.controls.party_class_icon_y.tb:GetText()) or s.party.class_icon.y or 2
-    local icon_size = _preview_scaled_int(raw_scale, raw_icon_size, 24)
-    local icon_x = _preview_scaled_int(raw_scale, raw_icon_x, 2)
-    local icon_y = _preview_scaled_int(raw_scale, raw_icon_y, 2)
+    local raw_icon_size = _require_control_number(self.controls, "party_class_icon_size")
+    local raw_icon_x = _require_control_number(self.controls, "party_class_icon_x")
+    local raw_icon_y = _require_control_number(self.controls, "party_class_icon_y")
+    local icon_size = _preview_scaled_int(raw_scale, raw_icon_size)
+    local icon_x = _preview_scaled_int(raw_scale, raw_icon_x)
+    local icon_y = _preview_scaled_int(raw_scale, raw_icon_y)
     if icon_size < 16 then icon_size = 16 end
     if icon_size > 50 then icon_size = 50 end
 
-    local leader_enabled = true
-    if self.controls.party_leader_icon_enabled ~= nil then
-        leader_enabled = self.controls.party_leader_icon_enabled.cb:IsChecked()
-    else
-        leader_enabled = s.party.leader_icon.enabled ~= false
-    end
+    local leader_enabled = self.controls.party_leader_icon_enabled.cb:IsChecked()
 
-    local raw_leader_size = tonumber(self.controls.party_leader_icon_size.tb:GetText()) or s.party.leader_icon.size or 24
-    local raw_leader_x = tonumber(self.controls.party_leader_icon_x.tb:GetText()) or s.party.leader_icon.x or 0
-    local raw_leader_y = tonumber(self.controls.party_leader_icon_y.tb:GetText()) or s.party.leader_icon.y or 2
-    local leader_size = _preview_scaled_int(raw_scale, raw_leader_size, 24)
-    local leader_x = _preview_scaled_int(raw_scale, raw_leader_x, 0)
-    local leader_y = _preview_scaled_int(raw_scale, raw_leader_y, 2)
+    local raw_leader_size = _require_control_number(self.controls, "party_leader_icon_size")
+    local raw_leader_x = _require_control_number(self.controls, "party_leader_icon_x")
+    local raw_leader_y = _require_control_number(self.controls, "party_leader_icon_y")
+    local leader_size = _preview_scaled_int(raw_scale, raw_leader_size)
+    local leader_x = _preview_scaled_int(raw_scale, raw_leader_x)
+    local leader_y = _preview_scaled_int(raw_scale, raw_leader_y)
     if leader_size < 16 then leader_size = 16 end
     if leader_size > 50 then leader_size = 50 end
 
@@ -286,35 +255,26 @@ function ConfigWindow:update_party_vitals_preview()
     local member_h = morale_h + power_h - border
     if member_h < 1 then member_h = 1 end
 
-    local morale_bg = _hex_to_color(self.controls.party_morale_background_color.tb:GetText()) or
-        Turbine.UI.Color(0, 0, 0)
-    local border_color = _hex_to_color(self.controls.party_border_color.tb:GetText()) or morale_bg
-    local bubble_color = _hex_to_color(self.controls.party_morale_bubble_color.tb:GetText()) or
-        Turbine.UI.Color(0.53, 0.8, 0.98)
-    local neutral_color = _hex_to_color(self.controls.party_morale_color_neutral.tb:GetText()) or
-        Turbine.UI.Color(0.5, 0.6, 0.5)
-    local high_color = _hex_to_color(self.controls.party_morale_color_high.tb:GetText()) or
-        Turbine.UI.Color(0.290196, 0.639216, 0.286275)
-    local med_color = _hex_to_color(self.controls.party_morale_color_medium.tb:GetText()) or
-        Turbine.UI.Color(0.650980, 0.803922, 0.196078)
-    local low_color = _hex_to_color(self.controls.party_morale_color_low.tb:GetText()) or
-        Turbine.UI.Color(0.87, 0.55, 0.0)
-    local crit_color = _hex_to_color(self.controls.party_morale_color_critical.tb:GetText()) or
-        Turbine.UI.Color(0.87, 0.11, 0.0)
+    local morale_bg = _require_control_color(self.controls, "party_morale_background_color")
+    local border_color = _require_control_color(self.controls, "party_border_color")
+    local bubble_color = _require_control_color(self.controls, "party_morale_bubble_color")
+    local neutral_color = _require_control_color(self.controls, "party_morale_color_neutral")
+    local high_color = _require_control_color(self.controls, "party_morale_color_high")
+    local med_color = _require_control_color(self.controls, "party_morale_color_medium")
+    local low_color = _require_control_color(self.controls, "party_morale_color_low")
+    local crit_color = _require_control_color(self.controls, "party_morale_color_critical")
     local morale_gradient = self.controls.party_morale_gradient.cb:IsChecked() == true
-    local gradient_full = _hex_to_color(self.controls.party_morale_gradient_full.tb:GetText()) or high_color
-    local gradient_mid = _hex_to_color(self.controls.party_morale_gradient_mid.tb:GetText()) or
-        DEFAULT_GRADIENT_MID_COLOR
-    local gradient_low = _hex_to_color(self.controls.party_morale_gradient_low.tb:GetText()) or crit_color
+    local gradient_full = _require_control_color(self.controls, "party_morale_gradient_full")
+    local gradient_mid = _require_control_color(self.controls, "party_morale_gradient_mid")
+    local gradient_low = _require_control_color(self.controls, "party_morale_gradient_low")
     Common.update_gradient_preview(self, "party_morale_gradient_preview", gradient_full, gradient_mid, gradient_low)
     local ressource_bg_matches_missing = self.controls.party_ressource_background_matches_missing.cb:IsChecked() == true
-    local ressource_bg_dimming = tonumber(self.controls.party_ressource_background_dimming.tb:GetText()) or 0.75
+    local ressource_bg_dimming = _require_control_number(self.controls, "party_ressource_background_dimming")
 
-    local power_color = _hex_to_color(self.controls.party_power_color.tb:GetText()) or Turbine.UI.Color(0.2, 0.6, 0.98)
-    local wrath_color = _hex_to_color(self.controls.party_wrath_color.tb:GetText()) or Turbine.UI.Color(1, 0.33, 0.13)
+    local power_color = _require_control_color(self.controls, "party_power_color")
+    local wrath_color = _require_control_color(self.controls, "party_wrath_color")
 
     local bubble_fmt = self.controls.party_morale_bubble_text.tb:GetText()
-    if type(bubble_fmt) ~= "string" then bubble_fmt = "" end
     local bubble_fmt_tokens = lui_tokenize_format(bubble_fmt)
 
     local preview_count = 24
@@ -426,10 +386,10 @@ function ConfigWindow:update_party_vitals_preview()
                 { max = 45000, cur = 12345, bubble = 0 },
             }
 
-            local sample = morale_samples[((i - 1) % #morale_samples) + 1] or {}
-            local morale_max = tonumber(sample.max) or 1
-            local morale_cur = tonumber(sample.cur) or 0
-            local bubble_cur = tonumber(sample.bubble) or 0
+            local sample = morale_samples[((i - 1) % #morale_samples) + 1]
+            local morale_max = sample.max
+            local morale_cur = sample.cur
+            local bubble_cur = sample.bubble
 
             if morale_max <= 0 then morale_max = 1 end
             if morale_cur < 0 then morale_cur = 0 end

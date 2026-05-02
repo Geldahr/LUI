@@ -2,8 +2,11 @@ import "LUI.src.Utils.timed_row_layout"
 
 local Common = SettingsPreviewCommon
 local _apply_preview_border = Common.apply_preview_border
-local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
+local _require_control_color = Common.require_control_color
+local _require_control_enum = Common.require_control_enum
+local _require_control_number = Common.require_control_number
+local _require_positive_scale = Common.require_positive_scale
 local _sync_preview_holder_height = Common.sync_preview_holder_height
 
 local BASE_ROW_PADDING = 4
@@ -124,19 +127,15 @@ function ConfigWindow:update_drops_preview()
     end
 
     local p = self.drops_preview
-    local s = _G.loaded_settings
-    local raw_scale = tonumber(self.controls.scale.tb:GetText()) or s.global.scale or 1
-    if raw_scale <= 0 then
-        raw_scale = 1
-    end
+    local raw_scale = _require_positive_scale(self)
 
     local function scaled_int(raw_value)
         return math.floor((raw_value * raw_scale) + 0.5)
     end
 
-    local rows = tonumber(self.controls.drops_rows.tb:GetText()) or s.drops.rows or 4
+    local rows = _require_control_number(self.controls, "drops_rows")
     rows = math.max(1, math.floor(rows + 0.5))
-    local icon_size = tonumber(self.controls.drops_icon_size.tb:GetText()) or s.drops.icon_size or 24
+    local icon_size = _require_control_number(self.controls, "drops_icon_size")
     if icon_size < 1 then
         icon_size = 1
     end
@@ -146,7 +145,7 @@ function ConfigWindow:update_drops_preview()
     local gap = scaled_int(BASE_GAP)
     local qty_font_size = BASE_FONT_SIZE * raw_scale
     local qty_w = _drops_qty_width(qty_font_size)
-    local width = tonumber(self.controls.drops_width.tb:GetText()) or s.drops.width or 180
+    local width = _require_control_number(self.controls, "drops_width")
     width = scaled_int(width)
     local min_width = _drops_min_width(icon_pixels, row_pad, gap, qty_font_size)
     if width < min_width then
@@ -169,17 +168,13 @@ function ConfigWindow:update_drops_preview()
 
     local frame_x = math.max(0, math.floor((holder_w - width) / 2))
 
-    local flow = self.controls.drops_flow:get_value() or s.drops.flow
-    local align = self.controls.drops_align:get_value() or s.drops.align
-    local icon_position = self.controls.drops_icon_side:get_value() or s.drops.icon_side
-    local hud_color = _hex_to_color(self.controls.drops_hud_background_color.tb:GetText()) or
-        s.drops.hud.background_color or Turbine.UI.Color(1, 0, 0, 0)
-    local hud_opacity = tonumber(self.controls.drops_hud_background_opacity.tb:GetText()) or
-        s.drops.hud.background_opacity or 0.0
-    local item_color = _hex_to_color(self.controls.drops_item_background_color.tb:GetText()) or
-        s.drops.item.background_color or Turbine.UI.Color(1, 0, 0, 0)
-    local item_opacity = tonumber(self.controls.drops_item_background_opacity.tb:GetText()) or
-        s.drops.item.background_opacity or 0.3
+    local flow = _require_control_enum(self.controls, "drops_flow")
+    local align = _require_control_enum(self.controls, "drops_align")
+    local icon_position = _require_control_enum(self.controls, "drops_icon_side")
+    local hud_color = _require_control_color(self.controls, "drops_hud_background_color")
+    local hud_opacity = _require_control_number(self.controls, "drops_hud_background_opacity")
+    local item_color = _require_control_color(self.controls, "drops_item_background_color")
+    local item_opacity = _require_control_number(self.controls, "drops_item_background_opacity")
 
     local font = _require_font(LUI_ENUMS.font_name.VERDANA, BASE_FONT_SIZE * raw_scale)
     local frame_y = PREVIEW_MARGIN

@@ -34,25 +34,57 @@ function Common.dim_color(color, amount)
     return lui_dim_color(color, amount)
 end
 
-function Common.preview_scaled_int(raw_scale, raw_value, fallback)
+function Common.require_number(raw_value, key)
     local n = raw_value
     if type(n) ~= "number" then
         n = tonumber(n)
     end
     if n == nil then
-        n = fallback or 0
+        error("Invalid preview number for " .. tostring(key) .. ": " .. tostring(raw_value))
     end
+    return n
+end
+
+function Common.require_control_text(controls, key)
+    return controls[key].tb:GetText()
+end
+
+function Common.require_control_number(controls, key)
+    return Common.require_number(Common.require_control_text(controls, key), key)
+end
+
+function Common.require_control_color(controls, key)
+    local text = Common.require_control_text(controls, key)
+    local color = Common.hex_to_color(text)
+    if color == nil then
+        error("Invalid preview color for " .. tostring(key) .. ": " .. tostring(text))
+    end
+    return color
+end
+
+function Common.require_control_enum(controls, key)
+    local value = controls[key]:get_value()
+    if type(value) ~= "number" then
+        error("Invalid preview enum for " .. tostring(key) .. ": " .. tostring(value))
+    end
+    return value
+end
+
+function Common.require_positive_scale(window)
+    local value = Common.require_control_number(window.controls, "scale")
+    if value <= 0 then
+        error("Invalid preview scale: " .. tostring(value))
+    end
+    return value
+end
+
+function Common.preview_scaled_int(raw_scale, raw_value)
+    local n = Common.require_number(raw_value, "scaled_int")
     return math.floor((n * raw_scale) + 0.5)
 end
 
-function Common.preview_scaled_border(raw_scale, raw_value, fallback)
-    local n = raw_value
-    if type(n) ~= "number" then
-        n = tonumber(n)
-    end
-    if n == nil then
-        n = fallback or 0
-    end
+function Common.preview_scaled_border(raw_scale, raw_value)
+    local n = Common.require_number(raw_value, "scaled_border")
     if n <= 0 then
         return 0
     end
@@ -63,19 +95,17 @@ function Common.preview_scaled_border(raw_scale, raw_value, fallback)
     return out
 end
 
-function Common.preview_scaled_number(raw_scale, raw_value, fallback)
-    local n = raw_value
-    if type(n) ~= "number" then
-        n = tonumber(n)
-    end
-    if n == nil then
-        n = fallback or 0
-    end
+function Common.preview_scaled_number(raw_scale, raw_value)
+    local n = Common.require_number(raw_value, "scaled_number")
     return n * raw_scale
 end
 
 function Common.preview_text_align(value)
-    return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
+    local align = LUI_TO_LOTRO.text_alignment[value]
+    if align == nil then
+        error("Missing preview text alignment: " .. tostring(value))
+    end
+    return align
 end
 
 function Common.preview_resource_background(matches_missing, dimming, background, fill_color)
@@ -121,7 +151,6 @@ function Common.morale_color_preview(percent, gradient_enabled, gradient_full_co
 end
 
 function Common.preview_number_abbrev_settings(window)
-    local raw = _G.loaded_settings.global.number_abbrev
     local controls = window.controls
 
     return {
@@ -133,18 +162,11 @@ function Common.preview_number_abbrev_settings(window)
 end
 
 function Common.apply_preview_border(p, w, h, x, y)
-    if p == nil then
-        return
-    end
-    if p.border_top == nil or p.border_bottom == nil or p.border_left == nil or p.border_right == nil then
-        return
-    end
-
     local bw = 1
-    local ww = tonumber(w) or 0
-    local hh = tonumber(h) or 0
-    local xx = tonumber(x) or 0
-    local yy = tonumber(y) or 0
+    local ww = Common.require_number(w, "preview_border_width")
+    local hh = Common.require_number(h, "preview_border_height")
+    local xx = x == nil and 0 or Common.require_number(x, "preview_border_x")
+    local yy = y == nil and 0 or Common.require_number(y, "preview_border_y")
     if ww < 1 then ww = 1 end
     if hh < 1 then hh = 1 end
 

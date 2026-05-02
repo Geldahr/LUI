@@ -1,8 +1,11 @@
 import "LUI.src.Cooldowns.time_display"
 
 local Common = SettingsPreviewCommon
-local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
+local _require_control_color = Common.require_control_color
+local _require_control_enum = Common.require_control_enum
+local _require_control_number = Common.require_control_number
+local _require_positive_scale = Common.require_positive_scale
 
 local function _truncate_name(name, max_chars)
     if type(name) ~= "string" then
@@ -153,21 +156,20 @@ function ConfigWindow:update_cooldowns_preview()
     if self.cooldowns_preview == nil then
         return
     end
-    local s = _G.loaded_settings
+    local raw_scale = _require_positive_scale(self)
 
-    local raw_scale = tonumber(self.controls.scale.tb:GetText()) or s.global.scale or 1
-    if raw_scale <= 0 then raw_scale = 1 end
-
-    local function scaled_int(raw_value, fallback)
+    local function scaled_int(raw_value)
         local n = tonumber(raw_value)
-        if n == nil then n = fallback or 0 end
+        if n == nil then
+            error("Invalid cooldown preview scaled int: " .. tostring(raw_value))
+        end
         return math.floor((n * raw_scale) + 0.5)
     end
 
-    local function scaled_border(raw_value, fallback)
+    local function scaled_border(raw_value)
         local n = tonumber(raw_value)
         if n == nil then
-            n = fallback or 0
+            error("Invalid cooldown preview scaled border: " .. tostring(raw_value))
         end
         if n <= 0 then
             return 0
@@ -177,87 +179,58 @@ function ConfigWindow:update_cooldowns_preview()
         return out
     end
 
-    local function scaled_number(raw_value, fallback)
+    local function scaled_number(raw_value)
         local n = tonumber(raw_value)
-        if n == nil then n = fallback or 0 end
+        if n == nil then
+            error("Invalid cooldown preview scaled number: " .. tostring(raw_value))
+        end
         return n * raw_scale
     end
 
-    local cd = s.self.cooldowns
-
-    local raw_item_h = tonumber(self.controls.cd_item_h.tb:GetText()) or cd.item_h or 26
-    local item_h = scaled_int(raw_item_h, 26)
+    local raw_item_h = _require_control_number(self.controls, "cd_item_h")
+    local item_h = scaled_int(raw_item_h)
     if item_h < 10 then item_h = 10 end
 
-    local bg = _hex_to_color(self.controls.cd_bg_color.tb:GetText())
-        or (cd.color and cd.color.background)
-        or Turbine.UI.Color(0, 0, 0)
-    local bar = _hex_to_color(self.controls.cd_bar_color.tb:GetText())
-        or (cd.color and cd.color.bar)
-        or Turbine.UI.Color(1, 0.0, 0.545098, 0.545098)
-    local border_color = _hex_to_color(self.controls.cd_border_color.tb:GetText())
-        or (cd.color and cd.color.border)
-        or Turbine.UI.Color(1, 0, 0, 0)
+    local bg = _require_control_color(self.controls, "cd_bg_color")
+    local bar = _require_control_color(self.controls, "cd_bar_color")
+    local border_color = _require_control_color(self.controls, "cd_border_color")
 
-    local raw_border_w = tonumber(self.controls.cd_border_width.tb:GetText()) or cd.border_width or 1
-    local border = scaled_border(raw_border_w, 1)
+    local raw_border_w = _require_control_number(self.controls, "cd_border_width")
+    local border = scaled_border(raw_border_w)
     if border < 0 then border = 0 end
 
-    local icon_side = self.controls.cd_icon_side:get_value()
-    if type(icon_side) ~= "number" then
-        icon_side = cd.icon_side or LUI_ENUMS.side.RIGHT
-    end
+    local icon_side = _require_control_enum(self.controls, "cd_icon_side")
     local icon_left = LUI_ENUMS.side_is_left[icon_side] == true
 
-    local bar_expire_towards = self.controls.cd_bar_expire_towards:get_value()
-    if type(bar_expire_towards) ~= "number" then
-        bar_expire_towards = cd.bar_expire_towards or LUI_ENUMS.side.RIGHT
-    end
+    local bar_expire_towards = _require_control_enum(self.controls, "cd_bar_expire_towards")
 
-    local bar_mode = self.controls.cd_bar_mode:get_value()
-    if type(bar_mode) ~= "number" then
-        bar_mode = cd.bar_mode or LUI_ENUMS.bar_mode.UNLOAD
-    end
+    local bar_mode = _require_control_enum(self.controls, "cd_bar_mode")
 
-    local time_format = self.controls.cd_time_format:get_value()
-    if type(time_format) ~= "number" then
-        time_format = cd.time_format or LUI_ENUMS.cooldown_time_format.AUTO
-    end
+    local time_format = _require_control_enum(self.controls, "cd_time_format")
 
-    local raw_text_margin = tonumber(self.controls.cd_text_margin.tb:GetText()) or cd.text_margin or 4
-    local text_margin = scaled_int(raw_text_margin, 4)
+    local raw_text_margin = _require_control_number(self.controls, "cd_text_margin")
+    local text_margin = scaled_int(raw_text_margin)
     if text_margin < 0 then text_margin = 0 end
 
-    local name_max_chars = tonumber(self.controls.cd_name_max_chars.tb:GetText())
-    if name_max_chars == nil then
-        name_max_chars = cd.name_max_chars
-    end
+    local name_max_chars = _require_control_number(self.controls, "cd_name_max_chars")
 
-    local font_name = self.controls.cd_font_name:get_value()
-    if type(font_name) ~= "number" then
-        font_name = cd.font.name or LUI_ENUMS.font_name.VERDANA
-    end
-    local raw_font_size = tonumber(self.controls.cd_font_size.tb:GetText()) or cd.font.size or 14
-    local font_size = scaled_number(raw_font_size, 14)
+    local font_name = _require_control_enum(self.controls, "cd_font_name")
+    local raw_font_size = _require_control_number(self.controls, "cd_font_size")
+    local font_size = scaled_number(raw_font_size)
     local font = _require_font(font_name, font_size)
 
-    local font_style = self.controls.cd_font_style:get_value()
-    if type(font_style) ~= "number" then
-        font_style = cd.font.style or LUI_ENUMS.font_style.OUTLINE
-    end
+    local font_style = _require_control_enum(self.controls, "cd_font_style")
     local font_style_lotro = LUI_TO_LOTRO.font_style[font_style] or Turbine.UI.FontStyle.None
 
-    local font_color = _hex_to_color(self.controls.cd_font_color.tb:GetText())
-        or (cd.font and cd.font.color)
-        or Turbine.UI.Color(1, 1, 1, 1)
-    local outline_color = _hex_to_color(self.controls.cd_font_outline_color.tb:GetText())
-        or (cd.font and cd.font.outline_color)
-        or Turbine.UI.Color(1, 0, 0, 0)
+    local font_color = _require_control_color(self.controls, "cd_font_color")
+    local outline_color = _require_control_color(self.controls, "cd_font_outline_color")
 
-    local threshold = tonumber(self.controls.cd_threshold.tb:GetText()) or cd.threshold or 30
-    if threshold <= 0 then threshold = 30 end
+    local threshold = _require_control_number(self.controls, "cd_threshold")
+    if threshold <= 0 then
+        error("Invalid cooldown preview threshold: " .. tostring(threshold))
+    end
 
-    local raw_item_w = tonumber(self.controls.cd_item_w.tb:GetText()) or cd.item_w or 150
+    local raw_item_w = _require_control_number(self.controls, "cd_item_w")
     local min_item_w = lui_cooldown_min_item_width(
         item_h,
         border,
@@ -267,7 +240,7 @@ function ConfigWindow:update_cooldowns_preview()
         threshold,
         time_format
     )
-    local item_w = scaled_int(raw_item_w, 150)
+    local item_w = scaled_int(raw_item_w)
     if item_w < 10 then item_w = 10 end
     if item_w < min_item_w then
         item_w = min_item_w
@@ -276,7 +249,7 @@ function ConfigWindow:update_cooldowns_preview()
     local row = self.cooldowns_preview.row
     local p = self.cooldowns_preview
 
-    local outer_bw = p.preview_border_thickness or 1
+    local outer_bw = p.preview_border_thickness
     if outer_bw < 1 then outer_bw = 1 end
 
     local pw, ph = p.container:GetSize()

@@ -365,10 +365,11 @@ function ConfigWindow:open(main_key, preferred_sub_key)
     self:load_from_settings()
     if type(main_key) == "string" then
         self:select_main_tab(main_key, preferred_sub_key)
+    else
+        self:_activate_active_page()
     end
     self:show()
     self:layout()
-    self:_activate_active_page()
 end
 
 function ConfigWindow:bring_to_front()

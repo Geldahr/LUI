@@ -1,8 +1,11 @@
 import "LUI.src.Utils.timed_row_layout"
 
 local Common = SettingsPreviewCommon
-local _hex_to_color = Common.hex_to_color
 local _require_font = Common.require_font
+local _require_control_color = Common.require_control_color
+local _require_control_enum = Common.require_control_enum
+local _require_control_number = Common.require_control_number
+local _require_positive_scale = Common.require_positive_scale
 local _sync_preview_holder_height = Common.sync_preview_holder_height
 
 local LABEL_PAD = 3
@@ -132,21 +135,20 @@ function ConfigWindow:update_expiring_effects_preview()
         return
     end
 
-    local s = _G.loaded_settings
+    local raw_scale = _require_positive_scale(self)
 
-    local raw_scale = tonumber(self.controls.scale.tb:GetText()) or s.global.scale or 1
-    if raw_scale <= 0 then raw_scale = 1 end
-
-    local function scaled_int(raw_value, fallback)
+    local function scaled_int(raw_value)
         local n = tonumber(raw_value)
-        if n == nil then n = fallback or 0 end
+        if n == nil then
+            error("Invalid self expiring effects preview scaled int: " .. tostring(raw_value))
+        end
         return math.floor((n * raw_scale) + 0.5)
     end
 
-    local function scaled_border(raw_value, fallback)
+    local function scaled_border(raw_value)
         local n = tonumber(raw_value)
         if n == nil then
-            n = fallback or 0
+            error("Invalid self expiring effects preview scaled border: " .. tostring(raw_value))
         end
         if n <= 0 then
             return 0
@@ -156,82 +158,60 @@ function ConfigWindow:update_expiring_effects_preview()
         return out
     end
 
-    local function scaled_number(raw_value, fallback)
+    local function scaled_number(raw_value)
         local n = tonumber(raw_value)
-        if n == nil then n = fallback or 0 end
+        if n == nil then
+            error("Invalid self expiring effects preview scaled number: " .. tostring(raw_value))
+        end
         return n * raw_scale
     end
 
-    local raw_border = tonumber(self.controls.expiring_effects_border_width.tb:GetText()) or
-        s.self.expiring_effects.border_width or 1
-    local border = scaled_border(raw_border, 1)
+    local raw_border = _require_control_number(self.controls, "expiring_effects_border_width")
+    local border = scaled_border(raw_border)
     if border < 0 then border = 0 end
 
-    local raw_bar_width = tonumber(self.controls.expiring_effects_bar_width.tb:GetText()) or
-        s.self.expiring_effects.bar_width or 180
-    local raw_bar_height = tonumber(self.controls.expiring_effects_bar_height.tb:GetText()) or
-        s.self.expiring_effects.bar_height or 22
-    local bar_width = scaled_int(raw_bar_width, 180)
-    local bar_height = scaled_int(raw_bar_height, 22)
+    local raw_bar_width = _require_control_number(self.controls, "expiring_effects_bar_width")
+    local raw_bar_height = _require_control_number(self.controls, "expiring_effects_bar_height")
+    local bar_width = scaled_int(raw_bar_width)
+    local bar_height = scaled_int(raw_bar_height)
     if bar_width < 10 then bar_width = 10 end
     if bar_height < 10 then bar_height = 10 end
     local max_border = math.floor(math.min(bar_width, bar_height) / 2)
     if border > max_border then border = max_border end
 
-    local background_color = _hex_to_color(self.controls.expiring_effects_background_color.tb:GetText())
-        or (s.self.expiring_effects.color and s.self.expiring_effects.color.background)
-        or Turbine.UI.Color(0, 0, 0)
-    local border_color = _hex_to_color(self.controls.expiring_effects_border_color.tb:GetText())
-        or (s.self.expiring_effects.color and s.self.expiring_effects.color.border)
-        or background_color
-    local buff_bar_color = _hex_to_color(self.controls.expiring_effects_bar_color.tb:GetText())
-        or (s.self.expiring_effects.color and (s.self.expiring_effects.color.bar_buff or s.self.expiring_effects.color.bar))
-        or Turbine.UI.Color(0.9, 0.7, 0.2)
-    local curable_debuff_bar_color = _hex_to_color(self.controls.expiring_effects_debuff_curable_bar_color.tb:GetText())
-        or
-        (s.self.expiring_effects.color and (s.self.expiring_effects.color.bar_debuff_curable or s.self.expiring_effects.color.bar))
-        or Turbine.UI.Color(0.9, 0.25, 0.25)
-    local noncurable_debuff_bar_color = _hex_to_color(self.controls.expiring_effects_debuff_noncurable_bar_color.tb
-            :GetText())
-        or
-        (s.self.expiring_effects.color and (s.self.expiring_effects.color.bar_debuff_noncurable or s.self.expiring_effects.color.bar))
-        or Turbine.UI.Color(0.9, 0.25, 0.25)
+    local background_color = _require_control_color(self.controls, "expiring_effects_background_color")
+    local border_color = _require_control_color(self.controls, "expiring_effects_border_color")
+    local buff_bar_color = _require_control_color(self.controls, "expiring_effects_bar_color")
+    local curable_debuff_bar_color = _require_control_color(self.controls, "expiring_effects_debuff_curable_bar_color")
+    local noncurable_debuff_bar_color =
+        _require_control_color(self.controls, "expiring_effects_debuff_noncurable_bar_color")
 
-    local icon_side = self.controls.expiring_effects_icon_side:get_value()
-    if type(icon_side) ~= "number" then
-        icon_side = s.self.expiring_effects.icon_side or LUI_ENUMS.side.RIGHT
-    end
+    local icon_side = _require_control_enum(self.controls, "expiring_effects_icon_side")
     local icon_left = LUI_ENUMS.side_is_left[icon_side] == true
 
-    local bar_expire_towards = self.controls.expiring_effects_bar_expire_towards:get_value()
-    if type(bar_expire_towards) ~= "number" then
-        bar_expire_towards = s.self.expiring_effects.bar_expire_towards or LUI_ENUMS.side.RIGHT
-    end
+    local bar_expire_towards = _require_control_enum(self.controls, "expiring_effects_bar_expire_towards")
     local expire_towards_right = bar_expire_towards == LUI_ENUMS.side.RIGHT
 
-    local name_max_chars = tonumber(self.controls.expiring_effects_name_max_chars.tb:GetText())
-        or s.self.expiring_effects.name_max_chars
-        or 10
+    local name_max_chars = _require_control_number(self.controls, "expiring_effects_name_max_chars")
 
-    local font_name = self.controls.expiring_effects_font_name:get_value()
-    if type(font_name) ~= "number" then
-        font_name = s.self.expiring_effects.font.name or LUI_ENUMS.font_name.VERDANA
-    end
-    local raw_font_size = tonumber(self.controls.expiring_effects_font_size.tb:GetText()) or
-        s.self.expiring_effects.font.size or 14
-    local font_size = scaled_number(raw_font_size, 14)
+    local font_name = _require_control_enum(self.controls, "expiring_effects_font_name")
+    local raw_font_size = _require_control_number(self.controls, "expiring_effects_font_size")
+    local font_size = scaled_number(raw_font_size)
     local font = _require_font(font_name, font_size)
 
-    local style_enum = self.controls.expiring_effects_font_style:get_value() or LUI_ENUMS.font_style.OUTLINE
-    local font_style = LUI_TO_LOTRO.font_style[style_enum] or Turbine.UI.FontStyle.None
+    local style_enum = _require_control_enum(self.controls, "expiring_effects_font_style")
+    local font_style = LUI_TO_LOTRO.font_style[style_enum]
+    if font_style == nil then
+        error("Missing self expiring effects preview font style: " .. tostring(style_enum))
+    end
 
-    local font_color = _hex_to_color(self.controls.expiring_effects_font_color.tb:GetText()) or Turbine.UI.Color(1, 1, 1)
-    local outline_color = _hex_to_color(self.controls.expiring_effects_font_outline_color.tb:GetText()) or
-        Turbine.UI.Color(0, 0, 0)
+    local font_color = _require_control_color(self.controls, "expiring_effects_font_color")
+    local outline_color = _require_control_color(self.controls, "expiring_effects_font_outline_color")
 
-    local threshold = tonumber(self.controls.expiring_effects_threshold.tb:GetText()) or
-        s.self.expiring_effects.threshold or 5
-    if threshold <= 0 then threshold = 5 end
+    local threshold = _require_control_number(self.controls, "expiring_effects_threshold")
+    if threshold <= 0 then
+        error("Invalid self expiring effects preview threshold: " .. tostring(threshold))
+    end
     local remaining = threshold / 2
 
     local min_bar_width = lui_timed_row_min_timed_bar_width(

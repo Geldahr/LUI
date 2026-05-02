@@ -104,7 +104,7 @@ end
 function ConfigContent:set_grid_columns(columns)
     local value = tonumber(columns)
     if value == nil or value < 1 then
-        value = 1
+        error("Invalid ConfigContent grid column count: " .. tostring(columns))
     end
     self.grid_columns = math.floor(value + 0.5)
 end

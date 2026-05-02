@@ -353,7 +353,11 @@ function SettingsFeatureSectionPage:layout()
         self.section_tab_bar:SetSize(width, section_tab_h)
         self.section_tab_bar:refresh_layout()
 
-        local border = math.max(1, _scaled_int(tonumber(Style.BORDER_WIDTH) or 1))
+        local border_value = tonumber(Style.BORDER_WIDTH)
+        if border_value == nil then
+            error("Invalid Style.BORDER_WIDTH: " .. tostring(Style.BORDER_WIDTH))
+        end
+        local border = math.max(1, _scaled_int(border_value))
         local body_pad = frame_margin
 
         self.section_frame:SetVisible(true)

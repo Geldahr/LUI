@@ -1,12 +1,14 @@
 local Common = SettingsPreviewCommon
-local _hex_to_color = Common.hex_to_color
 local _dim_color = Common.dim_color
 local _require_font = Common.require_font
+local _require_control_color = Common.require_control_color
+local _require_control_enum = Common.require_control_enum
+local _require_control_number = Common.require_control_number
+local _require_positive_scale = Common.require_positive_scale
 local _apply_preview_border = Common.apply_preview_border
 local _preview_number_abbrev_settings = Common.preview_number_abbrev_settings
 local _morale_color_preview = Common.morale_color_preview
 local _sync_preview_holder_height = Common.sync_preview_holder_height
-local DEFAULT_GRADIENT_MID_COLOR = Common.default_gradient_mid_color
 
 import "LUI.src.Utils.vitals_labels"
 
@@ -19,7 +21,7 @@ local function _render_preview_targets_target_label(window, label_index, label, 
     local controls = window.controls
     local key = "target_targets_target_label" .. tostring(label_index)
     local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
-    local text = controls[key .. "_text"].tb:GetText() or ""
+    local text = controls[key .. "_text"].tb:GetText()
 
     if enabled ~= true or _label_text_is_blank(text) == true then
         label:SetText("")
@@ -27,19 +29,19 @@ local function _render_preview_targets_target_label(window, label_index, label, 
         return
     end
 
-    local text_alignment = controls[key .. "_text_alignment"]:get_value() or LUI_ENUMS.text_alignment.CENTER
-    local anchor = controls[key .. "_anchor"]:get_value() or LUI_ENUMS.vitals_label_anchor.CENTER
-    local width_mode = controls[key .. "_width_mode"]:get_value() or LUI_ENUMS.vitals_label_width_mode.FILL
-    local font_name = controls[key .. "_font_name"]:get_value() or LUI_ENUMS.font_name.VERDANA
-    local raw_font_size = tonumber(controls[key .. "_font_size"].tb:GetText()) or default_font_size
+    local text_alignment = _require_control_enum(controls, key .. "_text_alignment")
+    local anchor = _require_control_enum(controls, key .. "_anchor")
+    local width_mode = _require_control_enum(controls, key .. "_width_mode")
+    local font_name = _require_control_enum(controls, key .. "_font_name")
+    local raw_font_size = _require_control_number(controls, key .. "_font_size")
     local font_size = raw_font_size * raw_scale
-    local font_style_enum = controls[key .. "_font_style"]:get_value() or LUI_ENUMS.font_style.OUTLINE
+    local font_style_enum = _require_control_enum(controls, key .. "_font_style")
     local rendered_text = lui_format_tokenized(lui_tokenize_format(text), context)
 
     label:SetFont(_require_font(font_name, font_size))
     label:SetFontStyle(LUI_TO_LOTRO.font_style[font_style_enum])
-    label:SetForeColor(_hex_to_color(controls[key .. "_font_color"].tb:GetText()) or Turbine.UI.Color(1, 1, 1))
-    label:SetOutlineColor(_hex_to_color(controls[key .. "_font_outline_color"].tb:GetText()) or Turbine.UI.Color(0, 0, 0))
+    label:SetForeColor(_require_control_color(controls, key .. "_font_color"))
+    label:SetOutlineColor(_require_control_color(controls, key .. "_font_outline_color"))
     lui_vitals_layout_label(
         label,
         width,
@@ -47,8 +49,8 @@ local function _render_preview_targets_target_label(window, label_index, label, 
         anchor,
         width_mode,
         text_alignment,
-        math.floor(((tonumber(controls[key .. "_x_offset"].tb:GetText()) or 0) * raw_scale) + 0.5),
-        math.floor(((tonumber(controls[key .. "_y_offset"].tb:GetText()) or 0) * raw_scale) + 0.5),
+        math.floor((_require_control_number(controls, key .. "_x_offset") * raw_scale) + 0.5),
+        math.floor((_require_control_number(controls, key .. "_y_offset") * raw_scale) + 0.5),
         font_name,
         font_size,
         rendered_text
@@ -145,21 +147,20 @@ function ConfigWindow:update_target_targets_target_preview()
         return
     end
 
-    local raw_scale = tonumber(self.controls.scale.tb:GetText()) or 1
-    if raw_scale <= 0 then raw_scale = 1 end
+    local raw_scale = _require_positive_scale(self)
 
-    local function scaled_int(raw_value, fallback)
+    local function scaled_int(raw_value)
         local n = tonumber(raw_value)
         if n == nil then
-            n = fallback or 0
+            error("Invalid target's target preview scaled int: " .. tostring(raw_value))
         end
         return math.floor((n * raw_scale) + 0.5)
     end
 
-    local function scaled_border(raw_value, fallback)
+    local function scaled_border(raw_value)
         local n = tonumber(raw_value)
         if n == nil then
-            n = fallback or 0
+            error("Invalid target's target preview scaled border: " .. tostring(raw_value))
         end
         if n <= 0 then
             return 0
@@ -171,16 +172,16 @@ function ConfigWindow:update_target_targets_target_preview()
 
     lui_set_number_abbrev_preview_settings(_preview_number_abbrev_settings(self))
 
-    local frame_w = scaled_int(tonumber(self.controls.target_targets_target_width.tb:GetText()), 250)
-    local border = scaled_border(tonumber(self.controls.target_targets_target_border_width.tb:GetText()), 1)
+    local frame_w = scaled_int(_require_control_number(self.controls, "target_targets_target_width"))
+    local border = scaled_border(_require_control_number(self.controls, "target_targets_target_border_width"))
     if frame_w < 40 then frame_w = 40 end
     if border < 0 then border = 0 end
     if border > math.floor(frame_w / 4) then
         border = math.floor(frame_w / 4)
     end
 
-    local raw_h = tonumber(self.controls.target_targets_target_height.tb:GetText()) or 26
-    local bar_h = scaled_int(raw_h, 26)
+    local raw_h = _require_control_number(self.controls, "target_targets_target_height")
+    local bar_h = scaled_int(raw_h)
     if bar_h < 10 then bar_h = 10 end
 
     local preview_border = 1
@@ -202,27 +203,20 @@ function ConfigWindow:update_target_targets_target_preview()
     p.root:SetSize(frame_w, bar_h)
     _apply_preview_border(p, outer_w, outer_h)
 
-    local morale_bg = _hex_to_color(self.controls.target_targets_target_background_color.tb:GetText()) or
-        Turbine.UI.Color(0, 0, 0)
+    local morale_bg = _require_control_color(self.controls, "target_targets_target_background_color")
     local ressource_bg_matches_missing =
         self.controls.target_targets_target_background_matches_missing.cb:IsChecked() == true
-    local ressource_bg_dimming = tonumber(self.controls.target_targets_target_background_dimming.tb:GetText()) or 0.75
-    local border_color = _hex_to_color(self.controls.target_targets_target_border_color.tb:GetText()) or morale_bg
-    local bubble_color = _hex_to_color(self.controls.target_targets_target_bubble_color.tb:GetText()) or
-        Turbine.UI.Color(0.2, 0.8, 1.0)
+    local ressource_bg_dimming = _require_control_number(self.controls, "target_targets_target_background_dimming")
+    local border_color = _require_control_color(self.controls, "target_targets_target_border_color")
+    local bubble_color = _require_control_color(self.controls, "target_targets_target_bubble_color")
     local gradient_enabled = self.controls.target_targets_target_color_gradient.cb:IsChecked() == true
-    local high = _hex_to_color(self.controls.target_targets_target_color_high.tb:GetText()) or
-        Turbine.UI.Color(0.290196, 0.639216, 0.286275)
-    local medium = _hex_to_color(self.controls.target_targets_target_color_medium.tb:GetText()) or
-        Turbine.UI.Color(1, 0.650980, 0.803922, 0.196078)
-    local low = _hex_to_color(self.controls.target_targets_target_color_low.tb:GetText()) or
-        Turbine.UI.Color(1, 0.5, 0)
-    local critical = _hex_to_color(self.controls.target_targets_target_color_critical.tb:GetText()) or
-        Turbine.UI.Color(1, 0, 0)
-    local gradient_full = _hex_to_color(self.controls.target_targets_target_color_gradient_full.tb:GetText()) or high
-    local gradient_mid = _hex_to_color(self.controls.target_targets_target_color_gradient_mid.tb:GetText()) or
-        DEFAULT_GRADIENT_MID_COLOR
-    local gradient_low = _hex_to_color(self.controls.target_targets_target_color_gradient_low.tb:GetText()) or critical
+    local high = _require_control_color(self.controls, "target_targets_target_color_high")
+    local medium = _require_control_color(self.controls, "target_targets_target_color_medium")
+    local low = _require_control_color(self.controls, "target_targets_target_color_low")
+    local critical = _require_control_color(self.controls, "target_targets_target_color_critical")
+    local gradient_full = _require_control_color(self.controls, "target_targets_target_color_gradient_full")
+    local gradient_mid = _require_control_color(self.controls, "target_targets_target_color_gradient_mid")
+    local gradient_low = _require_control_color(self.controls, "target_targets_target_color_gradient_low")
     Common.update_gradient_preview(self, "target_targets_target_color_gradient_preview", gradient_full, gradient_mid,
         gradient_low)
 
@@ -280,7 +274,7 @@ function ConfigWindow:update_target_targets_target_preview()
         p.bubble:SetVisible(false)
     end
 
-    local tt_bubble_fmt = self.controls.target_targets_target_bubble_text.tb:GetText() or ""
+    local tt_bubble_fmt = self.controls.target_targets_target_bubble_text.tb:GetText()
     local tt_bubble_tokens = lui_tokenize_format(tt_bubble_fmt)
     local tt_max = 10000
     local tt_cur = math.floor(tt_max * percent + 0.5)
