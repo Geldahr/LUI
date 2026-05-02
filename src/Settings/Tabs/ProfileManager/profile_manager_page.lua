@@ -240,7 +240,7 @@ end
 ProfileManagerPage = class(SettingsFeatureSectionPage)
 
 function ProfileManagerPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window)
+    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
     self:add_section(TR["General"], "general", _new_manage_section(window, self))
     self:add_section(TR["Create"], "create", _new_create_section(window))
 end

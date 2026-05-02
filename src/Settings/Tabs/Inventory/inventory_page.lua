@@ -18,7 +18,7 @@ local TILE_SIZE_VALUES = { 32, 40, 48 }
 InventoryPage = class(SettingsFeatureSectionPage)
 
 function InventoryPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window)
+    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
 
     local general = configure_compact_form(SettingsFormPage(window), 4, nil)
     general:add_checkbox("inventory_enabled", TR["Enabled"], true)

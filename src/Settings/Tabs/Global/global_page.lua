@@ -10,7 +10,7 @@ local configure_compact_form = FeatureShell.configure_compact_form
 GlobalPage = class(SettingsFeatureSectionPage)
 
 function GlobalPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window)
+    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
 
     local digits_help = table.concat({
         TR["How many digits are shown before shortening."],

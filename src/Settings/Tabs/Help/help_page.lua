@@ -161,7 +161,7 @@ end
 HelpPage = class(SettingsFeatureSectionPage)
 
 function HelpPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window)
+    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
     self:add_section(TR["About LUI"], "about", _new_about_section(window))
     self:add_section(TR["Commands"], "commands", _new_commands_section(window))
 end

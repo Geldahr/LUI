@@ -20,7 +20,7 @@ local DISPLAY_MODE_VALUES = {
 TravelPage = class(SettingsFeatureSectionPage)
 
 function TravelPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window)
+    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
 
     local general = configure_compact_form(SettingsFormPage(window), 4, nil)
     general:add_checkbox("travel_enabled", TR["Enabled"])

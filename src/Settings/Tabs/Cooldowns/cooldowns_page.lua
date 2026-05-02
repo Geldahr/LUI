@@ -166,7 +166,7 @@ local function _new_colors_section(window, refresh_preview_fn)
     local bar = _new_bar_colors_page(window, refresh_preview_fn)
     local text = _new_text_colors_page(window, refresh_preview_fn)
 
-    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.left,
+    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.top,
         FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
     page:add_sub_page(TR["Frame"], module_for_page("frame", frame))
     page:add_sub_page(TR["Bar"], module_for_page("bar", bar))
@@ -206,7 +206,7 @@ CooldownsFeaturePage = class(SettingsFeatureSectionPage)
 function CooldownsFeaturePage:Constructor(window)
     SettingsFeatureSectionPage.Constructor(self, window, "cooldowns_preview", 52, function(win)
         win:update_cooldowns_preview()
-    end)
+    end, false)
 
     self:add_section(TR["General"], "general", _new_general_page(window, self.refresh_preview))
     self:add_section(TR["Layout"], "layout", _new_layout_page(window, self.refresh_preview))

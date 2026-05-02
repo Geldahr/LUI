@@ -15,7 +15,7 @@ DropsPage = class(SettingsFeatureSectionPage)
 function DropsPage:Constructor(window)
     SettingsFeatureSectionPage.Constructor(self, window, "drops_preview", 136, function(win)
         win:update_drops_preview()
-    end)
+    end, false)
 
     local flow_labels = { TR["Latest at top"], TR["Latest at bottom"] }
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
@@ -49,7 +49,7 @@ function DropsPage:Constructor(window)
     item:add_text("drops_item_background_opacity", TR["Background opacity (0..1)"])
     item:add_text("drops_item_background_color", TR["Background color"], true)
 
-    local colors = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.left,
+    local colors = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.top,
         FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
     colors:add_sub_page(TR["HUD"], module_for_page("hud", hud))
     colors:add_sub_page(TR["Item"], module_for_page("item", item))

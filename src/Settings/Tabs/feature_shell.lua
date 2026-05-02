@@ -121,7 +121,7 @@ end
 
 SettingsFeatureSectionPage = class(Turbine.UI.Control)
 
-function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_height, preview_refresh_fn)
+function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_height, preview_refresh_fn, use_button_tabs)
     Turbine.UI.Control.Constructor(self)
 
     local ui = window._ui
@@ -136,6 +136,7 @@ function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_hei
     self._sections = {}
     self._section_tabs = {}
     self._active_section_key = nil
+    self._section_use_button_tabs = use_button_tabs ~= false
     self.loading = false
     self.show_main_content_border = false
     self.color_to_hex = ui.color_to_hex
@@ -144,10 +145,16 @@ function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_hei
     self.section_tab_bar = UI.Widgets.LuiTabBar()
     self.section_tab_bar:SetParent(self)
     self.section_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
-    self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.button)
     self.section_tab_bar:set_show_content_border(false)
-    self.section_tab_bar:set_content_padding(0)
-    _apply_button_tab_bar_theme(self.section_tab_bar)
+    self.section_tab_bar:set_show_border_left(false)
+    if self._section_use_button_tabs == true then
+        self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.button)
+        self.section_tab_bar:set_content_padding(0)
+        _apply_button_tab_bar_theme(self.section_tab_bar)
+    else
+        self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.connected)
+        self.section_tab_bar:set_content_padding(_scaled_int(4))
+    end
     self.section_tab_bar.on_tab_changed = function(_, page)
         self:_on_section_changed(page)
     end
@@ -264,10 +271,19 @@ end
 function SettingsFeatureSectionPage:apply_ui_scale()
     self.section_tab_bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
     self.section_tab_bar:set_show_content_border(false)
-    self.section_tab_bar:set_content_padding(0)
-    self.section_tab_bar:set_scale(_G.settings.global.scale * SECTION_TAB_SCALE)
-    self.section_tab_bar:set_font(_scaled_font("Verdana", SECTION_TAB_FONT_SIZE))
-    _apply_button_tab_bar_theme(self.section_tab_bar)
+    self.section_tab_bar:set_show_border_left(false)
+    if self._section_use_button_tabs == true then
+        self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.button)
+        self.section_tab_bar:set_content_padding(0)
+        self.section_tab_bar:set_scale(_G.settings.global.scale * SECTION_TAB_SCALE)
+        self.section_tab_bar:set_font(_scaled_font("Verdana", SECTION_TAB_FONT_SIZE))
+        _apply_button_tab_bar_theme(self.section_tab_bar)
+    else
+        self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.connected)
+        self.section_tab_bar:set_content_padding(_scaled_int(4))
+        self.section_tab_bar:set_scale(_G.settings.global.scale)
+        self.section_tab_bar:set_font(self.window.tab_font)
+    end
 
     for i = 1, #self._section_order do
         self._sections[self._section_order[i]]:apply_ui_scale()
@@ -298,7 +314,8 @@ function SettingsFeatureSectionPage:layout()
         return
     end
 
-    local section_tab_h = _scaled_int(BASE_TAB_HEIGHT * SECTION_TAB_SCALE)
+    local section_tab_h = self._section_use_button_tabs == true and _scaled_int(BASE_TAB_HEIGHT * SECTION_TAB_SCALE) or
+        _scaled_int(BASE_TAB_HEIGHT)
     local frame_margin = _scaled_int(SECTION_FRAME_PADDING)
     local section_gap = frame_margin
     local preview_h = 0

@@ -26,7 +26,7 @@ local DISPLAY_MODE_HELP = table.concat({
 CraftingPage = class(SettingsFeatureSectionPage)
 
 function CraftingPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window)
+    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
 
     local general = configure_compact_form(SettingsFormPage(window), 4, nil)
     general:add_checkbox("crafting_enabled", TR["Enabled"])

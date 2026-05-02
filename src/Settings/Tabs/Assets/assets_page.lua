@@ -28,7 +28,7 @@ local VIEW_MODE_VALUES = {
 AssetsPage = class(SettingsFeatureSectionPage)
 
 function AssetsPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window)
+    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
 
     local general = configure_compact_form(SettingsFormPage(window), 4, nil)
     general:add_checkbox("assets_enabled", TR["Enabled"])

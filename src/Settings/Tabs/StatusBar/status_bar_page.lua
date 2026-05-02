@@ -103,7 +103,7 @@ local function _new_colors_section(window)
     local inventory = _new_color_inventory_page(window)
     local durability = _new_color_durability_page(window)
 
-    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.left,
+    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.top,
         FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
     page:add_sub_page(TR["Background"], module_for_page("background", background))
     page:add_sub_page(TR["Font"], module_for_page("font", font))
@@ -183,7 +183,7 @@ local function _new_widget_crafting_plan_page(window)
 end
 
 local function _new_widgets_section(window)
-    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.left,
+    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.top,
         FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
     page:add_sub_page(TR["Time (local)"], module_for_page("time", _new_widget_time_page(window)))
     page:add_sub_page(TR["Inventory"], module_for_page("inventory", _new_widget_inventory_page(window)))
@@ -199,7 +199,7 @@ end
 StatusBarPage = class(SettingsFeatureSectionPage)
 
 function StatusBarPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window)
+    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
 
     self:add_section(TR["General"], "general", _new_general_page(window))
     self:add_section(TR["Background"], "background", _new_background_page(window))
