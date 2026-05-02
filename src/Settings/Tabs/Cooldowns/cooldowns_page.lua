@@ -86,14 +86,14 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
     local ui = window._ui
 
     local frame = ConfigContent(window, 3, refresh_preview)
-    frame:add_color_picker(TR["Background color"], "cd_bg_color",
+    frame:add_bound_color_picker(TR["Background color"], "cd_bg_color",
         function(value)
             settings_getter().color.background = ui.hex_to_color(value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().color.background))
         end)
-    frame:add_color_picker(TR["Border color"], "cd_border_color",
+    frame:add_bound_color_picker(TR["Border color"], "cd_border_color",
         function(value)
             settings_getter().color.border = ui.hex_to_color(value)
         end,
@@ -102,7 +102,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         end)
 
     local bar = ConfigContent(window, 3, refresh_preview)
-    bar:add_color_picker(TR["Bar color"], "cd_bar_color",
+    bar:add_bound_color_picker(TR["Bar color"], "cd_bar_color",
         function(value)
             settings_getter().color.bar = ui.hex_to_color(value)
         end,
@@ -111,14 +111,14 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         end)
 
     local text = ConfigContent(window, 3, refresh_preview)
-    text:add_color_picker(TR["Font color"], "cd_font_color",
+    text:add_bound_color_picker(TR["Font color"], "cd_font_color",
         function(value)
             settings_getter().font.color = ui.hex_to_color(value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().font.color))
         end)
-    text:add_color_picker(TR["Outline color"], "cd_font_outline_color",
+    text:add_bound_color_picker(TR["Outline color"], "cd_font_outline_color",
         function(value)
             settings_getter().font.outline_color = ui.hex_to_color(value)
         end,
@@ -171,7 +171,7 @@ function CooldownsFeaturePage:Constructor(window)
             entry.cb:SetChecked(settings_getter().enabled == true)
         end, true)
     general:break_line()
-    general:add_line_edit(TR["Threshold (s)"], "cd_threshold",
+    general:add_bound_line_edit(TR["Threshold (s)"], "cd_threshold",
         function(value)
             local threshold = tonumber(value)
             if threshold ~= nil then
@@ -181,7 +181,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().threshold))
         end)
-    general:add_line_edit(TR["Min base cooldown (s)"], "cd_min_base_cooldown",
+    general:add_bound_line_edit(TR["Min base cooldown (s)"], "cd_min_base_cooldown",
         function(value)
             local min_base_cooldown = tonumber(value)
             if min_base_cooldown ~= nil then
@@ -194,7 +194,7 @@ function CooldownsFeaturePage:Constructor(window)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4, refresh_preview)
-    layout:add_line_edit(TR["Item width"], "cd_item_w",
+    layout:add_bound_line_edit(TR["Item width"], "cd_item_w",
         function(value)
             local item_w = tonumber(value)
             if item_w ~= nil then
@@ -204,7 +204,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().item_w))
         end)
-    layout:add_line_edit(TR["Item height"], "cd_item_h",
+    layout:add_bound_line_edit(TR["Item height"], "cd_item_h",
         function(value)
             local item_h = tonumber(value)
             if item_h ~= nil then
@@ -214,7 +214,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().item_h))
         end)
-    layout:add_line_edit(TR["Spacing (px)"], "cd_spacing",
+    layout:add_bound_line_edit(TR["Spacing (px)"], "cd_spacing",
         function(value)
             local spacing = tonumber(value)
             if spacing ~= nil then
@@ -224,7 +224,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().spacing))
         end)
-    layout:add_line_edit(TR["Border width (px)"], "cd_border_width",
+    layout:add_bound_line_edit(TR["Border width (px)"], "cd_border_width",
         function(value)
             local border_width = tonumber(value)
             if border_width ~= nil then
@@ -234,7 +234,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().border_width))
         end)
-    layout:add_line_edit(TR["Columns"], "cd_columns",
+    layout:add_bound_line_edit(TR["Columns"], "cd_columns",
         function(value)
             local columns = tonumber(value)
             if columns ~= nil then
@@ -244,7 +244,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().columns))
         end)
-    layout:add_line_edit(TR["Rows"], "cd_rows",
+    layout:add_bound_line_edit(TR["Rows"], "cd_rows",
         function(value)
             local rows = tonumber(value)
             if rows ~= nil then
@@ -297,7 +297,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry:set_value(settings_getter().time_format)
         end)
-    text:add_line_edit(TR["Text margin (px)"], "cd_text_margin",
+    text:add_bound_line_edit(TR["Text margin (px)"], "cd_text_margin",
         function(value)
             local text_margin = tonumber(value)
             if text_margin ~= nil then
@@ -307,7 +307,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().text_margin))
         end)
-    text:add_line_edit(TR["Max name chars"], "cd_name_max_chars",
+    text:add_bound_line_edit(TR["Max name chars"], "cd_name_max_chars",
         function(value)
             local name_max_chars = tonumber(value)
             if name_max_chars ~= nil then
@@ -325,7 +325,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry:set_value(settings_getter().font.name)
         end)
-    text:add_line_edit(TR["Font size"], "cd_font_size",
+    text:add_bound_line_edit(TR["Font size"], "cd_font_size",
         function(value)
             local font_size = tonumber(value)
             if font_size ~= nil then
@@ -410,14 +410,4 @@ function CooldownsFeaturePage:layout()
 
     self.preview_holder.control:SetPosition(0, top_h + preview_gap)
     self.preview_holder.control:SetSize(width, preview_h)
-end
-
-function CooldownsFeaturePage:load_from_settings(s)
-    self._settings = s
-    self:load()
-end
-
-function CooldownsFeaturePage:apply_to_settings(s)
-    self._settings = s
-    self:save()
 end

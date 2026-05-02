@@ -38,17 +38,6 @@ local function _apply_button_tab_bar_theme(tab_bar)
     tab_bar:refresh_layout()
 end
 
-local function _configure_compact_form(page, columns, refresh_preview_fn)
-    page:set_compact_fields(true)
-    page:set_grid_columns(columns)
-    page.refresh_preview = refresh_preview_fn or _refresh_preview_noop
-    return page
-end
-
-local function _add_compact_row_break(page)
-    page:add_break(0)
-end
-
 local function _module_for_page(key, page)
     return {
         key = key,
@@ -401,8 +390,6 @@ SettingsFeatureShell = {
     scaled_int = _scaled_int,
     scaled_font = _scaled_font,
     apply_button_tab_bar_theme = _apply_button_tab_bar_theme,
-    configure_compact_form = _configure_compact_form,
-    add_compact_row_break = _add_compact_row_break,
     module_for_page = _module_for_page,
     nested_page_class = SettingsFeatureNestedPage,
     section_page_class = SettingsFeatureSectionPage,

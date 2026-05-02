@@ -169,10 +169,9 @@ function ConfigWindow:update_drops_preview()
 
     local frame_x = math.max(0, math.floor((holder_w - width) / 2))
 
-    local flow = self.controls.drops_flow.get_value and self.controls.drops_flow:get_value() or s.drops.flow
-    local align = self.controls.drops_align.get_value and self.controls.drops_align:get_value() or s.drops.align
-    local icon_position = self.controls.drops_icon_side.get_value and self.controls.drops_icon_side:get_value() or
-        s.drops.icon_side
+    local flow = self.controls.drops_flow:get_value() or s.drops.flow
+    local align = self.controls.drops_align:get_value() or s.drops.align
+    local icon_position = self.controls.drops_icon_side:get_value() or s.drops.icon_side
     local hud_color = _hex_to_color(self.controls.drops_hud_background_color.tb:GetText()) or
         s.drops.hud.background_color or Turbine.UI.Color(1, 0, 0, 0)
     local hud_opacity = tonumber(self.controls.drops_hud_background_opacity.tb:GetText()) or

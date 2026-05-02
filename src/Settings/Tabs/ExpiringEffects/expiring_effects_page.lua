@@ -41,14 +41,14 @@ local function _new_colors_section(window, refresh_preview, settings_getter, pre
     local ui = window._ui
 
     local frame = ConfigContent(window, 3, refresh_preview)
-    frame:add_color_picker(TR["Background Color"], prefix .. "_background_color",
+    frame:add_bound_color_picker(TR["Background Color"], prefix .. "_background_color",
         function(value)
             _apply_color(ui, settings_getter().color.background, value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().color.background))
         end)
-    frame:add_color_picker(TR["Border Color"], prefix .. "_border_color",
+    frame:add_bound_color_picker(TR["Border Color"], prefix .. "_border_color",
         function(value)
             _apply_color(ui, settings_getter().color.border, value)
         end,
@@ -59,7 +59,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter, pre
     local bars = ConfigContent(window, 3, refresh_preview)
     for i = 1, #bar_specs do
         local spec = bar_specs[i]
-        bars:add_color_picker(spec.label, spec.key,
+        bars:add_bound_color_picker(spec.label, spec.key,
             function(value)
                 _apply_color(ui, spec.get_target(settings_getter), value)
             end,
@@ -69,14 +69,14 @@ local function _new_colors_section(window, refresh_preview, settings_getter, pre
     end
 
     local text = ConfigContent(window, 3, refresh_preview)
-    text:add_color_picker(TR["Font Color"], prefix .. "_font_color",
+    text:add_bound_color_picker(TR["Font Color"], prefix .. "_font_color",
         function(value)
             _apply_color(ui, settings_getter().font.color, value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().font.color))
         end)
-    text:add_color_picker(TR["Outline Color"], prefix .. "_font_outline_color",
+    text:add_bound_color_picker(TR["Outline Color"], prefix .. "_font_outline_color",
         function(value)
             _apply_color(ui, settings_getter().font.outline_color, value)
         end,
@@ -127,7 +127,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
             entry.cb:SetChecked(settings_getter().show_noncurable_debuffs ~= false)
         end, false)
     general:break_line()
-    general:add_line_edit(TR["Show when less than seconds remaining"], prefix .. "_threshold",
+    general:add_bound_line_edit(TR["Show when less than seconds remaining"], prefix .. "_threshold",
         function(value)
             local threshold = tonumber(value)
             if threshold ~= nil then
@@ -140,7 +140,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
     page:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4, page.refresh_preview)
-    layout:add_line_edit(TR["Bar Width"], prefix .. "_bar_width",
+    layout:add_bound_line_edit(TR["Bar Width"], prefix .. "_bar_width",
         function(value)
             local bar_width = tonumber(value)
             if bar_width ~= nil then
@@ -150,7 +150,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function(entry)
             entry.tb:SetText(tostring(settings_getter().bar_width))
         end)
-    layout:add_line_edit(TR["Bar Height"], prefix .. "_bar_height",
+    layout:add_bound_line_edit(TR["Bar Height"], prefix .. "_bar_height",
         function(value)
             local bar_height = tonumber(value)
             if bar_height ~= nil then
@@ -160,7 +160,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function(entry)
             entry.tb:SetText(tostring(settings_getter().bar_height))
         end)
-    layout:add_line_edit(TR["Border Width"], prefix .. "_border_width",
+    layout:add_bound_line_edit(TR["Border Width"], prefix .. "_border_width",
         function(value)
             local border_width = tonumber(value)
             if border_width ~= nil then
@@ -171,7 +171,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
             entry.tb:SetText(tostring(settings_getter().border_width))
         end)
     layout:break_line()
-    layout:add_line_edit(TR["Columns"], prefix .. "_columns",
+    layout:add_bound_line_edit(TR["Columns"], prefix .. "_columns",
         function(value)
             local columns = tonumber(value)
             if columns ~= nil then
@@ -181,7 +181,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function(entry)
             entry.tb:SetText(tostring(settings_getter().columns))
         end)
-    layout:add_line_edit(TR["Rows"], prefix .. "_rows",
+    layout:add_bound_line_edit(TR["Rows"], prefix .. "_rows",
         function(value)
             local rows = tonumber(value)
             if rows ~= nil then
@@ -191,7 +191,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function(entry)
             entry.tb:SetText(tostring(settings_getter().rows))
         end)
-    layout:add_line_edit(TR["Spacing"], prefix .. "_spacing",
+    layout:add_bound_line_edit(TR["Spacing"], prefix .. "_spacing",
         function(value)
             local spacing = tonumber(value)
             if spacing ~= nil then
@@ -223,7 +223,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
     page:add_tab(TR["Colors"], "colors", colors)
 
     local text = ConfigContent(window, 4, page.refresh_preview)
-    text:add_line_edit(TR["Max name characters"], prefix .. "_name_max_chars",
+    text:add_bound_line_edit(TR["Max name characters"], prefix .. "_name_max_chars",
         function(value)
             local name_max_chars = tonumber(value)
             if name_max_chars ~= nil then
@@ -241,7 +241,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function(entry)
             entry:set_value(settings_getter().font.name)
         end)
-    text:add_line_edit(TR["Font Size"], prefix .. "_font_size",
+    text:add_bound_line_edit(TR["Font Size"], prefix .. "_font_size",
         function(value)
             local font_size = tonumber(value)
             if font_size ~= nil then
@@ -340,14 +340,4 @@ end
 function ExpiringEffectsPage:apply_ui_scale()
     ConfigTabs.apply_ui_scale(self)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
-end
-
-function ExpiringEffectsPage:load_from_settings(s)
-    self._settings = s
-    self:load()
-end
-
-function ExpiringEffectsPage:apply_to_settings(s)
-    self._settings = s
-    self:save()
 end

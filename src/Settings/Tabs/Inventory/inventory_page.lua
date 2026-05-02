@@ -40,7 +40,7 @@ function InventoryPage:Constructor(window)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4)
-    layout:add_line_edit(TR["Columns"], "inventory_cols",
+    layout:add_bound_line_edit(TR["Columns"], "inventory_cols",
         function(value)
             local cols = tonumber(value)
             if cols ~= nil then
@@ -63,14 +63,4 @@ end
 function InventoryPage:apply_ui_scale()
     ConfigTabs.apply_ui_scale(self)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
-end
-
-function InventoryPage:load_from_settings(s)
-    self._settings = s
-    self:load()
-end
-
-function InventoryPage:apply_to_settings(s)
-    self._settings = s
-    self:save()
 end

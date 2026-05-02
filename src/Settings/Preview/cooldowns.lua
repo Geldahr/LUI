@@ -203,24 +203,23 @@ function ConfigWindow:update_cooldowns_preview()
     local border = scaled_border(raw_border_w, 1)
     if border < 0 then border = 0 end
 
-    local icon_side = self.controls.cd_icon_side.get_value and self.controls.cd_icon_side:get_value() or nil
+    local icon_side = self.controls.cd_icon_side:get_value()
     if type(icon_side) ~= "number" then
         icon_side = cd.icon_side or LUI_ENUMS.side.RIGHT
     end
     local icon_left = LUI_ENUMS.side_is_left[icon_side] == true
 
-    local bar_expire_towards = self.controls.cd_bar_expire_towards.get_value and
-        self.controls.cd_bar_expire_towards:get_value() or nil
+    local bar_expire_towards = self.controls.cd_bar_expire_towards:get_value()
     if type(bar_expire_towards) ~= "number" then
         bar_expire_towards = cd.bar_expire_towards or LUI_ENUMS.side.RIGHT
     end
 
-    local bar_mode = self.controls.cd_bar_mode.get_value and self.controls.cd_bar_mode:get_value() or nil
+    local bar_mode = self.controls.cd_bar_mode:get_value()
     if type(bar_mode) ~= "number" then
         bar_mode = cd.bar_mode or LUI_ENUMS.bar_mode.UNLOAD
     end
 
-    local time_format = self.controls.cd_time_format.get_value and self.controls.cd_time_format:get_value() or nil
+    local time_format = self.controls.cd_time_format:get_value()
     if type(time_format) ~= "number" then
         time_format = cd.time_format or LUI_ENUMS.cooldown_time_format.AUTO
     end
@@ -234,7 +233,7 @@ function ConfigWindow:update_cooldowns_preview()
         name_max_chars = cd.name_max_chars
     end
 
-    local font_name = self.controls.cd_font_name.get_value and self.controls.cd_font_name:get_value() or nil
+    local font_name = self.controls.cd_font_name:get_value()
     if type(font_name) ~= "number" then
         font_name = cd.font.name or LUI_ENUMS.font_name.VERDANA
     end
@@ -242,7 +241,7 @@ function ConfigWindow:update_cooldowns_preview()
     local font_size = scaled_number(raw_font_size, 14)
     local font = _require_font(font_name, font_size)
 
-    local font_style = self.controls.cd_font_style.get_value and self.controls.cd_font_style:get_value() or nil
+    local font_style = self.controls.cd_font_style:get_value()
     if type(font_style) ~= "number" then
         font_style = cd.font.style or LUI_ENUMS.font_style.OUTLINE
     end

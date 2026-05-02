@@ -39,7 +39,7 @@ local function _new_colors_section(window, settings_getter)
     local ui = window._ui
 
     local background = ConfigContent(window, 3)
-    background:add_color_picker(TR["Background color"], "sb_bg_color",
+    background:add_bound_color_picker(TR["Background color"], "sb_bg_color",
         function(value)
             settings_getter().bg.color = ui.hex_to_color(value)
         end,
@@ -48,14 +48,14 @@ local function _new_colors_section(window, settings_getter)
         end)
 
     local font = ConfigContent(window, 3)
-    font:add_color_picker(TR["Font color"], "sb_font_color",
+    font:add_bound_color_picker(TR["Font color"], "sb_font_color",
         function(value)
             settings_getter().font.color = ui.hex_to_color(value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().font.color))
         end)
-    font:add_color_picker(TR["Outline color"], "sb_font_outline_color",
+    font:add_bound_color_picker(TR["Outline color"], "sb_font_outline_color",
         function(value)
             settings_getter().font.outline_color = ui.hex_to_color(value)
         end,
@@ -64,21 +64,21 @@ local function _new_colors_section(window, settings_getter)
         end)
 
     local inventory = ConfigContent(window, 3)
-    inventory:add_color_picker(TR["Warn color (30%)"], "sb_inv_yellow",
+    inventory:add_bound_color_picker(TR["Warn color (30%)"], "sb_inv_yellow",
         function(value)
             settings_getter().widgets.inventory_space.color.yellow = ui.hex_to_color(value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.inventory_space.color.yellow))
         end)
-    inventory:add_color_picker(TR["Warn color (20%)"], "sb_inv_orange",
+    inventory:add_bound_color_picker(TR["Warn color (20%)"], "sb_inv_orange",
         function(value)
             settings_getter().widgets.inventory_space.color.orange = ui.hex_to_color(value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.inventory_space.color.orange))
         end)
-    inventory:add_color_picker(TR["Warn color (10%)"], "sb_inv_red",
+    inventory:add_bound_color_picker(TR["Warn color (10%)"], "sb_inv_red",
         function(value)
             settings_getter().widgets.inventory_space.color.red = ui.hex_to_color(value)
         end,
@@ -87,21 +87,21 @@ local function _new_colors_section(window, settings_getter)
         end)
 
     local durability = ConfigContent(window, 3)
-    durability:add_color_picker(TR["Green color"], "sb_durability_green",
+    durability:add_bound_color_picker(TR["Green color"], "sb_durability_green",
         function(value)
             settings_getter().widgets.equipment_wear.color.green = ui.hex_to_color(value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.equipment_wear.color.green))
         end)
-    durability:add_color_picker(TR["Yellow color"], "sb_durability_yellow",
+    durability:add_bound_color_picker(TR["Yellow color"], "sb_durability_yellow",
         function(value)
             settings_getter().widgets.equipment_wear.color.yellow = ui.hex_to_color(value)
         end,
         function(entry)
             entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.equipment_wear.color.yellow))
         end)
-    durability:add_color_picker(TR["Red color"], "sb_durability_red",
+    durability:add_bound_color_picker(TR["Red color"], "sb_durability_red",
         function(value)
             settings_getter().widgets.equipment_wear.color.red = ui.hex_to_color(value)
         end,
@@ -124,7 +124,7 @@ local function _new_widgets_section(window, settings_getter)
     local time_format_values = { LUI_ENUMS.time_format.H24, LUI_ENUMS.time_format.AMPM }
 
     local time = ConfigContent(window, 4)
-    time:add_line_edit(TR["Width"], "sb_time_width",
+    time:add_bound_line_edit(TR["Width"], "sb_time_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -152,7 +152,7 @@ local function _new_widgets_section(window, settings_getter)
         end)
 
     local inventory = ConfigContent(window, 4)
-    inventory:add_line_edit(TR["Width"], "sb_inv_width",
+    inventory:add_bound_line_edit(TR["Width"], "sb_inv_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -180,7 +180,7 @@ local function _new_widgets_section(window, settings_getter)
         end)
 
     local durability = ConfigContent(window, 4)
-    durability:add_line_edit(TR["Width"], "sb_durability_width",
+    durability:add_bound_line_edit(TR["Width"], "sb_durability_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -216,7 +216,7 @@ local function _new_widgets_section(window, settings_getter)
         end, true)
 
     local money = ConfigContent(window, 4)
-    money:add_line_edit(TR["Width"], "sb_money_width",
+    money:add_bound_line_edit(TR["Width"], "sb_money_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -237,7 +237,7 @@ local function _new_widgets_section(window, settings_getter)
         end)
 
     local wallet = ConfigContent(window, 4)
-    wallet:add_line_edit(TR["Width"], "sb_wallet_width",
+    wallet:add_bound_line_edit(TR["Width"], "sb_wallet_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -271,7 +271,7 @@ local function _new_widgets_section(window, settings_getter)
     end
 
     local item = ConfigContent(window, 4)
-    item:add_line_edit(TR["Width"], "sb_item_width",
+    item:add_bound_line_edit(TR["Width"], "sb_item_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -283,7 +283,7 @@ local function _new_widgets_section(window, settings_getter)
         end)
 
     local shortcuts = ConfigContent(window, 4)
-    shortcuts:add_line_edit(TR["Width"], "sb_shortcut_width",
+    shortcuts:add_bound_line_edit(TR["Width"], "sb_shortcut_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -293,7 +293,7 @@ local function _new_widgets_section(window, settings_getter)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().widgets.shortcut.width))
         end)
-    shortcuts:add_line_edit(TR["Height"], "sb_shortcut_height",
+    shortcuts:add_bound_line_edit(TR["Height"], "sb_shortcut_height",
         function(value)
             local height = tonumber(value)
             if height ~= nil then
@@ -305,7 +305,7 @@ local function _new_widgets_section(window, settings_getter)
         end)
 
     local craft_plan = ConfigContent(window, 4)
-    craft_plan:add_line_edit(TR["Width"], "sb_craft_plan_width",
+    craft_plan:add_bound_line_edit(TR["Width"], "sb_craft_plan_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -315,7 +315,7 @@ local function _new_widgets_section(window, settings_getter)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().widgets.craft_plan.width))
         end)
-    craft_plan:add_line_edit(TR["Max visible resources"], "sb_craft_plan_max_visible",
+    craft_plan:add_bound_line_edit(TR["Max visible resources"], "sb_craft_plan_max_visible",
         function(value)
             local max_visible = tonumber(value)
             if max_visible ~= nil then
@@ -362,7 +362,7 @@ function StatusBarPage:Constructor(window)
     self:add_tab(TR["General"], "general", general)
 
     local background = ConfigContent(window, 4)
-    background:add_line_edit(TR["Background opacity (0..1)"], "sb_bg_opacity",
+    background:add_bound_line_edit(TR["Background opacity (0..1)"], "sb_bg_opacity",
         function(value)
             local opacity = tonumber(value)
             if opacity ~= nil then
@@ -382,7 +382,7 @@ function StatusBarPage:Constructor(window)
         function(entry)
             entry:set_value(settings_getter().font.name)
         end)
-    font:add_line_edit(TR["Font size"], "sb_font_size",
+    font:add_bound_line_edit(TR["Font size"], "sb_font_size",
         function(value)
             local font_size = tonumber(value)
             if font_size ~= nil then
@@ -403,7 +403,7 @@ function StatusBarPage:Constructor(window)
 
     local layout_help = BuildStatusBarLayoutHelp()
     local layout = ConfigContent(window, 4)
-    layout:add_line_edit(TR["Height"], "sb_height",
+    layout:add_bound_line_edit(TR["Height"], "sb_height",
         function(value)
             local height = tonumber(value)
             if height ~= nil then
@@ -414,7 +414,7 @@ function StatusBarPage:Constructor(window)
             entry.tb:SetText(tostring(settings_getter().height))
         end)
     layout:break_line()
-    layout:add_line_edit(TR["Left layout"], "sb_layout_left",
+    layout:add_bound_line_edit(TR["Left layout"], "sb_layout_left",
         function(value)
             settings_getter().layout.left = value
         end,
@@ -422,7 +422,7 @@ function StatusBarPage:Constructor(window)
             entry.tb:SetText(settings_getter().layout.left)
         end, layout_help, true)
     layout:break_line()
-    layout:add_line_edit(TR["Center layout"], "sb_layout_center",
+    layout:add_bound_line_edit(TR["Center layout"], "sb_layout_center",
         function(value)
             settings_getter().layout.center = value
         end,
@@ -430,7 +430,7 @@ function StatusBarPage:Constructor(window)
             entry.tb:SetText(settings_getter().layout.center)
         end, layout_help, true)
     layout:break_line()
-    layout:add_line_edit(TR["Right layout"], "sb_layout_right",
+    layout:add_bound_line_edit(TR["Right layout"], "sb_layout_right",
         function(value)
             settings_getter().layout.right = value
         end,
@@ -460,15 +460,9 @@ function StatusBarPage:refresh_layout_help()
     end
 end
 
-function StatusBarPage:load_from_settings(s)
-    self._settings = s
+function StatusBarPage:load()
     self:refresh_layout_help()
-    self:load()
-end
-
-function StatusBarPage:apply_to_settings(s)
-    self._settings = s
-    self:save()
+    ConfigTabs.load(self)
 end
 
 _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP = function()

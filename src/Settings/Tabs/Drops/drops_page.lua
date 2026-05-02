@@ -22,7 +22,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
     local ui = window._ui
 
     local hud = ConfigContent(window, 3, refresh_preview)
-    hud:add_line_edit(TR["Background opacity (0..1)"], "drops_hud_background_opacity",
+    hud:add_bound_line_edit(TR["Background opacity (0..1)"], "drops_hud_background_opacity",
         function(value)
             local opacity = tonumber(value)
             if opacity ~= nil then
@@ -32,7 +32,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().hud.background_opacity))
         end)
-    hud:add_color_picker(TR["Background color"], "drops_hud_background_color",
+    hud:add_bound_color_picker(TR["Background color"], "drops_hud_background_color",
         function(value)
             _apply_color(ui, settings_getter().hud.background_color, value)
         end,
@@ -41,7 +41,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         end)
 
     local item = ConfigContent(window, 3, refresh_preview)
-    item:add_line_edit(TR["Background opacity (0..1)"], "drops_item_background_opacity",
+    item:add_bound_line_edit(TR["Background opacity (0..1)"], "drops_item_background_opacity",
         function(value)
             local opacity = tonumber(value)
             if opacity ~= nil then
@@ -51,7 +51,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().item.background_opacity))
         end)
-    item:add_color_picker(TR["Background color"], "drops_item_background_color",
+    item:add_bound_color_picker(TR["Background color"], "drops_item_background_color",
         function(value)
             _apply_color(ui, settings_getter().item.background_color, value)
         end,
@@ -98,7 +98,7 @@ function DropsPage:Constructor(window)
             entry.cb:SetChecked(settings_getter().enabled == true)
         end, true)
     general:break_line()
-    general:add_line_edit(TR["Visible duration (s)"], "drops_visible_duration",
+    general:add_bound_line_edit(TR["Visible duration (s)"], "drops_visible_duration",
         function(value)
             local visible_duration = tonumber(value)
             if visible_duration ~= nil then
@@ -114,7 +114,7 @@ function DropsPage:Constructor(window)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4, refresh_preview)
-    layout:add_line_edit(TR["Width"], "drops_width",
+    layout:add_bound_line_edit(TR["Width"], "drops_width",
         function(value)
             local width = tonumber(value)
             if width ~= nil then
@@ -124,7 +124,7 @@ function DropsPage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().width))
         end)
-    layout:add_line_edit(TR["Rows"], "drops_rows",
+    layout:add_bound_line_edit(TR["Rows"], "drops_rows",
         function(value)
             local rows = tonumber(value)
             if rows ~= nil then
@@ -134,7 +134,7 @@ function DropsPage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().rows))
         end)
-    layout:add_line_edit(TR["Icon Size"], "drops_icon_size",
+    layout:add_bound_line_edit(TR["Icon Size"], "drops_icon_size",
         function(value)
             local icon_size = tonumber(value)
             if icon_size ~= nil then
@@ -179,7 +179,7 @@ function DropsPage:Constructor(window)
             entry.cb:SetChecked(settings_getter().animations_enabled == true)
         end, true)
     motion:break_line()
-    motion:add_line_edit(TR["Move duration (ms)"], "drops_move_duration",
+    motion:add_bound_line_edit(TR["Move duration (ms)"], "drops_move_duration",
         function(value)
             local move_duration = tonumber(value)
             if move_duration ~= nil then
@@ -235,14 +235,4 @@ function DropsPage:layout()
 
     self.preview_holder.control:SetPosition(0, top_h + preview_gap)
     self.preview_holder.control:SetSize(width, preview_h)
-end
-
-function DropsPage:load_from_settings(s)
-    self._settings = s
-    self:load()
-end
-
-function DropsPage:apply_to_settings(s)
-    self._settings = s
-    self:save()
 end

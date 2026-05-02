@@ -59,13 +59,3 @@ function CraftingPage:apply_ui_scale()
     ConfigTabs.apply_ui_scale(self)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
-
-function CraftingPage:load_from_settings(s)
-    self._settings = s
-    self:load()
-end
-
-function CraftingPage:apply_to_settings(s)
-    self._settings = s
-    self:save()
-end

@@ -572,9 +572,8 @@ function ConfigWindow:load_from_settings()
 
     if self.main_tab_bar ~= nil then
         self.main_tab_bar:each_widget(function(_, page)
-            if page ~= nil and page.load_from_settings ~= nil then
-                page:load_from_settings(s, self._ui)
-            end
+            page._settings = s
+            page:load()
         end)
     end
 
@@ -656,9 +655,8 @@ function ConfigWindow:apply_changes(close_after)
 
     if self.main_tab_bar ~= nil then
         self.main_tab_bar:each_widget(function(_, page)
-            if page ~= nil and page.apply_to_settings ~= nil then
-                page:apply_to_settings(s, self._ui)
-            end
+            page._settings = s
+            page:save()
         end)
     end
 

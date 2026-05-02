@@ -208,28 +208,23 @@ function ConfigWindow:update_expiring_target_effects_preview()
         (s.target.expiring_effects.color and (s.target.expiring_effects.color.bar_buff or s.target.expiring_effects.color.bar))
         or Turbine.UI.Color(0.9, 0.7, 0.2)
 
-    local icon_side = self.controls.expiring_target_effects_icon_side.get_value and
-        self.controls.expiring_target_effects_icon_side:get_value() or nil
+    local icon_side = self.controls.expiring_target_effects_icon_side:get_value()
     if type(icon_side) ~= "number" then
         icon_side = s.target.expiring_effects.icon_side or LUI_ENUMS.side.RIGHT
     end
     local icon_left = LUI_ENUMS.side_is_left[icon_side] == true
 
-    local bar_expire_towards = self.controls.expiring_target_effects_bar_expire_towards.get_value and
-        self.controls.expiring_target_effects_bar_expire_towards:get_value() or nil
+    local bar_expire_towards = self.controls.expiring_target_effects_bar_expire_towards:get_value()
     if type(bar_expire_towards) ~= "number" then
         bar_expire_towards = s.target.expiring_effects.bar_expire_towards or LUI_ENUMS.side.RIGHT
     end
     local expire_towards_right = bar_expire_towards == LUI_ENUMS.side.RIGHT
 
-    local name_max_chars = tonumber(self.controls.expiring_target_effects_name_max_chars and
-            self.controls.expiring_target_effects_name_max_chars.tb and
-            self.controls.expiring_target_effects_name_max_chars.tb:GetText() or "")
+    local name_max_chars = tonumber(self.controls.expiring_target_effects_name_max_chars.tb:GetText())
         or s.target.expiring_effects.name_max_chars
         or 10
 
-    local font_name = self.controls.expiring_target_effects_font_name.get_value and
-        self.controls.expiring_target_effects_font_name:get_value() or nil
+    local font_name = self.controls.expiring_target_effects_font_name:get_value()
     if type(font_name) ~= "number" then
         font_name = s.target.expiring_effects.font.name or LUI_ENUMS.font_name.VERDANA
     end
@@ -238,8 +233,7 @@ function ConfigWindow:update_expiring_target_effects_preview()
     local font_size = scaled_number(raw_font_size, 14)
     local font = _require_font(font_name, font_size)
 
-    local style_enum = self.controls.expiring_target_effects_font_style.get_value and
-        self.controls.expiring_target_effects_font_style:get_value() or LUI_ENUMS.font_style.OUTLINE
+    local style_enum = self.controls.expiring_target_effects_font_style:get_value() or LUI_ENUMS.font_style.OUTLINE
     local font_style = LUI_TO_LOTRO.font_style[style_enum] or Turbine.UI.FontStyle.None
 
     local font_color = _hex_to_color(self.controls.expiring_target_effects_font_color.tb:GetText()) or

@@ -174,7 +174,7 @@ function ProfileManagerPage:Constructor(window)
 
     self:add_break(BLOCK_GAP)
 
-    self:add_text("profile_manager_name", TR["Name"], false, nil, true)
+    self:add_line_edit("profile_manager_name", TR["Name"], nil, true)
 
     local name_actions = self:add_custom("profile_manager_name_actions", ACTION_ROW_HEIGHT)
     name_actions.rename_button = UI.Widgets.LuiButton()
@@ -224,13 +224,5 @@ function ProfileManagerPage:load()
     _refresh_profile_manager(self, selected_profile_id)
 end
 
-function ProfileManagerPage:apply()
-end
-
-function ProfileManagerPage:load_from_settings()
-    self:load()
-end
-
-function ProfileManagerPage:apply_to_settings()
-    self:apply()
+function ProfileManagerPage:save()
 end

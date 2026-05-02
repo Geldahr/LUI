@@ -33,7 +33,7 @@ function GlobalPage:Constructor(window)
     }, "\n")
 
     local general = ConfigContent(window, 4)
-    general:add_line_edit(TR["UI Scale"], "scale",
+    general:add_bound_line_edit(TR["UI Scale"], "scale",
         function(value)
             local scale = tonumber(value)
             if scale ~= nil and scale > 0 then
@@ -51,7 +51,7 @@ function GlobalPage:Constructor(window)
             entry.cb:SetChecked(self._settings.global.native_scaling == true)
         end, true)
     general:break_line()
-    general:add_line_edit(TR["Refresh rate of some UI elements (fps)"], "refresh_rate",
+    general:add_bound_line_edit(TR["Refresh rate of some UI elements (fps)"], "refresh_rate",
         function(value)
             local refresh_rate = tonumber(value)
             if refresh_rate ~= nil and refresh_rate > 0 then
@@ -123,14 +123,4 @@ end
 function GlobalPage:apply_ui_scale()
     ConfigTabs.apply_ui_scale(self)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
-end
-
-function GlobalPage:load_from_settings(s)
-    self._settings = s
-    self:load()
-end
-
-function GlobalPage:apply_to_settings(s)
-    self._settings = s
-    self:save()
 end
