@@ -1,16 +1,22 @@
 import "LUI.src.Settings.Tabs.feature_shell"
+import "LUI.src.Settings.Tabs.tabbed_page"
 import "LUI.src.Settings.Tabs.form_page"
 import "LUI.src.Settings.Tabs.Self.cooldowns"
 
+local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
+    _G.SettingsTabbedPage or SettingsTabbedPage
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local SettingsFeatureSectionPage = FeatureShell.section_page_class
 local SettingsFeatureNestedPage = FeatureShell.nested_page_class
 local configure_compact_form = FeatureShell.configure_compact_form
 local add_compact_row_break = FeatureShell.add_compact_row_break
 local module_for_page = FeatureShell.module_for_page
+local scaled_int = FeatureShell.scaled_int
 local Cooldowns = LUI.src.Settings.Tabs.Self.Cooldowns
+local PREVIEW_GAP = 10
+local PREVIEW_MIN_TOP_HEIGHT = 120
+local PREVIEW_MIN_HEIGHT = 100
 
 local function _is_outline(control)
     return control:get_value() == LUI_ENUMS.font_style.OUTLINE
@@ -200,20 +206,72 @@ local function _new_filters_page(window, refresh_preview_fn)
     return page
 end
 
-CooldownsFeaturePage = class(SettingsFeatureSectionPage)
+CooldownsFeaturePage = class(SettingsTabbedPage)
 
 function CooldownsFeaturePage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window, "cooldowns_preview", 52, function(win)
-        win:update_cooldowns_preview()
-    end, false)
+    SettingsTabbedPage.Constructor(self, window)
+    self.show_main_content_border = false
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
+    self._preview_default_height = 52
+    self.controls = self.controls or {}
 
-    self:add_section(TR["General"], "general", _new_general_page(window, self.refresh_preview))
-    self:add_section(TR["Layout"], "layout", _new_layout_page(window, self.refresh_preview))
-    local colors, colors_text = _new_colors_section(window, self.refresh_preview)
-    self:add_section(TR["Colors"], "colors", colors)
-    self:add_section(TR["Text"], "text", _new_text_page(window, self.refresh_preview))
-    self:add_section(TR["Filters"], "filters", _new_filters_page(window, self.refresh_preview))
+    local refresh_preview = function()
+        window:update_cooldowns_preview()
+    end
+
+    self:add_sub_page(TR["General"], module_for_page("general", _new_general_page(window, refresh_preview)))
+    self:add_sub_page(TR["Layout"], module_for_page("layout", _new_layout_page(window, refresh_preview)))
+    local colors, colors_text = _new_colors_section(window, refresh_preview)
+    self:add_sub_page(TR["Colors"], module_for_page("colors", colors))
+    self:add_sub_page(TR["Text"], module_for_page("text", _new_text_page(window, refresh_preview)))
+    self:add_sub_page(TR["Filters"], module_for_page("filters", _new_filters_page(window, refresh_preview)))
+
+    self.preview_holder = {
+        kind = "custom",
+        key = "cooldowns_preview",
+        height = self._preview_default_height,
+    }
+    self.preview_holder.control = Turbine.UI.Control()
+    self.preview_holder.control:SetParent(self)
+    self.preview_holder.control:SetMouseVisible(false)
+    self.controls.cooldowns_preview = self.preview_holder
+
     _bind_outline_visibility(self, colors_text, "cd_font_style", "cd_font_outline_color")
+end
+
+function CooldownsFeaturePage:apply_ui_scale()
+    SettingsTabbedPage.apply_ui_scale(self)
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
+end
+
+function CooldownsFeaturePage:layout()
+    local width, height = self:GetSize()
+    if width == nil or height == nil or width < 1 or height < 1 then
+        return
+    end
+
+    local preview_h = self.preview_holder.height or self._preview_default_height
+    local preview_gap = scaled_int(PREVIEW_GAP)
+    local min_top_h = scaled_int(PREVIEW_MIN_TOP_HEIGHT)
+    local top_h = height - preview_h - preview_gap
+    if top_h < min_top_h then
+        top_h = min_top_h
+        preview_h = height - top_h - preview_gap
+    end
+    if preview_h < scaled_int(PREVIEW_MIN_HEIGHT) then
+        preview_h = scaled_int(PREVIEW_MIN_HEIGHT)
+        top_h = height - preview_h - preview_gap
+    end
+    if top_h < 1 then
+        top_h = 1
+    end
+
+    self.sub_tab_bar:SetPosition(0, 0)
+    self.sub_tab_bar:SetSize(width, top_h)
+    self.sub_tab_bar:refresh_layout()
+
+    self.preview_holder.control:SetPosition(0, top_h + preview_gap)
+    self.preview_holder.control:SetSize(width, preview_h)
 end
 
 function CooldownsFeaturePage:load_from_settings(s, ui)

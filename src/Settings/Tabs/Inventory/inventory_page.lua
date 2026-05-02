@@ -31,13 +31,10 @@ function InventoryPage:Constructor(window)
     general:add_checkbox("inventory_replace", TR["Replace default backpack (I)"], true)
     self:add_sub_page(TR["General"], module_for_page("general", general))
 
-    local window_page = configure_compact_form(SettingsFormPage(window), 4, nil)
-    window_page:add_text("inventory_cols", TR["Columns"])
-    self:add_sub_page(TR["Window"], module_for_page("window", window_page))
-
-    local tiles = configure_compact_form(SettingsFormPage(window), 4, nil)
-    tiles:add_dropdown("inventory_tile_size", TR["Tile Size"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
-    self:add_sub_page(TR["Tiles"], module_for_page("tiles", tiles))
+    local layout = configure_compact_form(SettingsFormPage(window), 4, nil)
+    layout:add_text("inventory_cols", TR["Columns"])
+    layout:add_dropdown("inventory_tile_size", TR["Tile Size"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
+    self:add_sub_page(TR["Layout"], module_for_page("layout", layout))
 end
 
 function InventoryPage:apply_ui_scale()

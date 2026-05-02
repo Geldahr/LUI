@@ -32,12 +32,12 @@ function TravelPage:Constructor(window)
     general:add_checkbox("travel_enabled", TR["Enabled"])
     self:add_sub_page(TR["General"], module_for_page("general", general))
 
-    local window_page = configure_compact_form(SettingsFormPage(window), 4, nil)
-    window_page:add_dropdown("travel_display_mode", TR["Display"], DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES)
-    window_page.controls.travel_display_mode.visible_if = function()
+    local layout = configure_compact_form(SettingsFormPage(window), 4, nil)
+    layout:add_dropdown("travel_display_mode", TR["Display"], DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES)
+    layout.controls.travel_display_mode.visible_if = function()
         return self.controls.travel_enabled.cb:IsChecked() == true
     end
-    self:add_sub_page(TR["Window"], module_for_page("window", window_page))
+    self:add_sub_page(TR["Layout"], module_for_page("layout", layout))
 end
 
 function TravelPage:apply_ui_scale()

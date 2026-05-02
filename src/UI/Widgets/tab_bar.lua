@@ -4,7 +4,6 @@ import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
-import "LUI.src.Utils.timed_row_layout"
 
 local POSITION_TOP = "top"
 local POSITION_BOTTOM = "bottom"
@@ -83,11 +82,66 @@ local function _show_value(value)
     return value ~= false
 end
 
-local function _approx_text_width(scale, text)
-    local units = lui_estimate_text_width_units(text, "Verdana")
-    if units < 1 then
-        units = 1
+local function _approx_char_width_units(ch)
+    if ch == " " then
+        return 0.45
     end
+    if ch == "." or ch == "," or ch == ":" or ch == ";" or ch == "'" then
+        return 0.35
+    end
+    if ch == "m" then
+        return 1.70
+    end
+    if ch == "w" then
+        return 1.58
+    end
+    if ch == "n" or ch == "h" or ch == "u" then
+        return 1.00
+    end
+    if ch == "a" or ch == "c" or ch == "e" or ch == "o" or ch == "s" then
+        return 0.96
+    end
+    if ch == "d" or ch == "g" or ch == "p" or ch == "q" then
+        return 1.02
+    end
+    if ch == "b" or ch == "k" or ch == "x" or ch == "y" or ch == "z" then
+        return 0.94
+    end
+    if ch == "i" or ch == "l" or ch == "I" or ch == "j" then
+        return 0.55
+    end
+    if ch == "f" or ch == "t" or ch == "r" then
+        return 0.70
+    end
+    if ch == "M" or ch == "W" then
+        return 1.82
+    end
+    if ch == "N" or ch == "H" or ch == "U" then
+        return 1.14
+    end
+    if string.match(ch, "%u") ~= nil then
+        return 1.08
+    end
+    if string.match(ch, "%l") ~= nil then
+        return 0.98
+    end
+    if string.match(ch, "%d") ~= nil then
+        return 0.95
+    end
+    return 1.0
+end
+
+local function _approx_text_width(scale, text)
+    local value = tostring(text or "")
+    local units = 0
+    if string.len(value) < 1 then
+        units = 1
+    else
+        for i = 1, string.len(value) do
+            units = units + _approx_char_width_units(string.sub(value, i, i))
+        end
+    end
+
     return _scaled_int(scale, BASE_TAB_PADDING_X * 2) + _scaled_int(scale, BASE_APPROX_CHAR_WIDTH * units)
 end
 
