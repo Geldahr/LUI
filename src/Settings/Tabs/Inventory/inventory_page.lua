@@ -23,39 +23,39 @@ function InventoryPage:Constructor(window)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local general = ConfigContent(window, 4)
-    general:add_bound_checkbox(TR["Enabled"], "inventory_enabled",
+    general:add_checkbox("inventory_enabled", TR["Enabled"],
         function(value)
             self._settings.inventory.enabled = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(self._settings.inventory.enabled == true)
+        function()
+            return self._settings.inventory.enabled == true
         end, true)
-    general:add_bound_checkbox(TR["Replace default backpack (I)"], "inventory_replace",
+    general:add_checkbox("inventory_replace", TR["Replace default backpack (I)"],
         function(value)
             self._settings.inventory.replace = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(self._settings.inventory.replace == true)
+        function()
+            return self._settings.inventory.replace == true
         end, true)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4)
-    layout:add_bound_line_edit(TR["Columns"], "inventory_cols",
+    layout:add_line_edit("inventory_cols", TR["Columns"],
         function(value)
             local cols = tonumber(value)
             if cols ~= nil then
                 self._settings.inventory.cols = cols
             end
         end,
-        function(entry)
-            entry:set_value(tostring(self._settings.inventory.cols))
+        function()
+            return tostring(self._settings.inventory.cols)
         end)
-    layout:add_bound_dropdown(TR["Tile Size"], "inventory_tile_size", TILE_SIZE_LABELS, TILE_SIZE_VALUES,
+    layout:add_dropdown("inventory_tile_size", TR["Tile Size"], TILE_SIZE_LABELS, TILE_SIZE_VALUES,
         function(value)
             self._settings.inventory.tile_size = value
         end,
-        function(entry)
-            entry:set_value(self._settings.inventory.tile_size)
+        function()
+            return self._settings.inventory.tile_size
         end)
     self:add_tab(TR["Layout"], "layout", layout)
 end

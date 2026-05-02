@@ -26,7 +26,7 @@ local function _trim_profile_name(text)
 end
 
 local function _get_profile_manager_name(window)
-    return _trim_profile_name(window.controls.profile_manager_name.tb:GetText())
+    return _trim_profile_name(window.controls.profile_manager_name:get_value())
 end
 
 function ConfigWindow:use_selected_profile()

@@ -39,74 +39,74 @@ local function _new_colors_section(window, settings_getter)
     local ui = window._ui
 
     local background = ConfigContent(window, 3)
-    background:add_bound_color_picker(TR["Background color"], "sb_bg_color",
+    background:add_color_picker("sb_bg_color", TR["Background color"],
         function(value)
             settings_getter().bg.color = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().bg.color))
+        function()
+            return ui.color_to_hex(settings_getter().bg.color)
         end)
 
     local font = ConfigContent(window, 3)
-    font:add_bound_color_picker(TR["Font color"], "sb_font_color",
+    font:add_color_picker("sb_font_color", TR["Font color"],
         function(value)
             settings_getter().font.color = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().font.color))
+        function()
+            return ui.color_to_hex(settings_getter().font.color)
         end)
-    font:add_bound_color_picker(TR["Outline color"], "sb_font_outline_color",
+    font:add_color_picker("sb_font_outline_color", TR["Outline color"],
         function(value)
             settings_getter().font.outline_color = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().font.outline_color))
+        function()
+            return ui.color_to_hex(settings_getter().font.outline_color)
         end)
 
     local inventory = ConfigContent(window, 3)
-    inventory:add_bound_color_picker(TR["Warn color (30%)"], "sb_inv_yellow",
+    inventory:add_color_picker("sb_inv_yellow", TR["Warn color (30%)"],
         function(value)
             settings_getter().widgets.inventory_space.color.yellow = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.inventory_space.color.yellow))
+        function()
+            return ui.color_to_hex(settings_getter().widgets.inventory_space.color.yellow)
         end)
-    inventory:add_bound_color_picker(TR["Warn color (20%)"], "sb_inv_orange",
+    inventory:add_color_picker("sb_inv_orange", TR["Warn color (20%)"],
         function(value)
             settings_getter().widgets.inventory_space.color.orange = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.inventory_space.color.orange))
+        function()
+            return ui.color_to_hex(settings_getter().widgets.inventory_space.color.orange)
         end)
-    inventory:add_bound_color_picker(TR["Warn color (10%)"], "sb_inv_red",
+    inventory:add_color_picker("sb_inv_red", TR["Warn color (10%)"],
         function(value)
             settings_getter().widgets.inventory_space.color.red = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.inventory_space.color.red))
+        function()
+            return ui.color_to_hex(settings_getter().widgets.inventory_space.color.red)
         end)
 
     local durability = ConfigContent(window, 3)
-    durability:add_bound_color_picker(TR["Green color"], "sb_durability_green",
+    durability:add_color_picker("sb_durability_green", TR["Green color"],
         function(value)
             settings_getter().widgets.equipment_wear.color.green = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.equipment_wear.color.green))
+        function()
+            return ui.color_to_hex(settings_getter().widgets.equipment_wear.color.green)
         end)
-    durability:add_bound_color_picker(TR["Yellow color"], "sb_durability_yellow",
+    durability:add_color_picker("sb_durability_yellow", TR["Yellow color"],
         function(value)
             settings_getter().widgets.equipment_wear.color.yellow = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.equipment_wear.color.yellow))
+        function()
+            return ui.color_to_hex(settings_getter().widgets.equipment_wear.color.yellow)
         end)
-    durability:add_bound_color_picker(TR["Red color"], "sb_durability_red",
+    durability:add_color_picker("sb_durability_red", TR["Red color"],
         function(value)
             settings_getter().widgets.equipment_wear.color.red = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().widgets.equipment_wear.color.red))
+        function()
+            return ui.color_to_hex(settings_getter().widgets.equipment_wear.color.red)
         end)
 
     local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.top,
@@ -124,139 +124,139 @@ local function _new_widgets_section(window, settings_getter)
     local time_format_values = { LUI_ENUMS.time_format.H24, LUI_ENUMS.time_format.AMPM }
 
     local time = ConfigContent(window, 4)
-    time:add_bound_line_edit(TR["Width"], "sb_time_width",
+    time:add_line_edit("sb_time_width", TR["Width"],
         function(value)
             local width = tonumber(value)
             if width ~= nil then
                 settings_getter().widgets.time_local.width = width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.time_local.width))
+        function()
+            return tostring(settings_getter().widgets.time_local.width)
         end)
-    time:break_line()
-    time:add_bound_dropdown(TR["Time format"], "sb_time_format", time_format_labels, time_format_values,
+    time:add_row_break()
+    time:add_dropdown("sb_time_format", TR["Time format"], time_format_labels, time_format_values,
         function(value)
             settings_getter().widgets.time_local.time_format = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().widgets.time_local.time_format)
+        function()
+            return settings_getter().widgets.time_local.time_format
         end)
-    time:add_bound_dropdown(TR["Text alignment"], "sb_time_text_alignment", time.text_alignment_labels,
+    time:add_dropdown("sb_time_text_alignment", TR["Text alignment"], time.text_alignment_labels,
         time.text_alignment_values,
         function(value)
             settings_getter().widgets.time_local.text_alignment = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().widgets.time_local.text_alignment)
+        function()
+            return settings_getter().widgets.time_local.text_alignment
         end)
 
     local inventory = ConfigContent(window, 4)
-    inventory:add_bound_line_edit(TR["Width"], "sb_inv_width",
+    inventory:add_line_edit("sb_inv_width", TR["Width"],
         function(value)
             local width = tonumber(value)
             if width ~= nil then
                 settings_getter().widgets.inventory_space.width = width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.inventory_space.width))
+        function()
+            return tostring(settings_getter().widgets.inventory_space.width)
         end)
-    inventory:break_line()
-    inventory:add_bound_checkbox(TR["Icon"], "sb_inv_icon",
+    inventory:add_row_break()
+    inventory:add_checkbox("sb_inv_icon", TR["Icon"],
         function(value)
             settings_getter().widgets.inventory_space.icon = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(settings_getter().widgets.inventory_space.icon == true)
+        function()
+            return settings_getter().widgets.inventory_space.icon == true
         end)
-    inventory:add_bound_dropdown(TR["Text alignment"], "sb_inv_text_alignment", inventory.text_alignment_labels,
+    inventory:add_dropdown("sb_inv_text_alignment", TR["Text alignment"], inventory.text_alignment_labels,
         inventory.text_alignment_values,
         function(value)
             settings_getter().widgets.inventory_space.text_alignment = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().widgets.inventory_space.text_alignment)
+        function()
+            return settings_getter().widgets.inventory_space.text_alignment
         end)
 
     local durability = ConfigContent(window, 4)
-    durability:add_bound_line_edit(TR["Width"], "sb_durability_width",
+    durability:add_line_edit("sb_durability_width", TR["Width"],
         function(value)
             local width = tonumber(value)
             if width ~= nil then
                 settings_getter().widgets.equipment_wear.width = width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.equipment_wear.width))
+        function()
+            return tostring(settings_getter().widgets.equipment_wear.width)
         end)
-    durability:break_line()
-    durability:add_bound_checkbox(TR["Icon"], "sb_durability_icon",
+    durability:add_row_break()
+    durability:add_checkbox("sb_durability_icon", TR["Icon"],
         function(value)
             settings_getter().widgets.equipment_wear.icon = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(settings_getter().widgets.equipment_wear.icon == true)
+        function()
+            return settings_getter().widgets.equipment_wear.icon == true
         end)
-    durability:add_bound_dropdown(TR["Text alignment"], "sb_durability_text_alignment", durability.text_alignment_labels,
+    durability:add_dropdown("sb_durability_text_alignment", TR["Text alignment"], durability.text_alignment_labels,
         durability.text_alignment_values,
         function(value)
             settings_getter().widgets.equipment_wear.text_alignment = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().widgets.equipment_wear.text_alignment)
+        function()
+            return settings_getter().widgets.equipment_wear.text_alignment
         end)
-    durability:break_line()
-    durability:add_bound_checkbox(TR["Enable rich-text coloring"], "sb_durability_coloring",
+    durability:add_row_break()
+    durability:add_checkbox("sb_durability_coloring", TR["Enable rich-text coloring"],
         function(value)
             settings_getter().widgets.equipment_wear.coloring = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(settings_getter().widgets.equipment_wear.coloring == true)
+        function()
+            return settings_getter().widgets.equipment_wear.coloring == true
         end, true)
 
     local money = ConfigContent(window, 4)
-    money:add_bound_line_edit(TR["Width"], "sb_money_width",
+    money:add_line_edit("sb_money_width", TR["Width"],
         function(value)
             local width = tonumber(value)
             if width ~= nil then
                 settings_getter().widgets.money.width = width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.money.width))
+        function()
+            return tostring(settings_getter().widgets.money.width)
         end)
-    money:break_line()
-    money:add_bound_dropdown(TR["Text alignment"], "sb_money_text_alignment", money.text_alignment_labels,
+    money:add_row_break()
+    money:add_dropdown("sb_money_text_alignment", TR["Text alignment"], money.text_alignment_labels,
         money.text_alignment_values,
         function(value)
             settings_getter().widgets.money.text_alignment = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().widgets.money.text_alignment)
+        function()
+            return settings_getter().widgets.money.text_alignment
         end)
 
     local wallet = ConfigContent(window, 4)
-    wallet:add_bound_line_edit(TR["Width"], "sb_wallet_width",
+    wallet:add_line_edit("sb_wallet_width", TR["Width"],
         function(value)
             local width = tonumber(value)
             if width ~= nil then
                 settings_getter().widgets.wallet.width = width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.wallet.width))
+        function()
+            return tostring(settings_getter().widgets.wallet.width)
         end)
-    wallet:break_line()
-    wallet:add_bound_dropdown(TR["Text alignment"], "sb_wallet_text_alignment", wallet.text_alignment_labels,
+    wallet:add_row_break()
+    wallet:add_dropdown("sb_wallet_text_alignment", TR["Text alignment"], wallet.text_alignment_labels,
         wallet.text_alignment_values,
         function(value)
             settings_getter().widgets.wallet.text_alignment = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().widgets.wallet.text_alignment)
+        function()
+            return settings_getter().widgets.wallet.text_alignment
         end)
-    wallet:break_line()
+    wallet:add_row_break()
     CreateStatusBarWalletSelector(wallet, "sb_wallet_items")
     local wallet_items = wallet.controls.sb_wallet_items
     local wallet_load = wallet.load
@@ -271,59 +271,59 @@ local function _new_widgets_section(window, settings_getter)
     end
 
     local item = ConfigContent(window, 4)
-    item:add_bound_line_edit(TR["Width"], "sb_item_width",
+    item:add_line_edit("sb_item_width", TR["Width"],
         function(value)
             local width = tonumber(value)
             if width ~= nil then
                 settings_getter().widgets.item.width = width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.item.width))
+        function()
+            return tostring(settings_getter().widgets.item.width)
         end)
 
     local shortcuts = ConfigContent(window, 4)
-    shortcuts:add_bound_line_edit(TR["Width"], "sb_shortcut_width",
+    shortcuts:add_line_edit("sb_shortcut_width", TR["Width"],
         function(value)
             local width = tonumber(value)
             if width ~= nil then
                 settings_getter().widgets.shortcut.width = width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.shortcut.width))
+        function()
+            return tostring(settings_getter().widgets.shortcut.width)
         end)
-    shortcuts:add_bound_line_edit(TR["Height"], "sb_shortcut_height",
+    shortcuts:add_line_edit("sb_shortcut_height", TR["Height"],
         function(value)
             local height = tonumber(value)
             if height ~= nil then
                 settings_getter().widgets.shortcut.height = height
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.shortcut.height))
+        function()
+            return tostring(settings_getter().widgets.shortcut.height)
         end)
 
     local craft_plan = ConfigContent(window, 4)
-    craft_plan:add_bound_line_edit(TR["Width"], "sb_craft_plan_width",
+    craft_plan:add_line_edit("sb_craft_plan_width", TR["Width"],
         function(value)
             local width = tonumber(value)
             if width ~= nil then
                 settings_getter().widgets.craft_plan.width = width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.craft_plan.width))
+        function()
+            return tostring(settings_getter().widgets.craft_plan.width)
         end)
-    craft_plan:add_bound_line_edit(TR["Max visible resources"], "sb_craft_plan_max_visible",
+    craft_plan:add_line_edit("sb_craft_plan_max_visible", TR["Max visible resources"],
         function(value)
             local max_visible = tonumber(value)
             if max_visible ~= nil then
                 settings_getter().widgets.craft_plan.max_visible = max_visible
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().widgets.craft_plan.max_visible))
+        function()
+            return tostring(settings_getter().widgets.craft_plan.max_visible)
         end)
 
     local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.top,
@@ -352,90 +352,90 @@ function StatusBarPage:Constructor(window)
     end
 
     local general = ConfigContent(window, 4)
-    general:add_bound_checkbox(TR["Enabled"], "sb_enabled",
+    general:add_checkbox("sb_enabled", TR["Enabled"],
         function(value)
             settings_getter().enabled = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(settings_getter().enabled == true)
+        function()
+            return settings_getter().enabled == true
         end, true)
     self:add_tab(TR["General"], "general", general)
 
     local background = ConfigContent(window, 4)
-    background:add_bound_line_edit(TR["Background opacity (0..1)"], "sb_bg_opacity",
+    background:add_line_edit("sb_bg_opacity", TR["Background opacity (0..1)"],
         function(value)
             local opacity = tonumber(value)
             if opacity ~= nil then
                 settings_getter().bg.opacity = opacity
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().bg.opacity))
+        function()
+            return tostring(settings_getter().bg.opacity)
         end)
     self:add_tab(TR["Background"], "background", background)
 
     local font = ConfigContent(window, 4)
-    font:add_bound_dropdown(TR["Font"], "sb_font_name", font.font_name_labels, font.font_name_values,
+    font:add_dropdown("sb_font_name", TR["Font"], font.font_name_labels, font.font_name_values,
         function(value)
             settings_getter().font.name = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().font.name)
+        function()
+            return settings_getter().font.name
         end)
-    font:add_bound_line_edit(TR["Font size"], "sb_font_size",
+    font:add_line_edit("sb_font_size", TR["Font size"],
         function(value)
             local font_size = tonumber(value)
             if font_size ~= nil then
                 settings_getter().font.size = font_size
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().font.size))
+        function()
+            return tostring(settings_getter().font.size)
         end)
-    font:add_bound_dropdown(TR["Font style"], "sb_font_style", font.font_style_labels, font.font_style_values,
+    font:add_dropdown("sb_font_style", TR["Font style"], font.font_style_labels, font.font_style_values,
         function(value)
             settings_getter().font.style = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().font.style)
+        function()
+            return settings_getter().font.style
         end)
     self:add_tab(TR["Font"], "font", font)
 
     local layout_help = BuildStatusBarLayoutHelp()
     local layout = ConfigContent(window, 4)
-    layout:add_bound_line_edit(TR["Height"], "sb_height",
+    layout:add_line_edit("sb_height", TR["Height"],
         function(value)
             local height = tonumber(value)
             if height ~= nil then
                 settings_getter().height = height
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().height))
+        function()
+            return tostring(settings_getter().height)
         end)
-    layout:break_line()
-    layout:add_bound_line_edit(TR["Left layout"], "sb_layout_left",
+    layout:add_row_break()
+    layout:add_line_edit("sb_layout_left", TR["Left layout"],
         function(value)
             settings_getter().layout.left = value
         end,
-        function(entry)
-            entry.tb:SetText(settings_getter().layout.left)
+        function()
+            return settings_getter().layout.left
         end, layout_help, true)
-    layout:break_line()
-    layout:add_bound_line_edit(TR["Center layout"], "sb_layout_center",
+    layout:add_row_break()
+    layout:add_line_edit("sb_layout_center", TR["Center layout"],
         function(value)
             settings_getter().layout.center = value
         end,
-        function(entry)
-            entry.tb:SetText(settings_getter().layout.center)
+        function()
+            return settings_getter().layout.center
         end, layout_help, true)
-    layout:break_line()
-    layout:add_bound_line_edit(TR["Right layout"], "sb_layout_right",
+    layout:add_row_break()
+    layout:add_line_edit("sb_layout_right", TR["Right layout"],
         function(value)
             settings_getter().layout.right = value
         end,
-        function(entry)
-            entry.tb:SetText(settings_getter().layout.right)
+        function()
+            return settings_getter().layout.right
         end, layout_help, true)
     self:add_tab(TR["Layout"], "layout", layout)
 

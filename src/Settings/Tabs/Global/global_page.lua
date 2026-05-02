@@ -33,43 +33,43 @@ function GlobalPage:Constructor(window)
     }, "\n")
 
     local general = ConfigContent(window, 4)
-    general:add_bound_line_edit(TR["UI Scale"], "scale",
+    general:add_line_edit("scale", TR["UI Scale"],
         function(value)
             local scale = tonumber(value)
             if scale ~= nil and scale > 0 then
                 self._settings.global.scale = scale
             end
         end,
-        function(entry)
-            entry:set_value(tostring(self._settings.global.scale))
+        function()
+            return tostring(self._settings.global.scale)
         end)
-    general:add_bound_checkbox(TR["Use native LotRO UI scaling"], "native_scaling",
+    general:add_checkbox("native_scaling", TR["Use native LotRO UI scaling"],
         function(value)
             self._settings.global.native_scaling = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(self._settings.global.native_scaling == true)
+        function()
+            return self._settings.global.native_scaling == true
         end, true)
-    general:break_line()
-    general:add_bound_line_edit(TR["Refresh rate of some UI elements (fps)"], "refresh_rate",
+    general:add_row_break()
+    general:add_line_edit("refresh_rate", TR["Refresh rate of some UI elements (fps)"],
         function(value)
             local refresh_rate = tonumber(value)
             if refresh_rate ~= nil and refresh_rate > 0 then
                 self._settings.global.refresh_rate = refresh_rate
             end
         end,
-        function(entry)
-            entry:set_value(tostring(self._settings.global.refresh_rate))
+        function()
+            return tostring(self._settings.global.refresh_rate)
         end)
-    general:add_bound_checkbox(TR["Use LotRO move mode shortcut"], "move_mode_shortcut",
+    general:add_checkbox("move_mode_shortcut", TR["Use LotRO move mode shortcut"],
         function(value)
             self._settings.global.move_mode_shortcut = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(self._settings.global.move_mode_shortcut == true)
+        function()
+            return self._settings.global.move_mode_shortcut == true
         end)
-    general:break_line()
-    general:add_bound_checkbox(TR["Enable bestiary capture (English client only)"], "bestiary_capture",
+    general:add_row_break()
+    general:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"],
         function(value)
             if is_lui_english_language() == true then
                 self._settings.global.bestiary_capture = value == true
@@ -77,45 +77,48 @@ function GlobalPage:Constructor(window)
                 self._settings.global.bestiary_capture = false
             end
         end,
-        function(entry)
-            local english_only = is_lui_english_language() == true
-            entry.cb:SetChecked(english_only == true and self._settings.global.bestiary_capture == true)
-            entry.cb:SetEnabled(english_only == true)
+        function()
+            return is_lui_english_language() == true and self._settings.global.bestiary_capture == true
         end, true)
+    general.controls.bestiary_capture.load_fn = function()
+        local english_only = is_lui_english_language() == true
+        general.controls.bestiary_capture.cb:SetEnabled(english_only == true)
+        return english_only == true and self._settings.global.bestiary_capture == true
+    end
     self:add_tab(TR["General"], "general", general)
 
     local numbers = ConfigContent(window, 4)
-    numbers:add_bound_checkbox(TR["Shorten large numbers"], "abbrev_enabled",
+    numbers:add_checkbox("abbrev_enabled", TR["Shorten large numbers"],
         function(value)
             self._settings.global.number_abbrev.enabled = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(self._settings.global.number_abbrev.enabled == true)
+        function()
+            return self._settings.global.number_abbrev.enabled == true
         end)
-    numbers:break_line()
-    numbers:add_bound_dropdown(TR["Digits Before Shortening"], "abbrev_digits", numbers.abbrev_digits_labels,
+    numbers:add_row_break()
+    numbers:add_dropdown("abbrev_digits", TR["Digits Before Shortening"], numbers.abbrev_digits_labels,
         numbers.abbrev_digits_values,
         function(value)
             self._settings.global.number_abbrev.digits = value
         end,
-        function(entry)
-            entry:set_value(self._settings.global.number_abbrev.digits)
+        function()
+            return self._settings.global.number_abbrev.digits
         end, digits_help)
-    numbers:add_bound_dropdown(TR["Max Shortened Width"], "abbrev_width", numbers.abbrev_width_labels,
+    numbers:add_dropdown("abbrev_width", TR["Max Shortened Width"], numbers.abbrev_width_labels,
         numbers.abbrev_width_values,
         function(value)
             self._settings.global.number_abbrev.width = value
         end,
-        function(entry)
-            entry:set_value(self._settings.global.number_abbrev.width)
+        function()
+            return self._settings.global.number_abbrev.width
         end, width_help)
-    numbers:add_bound_dropdown(TR["Shortening Style"], "abbrev_method", numbers.abbrev_method_labels,
+    numbers:add_dropdown("abbrev_method", TR["Shortening Style"], numbers.abbrev_method_labels,
         numbers.abbrev_method_values,
         function(value)
             self._settings.global.number_abbrev.method = value
         end,
-        function(entry)
-            entry:set_value(self._settings.global.number_abbrev.method)
+        function()
+            return self._settings.global.number_abbrev.method
         end, method_help)
     self:add_tab(TR["Numbers"], "numbers", numbers)
 end

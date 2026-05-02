@@ -29,19 +29,6 @@ _G.ConfigContent = ConfigContent
 _G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
 _G.LUI_SETTINGS_SHARED.config_content = ConfigContent
 
-local function _entry_value(entry)
-    if entry.tb ~= nil then
-        return entry.tb:GetText()
-    end
-    if entry.button ~= nil then
-        return entry.button:GetValue()
-    end
-    if entry.cb ~= nil then
-        return entry.cb:IsChecked()
-    end
-    error("ConfigContent entry has no readable value control")
-end
-
 function ConfigContent:Constructor(window, columns, refresh_preview_fn)
     Turbine.UI.Control.Constructor(self)
 
@@ -50,7 +37,7 @@ function ConfigContent:Constructor(window, columns, refresh_preview_fn)
     self.controls = {}
     self.fields = {}
     self._color_fields = {}
-    self._bindings = {}
+    self._bound_entries = {}
     self.grid_columns = 2
     self.compact_fields = true
 
@@ -218,7 +205,7 @@ function ConfigContent:add_custom(key, height)
     return entry
 end
 
-function ConfigContent:add_line_edit(key, label_text, help_text, full_width)
+function ConfigContent:add_line_edit(key, label_text, save_fn, load_fn, help_text, full_width)
     local entry = {}
     entry.kind = "text"
     entry.key = key
@@ -263,12 +250,24 @@ function ConfigContent:add_line_edit(key, label_text, help_text, full_width)
         entry.tb:SetText(value)
     end
 
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent line edit binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent line edit binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
+    end
+
     self.controls[key] = entry
     self.fields[#self.fields + 1] = entry
     return entry
 end
 
-function ConfigContent:add_color_picker(key, label_text, help_text, full_width)
+function ConfigContent:add_color_picker(key, label_text, save_fn, load_fn, help_text, full_width)
     local entry = {}
     entry.kind = "text"
     entry.key = key
@@ -327,12 +326,25 @@ function ConfigContent:add_color_picker(key, label_text, help_text, full_width)
         entry.tb:SetText(value)
     end
 
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent color picker binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent color picker binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
+    end
+
     self.controls[key] = entry
     self.fields[#self.fields + 1] = entry
     return entry
 end
 
-function ConfigContent:add_dropdown(key, label_text, option_labels, option_values, help_text, full_width)
+function ConfigContent:add_dropdown(key, label_text, option_labels, option_values, save_fn, load_fn, help_text,
+                                    full_width)
     local entry = {}
     entry.kind = "dropdown"
     entry.key = key
@@ -341,8 +353,6 @@ function ConfigContent:add_dropdown(key, label_text, option_labels, option_value
     entry.option_values = option_values
     entry.help_text = help_text
     entry.full_width = full_width == true
-    entry.value = nil
-
     entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(self.form)
     entry.label:SetFont(self.window.field_label_font)
@@ -359,9 +369,7 @@ function ConfigContent:add_dropdown(key, label_text, option_labels, option_value
     entry.button:SetPopupHost(self.window)
     entry.button:SetMappedOptions(entry.option_labels, entry.option_values)
     entry.button:SetZOrder(2)
-    entry.value = entry.button:GetValue()
     entry.button.ValueChanged = function(_, value)
-        entry.value = value
         if self.loading == true then
             return
         end
@@ -381,7 +389,18 @@ function ConfigContent:add_dropdown(key, label_text, option_labels, option_value
 
     function entry:set_value(value)
         entry.button:SetValue(value)
-        entry.value = entry.button:GetValue()
+    end
+
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent dropdown binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent dropdown binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
     end
 
     self.controls[key] = entry
@@ -389,7 +408,7 @@ function ConfigContent:add_dropdown(key, label_text, option_labels, option_value
     return entry
 end
 
-function ConfigContent:add_checkbox(key, label_text, full_width)
+function ConfigContent:add_checkbox(key, label_text, save_fn, load_fn, full_width)
     local entry = {}
     entry.kind = "checkbox"
     entry.key = key
@@ -417,6 +436,18 @@ function ConfigContent:add_checkbox(key, label_text, full_width)
 
     function entry:set_value(value)
         entry.cb:SetChecked(value)
+    end
+
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent checkbox binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent checkbox binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
     end
 
     self.controls[key] = entry
@@ -809,6 +840,10 @@ function ConfigContent:layout()
     self.form:SetSize(form_width, y + form_pad)
 end
 
+function ConfigContent:add_row_break()
+    return self:add_break(0)
+end
+
 function ConfigContent:bind(entry, save_fn, load_fn)
     if type(save_fn) ~= "function" then
         error("ConfigContent binding is missing save_fn")
@@ -817,50 +852,18 @@ function ConfigContent:bind(entry, save_fn, load_fn)
         error("ConfigContent binding is missing load_fn")
     end
 
-    self._bindings[#self._bindings + 1] = {
-        entry = entry,
-        save = save_fn,
-        load = load_fn,
-    }
-
+    entry.save_fn = save_fn
+    entry.load_fn = load_fn
+    self._bound_entries[#self._bound_entries + 1] = entry
     return entry
-end
-
-function ConfigContent:add_bound_line_edit(label_text, key, save_fn, load_fn, help_text, full_width)
-    local entry = self:add_line_edit(key, label_text, help_text, full_width)
-    return self:bind(entry, save_fn, load_fn)
-end
-
-function ConfigContent:add_bound_color_picker(label_text, key, save_fn, load_fn, help_text, full_width)
-    local entry = self:add_color_picker(key, label_text, help_text, full_width)
-    return self:bind(entry, save_fn, load_fn)
-end
-
-function ConfigContent:add_bound_dropdown(label_text, key, option_labels, option_values, save_fn, load_fn, help_text,
-                                          full_width)
-    local entry = self:add_dropdown(key, label_text, option_labels, option_values, help_text, full_width)
-    return self:bind(entry, save_fn, load_fn)
-end
-
-function ConfigContent:add_bound_checkbox(label_text, key, save_fn, load_fn, full_width)
-    local entry = self:add_checkbox(key, label_text, full_width)
-    return self:bind(entry, save_fn, load_fn)
-end
-
-function ConfigContent:add_row_break()
-    return self:add_break(0)
-end
-
-function ConfigContent:break_line()
-    return self:add_row_break()
 end
 
 function ConfigContent:load()
     self.loading = true
 
-    for i = 1, #self._bindings do
-        local binding = self._bindings[i]
-        binding.load(binding.entry, self)
+    for i = 1, #self._bound_entries do
+        local entry = self._bound_entries[i]
+        entry:set_value(entry.load_fn())
     end
 
     self.loading = false
@@ -869,8 +872,8 @@ function ConfigContent:load()
 end
 
 function ConfigContent:save()
-    for i = 1, #self._bindings do
-        local binding = self._bindings[i]
-        binding.save(_entry_value(binding.entry), binding.entry, self)
+    for i = 1, #self._bound_entries do
+        local entry = self._bound_entries[i]
+        entry.save_fn(entry:get_value())
     end
 end

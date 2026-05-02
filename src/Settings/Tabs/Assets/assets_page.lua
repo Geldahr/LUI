@@ -33,36 +33,36 @@ function AssetsPage:Constructor(window)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local general = ConfigContent(window, 4)
-    general:add_bound_checkbox(TR["Enabled"], "assets_enabled",
+    general:add_checkbox("assets_enabled", TR["Enabled"],
         function(value)
             self._settings.assets.enabled = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(self._settings.assets.enabled == true)
+        function()
+            return self._settings.assets.enabled == true
         end)
-    general:add_bound_dropdown(TR["View"], "assets_view_mode", VIEW_MODE_LABELS, VIEW_MODE_VALUES,
+    general:add_dropdown("assets_view_mode", TR["View"], VIEW_MODE_LABELS, VIEW_MODE_VALUES,
         function(value)
             self._settings.assets.view_mode = value
         end,
-        function(entry)
-            entry:set_value(self._settings.assets.view_mode)
+        function()
+            return self._settings.assets.view_mode
         end)
     self:add_tab(TR["General"], "general", general)
 
     local tiles = ConfigContent(window, 4)
-    tiles:add_bound_dropdown(TR["Icons"], "assets_tile_icons", TILE_SIZE_LABELS, TILE_SIZE_VALUES,
+    tiles:add_dropdown("assets_tile_icons", TR["Icons"], TILE_SIZE_LABELS, TILE_SIZE_VALUES,
         function(value)
             self._settings.assets.tile.icons = value
         end,
-        function(entry)
-            entry:set_value(self._settings.assets.tile.icons)
+        function()
+            return self._settings.assets.tile.icons
         end)
-    tiles:add_bound_dropdown(TR["Details"], "assets_tile_details", TILE_SIZE_LABELS, TILE_SIZE_VALUES,
+    tiles:add_dropdown("assets_tile_details", TR["Details"], TILE_SIZE_LABELS, TILE_SIZE_VALUES,
         function(value)
             self._settings.assets.tile.details = value
         end,
-        function(entry)
-            entry:set_value(self._settings.assets.tile.details)
+        function()
+            return self._settings.assets.tile.details
         end)
     self:add_tab(TR["Tiles"], "tiles", tiles)
 end

@@ -71,7 +71,6 @@ local function _refresh_profile_manager(page, selected_profile_id)
     end
 
     local profile_dropdown = page.controls.profile_manager_profile
-    local name_field = page.controls.profile_manager_name
 
     page.window.profile_manager_refreshing = true
 
@@ -91,14 +90,13 @@ local function _refresh_profile_manager(page, selected_profile_id)
         wanted_profile_id = get_first_configuration_id()
     end
 
-    if wanted_profile_id ~= nil then
-        profile_dropdown:set_value(wanted_profile_id)
-    end
-
+    page.profile_manager_profile_value = wanted_profile_id
+    profile_dropdown:set_value(wanted_profile_id)
     local active_profile_id = profile_dropdown:get_value()
+    page.profile_manager_profile_value = active_profile_id
     page.window.profile_manager_selected_profile_id = active_profile_id
-    local profile_name = get_configuration_name(active_profile_id) or ""
-    name_field.tb:SetText(profile_name)
+    page.profile_manager_name_value = get_configuration_name(active_profile_id) or ""
+    ConfigContent.load(page)
 
     local can_delete = active_profile_id ~= nil and get_configuration_count() > 1
     page.profile_manager_use_button:set_enabled(active_profile_id ~= nil and active_profile_id ~= _G.current_profile_id)
@@ -113,6 +111,8 @@ ProfileManagerPage = class(ConfigContent)
 function ProfileManagerPage:Constructor(window)
     ConfigContent.Constructor(self, window, PROFILE_COLUMNS)
     self.show_main_content_border = false
+    self.profile_manager_profile_value = nil
+    self.profile_manager_name_value = ""
 
     local info_entry = self:add_custom("profile_manager_info", INFO_HEIGHT)
     info_entry.body = UI.Widgets.LuiLabel()
@@ -138,7 +138,14 @@ function ProfileManagerPage:Constructor(window)
 
     self:add_break(BLOCK_GAP)
 
-    local profile_dropdown = self:add_dropdown("profile_manager_profile", TR["Profile"], {}, {}, nil, true)
+    local profile_dropdown = self:add_dropdown("profile_manager_profile", TR["Profile"], {}, {},
+        function(value)
+            self.profile_manager_profile_value = value
+        end,
+        function()
+            return self.profile_manager_profile_value
+        end,
+        nil, true)
     profile_dropdown.on_changed = function(value)
         _refresh_profile_manager(self, value)
     end
@@ -174,7 +181,14 @@ function ProfileManagerPage:Constructor(window)
 
     self:add_break(BLOCK_GAP)
 
-    self:add_line_edit("profile_manager_name", TR["Name"], nil, true)
+    self:add_line_edit("profile_manager_name", TR["Name"],
+        function(value)
+            self.profile_manager_name_value = value
+        end,
+        function()
+            return self.profile_manager_name_value
+        end,
+        nil, true)
 
     local name_actions = self:add_custom("profile_manager_name_actions", ACTION_ROW_HEIGHT)
     name_actions.rename_button = UI.Widgets.LuiButton()
@@ -222,7 +236,4 @@ end
 function ProfileManagerPage:load()
     local selected_profile_id = self.window.profile_manager_selected_profile_id or _G.current_profile_id
     _refresh_profile_manager(self, selected_profile_id)
-end
-
-function ProfileManagerPage:save()
 end

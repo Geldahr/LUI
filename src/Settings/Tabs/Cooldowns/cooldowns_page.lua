@@ -59,6 +59,14 @@ local function _create_text_area(page, key, label_text, help_text)
         self.tb:SetText(self.tb:GetText())
     end
 
+    function entry:get_value()
+        return entry.tb:GetText()
+    end
+
+    function entry:set_value(value)
+        entry.tb:SetText(value)
+    end
+
     entry.control.SizeChanged = function()
         _layout_text_area(entry)
     end
@@ -86,44 +94,44 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
     local ui = window._ui
 
     local frame = ConfigContent(window, 3, refresh_preview)
-    frame:add_bound_color_picker(TR["Background color"], "cd_bg_color",
+    frame:add_color_picker("cd_bg_color", TR["Background color"],
         function(value)
             settings_getter().color.background = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().color.background))
+        function()
+            return ui.color_to_hex(settings_getter().color.background)
         end)
-    frame:add_bound_color_picker(TR["Border color"], "cd_border_color",
+    frame:add_color_picker("cd_border_color", TR["Border color"],
         function(value)
             settings_getter().color.border = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().color.border))
+        function()
+            return ui.color_to_hex(settings_getter().color.border)
         end)
 
     local bar = ConfigContent(window, 3, refresh_preview)
-    bar:add_bound_color_picker(TR["Bar color"], "cd_bar_color",
+    bar:add_color_picker("cd_bar_color", TR["Bar color"],
         function(value)
             settings_getter().color.bar = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().color.bar))
+        function()
+            return ui.color_to_hex(settings_getter().color.bar)
         end)
 
     local text = ConfigContent(window, 3, refresh_preview)
-    text:add_bound_color_picker(TR["Font color"], "cd_font_color",
+    text:add_color_picker("cd_font_color", TR["Font color"],
         function(value)
             settings_getter().font.color = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().font.color))
+        function()
+            return ui.color_to_hex(settings_getter().font.color)
         end)
-    text:add_bound_color_picker(TR["Outline color"], "cd_font_outline_color",
+    text:add_color_picker("cd_font_outline_color", TR["Outline color"],
         function(value)
             settings_getter().font.outline_color = ui.hex_to_color(value)
         end,
-        function(entry)
-            entry.tb:SetText(ui.color_to_hex(settings_getter().font.outline_color))
+        function()
+            return ui.color_to_hex(settings_getter().font.outline_color)
         end)
 
     local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.top,
@@ -163,126 +171,126 @@ function CooldownsFeaturePage:Constructor(window)
     end
 
     local general = ConfigContent(window, 4, refresh_preview)
-    general:add_bound_checkbox(TR["Enabled"], "cd_enabled",
+    general:add_checkbox("cd_enabled", TR["Enabled"],
         function(value)
             settings_getter().enabled = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(settings_getter().enabled == true)
+        function()
+            return settings_getter().enabled == true
         end, true)
-    general:break_line()
-    general:add_bound_line_edit(TR["Threshold (s)"], "cd_threshold",
+    general:add_row_break()
+    general:add_line_edit("cd_threshold", TR["Threshold (s)"],
         function(value)
             local threshold = tonumber(value)
             if threshold ~= nil then
                 settings_getter().threshold = threshold
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().threshold))
+        function()
+            return tostring(settings_getter().threshold)
         end)
-    general:add_bound_line_edit(TR["Min base cooldown (s)"], "cd_min_base_cooldown",
+    general:add_line_edit("cd_min_base_cooldown", TR["Min base cooldown (s)"],
         function(value)
             local min_base_cooldown = tonumber(value)
             if min_base_cooldown ~= nil then
                 settings_getter().min_base_cooldown = min_base_cooldown
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().min_base_cooldown))
+        function()
+            return tostring(settings_getter().min_base_cooldown)
         end, min_base_help)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4, refresh_preview)
-    layout:add_bound_line_edit(TR["Item width"], "cd_item_w",
+    layout:add_line_edit("cd_item_w", TR["Item width"],
         function(value)
             local item_w = tonumber(value)
             if item_w ~= nil then
                 settings_getter().item_w = item_w
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().item_w))
+        function()
+            return tostring(settings_getter().item_w)
         end)
-    layout:add_bound_line_edit(TR["Item height"], "cd_item_h",
+    layout:add_line_edit("cd_item_h", TR["Item height"],
         function(value)
             local item_h = tonumber(value)
             if item_h ~= nil then
                 settings_getter().item_h = item_h
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().item_h))
+        function()
+            return tostring(settings_getter().item_h)
         end)
-    layout:add_bound_line_edit(TR["Spacing (px)"], "cd_spacing",
+    layout:add_line_edit("cd_spacing", TR["Spacing (px)"],
         function(value)
             local spacing = tonumber(value)
             if spacing ~= nil then
                 settings_getter().spacing = spacing
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().spacing))
+        function()
+            return tostring(settings_getter().spacing)
         end)
-    layout:add_bound_line_edit(TR["Border width (px)"], "cd_border_width",
+    layout:add_line_edit("cd_border_width", TR["Border width (px)"],
         function(value)
             local border_width = tonumber(value)
             if border_width ~= nil then
                 settings_getter().border_width = border_width
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().border_width))
+        function()
+            return tostring(settings_getter().border_width)
         end)
-    layout:add_bound_line_edit(TR["Columns"], "cd_columns",
+    layout:add_line_edit("cd_columns", TR["Columns"],
         function(value)
             local columns = tonumber(value)
             if columns ~= nil then
                 settings_getter().columns = columns
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().columns))
+        function()
+            return tostring(settings_getter().columns)
         end)
-    layout:add_bound_line_edit(TR["Rows"], "cd_rows",
+    layout:add_line_edit("cd_rows", TR["Rows"],
         function(value)
             local rows = tonumber(value)
             if rows ~= nil then
                 settings_getter().rows = rows
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().rows))
+        function()
+            return tostring(settings_getter().rows)
         end)
-    layout:break_line()
-    layout:add_bound_dropdown(TR["Order"], "cd_flow", flow_labels, flow_values,
+    layout:add_row_break()
+    layout:add_dropdown("cd_flow", TR["Order"], flow_labels, flow_values,
         function(value)
             settings_getter().flow = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().flow)
+        function()
+            return settings_getter().flow
         end)
-    layout:add_bound_dropdown(TR["Icon position"], "cd_icon_side", layout.side_labels, layout.side_values,
+    layout:add_dropdown("cd_icon_side", TR["Icon position"], layout.side_labels, layout.side_values,
         function(value)
             settings_getter().icon_side = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().icon_side)
+        function()
+            return settings_getter().icon_side
         end)
-    layout:break_line()
-    layout:add_bound_dropdown(TR["Bar mode"], "cd_bar_mode", bar_mode_labels, bar_mode_values,
+    layout:add_row_break()
+    layout:add_dropdown("cd_bar_mode", TR["Bar mode"], bar_mode_labels, bar_mode_values,
         function(value)
             settings_getter().bar_mode = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().bar_mode)
+        function()
+            return settings_getter().bar_mode
         end)
-    layout:add_bound_dropdown(TR["Bar movement towards"], "cd_bar_expire_towards", layout.side_labels, layout.side_values,
+    layout:add_dropdown("cd_bar_expire_towards", TR["Bar movement towards"], layout.side_labels, layout.side_values,
         function(value)
             settings_getter().bar_expire_towards = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().bar_expire_towards)
+        function()
+            return settings_getter().bar_expire_towards
         end)
     self:add_tab(TR["Layout"], "layout", layout)
 
@@ -290,57 +298,57 @@ function CooldownsFeaturePage:Constructor(window)
     self:add_tab(TR["Colors"], "colors", colors)
 
     local text = ConfigContent(window, 4, refresh_preview)
-    text:add_bound_dropdown(TR["Time format"], "cd_time_format", time_format_labels, time_format_values,
+    text:add_dropdown("cd_time_format", TR["Time format"], time_format_labels, time_format_values,
         function(value)
             settings_getter().time_format = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().time_format)
+        function()
+            return settings_getter().time_format
         end)
-    text:add_bound_line_edit(TR["Text margin (px)"], "cd_text_margin",
+    text:add_line_edit("cd_text_margin", TR["Text margin (px)"],
         function(value)
             local text_margin = tonumber(value)
             if text_margin ~= nil then
                 settings_getter().text_margin = text_margin
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().text_margin))
+        function()
+            return tostring(settings_getter().text_margin)
         end)
-    text:add_bound_line_edit(TR["Max name chars"], "cd_name_max_chars",
+    text:add_line_edit("cd_name_max_chars", TR["Max name chars"],
         function(value)
             local name_max_chars = tonumber(value)
             if name_max_chars ~= nil then
                 settings_getter().name_max_chars = name_max_chars
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().name_max_chars))
+        function()
+            return tostring(settings_getter().name_max_chars)
         end)
-    text:break_line()
-    text:add_bound_dropdown(TR["Font"], "cd_font_name", text.font_name_labels, text.font_name_values,
+    text:add_row_break()
+    text:add_dropdown("cd_font_name", TR["Font"], text.font_name_labels, text.font_name_values,
         function(value)
             settings_getter().font.name = value
         end,
-        function(entry)
-            entry:set_value(settings_getter().font.name)
+        function()
+            return settings_getter().font.name
         end)
-    text:add_bound_line_edit(TR["Font size"], "cd_font_size",
+    text:add_line_edit("cd_font_size", TR["Font size"],
         function(value)
             local font_size = tonumber(value)
             if font_size ~= nil then
                 settings_getter().font.size = font_size
             end
         end,
-        function(entry)
-            entry.tb:SetText(tostring(settings_getter().font.size))
+        function()
+            return tostring(settings_getter().font.size)
         end)
-    text:add_bound_dropdown(TR["Font style"], "cd_font_style", text.font_style_labels, text.font_style_values,
+    text:add_dropdown("cd_font_style", TR["Font style"], text.font_style_labels, text.font_style_values,
         function(value)
             settings_getter().font.style = value
         end,
-        function(entry)
-            entry.set_value(entry, settings_getter().font.style)
+        function()
+            return settings_getter().font.style
         end)
     self:add_tab(TR["Text"], "text", text)
 
@@ -350,8 +358,8 @@ function CooldownsFeaturePage:Constructor(window)
         function(value)
             settings_getter().whitelist = value
         end,
-        function(entry)
-            entry.tb:SetText(settings_getter().whitelist)
+        function()
+            return settings_getter().whitelist
         end)
     filters:add_break()
     local blacklist = _create_text_area(filters, "cd_blacklist", TR["Blacklist"], list_help)
@@ -359,8 +367,8 @@ function CooldownsFeaturePage:Constructor(window)
         function(value)
             settings_getter().blacklist = value
         end,
-        function(entry)
-            entry.tb:SetText(settings_getter().blacklist)
+        function()
+            return settings_getter().blacklist
         end)
     self:add_tab(TR["Filters"], "filters", filters)
 

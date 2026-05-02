@@ -31,22 +31,22 @@ function CraftingPage:Constructor(window)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local general = ConfigContent(window, 4)
-    general:add_bound_checkbox(TR["Enabled"], "crafting_enabled",
+    general:add_checkbox("crafting_enabled", TR["Enabled"],
         function(value)
             self._settings.crafting.enabled = value == true
         end,
-        function(entry)
-            entry.cb:SetChecked(self._settings.crafting.enabled == true)
+        function()
+            return self._settings.crafting.enabled == true
         end)
     self:add_tab(TR["General"], "general", general)
 
     local recipes = ConfigContent(window, 4)
-    recipes:add_bound_dropdown(TR["Display"], "crafting_display_mode", DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES,
+    recipes:add_dropdown("crafting_display_mode", TR["Display"], DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES,
         function(value)
             self._settings.crafting.display_mode = value
         end,
-        function(entry)
-            entry:set_value(self._settings.crafting.display_mode)
+        function()
+            return self._settings.crafting.display_mode
         end, DISPLAY_MODE_HELP)
     recipes:add_info(TR["Reload the plugin for display mode changes to take effect."])
     recipes.controls.crafting_display_mode.visible_if = function()
