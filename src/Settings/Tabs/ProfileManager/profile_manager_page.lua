@@ -1,32 +1,19 @@
 import "Turbine.UI"
 
-import "LUI.src.Settings.Tabs.feature_shell"
-import "LUI.src.Settings.Tabs.tabbed_page"
 import "LUI.src.Settings.Tabs.form_page"
 import "LUI.src.UI.Widgets"
 
-local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
-    _G.SettingsTabbedPage or SettingsTabbedPage
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
-local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local configure_compact_form = FeatureShell.configure_compact_form
-local module_for_page = FeatureShell.module_for_page
-local scaled_int = FeatureShell.scaled_int
 
 local PROFILE_INFO_FONT_NAME = "Verdana"
 local PROFILE_INFO_FONT_SIZE = 13
 local INFO_HEIGHT = 59
 local ACTION_ROW_HEIGHT = 24
-local ACTION_BUTTON_WIDTH = 122
 local BLOCK_GAP = 24
 
 local function _scaled_profile_info_size(value)
     return value * _G.settings.global.scale
-end
-
-local function _scaled_action_button_width()
-    return math.floor((ACTION_BUTTON_WIDTH * _G.settings.global.scale) + 0.5)
 end
 
 local function _scaled_profile_info_font()
@@ -44,32 +31,26 @@ local function _layout_info(entry)
     entry.body:SetSize(width, height)
 end
 
-local function _layout_button_row(window, entry, left_button, right_button)
+local function _layout_button_row(window, entry, buttons)
     local gap = window.inner_gap
     local width, height = entry.control:GetSize()
-    local button_width = _scaled_action_button_width()
-    if button_width > width then
-        button_width = width
-    end
-
-    if right_button == nil then
-        left_button:SetPosition(0, 0)
-        left_button:SetSize(button_width, height)
+    local count = #buttons
+    if count < 1 then
         return
     end
 
-    if (button_width * 2) + gap > width then
-        button_width = math.floor((width - gap) / 2)
-    end
+    local button_width = math.floor((width - (gap * (count - 1))) / count)
     if button_width < 1 then
         button_width = 1
     end
 
-    left_button:SetPosition(0, 0)
-    left_button:SetSize(button_width, height)
-
-    right_button:SetPosition(button_width + gap, 0)
-    right_button:SetSize(button_width, height)
+    local x = 0
+    for i = 1, count do
+        local button = buttons[i]
+        button:SetPosition(x, 0)
+        button:SetSize(button_width, height)
+        x = x + button_width + gap
+    end
 end
 
 local function _apply_info_scale(entry)
@@ -77,14 +58,11 @@ local function _apply_info_scale(entry)
     _layout_info(entry)
 end
 
-local function _apply_row_scale(window, entry, left_button, right_button)
-    if left_button ~= nil then
-        left_button:set_font(window.settings_font)
+local function _apply_row_scale(window, entry, buttons)
+    for i = 1, #buttons do
+        buttons[i]:set_font(window.settings_font)
     end
-    if right_button ~= nil then
-        right_button:set_font(window.settings_font)
-    end
-    _layout_button_row(window, entry, left_button, right_button)
+    _layout_button_row(window, entry, buttons)
 end
 
 local function _refresh_profile_manager(page, selected_profile_id)
@@ -130,10 +108,15 @@ local function _refresh_profile_manager(page, selected_profile_id)
     page.window.profile_manager_refreshing = false
 end
 
-local function _new_manage_section(window, owner)
-    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
+ProfileManagerPage = class(SettingsFormPage)
 
-    local info_entry = page:add_custom("profile_manager_info", INFO_HEIGHT)
+function ProfileManagerPage:Constructor(window)
+    SettingsFormPage.Constructor(self, window)
+    self.show_main_content_border = false
+    self:set_compact_fields(true)
+    self:set_grid_columns(4)
+
+    local info_entry = self:add_custom("profile_manager_info", INFO_HEIGHT)
     info_entry.body = UI.Widgets.LuiLabel()
     info_entry.body:SetParent(info_entry.control)
     info_entry.body:SetMouseVisible(false)
@@ -155,14 +138,14 @@ local function _new_manage_section(window, owner)
     end
     info_entry:apply_ui_scale()
 
-    page:add_break(BLOCK_GAP)
+    self:add_break(BLOCK_GAP)
 
-    local profile_dropdown = page:add_dropdown("profile_manager_profile", TR["Profile"], {}, {}, nil, true)
+    local profile_dropdown = self:add_dropdown("profile_manager_profile", TR["Profile"], {}, {}, nil, true)
     profile_dropdown.on_changed = function(value)
-        _refresh_profile_manager(owner, value)
+        _refresh_profile_manager(self, value)
     end
 
-    local profile_actions = page:add_custom("profile_manager_profile_actions", ACTION_ROW_HEIGHT)
+    local profile_actions = self:add_custom("profile_manager_profile_actions", ACTION_ROW_HEIGHT)
     profile_actions.use_button = UI.Widgets.LuiButton()
     profile_actions.use_button:SetParent(profile_actions.control)
     profile_actions.use_button:set_text(TR["Use"])
@@ -178,82 +161,58 @@ local function _new_manage_section(window, owner)
     end
 
     profile_actions.control.SizeChanged = function()
-        _layout_button_row(window, profile_actions, profile_actions.use_button, profile_actions.delete_button)
+        _layout_button_row(window, profile_actions, { profile_actions.use_button, profile_actions.delete_button })
     end
     profile_actions.apply_ui_scale = function()
-        _apply_row_scale(window, profile_actions, profile_actions.use_button, profile_actions.delete_button)
+        _apply_row_scale(window, profile_actions, { profile_actions.use_button, profile_actions.delete_button })
     end
     profile_actions:apply_ui_scale()
 
-    page:add_break(BLOCK_GAP)
+    self:add_break(BLOCK_GAP)
 
-    page:add_text("profile_manager_name", TR["Name"], false, nil, true)
+    self:add_text("profile_manager_name", TR["Name"], false, nil, true)
 
-    local rename_actions = page:add_custom("profile_manager_name_actions", ACTION_ROW_HEIGHT)
-    rename_actions.rename_button = UI.Widgets.LuiButton()
-    rename_actions.rename_button:SetParent(rename_actions.control)
-    rename_actions.rename_button:set_text(TR["Rename"])
-    rename_actions.rename_button.Click = function()
+    local name_actions = self:add_custom("profile_manager_name_actions", ACTION_ROW_HEIGHT)
+    name_actions.rename_button = UI.Widgets.LuiButton()
+    name_actions.rename_button:SetParent(name_actions.control)
+    name_actions.rename_button:set_text(TR["Rename"])
+    name_actions.rename_button.Click = function()
         window:rename_selected_profile()
     end
 
-    rename_actions.control.SizeChanged = function()
-        _layout_button_row(window, rename_actions, rename_actions.rename_button, nil)
-    end
-    rename_actions.apply_ui_scale = function()
-        _apply_row_scale(window, rename_actions, rename_actions.rename_button, nil)
-    end
-    rename_actions:apply_ui_scale()
-
-    owner.profile_manager_use_button = profile_actions.use_button
-    owner.profile_manager_delete_button = profile_actions.delete_button
-    owner.profile_manager_rename_button = rename_actions.rename_button
-
-    return page
-end
-
-local function _new_create_section(window)
-    local page = configure_compact_form(SettingsFormPage(window), 4, nil)
-
-    local new_actions = page:add_custom("profile_manager_new_actions", ACTION_ROW_HEIGHT)
-    new_actions.new_from_current_button = UI.Widgets.LuiButton()
-    new_actions.new_from_current_button:SetParent(new_actions.control)
-    new_actions.new_from_current_button:set_text(TR["New from current"])
-    new_actions.new_from_current_button.Click = function()
+    name_actions.new_from_current_button = UI.Widgets.LuiButton()
+    name_actions.new_from_current_button:SetParent(name_actions.control)
+    name_actions.new_from_current_button:set_text(TR["New from current"])
+    name_actions.new_from_current_button.Click = function()
         window:create_profile_from_current()
     end
 
-    new_actions.new_button = UI.Widgets.LuiButton()
-    new_actions.new_button:SetParent(new_actions.control)
-    new_actions.new_button:set_text(TR["New"])
-    new_actions.new_button.Click = function()
+    name_actions.new_button = UI.Widgets.LuiButton()
+    name_actions.new_button:SetParent(name_actions.control)
+    name_actions.new_button:set_text(TR["New"])
+    name_actions.new_button.Click = function()
         window:start_new_profile_quick_setup()
     end
 
-    new_actions.control.SizeChanged = function()
-        _layout_button_row(window, new_actions, new_actions.new_from_current_button, new_actions.new_button)
+    name_actions.control.SizeChanged = function()
+        _layout_button_row(window, name_actions, {
+            name_actions.rename_button,
+            name_actions.new_from_current_button,
+            name_actions.new_button,
+        })
     end
-    new_actions.apply_ui_scale = function()
-        _apply_row_scale(window, new_actions, new_actions.new_from_current_button, new_actions.new_button)
+    name_actions.apply_ui_scale = function()
+        _apply_row_scale(window, name_actions, {
+            name_actions.rename_button,
+            name_actions.new_from_current_button,
+            name_actions.new_button,
+        })
     end
-    new_actions:apply_ui_scale()
+    name_actions:apply_ui_scale()
 
-    return page
-end
-
-ProfileManagerPage = class(SettingsTabbedPage)
-
-function ProfileManagerPage:Constructor(window)
-    SettingsTabbedPage.Constructor(self, window)
-    self.show_main_content_border = false
-    self.sub_tab_bar:set_content_padding(scaled_int(8))
-    self:add_sub_page(TR["General"], module_for_page("general", _new_manage_section(window, self)))
-    self:add_sub_page(TR["Create"], module_for_page("create", _new_create_section(window)))
-end
-
-function ProfileManagerPage:apply_ui_scale()
-    SettingsTabbedPage.apply_ui_scale(self)
-    self.sub_tab_bar:set_content_padding(scaled_int(8))
+    self.profile_manager_use_button = profile_actions.use_button
+    self.profile_manager_delete_button = profile_actions.delete_button
+    self.profile_manager_rename_button = name_actions.rename_button
 end
 
 function ProfileManagerPage:load()

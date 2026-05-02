@@ -17,6 +17,30 @@ local function _refresh_runtime_after_profile_change(window, selected_profile_id
     _save_profile_manager_state(window, selected_profile_id)
 end
 
+local function _trim_profile_name(text)
+    if type(text) ~= "string" then
+        return nil
+    end
+
+    local trimmed = string.gsub(text, "^%s+", "")
+    trimmed = string.gsub(trimmed, "%s+$", "")
+    if string.len(trimmed) == 0 then
+        return nil
+    end
+
+    return trimmed
+end
+
+local function _get_profile_manager_name(window)
+    local controls = window:_controls_for_tab("profile_manager")
+    local name_control = controls ~= nil and controls.profile_manager_name or nil
+    if name_control == nil then
+        return nil
+    end
+
+    return _trim_profile_name(name_control.tb:GetText())
+end
+
 function ConfigWindow:_controls_for_tab(key)
     local page = nil
     if self.main_tab_bar ~= nil then
@@ -118,10 +142,19 @@ function ConfigWindow:create_profile_from_current()
         return
     end
 
+    local profile_name = _get_profile_manager_name(self)
+    if profile_name == nil then
+        return
+    end
+
     _capture_runtime_geometry()
 
     local duplicate_profile_id = duplicate_configuration(_G.current_profile_id)
     if duplicate_profile_id == nil then
+        return
+    end
+
+    if rename_configuration(duplicate_profile_id, profile_name) ~= true then
         return
     end
 
@@ -133,12 +166,18 @@ function ConfigWindow:create_profile_from_current()
 end
 
 function ConfigWindow:start_new_profile_quick_setup()
+    local profile_name = _get_profile_manager_name(self)
+    if profile_name == nil then
+        return
+    end
+
     self:hide_confirmation_dialog()
     self:SetVisible(false)
 
     FIRST_RUN_QUICK_SETUP_WINDOW = Settings.FirstRunQuickSetup({
         skip_existing_configurations = true,
         create_profile_on_finish = true,
+        profile_name = profile_name,
     })
     FIRST_RUN_QUICK_SETUP_WINDOW:open()
 end
