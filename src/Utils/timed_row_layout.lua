@@ -133,6 +133,36 @@ local function _char_width_units(ch, normalized_font_name)
     if ch == " " then
         return 0.30
     end
+    if ch == "m" then
+        return 0.88
+    end
+    if ch == "w" then
+        return 0.82
+    end
+    if ch == "n" or ch == "h" or ch == "u" then
+        return 0.52
+    end
+    if ch == "a" or ch == "c" or ch == "e" or ch == "o" or ch == "s" then
+        return 0.50
+    end
+    if ch == "d" or ch == "g" or ch == "p" or ch == "q" then
+        return 0.54
+    end
+    if ch == "b" or ch == "k" or ch == "x" or ch == "y" or ch == "z" then
+        return 0.49
+    end
+    if ch == "i" or ch == "l" or ch == "I" or ch == "j" then
+        return 0.30
+    end
+    if ch == "f" or ch == "t" or ch == "r" then
+        return 0.38
+    end
+    if ch == "M" or ch == "W" then
+        return 0.94
+    end
+    if ch == "N" or ch == "H" or ch == "U" then
+        return 0.58
+    end
     if string.match(ch, "%l") ~= nil then
         return 0.52
     end
@@ -233,6 +263,10 @@ function _G.lui_timed_row_resolved_font_size(font_name, font_size)
         return 12
     end
     return _choose_font_size(_normalize_font_size(font_size), available)
+end
+
+function _G.lui_estimate_text_width_units(text, font_name)
+    return _text_width_units(text, _normalize_font_name(font_name))
 end
 
 function _G.lui_timed_row_estimate_text_width(text, font_name, font_size)
