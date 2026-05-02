@@ -2,13 +2,10 @@ import "Turbine.UI"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.Settings.Tabs.tabbed_page"
-import "LUI.src.Settings.Tabs.form_page"
 
 local Style = UI.Widgets.Style
 local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
     _G.SettingsTabbedPage or SettingsTabbedPage
-local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or
-    _G.SettingsFormPage or SettingsFormPage
 
 local SECTION_TAB_SCALE = 0.88
 local NESTED_TAB_SCALE = 0.78
