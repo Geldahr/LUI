@@ -1,5 +1,3 @@
-import "LUI.src.Settings.Tabs.Target.target_vitals_page"
-
 TargetVitals = {
     key = "target_vitals",
     text = TR["Target Vitals"],
@@ -81,10 +79,6 @@ local function _apply_vital_label(controls, prefix, bar_key, label_index, label,
     end
 
     _apply_color(ui, label.font.outline_color, controls[key .. "_font_outline_color"].tb:GetText())
-end
-
-function TargetVitals.create_page(window)
-    return TargetVitalsPage(window)
 end
 
 function TargetVitals.load(page, s, ui)

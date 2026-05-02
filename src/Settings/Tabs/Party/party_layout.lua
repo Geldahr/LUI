@@ -1,13 +1,7 @@
-import "LUI.src.Settings.Tabs.Party.party_layout_page"
-
 PartyLayout = {
     key = "party_layout",
     text = TR["Layout"],
 }
-
-function PartyLayout.create_page(window)
-    return PartyLayoutPage(window)
-end
 
 function PartyLayout.load(page, s)
     if page == nil then

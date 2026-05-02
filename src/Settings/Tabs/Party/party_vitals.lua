@@ -1,5 +1,3 @@
-import "LUI.src.Settings.Tabs.Party.party_vitals_page"
-
 PartyVitals = {
     key = "party_vitals",
     text = TR["Party Vitals"],
@@ -81,10 +79,6 @@ local function _apply_vital_label(controls, prefix, bar_key, label_index, label,
     end
 
     _apply_color(ui, label.font.outline_color, controls[key .. "_font_outline_color"].tb:GetText())
-end
-
-function PartyVitals.create_page(window)
-    return PartyVitalsPage(window)
 end
 
 function PartyVitals.load(page, s, ui)

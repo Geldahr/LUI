@@ -1,5 +1,3 @@
-import "LUI.src.Settings.Tabs.Target.target_targets_target_page"
-
 TargetTargetsTarget = {
     key = "target_targets_target",
     text = TR["Target's Target"],
@@ -57,10 +55,6 @@ local function _apply_targets_target_label(controls, label_index, label, ui)
     _apply_color(ui, label.font.color, controls[key .. "_font_color"].tb:GetText())
     label.font.style = controls[key .. "_font_style"]:get_value()
     _apply_color(ui, label.font.outline_color, controls[key .. "_font_outline_color"].tb:GetText())
-end
-
-function TargetTargetsTarget.create_page(window)
-    return TargetTargetsTargetPage(window)
 end
 
 function TargetTargetsTarget.load(page, s, ui)

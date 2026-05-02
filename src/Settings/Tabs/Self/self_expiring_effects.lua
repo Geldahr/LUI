@@ -1,5 +1,3 @@
-import "LUI.src.Settings.Tabs.Self.self_expiring_effects_page"
-
 SelfExpiringEffects = {
     key = "expiring_effects",
     text = TR["Expiring Effects"],
@@ -10,10 +8,6 @@ local function _apply_color(ui, dest, hex)
     if c ~= nil then
         dest.R, dest.G, dest.B = c.R, c.G, c.B
     end
-end
-
-function SelfExpiringEffects.create_page(window)
-    return SelfExpiringEffectsPage(window)
 end
 
 function SelfExpiringEffects.load(page, s, ui)

@@ -1,5 +1,3 @@
-import "LUI.src.Settings.Tabs.Self.self_vitals_page"
-
 SelfVitals = {
     key = "self_vitals",
     text = TR["Self Vitals"],
@@ -81,10 +79,6 @@ local function _apply_vital_label(controls, prefix, bar_key, label_index, label,
     end
 
     _apply_color(ui, label.font.outline_color, controls[key .. "_font_outline_color"].tb:GetText())
-end
-
-function SelfVitals.create_page(window)
-    return SelfVitalsPage(window)
 end
 
 function SelfVitals.load(page, s, ui)

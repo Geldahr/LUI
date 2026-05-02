@@ -1,13 +1,7 @@
-import "LUI.src.Settings.Tabs.Self.cooldowns_page"
-
 Cooldowns = {
     key = "cooldowns",
     text = TR["Cooldowns"],
 }
-
-function Cooldowns.create_page(window)
-    return CooldownsPage(window)
-end
 
 function Cooldowns.load(page, s, ui)
     if page == nil then

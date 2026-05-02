@@ -1,5 +1,3 @@
-import "LUI.src.Settings.Tabs.Target.expiring_target_effects_page"
-
 ExpiringTargetEffects = {
     key = "expiring_target_effects",
     text = TR["Expiring Effects (Target)"],
@@ -10,10 +8,6 @@ local function _apply_color(ui, dest, hex)
     if c ~= nil then
         dest.R, dest.G, dest.B = c.R, c.G, c.B
     end
-end
-
-function ExpiringTargetEffects.create_page(window)
-    return ExpiringTargetEffectsPage(window)
 end
 
 function ExpiringTargetEffects.load(page, s, ui)

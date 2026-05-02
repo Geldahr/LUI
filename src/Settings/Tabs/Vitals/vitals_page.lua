@@ -77,6 +77,25 @@ local function _add_font_color_controls(page, base_key, color_label, outline_lab
     page:add_text(base_key .. "_font_outline_color", outline_label or TR["Outline Color"], true)
 end
 
+local function _bind_outline_visibility(owner_page, colors_page, outline_page, style_key, outline_key)
+    local outline = outline_page.controls[outline_key]
+    local style = owner_page.controls[style_key]
+    local previous_on_changed = style.on_changed
+
+    outline.visible_if = function()
+        return style:get_value() == LUI_ENUMS.font_style.OUTLINE
+    end
+
+    style.on_changed = function(...)
+        if type(previous_on_changed) == "function" then
+            previous_on_changed(...)
+        end
+        outline_page:layout()
+        colors_page:layout()
+        owner_page:layout()
+    end
+end
+
 local function _add_vitals_label_controls(page, prefix, bar_key, label_index)
     local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
 
@@ -232,6 +251,10 @@ local function _new_standard_colors_section(window, refresh_preview_fn, prefix, 
 
     local page = CompactNestedTabbedPage(window, UI.Widgets.LuiTabBar.position.left, NESTED_TAB_SCALE,
         NESTED_TAB_FONT_SIZE)
+    page._frame_page = frame
+    page._morale_page = morale
+    page._power_page = power
+    page._text_page = text
     page:add_sub_page(TR["Frame"], _module_for_page("frame", frame))
     page:add_sub_page(TR["Morale"], _module_for_page("morale", morale))
     page:add_sub_page(TR["Power / Wrath"], _module_for_page("power", power))
@@ -240,6 +263,7 @@ local function _new_standard_colors_section(window, refresh_preview_fn, prefix, 
     if include_effects == true then
         local effects = _configure_compact_form(SettingsFormPage(window), 3, refresh_preview_fn)
         _build_effects_colors_form(effects, prefix)
+        page._effects_page = effects
         page:add_sub_page(TR["Effects"], _module_for_page("effects", effects))
     end
 
@@ -277,10 +301,38 @@ local function _new_targets_target_colors_section(window, refresh_preview_fn)
 
     local page = CompactNestedTabbedPage(window, UI.Widgets.LuiTabBar.position.left, NESTED_TAB_SCALE,
         NESTED_TAB_FONT_SIZE)
+    page._frame_page = frame
+    page._morale_page = morale
+    page._text_page = text
     page:add_sub_page(TR["Frame"], _module_for_page("frame", frame))
     page:add_sub_page(TR["Morale"], _module_for_page("morale", morale))
     page:add_sub_page(TR["Text"], _module_for_page("text", text))
     return page
+end
+
+local function _bind_standard_outline_visibility(owner_page, colors_page, prefix, include_effects)
+    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, prefix .. "_morale_label1_font_style",
+        prefix .. "_morale_label1_font_outline_color")
+    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, prefix .. "_morale_label2_font_style",
+        prefix .. "_morale_label2_font_outline_color")
+    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, prefix .. "_power_label1_font_style",
+        prefix .. "_power_label1_font_outline_color")
+    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, prefix .. "_power_label2_font_style",
+        prefix .. "_power_label2_font_outline_color")
+
+    if include_effects == true then
+        _bind_outline_visibility(owner_page, colors_page, colors_page._effects_page, prefix .. "_buff_timer_font_style",
+            prefix .. "_buff_timer_font_outline_color")
+        _bind_outline_visibility(owner_page, colors_page, colors_page._effects_page,
+            prefix .. "_debuff_timer_font_style", prefix .. "_debuff_timer_font_outline_color")
+    end
+end
+
+local function _bind_targets_target_outline_visibility(owner_page, colors_page)
+    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, "target_targets_target_label1_font_style",
+        "target_targets_target_label1_font_outline_color")
+    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, "target_targets_target_label2_font_style",
+        "target_targets_target_label2_font_outline_color")
 end
 
 _module_for_page = function(key, page)
@@ -675,7 +727,8 @@ local function _new_self_unit_page(window)
     _add_compact_row_break(frame)
     frame:add_text("self_ressource_background_dimming", TR["Dimming"])
     page:add_section(TR["Frame"], "frame", frame)
-    page:add_section(TR["Colors"], "colors", _new_standard_colors_section(window, page.refresh_preview, "self", true))
+    local colors = _new_standard_colors_section(window, page.refresh_preview, "self", true)
+    page:add_section(TR["Colors"], "colors", colors)
 
     local morale = _configure_compact_form(SettingsFormPage(window), 4, page.refresh_preview)
     _build_standard_morale_form(morale, "self")
@@ -687,6 +740,7 @@ local function _new_self_unit_page(window)
 
     page:add_section(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "self"))
     page:add_section(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "self"))
+    _bind_standard_outline_visibility(page, colors, "self", true)
 
     return page
 end
@@ -712,7 +766,8 @@ local function _new_target_unit_page(window)
     _add_compact_row_break(frame)
     frame:add_text("target_ressource_background_dimming", TR["Dimming"])
     page:add_section(TR["Frame"], "frame", frame)
-    page:add_section(TR["Colors"], "colors", _new_standard_colors_section(window, page.refresh_preview, "target", true))
+    local colors = _new_standard_colors_section(window, page.refresh_preview, "target", true)
+    page:add_section(TR["Colors"], "colors", colors)
 
     local morale = _configure_compact_form(SettingsFormPage(window), 4, page.refresh_preview)
     _build_standard_morale_form(morale, "target")
@@ -724,6 +779,7 @@ local function _new_target_unit_page(window)
 
     page:add_section(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "target"))
     page:add_section(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "target"))
+    _bind_standard_outline_visibility(page, colors, "target", true)
 
     return page
 end
@@ -747,7 +803,8 @@ local function _new_boss_unit_page(window)
     _add_compact_row_break(frame)
     frame:add_text("target_boss_ressource_background_dimming", TR["Dimming"])
     page:add_section(TR["Frame"], "frame", frame)
-    page:add_section(TR["Colors"], "colors", _new_standard_colors_section(window, page.refresh_preview, "target_boss", true))
+    local colors = _new_standard_colors_section(window, page.refresh_preview, "target_boss", true)
+    page:add_section(TR["Colors"], "colors", colors)
 
     local morale = _configure_compact_form(SettingsFormPage(window), 4, page.refresh_preview)
     _build_standard_morale_form(morale, "target_boss")
@@ -759,6 +816,7 @@ local function _new_boss_unit_page(window)
 
     page:add_section(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "target_boss"))
     page:add_section(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "target_boss"))
+    _bind_standard_outline_visibility(page, colors, "target_boss", true)
 
     return page
 end
@@ -781,9 +839,11 @@ local function _new_targets_target_unit_page(window)
     frame:add_text("target_targets_target_bubble_text", TR["Bubble Format (%B)"], false, frame.bubble_format_help,
         true)
     page:add_section(TR["Frame"], "frame", frame)
-    page:add_section(TR["Colors"], "colors", _new_targets_target_colors_section(window, page.refresh_preview))
+    local colors = _new_targets_target_colors_section(window, page.refresh_preview)
+    page:add_section(TR["Colors"], "colors", colors)
 
     page:add_section(TR["Texts"], "texts", _new_targets_target_texts_section(window, page.refresh_preview))
+    _bind_targets_target_outline_visibility(page, colors)
 
     return page
 end
@@ -812,7 +872,8 @@ local function _new_party_unit_page(window)
     _add_compact_row_break(frame)
     frame:add_text("party_ressource_background_dimming", TR["Dimming"])
     page:add_section(TR["Frame"], "frame", frame)
-    page:add_section(TR["Colors"], "colors", _new_standard_colors_section(window, page.refresh_preview, "party", false))
+    local colors = _new_standard_colors_section(window, page.refresh_preview, "party", false)
+    page:add_section(TR["Colors"], "colors", colors)
 
     local morale = _configure_compact_form(SettingsFormPage(window), 4, page.refresh_preview)
     _build_standard_morale_form(morale, "party")
@@ -839,6 +900,7 @@ local function _new_party_unit_page(window)
     icons:add_text("party_leader_icon_x", TR["Leader Icon X"])
     icons:add_text("party_leader_icon_y", TR["Leader Icon Y"])
     page:add_section(TR["Icons"], "icons", icons)
+    _bind_standard_outline_visibility(page, colors, "party", false)
 
     return page
 end
