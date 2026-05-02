@@ -1,14 +1,10 @@
 import "LUI.src.Settings.Tabs.feature_shell"
-import "LUI.src.Settings.Tabs.tabbed_page"
-import "LUI.src.Settings.Tabs.form_page"
+import "LUI.src.Settings.Content.content"
+import "LUI.src.Settings.Content.tabs"
 
-local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
-    _G.SettingsTabbedPage or SettingsTabbedPage
-local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
-    SettingsFormPage
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local configure_compact_form = FeatureShell.configure_compact_form
-local module_for_page = FeatureShell.module_for_page
+local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
+local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
 local scaled_int = FeatureShell.scaled_int
 
 local DISPLAY_MODE_LABELS = {
@@ -21,47 +17,48 @@ local DISPLAY_MODE_VALUES = {
     "grid",
 }
 
-TravelPage = class(SettingsTabbedPage)
+TravelPage = class(ConfigTabs)
 
 function TravelPage:Constructor(window)
-    SettingsTabbedPage.Constructor(self, window)
+    ConfigTabs.Constructor(self, window)
     self.show_main_content_border = false
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
-    local general = configure_compact_form(SettingsFormPage(window), 4, nil)
-    general:add_checkbox("travel_enabled", TR["Enabled"])
-    self:add_sub_page(TR["General"], module_for_page("general", general))
+    local general = ConfigContent(window, 4)
+    general:add_checkbox(TR["Enabled"], "travel_enabled",
+        function(value)
+            self._settings.travel.enabled = value == true
+        end,
+        function(entry)
+            entry.cb:SetChecked(self._settings.travel.enabled == true)
+        end)
+    self:add_tab(TR["General"], "general", general)
 
-    local layout = configure_compact_form(SettingsFormPage(window), 4, nil)
-    layout:add_dropdown("travel_display_mode", TR["Display"], DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES)
+    local layout = ConfigContent(window, 4)
+    layout:add_dropdown(TR["Display"], "travel_display_mode", DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES,
+        function(value)
+            self._settings.travel.display_mode = value
+        end,
+        function(entry)
+            entry:set_value(self._settings.travel.display_mode)
+        end)
     layout.controls.travel_display_mode.visible_if = function()
         return self.controls.travel_enabled.cb:IsChecked() == true
     end
-    self:add_sub_page(TR["Layout"], module_for_page("layout", layout))
+    self:add_tab(TR["Layout"], "layout", layout)
 end
 
 function TravelPage:apply_ui_scale()
-    SettingsTabbedPage.apply_ui_scale(self)
+    ConfigTabs.apply_ui_scale(self)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 
-function TravelPage:load(travel)
-    self.loading = true
-    self.controls.travel_enabled.cb:SetChecked(travel.enabled == true)
-    self.controls.travel_display_mode:set_value(travel.display_mode)
-    self.loading = false
-    self:layout()
-end
-
-function TravelPage:apply(travel)
-    travel.enabled = self.controls.travel_enabled.cb:IsChecked() == true
-    travel.display_mode = self.controls.travel_display_mode:get_value()
-end
-
 function TravelPage:load_from_settings(s)
-    self:load(s.travel)
+    self._settings = s
+    self:load()
 end
 
 function TravelPage:apply_to_settings(s)
-    self:apply(s.travel)
+    self._settings = s
+    self:save()
 end

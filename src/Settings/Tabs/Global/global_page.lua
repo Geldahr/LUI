@@ -1,20 +1,16 @@
 import "LUI.src.Settings.Tabs.feature_shell"
-import "LUI.src.Settings.Tabs.tabbed_page"
-import "LUI.src.Settings.Tabs.form_page"
+import "LUI.src.Settings.Content.content"
+import "LUI.src.Settings.Content.tabs"
 
-local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
-    _G.SettingsTabbedPage or SettingsTabbedPage
-local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
-    SettingsFormPage
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local configure_compact_form = FeatureShell.configure_compact_form
-local module_for_page = FeatureShell.module_for_page
+local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
+local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
 local scaled_int = FeatureShell.scaled_int
 
-GlobalPage = class(SettingsTabbedPage)
+GlobalPage = class(ConfigTabs)
 
 function GlobalPage:Constructor(window)
-    SettingsTabbedPage.Constructor(self, window)
+    ConfigTabs.Constructor(self, window)
     self.show_main_content_border = false
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
@@ -36,83 +32,105 @@ function GlobalPage:Constructor(window)
         TR["e3 / e6 / e9: 2500000000 -> 2.5e9"],
     }, "\n")
 
-    local general = configure_compact_form(SettingsFormPage(window), 4, nil)
-    general:add_text("scale", TR["UI Scale"])
-    general:add_checkbox("native_scaling", TR["Use native LotRO UI scaling"], true)
-    general:add_break(0)
-    general:add_text("refresh_rate", TR["Refresh rate of some UI elements (fps)"])
-    general:add_checkbox("move_mode_shortcut", TR["Use LotRO move mode shortcut"])
-    general:add_break(0)
-    general:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"], true)
-    self:add_sub_page(TR["General"], module_for_page("general", general))
+    local general = ConfigContent(window, 4)
+    general:add_line_edit(TR["UI Scale"], "scale",
+        function(value)
+            local scale = tonumber(value)
+            if scale ~= nil and scale > 0 then
+                self._settings.global.scale = scale
+            end
+        end,
+        function(entry)
+            entry:set_value(tostring(self._settings.global.scale))
+        end)
+    general:add_checkbox(TR["Use native LotRO UI scaling"], "native_scaling",
+        function(value)
+            self._settings.global.native_scaling = value == true
+        end,
+        function(entry)
+            entry.cb:SetChecked(self._settings.global.native_scaling == true)
+        end, true)
+    general:break_line()
+    general:add_line_edit(TR["Refresh rate of some UI elements (fps)"], "refresh_rate",
+        function(value)
+            local refresh_rate = tonumber(value)
+            if refresh_rate ~= nil and refresh_rate > 0 then
+                self._settings.global.refresh_rate = refresh_rate
+            end
+        end,
+        function(entry)
+            entry:set_value(tostring(self._settings.global.refresh_rate))
+        end)
+    general:add_checkbox(TR["Use LotRO move mode shortcut"], "move_mode_shortcut",
+        function(value)
+            self._settings.global.move_mode_shortcut = value == true
+        end,
+        function(entry)
+            entry.cb:SetChecked(self._settings.global.move_mode_shortcut == true)
+        end)
+    general:break_line()
+    general:add_checkbox(TR["Enable bestiary capture (English client only)"], "bestiary_capture",
+        function(value)
+            if is_lui_english_language() == true then
+                self._settings.global.bestiary_capture = value == true
+            else
+                self._settings.global.bestiary_capture = false
+            end
+        end,
+        function(entry)
+            local english_only = is_lui_english_language() == true
+            entry.cb:SetChecked(english_only == true and self._settings.global.bestiary_capture == true)
+            entry.cb:SetEnabled(english_only == true)
+        end, true)
+    self:add_tab(TR["General"], "general", general)
 
-    local numbers = configure_compact_form(SettingsFormPage(window), 4, nil)
-    numbers:add_checkbox("abbrev_enabled", TR["Shorten large numbers"])
-    numbers:add_break(0)
-    numbers:add_dropdown("abbrev_digits", TR["Digits Before Shortening"], numbers.abbrev_digits_labels,
-        numbers.abbrev_digits_values, digits_help)
-    numbers:add_dropdown("abbrev_width", TR["Max Shortened Width"], numbers.abbrev_width_labels,
-        numbers.abbrev_width_values, width_help)
-    numbers:add_dropdown("abbrev_method", TR["Shortening Style"], numbers.abbrev_method_labels,
-        numbers.abbrev_method_values, method_help)
-    self:add_sub_page(TR["Numbers"], module_for_page("numbers", numbers))
+    local numbers = ConfigContent(window, 4)
+    numbers:add_checkbox(TR["Shorten large numbers"], "abbrev_enabled",
+        function(value)
+            self._settings.global.number_abbrev.enabled = value == true
+        end,
+        function(entry)
+            entry.cb:SetChecked(self._settings.global.number_abbrev.enabled == true)
+        end)
+    numbers:break_line()
+    numbers:add_dropdown(TR["Digits Before Shortening"], "abbrev_digits", numbers.abbrev_digits_labels,
+        numbers.abbrev_digits_values,
+        function(value)
+            self._settings.global.number_abbrev.digits = value
+        end,
+        function(entry)
+            entry:set_value(self._settings.global.number_abbrev.digits)
+        end, digits_help)
+    numbers:add_dropdown(TR["Max Shortened Width"], "abbrev_width", numbers.abbrev_width_labels,
+        numbers.abbrev_width_values,
+        function(value)
+            self._settings.global.number_abbrev.width = value
+        end,
+        function(entry)
+            entry:set_value(self._settings.global.number_abbrev.width)
+        end, width_help)
+    numbers:add_dropdown(TR["Shortening Style"], "abbrev_method", numbers.abbrev_method_labels,
+        numbers.abbrev_method_values,
+        function(value)
+            self._settings.global.number_abbrev.method = value
+        end,
+        function(entry)
+            entry:set_value(self._settings.global.number_abbrev.method)
+        end, method_help)
+    self:add_tab(TR["Numbers"], "numbers", numbers)
 end
 
 function GlobalPage:apply_ui_scale()
-    SettingsTabbedPage.apply_ui_scale(self)
+    ConfigTabs.apply_ui_scale(self)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 
-function GlobalPage:load(s)
-    local controls = self.controls
-    self.loading = true
-    controls.scale.tb:SetText(tostring(s.global.scale))
-    controls.native_scaling.cb:SetChecked(s.global.native_scaling == true)
-    controls.refresh_rate.tb:SetText(tostring(s.global.refresh_rate))
-
-    local abbrev = s.global.number_abbrev
-    controls.move_mode_shortcut.cb:SetChecked(s.global.move_mode_shortcut == true)
-    local english_only = is_lui_english_language == nil or is_lui_english_language() == true
-    controls.bestiary_capture.cb:SetChecked(english_only == true and s.global.bestiary_capture == true)
-    if controls.bestiary_capture.cb.SetEnabled ~= nil then
-        controls.bestiary_capture.cb:SetEnabled(english_only == true)
-    end
-    controls.abbrev_enabled.cb:SetChecked(abbrev.enabled == true)
-    controls.abbrev_digits:set_value(abbrev.digits)
-    controls.abbrev_width:set_value(abbrev.width)
-    controls.abbrev_method:set_value(abbrev.method)
-    self.loading = false
-    self:layout()
-end
-
-function GlobalPage:apply(s)
-    local controls = self.controls
-    local scale = tonumber(controls.scale.tb:GetText())
-    if scale ~= nil and scale > 0 then
-        s.global.scale = scale
-    end
-    s.global.native_scaling = controls.native_scaling.cb:IsChecked() == true
-    local refresh_rate = tonumber(controls.refresh_rate.tb:GetText())
-    if refresh_rate ~= nil and refresh_rate > 0 then
-        s.global.refresh_rate = refresh_rate
-    end
-
-    s.global.move_mode_shortcut = controls.move_mode_shortcut.cb:IsChecked() == true
-    if is_lui_english_language == nil or is_lui_english_language() == true then
-        s.global.bestiary_capture = controls.bestiary_capture.cb:IsChecked() == true
-    else
-        s.global.bestiary_capture = false
-    end
-    s.global.number_abbrev.enabled = controls.abbrev_enabled.cb:IsChecked()
-    s.global.number_abbrev.digits = controls.abbrev_digits:get_value()
-    s.global.number_abbrev.width = controls.abbrev_width:get_value()
-    s.global.number_abbrev.method = controls.abbrev_method:get_value()
-end
-
 function GlobalPage:load_from_settings(s)
-    self:load(s)
+    self._settings = s
+    self:load()
 end
 
 function GlobalPage:apply_to_settings(s)
-    self:apply(s)
+    self._settings = s
+    self:save()
 end
