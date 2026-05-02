@@ -19,8 +19,8 @@ local FIELD_FONT_NAME = "Verdana"
 local FIELD_FONT_SIZE = 12
 local HINT_FONT_NAME = "Verdana"
 local HINT_FONT_SIZE = 10
-local CONFIG_MIN_WIDTH = 1000
-local CONFIG_MIN_HEIGHT = 720
+local CONFIG_MIN_WIDTH = 900
+local CONFIG_MIN_HEIGHT = 800
 local function _scaled_size(value)
     return value * _G.settings.global.scale
 end
@@ -231,10 +231,10 @@ function ConfigWindow:_update_ui_scale_metrics()
     self.settings_font = _scaled_font(SETTINGS_FONT_NAME, SETTINGS_FONT_SIZE)
     self.tab_font = _scaled_font(TAB_FONT_NAME, TAB_FONT_SIZE)
 
-    self.margin_left = _scaled_int(15)
-    self.margin_top = _scaled_int(11)
-    self.margin_right = _scaled_int(15)
-    self.margin_bottom = _scaled_int(15)
+    self.margin_left = _scaled_int(6)
+    self.margin_top = _scaled_int(6)
+    self.margin_right = _scaled_int(6)
+    self.margin_bottom = _scaled_int(6)
 
     self.button_bar_height = _scaled_int(30)
     self.row_height = _scaled_int(34)

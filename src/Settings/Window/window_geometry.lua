@@ -4,8 +4,8 @@ end
 
 local CONFIG_DEFAULT_WIDTH = 1260
 local CONFIG_DEFAULT_HEIGHT = 820
-local CONFIG_MIN_WIDTH = 1000
-local CONFIG_MIN_HEIGHT = 720
+local CONFIG_MIN_WIDTH = 900
+local CONFIG_MIN_HEIGHT = 800
 
 function ConfigWindow:get_geometry_state()
     if _G.loaded_settings == nil then
