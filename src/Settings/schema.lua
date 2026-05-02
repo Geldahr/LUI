@@ -248,11 +248,6 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "party", "power", "labels", 1, "font" })
     ensure_table_at(s, { "party", "power", "labels", 2 })
     ensure_table_at(s, { "party", "power", "labels", 2, "font" })
-    ensure_table_at(s, { "party", "effects" })
-    ensure_table_at(s, { "party", "effects", "buffs" })
-    ensure_table_at(s, { "party", "effects", "buffs", "timer_font" })
-    ensure_table_at(s, { "party", "effects", "debuffs" })
-    ensure_table_at(s, { "party", "effects", "debuffs", "timer_font" })
 
     ensure_table_at(s, { "assets", "tile" })
     ensure_table_at(s, { "assets", "layouts" })
@@ -494,37 +489,39 @@ function _G.ensure_loaded_settings()
             )
         end
 
-        v.effects.buffs.icon_size = v.effects.buffs.icon_size or 22
-        if v.effects.buffs.timer_font.name == nil then
-            v.effects.buffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
-        end
-        v.effects.buffs.timer_font.size = v.effects.buffs.timer_font.size or 10
-        if v.effects.buffs.timer_font.style == nil then
-            v.effects.buffs.timer_font.style = LUI_ENUMS.font_style.OUTLINE
-        end
-        v.effects.buffs.timer_font.color = v.effects.buffs.timer_font.color or Turbine.UI.Color(1, 1, 1, 1)
-        v.effects.buffs.timer_font.outline_color = v.effects.buffs.timer_font.outline_color or
-            Turbine.UI.Color(1, 0, 0, 0)
+        if v.effects ~= nil then
+            v.effects.buffs.icon_size = v.effects.buffs.icon_size or 22
+            if v.effects.buffs.timer_font.name == nil then
+                v.effects.buffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
+            end
+            v.effects.buffs.timer_font.size = v.effects.buffs.timer_font.size or 10
+            if v.effects.buffs.timer_font.style == nil then
+                v.effects.buffs.timer_font.style = LUI_ENUMS.font_style.OUTLINE
+            end
+            v.effects.buffs.timer_font.color = v.effects.buffs.timer_font.color or Turbine.UI.Color(1, 1, 1, 1)
+            v.effects.buffs.timer_font.outline_color = v.effects.buffs.timer_font.outline_color or
+                Turbine.UI.Color(1, 0, 0, 0)
 
-        v.effects.debuffs.icon_size = v.effects.debuffs.icon_size or 31
-        if v.effects.debuffs.timer_font.name == nil then
-            v.effects.debuffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
-        end
-        v.effects.debuffs.timer_font.size = v.effects.debuffs.timer_font.size or 14
-        if v.effects.debuffs.timer_font.style == nil then
-            v.effects.debuffs.timer_font.style = LUI_ENUMS.font_style.OUTLINE
-        end
-        v.effects.debuffs.timer_font.color = v.effects.debuffs.timer_font.color or Turbine.UI.Color(1, 1, 1, 1)
-        v.effects.debuffs.timer_font.outline_color = v.effects.debuffs.timer_font.outline_color or
-            Turbine.UI.Color(1, 0, 0, 0)
-        if v.effects.debuffs.track_curable == nil then
-            v.effects.debuffs.track_curable = true
-        end
-        if v.effects.debuffs.track_noncurable == nil then
-            if default_track_noncurable == nil then
-                v.effects.debuffs.track_noncurable = true
-            else
-                v.effects.debuffs.track_noncurable = default_track_noncurable
+            v.effects.debuffs.icon_size = v.effects.debuffs.icon_size or 31
+            if v.effects.debuffs.timer_font.name == nil then
+                v.effects.debuffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
+            end
+            v.effects.debuffs.timer_font.size = v.effects.debuffs.timer_font.size or 14
+            if v.effects.debuffs.timer_font.style == nil then
+                v.effects.debuffs.timer_font.style = LUI_ENUMS.font_style.OUTLINE
+            end
+            v.effects.debuffs.timer_font.color = v.effects.debuffs.timer_font.color or Turbine.UI.Color(1, 1, 1, 1)
+            v.effects.debuffs.timer_font.outline_color = v.effects.debuffs.timer_font.outline_color or
+                Turbine.UI.Color(1, 0, 0, 0)
+            if v.effects.debuffs.track_curable == nil then
+                v.effects.debuffs.track_curable = true
+            end
+            if v.effects.debuffs.track_noncurable == nil then
+                if default_track_noncurable == nil then
+                    v.effects.debuffs.track_noncurable = true
+                else
+                    v.effects.debuffs.track_noncurable = default_track_noncurable
+                end
             end
         end
         v.frame.effects_height = v.frame.effects_height or 200
@@ -706,8 +703,6 @@ function _G.ensure_loaded_settings()
     pv.power.height = pv.power.height or 16
     pv.morale.font.size = pv.morale.font.size or 12
     pv.power.font.size = pv.power.font.size or 10
-    pv.effects.buffs.icon_size = pv.effects.buffs.icon_size or 32
-    pv.effects.debuffs.icon_size = pv.effects.debuffs.icon_size or 36
     apply_vital_defaults(s.party, "party_vitals", false, "%name%\\n%c / %t", "%c / %t", party_left, party_top, nil,
         nil, true, 110)
 

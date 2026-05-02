@@ -196,27 +196,29 @@ function _G.rebuild_settings()
         dst.frame.effects_height = scaled_int(src.frame.effects_height)
         dst.frame.effects_position = src.frame.effects_position
 
-        dst.effects.buffs.icon_size = scaled_int(src.effects.buffs.icon_size)
-        dst.effects.debuffs.icon_size = scaled_int(src.effects.debuffs.icon_size)
+        if src.effects ~= nil then
+            dst.effects.buffs.icon_size = scaled_int(src.effects.buffs.icon_size)
+            dst.effects.debuffs.icon_size = scaled_int(src.effects.debuffs.icon_size)
 
-        dst.effects.buffs.timer_font.name = src.effects.buffs.timer_font.name
-        dst.effects.buffs.timer_font.size = scaled_number(src.effects.buffs.timer_font.size)
-        dst.effects.buffs.timer_font.lotro = FONT_TO_LOTRO(dst.effects.buffs.timer_font.name,
-            dst.effects.buffs.timer_font.size)
-        dst.effects.buffs.timer_font.style = src.effects.buffs.timer_font.style
-        dst.effects.buffs.timer_font.color = src.effects.buffs.timer_font.color
-        dst.effects.buffs.timer_font.outline_color = src.effects.buffs.timer_font.outline_color
+            dst.effects.buffs.timer_font.name = src.effects.buffs.timer_font.name
+            dst.effects.buffs.timer_font.size = scaled_number(src.effects.buffs.timer_font.size)
+            dst.effects.buffs.timer_font.lotro = FONT_TO_LOTRO(dst.effects.buffs.timer_font.name,
+                dst.effects.buffs.timer_font.size)
+            dst.effects.buffs.timer_font.style = src.effects.buffs.timer_font.style
+            dst.effects.buffs.timer_font.color = src.effects.buffs.timer_font.color
+            dst.effects.buffs.timer_font.outline_color = src.effects.buffs.timer_font.outline_color
 
-        dst.effects.debuffs.timer_font.name = src.effects.debuffs.timer_font.name
-        dst.effects.debuffs.timer_font.size = scaled_number(src.effects.debuffs.timer_font.size)
-        dst.effects.debuffs.timer_font.lotro = FONT_TO_LOTRO(dst.effects.debuffs.timer_font.name,
-            dst.effects.debuffs.timer_font.size)
-        dst.effects.debuffs.timer_font.style = src.effects.debuffs.timer_font.style
-        dst.effects.debuffs.timer_font.color = src.effects.debuffs.timer_font.color
-        dst.effects.debuffs.timer_font.outline_color = src.effects.debuffs.timer_font.outline_color
+            dst.effects.debuffs.timer_font.name = src.effects.debuffs.timer_font.name
+            dst.effects.debuffs.timer_font.size = scaled_number(src.effects.debuffs.timer_font.size)
+            dst.effects.debuffs.timer_font.lotro = FONT_TO_LOTRO(dst.effects.debuffs.timer_font.name,
+                dst.effects.debuffs.timer_font.size)
+            dst.effects.debuffs.timer_font.style = src.effects.debuffs.timer_font.style
+            dst.effects.debuffs.timer_font.color = src.effects.debuffs.timer_font.color
+            dst.effects.debuffs.timer_font.outline_color = src.effects.debuffs.timer_font.outline_color
 
-        dst.effects.debuffs.track_curable = src.effects.debuffs.track_curable
-        dst.effects.debuffs.track_noncurable = src.effects.debuffs.track_noncurable
+            dst.effects.debuffs.track_curable = src.effects.debuffs.track_curable
+            dst.effects.debuffs.track_noncurable = src.effects.debuffs.track_noncurable
+        end
     end
 
     build_vital(_G.settings.self.vitals, raw.self.vitals)

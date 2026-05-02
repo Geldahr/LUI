@@ -108,7 +108,7 @@ local function _new_colors_section(window)
     page:add_sub_page(TR["Background"], module_for_page("background", background))
     page:add_sub_page(TR["Font"], module_for_page("font", font))
     page:add_sub_page(TR["Inventory"], module_for_page("inventory", inventory))
-    page:add_sub_page(TR["Equipment wear"], module_for_page("durability", durability))
+    page:add_sub_page(TR["Equipment Wear"], module_for_page("durability", durability))
     return page, font
 end
 
@@ -187,12 +187,12 @@ local function _new_widgets_section(window)
         FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
     page:add_sub_page(TR["Time (local)"], module_for_page("time", _new_widget_time_page(window)))
     page:add_sub_page(TR["Inventory"], module_for_page("inventory", _new_widget_inventory_page(window)))
-    page:add_sub_page(TR["Equipment wear"], module_for_page("durability", _new_widget_durability_page(window)))
+    page:add_sub_page(TR["Equipment Wear"], module_for_page("durability", _new_widget_durability_page(window)))
     page:add_sub_page(TR["Money"], module_for_page("money", _new_widget_money_page(window)))
     page:add_sub_page(TR["Wallet"], module_for_page("wallet", _new_widget_wallet_page(window)))
-    page:add_sub_page(TR["Tracked item"], module_for_page("item", _new_widget_item_page(window)))
-    page:add_sub_page(TR["Shortcut buttons"], module_for_page("shortcuts", _new_widget_shortcuts_page(window)))
-    page:add_sub_page(TR["Crafting plan"], module_for_page("craft_plan", _new_widget_crafting_plan_page(window)))
+    page:add_sub_page(TR["Tracked Item"], module_for_page("item", _new_widget_item_page(window)))
+    page:add_sub_page(TR["Shortcut Buttons"], module_for_page("shortcuts", _new_widget_shortcuts_page(window)))
+    page:add_sub_page(TR["Crafting Plan"], module_for_page("craft_plan", _new_widget_crafting_plan_page(window)))
     return page
 end
 

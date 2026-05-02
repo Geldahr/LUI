@@ -944,7 +944,7 @@ function S.get_status_bar_widget_display_name(widget_key)
     elseif widget_key == "inventory_space" then
         return TR["Inventory space"]
     elseif widget_key == "equipment_wear" then
-        return TR["Equipment wear"]
+        return TR["Equipment Wear"]
     elseif widget_key == "money" then
         return TR["Money"]
     elseif widget_key == "wallet" then
