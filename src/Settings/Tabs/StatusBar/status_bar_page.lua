@@ -121,6 +121,7 @@ local function _new_widget_time_page(window)
 
     local page = configure_compact_form(SettingsFormPage(window), 4, nil)
     page:add_text("sb_time_width", TR["Width"])
+    add_compact_row_break(page)
     page:add_dropdown("sb_time_format", TR["Time format"], time_format_labels, time_format_values)
     page:add_dropdown("sb_time_text_alignment", TR["Text alignment"], page.text_alignment_labels,
         page.text_alignment_values)
@@ -130,6 +131,7 @@ end
 local function _new_widget_inventory_page(window)
     local page = configure_compact_form(SettingsFormPage(window), 4, nil)
     page:add_text("sb_inv_width", TR["Width"])
+    add_compact_row_break(page)
     page:add_checkbox("sb_inv_icon", TR["Icon"])
     page:add_dropdown("sb_inv_text_alignment", TR["Text alignment"], page.text_alignment_labels,
         page.text_alignment_values)
@@ -139,6 +141,7 @@ end
 local function _new_widget_durability_page(window)
     local page = configure_compact_form(SettingsFormPage(window), 4, nil)
     page:add_text("sb_durability_width", TR["Width"])
+    add_compact_row_break(page)
     page:add_checkbox("sb_durability_icon", TR["Icon"])
     page:add_dropdown("sb_durability_text_alignment", TR["Text alignment"], page.text_alignment_labels,
         page.text_alignment_values)
@@ -150,6 +153,7 @@ end
 local function _new_widget_money_page(window)
     local page = configure_compact_form(SettingsFormPage(window), 4, nil)
     page:add_text("sb_money_width", TR["Width"])
+    add_compact_row_break(page)
     page:add_dropdown("sb_money_text_alignment", TR["Text alignment"], page.text_alignment_labels,
         page.text_alignment_values)
     return page
@@ -158,6 +162,7 @@ end
 local function _new_widget_wallet_page(window)
     local page = configure_compact_form(SettingsFormPage(window), 4, nil)
     page:add_text("sb_wallet_width", TR["Width"])
+    add_compact_row_break(page)
     page:add_dropdown("sb_wallet_text_alignment", TR["Text alignment"], page.text_alignment_labels,
         page.text_alignment_values)
     add_compact_row_break(page)

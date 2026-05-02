@@ -39,13 +39,16 @@ function GlobalPage:Constructor(window)
     local general = configure_compact_form(SettingsFormPage(window), 4, nil)
     general:add_text("scale", TR["UI Scale"])
     general:add_checkbox("native_scaling", TR["Use native LotRO UI scaling"], true)
+    general:add_break(0)
     general:add_text("refresh_rate", TR["Refresh rate of some UI elements (fps)"])
     general:add_checkbox("move_mode_shortcut", TR["Use LotRO move mode shortcut"])
+    general:add_break(0)
     general:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"], true)
     self:add_sub_page(TR["General"], module_for_page("general", general))
 
     local numbers = configure_compact_form(SettingsFormPage(window), 4, nil)
     numbers:add_checkbox("abbrev_enabled", TR["Shorten large numbers"])
+    numbers:add_break(0)
     numbers:add_dropdown("abbrev_digits", TR["Digits Before Shortening"], numbers.abbrev_digits_labels,
         numbers.abbrev_digits_values, digits_help)
     numbers:add_dropdown("abbrev_width", TR["Max Shortened Width"], numbers.abbrev_width_labels,
