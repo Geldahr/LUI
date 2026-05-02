@@ -1,11 +1,15 @@
 import "LUI.src.Settings.Tabs.feature_shell"
+import "LUI.src.Settings.Tabs.tabbed_page"
 import "LUI.src.Settings.Tabs.form_page"
 
+local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
+    _G.SettingsTabbedPage or SettingsTabbedPage
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local SettingsFeatureSectionPage = FeatureShell.section_page_class
 local configure_compact_form = FeatureShell.configure_compact_form
+local module_for_page = FeatureShell.module_for_page
+local scaled_int = FeatureShell.scaled_int
 
 local TILE_SIZE_LABELS = {
     TR["Small (32)"],
@@ -25,20 +29,27 @@ local VIEW_MODE_VALUES = {
     LUI_ENUMS.assets_view_mode.DETAILS,
 }
 
-AssetsPage = class(SettingsFeatureSectionPage)
+AssetsPage = class(SettingsTabbedPage)
 
 function AssetsPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
+    SettingsTabbedPage.Constructor(self, window)
+    self.show_main_content_border = false
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local general = configure_compact_form(SettingsFormPage(window), 4, nil)
     general:add_checkbox("assets_enabled", TR["Enabled"])
     general:add_dropdown("assets_view_mode", TR["View"], VIEW_MODE_LABELS, VIEW_MODE_VALUES)
-    self:add_section(TR["General"], "general", general)
+    self:add_sub_page(TR["General"], module_for_page("general", general))
 
     local tiles = configure_compact_form(SettingsFormPage(window), 4, nil)
     tiles:add_dropdown("assets_tile_icons", TR["Icons"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
     tiles:add_dropdown("assets_tile_details", TR["Details"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
-    self:add_section(TR["Tiles"], "tiles", tiles)
+    self:add_sub_page(TR["Tiles"], module_for_page("tiles", tiles))
+end
+
+function AssetsPage:apply_ui_scale()
+    SettingsTabbedPage.apply_ui_scale(self)
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 
 function AssetsPage:load(assets)

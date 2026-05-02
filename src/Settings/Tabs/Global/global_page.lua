@@ -1,16 +1,22 @@
 import "LUI.src.Settings.Tabs.feature_shell"
+import "LUI.src.Settings.Tabs.tabbed_page"
 import "LUI.src.Settings.Tabs.form_page"
 
+local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
+    _G.SettingsTabbedPage or SettingsTabbedPage
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local SettingsFeatureSectionPage = FeatureShell.section_page_class
 local configure_compact_form = FeatureShell.configure_compact_form
+local module_for_page = FeatureShell.module_for_page
+local scaled_int = FeatureShell.scaled_int
 
-GlobalPage = class(SettingsFeatureSectionPage)
+GlobalPage = class(SettingsTabbedPage)
 
 function GlobalPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
+    SettingsTabbedPage.Constructor(self, window)
+    self.show_main_content_border = false
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local digits_help = table.concat({
         TR["How many digits are shown before shortening."],
@@ -36,7 +42,7 @@ function GlobalPage:Constructor(window)
     general:add_text("refresh_rate", TR["Refresh rate of some UI elements (fps)"])
     general:add_checkbox("move_mode_shortcut", TR["Use LotRO move mode shortcut"])
     general:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"], true)
-    self:add_section(TR["General"], "general", general)
+    self:add_sub_page(TR["General"], module_for_page("general", general))
 
     local numbers = configure_compact_form(SettingsFormPage(window), 4, nil)
     numbers:add_checkbox("abbrev_enabled", TR["Shorten large numbers"])
@@ -46,7 +52,12 @@ function GlobalPage:Constructor(window)
         numbers.abbrev_width_values, width_help)
     numbers:add_dropdown("abbrev_method", TR["Shortening Style"], numbers.abbrev_method_labels,
         numbers.abbrev_method_values, method_help)
-    self:add_section(TR["Numbers"], "numbers", numbers)
+    self:add_sub_page(TR["Numbers"], module_for_page("numbers", numbers))
+end
+
+function GlobalPage:apply_ui_scale()
+    SettingsTabbedPage.apply_ui_scale(self)
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 
 function GlobalPage:load(s)

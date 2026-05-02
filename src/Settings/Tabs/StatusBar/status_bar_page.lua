@@ -1,8 +1,11 @@
 import "LUI.src.Settings.Tabs.feature_shell"
+import "LUI.src.Settings.Tabs.tabbed_page"
 import "LUI.src.Settings.Tabs.form_page"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_wallet_selector"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_layout_help"
 
+local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
+    _G.SettingsTabbedPage or SettingsTabbedPage
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
 local CreateStatusBarWalletSelector = LUI.src.Settings.Tabs.StatusBar.CreateStatusBarWalletSelector or
@@ -10,11 +13,11 @@ local CreateStatusBarWalletSelector = LUI.src.Settings.Tabs.StatusBar.CreateStat
 local BuildStatusBarLayoutHelp = LUI.src.Settings.Tabs.StatusBar.BuildStatusBarLayoutHelp or
     BuildStatusBarLayoutHelp
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local SettingsFeatureSectionPage = FeatureShell.section_page_class
 local SettingsFeatureNestedPage = FeatureShell.nested_page_class
 local configure_compact_form = FeatureShell.configure_compact_form
 local add_compact_row_break = FeatureShell.add_compact_row_break
 local module_for_page = FeatureShell.module_for_page
+local scaled_int = FeatureShell.scaled_int
 
 local function _is_outline(control)
     return control:get_value() == LUI_ENUMS.font_style.OUTLINE
@@ -196,20 +199,39 @@ local function _new_widgets_section(window)
     return page
 end
 
-StatusBarPage = class(SettingsFeatureSectionPage)
+StatusBarPage = class(SettingsTabbedPage)
 
 function StatusBarPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
+    SettingsTabbedPage.Constructor(self, window)
+    self.color_to_hex = window._ui.color_to_hex
+    self.hex_to_color = window._ui.hex_to_color
+    self.show_main_content_border = false
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 
-    self:add_section(TR["General"], "general", _new_general_page(window))
-    self:add_section(TR["Background"], "background", _new_background_page(window))
-    self:add_section(TR["Font"], "font", _new_font_page(window))
-    self:add_section(TR["Layout"], "layout", _new_layout_page(window))
+    self:add_sub_page(TR["General"], module_for_page("general", _new_general_page(window)))
+    self:add_sub_page(TR["Background"], module_for_page("background", _new_background_page(window)))
+    self:add_sub_page(TR["Font"], module_for_page("font", _new_font_page(window)))
+    self:add_sub_page(TR["Layout"], module_for_page("layout", _new_layout_page(window)))
     local colors, colors_font = _new_colors_section(window)
-    self:add_section(TR["Colors"], "colors", colors)
-    self:add_section(TR["Widgets"], "widgets", _new_widgets_section(window))
+    self:add_sub_page(TR["Colors"], module_for_page("colors", colors))
+    self:add_sub_page(TR["Widgets"], module_for_page("widgets", _new_widgets_section(window)))
     _bind_outline_visibility(self, colors_font, "sb_font_style", "sb_font_outline_color")
     self:refresh_layout_help()
+end
+
+function StatusBarPage:apply_ui_scale()
+    SettingsTabbedPage.apply_ui_scale(self)
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
+end
+
+function StatusBarPage:update_swatch(entry)
+    entry.tb:update_swatch()
+end
+
+function StatusBarPage:update_all_swatches()
+    for i = 1, #self._color_fields do
+        self:update_swatch(self._color_fields[i])
+    end
 end
 
 function StatusBarPage:refresh_layout_help()

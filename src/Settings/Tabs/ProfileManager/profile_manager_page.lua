@@ -1,14 +1,18 @@
 import "Turbine.UI"
 
 import "LUI.src.Settings.Tabs.feature_shell"
+import "LUI.src.Settings.Tabs.tabbed_page"
 import "LUI.src.Settings.Tabs.form_page"
 import "LUI.src.UI.Widgets"
 
+local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
+    _G.SettingsTabbedPage or SettingsTabbedPage
 local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
     SettingsFormPage
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local SettingsFeatureSectionPage = FeatureShell.section_page_class
 local configure_compact_form = FeatureShell.configure_compact_form
+local module_for_page = FeatureShell.module_for_page
+local scaled_int = FeatureShell.scaled_int
 
 local PROFILE_INFO_FONT_NAME = "Verdana"
 local PROFILE_INFO_FONT_SIZE = 13
@@ -237,12 +241,19 @@ local function _new_create_section(window)
     return page
 end
 
-ProfileManagerPage = class(SettingsFeatureSectionPage)
+ProfileManagerPage = class(SettingsTabbedPage)
 
 function ProfileManagerPage:Constructor(window)
-    SettingsFeatureSectionPage.Constructor(self, window, nil, nil, nil, false)
-    self:add_section(TR["General"], "general", _new_manage_section(window, self))
-    self:add_section(TR["Create"], "create", _new_create_section(window))
+    SettingsTabbedPage.Constructor(self, window)
+    self.show_main_content_border = false
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
+    self:add_sub_page(TR["General"], module_for_page("general", _new_manage_section(window, self)))
+    self:add_sub_page(TR["Create"], module_for_page("create", _new_create_section(window)))
+end
+
+function ProfileManagerPage:apply_ui_scale()
+    SettingsTabbedPage.apply_ui_scale(self)
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 
 function ProfileManagerPage:load()
