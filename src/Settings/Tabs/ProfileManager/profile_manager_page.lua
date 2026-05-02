@@ -11,6 +11,7 @@ local PROFILE_INFO_FONT_SIZE = 13
 local INFO_HEIGHT = 59
 local ACTION_ROW_HEIGHT = 24
 local BLOCK_GAP = 24
+local PROFILE_COLUMNS = 4
 
 local function _scaled_profile_info_size(value)
     return value * _G.settings.global.scale
@@ -32,24 +33,24 @@ local function _layout_info(entry)
 end
 
 local function _layout_button_row(window, entry, buttons)
-    local gap = window.inner_gap
     local width, height = entry.control:GetSize()
-    local count = #buttons
-    if count < 1 then
+    local grid_gaps = (PROFILE_COLUMNS - 1) * window.col_gap
+    local col_width = math.floor((width - grid_gaps) / PROFILE_COLUMNS)
+    if col_width < 1 then
+        col_width = 1
+    end
+
+    if #buttons < 1 then
         return
     end
 
-    local button_width = math.floor((width - (gap * (count - 1))) / count)
-    if button_width < 1 then
-        button_width = 1
-    end
-
-    local x = 0
-    for i = 1, count do
-        local button = buttons[i]
+    for i = 1, #buttons do
+        local item = buttons[i]
+        local button = item.button
+        local col = item.col - 1
+        local x = col * (col_width + window.col_gap)
         button:SetPosition(x, 0)
-        button:SetSize(button_width, height)
-        x = x + button_width + gap
+        button:SetSize(col_width, height)
     end
 end
 
@@ -60,7 +61,7 @@ end
 
 local function _apply_row_scale(window, entry, buttons)
     for i = 1, #buttons do
-        buttons[i]:set_font(window.settings_font)
+        buttons[i].button:set_font(window.settings_font)
     end
     _layout_button_row(window, entry, buttons)
 end
@@ -114,7 +115,7 @@ function ProfileManagerPage:Constructor(window)
     SettingsFormPage.Constructor(self, window)
     self.show_main_content_border = false
     self:set_compact_fields(true)
-    self:set_grid_columns(4)
+    self:set_grid_columns(PROFILE_COLUMNS)
 
     local info_entry = self:add_custom("profile_manager_info", INFO_HEIGHT)
     info_entry.body = UI.Widgets.LuiLabel()
@@ -161,10 +162,16 @@ function ProfileManagerPage:Constructor(window)
     end
 
     profile_actions.control.SizeChanged = function()
-        _layout_button_row(window, profile_actions, { profile_actions.use_button, profile_actions.delete_button })
+        _layout_button_row(window, profile_actions, {
+            { button = profile_actions.use_button, col = 1 },
+            { button = profile_actions.delete_button, col = 4 },
+        })
     end
     profile_actions.apply_ui_scale = function()
-        _apply_row_scale(window, profile_actions, { profile_actions.use_button, profile_actions.delete_button })
+        _apply_row_scale(window, profile_actions, {
+            { button = profile_actions.use_button, col = 1 },
+            { button = profile_actions.delete_button, col = 4 },
+        })
     end
     profile_actions:apply_ui_scale()
 
@@ -196,16 +203,16 @@ function ProfileManagerPage:Constructor(window)
 
     name_actions.control.SizeChanged = function()
         _layout_button_row(window, name_actions, {
-            name_actions.rename_button,
-            name_actions.new_from_current_button,
-            name_actions.new_button,
+            { button = name_actions.rename_button, col = 1 },
+            { button = name_actions.new_from_current_button, col = 3 },
+            { button = name_actions.new_button, col = 4 },
         })
     end
     name_actions.apply_ui_scale = function()
         _apply_row_scale(window, name_actions, {
-            name_actions.rename_button,
-            name_actions.new_from_current_button,
-            name_actions.new_button,
+            { button = name_actions.rename_button, col = 1 },
+            { button = name_actions.new_from_current_button, col = 3 },
+            { button = name_actions.new_button, col = 4 },
         })
     end
     name_actions:apply_ui_scale()
