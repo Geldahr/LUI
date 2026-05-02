@@ -1,25 +1,85 @@
 import "LUI.src.Settings.Tabs.feature_shell"
-import "LUI.src.Settings.Tabs.tabbed_page"
-import "LUI.src.Settings.Tabs.form_page"
+import "LUI.src.Settings.Content.content"
+import "LUI.src.Settings.Content.tabs"
 
-local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
-    _G.SettingsTabbedPage or SettingsTabbedPage
-local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
-    SettingsFormPage
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
+local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
 local SettingsFeatureNestedPage = FeatureShell.nested_page_class
-local configure_compact_form = FeatureShell.configure_compact_form
-local add_compact_row_break = FeatureShell.add_compact_row_break
 local module_for_page = FeatureShell.module_for_page
 local scaled_int = FeatureShell.scaled_int
 local PREVIEW_GAP = 10
 local PREVIEW_MIN_TOP_HEIGHT = 120
 local PREVIEW_MIN_HEIGHT = 100
 
-DropsPage = class(SettingsTabbedPage)
+local function _apply_color(ui, dest, hex)
+    local color = ui.hex_to_color(hex)
+    dest.R, dest.G, dest.B = color.R, color.G, color.B
+end
+
+local function _new_colors_section(window, refresh_preview, settings_getter)
+    local ui = window._ui
+
+    local hud = ConfigContent(window, 3, refresh_preview)
+    hud:add_line_edit(TR["Background opacity (0..1)"], "drops_hud_background_opacity",
+        function(value)
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().hud.background_opacity = opacity
+            end
+        end,
+        function(entry)
+            entry.tb:SetText(tostring(settings_getter().hud.background_opacity))
+        end)
+    hud:add_color_picker(TR["Background color"], "drops_hud_background_color",
+        function(value)
+            _apply_color(ui, settings_getter().hud.background_color, value)
+        end,
+        function(entry)
+            entry.tb:SetText(ui.color_to_hex(settings_getter().hud.background_color))
+        end)
+
+    local item = ConfigContent(window, 3, refresh_preview)
+    item:add_line_edit(TR["Background opacity (0..1)"], "drops_item_background_opacity",
+        function(value)
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().item.background_opacity = opacity
+            end
+        end,
+        function(entry)
+            entry.tb:SetText(tostring(settings_getter().item.background_opacity))
+        end)
+    item:add_color_picker(TR["Background color"], "drops_item_background_color",
+        function(value)
+            _apply_color(ui, settings_getter().item.background_color, value)
+        end,
+        function(entry)
+            entry.tb:SetText(ui.color_to_hex(settings_getter().item.background_color))
+        end)
+
+    local page = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.top,
+        FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
+    page:add_sub_page(TR["HUD"], module_for_page("hud", hud))
+    page:add_sub_page(TR["Item"], module_for_page("item", item))
+
+    function page:load()
+        hud:load()
+        item:load()
+    end
+
+    function page:save()
+        hud:save()
+        item:save()
+    end
+
+    return page
+end
+
+DropsPage = class(ConfigTabs)
 
 function DropsPage:Constructor(window)
-    SettingsTabbedPage.Constructor(self, window)
+    ConfigTabs.Constructor(self, window)
     self.show_main_content_border = false
     self.sub_tab_bar:set_content_padding(scaled_int(8))
     self._preview_default_height = 136
@@ -34,43 +94,111 @@ function DropsPage:Constructor(window)
     local refresh_preview = function()
         window:update_drops_preview()
     end
+    local settings_getter = function()
+        return self._settings.drops
+    end
 
-    local general = configure_compact_form(SettingsFormPage(window), 4, refresh_preview)
-    general:add_checkbox("drops_enabled", TR["Enabled"], true)
-    add_compact_row_break(general)
-    general:add_text("drops_visible_duration", TR["Visible duration (s)"])
-    general:add_info(TR["Carry-alls may bypass inventory item events. Those drops can appear without icon or hover and will be shown as text only."], 42)
-    self:add_sub_page(TR["General"], module_for_page("general", general))
+    local general = ConfigContent(window, 4, refresh_preview)
+    general:add_checkbox(TR["Enabled"], "drops_enabled",
+        function(value)
+            settings_getter().enabled = value == true
+        end,
+        function(entry)
+            entry.cb:SetChecked(settings_getter().enabled == true)
+        end, true)
+    general:break_line()
+    general:add_line_edit(TR["Visible duration (s)"], "drops_visible_duration",
+        function(value)
+            local visible_duration = tonumber(value)
+            if visible_duration ~= nil then
+                settings_getter().visible_duration = visible_duration
+            end
+        end,
+        function(entry)
+            entry.tb:SetText(tostring(settings_getter().visible_duration))
+        end)
+    general:add_info(
+        TR["Carry-alls may bypass inventory item events. Those drops can appear without icon or hover and will be shown as text only."],
+        42)
+    self:add_tab(TR["General"], "general", general)
 
-    local layout = configure_compact_form(SettingsFormPage(window), 4, refresh_preview)
-    layout:add_text("drops_width", TR["Width"])
-    layout:add_text("drops_rows", TR["Rows"])
-    layout:add_text("drops_icon_size", TR["Icon Size"])
-    add_compact_row_break(layout)
-    layout:add_dropdown("drops_flow", TR["Order"], flow_labels, flow_values)
-    layout:add_dropdown("drops_align", TR["Align"], align_labels, align_values)
-    layout:add_dropdown("drops_icon_side", TR["Icon position"], side_labels, side_values)
-    self:add_sub_page(TR["Layout"], module_for_page("layout", layout))
+    local layout = ConfigContent(window, 4, refresh_preview)
+    layout:add_line_edit(TR["Width"], "drops_width",
+        function(value)
+            local width = tonumber(value)
+            if width ~= nil then
+                settings_getter().width = width
+            end
+        end,
+        function(entry)
+            entry.tb:SetText(tostring(settings_getter().width))
+        end)
+    layout:add_line_edit(TR["Rows"], "drops_rows",
+        function(value)
+            local rows = tonumber(value)
+            if rows ~= nil then
+                settings_getter().rows = rows
+            end
+        end,
+        function(entry)
+            entry.tb:SetText(tostring(settings_getter().rows))
+        end)
+    layout:add_line_edit(TR["Icon Size"], "drops_icon_size",
+        function(value)
+            local icon_size = tonumber(value)
+            if icon_size ~= nil then
+                settings_getter().icon_size = icon_size
+            end
+        end,
+        function(entry)
+            entry.tb:SetText(tostring(settings_getter().icon_size))
+        end)
+    layout:break_line()
+    layout:add_dropdown(TR["Order"], "drops_flow", flow_labels, flow_values,
+        function(value)
+            settings_getter().flow = value
+        end,
+        function(entry)
+            entry:set_value(settings_getter().flow)
+        end)
+    layout:add_dropdown(TR["Align"], "drops_align", align_labels, align_values,
+        function(value)
+            settings_getter().align = value
+        end,
+        function(entry)
+            entry:set_value(settings_getter().align)
+        end)
+    layout:add_dropdown(TR["Icon position"], "drops_icon_side", side_labels, side_values,
+        function(value)
+            settings_getter().icon_side = value
+        end,
+        function(entry)
+            entry:set_value(settings_getter().icon_side)
+        end)
+    self:add_tab(TR["Layout"], "layout", layout)
 
-    local hud = configure_compact_form(SettingsFormPage(window), 3, refresh_preview)
-    hud:add_text("drops_hud_background_opacity", TR["Background opacity (0..1)"])
-    hud:add_text("drops_hud_background_color", TR["Background color"], true)
+    self:add_tab(TR["Colors"], "colors", _new_colors_section(window, refresh_preview, settings_getter))
 
-    local item = configure_compact_form(SettingsFormPage(window), 3, refresh_preview)
-    item:add_text("drops_item_background_opacity", TR["Background opacity (0..1)"])
-    item:add_text("drops_item_background_color", TR["Background color"], true)
-
-    local colors = SettingsFeatureNestedPage(window, UI.Widgets.LuiTabBar.position.top,
-        FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
-    colors:add_sub_page(TR["HUD"], module_for_page("hud", hud))
-    colors:add_sub_page(TR["Item"], module_for_page("item", item))
-    self:add_sub_page(TR["Colors"], module_for_page("colors", colors))
-
-    local motion = configure_compact_form(SettingsFormPage(window), 4, refresh_preview)
-    motion:add_checkbox("drops_animations_enabled", TR["Animations"], true)
-    add_compact_row_break(motion)
-    motion:add_text("drops_move_duration", TR["Move duration (ms)"])
-    self:add_sub_page(TR["Motion"], module_for_page("motion", motion))
+    local motion = ConfigContent(window, 4, refresh_preview)
+    motion:add_checkbox(TR["Animations"], "drops_animations_enabled",
+        function(value)
+            settings_getter().animations_enabled = value == true
+        end,
+        function(entry)
+            entry.cb:SetChecked(settings_getter().animations_enabled == true)
+        end, true)
+    motion:break_line()
+    motion:add_line_edit(TR["Move duration (ms)"], "drops_move_duration",
+        function(value)
+            local move_duration = tonumber(value)
+            if move_duration ~= nil then
+                settings_getter().move_duration = move_duration
+            end
+        end,
+        function(entry)
+            entry.tb:SetText(tostring(settings_getter().move_duration))
+        end)
+    self:add_tab(TR["Motion"], "motion", motion)
 
     self.preview_holder = {
         kind = "custom",
@@ -84,7 +212,7 @@ function DropsPage:Constructor(window)
 end
 
 function DropsPage:apply_ui_scale()
-    SettingsTabbedPage.apply_ui_scale(self)
+    ConfigTabs.apply_ui_scale(self)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 
@@ -118,81 +246,12 @@ function DropsPage:layout()
     self.preview_holder.control:SetSize(width, preview_h)
 end
 
-function DropsPage:load(drops, ui)
-    self.loading = true
-    self.controls.drops_enabled.cb:SetChecked(drops.enabled == true)
-    self.controls.drops_visible_duration.tb:SetText(tostring(drops.visible_duration))
-    self.controls.drops_width.tb:SetText(tostring(drops.width))
-    self.controls.drops_rows.tb:SetText(tostring(drops.rows))
-    self.controls.drops_icon_size.tb:SetText(tostring(drops.icon_size))
-    self.controls.drops_flow:set_value(drops.flow)
-    self.controls.drops_align:set_value(drops.align)
-    self.controls.drops_icon_side:set_value(drops.icon_side)
-    self.controls.drops_animations_enabled.cb:SetChecked(drops.animations_enabled == true)
-    self.controls.drops_move_duration.tb:SetText(tostring(drops.move_duration))
-    self.controls.drops_hud_background_opacity.tb:SetText(tostring(drops.hud.background_opacity))
-    self.controls.drops_hud_background_color.tb:SetText(ui.color_to_hex(drops.hud.background_color))
-    self.controls.drops_item_background_opacity.tb:SetText(tostring(drops.item.background_opacity))
-    self.controls.drops_item_background_color.tb:SetText(ui.color_to_hex(drops.item.background_color))
-    self.loading = false
-    self:layout()
+function DropsPage:load_from_settings(s)
+    self._settings = s
+    self:load()
 end
 
-local function _apply_color(ui, dest, hex)
-    local c = ui.hex_to_color(hex)
-    if c ~= nil then
-        dest.R, dest.G, dest.B = c.R, c.G, c.B
-    end
-end
-
-function DropsPage:apply(drops, ui)
-    drops.enabled = self.controls.drops_enabled.cb:IsChecked() == true
-
-    local visible_duration = tonumber(self.controls.drops_visible_duration.tb:GetText())
-    if visible_duration ~= nil then
-        drops.visible_duration = visible_duration
-    end
-
-    local width = tonumber(self.controls.drops_width.tb:GetText())
-    if width ~= nil then
-        drops.width = width
-    end
-
-    local rows = tonumber(self.controls.drops_rows.tb:GetText())
-    if rows ~= nil then
-        drops.rows = rows
-    end
-
-    local icon_size = tonumber(self.controls.drops_icon_size.tb:GetText())
-    if icon_size ~= nil then
-        drops.icon_size = icon_size
-    end
-    drops.flow = self.controls.drops_flow:get_value()
-    drops.align = self.controls.drops_align:get_value()
-    drops.icon_side = self.controls.drops_icon_side:get_value()
-    drops.animations_enabled = self.controls.drops_animations_enabled.cb:IsChecked() == true
-    local move_duration = tonumber(self.controls.drops_move_duration.tb:GetText())
-    if move_duration ~= nil then
-        drops.move_duration = move_duration
-    end
-
-    local hud_opacity = tonumber(self.controls.drops_hud_background_opacity.tb:GetText())
-    if hud_opacity ~= nil then
-        drops.hud.background_opacity = hud_opacity
-    end
-    _apply_color(ui, drops.hud.background_color, self.controls.drops_hud_background_color.tb:GetText())
-
-    local item_opacity = tonumber(self.controls.drops_item_background_opacity.tb:GetText())
-    if item_opacity ~= nil then
-        drops.item.background_opacity = item_opacity
-    end
-    _apply_color(ui, drops.item.background_color, self.controls.drops_item_background_color.tb:GetText())
-end
-
-function DropsPage:load_from_settings(s, ui)
-    self:load(s.drops, ui)
-end
-
-function DropsPage:apply_to_settings(s, ui)
-    self:apply(s.drops, ui)
+function DropsPage:apply_to_settings(s)
+    self._settings = s
+    self:save()
 end
