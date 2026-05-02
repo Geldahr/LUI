@@ -32,6 +32,9 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
     if main_key == "self_vitals" then
         return "vitals", "self"
     end
+    if main_key == "self" then
+        return "expiring_effects", "self"
+    end
     if main_key == "expiring_effects" then
         return "expiring_effects", "self"
     end
@@ -40,6 +43,9 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
     end
     if main_key == "target_vitals" then
         return "vitals", "target"
+    end
+    if main_key == "target" then
+        return "expiring_effects", "target"
     end
     if main_key == "target_boss_vitals" then
         return "vitals", "boss"

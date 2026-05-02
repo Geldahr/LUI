@@ -188,6 +188,7 @@ DE = {
     ["Configuration / Profile Manager"] = "Einstellungen / Profilverwaltung",
     ["Confirm"] = "Bestätigen",
     ["Config"] = "Konfig",
+    ["Crafting Plan"] = "Handwerksplan",
     ["Shortcut Buttons"] = "Kurzschaltflächen",
     ["Cooldowns"] = "Abklingzeiten",
     ["Filters"] = "Filter",

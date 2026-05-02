@@ -188,6 +188,7 @@ FR = {
     ["Configuration / Profile Manager"] = "Configuration / Gestionnaire de profils",
     ["Confirm"] = "Confirmer",
     ["Config"] = "Config",
+    ["Crafting Plan"] = "Plan d'artisanat",
     ["Shortcut Buttons"] = "Boutons de raccourci",
     ["Cooldowns"] = "Temps de recharge",
     ["Filters"] = "Filtres",

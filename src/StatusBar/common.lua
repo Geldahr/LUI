@@ -954,7 +954,7 @@ function S.get_status_bar_widget_display_name(widget_key)
     elseif widget_key == "craft" then
         return S.get_shortcut_label("craft")
     elseif widget_key == "craft_plan" then
-        return TR["Craft plan"]
+        return TR["Crafting Plan"]
     elseif widget_key == "travel" then
         return S.get_shortcut_label("travel")
     elseif widget_key == "assets" then
