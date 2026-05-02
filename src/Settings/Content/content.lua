@@ -8,35 +8,17 @@ _G.ConfigContent = ConfigContent
 _G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
 _G.LUI_SETTINGS_SHARED.config_content = ConfigContent
 
-local function _set_text_entry_methods(entry)
-    function entry:get_value()
-        return self.tb:GetText()
+local function _entry_value(entry)
+    if entry.tb ~= nil then
+        return entry.tb:GetText()
     end
-
-    function entry:set_value(value)
-        self.tb:SetText(value)
+    if entry.button ~= nil then
+        return entry.button:GetValue()
     end
-end
-
-local function _set_dropdown_entry_methods(entry)
-    function entry:get_value()
-        return self.button:GetValue()
+    if entry.cb ~= nil then
+        return entry.cb:IsChecked()
     end
-
-    function entry:set_value(value)
-        self.value = value
-        self.button:SetValue(value)
-    end
-end
-
-local function _set_checkbox_entry_methods(entry)
-    function entry:get_value()
-        return self.cb:IsChecked()
-    end
-
-    function entry:set_value(value)
-        self.cb:SetChecked(value)
-    end
+    error("ConfigContent entry has no readable value control")
 end
 
 function ConfigContent:Constructor(window, columns, refresh_preview_fn)
@@ -71,13 +53,11 @@ end
 
 function ConfigContent:add_line_edit(label_text, key, save_fn, load_fn, help_text, full_width)
     local entry = SettingsFormPage.add_text(self, key, label_text, false, help_text, full_width)
-    _set_text_entry_methods(entry)
     return self:bind(entry, save_fn, load_fn)
 end
 
 function ConfigContent:add_color_picker(label_text, key, save_fn, load_fn, help_text, full_width)
     local entry = SettingsFormPage.add_text(self, key, label_text, true, help_text, full_width)
-    _set_text_entry_methods(entry)
     return self:bind(entry, save_fn, load_fn)
 end
 
@@ -85,13 +65,11 @@ function ConfigContent:add_dropdown(label_text, key, option_labels, option_value
                                     full_width)
     local entry = SettingsFormPage.add_dropdown(self, key, label_text, option_labels, option_values, help_text,
         full_width)
-    _set_dropdown_entry_methods(entry)
     return self:bind(entry, save_fn, load_fn)
 end
 
 function ConfigContent:add_checkbox(label_text, key, save_fn, load_fn, full_width)
     local entry = SettingsFormPage.add_checkbox(self, key, label_text, full_width)
-    _set_checkbox_entry_methods(entry)
     return self:bind(entry, save_fn, load_fn)
 end
 
@@ -115,6 +93,6 @@ end
 function ConfigContent:save()
     for i = 1, #self._bindings do
         local binding = self._bindings[i]
-        binding.save(binding.entry:get_value(), binding.entry, self)
+        binding.save(_entry_value(binding.entry), binding.entry, self)
     end
 end
