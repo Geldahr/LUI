@@ -124,6 +124,8 @@ SettingsFeatureSectionPage = class(Turbine.UI.Control)
 function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_height, preview_refresh_fn)
     Turbine.UI.Control.Constructor(self)
 
+    local ui = window._ui
+
     self.window = window
     self.controls = {}
     self._color_fields = {}
@@ -136,6 +138,8 @@ function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_hei
     self._active_section_key = nil
     self.loading = false
     self.show_main_content_border = false
+    self.color_to_hex = ui.color_to_hex
+    self.hex_to_color = ui.hex_to_color
 
     self.section_tab_bar = UI.Widgets.LuiTabBar()
     self.section_tab_bar:SetParent(self)
