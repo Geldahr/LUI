@@ -90,7 +90,7 @@ function DropsPage:Constructor(window)
     end
 
     local general = ConfigContent(window, 4, refresh_preview)
-    general:add_checkbox(TR["Enabled"], "drops_enabled",
+    general:add_bound_checkbox(TR["Enabled"], "drops_enabled",
         function(value)
             settings_getter().enabled = value == true
         end,
@@ -145,21 +145,21 @@ function DropsPage:Constructor(window)
             entry.tb:SetText(tostring(settings_getter().icon_size))
         end)
     layout:break_line()
-    layout:add_dropdown(TR["Order"], "drops_flow", flow_labels, flow_values,
+    layout:add_bound_dropdown(TR["Order"], "drops_flow", flow_labels, flow_values,
         function(value)
             settings_getter().flow = value
         end,
         function(entry)
             entry:set_value(settings_getter().flow)
         end)
-    layout:add_dropdown(TR["Align"], "drops_align", align_labels, align_values,
+    layout:add_bound_dropdown(TR["Align"], "drops_align", align_labels, align_values,
         function(value)
             settings_getter().align = value
         end,
         function(entry)
             entry:set_value(settings_getter().align)
         end)
-    layout:add_dropdown(TR["Icon position"], "drops_icon_side", side_labels, side_values,
+    layout:add_bound_dropdown(TR["Icon position"], "drops_icon_side", side_labels, side_values,
         function(value)
             settings_getter().icon_side = value
         end,
@@ -171,7 +171,7 @@ function DropsPage:Constructor(window)
     self:add_tab(TR["Colors"], "colors", _new_colors_section(window, refresh_preview, settings_getter))
 
     local motion = ConfigContent(window, 4, refresh_preview)
-    motion:add_checkbox(TR["Animations"], "drops_animations_enabled",
+    motion:add_bound_checkbox(TR["Animations"], "drops_animations_enabled",
         function(value)
             settings_getter().animations_enabled = value == true
         end,

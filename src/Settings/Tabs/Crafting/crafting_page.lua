@@ -31,7 +31,7 @@ function CraftingPage:Constructor(window)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local general = ConfigContent(window, 4)
-    general:add_checkbox(TR["Enabled"], "crafting_enabled",
+    general:add_bound_checkbox(TR["Enabled"], "crafting_enabled",
         function(value)
             self._settings.crafting.enabled = value == true
         end,
@@ -41,7 +41,7 @@ function CraftingPage:Constructor(window)
     self:add_tab(TR["General"], "general", general)
 
     local recipes = ConfigContent(window, 4)
-    recipes:add_dropdown(TR["Display"], "crafting_display_mode", DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES,
+    recipes:add_bound_dropdown(TR["Display"], "crafting_display_mode", DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES,
         function(value)
             self._settings.crafting.display_mode = value
         end,

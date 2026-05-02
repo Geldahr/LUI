@@ -61,20 +61,32 @@ function ConfigContent:add_color_picker(label_text, key, save_fn, load_fn, help_
     return self:bind(entry, save_fn, load_fn)
 end
 
-function ConfigContent:add_dropdown(label_text, key, option_labels, option_values, save_fn, load_fn, help_text,
-                                    full_width)
+function ConfigContent:add_bound_dropdown(label_text, key, option_labels, option_values, save_fn, load_fn, help_text,
+                                          full_width)
     local entry = SettingsFormPage.add_dropdown(self, key, label_text, option_labels, option_values, help_text,
         full_width)
     return self:bind(entry, save_fn, load_fn)
 end
 
-function ConfigContent:add_checkbox(label_text, key, save_fn, load_fn, full_width)
+function ConfigContent:add_bound_checkbox(label_text, key, save_fn, load_fn, full_width)
     local entry = SettingsFormPage.add_checkbox(self, key, label_text, full_width)
     return self:bind(entry, save_fn, load_fn)
 end
 
-function ConfigContent:break_line()
+function ConfigContent:add_dropdown(key, label_text, option_labels, option_values, help_text, full_width)
+    return SettingsFormPage.add_dropdown(self, key, label_text, option_labels, option_values, help_text, full_width)
+end
+
+function ConfigContent:add_checkbox(key, label_text, full_width)
+    return SettingsFormPage.add_checkbox(self, key, label_text, full_width)
+end
+
+function ConfigContent:add_row_break()
     return SettingsFormPage.add_break(self, 0)
+end
+
+function ConfigContent:break_line()
+    return self:add_row_break()
 end
 
 function ConfigContent:load()

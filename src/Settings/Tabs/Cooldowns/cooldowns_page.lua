@@ -163,7 +163,7 @@ function CooldownsFeaturePage:Constructor(window)
     end
 
     local general = ConfigContent(window, 4, refresh_preview)
-    general:add_checkbox(TR["Enabled"], "cd_enabled",
+    general:add_bound_checkbox(TR["Enabled"], "cd_enabled",
         function(value)
             settings_getter().enabled = value == true
         end,
@@ -255,14 +255,14 @@ function CooldownsFeaturePage:Constructor(window)
             entry.tb:SetText(tostring(settings_getter().rows))
         end)
     layout:break_line()
-    layout:add_dropdown(TR["Order"], "cd_flow", flow_labels, flow_values,
+    layout:add_bound_dropdown(TR["Order"], "cd_flow", flow_labels, flow_values,
         function(value)
             settings_getter().flow = value
         end,
         function(entry)
             entry:set_value(settings_getter().flow)
         end)
-    layout:add_dropdown(TR["Icon position"], "cd_icon_side", layout.side_labels, layout.side_values,
+    layout:add_bound_dropdown(TR["Icon position"], "cd_icon_side", layout.side_labels, layout.side_values,
         function(value)
             settings_getter().icon_side = value
         end,
@@ -270,14 +270,14 @@ function CooldownsFeaturePage:Constructor(window)
             entry:set_value(settings_getter().icon_side)
         end)
     layout:break_line()
-    layout:add_dropdown(TR["Bar mode"], "cd_bar_mode", bar_mode_labels, bar_mode_values,
+    layout:add_bound_dropdown(TR["Bar mode"], "cd_bar_mode", bar_mode_labels, bar_mode_values,
         function(value)
             settings_getter().bar_mode = value
         end,
         function(entry)
             entry:set_value(settings_getter().bar_mode)
         end)
-    layout:add_dropdown(TR["Bar movement towards"], "cd_bar_expire_towards", layout.side_labels, layout.side_values,
+    layout:add_bound_dropdown(TR["Bar movement towards"], "cd_bar_expire_towards", layout.side_labels, layout.side_values,
         function(value)
             settings_getter().bar_expire_towards = value
         end,
@@ -290,7 +290,7 @@ function CooldownsFeaturePage:Constructor(window)
     self:add_tab(TR["Colors"], "colors", colors)
 
     local text = ConfigContent(window, 4, refresh_preview)
-    text:add_dropdown(TR["Time format"], "cd_time_format", time_format_labels, time_format_values,
+    text:add_bound_dropdown(TR["Time format"], "cd_time_format", time_format_labels, time_format_values,
         function(value)
             settings_getter().time_format = value
         end,
@@ -318,7 +318,7 @@ function CooldownsFeaturePage:Constructor(window)
             entry.tb:SetText(tostring(settings_getter().name_max_chars))
         end)
     text:break_line()
-    text:add_dropdown(TR["Font"], "cd_font_name", text.font_name_labels, text.font_name_values,
+    text:add_bound_dropdown(TR["Font"], "cd_font_name", text.font_name_labels, text.font_name_values,
         function(value)
             settings_getter().font.name = value
         end,
@@ -335,7 +335,7 @@ function CooldownsFeaturePage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().font.size))
         end)
-    text:add_dropdown(TR["Font style"], "cd_font_style", text.font_style_labels, text.font_style_values,
+    text:add_bound_dropdown(TR["Font style"], "cd_font_style", text.font_style_labels, text.font_style_values,
         function(value)
             settings_getter().font.style = value
         end,

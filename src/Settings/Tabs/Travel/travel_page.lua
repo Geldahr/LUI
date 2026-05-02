@@ -25,7 +25,7 @@ function TravelPage:Constructor(window)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local general = ConfigContent(window, 4)
-    general:add_checkbox(TR["Enabled"], "travel_enabled",
+    general:add_bound_checkbox(TR["Enabled"], "travel_enabled",
         function(value)
             self._settings.travel.enabled = value == true
         end,
@@ -35,7 +35,7 @@ function TravelPage:Constructor(window)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4)
-    layout:add_dropdown(TR["Display"], "travel_display_mode", DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES,
+    layout:add_bound_dropdown(TR["Display"], "travel_display_mode", DISPLAY_MODE_LABELS, DISPLAY_MODE_VALUES,
         function(value)
             self._settings.travel.display_mode = value
         end,

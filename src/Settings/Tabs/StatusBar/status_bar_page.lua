@@ -135,14 +135,14 @@ local function _new_widgets_section(window, settings_getter)
             entry.tb:SetText(tostring(settings_getter().widgets.time_local.width))
         end)
     time:break_line()
-    time:add_dropdown(TR["Time format"], "sb_time_format", time_format_labels, time_format_values,
+    time:add_bound_dropdown(TR["Time format"], "sb_time_format", time_format_labels, time_format_values,
         function(value)
             settings_getter().widgets.time_local.time_format = value
         end,
         function(entry)
             entry:set_value(settings_getter().widgets.time_local.time_format)
         end)
-    time:add_dropdown(TR["Text alignment"], "sb_time_text_alignment", time.text_alignment_labels,
+    time:add_bound_dropdown(TR["Text alignment"], "sb_time_text_alignment", time.text_alignment_labels,
         time.text_alignment_values,
         function(value)
             settings_getter().widgets.time_local.text_alignment = value
@@ -163,14 +163,14 @@ local function _new_widgets_section(window, settings_getter)
             entry.tb:SetText(tostring(settings_getter().widgets.inventory_space.width))
         end)
     inventory:break_line()
-    inventory:add_checkbox(TR["Icon"], "sb_inv_icon",
+    inventory:add_bound_checkbox(TR["Icon"], "sb_inv_icon",
         function(value)
             settings_getter().widgets.inventory_space.icon = value == true
         end,
         function(entry)
             entry.cb:SetChecked(settings_getter().widgets.inventory_space.icon == true)
         end)
-    inventory:add_dropdown(TR["Text alignment"], "sb_inv_text_alignment", inventory.text_alignment_labels,
+    inventory:add_bound_dropdown(TR["Text alignment"], "sb_inv_text_alignment", inventory.text_alignment_labels,
         inventory.text_alignment_values,
         function(value)
             settings_getter().widgets.inventory_space.text_alignment = value
@@ -191,14 +191,14 @@ local function _new_widgets_section(window, settings_getter)
             entry.tb:SetText(tostring(settings_getter().widgets.equipment_wear.width))
         end)
     durability:break_line()
-    durability:add_checkbox(TR["Icon"], "sb_durability_icon",
+    durability:add_bound_checkbox(TR["Icon"], "sb_durability_icon",
         function(value)
             settings_getter().widgets.equipment_wear.icon = value == true
         end,
         function(entry)
             entry.cb:SetChecked(settings_getter().widgets.equipment_wear.icon == true)
         end)
-    durability:add_dropdown(TR["Text alignment"], "sb_durability_text_alignment", durability.text_alignment_labels,
+    durability:add_bound_dropdown(TR["Text alignment"], "sb_durability_text_alignment", durability.text_alignment_labels,
         durability.text_alignment_values,
         function(value)
             settings_getter().widgets.equipment_wear.text_alignment = value
@@ -207,7 +207,7 @@ local function _new_widgets_section(window, settings_getter)
             entry:set_value(settings_getter().widgets.equipment_wear.text_alignment)
         end)
     durability:break_line()
-    durability:add_checkbox(TR["Enable rich-text coloring"], "sb_durability_coloring",
+    durability:add_bound_checkbox(TR["Enable rich-text coloring"], "sb_durability_coloring",
         function(value)
             settings_getter().widgets.equipment_wear.coloring = value == true
         end,
@@ -227,7 +227,7 @@ local function _new_widgets_section(window, settings_getter)
             entry.tb:SetText(tostring(settings_getter().widgets.money.width))
         end)
     money:break_line()
-    money:add_dropdown(TR["Text alignment"], "sb_money_text_alignment", money.text_alignment_labels,
+    money:add_bound_dropdown(TR["Text alignment"], "sb_money_text_alignment", money.text_alignment_labels,
         money.text_alignment_values,
         function(value)
             settings_getter().widgets.money.text_alignment = value
@@ -248,7 +248,7 @@ local function _new_widgets_section(window, settings_getter)
             entry.tb:SetText(tostring(settings_getter().widgets.wallet.width))
         end)
     wallet:break_line()
-    wallet:add_dropdown(TR["Text alignment"], "sb_wallet_text_alignment", wallet.text_alignment_labels,
+    wallet:add_bound_dropdown(TR["Text alignment"], "sb_wallet_text_alignment", wallet.text_alignment_labels,
         wallet.text_alignment_values,
         function(value)
             settings_getter().widgets.wallet.text_alignment = value
@@ -352,7 +352,7 @@ function StatusBarPage:Constructor(window)
     end
 
     local general = ConfigContent(window, 4)
-    general:add_checkbox(TR["Enabled"], "sb_enabled",
+    general:add_bound_checkbox(TR["Enabled"], "sb_enabled",
         function(value)
             settings_getter().enabled = value == true
         end,
@@ -375,7 +375,7 @@ function StatusBarPage:Constructor(window)
     self:add_tab(TR["Background"], "background", background)
 
     local font = ConfigContent(window, 4)
-    font:add_dropdown(TR["Font"], "sb_font_name", font.font_name_labels, font.font_name_values,
+    font:add_bound_dropdown(TR["Font"], "sb_font_name", font.font_name_labels, font.font_name_values,
         function(value)
             settings_getter().font.name = value
         end,
@@ -392,7 +392,7 @@ function StatusBarPage:Constructor(window)
         function(entry)
             entry.tb:SetText(tostring(settings_getter().font.size))
         end)
-    font:add_dropdown(TR["Font style"], "sb_font_style", font.font_style_labels, font.font_style_values,
+    font:add_bound_dropdown(TR["Font style"], "sb_font_style", font.font_style_labels, font.font_style_values,
         function(value)
             settings_getter().font.style = value
         end,

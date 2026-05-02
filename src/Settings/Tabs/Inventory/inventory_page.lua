@@ -23,14 +23,14 @@ function InventoryPage:Constructor(window)
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local general = ConfigContent(window, 4)
-    general:add_checkbox(TR["Enabled"], "inventory_enabled",
+    general:add_bound_checkbox(TR["Enabled"], "inventory_enabled",
         function(value)
             self._settings.inventory.enabled = value == true
         end,
         function(entry)
             entry.cb:SetChecked(self._settings.inventory.enabled == true)
         end, true)
-    general:add_checkbox(TR["Replace default backpack (I)"], "inventory_replace",
+    general:add_bound_checkbox(TR["Replace default backpack (I)"], "inventory_replace",
         function(value)
             self._settings.inventory.replace = value == true
         end,
@@ -50,7 +50,7 @@ function InventoryPage:Constructor(window)
         function(entry)
             entry:set_value(tostring(self._settings.inventory.cols))
         end)
-    layout:add_dropdown(TR["Tile Size"], "inventory_tile_size", TILE_SIZE_LABELS, TILE_SIZE_VALUES,
+    layout:add_bound_dropdown(TR["Tile Size"], "inventory_tile_size", TILE_SIZE_LABELS, TILE_SIZE_VALUES,
         function(value)
             self._settings.inventory.tile_size = value
         end,

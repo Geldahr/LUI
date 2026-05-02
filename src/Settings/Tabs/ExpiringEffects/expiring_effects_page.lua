@@ -61,10 +61,10 @@ local function _new_colors_section(window, refresh_preview, settings_getter, pre
         local spec = bar_specs[i]
         bars:add_color_picker(spec.label, spec.key,
             function(value)
-                _apply_color(ui, spec.get_target(settings_getter()), value)
+                _apply_color(ui, spec.get_target(settings_getter), value)
             end,
             function(entry)
-                entry.tb:SetText(ui.color_to_hex(spec.get_target(settings_getter())))
+                entry.tb:SetText(ui.color_to_hex(spec.get_target(settings_getter)))
             end)
     end
 
@@ -97,7 +97,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
     local page = ConfigSectionPage(window, preview_key, preview_height, refresh_preview_fn)
 
     local general = ConfigContent(window, 4, page.refresh_preview)
-    general:add_checkbox(TR["Enabled"], prefix .. "_enabled",
+    general:add_bound_checkbox(TR["Enabled"], prefix .. "_enabled",
         function(value)
             settings_getter().enabled = value == true
         end,
@@ -105,21 +105,21 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
             entry.cb:SetChecked(settings_getter().enabled == true)
         end, true)
     general:break_line()
-    general:add_checkbox(TR["Track buffs"], prefix .. "_show_buffs",
+    general:add_bound_checkbox(TR["Track buffs"], prefix .. "_show_buffs",
         function(value)
             settings_getter().show_buffs = value == true
         end,
         function(entry)
             entry.cb:SetChecked(settings_getter().show_buffs == true)
         end, false)
-    general:add_checkbox(TR["Track curable debuffs"], prefix .. "_show_curable_debuffs",
+    general:add_bound_checkbox(TR["Track curable debuffs"], prefix .. "_show_curable_debuffs",
         function(value)
             settings_getter().show_curable_debuffs = value == true
         end,
         function(entry)
             entry.cb:SetChecked(settings_getter().show_curable_debuffs ~= false)
         end, false)
-    general:add_checkbox(TR["Track non-curable debuffs"], prefix .. "_show_noncurable_debuffs",
+    general:add_bound_checkbox(TR["Track non-curable debuffs"], prefix .. "_show_noncurable_debuffs",
         function(value)
             settings_getter().show_noncurable_debuffs = value == true
         end,
@@ -202,14 +202,14 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
             entry.tb:SetText(tostring(settings_getter().spacing))
         end)
     layout:break_line()
-    layout:add_dropdown(TR["Icon position"], prefix .. "_icon_side", layout.side_labels, layout.side_values,
+    layout:add_bound_dropdown(TR["Icon position"], prefix .. "_icon_side", layout.side_labels, layout.side_values,
         function(value)
             settings_getter().icon_side = value
         end,
         function(entry)
             entry:set_value(settings_getter().icon_side)
         end)
-    layout:add_dropdown(TR["Bar expires towards"], prefix .. "_bar_expire_towards", layout.side_labels,
+    layout:add_bound_dropdown(TR["Bar expires towards"], prefix .. "_bar_expire_towards", layout.side_labels,
         layout.side_values,
         function(value)
             settings_getter().bar_expire_towards = value
@@ -234,7 +234,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
             entry.tb:SetText(tostring(settings_getter().name_max_chars))
         end)
     text:break_line()
-    text:add_dropdown(TR["Font"], prefix .. "_font_name", text.font_name_labels, text.font_name_values,
+    text:add_bound_dropdown(TR["Font"], prefix .. "_font_name", text.font_name_labels, text.font_name_values,
         function(value)
             settings_getter().font.name = value
         end,
@@ -251,7 +251,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function(entry)
             entry.tb:SetText(tostring(settings_getter().font.size))
         end)
-    text:add_dropdown(TR["Font Style"], prefix .. "_font_style", text.font_style_labels, text.font_style_values,
+    text:add_bound_dropdown(TR["Font Style"], prefix .. "_font_style", text.font_style_labels, text.font_style_values,
         function(value)
             settings_getter().font.style = value
         end,
