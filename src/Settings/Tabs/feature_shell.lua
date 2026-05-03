@@ -159,7 +159,14 @@ function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_hei
     self.section_frame_body:SetBackColor(Style.BACKGROUND)
 
     self.refresh_preview = function()
+        local preview_height_before = self.preview_holder ~= nil and self.preview_holder.height or nil
         self._preview_refresh_fn(self.window)
+
+        local preview_height_after = self.preview_holder ~= nil and self.preview_holder.height or nil
+        if preview_height_before ~= preview_height_after then
+            self:layout()
+            self._preview_refresh_fn(self.window)
+        end
     end
 
     if preview_key ~= nil and preview_height ~= nil then
