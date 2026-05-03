@@ -300,16 +300,6 @@ function SettingsFeatureSectionPage:close_all_dropdowns()
     end
 end
 
-function SettingsFeatureSectionPage:update_swatch(entry)
-    entry.tb:update_swatch()
-end
-
-function SettingsFeatureSectionPage:update_all_swatches()
-    for i = 1, #self._color_fields do
-        self:update_swatch(self._color_fields[i])
-    end
-end
-
 function SettingsFeatureSectionPage:layout()
     local width, height = self:GetSize()
     if width == nil or height == nil or width < 1 or height < 1 then

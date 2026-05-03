@@ -32,10 +32,6 @@ function ConfigTabs:add_tab(text, key, page)
     return self:add_sub_page(text, _module_for_page(key, page))
 end
 
-function ConfigTabs:get_page(key)
-    return self._sub_pages[key]
-end
-
 function ConfigTabs:load()
     for i = 1, #self._sub_page_order do
         local page = self._sub_pages[self._sub_page_order[i]]

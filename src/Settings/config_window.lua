@@ -207,11 +207,21 @@ function ConfigWindow:Constructor()
             self:hide_hint()
             self:hide_confirmation_dialog()
             self:close_all_dropdowns()
+            self._pending_open_main_key = nil
+            self._pending_open_sub_key = nil
             return
         end
 
         self:layout()
-        self:_activate_active_page()
+        if type(self._pending_open_main_key) == "string" then
+            local main_key = self._pending_open_main_key
+            local preferred_sub_key = self._pending_open_sub_key
+            self._pending_open_main_key = nil
+            self._pending_open_sub_key = nil
+            self:select_main_tab(main_key, preferred_sub_key)
+        else
+            self:_activate_active_page()
+        end
     end
 
     self:apply_saved_geometry()
@@ -363,13 +373,20 @@ end
 function ConfigWindow:open(main_key, preferred_sub_key)
     self:apply_saved_geometry()
     self:load_from_settings()
-    if type(main_key) == "string" then
-        self:select_main_tab(main_key, preferred_sub_key)
+
+    if self:IsVisible() == true then
+        if type(main_key) == "string" then
+            self:select_main_tab(main_key, preferred_sub_key)
+        else
+            self:_activate_active_page()
+        end
+        self:show()
+        self:layout()
     else
-        self:_activate_active_page()
+        self._pending_open_main_key = type(main_key) == "string" and main_key or nil
+        self._pending_open_sub_key = type(main_key) == "string" and preferred_sub_key or nil
+        self:show()
     end
-    self:show()
-    self:layout()
 end
 
 function ConfigWindow:bring_to_front()

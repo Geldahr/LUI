@@ -17,10 +17,6 @@ function ConfigSectionPage:add_tab(text, key, page)
     self:add_section(text, key, page)
 end
 
-function ConfigSectionPage:get_page(key)
-    return self._sections[key]
-end
-
 function ConfigSectionPage:load()
     for i = 1, #self._section_order do
         local page = self._sections[self._section_order[i]]
