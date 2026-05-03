@@ -670,7 +670,7 @@ function _G.ensure_loaded_settings()
     local bestiary = s.bestiary
     ensure_ui_window("bestiary", _pos_x(900), _pos_y(180), 700, 520)
 
-    ensure_ui_window("config", _pos_x(450), _pos_y(51), 1005, 1011)
+    ensure_ui_window("config", _pos_x(450), _pos_y(51), 1000, 900)
     ensure_ui_window("travel", _pos_x(980), _pos_y(180), 420, 520)
 
     local tv = s.target.vitals
