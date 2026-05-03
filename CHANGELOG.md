@@ -10,6 +10,7 @@
 - Added shared structured search filters across Bestiary, Crafting, and Assets, including Bestiary `loc:` / `gen:` / `lvl:` filters, Crafting rank filters, and Assets `owner:` / `store:` filters.
 - Added the Drops HUD with chat-driven loot rows, move-mode support, preview, and layout settings.
 - Added configurable multi-label text layouts for self, target, boss, target's target, and party vitals.
+- Added `Vitals > General` enable toggles for Self, Target, Boss, Target's Target, and Party vitals.
 
 ### Changed
 
@@ -17,6 +18,8 @@
 - Improved Bestiary search opening for item and multi-resource queries from Crafting.
 - Reorganized the configuration window around feature-first tabs with unified layouts for Vitals, Expiring Effects, Cooldowns, Drops, Inventory, Travel, and the remaining feature pages.
 - Removed silent internal fallbacks across plugin wiring so missing internal modules, methods, and state now fail loudly instead of being masked.
+- Self, Target, and Party vitals now hand off cleanly to the built-in LotRO HUD when their LUI replacements are disabled.
+- Boss vitals now follow the Target vitals enable state, while Target's Target remains independently toggleable.
 
 ### Fixed
 
