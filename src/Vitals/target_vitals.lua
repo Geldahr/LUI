@@ -28,6 +28,14 @@ end
 
 local _gradient_morale_color = lui_gradient_morale_color
 
+local function _target_vitals_enabled()
+    return _G.loaded_settings.target.vitals.enabled == true
+end
+
+local function _targets_target_enabled()
+    return _G.loaded_settings.target.vitals.targets_target.enabled == true
+end
+
 ---@class TargetVitals : VitalsBase
 TargetVitals = class(VitalsBase)
 
@@ -237,7 +245,9 @@ end
 
 function TargetVitals:set_move_mode(enabled)
     VitalsBase.set_move_mode(self, enabled)
-    if enabled == true then
+    if _target_vitals_enabled() ~= true then
+        self:SetVisible(false)
+    elseif enabled == true then
         self:SetVisible(true)
     elseif self.entity == nil then
         self:SetVisible(false)
@@ -506,7 +516,8 @@ function TargetVitals:_build_extra_controls()
         labels = self.targets_target_window.targets_target_labels,
         control = self.targets_target_window.targets_control,
         set_visible = function(visible)
-            self.targets_target_window:SetVisible(visible == true or self.targets_target_window:is_move_mode())
+            self.targets_target_window:SetVisible(_targets_target_enabled() == true and
+                (visible == true or self.targets_target_window:is_move_mode()))
         end,
         set_entity = function(entity)
             self.targets_target_window.targets_control:SetEntity(entity)

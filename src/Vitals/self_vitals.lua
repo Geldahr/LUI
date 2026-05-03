@@ -36,12 +36,13 @@ function SelfVitals:on_target_changed()
         return
     end
 
-    local boss_vitals_enabled = _G.loaded_settings.target.boss_vitals.enabled == true
+    local target_vitals_enabled = _G.loaded_settings.target.vitals.enabled == true
+    local boss_vitals_enabled = target_vitals_enabled == true and _G.loaded_settings.target.boss_vitals.enabled == true
 
     if self.entity == nil or self.entity.GetTarget == nil then
         if self.target_vitals ~= nil then
             self.target_vitals:set_entity(nil)
-            self.target_vitals:SetVisible(self.target_vitals:is_move_mode())
+            self.target_vitals:SetVisible(target_vitals_enabled == true and self.target_vitals:is_move_mode())
         end
         if self.boss_vitals ~= nil then
             self.boss_vitals:set_entity(nil)
@@ -58,7 +59,9 @@ function SelfVitals:on_target_changed()
 
     if self.target_vitals ~= nil then
         self.target_vitals:set_entity(t)
-        if t ~= nil and is_boss ~= true then
+        if target_vitals_enabled ~= true then
+            self.target_vitals:SetVisible(false)
+        elseif t ~= nil and is_boss ~= true then
             self.target_vitals:SetVisible(true)
         else
             self.target_vitals:SetVisible(self.target_vitals:is_move_mode())

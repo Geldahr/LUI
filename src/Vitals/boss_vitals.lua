@@ -130,7 +130,9 @@ end
 function BossVitals:set_move_mode(enabled)
     VitalsBase.set_move_mode(self, enabled)
     self:_layout_effect_windows()
-    if self:get_loaded_vitals_settings().enabled ~= true then
+    if _G.loaded_settings.target.vitals.enabled ~= true then
+        self:SetVisible(false)
+    elseif self:get_loaded_vitals_settings().enabled ~= true then
         self:SetVisible(false)
     elseif enabled == true then
         self:SetVisible(true)
