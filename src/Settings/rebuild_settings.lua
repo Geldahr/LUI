@@ -142,6 +142,7 @@ function _G.rebuild_settings()
     end
 
     local function build_vital(dst, src)
+        dst.enabled = src.enabled == true
         dst.frame.width = scaled_int(src.frame.width)
         dst.frame.border_width = scaled_border(src.frame.border_width)
         dst.frame.border_color = src.frame.border_color
@@ -272,6 +273,7 @@ function _G.rebuild_settings()
 
     local raw_tt = raw.target.vitals.targets_target
     local dst_tt = _G.settings.target.vitals.targets_target
+    dst_tt.enabled = raw_tt.enabled == true
     dst_tt.width = scaled_int(raw_tt.width)
     dst_tt.height = scaled_int(raw_tt.height)
     dst_tt.border_width = scaled_border(raw_tt.border_width)

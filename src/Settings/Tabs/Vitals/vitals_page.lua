@@ -1068,12 +1068,44 @@ end
 local function _new_general_page(window, root)
     local page = ConfigContent(window, 4)
     page:add_title(TR["General"])
+    _add_checkbox_field(page, "self_vitals_enabled", TR["Enable self vitals"],
+        function()
+            return root._settings.self.vitals.enabled
+        end,
+        function(value)
+            root._settings.self.vitals.enabled = value
+        end, true)
+    page:add_row_break()
+    _add_checkbox_field(page, "target_vitals_enabled", TR["Enable target vitals"],
+        function()
+            return root._settings.target.vitals.enabled
+        end,
+        function(value)
+            root._settings.target.vitals.enabled = value
+        end, true)
+    page:add_row_break()
     _add_checkbox_field(page, "target_boss_enabled", TR["Enable boss vitals"],
         function()
             return root._settings.target.boss_vitals.enabled
         end,
         function(value)
             root._settings.target.boss_vitals.enabled = value
+        end, true)
+    page:add_row_break()
+    _add_checkbox_field(page, "target_targets_target_enabled", TR["Enable target's target"],
+        function()
+            return root._settings.target.vitals.targets_target.enabled
+        end,
+        function(value)
+            root._settings.target.vitals.targets_target.enabled = value
+        end, true)
+    page:add_row_break()
+    _add_checkbox_field(page, "party_vitals_enabled", TR["Enable party vitals"],
+        function()
+            return root._settings.party.enabled
+        end,
+        function(value)
+            root._settings.party.enabled = value
         end, true)
     return page
 end

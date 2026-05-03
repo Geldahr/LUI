@@ -347,6 +347,9 @@ function _G.ensure_loaded_settings()
     local function apply_vital_defaults(v, hud_key, is_target, morale_default, power_default, default_left, default_top,
                                         default_tt_left, default_tt_top, default_track_noncurable,
                                         default_frame_width)
+        if v.enabled == nil then
+            v.enabled = true
+        end
         v.frame.width = v.frame.width or default_frame_width or 250
         v.frame.border_width = v.frame.border_width or 1
         v.frame.incombat_opacity = v.frame.incombat_opacity or 1.0
@@ -530,6 +533,9 @@ function _G.ensure_loaded_settings()
         end
 
         if is_target and v.targets_target ~= nil then
+            if v.targets_target.enabled == nil then
+                v.targets_target.enabled = true
+            end
             v.targets_target.width = v.targets_target.width or v.frame.width or 250
             v.targets_target.height = v.targets_target.height or v.power.height or 26
             v.targets_target.border_width = v.targets_target.border_width or v.frame.border_width
