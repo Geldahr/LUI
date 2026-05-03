@@ -204,6 +204,7 @@ function ConfigWindow:Constructor()
 
     self.VisibleChanged = function()
         if self:IsVisible() == false then
+            self:update_saved_geometry()
             self:hide_hint()
             self:hide_confirmation_dialog()
             self:close_all_dropdowns()

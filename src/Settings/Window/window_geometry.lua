@@ -2,8 +2,8 @@ local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
 end
 
-local CONFIG_DEFAULT_WIDTH = 1260
-local CONFIG_DEFAULT_HEIGHT = 820
+local CONFIG_DEFAULT_WIDTH = 1000
+local CONFIG_DEFAULT_HEIGHT = 900
 local CONFIG_MIN_WIDTH = 900
 local CONFIG_MIN_HEIGHT = 800
 
