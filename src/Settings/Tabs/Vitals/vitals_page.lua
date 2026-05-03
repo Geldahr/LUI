@@ -1068,45 +1068,41 @@ end
 local function _new_general_page(window, root)
     local page = ConfigContent(window, 4)
     page:add_title(TR["General"])
-    _add_checkbox_field(page, "self_vitals_enabled", TR["Enable self vitals"],
-        function()
-            return root._settings.self.vitals.enabled
-        end,
+    page:add_checkbox("self_vitals_enabled", TR["Enable self vitals"],
         function(value)
-            root._settings.self.vitals.enabled = value
-        end, true)
-    page:add_row_break()
-    _add_checkbox_field(page, "target_vitals_enabled", TR["Enable target vitals"],
-        function()
-            return root._settings.target.vitals.enabled
+            root._settings.self.vitals.enabled = value == true
         end,
-        function(value)
-            root._settings.target.vitals.enabled = value
-        end, true)
-    page:add_row_break()
-    _add_checkbox_field(page, "target_boss_enabled", TR["Enable boss vitals"],
         function()
-            return root._settings.target.boss_vitals.enabled
-        end,
+            return root._settings.self.vitals.enabled == true
+        end)
+    page:add_checkbox("target_vitals_enabled", TR["Enable target vitals"],
         function(value)
-            root._settings.target.boss_vitals.enabled = value
-        end, true)
-    page:add_row_break()
-    _add_checkbox_field(page, "target_targets_target_enabled", TR["Enable target's target"],
+            root._settings.target.vitals.enabled = value == true
+        end,
         function()
-            return root._settings.target.vitals.targets_target.enabled
-        end,
+            return root._settings.target.vitals.enabled == true
+        end)
+    page:add_checkbox("target_boss_enabled", TR["Enable boss vitals"],
         function(value)
-            root._settings.target.vitals.targets_target.enabled = value
-        end, true)
-    page:add_row_break()
-    _add_checkbox_field(page, "party_vitals_enabled", TR["Enable party vitals"],
+            root._settings.target.boss_vitals.enabled = value == true
+        end,
         function()
-            return root._settings.party.enabled
-        end,
+            return root._settings.target.boss_vitals.enabled == true
+        end)
+    page:add_checkbox("target_targets_target_enabled", TR["Enable target's target"],
         function(value)
-            root._settings.party.enabled = value
-        end, true)
+            root._settings.target.vitals.targets_target.enabled = value == true
+        end,
+        function()
+            return root._settings.target.vitals.targets_target.enabled == true
+        end)
+    page:add_checkbox("party_vitals_enabled", TR["Enable party vitals"],
+        function(value)
+            root._settings.party.enabled = value == true
+        end,
+        function()
+            return root._settings.party.enabled == true
+        end)
     return page
 end
 
