@@ -19,6 +19,10 @@ local function _is_local_player(entity)
     return entity:GetName() == lp:GetName()
 end
 
+local function _party_vitals_enabled()
+    return _G.loaded_settings.party.enabled == true
+end
+
 ---@class PartyMemberVitals : VitalsBase
 PartyMemberVitals = class(VitalsBase)
 
@@ -261,7 +265,7 @@ end
 ---------------------------------------------------------------------
 
 function PartyVitals:set_move_mode(enabled)
-    if enabled == true then
+    if enabled == true and _party_vitals_enabled() == true then
         self:SetVisible(true)
     end
     LuiHUD.set_move_mode(self, enabled)
@@ -388,6 +392,10 @@ function PartyVitals:layout_members(count)
 end
 
 function PartyVitals:update_visibility(member_count)
+    if _party_vitals_enabled() ~= true then
+        self:SetVisible(false)
+        return
+    end
     if self:is_move_mode() then
         self:SetVisible(true)
         return

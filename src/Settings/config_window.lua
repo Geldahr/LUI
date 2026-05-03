@@ -611,12 +611,14 @@ function ConfigWindow:refresh_runtime_settings()
     apply_drops_settings()
     apply_crafting_settings()
     apply_travel_settings()
+    _G.apply_lotro_vitals_handoff()
 
     self:apply_ui_scale()
     self:layout()
 
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.resize ~= nil then
+    if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:resize()
+        PLAYER_VITAL:apply_enabled_state()
     end
     if TARGET_VITAL ~= nil then
         TARGET_VITAL:resize()

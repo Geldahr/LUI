@@ -3,6 +3,10 @@ import "Turbine.UI"
 
 import "LUI.src.Vitals.vitals_base"
 
+local function _self_vitals_enabled()
+    return _G.loaded_settings.self.vitals.enabled == true
+end
+
 ---@class SelfVitals : VitalsBase
 SelfVitals = class(VitalsBase)
 
@@ -14,6 +18,7 @@ function SelfVitals:Constructor(entity)
     self.target_vitals = nil
     self.boss_vitals = nil
     VitalsBase.Constructor(self, "self", entity, TR["Self Vitals"])
+    self:apply_enabled_state()
 end
 
 ---------------------------------------------------------------------
@@ -29,6 +34,10 @@ function SelfVitals:set_target_vitals(target_vitals, boss_vitals)
     self.boss_vitals = boss_vitals
     -- Sync initial target state (plugin can load while a target is already selected).
     self:on_target_changed()
+end
+
+function SelfVitals:apply_enabled_state()
+    self:SetVisible(_self_vitals_enabled())
 end
 
 function SelfVitals:on_target_changed()
