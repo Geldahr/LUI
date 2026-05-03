@@ -59,9 +59,9 @@ local function _copy_favorite_entries(entries)
     return out
 end
 
-local function _current_character_entry()
-    _G.ensure_server_settings()
-    if type(_G.server_settings) ~= "table" or type(_G.server_settings.characters) ~= "table" then
+local function _current_character_settings()
+    _G.ensure_character_settings()
+    if type(_G.character_settings) ~= "table" then
         return nil
     end
 
@@ -70,24 +70,19 @@ local function _current_character_entry()
         return nil
     end
 
-    local entry = _G.server_settings.characters[character_name]
-    if type(entry) ~= "table" then
-        entry = {}
-        _G.server_settings.characters[character_name] = entry
-    end
-    return entry
+    return _G.character_settings
 end
 
 local function _character_crafting_settings()
-    local entry = _current_character_entry()
-    if entry == nil then
+    local character_settings = _current_character_settings()
+    if character_settings == nil then
         return nil
     end
 
-    if type(entry.crafting) ~= "table" then
-        entry.crafting = {}
+    if type(character_settings.crafting) ~= "table" then
+        character_settings.crafting = {}
     end
-    return entry.crafting
+    return character_settings.crafting
 end
 
 local function _character_section_settings(section_key)

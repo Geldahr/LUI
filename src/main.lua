@@ -82,7 +82,7 @@ end
 
 local function _release_persistent_state()
     _G.account_settings = nil
-    _G.server_settings = nil
+    _G.character_settings = nil
     _G.loaded_settings = nil
     _G.settings = nil
 
