@@ -71,9 +71,6 @@ end
 
 function ConfigWindow:init_target_boss_vitals_preview()
     local holder = self.controls.target_boss_vitals_preview
-    if holder == nil or holder.control == nil then
-        return
-    end
 
     if self.target_boss_vitals_preview ~= nil then
         return
@@ -167,9 +164,6 @@ function ConfigWindow:update_target_boss_vitals_preview()
     if p == nil then
         self:init_target_boss_vitals_preview()
         p = self.target_boss_vitals_preview
-    end
-    if p == nil then
-        return
     end
 
     local raw_scale = _require_positive_scale(self)

@@ -109,9 +109,6 @@ end
 
 function ConfigWindow:init_expiring_effects_preview()
     local holder = self.controls.expiring_effects_preview
-    if holder == nil or holder.control == nil then
-        return
-    end
 
     if self.expiring_effects_preview ~= nil then
         return
@@ -130,9 +127,6 @@ end
 function ConfigWindow:update_expiring_effects_preview()
     if self.expiring_effects_preview == nil then
         self:init_expiring_effects_preview()
-    end
-    if self.expiring_effects_preview == nil then
-        return
     end
 
     local raw_scale = _require_positive_scale(self)

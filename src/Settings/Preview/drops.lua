@@ -70,9 +70,6 @@ end
 
 function ConfigWindow:init_drops_preview()
     local holder = self.controls.drops_preview
-    if holder == nil or holder.control == nil then
-        return
-    end
     if self.drops_preview ~= nil then
         return
     end
@@ -121,9 +118,6 @@ end
 function ConfigWindow:update_drops_preview()
     if self.drops_preview == nil then
         self:init_drops_preview()
-    end
-    if self.drops_preview == nil then
-        return
     end
 
     local p = self.drops_preview

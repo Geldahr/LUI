@@ -67,9 +67,6 @@ end
 
 function ConfigWindow:init_target_targets_target_preview()
     local holder = self.controls.target_targets_target_preview
-    if holder == nil or holder.control == nil then
-        return
-    end
 
     if self.target_targets_target_preview ~= nil then
         return
@@ -142,9 +139,6 @@ function ConfigWindow:update_target_targets_target_preview()
     if p == nil then
         self:init_target_targets_target_preview()
         p = self.target_targets_target_preview
-    end
-    if p == nil then
-        return
     end
 
     local raw_scale = _require_positive_scale(self)

@@ -35,9 +35,6 @@ end
 
 function ConfigWindow:init_cooldowns_preview()
     local holder = self.controls.cooldowns_preview
-    if holder == nil or holder.control == nil then
-        return
-    end
 
     if self.cooldowns_preview ~= nil then
         return
@@ -152,9 +149,6 @@ end
 function ConfigWindow:update_cooldowns_preview()
     if self.cooldowns_preview == nil then
         self:init_cooldowns_preview()
-    end
-    if self.cooldowns_preview == nil then
-        return
     end
     local raw_scale = _require_positive_scale(self)
 

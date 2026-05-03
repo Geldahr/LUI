@@ -100,40 +100,12 @@ function Common.preview_scaled_number(raw_scale, raw_value)
     return n * raw_scale
 end
 
-function Common.preview_text_align(value)
-    local align = LUI_TO_LOTRO.text_alignment[value]
-    if align == nil then
-        error("Missing preview text alignment: " .. tostring(value))
-    end
-    return align
-end
-
 function Common.preview_resource_background(matches_missing, dimming, background, fill_color)
     if matches_missing == true then
         return Common.dim_color(fill_color, dimming)
     end
     return background
 end
-
-function Common.apply_preview_label_bounds(label, align, margin, width, height)
-    if label == nil then
-        return
-    end
-
-    local content_w = math.max(0, width - margin)
-    if align == LUI_ENUMS.text_alignment.LEFT then
-        label:SetPosition(margin, 0)
-        label:SetSize(content_w, height)
-    elseif align == LUI_ENUMS.text_alignment.RIGHT then
-        label:SetPosition(0, 0)
-        label:SetSize(content_w, height)
-    else
-        label:SetPosition(0, 0)
-        label:SetSize(width, height)
-    end
-end
-
-Common.default_gradient_mid_color = Turbine.UI.Color(1, 0.847059, 0.776471, 0.235294)
 
 function Common.morale_color_preview(percent, gradient_enabled, gradient_full_color, gradient_mid_color,
                                      gradient_low_color, high_color, medium_color, low_color, critical_color)
@@ -192,14 +164,7 @@ function Common.apply_preview_border(p, w, h, x, y)
 end
 
 function Common.sync_preview_holder_height(window, holder, desired_height)
-    if window == nil or holder == nil or holder.control == nil then
-        return holder
-    end
-
-    local h = tonumber(desired_height)
-    if h == nil then
-        return holder
-    end
+    local h = Common.require_number(desired_height, "preview_holder_height")
     h = math.floor(h + 0.5)
     if h < 1 then
         h = 1
@@ -207,13 +172,10 @@ function Common.sync_preview_holder_height(window, holder, desired_height)
 
     if holder.height ~= h then
         holder.height = h
-        if window.layout ~= nil then
-            window:layout()
-        end
     end
 
-    local w = holder.control:GetWidth()
-    if type(w) == "number" and w > 0 then
+    local w = Common.require_number(holder.control:GetWidth(), "preview_holder_width")
+    if w > 0 then
         holder.control:SetSize(w, h)
     end
 
@@ -222,9 +184,6 @@ end
 
 function Common.ensure_gradient_preview(window, control_key)
     local holder = window.controls[control_key]
-    if holder == nil or holder.control == nil then
-        return nil
-    end
     if holder.gradient_preview ~= nil then
         return holder.gradient_preview
     end
@@ -253,14 +212,7 @@ end
 
 function Common.update_gradient_preview(window, control_key, full_color, mid_color, low_color)
     local holder = window.controls[control_key]
-    if holder == nil or holder.control == nil then
-        return
-    end
-
     local p = Common.ensure_gradient_preview(window, control_key)
-    if p == nil then
-        return
-    end
 
     local w, h = holder.control:GetSize()
     if w == nil or h == nil or w < 1 or h < 1 then

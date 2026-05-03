@@ -399,16 +399,11 @@ end
 
 SettingsFeatureShell = {
     scaled_int = _scaled_int,
-    scaled_font = _scaled_font,
-    apply_button_tab_bar_theme = _apply_button_tab_bar_theme,
     module_for_page = _module_for_page,
     nested_page_class = SettingsFeatureNestedPage,
     section_page_class = SettingsFeatureSectionPage,
-    section_tab_scale = SECTION_TAB_SCALE,
     nested_tab_scale = NESTED_TAB_SCALE,
-    section_tab_font_size = SECTION_TAB_FONT_SIZE,
     nested_tab_font_size = NESTED_TAB_FONT_SIZE,
-    content_border_color = CONTENT_BORDER_COLOR,
 }
 
 _G.SettingsFeatureShell = SettingsFeatureShell

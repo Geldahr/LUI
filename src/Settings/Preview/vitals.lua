@@ -571,10 +571,6 @@ function StandardVitalsPreview:update()
     lui_clear_number_abbrev_preview_settings()
 end
 
-function ConfigWindow:_ensure_gradient_preview(control_key)
-    return Common.ensure_gradient_preview(self, control_key)
-end
-
 function ConfigWindow:_update_gradient_preview(control_key, full_color, mid_color, low_color)
     return Common.update_gradient_preview(self, control_key, full_color, mid_color, low_color)
 end

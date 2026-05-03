@@ -73,9 +73,6 @@ end
 
 function ConfigWindow:init_party_vitals_preview()
     local holder = self.controls.party_vitals_preview
-    if holder == nil or holder.control == nil then
-        return
-    end
 
     if self.party_vitals_preview ~= nil then
         return
@@ -192,9 +189,6 @@ end
 function ConfigWindow:update_party_vitals_preview()
     if self.party_vitals_preview == nil then
         self:init_party_vitals_preview()
-    end
-    if self.party_vitals_preview == nil then
-        return
     end
 
     local raw_scale = _require_positive_scale(self)
