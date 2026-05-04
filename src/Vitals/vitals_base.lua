@@ -10,6 +10,7 @@ import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Utils.color"
 import "LUI.src.Utils.token_format"
+import "LUI.src.Utils.vitals_labels"
 import "LUI.src.Settings.enums"
 
 local function _effect_is_debuff(effect)
@@ -70,6 +71,10 @@ local function _apply_label_margin(label, frame_width, margin, alignment)
         label:SetPosition(0, 0)
         label:SetSize(frame_width, label:GetHeight())
     end
+end
+
+local function _label_text_is_blank(text)
+    return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
 
 local _dim_color = lui_dim_color
@@ -243,19 +248,34 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     ---------------------------------------------------------------------
     -- LABELS
     ---------------------------------------------------------------------
-    self.morale_label = UI.Widgets.LuiLabel()
-    self.morale_label:SetParent(self.morale_frame)
-    self.morale_label:SetSize(self.morale_frame:GetSize())
-    self.morale_label:SetPosition(0, 0)
-    self.morale_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.morale_label:SetZOrder(50)
+    local function make_bar_label(parent, z_order)
+        local label = UI.Widgets.LuiLabel()
+        label:SetParent(parent)
+        label:SetSize(parent:GetSize())
+        label:SetPosition(0, 0)
+        label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        label:SetMultiline(true)
+        label:SetZOrder(z_order)
+        return label
+    end
 
-    self.power_label = UI.Widgets.LuiLabel()
-    self.power_label:SetParent(self.power_frame)
-    self.power_label:SetSize(self.power_frame:GetSize())
-    self.power_label:SetPosition(0, 0)
-    self.power_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.power_label:SetZOrder(50)
+    if self:_uses_configurable_bar_labels() == true then
+        self.morale_labels = {
+            make_bar_label(self.morale_frame, 50),
+            make_bar_label(self.morale_frame, 51),
+        }
+        self.power_labels = {
+            make_bar_label(self.power_frame, 50),
+            make_bar_label(self.power_frame, 51),
+        }
+        self.morale_label = self.morale_labels[1]
+        self.power_label = self.power_labels[1]
+    else
+        self.morale_labels = nil
+        self.power_labels = nil
+        self.morale_label = make_bar_label(self.morale_frame, 50)
+        self.power_label = make_bar_label(self.power_frame, 50)
+    end
 
     ---------------------------------------------------------------------
     -- Entity control (clickable player frame)
@@ -432,8 +452,163 @@ function VitalsBase:get_empty_morale_text()
     return ""
 end
 
+function VitalsBase:_uses_configurable_bar_labels()
+    return self.vital_key == "self" or self.vital_key == "target" or self.vital_key == "party"
+end
+
+function VitalsBase:_bar_label_controls(bar_key)
+    if bar_key == "morale" then
+        return self.morale_labels
+    end
+    return self.power_labels
+end
+
+function VitalsBase:_bar_frame_and_settings(bar_key)
+    local v = self:get_vitals_settings()
+    if bar_key == "morale" then
+        return self.morale_frame, v.morale
+    end
+    return self.power_frame, v.power
+end
+
+function VitalsBase:_single_bar_label(bar_key)
+    if bar_key == "morale" then
+        return self.morale_label
+    end
+    return self.power_label
+end
+
+function VitalsBase:_uses_single_bar_label_layout()
+    return false
+end
+
+function VitalsBase:_layout_single_bar_label(bar_key)
+    if self:_uses_single_bar_label_layout() ~= true then
+        return
+    end
+
+    local label = self:_single_bar_label(bar_key)
+    local frame, settings = self:_bar_frame_and_settings(bar_key)
+    local font = settings.font
+    local width, height = frame:GetSize()
+    lui_vitals_layout_label(label, width, height, settings.anchor, settings.width_mode, settings.text_alignment,
+        settings.x_offset, settings.y_offset, font.name, font.size, label:GetText())
+end
+
+function VitalsBase:_set_single_bar_label_text(bar_key, text)
+    local label = self:_single_bar_label(bar_key)
+    label:SetText(text)
+    self:_layout_single_bar_label(bar_key)
+end
+
+function VitalsBase:_apply_configurable_bar_label_fonts(bar_key)
+    local controls = self:_bar_label_controls(bar_key)
+    if controls == nil then
+        return
+    end
+
+    local _, settings = self:_bar_frame_and_settings(bar_key)
+    local specs = settings.labels
+    for i = 1, #controls do
+        local label = controls[i]
+        local spec = specs[i]
+        local font = spec.font
+        local style = LUI_TO_LOTRO.font_style[font.style]
+        label:SetFont(font.lotro)
+        label:SetFontStyle(style)
+        if style == Turbine.UI.FontStyle.Outline then
+            label:SetOutlineColor(font.outline_color)
+        end
+        label:SetForeColor(font.color)
+    end
+end
+
+function VitalsBase:_apply_configurable_bar_label_layout(bar_key)
+    local controls = self:_bar_label_controls(bar_key)
+    if controls == nil then
+        return
+    end
+
+    local frame, settings = self:_bar_frame_and_settings(bar_key)
+    local width, height = frame:GetSize()
+    local specs = settings.labels
+    for i = 1, #controls do
+        local label = controls[i]
+        local spec = specs[i]
+        lui_vitals_layout_label(label, width, height, spec.anchor, spec.width_mode, spec.text_alignment, spec.x_offset,
+            spec.y_offset, spec.font.name, spec.font.size, label:GetText())
+        label:SetVisible(spec.enabled == true and _label_text_is_blank(spec.text) ~= true)
+    end
+end
+
+function VitalsBase:_render_configurable_bar_labels(bar_key, context)
+    local controls = self:_bar_label_controls(bar_key)
+    if controls == nil then
+        return
+    end
+
+    local _, settings = self:_bar_frame_and_settings(bar_key)
+    local specs = settings.labels
+    local frame, _ = self:_bar_frame_and_settings(bar_key)
+    local width, height = frame:GetSize()
+    for i = 1, #controls do
+        local label = controls[i]
+        local spec = specs[i]
+        if spec.enabled == true and _label_text_is_blank(spec.text) ~= true then
+            local rendered_text = lui_format_tokenized(spec.tokens, context)
+            label:SetText(rendered_text)
+            lui_vitals_layout_label(label, width, height, spec.anchor, spec.width_mode, spec.text_alignment,
+                spec.x_offset, spec.y_offset, spec.font.name, spec.font.size, rendered_text)
+            label:SetVisible(true)
+        else
+            label:SetText("")
+            label:SetVisible(false)
+        end
+    end
+end
+
+function VitalsBase:_set_configurable_morale_fallback(text)
+    if self.morale_labels == nil then
+        return
+    end
+
+    local frame, settings = self:_bar_frame_and_settings("morale")
+    local width, height = frame:GetSize()
+    for i = 1, #self.morale_labels do
+        local label = self.morale_labels[i]
+        local spec = settings.labels[i]
+        if i == 1 and _label_text_is_blank(text) ~= true then
+            label:SetText(text)
+            lui_vitals_layout_label(label, width, height, spec.anchor, spec.width_mode, spec.text_alignment,
+                spec.x_offset, spec.y_offset, spec.font.name, spec.font.size, text)
+            label:SetVisible(true)
+        else
+            label:SetText("")
+            label:SetVisible(false)
+        end
+    end
+end
+
+function VitalsBase:_clear_configurable_power_labels()
+    if self.power_labels == nil then
+        return
+    end
+
+    for i = 1, #self.power_labels do
+        local label = self.power_labels[i]
+        label:SetText("")
+        label:SetVisible(false)
+    end
+end
+
 function VitalsBase:apply_fonts()
     local v = self:get_vitals_settings()
+    if self:_uses_configurable_bar_labels() == true then
+        self:_apply_configurable_bar_label_fonts("morale")
+        self:_apply_configurable_bar_label_fonts("power")
+        return
+    end
+
     local morale_font = v.morale.font
     self.morale_label:SetFont(morale_font.lotro)
     local morale_style = LUI_TO_LOTRO.font_style[morale_font.style] or Turbine.UI.FontStyle.None
@@ -455,6 +630,18 @@ end
 
 function VitalsBase:apply_text_alignment()
     local v = self:get_vitals_settings()
+    if self:_uses_configurable_bar_labels() == true then
+        self:_apply_configurable_bar_label_layout("morale")
+        self:_apply_configurable_bar_label_layout("power")
+        return
+    end
+
+    if self:_uses_single_bar_label_layout() == true then
+        self:_layout_single_bar_label("morale")
+        self:_layout_single_bar_label("power")
+        return
+    end
+
     self.morale_label:SetTextAlignment(_text_alignment(v.morale.text_alignment))
     self.power_label:SetTextAlignment(_text_alignment(v.power.text_alignment))
 
@@ -596,7 +783,11 @@ function VitalsBase:self_morale_changed()
             ctx.B = lui_format_tokenized(bubble_fmt, { b = ctx.b })
         end
 
-        self.morale_label:SetText(lui_format_tokenized(fmt, ctx))
+        if self:_uses_configurable_bar_labels() == true then
+            self:_render_configurable_bar_labels("morale", ctx)
+        else
+            self:_set_single_bar_label_text("morale", lui_format_tokenized(fmt, ctx))
+        end
 
         local fill_color = self:morale_color(percent)
         self.morale_bar:SetBackColor(fill_color)
@@ -612,7 +803,11 @@ function VitalsBase:self_morale_changed()
         if self.entity.GetName ~= nil then
             name = tostring(self.entity:GetName() or "")
         end
-        self.morale_label:SetText(name)
+        if self:_uses_configurable_bar_labels() == true then
+            self:_set_configurable_morale_fallback(name)
+        else
+            self:_set_single_bar_label_text("morale", name)
+        end
         self.morale_bar:SetWidth(self.width)
         self.morale_bar:SetBackColor(v.morale.color.neutral)
         self.morale_background:SetBackColor(self:morale_background_color(v.morale.color.neutral))
@@ -622,8 +817,10 @@ function VitalsBase:self_morale_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(false)
         end
-        if self.power_label ~= nil then
-            self.power_label:SetText("")
+        if self:_uses_configurable_bar_labels() == true then
+            self:_clear_configurable_power_labels()
+        elseif self.power_label ~= nil then
+            self:_set_single_bar_label_text("power", "")
         end
     end
 end
@@ -636,8 +833,10 @@ function VitalsBase:self_power_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(false)
         end
-        if self.power_label ~= nil then
-            self.power_label:SetText("")
+        if self:_uses_configurable_bar_labels() == true then
+            self:_clear_configurable_power_labels()
+        elseif self.power_label ~= nil then
+            self:_set_single_bar_label_text("power", "")
         end
         if self.power_bar ~= nil then
             self.power_bar:SetWidth(0)
@@ -660,24 +859,39 @@ function VitalsBase:self_power_changed()
         end
         local percent = p / maxp
         local pct = math.floor((percent * 100) + 0.5)
-        local fmt = v.power.string_tokens
-        local fmt_text = v.power.string_format
-
-        if string.len((fmt_text:gsub("%s+", ""))) == 0 then
-            self.power_label:SetText("")
-        else
+        if self:_uses_configurable_bar_labels() == true then
             local level = ""
             if self.entity.GetLevel ~= nil then
                 level = tostring(self.entity:GetLevel() or "")
             end
 
-            self.power_label:SetText(lui_format_tokenized(fmt, {
+            self:_render_configurable_bar_labels("power", {
                 c = lui_abbrev_number(p),
                 t = lui_abbrev_number(maxp),
                 p = tostring(pct) .. "%",
                 name = self.entity:GetName(),
                 level = level,
-            }))
+            })
+        else
+            local fmt = v.power.string_tokens
+            local fmt_text = v.power.string_format
+
+            if string.len((fmt_text:gsub("%s+", ""))) == 0 then
+                self:_set_single_bar_label_text("power", "")
+            else
+                local level = ""
+                if self.entity.GetLevel ~= nil then
+                    level = tostring(self.entity:GetLevel() or "")
+                end
+
+                self:_set_single_bar_label_text("power", lui_format_tokenized(fmt, {
+                    c = lui_abbrev_number(p),
+                    t = lui_abbrev_number(maxp),
+                    p = tostring(pct) .. "%",
+                    name = self.entity:GetName(),
+                    level = level,
+                }))
+            end
         end
         self.power_bar:SetWidth(self.width * percent)
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
@@ -687,7 +901,11 @@ function VitalsBase:self_power_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(true)
         end
-        self.power_label:SetText("")
+        if self:_uses_configurable_bar_labels() == true then
+            self:_clear_configurable_power_labels()
+        else
+            self:_set_single_bar_label_text("power", "")
+        end
         self.power_bar:SetWidth(self.width)
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
         self.power_bar:SetBackColor(fill_color)
@@ -705,24 +923,39 @@ function VitalsBase:self_wrath_changed()
 
     local percent = w / maxw
     local pct = math.floor((percent * 100) + 0.5)
-    local fmt = v.power.string_tokens
-    local fmt_text = v.power.string_format
-
-    if string.len((fmt_text:gsub("%s+", ""))) == 0 then
-        self.power_label:SetText("")
-    else
+    if self:_uses_configurable_bar_labels() == true then
         local level = ""
         if self.entity.GetLevel ~= nil then
             level = tostring(self.entity:GetLevel() or "")
         end
 
-        self.power_label:SetText(lui_format_tokenized(fmt, {
+        self:_render_configurable_bar_labels("power", {
             c = lui_abbrev_number(w),
             t = lui_abbrev_number(maxw),
             p = tostring(pct) .. "%",
             name = self.entity:GetName(),
             level = level,
-        }))
+        })
+    else
+        local fmt = v.power.string_tokens
+        local fmt_text = v.power.string_format
+
+        if string.len((fmt_text:gsub("%s+", ""))) == 0 then
+            self:_set_single_bar_label_text("power", "")
+        else
+            local level = ""
+            if self.entity.GetLevel ~= nil then
+                level = tostring(self.entity:GetLevel() or "")
+            end
+
+            self:_set_single_bar_label_text("power", lui_format_tokenized(fmt, {
+                c = lui_abbrev_number(w),
+                t = lui_abbrev_number(maxw),
+                p = tostring(pct) .. "%",
+                name = self.entity:GetName(),
+                level = level,
+            }))
+        end
     end
     self.power_bar:SetWidth(self.width * percent)
     self.power_bar:SetBackColor(v.power.color.wrath)
@@ -788,8 +1021,13 @@ function VitalsBase:set_entity(entity)
         self.power_border:SetVisible(true)
         self.bubble_bar:SetVisible(false)
 
-        self.morale_label:SetText(self:get_empty_morale_text())
-        self.power_label:SetText("")
+        if self:_uses_configurable_bar_labels() == true then
+            self:_set_configurable_morale_fallback(self:get_empty_morale_text())
+            self:_clear_configurable_power_labels()
+        else
+            self:_set_single_bar_label_text("morale", self:get_empty_morale_text())
+            self:_set_single_bar_label_text("power", "")
+        end
 
         self.morale_bar:SetWidth(self.width)
         self.morale_bar:SetBackColor(v.morale.color.neutral)
@@ -816,8 +1054,13 @@ function VitalsBase:set_entity(entity)
         self.morale_bar:SetWidth(0)
         self.power_bar:SetWidth(0)
         self.bubble_bar:SetWidth(0)
-        self.morale_label:SetText(self.entity:GetName())
-        self.power_label:SetText("")
+        if self:_uses_configurable_bar_labels() == true then
+            self:_set_configurable_morale_fallback(self.entity:GetName())
+            self:_clear_configurable_power_labels()
+        else
+            self:_set_single_bar_label_text("morale", self.entity:GetName())
+            self:_set_single_bar_label_text("power", "")
+        end
         self.power_border:SetVisible(false)
 
         if self.show_effects then
@@ -917,8 +1160,13 @@ function VitalsBase:resize()
     self.power_bar:SetPosition(0, 0)
     self.power_bar:SetSize(inner_w, power_inner_h)
 
-    self.morale_label:SetSize(self.morale_frame:GetSize())
-    self.power_label:SetSize(self.power_frame:GetSize())
+    if self:_uses_configurable_bar_labels() == true then
+        self:_apply_configurable_bar_label_layout("morale")
+        self:_apply_configurable_bar_label_layout("power")
+    else
+        self.morale_label:SetSize(self.morale_frame:GetSize())
+        self.power_label:SetSize(self.power_frame:GetSize())
+    end
     self:apply_fonts()
     self:apply_text_alignment()
 

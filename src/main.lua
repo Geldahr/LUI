@@ -44,6 +44,21 @@ local function set_backpacks_enabled(enabled)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Backpack6, enabled == true)
 end
 
+function _G.apply_lotro_vitals_handoff()
+    Turbine.UI.Lotro.LotroUI.SetEnabled(
+        Turbine.UI.Lotro.LotroUIElement.Vitals,
+        _G.settings.self.vitals.enabled ~= true
+    )
+    Turbine.UI.Lotro.LotroUI.SetEnabled(
+        Turbine.UI.Lotro.LotroUIElement.Target,
+        _G.settings.target.vitals.enabled ~= true
+    )
+    Turbine.UI.Lotro.LotroUI.SetEnabled(
+        Turbine.UI.Lotro.LotroUIElement.Party,
+        _G.settings.party.enabled ~= true
+    )
+end
+
 local function _ensure_bestiary_window()
     local window = _G.BESTIARY_WINDOW
     if window == nil then
@@ -67,7 +82,7 @@ end
 
 local function _release_persistent_state()
     _G.account_settings = nil
-    _G.server_settings = nil
+    _G.character_settings = nil
     _G.loaded_settings = nil
     _G.settings = nil
 
@@ -375,9 +390,7 @@ apply_crafting_settings()
 apply_travel_settings()
 BESTIARY_TRACKER:apply_settings()
 
-Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Vitals, false)
-Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Target, false)
-Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Party, false)
+_G.apply_lotro_vitals_handoff()
 
 CONFIG_WINDOW = Settings.ConfigWindow()
 FIRST_RUN_QUICK_SETUP_WINDOW = nil
@@ -393,6 +406,9 @@ Turbine.Shell.WriteLine(string.format(
 
 Plugins["LUI"].Unload = function()
     _G.LUI_IS_UNLOADING = true
+    Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Vitals, true)
+    Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Target, true)
+    Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Party, true)
 
     if CRAFTING_WINDOW ~= nil then
         CRAFTING_WINDOW:SetVisible(false)

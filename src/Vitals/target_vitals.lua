@@ -8,10 +8,6 @@ import "LUI.src.Vitals.targets_target_vitals_window"
 import "LUI.src.Utils.color"
 import "LUI.src.Settings.enums"
 
-local function _text_alignment(value)
-    return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
-end
-
 local function _target_is_player(target)
     if type(target.IsPlayer) ~= "function" then
         return false
@@ -31,6 +27,14 @@ local function _target_is_local_player(target)
 end
 
 local _gradient_morale_color = lui_gradient_morale_color
+
+local function _target_vitals_enabled()
+    return _G.loaded_settings.target.vitals.enabled == true
+end
+
+local function _targets_target_enabled()
+    return _G.loaded_settings.target.vitals.targets_target.enabled == true
+end
 
 ---@class TargetVitals : VitalsBase
 TargetVitals = class(VitalsBase)
@@ -111,194 +115,48 @@ function TargetVitals:get_empty_morale_text()
     return "No Target"
 end
 
-function TargetVitals:apply_text_alignment()
-    VitalsBase.apply_text_alignment(self)
-    local v = self:get_vitals_settings()
-
-    local function apply_targets_target_alignment(label)
-        if label == nil then
-            return
-        end
-        label:SetTextAlignment(_text_alignment(v.targets_target.text_alignment))
-        local w = v.targets_target.width
-        local m = v.targets_target.border_width + v.targets_target.text_margin
-        local a = v.targets_target.text_alignment
-        if a == LUI_ENUMS.text_alignment.LEFT then
-            label:SetPosition(m, 0)
-            label:SetSize(w - m, label:GetHeight())
-        elseif a == LUI_ENUMS.text_alignment.RIGHT then
-            label:SetPosition(0, 0)
-            label:SetSize(w - m, label:GetHeight())
-        else
-            label:SetPosition(0, 0)
-            label:SetSize(w, label:GetHeight())
-        end
-    end
-
-    apply_targets_target_alignment(self.targets_target_window.targets_target_label)
+function TargetVitals:_targets_target_label_controls()
+    return self.targets_target_window.targets_target_labels
 end
 
-function TargetVitals:apply_fonts()
-    VitalsBase.apply_fonts(self)
+function TargetVitals:_apply_targets_target_label_layout()
+    local v = self:get_vitals_settings().targets_target
+    local labels = self:_targets_target_label_controls()
+    for i = 1, #labels do
+        local label = labels[i]
+        local spec = v.labels[i]
+        lui_vitals_layout_label(label, v.width, v.height, spec.anchor, spec.width_mode, spec.text_alignment,
+            spec.x_offset, spec.y_offset, spec.font.name, spec.font.size, label:GetText())
+        label:SetVisible(spec.enabled == true and type(spec.text) == "string" and string.len((spec.text:gsub("%s+", ""))) > 0)
+    end
+end
 
-    local v = self:get_vitals_settings()
-    local font = v.targets_target.font
-
-    local function apply_targets_target_font(label)
-        if label == nil then
-            return
-        end
-        label:SetFont(font.lotro)
+function TargetVitals:_apply_targets_target_label_fonts()
+    local v = self:get_vitals_settings().targets_target
+    local labels = self:_targets_target_label_controls()
+    for i = 1, #labels do
+        local label = labels[i]
+        local font = v.labels[i].font
         local style = LUI_TO_LOTRO.font_style[font.style] or Turbine.UI.FontStyle.None
+        label:SetFont(font.lotro)
         label:SetFontStyle(style)
         if style == Turbine.UI.FontStyle.Outline then
             label:SetOutlineColor(font.outline_color)
         end
         label:SetForeColor(font.color)
     end
-
-    apply_targets_target_font(self.targets_target_window.targets_target_label)
 end
 
-function TargetVitals:on_target_changed()
-    self:update_targets_target()
-end
-
-function TargetVitals:set_move_mode(enabled)
-    VitalsBase.set_move_mode(self, enabled)
-    if enabled == true then
-        self:SetVisible(true)
-    elseif self.entity == nil then
-        self:SetVisible(false)
-    end
-
-    self.targets_target_window:set_move_mode(enabled)
-    if enabled ~= true and self.tt == nil then
-        self.targets_target_window:SetVisible(false)
+function TargetVitals:_clear_targets_target_labels()
+    local labels = self:_targets_target_label_controls()
+    for i = 1, #labels do
+        labels[i]:SetText("")
+        labels[i]:SetVisible(false)
     end
 end
 
-function TargetVitals:targets_morale_changed()
-    if self.tt == nil or self.tt.GetMaxMorale == nil or self.tt.GetMorale == nil then
-        return
-    end
-
+function TargetVitals:_targets_target_context()
     local v = self:get_vitals_settings()
-    local w = self.targets_target_widgets
-    local inner_w = self.targets_target_inner_w
-    local maxm = self.tt:GetMaxMorale()
-    local m = self.tt:GetMorale()
-    if maxm == nil then maxm = 0 end
-    if m == nil then m = 0 end
-    if maxm > 0 then
-        local percent = m / maxm
-        local fill_color = self:targets_target_morale_color(percent)
-        w.morale:SetBackColor(fill_color)
-        local fill_w = math.floor((inner_w * percent) + 0.5)
-        if fill_w < 0 then fill_w = 0 end
-        if fill_w > inner_w then fill_w = inner_w end
-        w.morale:SetWidth(fill_w)
-        if w.background ~= nil then
-            w.background:SetBackColor(self:targets_target_background_color(fill_color))
-        end
-        w.label:SetText(self:get_targets_target_text())
-    else
-        w.morale:SetWidth(inner_w)
-        w.morale:SetBackColor(v.targets_target.color.neutral)
-        if w.background ~= nil then
-            w.background:SetBackColor(self:targets_target_background_color(v.targets_target.color.neutral))
-        end
-        w.label:SetText(self:get_targets_target_text())
-    end
-
-    self:targets_bubble_changed()
-end
-
-function TargetVitals:targets_bubble_changed()
-    local w = self.targets_target_widgets
-    if w == nil or w.bubble == nil then
-        return
-    end
-    if self.tt == nil or self.tt.GetMaxMorale == nil or self.tt.GetTemporaryMorale == nil then
-        w.bubble:SetVisible(false)
-        w.label:SetText(self:get_targets_target_text())
-        return
-    end
-
-    local v = self:get_vitals_settings()
-    local inner_w = self.targets_target_inner_w
-    local maxm = self.tt:GetMaxMorale() or 0
-    if maxm <= 0 then
-        w.bubble:SetVisible(false)
-        w.label:SetText(self:get_targets_target_text())
-        return
-    end
-
-    local b = self.tt:GetTemporaryMorale() or 0
-    if b <= 0 then
-        w.bubble:SetVisible(false)
-        w.label:SetText(self:get_targets_target_text())
-        return
-    end
-
-    local bubble_w = math.floor(((b / maxm) * inner_w) + 0.5)
-    if bubble_w <= 0 then
-        w.bubble:SetVisible(false)
-        w.label:SetText(self:get_targets_target_text())
-        return
-    end
-    if bubble_w > inner_w then bubble_w = inner_w end
-
-    local morale_w = w.morale:GetWidth() or 0
-    if morale_w < 0 then morale_w = 0 end
-    if morale_w > inner_w then morale_w = inner_w end
-    morale_w = math.floor(morale_w + 0.5)
-
-    local max_left = inner_w - bubble_w
-    if max_left < 0 then max_left = 0 end
-
-    local left_inner = morale_w
-    if left_inner > max_left then
-        left_inner = max_left
-    end
-
-    w.bubble:SetTop(0)
-    w.bubble:SetHeight(w.morale:GetHeight())
-    w.bubble:SetLeft(left_inner)
-    w.bubble:SetWidth(bubble_w)
-    w.bubble:SetBackColor(v.targets_target.color.bubble)
-    w.bubble:SetVisible(true)
-
-    w.label:SetText(self:get_targets_target_text())
-end
-
-function TargetVitals:targets_target_morale_color(percent)
-    local c = self:get_vitals_settings().targets_target.color
-    if c.gradient == true then
-        return _gradient_morale_color(percent, c.gradient_full or c.high, c.gradient_mid or c.medium,
-            c.gradient_low or c.critical)
-    end
-    if percent > 0.75 then
-        return c.high
-    elseif percent > 0.5 then
-        return c.medium
-    elseif percent > 0.25 then
-        return c.low
-    end
-    return c.critical
-end
-
-function TargetVitals:targets_target_background_color(fill_color)
-    local tt = self:get_vitals_settings().targets_target
-    if tt.background_matches_missing == true then
-        return self:dimmed_color(fill_color, tt.background_dimming)
-    end
-    return tt.color.background
-end
-
-function TargetVitals:get_targets_target_text()
-    local v = self:get_vitals_settings()
-    local fmt = v.targets_target.text_tokens
     local bubble_fmt = v.targets_target.bubble_tokens
 
     local name = ""
@@ -347,7 +205,176 @@ function TargetVitals:get_targets_target_text()
         ctx.B = lui_format_tokenized(bubble_fmt, { b = ctx.b })
     end
 
-    return lui_format_tokenized(fmt, ctx)
+    return ctx
+end
+
+function TargetVitals:_render_targets_target_labels()
+    local v = self:get_vitals_settings().targets_target
+    local labels = self:_targets_target_label_controls()
+    local ctx = self:_targets_target_context()
+    for i = 1, #labels do
+        local label = labels[i]
+        local spec = v.labels[i]
+        if spec.enabled == true and type(spec.text) == "string" and string.len((spec.text:gsub("%s+", ""))) > 0 then
+            local rendered_text = lui_format_tokenized(spec.tokens, ctx)
+            label:SetText(rendered_text)
+            lui_vitals_layout_label(label, v.width, v.height, spec.anchor, spec.width_mode, spec.text_alignment,
+                spec.x_offset, spec.y_offset, spec.font.name, spec.font.size, rendered_text)
+            label:SetVisible(true)
+        else
+            label:SetText("")
+            label:SetVisible(false)
+        end
+    end
+end
+
+function TargetVitals:apply_text_alignment()
+    VitalsBase.apply_text_alignment(self)
+    self:_apply_targets_target_label_layout()
+end
+
+function TargetVitals:apply_fonts()
+    VitalsBase.apply_fonts(self)
+    self:_apply_targets_target_label_fonts()
+    self:_apply_targets_target_label_layout()
+end
+
+function TargetVitals:on_target_changed()
+    self:update_targets_target()
+end
+
+function TargetVitals:set_move_mode(enabled)
+    VitalsBase.set_move_mode(self, enabled)
+    if _target_vitals_enabled() ~= true then
+        self:SetVisible(false)
+    elseif enabled == true then
+        self:SetVisible(true)
+    elseif self.entity == nil then
+        self:SetVisible(false)
+    end
+
+    self.targets_target_window:set_move_mode(enabled)
+    if enabled ~= true and self.tt == nil then
+        self.targets_target_window:SetVisible(false)
+    end
+end
+
+function TargetVitals:targets_morale_changed()
+    if self.tt == nil or self.tt.GetMaxMorale == nil or self.tt.GetMorale == nil then
+        return
+    end
+
+    local v = self:get_vitals_settings()
+    local w = self.targets_target_widgets
+    local inner_w = self.targets_target_inner_w
+    local maxm = self.tt:GetMaxMorale()
+    local m = self.tt:GetMorale()
+    if maxm == nil then maxm = 0 end
+    if m == nil then m = 0 end
+    if maxm > 0 then
+        local percent = m / maxm
+        local fill_color = self:targets_target_morale_color(percent)
+        w.morale:SetBackColor(fill_color)
+        local fill_w = math.floor((inner_w * percent) + 0.5)
+        if fill_w < 0 then fill_w = 0 end
+        if fill_w > inner_w then fill_w = inner_w end
+        w.morale:SetWidth(fill_w)
+        if w.background ~= nil then
+            w.background:SetBackColor(self:targets_target_background_color(fill_color))
+        end
+        self:_render_targets_target_labels()
+    else
+        w.morale:SetWidth(inner_w)
+        w.morale:SetBackColor(v.targets_target.color.neutral)
+        if w.background ~= nil then
+            w.background:SetBackColor(self:targets_target_background_color(v.targets_target.color.neutral))
+        end
+        self:_render_targets_target_labels()
+    end
+
+    self:targets_bubble_changed()
+end
+
+function TargetVitals:targets_bubble_changed()
+    local w = self.targets_target_widgets
+    if w == nil or w.bubble == nil then
+        return
+    end
+    if self.tt == nil or self.tt.GetMaxMorale == nil or self.tt.GetTemporaryMorale == nil then
+        w.bubble:SetVisible(false)
+        self:_render_targets_target_labels()
+        return
+    end
+
+    local v = self:get_vitals_settings()
+    local inner_w = self.targets_target_inner_w
+    local maxm = self.tt:GetMaxMorale() or 0
+    if maxm <= 0 then
+        w.bubble:SetVisible(false)
+        self:_render_targets_target_labels()
+        return
+    end
+
+    local b = self.tt:GetTemporaryMorale() or 0
+    if b <= 0 then
+        w.bubble:SetVisible(false)
+        self:_render_targets_target_labels()
+        return
+    end
+
+    local bubble_w = math.floor(((b / maxm) * inner_w) + 0.5)
+    if bubble_w <= 0 then
+        w.bubble:SetVisible(false)
+        self:_render_targets_target_labels()
+        return
+    end
+    if bubble_w > inner_w then bubble_w = inner_w end
+
+    local morale_w = w.morale:GetWidth() or 0
+    if morale_w < 0 then morale_w = 0 end
+    if morale_w > inner_w then morale_w = inner_w end
+    morale_w = math.floor(morale_w + 0.5)
+
+    local max_left = inner_w - bubble_w
+    if max_left < 0 then max_left = 0 end
+
+    local left_inner = morale_w
+    if left_inner > max_left then
+        left_inner = max_left
+    end
+
+    w.bubble:SetTop(0)
+    w.bubble:SetHeight(w.morale:GetHeight())
+    w.bubble:SetLeft(left_inner)
+    w.bubble:SetWidth(bubble_w)
+    w.bubble:SetBackColor(v.targets_target.color.bubble)
+    w.bubble:SetVisible(true)
+
+    self:_render_targets_target_labels()
+end
+
+function TargetVitals:targets_target_morale_color(percent)
+    local c = self:get_vitals_settings().targets_target.color
+    if c.gradient == true then
+        return _gradient_morale_color(percent, c.gradient_full or c.high, c.gradient_mid or c.medium,
+            c.gradient_low or c.critical)
+    end
+    if percent > 0.75 then
+        return c.high
+    elseif percent > 0.5 then
+        return c.medium
+    elseif percent > 0.25 then
+        return c.low
+    end
+    return c.critical
+end
+
+function TargetVitals:targets_target_background_color(fill_color)
+    local tt = self:get_vitals_settings().targets_target
+    if tt.background_matches_missing == true then
+        return self:dimmed_color(fill_color, tt.background_dimming)
+    end
+    return tt.color.background
 end
 
 function TargetVitals:update_targets_target()
@@ -372,7 +399,7 @@ function TargetVitals:update_targets_target()
             w.set_entity(self.tt)
         end
         if w ~= nil then
-            w.label:SetText(self:get_targets_target_text())
+            self:_render_targets_target_labels()
         end
         if w ~= nil then
             w.set_visible(true)
@@ -397,6 +424,7 @@ function TargetVitals:update_targets_target()
         if w ~= nil then
             w.bubble:SetVisible(false)
         end
+        self:_clear_targets_target_labels()
     end
 end
 
@@ -485,10 +513,11 @@ function TargetVitals:_build_extra_controls()
         background = self.targets_target_window.targets_target_background,
         morale = self.targets_target_window.targets_target_morale,
         bubble = self.targets_target_window.targets_target_bubble,
-        label = self.targets_target_window.targets_target_label,
+        labels = self.targets_target_window.targets_target_labels,
         control = self.targets_target_window.targets_control,
         set_visible = function(visible)
-            self.targets_target_window:SetVisible(visible == true or self.targets_target_window:is_move_mode())
+            self.targets_target_window:SetVisible(_targets_target_enabled() == true and
+                (visible == true or self.targets_target_window:is_move_mode()))
         end,
         set_entity = function(entity)
             self.targets_target_window.targets_control:SetEntity(entity)

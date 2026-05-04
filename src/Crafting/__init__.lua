@@ -59,42 +59,22 @@ local function _copy_favorite_entries(entries)
     return out
 end
 
-local function _current_character_entry()
-    _G.ensure_server_settings()
-    if type(_G.server_settings) ~= "table" or type(_G.server_settings.characters) ~= "table" then
-        return nil
-    end
-
-    local character_name = _G.current_character_name
-    if type(character_name) ~= "string" or string.len(character_name) == 0 then
-        return nil
-    end
-
-    local entry = _G.server_settings.characters[character_name]
-    if type(entry) ~= "table" then
-        entry = {}
-        _G.server_settings.characters[character_name] = entry
-    end
-    return entry
+local function _current_character_settings()
+    _G.ensure_character_settings()
+    return _G.character_settings
 end
 
 local function _character_crafting_settings()
-    local entry = _current_character_entry()
-    if entry == nil then
-        return nil
-    end
+    local character_settings = _current_character_settings()
 
-    if type(entry.crafting) ~= "table" then
-        entry.crafting = {}
+    if type(character_settings.crafting) ~= "table" then
+        character_settings.crafting = {}
     end
-    return entry.crafting
+    return character_settings.crafting
 end
 
 local function _character_section_settings(section_key)
     local crafting = _character_crafting_settings()
-    if crafting == nil then
-        return nil
-    end
 
     if type(crafting[section_key]) ~= "table" then
         crafting[section_key] = {}
@@ -167,14 +147,11 @@ end
 
 function Crafting.get_tracked_plan_entries()
     local tracked_plan = _tracked_plan_settings()
-    return _copy_tracked_plan_entries(tracked_plan ~= nil and tracked_plan.entries or nil)
+    return _copy_tracked_plan_entries(tracked_plan.entries)
 end
 
 function Crafting.set_tracked_plan_entries(entries, save_now)
     local tracked_plan = _tracked_plan_settings()
-    if tracked_plan == nil then
-        return
-    end
 
     tracked_plan.entries = _copy_tracked_plan_entries(entries)
     Crafting.invalidate_tracked_plan_cache()
@@ -187,14 +164,11 @@ end
 
 function Crafting.get_favorite_recipe_entries()
     local favorites = _favorite_settings()
-    return _copy_favorite_entries(favorites ~= nil and favorites.entries or nil)
+    return _copy_favorite_entries(favorites.entries)
 end
 
 function Crafting.set_favorite_recipe_entries(entries, save_now)
     local favorites = _favorite_settings()
-    if favorites == nil then
-        return
-    end
 
     favorites.entries = _copy_favorite_entries(entries)
 

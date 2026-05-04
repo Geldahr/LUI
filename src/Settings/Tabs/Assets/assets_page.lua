@@ -1,7 +1,11 @@
-import "LUI.src.Settings.Tabs.form_page"
+import "LUI.src.Settings.Tabs.feature_shell"
+import "LUI.src.Settings.Content.content"
+import "LUI.src.Settings.Content.tabs"
 
-local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
-    SettingsFormPage
+local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
+local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
+local scaled_int = FeatureShell.scaled_int
 
 local TILE_SIZE_LABELS = {
     TR["Small (32)"],
@@ -21,53 +25,49 @@ local VIEW_MODE_VALUES = {
     LUI_ENUMS.assets_view_mode.DETAILS,
 }
 
-AssetsPage = class(SettingsFormPage)
+AssetsPage = class(ConfigTabs)
 
 function AssetsPage:Constructor(window)
-    SettingsFormPage.Constructor(self, window)
-    self.show_main_content_border = true
+    ConfigTabs.Constructor(self, window)
+    self.show_main_content_border = false
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 
-    self:add_title(TR["Assets"])
+    local general = ConfigContent(window, 4)
+    general:add_checkbox("assets_enabled", TR["Enabled"],
+        function(value)
+            self._settings.assets.enabled = value == true
+        end,
+        function()
+            return self._settings.assets.enabled == true
+        end)
+    general:add_dropdown("assets_view_mode", TR["View"], VIEW_MODE_LABELS, VIEW_MODE_VALUES,
+        function(value)
+            self._settings.assets.view_mode = value
+        end,
+        function()
+            return self._settings.assets.view_mode
+        end)
+    self:add_tab(TR["General"], "general", general)
 
-    self:add_hr()
-    self:add_title(TR["General"])
-    self:add_checkbox("assets_enabled", TR["Enabled"])
-    self:add_dropdown("assets_view_mode", TR["View"], VIEW_MODE_LABELS, VIEW_MODE_VALUES)
-
-    self:add_hr()
-    self:add_title(TR["Tiles"])
-    self:add_dropdown("assets_tile_icons", TR["Icons"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
-    self:add_dropdown("assets_tile_details", TR["Details"], TILE_SIZE_LABELS, TILE_SIZE_VALUES)
+    local tiles = ConfigContent(window, 4)
+    tiles:add_dropdown("assets_tile_icons", TR["Icons"], TILE_SIZE_LABELS, TILE_SIZE_VALUES,
+        function(value)
+            self._settings.assets.tile.icons = value
+        end,
+        function()
+            return self._settings.assets.tile.icons
+        end)
+    tiles:add_dropdown("assets_tile_details", TR["Details"], TILE_SIZE_LABELS, TILE_SIZE_VALUES,
+        function(value)
+            self._settings.assets.tile.details = value
+        end,
+        function()
+            return self._settings.assets.tile.details
+        end)
+    self:add_tab(TR["Tiles"], "tiles", tiles)
 end
 
-function AssetsPage:load(assets)
-    if assets == nil then
-        return
-    end
-
-    self.loading = true
-    self.controls.assets_enabled.cb:SetChecked(assets.enabled == true)
-    self.controls.assets_view_mode:set_value(assets.view_mode)
-    self.controls.assets_tile_icons:set_value(assets.tile.icons)
-    self.controls.assets_tile_details:set_value(assets.tile.details)
-    self.loading = false
-end
-
-function AssetsPage:apply(assets)
-    if assets == nil then
-        return
-    end
-
-    assets.enabled = self.controls.assets_enabled.cb:IsChecked() == true
-    assets.view_mode = self.controls.assets_view_mode:get_value()
-    assets.tile.icons = self.controls.assets_tile_icons:get_value()
-    assets.tile.details = self.controls.assets_tile_details:get_value()
-end
-
-function AssetsPage:load_from_settings(s)
-    self:load(s.assets)
-end
-
-function AssetsPage:apply_to_settings(s)
-    self:apply(s.assets)
+function AssetsPage:apply_ui_scale()
+    ConfigTabs.apply_ui_scale(self)
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 end

@@ -16,26 +16,20 @@ local function _scaled_int(value)
 end
 
 local function _scaled_font(name, size)
-    local font = FONT_TO_LOTRO(name, _scaled_size(size))
+    local scaled_size = _scaled_size(size)
+    local font = FONT_TO_LOTRO(name, scaled_size)
     if font == nil then
-        error("Missing scaled font: " .. tostring(name) .. " " .. tostring(_scaled_size(size)))
+        error("Missing scaled font: " .. tostring(name) .. " " .. tostring(scaled_size))
     end
     return font
 end
 
-local function _refresh_text_control(control)
-    if control == nil or control.GetText == nil or control.SetText == nil then
-        return
-    end
-    control:SetText(control:GetText() or "")
-end
-
-SettingsFormPage = class(Turbine.UI.Control)
-_G.SettingsFormPage = SettingsFormPage
+ConfigContent = class(Turbine.UI.Control)
+_G.ConfigContent = ConfigContent
 _G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
-_G.LUI_SETTINGS_SHARED.form_page = SettingsFormPage
+_G.LUI_SETTINGS_SHARED.config_content = ConfigContent
 
-function SettingsFormPage:Constructor(window)
+function ConfigContent:Constructor(window, columns, refresh_preview_fn)
     Turbine.UI.Control.Constructor(self)
 
     self.window = window
@@ -43,24 +37,31 @@ function SettingsFormPage:Constructor(window)
     self.controls = {}
     self.fields = {}
     self._color_fields = {}
+    self._bound_entries = {}
+    self.grid_columns = 2
+    self.compact_fields = true
 
-    local ui = window._ui or {}
-    self.font_name_labels = ui.font_name_labels or {}
-    self.font_name_values = ui.font_name_values or {}
-    self.font_style_labels = ui.font_style_labels or {}
-    self.font_style_values = ui.font_style_values or {}
-    self.side_labels = ui.side_labels or {}
-    self.side_values = ui.side_values or {}
-    self.text_alignment_labels = ui.text_alignment_labels or {}
-    self.text_alignment_values = ui.text_alignment_values or {}
-    self.abbrev_digits_labels = ui.abbrev_digits_labels or {}
-    self.abbrev_digits_values = ui.abbrev_digits_values or {}
-    self.abbrev_width_labels = ui.abbrev_width_labels or {}
-    self.abbrev_width_values = ui.abbrev_width_values or {}
-    self.abbrev_method_labels = ui.abbrev_method_labels or {}
-    self.abbrev_method_values = ui.abbrev_method_values or {}
-    self.vitals_effects_position_labels = ui.vitals_effects_position_labels or {}
-    self.vitals_effects_position_values = ui.vitals_effects_position_values or {}
+    local ui = window._ui
+    self.font_name_labels = ui.font_name_labels
+    self.font_name_values = ui.font_name_values
+    self.font_style_labels = ui.font_style_labels
+    self.font_style_values = ui.font_style_values
+    self.side_labels = ui.side_labels
+    self.side_values = ui.side_values
+    self.text_alignment_labels = ui.text_alignment_labels
+    self.text_alignment_values = ui.text_alignment_values
+    self.vitals_label_anchor_labels = ui.vitals_label_anchor_labels
+    self.vitals_label_anchor_values = ui.vitals_label_anchor_values
+    self.vitals_label_width_mode_labels = ui.vitals_label_width_mode_labels
+    self.vitals_label_width_mode_values = ui.vitals_label_width_mode_values
+    self.abbrev_digits_labels = ui.abbrev_digits_labels
+    self.abbrev_digits_values = ui.abbrev_digits_values
+    self.abbrev_width_labels = ui.abbrev_width_labels
+    self.abbrev_width_values = ui.abbrev_width_values
+    self.abbrev_method_labels = ui.abbrev_method_labels
+    self.abbrev_method_values = ui.abbrev_method_values
+    self.vitals_effects_position_labels = ui.vitals_effects_position_labels
+    self.vitals_effects_position_values = ui.vitals_effects_position_values
     self.vital_format_help = ui.vital_format_help
     self.bubble_format_help = ui.bubble_format_help
     self.color_to_hex = ui.color_to_hex
@@ -84,12 +85,35 @@ function SettingsFormPage:Constructor(window)
     self.form = Turbine.UI.Control()
     self.scroll:AddItem(self.form)
 
+    if columns ~= nil then
+        self:set_grid_columns(columns)
+    end
+    if refresh_preview_fn ~= nil then
+        self.refresh_preview = refresh_preview_fn
+    end
+
     self.SizeChanged = function()
         self:layout()
     end
 end
 
-function SettingsFormPage:_refresh_preview()
+function ConfigContent:_refresh_text_control(control)
+    control:SetText(control:GetText())
+end
+
+function ConfigContent:set_grid_columns(columns)
+    local value = tonumber(columns)
+    if value == nil or value < 1 then
+        error("Invalid ConfigContent grid column count: " .. tostring(columns))
+    end
+    self.grid_columns = math.floor(value + 0.5)
+end
+
+function ConfigContent:set_compact_fields(enabled)
+    self.compact_fields = enabled == true
+end
+
+function ConfigContent:_refresh_preview()
     if self.loading == true then
         return
     end
@@ -98,50 +122,14 @@ function SettingsFormPage:_refresh_preview()
     end
 end
 
-function SettingsFormPage:_bind_hint(target, help_source)
+function ConfigContent:_bind_hint(target, help_source)
     if target == nil or help_source == nil then
         return
     end
-    if self.window ~= nil and self.window.bind_tooltip ~= nil then
-        self.window:bind_tooltip(target, help_source)
-        return
-    end
-
-    local function resolve_help()
-        local text = help_source
-        if type(help_source) == "function" then
-            text = help_source()
-        end
-        if type(text) ~= "string" then
-            return nil
-        end
-        if string.len(text) == 0 then
-            return nil
-        end
-        return text
-    end
-
-    local prev_enter = target.MouseEnter
-    target.MouseEnter = function(sender, args)
-        if prev_enter ~= nil then
-            prev_enter(sender, args)
-        end
-        local help_text = resolve_help()
-        if help_text ~= nil then
-            self.window:show_hint_for(target, help_text)
-        end
-    end
-
-    local prev_leave = target.MouseLeave
-    target.MouseLeave = function(sender, args)
-        if prev_leave ~= nil then
-            prev_leave(sender, args)
-        end
-        self.window:hide_hint()
-    end
+    self.window:bind_tooltip(target, help_source)
 end
 
-function SettingsFormPage:add_title(text)
+function ConfigContent:add_title(text)
     local entry = {}
     entry.kind = "title"
 
@@ -155,7 +143,7 @@ function SettingsFormPage:add_title(text)
     return entry
 end
 
-function SettingsFormPage:add_info(text, height)
+function ConfigContent:add_info(text, height)
     local entry = {}
     entry.kind = "info"
     entry.base_height = height or 34
@@ -167,14 +155,14 @@ function SettingsFormPage:add_info(text, height)
     entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     entry.label:SetMultiline(true)
     entry.label:SetForeColor(Turbine.UI.Color(0.85, 0.85, 0.85))
-    entry.label:SetText(text or "")
+    entry.label:SetText(text)
     entry.label:SetMouseVisible(false)
 
     self.fields[#self.fields + 1] = entry
     return entry
 end
 
-function SettingsFormPage:add_hr()
+function ConfigContent:add_hr()
     local entry = {}
     entry.kind = "hr"
 
@@ -187,7 +175,7 @@ function SettingsFormPage:add_hr()
     return entry
 end
 
-function SettingsFormPage:add_break(height)
+function ConfigContent:add_break(height)
     local entry = {}
     entry.kind = "break"
     entry.base_height = height or 4
@@ -201,7 +189,7 @@ function SettingsFormPage:add_break(height)
     return entry
 end
 
-function SettingsFormPage:add_custom(key, height)
+function ConfigContent:add_custom(key, height)
     local entry = {}
     entry.kind = "custom"
     entry.key = key
@@ -217,12 +205,12 @@ function SettingsFormPage:add_custom(key, height)
     return entry
 end
 
-function SettingsFormPage:add_text(key, label_text, is_color, help_text, full_width)
+function ConfigContent:add_line_edit(key, label_text, save_fn, load_fn, help_text, full_width)
     local entry = {}
     entry.kind = "text"
     entry.key = key
     entry.label_text = label_text
-    entry.is_color = is_color == true
+    entry.is_color = false
     entry.help_text = help_text
     entry.full_width = full_width == true
 
@@ -234,32 +222,86 @@ function SettingsFormPage:add_text(key, label_text, is_color, help_text, full_wi
     entry.label:SetText(label_text)
     entry.label:SetZOrder(1)
 
-    if entry.is_color then
-        entry.tb = UI.Widgets.LuiColorField()
-        entry.tb:set_scale(_G.settings.global.scale)
-        entry.tb:SetPickerHost(self.window)
-        entry.tb:SetParent(self.form)
-        entry.tb:SetFont(self.window.input_font)
-        entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-        entry.tb:SetZOrder(2)
-        self._color_fields[#self._color_fields + 1] = entry
-    else
-        entry.tb = UI.Widgets.LuiLineEdit()
-        entry.tb:SetParent(self.form)
-        entry.tb:SetFont(self.window.input_font)
-        entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-        entry.tb:SetZOrder(2)
-    end
+    entry.tb = UI.Widgets.LuiLineEdit()
+    entry.tb:SetParent(self.form)
+    entry.tb:SetFont(self.window.input_font)
+    entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    entry.tb:SetZOrder(2)
 
     self:_bind_hint(entry.tb, function()
         return entry.help_text
     end)
-    if entry.is_color == true and entry.tb.tb ~= nil then
+
+    entry.tb.TextChanged = function()
+        if self.loading == true then
+            return
+        end
+        if entry.on_changed ~= nil then
+            entry.on_changed(entry.tb:GetText())
+        end
+        self:_refresh_preview()
+    end
+
+    function entry:get_value()
+        return entry.tb:GetText()
+    end
+
+    function entry:set_value(value)
+        entry.tb:SetText(value)
+    end
+
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent line edit binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent line edit binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
+    end
+
+    self.controls[key] = entry
+    self.fields[#self.fields + 1] = entry
+    return entry
+end
+
+function ConfigContent:add_color_picker(key, label_text, save_fn, load_fn, help_text, full_width)
+    local entry = {}
+    entry.kind = "text"
+    entry.key = key
+    entry.label_text = label_text
+    entry.is_color = true
+    entry.help_text = help_text
+    entry.full_width = full_width == true
+
+    entry.label = UI.Widgets.LuiLabel()
+    entry.label:SetParent(self.form)
+    entry.label:SetFont(self.window.field_label_font)
+    entry.label:SetMultiline(true)
+    entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    entry.label:SetText(label_text)
+    entry.label:SetZOrder(1)
+
+    entry.tb = UI.Widgets.LuiColorField()
+    entry.tb:set_scale(_G.settings.global.scale)
+    entry.tb:SetPickerHost(self.window)
+    entry.tb:SetParent(self.form)
+    entry.tb:SetFont(self.window.input_font)
+    entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    entry.tb:SetZOrder(2)
+    self._color_fields[#self._color_fields + 1] = entry
+
+    self:_bind_hint(entry.tb, function()
+        return entry.help_text
+    end)
+    if entry.tb.tb ~= nil then
         self:_bind_hint(entry.tb.tb, function()
             return entry.help_text
         end)
     end
-    if entry.is_color == true and entry.tb.swatch_border ~= nil then
+    if entry.tb.swatch_border ~= nil then
         self:_bind_hint(entry.tb.swatch_border, function()
             return entry.help_text
         end)
@@ -269,21 +311,31 @@ function SettingsFormPage:add_text(key, label_text, is_color, help_text, full_wi
         if self.loading == true then
             return
         end
-        if entry.is_color then
-            self:update_swatch(entry)
-        end
+        self:update_swatch(entry)
         if entry.on_changed ~= nil then
             entry.on_changed(entry.tb:GetText())
         end
         self:_refresh_preview()
     end
 
-    entry.get_value = function()
+    function entry:get_value()
         return entry.tb:GetText()
     end
 
-    entry.set_value = function(value)
-        entry.tb:SetText(value or "")
+    function entry:set_value(value)
+        entry.tb:SetText(value)
+    end
+
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent color picker binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent color picker binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
     end
 
     self.controls[key] = entry
@@ -291,17 +343,16 @@ function SettingsFormPage:add_text(key, label_text, is_color, help_text, full_wi
     return entry
 end
 
-function SettingsFormPage:add_dropdown(key, label_text, option_labels, option_values, help_text, full_width)
+function ConfigContent:add_dropdown(key, label_text, option_labels, option_values, save_fn, load_fn, help_text,
+                                    full_width)
     local entry = {}
     entry.kind = "dropdown"
     entry.key = key
     entry.label_text = label_text
-    entry.option_labels = option_labels or {}
-    entry.option_values = option_values or {}
+    entry.option_labels = option_labels
+    entry.option_values = option_values
     entry.help_text = help_text
     entry.full_width = full_width == true
-    entry.value = nil
-
     entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(self.form)
     entry.label:SetFont(self.window.field_label_font)
@@ -318,9 +369,7 @@ function SettingsFormPage:add_dropdown(key, label_text, option_labels, option_va
     entry.button:SetPopupHost(self.window)
     entry.button:SetMappedOptions(entry.option_labels, entry.option_values)
     entry.button:SetZOrder(2)
-    entry.value = entry.button:GetValue()
     entry.button.ValueChanged = function(_, value)
-        entry.value = value
         if self.loading == true then
             return
         end
@@ -339,19 +388,19 @@ function SettingsFormPage:add_dropdown(key, label_text, option_labels, option_va
     end
 
     function entry:set_value(value)
-        local chosen = nil
-        for i = 1, #entry.option_values do
-            if entry.option_values[i] == value then
-                chosen = value
-                break
-            end
-        end
-        if chosen == nil then
-            chosen = entry.option_values[1]
-        end
+        entry.button:SetValue(value)
+    end
 
-        entry.value = chosen
-        entry.button:SetValue(chosen)
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent dropdown binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent dropdown binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
     end
 
     self.controls[key] = entry
@@ -359,7 +408,7 @@ function SettingsFormPage:add_dropdown(key, label_text, option_labels, option_va
     return entry
 end
 
-function SettingsFormPage:add_checkbox(key, label_text, full_width)
+function ConfigContent:add_checkbox(key, label_text, save_fn, load_fn, full_width)
     local entry = {}
     entry.kind = "checkbox"
     entry.key = key
@@ -369,7 +418,7 @@ function SettingsFormPage:add_checkbox(key, label_text, full_width)
     entry.cb = UI.Widgets.LuiCheckBox()
     entry.cb:SetParent(self.form)
     entry.cb:SetFont(self.window.field_label_font)
-    entry.cb:SetText(tostring(label_text or ""))
+    entry.cb:SetText(label_text)
     entry.cb:SetZOrder(2)
     entry.cb.CheckedChanged = function()
         if self.loading == true then
@@ -381,12 +430,32 @@ function SettingsFormPage:add_checkbox(key, label_text, full_width)
         self:_refresh_preview()
     end
 
+    function entry:get_value()
+        return entry.cb:IsChecked()
+    end
+
+    function entry:set_value(value)
+        entry.cb:SetChecked(value)
+    end
+
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent checkbox binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent checkbox binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
+    end
+
     self.controls[key] = entry
     self.fields[#self.fields + 1] = entry
     return entry
 end
 
-function SettingsFormPage:update_swatch(entry)
+function ConfigContent:update_swatch(entry)
     if entry == nil or entry.is_color ~= true or entry.tb == nil then
         return
     end
@@ -396,13 +465,13 @@ function SettingsFormPage:update_swatch(entry)
     end
 end
 
-function SettingsFormPage:update_all_swatches()
+function ConfigContent:update_all_swatches()
     for i = 1, #self._color_fields do
         self:update_swatch(self._color_fields[i])
     end
 end
 
-function SettingsFormPage:apply_ui_scale()
+function ConfigContent:apply_ui_scale()
     local scale = _G.settings.global.scale
 
     for i = 1, #self.fields do
@@ -454,7 +523,7 @@ function SettingsFormPage:apply_ui_scale()
     self:layout()
 end
 
-function SettingsFormPage:close_all_dropdowns()
+function ConfigContent:close_all_dropdowns()
     for i = 1, #self.fields do
         local field = self.fields[i]
         if field ~= nil and field.kind == "dropdown" and field.button ~= nil then
@@ -463,12 +532,12 @@ function SettingsFormPage:close_all_dropdowns()
     end
 end
 
-function SettingsFormPage:refresh_text_inputs()
+function ConfigContent:refresh_text_inputs()
     for i = 1, #self.fields do
         local field = self.fields[i]
         if field ~= nil then
             if field.kind == "text" then
-                _refresh_text_control(field.tb)
+                self:_refresh_text_control(field.tb)
             elseif field.kind == "custom" and field.refresh_text ~= nil then
                 field:refresh_text()
             end
@@ -476,7 +545,7 @@ function SettingsFormPage:refresh_text_inputs()
     end
 end
 
-function SettingsFormPage:on_selected()
+function ConfigContent:on_selected()
     self:layout()
     local was_loading = self.loading == true
     self.loading = true
@@ -486,7 +555,7 @@ function SettingsFormPage:on_selected()
     self:layout()
 end
 
-function SettingsFormPage:layout()
+function ConfigContent:layout()
     local page_width, page_height = self:GetSize()
     local scroll_w = BASE_SCROLL_W
     local title_h = _scaled_int(22)
@@ -497,6 +566,9 @@ function SettingsFormPage:layout()
     local custom_min_h = _scaled_int(7)
     local custom_gap = _scaled_int(4)
     local form_pad = _scaled_int(4)
+    local compact_label_h = _scaled_int(14)
+    local compact_field_gap = _scaled_int(2)
+    local compact_row_gap = _scaled_int(8)
 
     if page_width == nil or page_height == nil or page_width < 1 or page_height < 1 then
         return
@@ -518,7 +590,12 @@ function SettingsFormPage:layout()
         inner_width = _scaled_int(74)
     end
 
-    local col_width = math.floor((inner_width - self.window.col_gap) / 2)
+    local grid_columns = self.grid_columns or 2
+    if grid_columns < 1 then
+        grid_columns = 1
+    end
+    local grid_gaps = (grid_columns - 1) * self.window.col_gap
+    local col_width = math.floor((inner_width - grid_gaps) / grid_columns)
     local label_width = math.floor(col_width * 0.55)
     local input_width = col_width - label_width - self.window.inner_gap
 
@@ -553,7 +630,10 @@ function SettingsFormPage:layout()
         end
 
         if is_visible and field.kind == "title" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -563,7 +643,10 @@ function SettingsFormPage:layout()
             y = y + title_gap
             col = 0
         elseif is_visible and field.kind == "info" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -574,7 +657,10 @@ function SettingsFormPage:layout()
             y = y + h
             col = 0
         elseif is_visible and field.kind == "hr" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -584,7 +670,10 @@ function SettingsFormPage:layout()
             y = y + hr_gap
             col = 0
         elseif is_visible and field.kind == "break" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -594,7 +683,10 @@ function SettingsFormPage:layout()
             y = y + field.height
             col = 0
         elseif is_visible and field.kind == "custom" then
-            if col == 1 then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
                 y = y + self.window.row_height
                 col = 0
             end
@@ -611,6 +703,59 @@ function SettingsFormPage:layout()
             field.control:SetSize(inner_width, h)
             y = y + h + custom_gap
             col = 0
+        elseif is_visible and self.compact_fields == true then
+            if field.full_width == true then
+                if col ~= 0 then
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                    col = 0
+                end
+
+                local full_x = self.window.content_padding
+                local full_w = inner_width
+
+                if field.kind == "checkbox" then
+                    field.cb:SetPosition(full_x, y + compact_label_h + compact_field_gap)
+                    field.cb:SetSize(full_w, self.window.field_label_height)
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                elseif field.kind == "text" then
+                    field.label:SetPosition(full_x, y)
+                    field.label:SetSize(full_w, compact_label_h)
+                    field.tb:SetPosition(full_x, y + compact_label_h + compact_field_gap)
+                    field.tb:SetSize(full_w, self.window.input_height)
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                elseif field.kind == "dropdown" then
+                    field.label:SetPosition(full_x, y)
+                    field.label:SetSize(full_w, compact_label_h)
+                    field.button:SetPosition(full_x, y + compact_label_h + compact_field_gap +
+                        self.window.dropdown_y_offset)
+                    field.button:SetSize(full_w, self.window.input_height)
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                end
+            else
+                local x = self.window.content_padding + (col * (col_width + self.window.col_gap))
+
+                if field.kind == "checkbox" then
+                    field.cb:SetPosition(x, y + compact_label_h + compact_field_gap)
+                    field.cb:SetSize(col_width, self.window.field_label_height)
+                elseif field.kind == "text" then
+                    field.label:SetPosition(x, y)
+                    field.label:SetSize(col_width, compact_label_h)
+                    field.tb:SetPosition(x, y + compact_label_h + compact_field_gap)
+                    field.tb:SetSize(col_width, self.window.input_height)
+                elseif field.kind == "dropdown" then
+                    field.label:SetPosition(x, y)
+                    field.label:SetSize(col_width, compact_label_h)
+                    field.button:SetPosition(x, y + compact_label_h + compact_field_gap +
+                        self.window.dropdown_y_offset)
+                    field.button:SetSize(col_width, self.window.input_height)
+                end
+
+                col = col + 1
+                if col >= grid_columns then
+                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                    col = 0
+                end
+            end
         elseif is_visible then
             if field.kind == "checkbox" and field.full_width == true then
                 if col == 1 then
@@ -666,7 +811,8 @@ function SettingsFormPage:layout()
                     field.label:SetSize(label_width, self.window.field_label_height)
 
                     local input_y = y + math.floor((self.window.field_label_height - self.window.input_height) / 2)
-                    field.button:SetPosition(x + label_width + self.window.inner_gap, input_y + self.window.dropdown_y_offset)
+                    field.button:SetPosition(x + label_width + self.window.inner_gap,
+                        input_y + self.window.dropdown_y_offset)
                     field.button:SetSize(input_width, self.window.input_height)
                 else
                     field.cb:SetPosition(x, y)
@@ -683,9 +829,51 @@ function SettingsFormPage:layout()
         end
     end
 
-    if col == 1 then
+    if self.compact_fields == true then
+        if col ~= 0 then
+            y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+        end
+    elseif col == 1 then
         y = y + self.window.row_height
     end
 
     self.form:SetSize(form_width, y + form_pad)
+end
+
+function ConfigContent:add_row_break()
+    return self:add_break(0)
+end
+
+function ConfigContent:bind(entry, save_fn, load_fn)
+    if type(save_fn) ~= "function" then
+        error("ConfigContent binding is missing save_fn")
+    end
+    if type(load_fn) ~= "function" then
+        error("ConfigContent binding is missing load_fn")
+    end
+
+    entry.save_fn = save_fn
+    entry.load_fn = load_fn
+    self._bound_entries[#self._bound_entries + 1] = entry
+    return entry
+end
+
+function ConfigContent:load()
+    self.loading = true
+
+    for i = 1, #self._bound_entries do
+        local entry = self._bound_entries[i]
+        entry:set_value(entry.load_fn())
+    end
+
+    self.loading = false
+    self:update_all_swatches()
+    self:layout()
+end
+
+function ConfigContent:save()
+    for i = 1, #self._bound_entries do
+        local entry = self._bound_entries[i]
+        entry.save_fn(entry:get_value())
+    end
 end

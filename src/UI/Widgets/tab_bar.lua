@@ -9,6 +9,8 @@ local POSITION_TOP = "top"
 local POSITION_BOTTOM = "bottom"
 local POSITION_LEFT = "left"
 local POSITION_RIGHT = "right"
+local SELECTION_STYLE_CONNECTED = "connected"
+local SELECTION_STYLE_BUTTON = "button"
 
 local BASE_WIDGET_W = 320
 local BASE_WIDGET_H = 200
@@ -17,6 +19,8 @@ local BASE_TAB_HEIGHT = 24
 local BASE_SIDE_TAB_WIDTH = 124
 local BASE_SIDE_TAB_HEIGHT = 24
 local BASE_TAB_GAP = 0
+local BASE_BUTTON_TAB_GAP = 4
+local BASE_BUTTON_SIDE_MARGIN = 4
 local BASE_TAB_PADDING_X = 14
 local BASE_LABEL_PADDING_X = 8
 local BASE_CONTENT_PADDING = 0
@@ -53,6 +57,13 @@ local function _normalize_position(position)
     return POSITION_TOP
 end
 
+local function _normalize_selection_style(style)
+    if style == SELECTION_STYLE_BUTTON then
+        return SELECTION_STYLE_BUTTON
+    end
+    return SELECTION_STYLE_CONNECTED
+end
+
 local function _set_rect(control, x, y, width, height)
     if control == nil then
         return
@@ -71,13 +82,87 @@ local function _show_value(value)
     return value ~= false
 end
 
+local function _approx_char_width_units(ch)
+    if ch == " " then
+        return 0.45
+    end
+    if ch == "." or ch == "," or ch == ":" or ch == ";" or ch == "'" then
+        return 0.35
+    end
+    if ch == "m" then
+        return 1.70
+    end
+    if ch == "w" then
+        return 1.58
+    end
+    if ch == "n" or ch == "h" or ch == "u" then
+        return 1.00
+    end
+    if ch == "a" or ch == "c" or ch == "e" or ch == "o" or ch == "s" then
+        return 0.96
+    end
+    if ch == "d" or ch == "g" or ch == "p" or ch == "q" then
+        return 1.02
+    end
+    if ch == "b" or ch == "k" or ch == "x" or ch == "y" or ch == "z" then
+        return 0.94
+    end
+    if ch == "i" or ch == "l" or ch == "I" or ch == "j" then
+        return 0.55
+    end
+    if ch == "f" or ch == "t" or ch == "r" then
+        return 0.70
+    end
+    if ch == "M" or ch == "W" then
+        return 1.82
+    end
+    if ch == "N" or ch == "H" or ch == "U" then
+        return 1.14
+    end
+    if string.match(ch, "%u") ~= nil then
+        return 1.08
+    end
+    if string.match(ch, "%l") ~= nil then
+        return 0.98
+    end
+    if string.match(ch, "%d") ~= nil then
+        return 0.95
+    end
+    return 1.0
+end
+
 local function _approx_text_width(scale, text)
-    local len = string.len(tostring(text or ""))
-    if len < 1 then
-        len = 1
+    local value = tostring(text or "")
+    local units = 0
+    if string.len(value) < 1 then
+        units = 1
+    else
+        for i = 1, string.len(value) do
+            units = units + _approx_char_width_units(string.sub(value, i, i))
+        end
     end
 
-    return _scaled_int(scale, BASE_TAB_PADDING_X * 2) + _scaled_int(scale, BASE_APPROX_CHAR_WIDTH * len)
+    return _scaled_int(scale, BASE_TAB_PADDING_X * 2) + _scaled_int(scale, BASE_APPROX_CHAR_WIDTH * units)
+end
+
+local function _tab_gap(scale, selection_style)
+    if selection_style == SELECTION_STYLE_BUTTON then
+        return _scaled_int(scale, BASE_BUTTON_TAB_GAP)
+    end
+
+    return _scaled_int(scale, BASE_TAB_GAP)
+end
+
+local function _button_side_margin(scale, selection_style, override)
+    if type(override) == "number" and override >= 0 then
+        return _round(override)
+    end
+
+    if selection_style == SELECTION_STYLE_BUTTON then
+        return _scaled_int(scale, BASE_BUTTON_SIDE_MARGIN)
+    end
+
+    return 0
 end
 
 local LuiTabButton = class(Turbine.UI.Control)
@@ -243,6 +328,11 @@ LuiTabBar.position = {
     right = POSITION_RIGHT,
 }
 
+LuiTabBar.selection_style = {
+    connected = SELECTION_STYLE_CONNECTED,
+    button = SELECTION_STYLE_BUTTON,
+}
+
 function LuiTabBar:Constructor()
     Turbine.UI.Control.Constructor(self)
 
@@ -253,6 +343,10 @@ function LuiTabBar:Constructor()
     self._uses_default_font = true
     self._position = POSITION_TOP
     self._fill_tabs = false
+    self._side_tab_width_override = nil
+    self._button_side_margin_override = nil
+    self._button_content_gap_override = nil
+    self._selection_style = SELECTION_STYLE_CONNECTED
     self._content_padding = BASE_CONTENT_PADDING
     self._show_border_top = true
     self._show_border_right = true
@@ -279,9 +373,11 @@ function LuiTabBar:Constructor()
 
     self._border_width = tonumber(Style.BORDER_WIDTH) or 1
     self._border_color = Style.CONTROL_BORDER
+    self._content_border_color = self._border_color
     self._strip_back = Style.ALTERNATE_BACKGROUND
     self._content_back = Style.BACKGROUND
     self._hover_back = Style.CONTROL_BACKGROUND_HOVER
+    self._selected_back = Style.SELECTION_BACKGROUND
     self._tab_text = Style.ALTERNATE_FOREGROUND
     self._tab_text_hover = Style.CONTROL_FOREGROUND_HOVER
     self._tab_text_selected = Style.SELECTION_FOREGROUND
@@ -336,6 +432,7 @@ function LuiTabBar:Constructor()
     self._tabs_overlay_host:SetZOrder(10)
 
     self._tab_fill_controls = {}
+    self._tab_border_controls = {}
     self._divider_controls = {}
 
     self._adjacent_line_before = Turbine.UI.Control()
@@ -482,6 +579,41 @@ end
 
 function LuiTabBar:get_fill_tabs()
     return self._fill_tabs == true
+end
+
+function LuiTabBar:set_selection_style(style)
+    self._selection_style = _normalize_selection_style(style)
+    self:_layout()
+end
+
+function LuiTabBar:set_side_tab_width(width)
+    local value = tonumber(width)
+    if value ~= nil and value > 0 then
+        self._side_tab_width_override = _round(value)
+    else
+        self._side_tab_width_override = nil
+    end
+    self:_layout()
+end
+
+function LuiTabBar:set_button_side_margin(margin)
+    local value = tonumber(margin)
+    if value ~= nil and value >= 0 then
+        self._button_side_margin_override = _round(value)
+    else
+        self._button_side_margin_override = nil
+    end
+    self:_layout()
+end
+
+function LuiTabBar:set_button_content_gap(gap)
+    local value = tonumber(gap)
+    if value ~= nil and value >= 0 then
+        self._button_content_gap_override = _round(value)
+    else
+        self._button_content_gap_override = nil
+    end
+    self:_layout()
 end
 
 function LuiTabBar:set_content_padding(padding)
@@ -782,6 +914,42 @@ function LuiTabBar:_ensure_tab_fill_count(count)
     end
 end
 
+function LuiTabBar:_ensure_tab_border_count(count)
+    while #self._tab_border_controls < count do
+        local borders = {}
+
+        borders.top = Turbine.UI.Control()
+        borders.top:SetParent(self._tabs_overlay_host)
+        borders.top:SetMouseVisible(false)
+        borders.top:SetZOrder(10)
+
+        borders.right = Turbine.UI.Control()
+        borders.right:SetParent(self._tabs_overlay_host)
+        borders.right:SetMouseVisible(false)
+        borders.right:SetZOrder(10)
+
+        borders.bottom = Turbine.UI.Control()
+        borders.bottom:SetParent(self._tabs_overlay_host)
+        borders.bottom:SetMouseVisible(false)
+        borders.bottom:SetZOrder(10)
+
+        borders.left = Turbine.UI.Control()
+        borders.left:SetParent(self._tabs_overlay_host)
+        borders.left:SetMouseVisible(false)
+        borders.left:SetZOrder(10)
+
+        self._tab_border_controls[#self._tab_border_controls + 1] = borders
+    end
+
+    for i = count + 1, #self._tab_border_controls do
+        local borders = self._tab_border_controls[i]
+        borders.top:SetVisible(false)
+        borders.right:SetVisible(false)
+        borders.bottom:SetVisible(false)
+        borders.left:SetVisible(false)
+    end
+end
+
 function LuiTabBar:_button_clicked(button)
     for i = 1, #self._tabs do
         if self._tabs[i].button == button then
@@ -975,7 +1143,7 @@ function LuiTabBar:_layout_tabs_horizontal(width, height)
         return
     end
 
-    local gap = _scaled_int(self._scale, BASE_TAB_GAP)
+    local gap = _tab_gap(self._scale, self._selection_style)
     local min_tab_w = _scaled_int(self._scale, BASE_MIN_TAB_WIDTH)
     local widths = {}
     local total = 0
@@ -1106,7 +1274,8 @@ function LuiTabBar:_layout_tabs_vertical(width, height)
         return
     end
 
-    local gap = _scaled_int(self._scale, BASE_TAB_GAP)
+    local gap = _tab_gap(self._scale, self._selection_style)
+    local side_margin = _button_side_margin(self._scale, self._selection_style, self._button_side_margin_override)
     local tab_h = _scaled_int(self._scale, BASE_SIDE_TAB_HEIGHT)
     local total = (count * tab_h) + (math.max(0, count - 1) * gap)
     if total > height then
@@ -1120,16 +1289,63 @@ function LuiTabBar:_layout_tabs_vertical(width, height)
     local y = 0
     for i = 1, count do
         local button = self._tabs[i].button
-        self._tab_rects[i] = { x = 0, y = y, w = width, h = tab_h }
+        self._tab_rects[i] = { x = side_margin, y = y, w = width - (side_margin * 2), h = tab_h }
         if button ~= nil then
             button:SetVisible(true)
-            _set_rect(button, 0, y, width, tab_h)
+            _set_rect(button, side_margin, y, width - (side_margin * 2), tab_h)
         end
         y = y + tab_h + gap
     end
 end
 
+function LuiTabBar:_layout_button_borders(border)
+    local count = #self._tabs
+    self:_ensure_tab_border_count(count)
+
+    if self._selection_style ~= SELECTION_STYLE_BUTTON then
+        for i = 1, #self._tab_border_controls do
+            local borders = self._tab_border_controls[i]
+            borders.top:SetVisible(false)
+            borders.right:SetVisible(false)
+            borders.bottom:SetVisible(false)
+            borders.left:SetVisible(false)
+        end
+        return
+    end
+
+    local rects = self._tab_rects or {}
+    for i = 1, count do
+        local rect = rects[i]
+        local borders = self._tab_border_controls[i]
+        if rect ~= nil then
+            _set_rect(borders.top, rect.x, rect.y, rect.w, border)
+            _set_rect(borders.right, rect.x + rect.w - border, rect.y, border, rect.h)
+            _set_rect(borders.bottom, rect.x, rect.y + rect.h - border, rect.w, border)
+            _set_rect(borders.left, rect.x, rect.y, border, rect.h)
+
+            borders.top:SetBackColor(self._border_color)
+            borders.right:SetBackColor(self._border_color)
+            borders.bottom:SetBackColor(self._border_color)
+            borders.left:SetBackColor(self._border_color)
+
+            borders.top:SetVisible(true)
+            borders.right:SetVisible(true)
+            borders.bottom:SetVisible(true)
+            borders.left:SetVisible(true)
+        else
+            borders.top:SetVisible(false)
+            borders.right:SetVisible(false)
+            borders.bottom:SetVisible(false)
+            borders.left:SetVisible(false)
+        end
+    end
+end
+
 function LuiTabBar:_desired_side_strip_width()
+    if type(self._side_tab_width_override) == "number" and self._side_tab_width_override > 0 then
+        return self._side_tab_width_override
+    end
+
     local width = _scaled_int(self._scale, BASE_SIDE_TAB_WIDTH)
     for i = 1, #self._tabs do
         local entry = self._tabs[i]
@@ -1158,7 +1374,8 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
     for i = 1, divider_count do
         local divider = self._divider_controls[i]
         local rect = rects[i]
-        local show_divider = selected_index ~= nil and (i == selected_index or i == (selected_index - 1))
+        local show_divider = self._selection_style ~= SELECTION_STYLE_BUTTON and selected_index ~= nil and
+            (i == selected_index or i == (selected_index - 1))
 
         if divider ~= nil and rect ~= nil and show_divider == true then
             if self._position == POSITION_TOP or self._position == POSITION_BOTTOM then
@@ -1196,6 +1413,10 @@ function LuiTabBar:_layout_strip_overlays(strip_x, strip_y, strip_w, strip_h, co
         selected_h = selected_rect.h
         selected_abs_x = strip_x + selected_x
         selected_abs_y = strip_y + selected_y
+    end
+
+    if self._selection_style == SELECTION_STYLE_BUTTON then
+        return
     end
 
     if show_adjacent_border == true then
@@ -1317,7 +1538,11 @@ function LuiTabBar:_layout_tab_fills(strip_x, strip_y)
         if fill ~= nil and rect ~= nil and show_fill == true then
             _set_rect(fill, rect.x, rect.y, rect.w, rect.h)
             if selected == true then
-                fill:SetBackColor(self._content_back)
+                if self._selection_style == SELECTION_STYLE_BUTTON then
+                    fill:SetBackColor(self._selected_back)
+                else
+                    fill:SetBackColor(self._content_back)
+                end
             else
                 fill:SetBackColor(self._hover_back)
             end
@@ -1348,33 +1573,50 @@ function LuiTabBar:_layout()
     local content_y = 0
     local content_w = width
     local content_h = height
+    local button_style = self._selection_style == SELECTION_STYLE_BUTTON
+    local button_content_gap = 0
+    if button_style == true and type(self._button_content_gap_override) == "number" and self._button_content_gap_override > 0 then
+        button_content_gap = self._button_content_gap_override
+    end
 
     if self._position == POSITION_TOP then
         strip_h = math.min(height, horizontal_strip)
         if show_border_top == true then
-            content_y = math.max(0, strip_h - border)
-            show_adjacent_border = true
+            if button_style == true then
+                content_y = strip_h + button_content_gap
+            else
+                content_y = math.max(0, strip_h - border)
+                show_adjacent_border = true
+            end
         else
-            content_y = strip_h
+            content_y = strip_h + button_content_gap
         end
         content_h = math.max(0, height - content_y)
     elseif self._position == POSITION_BOTTOM then
         strip_h = math.min(height, horizontal_strip)
         strip_y = math.max(0, height - strip_h)
         if show_border_bottom == true then
-            content_h = math.max(0, height - strip_h + border)
-            show_adjacent_border = true
+            if button_style == true then
+                content_h = math.max(0, height - strip_h - button_content_gap)
+            else
+                content_h = math.max(0, height - strip_h + border)
+                show_adjacent_border = true
+            end
         else
-            content_h = math.max(0, height - strip_h)
+            content_h = math.max(0, height - strip_h - button_content_gap)
         end
     elseif self._position == POSITION_LEFT then
         strip_w = math.min(width, vertical_strip)
         strip_h = height
         if show_border_left == true then
-            content_x = math.max(0, strip_w - border)
-            show_adjacent_border = true
+            if button_style == true then
+                content_x = strip_w + button_content_gap
+            else
+                content_x = math.max(0, strip_w - border)
+                show_adjacent_border = true
+            end
         else
-            content_x = strip_w
+            content_x = strip_w + button_content_gap
         end
         content_w = math.max(0, width - content_x)
     else
@@ -1382,10 +1624,14 @@ function LuiTabBar:_layout()
         strip_h = height
         strip_x = math.max(0, width - strip_w)
         if show_border_right == true then
-            content_w = math.max(0, width - strip_w + border)
-            show_adjacent_border = true
+            if button_style == true then
+                content_w = math.max(0, width - strip_w - button_content_gap)
+            else
+                content_w = math.max(0, width - strip_w + border)
+                show_adjacent_border = true
+            end
         else
-            content_w = math.max(0, width - strip_w)
+            content_w = math.max(0, width - strip_w - button_content_gap)
         end
     end
 
@@ -1415,14 +1661,14 @@ function LuiTabBar:_layout()
 
     self._strip_back_control:SetBackColor(self._strip_back)
     self._content_frame:SetBackColor(self._content_back)
-    self._content_border_top:SetBackColor(self._border_color)
-    self._content_border_right:SetBackColor(self._border_color)
-    self._content_border_bottom:SetBackColor(self._border_color)
-    self._content_border_left:SetBackColor(self._border_color)
-    self._content_border_top:SetVisible(show_border_top and self._position ~= POSITION_TOP)
-    self._content_border_right:SetVisible(show_border_right and self._position ~= POSITION_RIGHT)
-    self._content_border_bottom:SetVisible(show_border_bottom and self._position ~= POSITION_BOTTOM)
-    self._content_border_left:SetVisible(show_border_left and self._position ~= POSITION_LEFT)
+    self._content_border_top:SetBackColor(self._content_border_color)
+    self._content_border_right:SetBackColor(self._content_border_color)
+    self._content_border_bottom:SetBackColor(self._content_border_color)
+    self._content_border_left:SetBackColor(self._content_border_color)
+    self._content_border_top:SetVisible(show_border_top and (button_style == true or self._position ~= POSITION_TOP))
+    self._content_border_right:SetVisible(show_border_right and (button_style == true or self._position ~= POSITION_RIGHT))
+    self._content_border_bottom:SetVisible(show_border_bottom and (button_style == true or self._position ~= POSITION_BOTTOM))
+    self._content_border_left:SetVisible(show_border_left and (button_style == true or self._position ~= POSITION_LEFT))
     self._content_inner:SetBackColor(self._content_back)
 
     if self._position == POSITION_TOP or self._position == POSITION_BOTTOM then
@@ -1457,6 +1703,7 @@ function LuiTabBar:_layout()
     end
 
     self:_layout_tab_fills(tabs_x, tabs_y)
+    self:_layout_button_borders(border)
     self:_layout_strip_overlays(tabs_x, tabs_y, tabs_w, tabs_h, content_x, content_y, content_w, content_h, border,
         show_adjacent_border)
     self:_layout_selected_widget()

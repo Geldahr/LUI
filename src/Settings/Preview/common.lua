@@ -34,25 +34,57 @@ function Common.dim_color(color, amount)
     return lui_dim_color(color, amount)
 end
 
-function Common.preview_scaled_int(raw_scale, raw_value, fallback)
+function Common.require_number(raw_value, key)
     local n = raw_value
     if type(n) ~= "number" then
         n = tonumber(n)
     end
     if n == nil then
-        n = fallback or 0
+        error("Invalid preview number for " .. tostring(key) .. ": " .. tostring(raw_value))
     end
+    return n
+end
+
+function Common.require_control_text(controls, key)
+    return controls[key].tb:GetText()
+end
+
+function Common.require_control_number(controls, key)
+    return Common.require_number(Common.require_control_text(controls, key), key)
+end
+
+function Common.require_control_color(controls, key)
+    local text = Common.require_control_text(controls, key)
+    local color = Common.hex_to_color(text)
+    if color == nil then
+        error("Invalid preview color for " .. tostring(key) .. ": " .. tostring(text))
+    end
+    return color
+end
+
+function Common.require_control_enum(controls, key)
+    local value = controls[key]:get_value()
+    if type(value) ~= "number" then
+        error("Invalid preview enum for " .. tostring(key) .. ": " .. tostring(value))
+    end
+    return value
+end
+
+function Common.require_positive_scale(window)
+    local value = Common.require_control_number(window.controls, "scale")
+    if value <= 0 then
+        error("Invalid preview scale: " .. tostring(value))
+    end
+    return value
+end
+
+function Common.preview_scaled_int(raw_scale, raw_value)
+    local n = Common.require_number(raw_value, "scaled_int")
     return math.floor((n * raw_scale) + 0.5)
 end
 
-function Common.preview_scaled_border(raw_scale, raw_value, fallback)
-    local n = raw_value
-    if type(n) ~= "number" then
-        n = tonumber(n)
-    end
-    if n == nil then
-        n = fallback or 0
-    end
+function Common.preview_scaled_border(raw_scale, raw_value)
+    local n = Common.require_number(raw_value, "scaled_border")
     if n <= 0 then
         return 0
     end
@@ -63,19 +95,9 @@ function Common.preview_scaled_border(raw_scale, raw_value, fallback)
     return out
 end
 
-function Common.preview_scaled_number(raw_scale, raw_value, fallback)
-    local n = raw_value
-    if type(n) ~= "number" then
-        n = tonumber(n)
-    end
-    if n == nil then
-        n = fallback or 0
-    end
+function Common.preview_scaled_number(raw_scale, raw_value)
+    local n = Common.require_number(raw_value, "scaled_number")
     return n * raw_scale
-end
-
-function Common.preview_text_align(value)
-    return LUI_TO_LOTRO.text_alignment[value] or Turbine.UI.ContentAlignment.MiddleLeft
 end
 
 function Common.preview_resource_background(matches_missing, dimming, background, fill_color)
@@ -84,26 +106,6 @@ function Common.preview_resource_background(matches_missing, dimming, background
     end
     return background
 end
-
-function Common.apply_preview_label_bounds(label, align, margin, width, height)
-    if label == nil then
-        return
-    end
-
-    local content_w = math.max(0, width - margin)
-    if align == LUI_ENUMS.text_alignment.LEFT then
-        label:SetPosition(margin, 0)
-        label:SetSize(content_w, height)
-    elseif align == LUI_ENUMS.text_alignment.RIGHT then
-        label:SetPosition(0, 0)
-        label:SetSize(content_w, height)
-    else
-        label:SetPosition(0, 0)
-        label:SetSize(width, height)
-    end
-end
-
-Common.default_gradient_mid_color = Turbine.UI.Color(1, 0.847059, 0.776471, 0.235294)
 
 function Common.morale_color_preview(percent, gradient_enabled, gradient_full_color, gradient_mid_color,
                                      gradient_low_color, high_color, medium_color, low_color, critical_color)
@@ -121,7 +123,6 @@ function Common.morale_color_preview(percent, gradient_enabled, gradient_full_co
 end
 
 function Common.preview_number_abbrev_settings(window)
-    local raw = _G.loaded_settings.global.number_abbrev
     local controls = window.controls
 
     return {
@@ -133,18 +134,11 @@ function Common.preview_number_abbrev_settings(window)
 end
 
 function Common.apply_preview_border(p, w, h, x, y)
-    if p == nil then
-        return
-    end
-    if p.border_top == nil or p.border_bottom == nil or p.border_left == nil or p.border_right == nil then
-        return
-    end
-
     local bw = 1
-    local ww = tonumber(w) or 0
-    local hh = tonumber(h) or 0
-    local xx = tonumber(x) or 0
-    local yy = tonumber(y) or 0
+    local ww = Common.require_number(w, "preview_border_width")
+    local hh = Common.require_number(h, "preview_border_height")
+    local xx = x == nil and 0 or Common.require_number(x, "preview_border_x")
+    local yy = y == nil and 0 or Common.require_number(y, "preview_border_y")
     if ww < 1 then ww = 1 end
     if hh < 1 then hh = 1 end
 
@@ -170,14 +164,7 @@ function Common.apply_preview_border(p, w, h, x, y)
 end
 
 function Common.sync_preview_holder_height(window, holder, desired_height)
-    if window == nil or holder == nil or holder.control == nil then
-        return holder
-    end
-
-    local h = tonumber(desired_height)
-    if h == nil then
-        return holder
-    end
+    local h = Common.require_number(desired_height, "preview_holder_height")
     h = math.floor(h + 0.5)
     if h < 1 then
         h = 1
@@ -185,13 +172,10 @@ function Common.sync_preview_holder_height(window, holder, desired_height)
 
     if holder.height ~= h then
         holder.height = h
-        if window.layout ~= nil then
-            window:layout()
-        end
     end
 
-    local w = holder.control:GetWidth()
-    if type(w) == "number" and w > 0 then
+    local w = Common.require_number(holder.control:GetWidth(), "preview_holder_width")
+    if w > 0 then
         holder.control:SetSize(w, h)
     end
 
@@ -200,9 +184,6 @@ end
 
 function Common.ensure_gradient_preview(window, control_key)
     local holder = window.controls[control_key]
-    if holder == nil or holder.control == nil then
-        return nil
-    end
     if holder.gradient_preview ~= nil then
         return holder.gradient_preview
     end
@@ -231,14 +212,7 @@ end
 
 function Common.update_gradient_preview(window, control_key, full_color, mid_color, low_color)
     local holder = window.controls[control_key]
-    if holder == nil or holder.control == nil then
-        return
-    end
-
     local p = Common.ensure_gradient_preview(window, control_key)
-    if p == nil then
-        return
-    end
 
     local w, h = holder.control:GetSize()
     if w == nil or h == nil or w < 1 or h < 1 then

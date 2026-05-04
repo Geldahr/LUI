@@ -160,28 +160,6 @@ function SettingsTabbedPage:close_all_dropdowns()
     end)
 end
 
-function SettingsTabbedPage:load_pages(s, ui)
-    for i = 1, #self._sub_page_order do
-        local key = self._sub_page_order[i]
-        local module = key ~= nil and self._sub_page_modules[key] or nil
-        local page = key ~= nil and self._sub_pages[key] or nil
-        if module ~= nil and module.load ~= nil then
-            module.load(page, s, ui)
-        end
-    end
-end
-
-function SettingsTabbedPage:apply_pages(s, ui)
-    for i = 1, #self._sub_page_order do
-        local key = self._sub_page_order[i]
-        local module = key ~= nil and self._sub_page_modules[key] or nil
-        local page = key ~= nil and self._sub_pages[key] or nil
-        if module ~= nil and module.apply ~= nil then
-            module.apply(page, s, ui)
-        end
-    end
-end
-
 function SettingsTabbedPage:layout()
     local width, height = self:GetSize()
     if width == nil or height == nil or width < 1 or height < 1 then

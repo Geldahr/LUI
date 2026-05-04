@@ -154,9 +154,19 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "self", "vitals", "morale" })
     ensure_table_at(s, { "self", "vitals", "morale", "font" })
     ensure_table_at(s, { "self", "vitals", "morale", "color" })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels" })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels", 1 })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels", 1, "font" })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels", 2 })
+    ensure_table_at(s, { "self", "vitals", "morale", "labels", 2, "font" })
     ensure_table_at(s, { "self", "vitals", "power" })
     ensure_table_at(s, { "self", "vitals", "power", "font" })
     ensure_table_at(s, { "self", "vitals", "power", "color" })
+    ensure_table_at(s, { "self", "vitals", "power", "labels" })
+    ensure_table_at(s, { "self", "vitals", "power", "labels", 1 })
+    ensure_table_at(s, { "self", "vitals", "power", "labels", 1, "font" })
+    ensure_table_at(s, { "self", "vitals", "power", "labels", 2 })
+    ensure_table_at(s, { "self", "vitals", "power", "labels", 2, "font" })
     ensure_table_at(s, { "self", "vitals", "effects" })
     ensure_table_at(s, { "self", "vitals", "effects", "buffs" })
     ensure_table_at(s, { "self", "vitals", "effects", "buffs", "timer_font" })
@@ -168,12 +178,27 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "target", "vitals", "morale" })
     ensure_table_at(s, { "target", "vitals", "morale", "font" })
     ensure_table_at(s, { "target", "vitals", "morale", "color" })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels" })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels", 1 })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels", 1, "font" })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels", 2 })
+    ensure_table_at(s, { "target", "vitals", "morale", "labels", 2, "font" })
     ensure_table_at(s, { "target", "vitals", "power" })
     ensure_table_at(s, { "target", "vitals", "power", "font" })
     ensure_table_at(s, { "target", "vitals", "power", "color" })
+    ensure_table_at(s, { "target", "vitals", "power", "labels" })
+    ensure_table_at(s, { "target", "vitals", "power", "labels", 1 })
+    ensure_table_at(s, { "target", "vitals", "power", "labels", 1, "font" })
+    ensure_table_at(s, { "target", "vitals", "power", "labels", 2 })
+    ensure_table_at(s, { "target", "vitals", "power", "labels", 2, "font" })
     ensure_table_at(s, { "target", "vitals", "targets_target" })
     ensure_table_at(s, { "target", "vitals", "targets_target", "font" })
     ensure_table_at(s, { "target", "vitals", "targets_target", "color" })
+    ensure_table_at(s, { "target", "vitals", "targets_target", "labels" })
+    ensure_table_at(s, { "target", "vitals", "targets_target", "labels", 1 })
+    ensure_table_at(s, { "target", "vitals", "targets_target", "labels", 1, "font" })
+    ensure_table_at(s, { "target", "vitals", "targets_target", "labels", 2 })
+    ensure_table_at(s, { "target", "vitals", "targets_target", "labels", 2, "font" })
     ensure_table_at(s, { "target", "vitals", "effects" })
     ensure_table_at(s, { "target", "vitals", "effects", "buffs" })
     ensure_table_at(s, { "target", "vitals", "effects", "buffs", "timer_font" })
@@ -184,9 +209,19 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "target", "boss_vitals", "morale" })
     ensure_table_at(s, { "target", "boss_vitals", "morale", "font" })
     ensure_table_at(s, { "target", "boss_vitals", "morale", "color" })
+    ensure_table_at(s, { "target", "boss_vitals", "morale", "labels" })
+    ensure_table_at(s, { "target", "boss_vitals", "morale", "labels", 1 })
+    ensure_table_at(s, { "target", "boss_vitals", "morale", "labels", 1, "font" })
+    ensure_table_at(s, { "target", "boss_vitals", "morale", "labels", 2 })
+    ensure_table_at(s, { "target", "boss_vitals", "morale", "labels", 2, "font" })
     ensure_table_at(s, { "target", "boss_vitals", "power" })
     ensure_table_at(s, { "target", "boss_vitals", "power", "font" })
     ensure_table_at(s, { "target", "boss_vitals", "power", "color" })
+    ensure_table_at(s, { "target", "boss_vitals", "power", "labels" })
+    ensure_table_at(s, { "target", "boss_vitals", "power", "labels", 1 })
+    ensure_table_at(s, { "target", "boss_vitals", "power", "labels", 1, "font" })
+    ensure_table_at(s, { "target", "boss_vitals", "power", "labels", 2 })
+    ensure_table_at(s, { "target", "boss_vitals", "power", "labels", 2, "font" })
     ensure_table_at(s, { "target", "boss_vitals", "effects" })
     ensure_table_at(s, { "target", "boss_vitals", "effects", "buffs" })
     ensure_table_at(s, { "target", "boss_vitals", "effects", "buffs", "timer_font" })
@@ -200,14 +235,19 @@ function _G.ensure_loaded_settings()
     ensure_table_at(s, { "party", "morale" })
     ensure_table_at(s, { "party", "morale", "font" })
     ensure_table_at(s, { "party", "morale", "color" })
+    ensure_table_at(s, { "party", "morale", "labels" })
+    ensure_table_at(s, { "party", "morale", "labels", 1 })
+    ensure_table_at(s, { "party", "morale", "labels", 1, "font" })
+    ensure_table_at(s, { "party", "morale", "labels", 2 })
+    ensure_table_at(s, { "party", "morale", "labels", 2, "font" })
     ensure_table_at(s, { "party", "power" })
     ensure_table_at(s, { "party", "power", "font" })
     ensure_table_at(s, { "party", "power", "color" })
-    ensure_table_at(s, { "party", "effects" })
-    ensure_table_at(s, { "party", "effects", "buffs" })
-    ensure_table_at(s, { "party", "effects", "buffs", "timer_font" })
-    ensure_table_at(s, { "party", "effects", "debuffs" })
-    ensure_table_at(s, { "party", "effects", "debuffs", "timer_font" })
+    ensure_table_at(s, { "party", "power", "labels" })
+    ensure_table_at(s, { "party", "power", "labels", 1 })
+    ensure_table_at(s, { "party", "power", "labels", 1, "font" })
+    ensure_table_at(s, { "party", "power", "labels", 2 })
+    ensure_table_at(s, { "party", "power", "labels", 2, "font" })
 
     ensure_table_at(s, { "assets", "tile" })
     ensure_table_at(s, { "assets", "layouts" })
@@ -246,9 +286,70 @@ function _G.ensure_loaded_settings()
         s.global.bestiary_capture = false
     end
 
+    local function default_label_x_offset(text_alignment, text_margin)
+        if text_alignment == LUI_ENUMS.text_alignment.LEFT then
+            return text_margin or 0
+        end
+        if text_alignment == LUI_ENUMS.text_alignment.RIGHT then
+            return -(text_margin or 0)
+        end
+        return 0
+    end
+
+    local function default_label_anchor(text_alignment)
+        if text_alignment == LUI_ENUMS.text_alignment.LEFT then
+            return LUI_ENUMS.vitals_label_anchor.LEFT
+        end
+        if text_alignment == LUI_ENUMS.text_alignment.RIGHT then
+            return LUI_ENUMS.vitals_label_anchor.RIGHT
+        end
+        return LUI_ENUMS.vitals_label_anchor.CENTER
+    end
+
+    local function ensure_vitals_label_defaults(label, default_enabled, default_text, source_font, source_alignment,
+                                                source_margin)
+        if label.enabled == nil then
+            label.enabled = default_enabled == true
+        end
+        if label.text == nil then
+            label.text = default_text or ""
+        end
+
+        if label.font.name == nil then
+            label.font.name = source_font.name
+        end
+        if label.font.size == nil then
+            label.font.size = source_font.size
+        end
+        if label.font.style == nil then
+            label.font.style = source_font.style
+        end
+        label.font.color = label.font.color or source_font.color
+        label.font.outline_color = label.font.outline_color or source_font.outline_color
+
+        if label.text_alignment == nil then
+            label.text_alignment = source_alignment or LUI_ENUMS.text_alignment.CENTER
+        end
+        if label.anchor == nil then
+            label.anchor = default_label_anchor(source_alignment)
+        end
+        if label.width_mode == nil then
+            label.width_mode = LUI_ENUMS.vitals_label_width_mode.FILL
+        end
+        if label.x_offset == nil then
+            label.x_offset = default_label_x_offset(source_alignment, source_margin)
+        end
+        if label.y_offset == nil then
+            label.y_offset = 0
+        end
+    end
+
     local function apply_vital_defaults(v, hud_key, is_target, morale_default, power_default, default_left, default_top,
                                         default_tt_left, default_tt_top, default_track_noncurable,
                                         default_frame_width)
+        if v.enabled == nil then
+            v.enabled = true
+        end
         v.frame.width = v.frame.width or default_frame_width or 250
         v.frame.border_width = v.frame.border_width or 1
         v.frame.incombat_opacity = v.frame.incombat_opacity or 1.0
@@ -323,37 +424,107 @@ function _G.ensure_loaded_settings()
         v.morale.text_margin = v.morale.text_margin or 4
         v.power.text_margin = v.power.text_margin or 4
 
-        v.effects.buffs.icon_size = v.effects.buffs.icon_size or 22
-        if v.effects.buffs.timer_font.name == nil then
-            v.effects.buffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
+        if hud_key == "self_vitals" or hud_key == "target_vitals" or hud_key == "boss_vitals" then
+            ensure_vitals_label_defaults(
+                v.morale.labels[1],
+                true,
+                v.morale.string_format,
+                v.morale.font,
+                v.morale.text_alignment,
+                v.morale.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.morale.labels[2],
+                false,
+                "",
+                v.morale.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[1],
+                true,
+                v.power.string_format,
+                v.power.font,
+                v.power.text_alignment,
+                v.power.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[2],
+                false,
+                "",
+                v.power.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
+        elseif hud_key == "party_vitals" then
+            ensure_vitals_label_defaults(
+                v.morale.labels[1],
+                true,
+                v.morale.string_format,
+                v.morale.font,
+                v.morale.text_alignment,
+                v.morale.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.morale.labels[2],
+                false,
+                "",
+                v.morale.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[1],
+                false,
+                v.power.string_format,
+                v.power.font,
+                v.power.text_alignment,
+                v.power.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[2],
+                false,
+                "",
+                v.power.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
         end
-        v.effects.buffs.timer_font.size = v.effects.buffs.timer_font.size or 10
-        if v.effects.buffs.timer_font.style == nil then
-            v.effects.buffs.timer_font.style = LUI_ENUMS.font_style.OUTLINE
-        end
-        v.effects.buffs.timer_font.color = v.effects.buffs.timer_font.color or Turbine.UI.Color(1, 1, 1, 1)
-        v.effects.buffs.timer_font.outline_color = v.effects.buffs.timer_font.outline_color or
-            Turbine.UI.Color(1, 0, 0, 0)
 
-        v.effects.debuffs.icon_size = v.effects.debuffs.icon_size or 31
-        if v.effects.debuffs.timer_font.name == nil then
-            v.effects.debuffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
-        end
-        v.effects.debuffs.timer_font.size = v.effects.debuffs.timer_font.size or 14
-        if v.effects.debuffs.timer_font.style == nil then
-            v.effects.debuffs.timer_font.style = LUI_ENUMS.font_style.OUTLINE
-        end
-        v.effects.debuffs.timer_font.color = v.effects.debuffs.timer_font.color or Turbine.UI.Color(1, 1, 1, 1)
-        v.effects.debuffs.timer_font.outline_color = v.effects.debuffs.timer_font.outline_color or
-            Turbine.UI.Color(1, 0, 0, 0)
-        if v.effects.debuffs.track_curable == nil then
-            v.effects.debuffs.track_curable = true
-        end
-        if v.effects.debuffs.track_noncurable == nil then
-            if default_track_noncurable == nil then
-                v.effects.debuffs.track_noncurable = true
-            else
-                v.effects.debuffs.track_noncurable = default_track_noncurable
+        if v.effects ~= nil then
+            v.effects.buffs.icon_size = v.effects.buffs.icon_size or 22
+            if v.effects.buffs.timer_font.name == nil then
+                v.effects.buffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
+            end
+            v.effects.buffs.timer_font.size = v.effects.buffs.timer_font.size or 10
+            if v.effects.buffs.timer_font.style == nil then
+                v.effects.buffs.timer_font.style = LUI_ENUMS.font_style.OUTLINE
+            end
+            v.effects.buffs.timer_font.color = v.effects.buffs.timer_font.color or Turbine.UI.Color(1, 1, 1, 1)
+            v.effects.buffs.timer_font.outline_color = v.effects.buffs.timer_font.outline_color or
+                Turbine.UI.Color(1, 0, 0, 0)
+
+            v.effects.debuffs.icon_size = v.effects.debuffs.icon_size or 31
+            if v.effects.debuffs.timer_font.name == nil then
+                v.effects.debuffs.timer_font.name = LUI_ENUMS.font_name.VERDANA
+            end
+            v.effects.debuffs.timer_font.size = v.effects.debuffs.timer_font.size or 14
+            if v.effects.debuffs.timer_font.style == nil then
+                v.effects.debuffs.timer_font.style = LUI_ENUMS.font_style.OUTLINE
+            end
+            v.effects.debuffs.timer_font.color = v.effects.debuffs.timer_font.color or Turbine.UI.Color(1, 1, 1, 1)
+            v.effects.debuffs.timer_font.outline_color = v.effects.debuffs.timer_font.outline_color or
+                Turbine.UI.Color(1, 0, 0, 0)
+            if v.effects.debuffs.track_curable == nil then
+                v.effects.debuffs.track_curable = true
+            end
+            if v.effects.debuffs.track_noncurable == nil then
+                if default_track_noncurable == nil then
+                    v.effects.debuffs.track_noncurable = true
+                else
+                    v.effects.debuffs.track_noncurable = default_track_noncurable
+                end
             end
         end
         v.frame.effects_height = v.frame.effects_height or 200
@@ -362,6 +533,9 @@ function _G.ensure_loaded_settings()
         end
 
         if is_target and v.targets_target ~= nil then
+            if v.targets_target.enabled == nil then
+                v.targets_target.enabled = true
+            end
             v.targets_target.width = v.targets_target.width or v.frame.width or 250
             v.targets_target.height = v.targets_target.height or v.power.height or 26
             v.targets_target.border_width = v.targets_target.border_width or v.frame.border_width
@@ -391,6 +565,22 @@ function _G.ensure_loaded_settings()
                 v.targets_target.text_alignment = LUI_ENUMS.text_alignment.CENTER
             end
             v.targets_target.text_margin = v.targets_target.text_margin or 4
+            ensure_vitals_label_defaults(
+                v.targets_target.labels[1],
+                true,
+                v.targets_target.text,
+                v.targets_target.font,
+                v.targets_target.text_alignment,
+                v.targets_target.text_margin
+            )
+            ensure_vitals_label_defaults(
+                v.targets_target.labels[2],
+                false,
+                "",
+                v.targets_target.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0
+            )
 
             local tc = v.targets_target.color
             if tc.background == nil then tc.background = v.morale.color.background end
@@ -480,7 +670,7 @@ function _G.ensure_loaded_settings()
     local bestiary = s.bestiary
     ensure_ui_window("bestiary", _pos_x(900), _pos_y(180), 700, 520)
 
-    ensure_ui_window("config", _pos_x(450), _pos_y(51), 1005, 1011)
+    ensure_ui_window("config", _pos_x(450), _pos_y(51), 1000, 900)
     ensure_ui_window("travel", _pos_x(980), _pos_y(180), 420, 520)
 
     local tv = s.target.vitals
@@ -519,8 +709,6 @@ function _G.ensure_loaded_settings()
     pv.power.height = pv.power.height or 16
     pv.morale.font.size = pv.morale.font.size or 12
     pv.power.font.size = pv.power.font.size or 10
-    pv.effects.buffs.icon_size = pv.effects.buffs.icon_size or 32
-    pv.effects.debuffs.icon_size = pv.effects.debuffs.icon_size or 36
     apply_vital_defaults(s.party, "party_vitals", false, "%name%\\n%c / %t", "%c / %t", party_left, party_top, nil,
         nil, true, 110)
 

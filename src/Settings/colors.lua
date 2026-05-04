@@ -40,6 +40,22 @@ function _G.fix_colors()
         power.font.color = to_color(power.font.color)
         power.font.outline_color = to_color(power.font.outline_color)
 
+        if morale.labels ~= nil then
+            for i = 1, #morale.labels do
+                local label = morale.labels[i]
+                label.font.color = to_color(label.font.color)
+                label.font.outline_color = to_color(label.font.outline_color)
+            end
+        end
+
+        if power.labels ~= nil then
+            for i = 1, #power.labels do
+                local label = power.labels[i]
+                label.font.color = to_color(label.font.color)
+                label.font.outline_color = to_color(label.font.outline_color)
+            end
+        end
+
         effects.buffs.timer_font.color = to_color(effects.buffs.timer_font.color)
         effects.buffs.timer_font.outline_color = to_color(effects.buffs.timer_font.outline_color)
 
@@ -54,10 +70,14 @@ function _G.fix_colors()
 
     if s.target ~= nil and s.target.vitals ~= nil and s.target.vitals.targets_target ~= nil then
         local tt = s.target.vitals.targets_target
-        local target_morale = s.target.vitals.morale
 
-        tt.font.color = to_color(tt.font.color)
-        tt.font.outline_color = to_color(tt.font.outline_color)
+        if tt.labels ~= nil then
+            for i = 1, #tt.labels do
+                local label = tt.labels[i]
+                label.font.color = to_color(label.font.color)
+                label.font.outline_color = to_color(label.font.outline_color)
+            end
+        end
 
         local c = tt.color
         c.background = to_color(c.background)

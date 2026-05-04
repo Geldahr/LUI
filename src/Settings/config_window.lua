@@ -19,6 +19,8 @@ local FIELD_FONT_NAME = "Verdana"
 local FIELD_FONT_SIZE = 12
 local HINT_FONT_NAME = "Verdana"
 local HINT_FONT_SIZE = 10
+local CONFIG_MIN_WIDTH = 900
+local CONFIG_MIN_HEIGHT = 800
 local function _scaled_size(value)
     return value * _G.settings.global.scale
 end
@@ -78,7 +80,16 @@ function ConfigWindow:Constructor()
     self:hide()
 
     self:_update_ui_scale_metrics()
-    self:set_minimum_size(_scaled_int(222), _scaled_int(185))
+    local display_width, display_height = Turbine.UI.Display.GetSize()
+    local minimum_width = _scaled_int(CONFIG_MIN_WIDTH)
+    local minimum_height = _scaled_int(CONFIG_MIN_HEIGHT)
+    if minimum_width > display_width then
+        minimum_width = display_width
+    end
+    if minimum_height > display_height then
+        minimum_height = display_height
+    end
+    self:set_minimum_size(minimum_width, minimum_height)
 
     local content = Turbine.UI.Control()
     content:SetMouseVisible(true)
@@ -188,18 +199,30 @@ function ConfigWindow:Constructor()
     self.SizeChanged = function()
         LuiWindow._layout(self)
         self:layout()
+        self:_refresh_active_preview()
     end
 
     self.VisibleChanged = function()
         if self:IsVisible() == false then
+            self:update_saved_geometry()
             self:hide_hint()
             self:hide_confirmation_dialog()
             self:close_all_dropdowns()
+            self._pending_open_main_key = nil
+            self._pending_open_sub_key = nil
             return
         end
 
         self:layout()
-        self:_activate_active_page()
+        if type(self._pending_open_main_key) == "string" then
+            local main_key = self._pending_open_main_key
+            local preferred_sub_key = self._pending_open_sub_key
+            self._pending_open_main_key = nil
+            self._pending_open_sub_key = nil
+            self:select_main_tab(main_key, preferred_sub_key)
+        else
+            self:_activate_active_page()
+        end
     end
 
     self:apply_saved_geometry()
@@ -219,10 +242,10 @@ function ConfigWindow:_update_ui_scale_metrics()
     self.settings_font = _scaled_font(SETTINGS_FONT_NAME, SETTINGS_FONT_SIZE)
     self.tab_font = _scaled_font(TAB_FONT_NAME, TAB_FONT_SIZE)
 
-    self.margin_left = _scaled_int(15)
-    self.margin_top = _scaled_int(11)
-    self.margin_right = _scaled_int(15)
-    self.margin_bottom = _scaled_int(15)
+    self.margin_left = _scaled_int(6)
+    self.margin_top = _scaled_int(6)
+    self.margin_right = _scaled_int(6)
+    self.margin_bottom = _scaled_int(6)
 
     self.button_bar_height = _scaled_int(30)
     self.row_height = _scaled_int(34)
@@ -242,7 +265,16 @@ end
 function ConfigWindow:apply_ui_scale()
     LuiWindow.apply_settings(self, _G.settings.global.scale)
     self:_update_ui_scale_metrics()
-    self:set_minimum_size(_scaled_int(222), _scaled_int(185))
+    local display_width, display_height = Turbine.UI.Display.GetSize()
+    local minimum_width = _scaled_int(CONFIG_MIN_WIDTH)
+    local minimum_height = _scaled_int(CONFIG_MIN_HEIGHT)
+    if minimum_width > display_width then
+        minimum_width = display_width
+    end
+    if minimum_height > display_height then
+        minimum_height = display_height
+    end
+    self:set_minimum_size(minimum_width, minimum_height)
     local scale = _G.settings.global.scale
 
     if self.tooltip ~= nil then
@@ -342,12 +374,20 @@ end
 function ConfigWindow:open(main_key, preferred_sub_key)
     self:apply_saved_geometry()
     self:load_from_settings()
-    if type(main_key) == "string" then
-        self:select_main_tab(main_key, preferred_sub_key)
+
+    if self:IsVisible() == true then
+        if type(main_key) == "string" then
+            self:select_main_tab(main_key, preferred_sub_key)
+        else
+            self:_activate_active_page()
+        end
+        self:show()
+        self:layout()
+    else
+        self._pending_open_main_key = type(main_key) == "string" and main_key or nil
+        self._pending_open_sub_key = type(main_key) == "string" and preferred_sub_key or nil
+        self:show()
     end
-    self:show()
-    self:layout()
-    self:_activate_active_page()
 end
 
 function ConfigWindow:bring_to_front()
@@ -415,6 +455,35 @@ function ConfigWindow:build_controls()
         LUI_ENUMS.text_alignment.RIGHT,
     }
 
+    local vitals_label_anchor_labels = {
+        TR["Top Left"],
+        TR["Top"],
+        TR["Top Right"],
+        TR["Left"],
+        TR["Center"],
+        TR["Right"],
+        TR["Bottom Left"],
+        TR["Bottom"],
+        TR["Bottom Right"],
+    }
+    local vitals_label_anchor_values = {
+        LUI_ENUMS.vitals_label_anchor.TOP_LEFT,
+        LUI_ENUMS.vitals_label_anchor.TOP,
+        LUI_ENUMS.vitals_label_anchor.TOP_RIGHT,
+        LUI_ENUMS.vitals_label_anchor.LEFT,
+        LUI_ENUMS.vitals_label_anchor.CENTER,
+        LUI_ENUMS.vitals_label_anchor.RIGHT,
+        LUI_ENUMS.vitals_label_anchor.BOTTOM_LEFT,
+        LUI_ENUMS.vitals_label_anchor.BOTTOM,
+        LUI_ENUMS.vitals_label_anchor.BOTTOM_RIGHT,
+    }
+
+    local vitals_label_width_mode_labels = { TR["Auto"], TR["Fill"] }
+    local vitals_label_width_mode_values = {
+        LUI_ENUMS.vitals_label_width_mode.AUTO,
+        LUI_ENUMS.vitals_label_width_mode.FILL,
+    }
+
     local abbrev_digits_labels = { "3", "4" }
     local abbrev_digits_values = { LUI_ENUMS.abbrev_digits.DIGITS_3, LUI_ENUMS.abbrev_digits.DIGITS_4 }
     local abbrev_width_labels = { "3", "4" }
@@ -473,6 +542,10 @@ function ConfigWindow:build_controls()
         side_values = side_values,
         text_alignment_labels = text_alignment_labels,
         text_alignment_values = text_alignment_values,
+        vitals_label_anchor_labels = vitals_label_anchor_labels,
+        vitals_label_anchor_values = vitals_label_anchor_values,
+        vitals_label_width_mode_labels = vitals_label_width_mode_labels,
+        vitals_label_width_mode_values = vitals_label_width_mode_values,
         abbrev_digits_labels = abbrev_digits_labels,
         abbrev_digits_values = abbrev_digits_values,
         abbrev_width_labels = abbrev_width_labels,
@@ -518,9 +591,8 @@ function ConfigWindow:load_from_settings()
 
     if self.main_tab_bar ~= nil then
         self.main_tab_bar:each_widget(function(_, page)
-            if page ~= nil and page.load_from_settings ~= nil then
-                page:load_from_settings(s, self._ui)
-            end
+            page._settings = s
+            page:load()
         end)
     end
 
@@ -540,12 +612,14 @@ function ConfigWindow:refresh_runtime_settings()
     apply_drops_settings()
     apply_crafting_settings()
     apply_travel_settings()
+    _G.apply_lotro_vitals_handoff()
 
     self:apply_ui_scale()
     self:layout()
 
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.resize ~= nil then
+    if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:resize()
+        PLAYER_VITAL:apply_enabled_state()
     end
     if TARGET_VITAL ~= nil then
         TARGET_VITAL:resize()
@@ -602,9 +676,8 @@ function ConfigWindow:apply_changes(close_after)
 
     if self.main_tab_bar ~= nil then
         self.main_tab_bar:each_widget(function(_, page)
-            if page ~= nil and page.apply_to_settings ~= nil then
-                page:apply_to_settings(s, self._ui)
-            end
+            page._settings = s
+            page:save()
         end)
     end
 

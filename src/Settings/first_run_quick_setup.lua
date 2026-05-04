@@ -292,6 +292,7 @@ function FirstRunQuickSetup:Constructor(options)
     self.updating_scale_text = false
     self.closing = false
     self.create_profile_on_finish = options ~= nil and options.create_profile_on_finish == true
+    self.profile_name = options ~= nil and options.profile_name or nil
     self.previous_profile_id = self.create_profile_on_finish == true and _G.current_profile_id or nil
     self.created_profile_id = nil
     self.initial_settings = _G.DefaultLayouts.copy_table(_G.loaded_settings)
@@ -990,7 +991,12 @@ function FirstRunQuickSetup:ensure_finish_profile()
         return true
     end
 
-    local profile_id = create_configuration(_G.current_character_name, _G.loaded_settings)
+    local profile_name = self.profile_name
+    if type(profile_name) ~= "string" or string.len(profile_name) == 0 then
+        profile_name = _G.current_character_name
+    end
+
+    local profile_id = create_configuration(profile_name, _G.loaded_settings)
     if assign_character_profile(profile_id) ~= true then
         return false
     end

@@ -1,13 +1,80 @@
-import "LUI.src.Settings.Tabs.form_page"
+import "LUI.src.Settings.Tabs.feature_shell"
+import "LUI.src.Settings.Content.content"
+import "LUI.src.Settings.Content.tabs"
+import "LUI.src.Settings.Content.nested_tabs"
 
-local SettingsFormPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.form_page) or _G.SettingsFormPage or
-    SettingsFormPage
+local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
+local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
+local ConfigNestedTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_nested_tabs) or
+    ConfigNestedTabs
+local scaled_int = FeatureShell.scaled_int
+local PREVIEW_GAP = 10
+local PREVIEW_MIN_TOP_HEIGHT = 120
+local PREVIEW_MIN_HEIGHT = 100
 
-DropsPage = class(SettingsFormPage)
+local function _apply_color(ui, dest, hex)
+    local color = ui.hex_to_color(hex)
+    dest.R, dest.G, dest.B = color.R, color.G, color.B
+end
+
+local function _new_colors_section(window, refresh_preview, settings_getter)
+    local ui = window._ui
+
+    local hud = ConfigContent(window, 3, refresh_preview)
+    hud:add_line_edit("drops_hud_background_opacity", TR["Background opacity (0..1)"],
+        function(value)
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().hud.background_opacity = opacity
+            end
+        end,
+        function()
+            return tostring(settings_getter().hud.background_opacity)
+        end)
+    hud:add_color_picker("drops_hud_background_color", TR["Background color"],
+        function(value)
+            _apply_color(ui, settings_getter().hud.background_color, value)
+        end,
+        function()
+            return ui.color_to_hex(settings_getter().hud.background_color)
+        end)
+
+    local item = ConfigContent(window, 3, refresh_preview)
+    item:add_line_edit("drops_item_background_opacity", TR["Background opacity (0..1)"],
+        function(value)
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().item.background_opacity = opacity
+            end
+        end,
+        function()
+            return tostring(settings_getter().item.background_opacity)
+        end)
+    item:add_color_picker("drops_item_background_color", TR["Background color"],
+        function(value)
+            _apply_color(ui, settings_getter().item.background_color, value)
+        end,
+        function()
+            return ui.color_to_hex(settings_getter().item.background_color)
+        end)
+
+    local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.top,
+        FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
+    page:add_tab(TR["HUD"], "hud", hud)
+    page:add_tab(TR["Item"], "item", item)
+
+    return page
+end
+
+DropsPage = class(ConfigTabs)
 
 function DropsPage:Constructor(window)
-    SettingsFormPage.Constructor(self, window)
-    self.show_main_content_border = true
+    ConfigTabs.Constructor(self, window)
+    self.show_main_content_border = false
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
+    self._preview_default_height = 136
+    self.controls = self.controls or {}
 
     local flow_labels = { TR["Latest at top"], TR["Latest at bottom"] }
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
@@ -15,118 +82,157 @@ function DropsPage:Constructor(window)
     local align_values = { LUI_ENUMS.vertical_align.TOP, LUI_ENUMS.vertical_align.BOTTOM }
     local side_labels = { TR["Left"], TR["Right"] }
     local side_values = { LUI_ENUMS.side.LEFT, LUI_ENUMS.side.RIGHT }
-
-    self.refresh_preview = function()
-        self.window:update_drops_preview()
+    local refresh_preview = function()
+        window:update_drops_preview()
+    end
+    local settings_getter = function()
+        return self._settings.drops
     end
 
-    self:add_title(TR["Drops"])
+    local general = ConfigContent(window, 4, refresh_preview)
+    general:add_checkbox("drops_enabled", TR["Enabled"],
+        function(value)
+            settings_getter().enabled = value == true
+        end,
+        function()
+            return settings_getter().enabled == true
+        end, true)
+    general:add_row_break()
+    general:add_line_edit("drops_visible_duration", TR["Visible duration (s)"],
+        function(value)
+            local visible_duration = tonumber(value)
+            if visible_duration ~= nil then
+                settings_getter().visible_duration = visible_duration
+            end
+        end,
+        function()
+            return tostring(settings_getter().visible_duration)
+        end)
+    general:add_info(
+        TR["Carry-alls may bypass inventory item events. Those drops can appear without icon or hover and will be shown as text only."],
+        42)
+    self:add_tab(TR["General"], "general", general)
 
-    self:add_hr()
-    self:add_title(TR["General"])
-    self:add_checkbox("drops_enabled", TR["Enabled"], true)
-    self:add_text("drops_visible_duration", TR["Visible duration (s)"])
-    self:add_text("drops_width", TR["Width"])
-    self:add_text("drops_rows", TR["Rows"])
-    self:add_text("drops_icon_size", TR["Icon Size"])
-    self:add_dropdown("drops_flow", TR["Order"], flow_labels, flow_values)
-    self:add_dropdown("drops_align", TR["Align"], align_labels, align_values)
-    self:add_dropdown("drops_icon_side", TR["Icon position"], side_labels, side_values)
-    self:add_checkbox("drops_animations_enabled", TR["Animations"], true)
-    self:add_text("drops_move_duration", TR["Move duration (ms)"])
+    local layout = ConfigContent(window, 4, refresh_preview)
+    layout:add_line_edit("drops_width", TR["Width"],
+        function(value)
+            local width = tonumber(value)
+            if width ~= nil then
+                settings_getter().width = width
+            end
+        end,
+        function()
+            return tostring(settings_getter().width)
+        end)
+    layout:add_line_edit("drops_rows", TR["Rows"],
+        function(value)
+            local rows = tonumber(value)
+            if rows ~= nil then
+                settings_getter().rows = rows
+            end
+        end,
+        function()
+            return tostring(settings_getter().rows)
+        end)
+    layout:add_line_edit("drops_icon_size", TR["Icon Size"],
+        function(value)
+            local icon_size = tonumber(value)
+            if icon_size ~= nil then
+                settings_getter().icon_size = icon_size
+            end
+        end,
+        function()
+            return tostring(settings_getter().icon_size)
+        end)
+    layout:add_row_break()
+    layout:add_dropdown("drops_flow", TR["Order"], flow_labels, flow_values,
+        function(value)
+            settings_getter().flow = value
+        end,
+        function()
+            return settings_getter().flow
+        end)
+    layout:add_dropdown("drops_align", TR["Align"], align_labels, align_values,
+        function(value)
+            settings_getter().align = value
+        end,
+        function()
+            return settings_getter().align
+        end)
+    layout:add_dropdown("drops_icon_side", TR["Icon position"], side_labels, side_values,
+        function(value)
+            settings_getter().icon_side = value
+        end,
+        function()
+            return settings_getter().icon_side
+        end)
+    self:add_tab(TR["Layout"], "layout", layout)
 
-    self:add_break()
-    self:add_info(TR["Carry-alls may bypass inventory item events. Those drops can appear without icon or hover and will be shown as text only."], 42)
+    self:add_tab(TR["Colors"], "colors", _new_colors_section(window, refresh_preview, settings_getter))
 
-    self:add_hr()
-    self:add_title(TR["HUD"])
-    self:add_text("drops_hud_background_opacity", TR["Background opacity (0..1)"])
-    self:add_text("drops_hud_background_color", TR["Background color"], true)
+    local motion = ConfigContent(window, 4, refresh_preview)
+    motion:add_checkbox("drops_animations_enabled", TR["Animations"],
+        function(value)
+            settings_getter().animations_enabled = value == true
+        end,
+        function()
+            return settings_getter().animations_enabled == true
+        end, true)
+    motion:add_row_break()
+    motion:add_line_edit("drops_move_duration", TR["Move duration (ms)"],
+        function(value)
+            local move_duration = tonumber(value)
+            if move_duration ~= nil then
+                settings_getter().move_duration = move_duration
+            end
+        end,
+        function()
+            return tostring(settings_getter().move_duration)
+        end)
+    self:add_tab(TR["Motion"], "motion", motion)
 
-    self:add_hr()
-    self:add_title(TR["Item"])
-    self:add_text("drops_item_background_opacity", TR["Background opacity (0..1)"])
-    self:add_text("drops_item_background_color", TR["Background color"], true)
-
-    self:add_hr()
-    self:add_title(TR["Preview"])
-    self:add_custom("drops_preview", 136)
+    self.preview_holder = {
+        kind = "custom",
+        key = "drops_preview",
+        height = self._preview_default_height,
+    }
+    self.preview_holder.control = Turbine.UI.Control()
+    self.preview_holder.control:SetParent(self)
+    self.preview_holder.control:SetMouseVisible(false)
+    self.controls.drops_preview = self.preview_holder
 end
 
-function DropsPage:load(drops, ui)
-    self.loading = true
-    self.controls.drops_enabled.cb:SetChecked(drops.enabled == true)
-    self.controls.drops_visible_duration.tb:SetText(tostring(drops.visible_duration))
-    self.controls.drops_width.tb:SetText(tostring(drops.width))
-    self.controls.drops_rows.tb:SetText(tostring(drops.rows))
-    self.controls.drops_icon_size.tb:SetText(tostring(drops.icon_size))
-    self.controls.drops_flow:set_value(drops.flow)
-    self.controls.drops_align:set_value(drops.align)
-    self.controls.drops_icon_side:set_value(drops.icon_side)
-    self.controls.drops_animations_enabled.cb:SetChecked(drops.animations_enabled == true)
-    self.controls.drops_move_duration.tb:SetText(tostring(drops.move_duration))
-    self.controls.drops_hud_background_opacity.tb:SetText(tostring(drops.hud.background_opacity))
-    self.controls.drops_hud_background_color.tb:SetText(ui.color_to_hex(drops.hud.background_color))
-    self.controls.drops_item_background_opacity.tb:SetText(tostring(drops.item.background_opacity))
-    self.controls.drops_item_background_color.tb:SetText(ui.color_to_hex(drops.item.background_color))
-    self.loading = false
+function DropsPage:apply_ui_scale()
+    ConfigTabs.apply_ui_scale(self)
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 
-local function _apply_color(ui, dest, hex)
-    local c = ui.hex_to_color(hex)
-    if c ~= nil then
-        dest.R, dest.G, dest.B = c.R, c.G, c.B
-    end
-end
-
-function DropsPage:apply(drops, ui)
-    drops.enabled = self.controls.drops_enabled.cb:IsChecked() == true
-
-    local visible_duration = tonumber(self.controls.drops_visible_duration.tb:GetText())
-    if visible_duration ~= nil then
-        drops.visible_duration = visible_duration
+function DropsPage:layout()
+    local width, height = self:GetSize()
+    if width == nil or height == nil or width < 1 or height < 1 then
+        return
     end
 
-    local width = tonumber(self.controls.drops_width.tb:GetText())
-    if width ~= nil then
-        drops.width = width
+    local preview_h = self.preview_holder.height or self._preview_default_height
+    local preview_gap = scaled_int(PREVIEW_GAP)
+    local min_top_h = scaled_int(PREVIEW_MIN_TOP_HEIGHT)
+    local top_h = height - preview_h - preview_gap
+    if top_h < min_top_h then
+        top_h = min_top_h
+        preview_h = height - top_h - preview_gap
+    end
+    if preview_h < scaled_int(PREVIEW_MIN_HEIGHT) then
+        preview_h = scaled_int(PREVIEW_MIN_HEIGHT)
+        top_h = height - preview_h - preview_gap
+    end
+    if top_h < 1 then
+        top_h = 1
     end
 
-    local rows = tonumber(self.controls.drops_rows.tb:GetText())
-    if rows ~= nil then
-        drops.rows = rows
-    end
+    self.sub_tab_bar:SetPosition(0, 0)
+    self.sub_tab_bar:SetSize(width, top_h)
+    self.sub_tab_bar:refresh_layout()
 
-    local icon_size = tonumber(self.controls.drops_icon_size.tb:GetText())
-    if icon_size ~= nil then
-        drops.icon_size = icon_size
-    end
-    drops.flow = self.controls.drops_flow:get_value()
-    drops.align = self.controls.drops_align:get_value()
-    drops.icon_side = self.controls.drops_icon_side:get_value()
-    drops.animations_enabled = self.controls.drops_animations_enabled.cb:IsChecked() == true
-    local move_duration = tonumber(self.controls.drops_move_duration.tb:GetText())
-    if move_duration ~= nil then
-        drops.move_duration = move_duration
-    end
-
-    local hud_opacity = tonumber(self.controls.drops_hud_background_opacity.tb:GetText())
-    if hud_opacity ~= nil then
-        drops.hud.background_opacity = hud_opacity
-    end
-    _apply_color(ui, drops.hud.background_color, self.controls.drops_hud_background_color.tb:GetText())
-
-    local item_opacity = tonumber(self.controls.drops_item_background_opacity.tb:GetText())
-    if item_opacity ~= nil then
-        drops.item.background_opacity = item_opacity
-    end
-    _apply_color(ui, drops.item.background_color, self.controls.drops_item_background_color.tb:GetText())
-end
-
-function DropsPage:load_from_settings(s, ui)
-    self:load(s.drops, ui)
-end
-
-function DropsPage:apply_to_settings(s, ui)
-    self:apply(s.drops, ui)
+    self.preview_holder.control:SetPosition(0, top_h + preview_gap)
+    self.preview_holder.control:SetSize(width, preview_h)
 end

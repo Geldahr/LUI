@@ -119,42 +119,20 @@ function BossVitals:use_stacked_effects_layout()
     return raw_frame_width < 400 or raw_power_width > (raw_frame_width / 2)
 end
 
+function BossVitals:_uses_configurable_bar_labels()
+    return true
+end
+
 function BossVitals:apply_text_alignment()
-    local v = self:get_vitals_settings()
-
-    self.morale_label:SetTextAlignment(LUI_TO_LOTRO.text_alignment[v.morale.text_alignment] or
-        Turbine.UI.ContentAlignment.MiddleLeft)
-    self.power_label:SetTextAlignment(LUI_TO_LOTRO.text_alignment[v.power.text_alignment] or
-        Turbine.UI.ContentAlignment.MiddleLeft)
-
-    local frame_width = v.frame.width
-    local morale_margin = v.frame.border_width + v.morale.text_margin
-    local power_margin = v.frame.border_width + v.power.text_margin
-
-    local function apply_margin(label, width, margin, alignment)
-        if width < 1 then
-            width = 1
-        end
-        if alignment == LUI_ENUMS.text_alignment.LEFT then
-            label:SetPosition(margin, 0)
-            label:SetSize(math.max(1, width - margin), label:GetHeight())
-        elseif alignment == LUI_ENUMS.text_alignment.RIGHT then
-            label:SetPosition(0, 0)
-            label:SetSize(math.max(1, width - margin), label:GetHeight())
-        else
-            label:SetPosition(0, 0)
-            label:SetSize(width, label:GetHeight())
-        end
-    end
-
-    apply_margin(self.morale_label, frame_width, morale_margin, v.morale.text_alignment)
-    apply_margin(self.power_label, self.power_frame:GetWidth(), power_margin, v.power.text_alignment)
+    VitalsBase.apply_text_alignment(self)
 end
 
 function BossVitals:set_move_mode(enabled)
     VitalsBase.set_move_mode(self, enabled)
     self:_layout_effect_windows()
-    if self:get_loaded_vitals_settings().enabled ~= true then
+    if _G.loaded_settings.target.vitals.enabled ~= true then
+        self:SetVisible(false)
+    elseif self:get_loaded_vitals_settings().enabled ~= true then
         self:SetVisible(false)
     elseif enabled == true then
         self:SetVisible(true)
@@ -168,7 +146,7 @@ function BossVitals:self_power_changed()
     if v.power.hide == true then
         self.power_frame:SetVisible(false)
         self.power_border:SetVisible(false)
-        self.power_label:SetText("")
+        self:_clear_configurable_power_labels()
         self.power_bar:SetWidth(0)
         return
     end
@@ -179,9 +157,7 @@ function BossVitals:self_power_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(false)
         end
-        if self.power_label ~= nil then
-            self.power_label:SetText("")
-        end
+        self:_clear_configurable_power_labels()
         if self.power_bar ~= nil then
             self.power_bar:SetWidth(0)
         end
@@ -196,25 +172,18 @@ function BossVitals:self_power_changed()
         self.power_border:SetVisible(true)
         local percent = p / maxp
         local pct = math.floor((percent * 100) + 0.5)
-        local fmt = v.power.string_tokens
-        local fmt_text = v.power.string_format
-
-        if string.len((fmt_text:gsub("%s+", ""))) == 0 then
-            self.power_label:SetText("")
-        else
-            local level = ""
-            if self.entity.GetLevel ~= nil then
-                level = tostring(self.entity:GetLevel() or "")
-            end
-
-            self.power_label:SetText(lui_format_tokenized(fmt, {
-                c = lui_abbrev_number(p),
-                t = lui_abbrev_number(maxp),
-                p = tostring(pct) .. "%",
-                name = self.entity:GetName(),
-                level = level,
-            }))
+        local level = ""
+        if self.entity.GetLevel ~= nil then
+            level = tostring(self.entity:GetLevel() or "")
         end
+
+        self:_render_configurable_bar_labels("power", {
+            c = lui_abbrev_number(p),
+            t = lui_abbrev_number(maxp),
+            p = tostring(pct) .. "%",
+            name = self.entity:GetName(),
+            level = level,
+        })
 
         self.power_bar:SetWidth(math.floor((fill_width * percent) + 0.5))
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
@@ -222,7 +191,7 @@ function BossVitals:self_power_changed()
         self.power_background:SetBackColor(self:power_background_color(fill_color))
     else
         self.power_border:SetVisible(true)
-        self.power_label:SetText("")
+        self:_clear_configurable_power_labels()
         self.power_bar:SetWidth(fill_width)
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
         self.power_bar:SetBackColor(fill_color)
@@ -235,7 +204,7 @@ function BossVitals:self_wrath_changed()
     if v.power.hide == true then
         self.power_frame:SetVisible(false)
         self.power_border:SetVisible(false)
-        self.power_label:SetText("")
+        self:_clear_configurable_power_labels()
         self.power_bar:SetWidth(0)
         return
     end
@@ -247,25 +216,18 @@ function BossVitals:self_wrath_changed()
     local w = self.entity:GetClassAttributes():GetWrath()
     local percent = w / maxw
     local pct = math.floor((percent * 100) + 0.5)
-    local fmt = v.power.string_tokens
-    local fmt_text = v.power.string_format
-
-    if string.len((fmt_text:gsub("%s+", ""))) == 0 then
-        self.power_label:SetText("")
-    else
-        local level = ""
-        if self.entity.GetLevel ~= nil then
-            level = tostring(self.entity:GetLevel() or "")
-        end
-
-        self.power_label:SetText(lui_format_tokenized(fmt, {
-            c = lui_abbrev_number(w),
-            t = lui_abbrev_number(maxw),
-            p = tostring(pct) .. "%",
-            name = self.entity:GetName(),
-            level = level,
-        }))
+    local level = ""
+    if self.entity.GetLevel ~= nil then
+        level = tostring(self.entity:GetLevel() or "")
     end
+
+    self:_render_configurable_bar_labels("power", {
+        c = lui_abbrev_number(w),
+        t = lui_abbrev_number(maxw),
+        p = tostring(pct) .. "%",
+        name = self.entity:GetName(),
+        level = level,
+    })
 
     self.power_bar:SetWidth(math.floor((self._power_fill_width * percent) + 0.5))
     self.power_bar:SetBackColor(v.power.color.wrath)
@@ -302,8 +264,6 @@ function BossVitals:resize()
     self.bubble_bar:SetPosition(0, 0)
     self.bubble_bar:SetHeight(morale_inner_h)
     self.bubble_bar:SetBackColor(v.morale.color.bubble)
-    self.morale_label:SetPosition(0, 0)
-    self.morale_label:SetSize(frame_width, morale_h)
 
     local power_width = power_hidden == true and 0 or v.power.width
     if power_width < 0 then power_width = 0 end
@@ -481,7 +441,7 @@ function BossVitals:_layout_effect_windows()
         self._power_fill_width = 0
         self.power_frame:SetVisible(false)
         self.power_border:SetVisible(false)
-        self.power_label:SetText("")
+        self:_clear_configurable_power_labels()
         self.power_bar:SetWidth(0)
     else
         self.power_frame:SetVisible(true)
@@ -502,8 +462,6 @@ function BossVitals:_layout_effect_windows()
         self.power_background:SetBackColor(self:power_background_color(v.power.color.power))
         self.power_bar:SetPosition(0, 0)
         self.power_bar:SetHeight(power_inner_h)
-        self.power_label:SetPosition(0, 0)
-        self.power_label:SetSize(power_width, power_h)
     end
 
     if self.effects_top_border ~= nil then

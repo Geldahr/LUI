@@ -1,8 +1,9 @@
 local ACCOUNT_DATA_SCOPE = Turbine.DataScope.Account
 local SERVER_DATA_SCOPE = Turbine.DataScope.Server
+local CHARACTER_DATA_SCOPE = Turbine.DataScope.Character
 
 local ACCOUNT_DATA_KEY = "LUI_PROFILES"
-local SERVER_DATA_KEY = "LUI_CHARACTERS"
+local CHARACTER_DATA_KEY = "LUI_CHARACTER"
 local SERVER_ASSETS_CACHE_KEY = "LUI_ASSETS_CACHE"
 local SERVER_BESTIARY_CACHE_KEY = "LUI_BESTIARY_CACHE"
 
@@ -96,14 +97,14 @@ function _G.ensure_account_settings()
     end
 end
 
-function _G.ensure_server_settings()
-    if type(_G.server_settings) ~= "table" then
-        _G.server_settings = {}
+function _G.ensure_character_settings()
+    if type(_G.character_settings) ~= "table" then
+        _G.character_settings = {}
     end
 
-    local s = _G.server_settings
-    if type(s.characters) ~= "table" then
-        s.characters = {}
+    local s = _G.character_settings
+    if type(s.crafting) ~= "table" then
+        s.crafting = {}
     end
 end
 
@@ -283,7 +284,7 @@ end
 
 function _G.assign_character_profile(profile_id)
     _G.ensure_account_settings()
-    _G.ensure_server_settings()
+    _G.ensure_character_settings()
 
     local profile = _G.account_settings.profiles[profile_id]
     if type(profile) ~= "table" or type(profile.settings) ~= "table" then
@@ -291,12 +292,7 @@ function _G.assign_character_profile(profile_id)
     end
 
     local character_name = _G.current_character_name or _get_current_character_name()
-    local character_entry = _G.server_settings.characters[character_name]
-    if type(character_entry) ~= "table" then
-        character_entry = {}
-        _G.server_settings.characters[character_name] = character_entry
-    end
-    character_entry.profile_id = profile_id
+    _G.character_settings.profile_id = profile_id
 
     _G.current_character_name = character_name
     _G.current_profile_id = profile_id
@@ -396,7 +392,7 @@ end
 
 function _G.delete_configuration(profile_id)
     _G.ensure_account_settings()
-    _G.ensure_server_settings()
+    _G.ensure_character_settings()
 
     if _G.get_configuration_count() <= 1 then
         return false
@@ -409,13 +405,8 @@ function _G.delete_configuration(profile_id)
 
     _G.account_settings.profiles[profile_id] = nil
 
-    for character_name, entry in pairs(_G.server_settings.characters) do
-        if type(entry) == "table" and entry.profile_id == profile_id then
-            entry.profile_id = nil
-            if next(entry) == nil then
-                _G.server_settings.characters[character_name] = nil
-            end
-        end
+    if _G.character_settings.profile_id == profile_id then
+        _G.character_settings.profile_id = nil
     end
 
     if _G.current_profile_id == profile_id then
@@ -427,7 +418,7 @@ end
 
 function _G.save_settings()
     _G.ensure_account_settings()
-    _G.ensure_server_settings()
+    _G.ensure_character_settings()
 
     if _G.capture_runtime_geometry ~= nil then
         _G.capture_runtime_geometry()
@@ -436,7 +427,7 @@ function _G.save_settings()
     _sync_current_profile_settings()
 
     Turbine.PluginData.Save(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, _G.account_settings)
-    Turbine.PluginData.Save(SERVER_DATA_SCOPE, SERVER_DATA_KEY, _G.server_settings)
+    Turbine.PluginData.Save(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY, _G.character_settings)
 end
 
 function _G.capture_runtime_geometry()
@@ -509,7 +500,7 @@ end
 
 function _G.load_settings()
     _G.account_settings = Turbine.PluginData.Load(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY)
-    _G.server_settings = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_DATA_KEY)
+    _G.character_settings = Turbine.PluginData.Load(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY)
     _G.assets_cache = nil
     _G.assets_cache_loaded = false
     _G.assets_cache_loading = false
@@ -520,22 +511,19 @@ function _G.load_settings()
     _G.bestiary_cache_dirty = false
 
     _G.ensure_account_settings()
-    _G.ensure_server_settings()
+    _G.ensure_character_settings()
 
     _G.current_character_name = _get_current_character_name()
     _G.current_profile_id = nil
 
-    local character_entry = _G.server_settings.characters[_G.current_character_name]
-    local profile_id = nil
-    if type(character_entry) == "table" then
-        profile_id = character_entry.profile_id
-    end
+    local profile_id = _G.character_settings.profile_id
 
     local profile = nil
     if profile_id ~= nil then
         profile = _G.account_settings.profiles[profile_id]
         if type(profile) ~= "table" then
-            character_entry.profile_id = nil
+            _G.character_settings.profile_id = nil
+            profile_id = nil
         end
     end
 
