@@ -437,7 +437,13 @@ function _G.ensure_loaded_settings()
         if v.info.enabled == nil then
             v.info.enabled = false
         end
-        v.info.height = v.info.height or 26
+        if v.info.height == nil then
+            if hud_key == "party_vitals" then
+                v.info.height = 16
+            else
+                v.info.height = 26
+            end
+        end
         if v.info.opacity == nil then
             v.info.opacity = 1.0
         end
