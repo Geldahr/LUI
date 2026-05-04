@@ -232,8 +232,6 @@ function StandardVitalsPreview:Constructor(window, holder_key, prefix, name_text
     self.info_background = Turbine.UI.Control()
     self.info_background:SetParent(self.info_border)
     self.info_background:SetMouseVisible(false)
-    self.info_background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.info_background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 end
 
 function StandardVitalsPreview:update()
@@ -596,8 +594,7 @@ function StandardVitalsPreview:update()
         self.info_border:SetBackColor(border_color)
         self.info_background:SetPosition(border, border)
         self.info_background:SetSize(inner_w, inner_info_h)
-        self.info_background:SetBackColor(info_bg)
-        self.info_background:SetOpacity(info_opacity)
+        self.info_background:SetBackColor(lui_apply_opacity_to_color(info_bg, info_opacity))
     end
 
     local label_targets = {

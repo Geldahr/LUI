@@ -335,8 +335,7 @@ function BossVitals:resize()
     if info_inner_h < 1 then info_inner_h = 1 end
     self.info_background:SetPosition(border, border)
     self.info_background:SetSize(self.width, info_inner_h)
-    self.info_background:SetBackColor(v.info.color.background)
-    self.info_background:SetOpacity(v.info.opacity)
+    self.info_background:SetBackColor(lui_apply_opacity_to_color(v.info.color.background, v.info.opacity))
 
     local top_height = self:_layout_effect_windows() or 0
 

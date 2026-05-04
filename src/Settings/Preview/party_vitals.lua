@@ -195,8 +195,6 @@ function ConfigWindow:init_party_vitals_preview()
         m.info_background = Turbine.UI.Control()
         m.info_background:SetParent(m.info_border)
         m.info_background:SetMouseVisible(false)
-        m.info_background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-        m.info_background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
         table.insert(p.members, m)
     end
@@ -545,8 +543,7 @@ function ConfigWindow:update_party_vitals_preview()
                 m.info_border:SetBackColor(border_color)
                 m.info_background:SetPosition(border, border)
                 m.info_background:SetSize(inner_w, inner_info_h)
-                m.info_background:SetBackColor(info_bg)
-                m.info_background:SetOpacity(info_opacity)
+                m.info_background:SetBackColor(lui_apply_opacity_to_color(info_bg, info_opacity))
             end
         end
     end

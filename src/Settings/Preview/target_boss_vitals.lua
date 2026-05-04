@@ -196,8 +196,6 @@ function ConfigWindow:init_target_boss_vitals_preview()
     p.power_back:SetParent(p.power_border)
     p.power_fill:SetParent(p.power_back)
     p.info_back:SetParent(p.info_border)
-    p.info_back:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    p.info_back:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
     for i = 1, 2 do
         local label = UI.Widgets.LuiLabel()
@@ -510,8 +508,7 @@ function ConfigWindow:update_target_boss_vitals_preview()
         p.info_border:SetBackColor(border_color)
         p.info_back:SetPosition(border, border)
         p.info_back:SetSize(frame_w - (2 * border), info_h - (2 * border))
-        p.info_back:SetBackColor(info_back_color)
-        p.info_back:SetOpacity(info_opacity)
+        p.info_back:SetBackColor(lui_apply_opacity_to_color(info_back_color, info_opacity))
     end
 
     local label_targets = {
