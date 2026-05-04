@@ -412,7 +412,7 @@ function _G.ensure_loaded_settings()
 
         if v.morale.string_format == nil then
             v.morale.string_format = morale_default or
-                (is_target and "[%level%] %name%\\n%c / %t - %p" or "%c / %t - %p")
+                (is_target and "[%level%] %name%\\n%mc / %mt - %mp" or "%mc / %mt - %mp")
         end
         if v.background_matches_missing == nil then
             v.background_matches_missing = true
@@ -424,7 +424,7 @@ function _G.ensure_loaded_settings()
             v.morale.bubble_format = " - %b"
         end
         if v.power.string_format == nil then
-            v.power.string_format = power_default or "%c / %t - %p"
+            v.power.string_format = power_default or "%pc / %pt - %pp"
         end
         if v.morale.text_alignment == nil then
             v.morale.text_alignment = LUI_ENUMS.text_alignment.CENTER
@@ -748,13 +748,13 @@ function _G.ensure_loaded_settings()
         tv.morale.bubble_format = " - %b"
     end
 
-    apply_vital_defaults(s.self.vitals, "self_vitals", false, "%c / %t - %p", "%c / %t - %p", self_left, self_top,
+    apply_vital_defaults(s.self.vitals, "self_vitals", false, "%mc / %mt - %mp", "%pc / %pt - %pp", self_left, self_top,
         nil, nil, false, 250)
-    apply_vital_defaults(s.target.vitals, "target_vitals", true, "[%level%] %name%\\n%c / %t - %p", "%c / %t - %p",
+    apply_vital_defaults(s.target.vitals, "target_vitals", true, "[%level%] %name%\\n%mc / %mt - %mp", "%pc / %pt - %pp",
         target_left,
         target_top, tt_left, tt_top, true, 250)
-    apply_vital_defaults(s.target.boss_vitals, "boss_vitals", false, "[%level%] %name%\\n%c / %t",
-        "%c / %t - %p", boss_left, boss_top, nil, nil, true, 800)
+    apply_vital_defaults(s.target.boss_vitals, "boss_vitals", false, "[%level%] %name%\\n%mc / %mt",
+        "%pc / %pt - %pp", boss_left, boss_top, nil, nil, true, 800)
 
     local bv = s.target.boss_vitals
     if bv.enabled == nil then
@@ -779,7 +779,7 @@ function _G.ensure_loaded_settings()
     pv.power.height = pv.power.height or 16
     pv.morale.font.size = pv.morale.font.size or 12
     pv.power.font.size = pv.power.font.size or 10
-    apply_vital_defaults(s.party, "party_vitals", false, "%name%\\n%c / %t", "%c / %t", party_left, party_top, nil,
+    apply_vital_defaults(s.party, "party_vitals", false, "%name%\\n%mc / %mt", "%pc / %pt", party_left, party_top, nil,
         nil, true, 110)
 
     local pli = s.party.leader_icon

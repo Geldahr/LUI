@@ -153,7 +153,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 		{
 			["morale"] =
 			{
-				["string_format"] = "%c / %t - %p",
+				["string_format"] = "%mc / %mt - %mp",
 				["color"] =
 				{
 					["gradient"] = true,
@@ -257,7 +257,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			},
 			["power"] =
 			{
-				["string_format"] = "%c / %t - %p",
+				["string_format"] = "%pc / %pt - %pp",
 				["height"] = 26.000000,
 				["color"] =
 				{
@@ -383,7 +383,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 		},
 		["power"] =
 		{
-			["string_format"] = "%c / %t",
+			["string_format"] = "%pc / %pt",
 			["height"] = 16.000000,
 			["color"] =
 			{
@@ -487,7 +487,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 		},
 		["morale"] =
 		{
-			["string_format"] = "%name%\\n%c / %t",
+			["string_format"] = "%name%\\n%mc / %mt",
 			["color"] =
 			{
 				["gradient"] = true,
@@ -768,7 +768,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 				},
 				["background_dimming"] = 50.000000,
 				["height"] = 34.000000,
-				["string_format"] = "[%level%] %name%\\n%c / %t",
+				["string_format"] = "[%level%] %name%\\n%mc / %mt",
 				["text_alignment"] = 2.000000,
 				["background_matches_missing"] = false
 			},
@@ -948,7 +948,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			},
 			["morale"] =
 			{
-				["string_format"] = "[%level%] %name%\\n%c / %t - %p",
+				["string_format"] = "[%level%] %name%\\n%mc / %mt - %mp",
 				["color"] =
 				{
 					["gradient"] = true,
@@ -1068,7 +1068,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 			},
 			["power"] =
 			{
-				["string_format"] = "%c / %t - %p",
+				["string_format"] = "%pc / %pt - %pp",
 				["height"] = 26.000000,
 				["color"] =
 				{

@@ -536,17 +536,20 @@ function ConfigWindow:build_controls()
 
     local vital_format_help = table.concat({
         TR["Text template tokens:"],
-        TR["  %c = current value"],
-        TR["  %t = total / maximum value"],
-        TR["  %p = percent (e.g. 73%)"],
+        TR["  %mc = current morale"],
+        TR["  %mt = maximum morale"],
+        TR["  %mp = morale percent (e.g. 73%)"],
         TR["  %b = bubble value (temporary morale)"],
         TR["  %B = bubble format output (only when bubble > 0)"],
+        TR["  %pc = current power / wrath"],
+        TR["  %pt = maximum power / wrath"],
+        TR["  %pp = power / wrath percent (e.g. 73%)"],
         TR["  %name% = entity name"],
         TR["  %level% = entity level"],
         "",
         TR["Set the text to empty to hide the label."],
         TR["You can use \\n for a new line."],
-        TR["Example: [%level%] %name%\n%c / %t - %p"],
+        TR["Example: [%level%] %name%\n%mc / %mt - %mp"],
     }, "\n")
 
     local bubble_format_help = table.concat({

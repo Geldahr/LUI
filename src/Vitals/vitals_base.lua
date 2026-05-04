@@ -659,6 +659,79 @@ function VitalsBase:_render_configurable_bar_labels(bar_key, context)
     end
 end
 
+function VitalsBase:_render_all_configurable_bar_labels(context)
+    self:_render_configurable_bar_labels("morale", context)
+    self:_render_configurable_bar_labels("power", context)
+end
+
+function VitalsBase:_build_vitals_label_context()
+    local ctx = {
+        name = "",
+        level = "",
+        mc = "-",
+        mt = "-",
+        mp = "-",
+        b = "",
+        B = "",
+        pc = "-",
+        pt = "-",
+        pp = "-",
+    }
+
+    if self.entity == nil then
+        return ctx
+    end
+
+    if self.entity.GetName ~= nil then
+        ctx.name = tostring(self.entity:GetName() or "")
+    end
+    if self.entity.GetLevel ~= nil then
+        ctx.level = tostring(self.entity:GetLevel() or "")
+    end
+
+    if self.entity.GetMaxMorale ~= nil and self.entity.GetMorale ~= nil then
+        local maxm = self.entity:GetMaxMorale() or 0
+        local m = self.entity:GetMorale() or 0
+        if maxm > 0 then
+            ctx.mc = lui_abbrev_number(m)
+            ctx.mt = lui_abbrev_number(maxm)
+            ctx.mp = tostring(math.floor((((m / maxm) * 100)) + 0.5)) .. "%"
+
+            local bubble = 0
+            if self.entity.GetTemporaryMorale ~= nil then
+                bubble = self.entity:GetTemporaryMorale() or 0
+            end
+            if bubble > 0 then
+                local bubble_fmt = self:get_vitals_settings().morale.bubble_tokens
+                ctx.b = lui_abbrev_number(bubble)
+                ctx.B = lui_format_tokenized(bubble_fmt, {
+                    b = ctx.b,
+                })
+            end
+        end
+    end
+
+    local is_wrath = self.entity.GetClass ~= nil and self.entity:GetClass() == Turbine.Gameplay.Class.Beorning
+    if is_wrath == true and self.entity.GetClassAttributes ~= nil and self.entity:GetClassAttributes() ~= nil
+        and self.entity:GetClassAttributes().GetWrath ~= nil then
+        local maxw = 100
+        local w = self.entity:GetClassAttributes():GetWrath() or 0
+        ctx.pc = lui_abbrev_number(w)
+        ctx.pt = lui_abbrev_number(maxw)
+        ctx.pp = tostring(math.floor((((w / maxw) * 100)) + 0.5)) .. "%"
+    elseif self.entity.GetMaxPower ~= nil and self.entity.GetPower ~= nil then
+        local maxp = self.entity:GetMaxPower() or 0
+        local p = self.entity:GetPower() or 0
+        if maxp > 0 then
+            ctx.pc = lui_abbrev_number(p)
+            ctx.pt = lui_abbrev_number(maxp)
+            ctx.pp = tostring(math.floor((((p / maxp) * 100)) + 0.5)) .. "%"
+        end
+    end
+
+    return ctx
+end
+
 function VitalsBase:_set_configurable_morale_fallback(text)
     if self.morale_labels == nil then
         return
@@ -786,23 +859,31 @@ function VitalsBase:self_bubble_changed()
     if self.entity == nil or self.entity.GetMaxMorale == nil or self.entity.GetMaxTemporaryMorale == nil then
         return
     end
-    local frame = self:get_vitals_settings().frame
     local b = self.entity:GetTemporaryMorale() or 0
 
     if b <= 0 then
         self.bubble_bar:SetVisible(false)
+        if self:_uses_configurable_bar_labels() == true then
+            self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        end
         return
     end
 
     local maxm = self.entity:GetMaxMorale() or 0
     if maxm <= 0 then
         self.bubble_bar:SetVisible(false)
+        if self:_uses_configurable_bar_labels() == true then
+            self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        end
         return
     end
 
     local bubble_w = math.floor(((b / maxm) * self.width) + 0.5)
     if bubble_w <= 0 then
         self.bubble_bar:SetVisible(false)
+        if self:_uses_configurable_bar_labels() == true then
+            self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        end
         return
     end
     if bubble_w > self.width then bubble_w = self.width end
@@ -830,6 +911,9 @@ function VitalsBase:self_bubble_changed()
     self.bubble_bar:SetLeft(left_inner)
     self.bubble_bar:SetWidth(bubble_w)
     self.bubble_bar:SetVisible(true)
+    if self:_uses_configurable_bar_labels() == true then
+        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+    end
 end
 
 function VitalsBase:self_morale_changed()
@@ -849,38 +933,10 @@ function VitalsBase:self_morale_changed()
         local pct = math.floor((percent * 100) + 0.5)
 
         local fmt = v.morale.string_tokens
-        local bubble_fmt = v.morale.bubble_tokens
-
-        local level = ""
-        if self.entity.GetLevel ~= nil then
-            level = tostring(self.entity:GetLevel() or "")
-        end
-
-        local bubble = 0
-        if self.entity.GetTemporaryMorale ~= nil then
-            bubble = self.entity:GetTemporaryMorale() or 0
-        end
-        local bubble_text = ""
-        if bubble > 0 then
-            bubble_text = lui_abbrev_number(bubble)
-        end
-
-        local ctx = {
-            c = lui_abbrev_number(m),
-            t = lui_abbrev_number(maxm),
-            p = tostring(pct) .. "%",
-            b = bubble_text,
-            B = "",
-            name = self.entity:GetName(),
-            level = level,
-        }
-
-        if bubble > 0 and #bubble_fmt > 0 then
-            ctx.B = lui_format_tokenized(bubble_fmt, { b = ctx.b })
-        end
+        local ctx = self:_build_vitals_label_context()
 
         if self:_uses_configurable_bar_labels() == true then
-            self:_render_configurable_bar_labels("morale", ctx)
+            self:_render_all_configurable_bar_labels(ctx)
         else
             self:_set_single_bar_label_text("morale", lui_format_tokenized(fmt, ctx))
         end
@@ -954,20 +1010,8 @@ function VitalsBase:self_power_changed()
             self.power_border:SetVisible(true)
         end
         local percent = p / maxp
-        local pct = math.floor((percent * 100) + 0.5)
         if self:_uses_configurable_bar_labels() == true then
-            local level = ""
-            if self.entity.GetLevel ~= nil then
-                level = tostring(self.entity:GetLevel() or "")
-            end
-
-            self:_render_configurable_bar_labels("power", {
-                c = lui_abbrev_number(p),
-                t = lui_abbrev_number(maxp),
-                p = tostring(pct) .. "%",
-                name = self.entity:GetName(),
-                level = level,
-            })
+            self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
         else
             local fmt = v.power.string_tokens
             local fmt_text = v.power.string_format
@@ -975,18 +1019,7 @@ function VitalsBase:self_power_changed()
             if string.len((fmt_text:gsub("%s+", ""))) == 0 then
                 self:_set_single_bar_label_text("power", "")
             else
-                local level = ""
-                if self.entity.GetLevel ~= nil then
-                    level = tostring(self.entity:GetLevel() or "")
-                end
-
-                self:_set_single_bar_label_text("power", lui_format_tokenized(fmt, {
-                    c = lui_abbrev_number(p),
-                    t = lui_abbrev_number(maxp),
-                    p = tostring(pct) .. "%",
-                    name = self.entity:GetName(),
-                    level = level,
-                }))
+                self:_set_single_bar_label_text("power", lui_format_tokenized(fmt, self:_build_vitals_label_context()))
             end
         end
         self.power_bar:SetWidth(self.width * percent)
@@ -998,7 +1031,7 @@ function VitalsBase:self_power_changed()
             self.power_border:SetVisible(true)
         end
         if self:_uses_configurable_bar_labels() == true then
-            self:_clear_configurable_power_labels()
+            self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
         else
             self:_set_single_bar_label_text("power", "")
         end
@@ -1018,20 +1051,8 @@ function VitalsBase:self_wrath_changed()
     local w = self.entity:GetClassAttributes():GetWrath()
 
     local percent = w / maxw
-    local pct = math.floor((percent * 100) + 0.5)
     if self:_uses_configurable_bar_labels() == true then
-        local level = ""
-        if self.entity.GetLevel ~= nil then
-            level = tostring(self.entity:GetLevel() or "")
-        end
-
-        self:_render_configurable_bar_labels("power", {
-            c = lui_abbrev_number(w),
-            t = lui_abbrev_number(maxw),
-            p = tostring(pct) .. "%",
-            name = self.entity:GetName(),
-            level = level,
-        })
+        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
     else
         local fmt = v.power.string_tokens
         local fmt_text = v.power.string_format
@@ -1039,18 +1060,7 @@ function VitalsBase:self_wrath_changed()
         if string.len((fmt_text:gsub("%s+", ""))) == 0 then
             self:_set_single_bar_label_text("power", "")
         else
-            local level = ""
-            if self.entity.GetLevel ~= nil then
-                level = tostring(self.entity:GetLevel() or "")
-            end
-
-            self:_set_single_bar_label_text("power", lui_format_tokenized(fmt, {
-                c = lui_abbrev_number(w),
-                t = lui_abbrev_number(maxw),
-                p = tostring(pct) .. "%",
-                name = self.entity:GetName(),
-                level = level,
-            }))
+            self:_set_single_bar_label_text("power", lui_format_tokenized(fmt, self:_build_vitals_label_context()))
         end
     end
     self.power_bar:SetWidth(self.width * percent)

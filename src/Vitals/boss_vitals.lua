@@ -194,19 +194,7 @@ function BossVitals:self_power_changed()
     if maxp > 0 then
         self.power_border:SetVisible(true)
         local percent = p / maxp
-        local pct = math.floor((percent * 100) + 0.5)
-        local level = ""
-        if self.entity.GetLevel ~= nil then
-            level = tostring(self.entity:GetLevel() or "")
-        end
-
-        self:_render_configurable_bar_labels("power", {
-            c = lui_abbrev_number(p),
-            t = lui_abbrev_number(maxp),
-            p = tostring(pct) .. "%",
-            name = self.entity:GetName(),
-            level = level,
-        })
+        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
 
         self.power_bar:SetWidth(math.floor((fill_width * percent) + 0.5))
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
@@ -214,7 +202,7 @@ function BossVitals:self_power_changed()
         self.power_background:SetBackColor(self:power_background_color(fill_color))
     else
         self.power_border:SetVisible(true)
-        self:_clear_configurable_power_labels()
+        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
         self.power_bar:SetWidth(fill_width)
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
         self.power_bar:SetBackColor(fill_color)
@@ -238,19 +226,7 @@ function BossVitals:self_wrath_changed()
     local maxw = 100
     local w = self.entity:GetClassAttributes():GetWrath()
     local percent = w / maxw
-    local pct = math.floor((percent * 100) + 0.5)
-    local level = ""
-    if self.entity.GetLevel ~= nil then
-        level = tostring(self.entity:GetLevel() or "")
-    end
-
-    self:_render_configurable_bar_labels("power", {
-        c = lui_abbrev_number(w),
-        t = lui_abbrev_number(maxw),
-        p = tostring(pct) .. "%",
-        name = self.entity:GetName(),
-        level = level,
-    })
+    self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
 
     self.power_bar:SetWidth(math.floor((self._power_fill_width * percent) + 0.5))
     self.power_bar:SetBackColor(v.power.color.wrath)

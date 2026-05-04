@@ -617,16 +617,6 @@ function StandardVitalsPreview:update()
         }
     end
 
-    _render_preview_vital_labels(window, prefix, "morale", self.morale_labels, raw_scale, label_targets, {
-        name = self.name_text,
-        level = self.level_text,
-        c = lui_abbrev_number(morale_cur),
-        t = lui_abbrev_number(morale_max),
-        p = morale_pct_text,
-        b = bubble_text,
-        B = bubble_formatted,
-    })
-
     self.power_border:SetPosition(0, power_top)
     self.power_border:SetSize(frame_w, power_h)
     self.power_border:SetBackColor(border_color)
@@ -644,13 +634,21 @@ function StandardVitalsPreview:update()
     local power_cur = math.floor(power_max * power_percent + 0.5)
     local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
 
-    _render_preview_vital_labels(window, prefix, "power", self.power_labels, raw_scale, label_targets, {
+    local label_context = {
         name = self.name_text,
         level = self.level_text,
-        c = lui_abbrev_number(power_cur),
-        t = lui_abbrev_number(power_max),
-        p = power_pct_text,
-    })
+        mc = lui_abbrev_number(morale_cur),
+        mt = lui_abbrev_number(morale_max),
+        mp = morale_pct_text,
+        b = bubble_text,
+        B = bubble_formatted,
+        pc = lui_abbrev_number(power_cur),
+        pt = lui_abbrev_number(power_max),
+        pp = power_pct_text,
+    }
+
+    _render_preview_vital_labels(window, prefix, "morale", self.morale_labels, raw_scale, label_targets, label_context)
+    _render_preview_vital_labels(window, prefix, "power", self.power_labels, raw_scale, label_targets, label_context)
 
     lui_clear_number_abbrev_preview_settings()
 end

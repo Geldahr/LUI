@@ -529,27 +529,29 @@ function ConfigWindow:update_target_boss_vitals_preview()
         } or nil,
     }
 
-    _render_preview_boss_labels(self, "morale", p.morale_labels, raw_scale, label_targets, {
+    local label_context = {
         name = "The Watcher in the Water",
         level = "150",
-        c = lui_abbrev_number(morale_cur),
-        t = lui_abbrev_number(morale_max),
-        p = tostring(math.floor(morale_percent * 100 + 0.5)) .. "%",
+        mc = lui_abbrev_number(morale_cur),
+        mt = lui_abbrev_number(morale_max),
+        mp = tostring(math.floor(morale_percent * 100 + 0.5)) .. "%",
         b = bubble_text,
         B = bubble_formatted,
-    })
+        pc = "-",
+        pt = "-",
+        pp = "-",
+    }
 
     if power_hidden ~= true then
         local power_max = 120000
         local power_cur = math.floor(power_max * power_percent + 0.5)
-        _render_preview_boss_labels(self, "power", p.power_labels, raw_scale, label_targets, {
-            name = "The Watcher in the Water",
-            level = "150",
-            c = lui_abbrev_number(power_cur),
-            t = lui_abbrev_number(power_max),
-            p = tostring(math.floor(power_percent * 100 + 0.5)) .. "%",
-        })
+        label_context.pc = lui_abbrev_number(power_cur)
+        label_context.pt = lui_abbrev_number(power_max)
+        label_context.pp = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
     end
+
+    _render_preview_boss_labels(self, "morale", p.morale_labels, raw_scale, label_targets, label_context)
+    _render_preview_boss_labels(self, "power", p.power_labels, raw_scale, label_targets, label_context)
 
     local buff_timer_font_name = _require_control_enum(self.controls, "target_boss_buff_timer_font_name")
     local buff_timer_font_size = _preview_scaled_number(raw_scale,

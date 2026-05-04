@@ -460,18 +460,21 @@ function ConfigWindow:update_party_vitals_preview()
                 bubble_text = lui_abbrev_number(bubble_cur)
             end
             local morale_pct_text = tostring(math.floor(morale_percent * 100 + 0.5)) .. "%"
-            local ctx = {
-                c = lui_abbrev_number(morale_cur),
-                t = lui_abbrev_number(morale_max),
-                p = morale_pct_text,
+            local label_context = {
+                mc = lui_abbrev_number(morale_cur),
+                mt = lui_abbrev_number(morale_max),
+                mp = morale_pct_text,
                 b = bubble_text,
                 B = "",
+                pc = "-",
+                pt = "-",
+                pp = "-",
                 name = TR["Player "] .. tostring(i),
                 level = "150",
             }
 
             if bubble_cur > 0 and string.len(bubble_fmt) > 0 then
-                ctx.B = lui_format_tokenized(bubble_fmt_tokens, { b = ctx.b })
+                label_context.B = lui_format_tokenized(bubble_fmt_tokens, { b = label_context.b })
             end
 
             local label_targets = {
@@ -491,9 +494,6 @@ function ConfigWindow:update_party_vitals_preview()
                     height = info_h,
                 } or nil,
             }
-
-            _render_preview_vital_labels(self, "party", "morale", m.morale_labels, raw_scale, label_targets, ctx)
-
             m.power_border:SetPosition(0, power_y)
             m.power_border:SetSize(frame_w, power_h)
             m.power_border:SetBackColor(border_color)
@@ -525,13 +525,13 @@ function ConfigWindow:update_party_vitals_preview()
             local power_max = 30000
             local power_cur = math.floor(power_max * power_percent + 0.5)
             local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
-            _render_preview_vital_labels(self, "party", "power", m.power_labels, raw_scale, label_targets, {
-                c = lui_abbrev_number(power_cur),
-                t = lui_abbrev_number(power_max),
-                p = power_pct_text,
-                name = TR["Player "] .. tostring(i),
-                level = "150",
-            })
+            label_context.pc = lui_abbrev_number(power_cur)
+            label_context.pt = lui_abbrev_number(power_max)
+            label_context.pp = power_pct_text
+            _render_preview_vital_labels(self, "party", "morale", m.morale_labels, raw_scale, label_targets,
+                label_context)
+            _render_preview_vital_labels(self, "party", "power", m.power_labels, raw_scale, label_targets,
+                label_context)
 
             m.info_border:SetVisible(info_h > 0)
             m.info_background:SetVisible(info_h > 0)
