@@ -244,14 +244,6 @@ local function _build_info_form(page, prefix, get)
         function(value)
             get().info.opacity = value
         end)
-    page:add_row_break()
-    _add_color_field(page, prefix .. "_info_background_color", TR["Background Color"],
-        function()
-            return get().info.color.background
-        end,
-        function(color)
-            _set_color(get().info.color.background, color)
-        end, nil, true)
 end
 
 local function _add_targets_target_label_controls(page, label_index, label)
@@ -335,6 +327,14 @@ local function _build_standard_frame_colors_form(page, prefix, get)
         end,
         function(color)
             _set_color(get().frame.border_color, color)
+        end)
+    page:add_row_break()
+    _add_color_field(page, prefix .. "_info_background_color", TR["Info Background Color"],
+        function()
+            return get().info.color.background
+        end,
+        function(color)
+            _set_color(get().info.color.background, color)
         end)
 end
 
