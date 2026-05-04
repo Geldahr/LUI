@@ -816,13 +816,13 @@ local function _new_texts_section(window, refresh_preview_fn, prefix, get)
         _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 1, function()
             return get().morale.labels[1]
         end))
-    page:add_tab(TR["Label 2"], "morale_label2",
-        _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 2, function()
-            return get().morale.labels[2]
-        end))
-    page:add_tab(TR["Label 3"], "power_label1",
+    page:add_tab(TR["Label 2"], "power_label1",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "power", 1, function()
             return get().power.labels[1]
+        end))
+    page:add_tab(TR["Label 3"], "morale_label2",
+        _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 2, function()
+            return get().morale.labels[2]
         end))
     page:add_tab(TR["Label 4"], "power_label2",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "power", 2, function()
