@@ -70,10 +70,10 @@ function _G.lui_tokenize_format(fmt)
                 parts[parts_len] = { token = token }
                 i = k + 1
             else
-                local token = string.sub(fmt, j, j)
+                local token = string.sub(fmt, j, k - 1)
                 parts_len = parts_len + 1
                 parts[parts_len] = { token = token }
-                i = j + 1
+                i = k
             end
         else
             parts_len = parts_len + 1
