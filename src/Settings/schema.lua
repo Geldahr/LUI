@@ -455,17 +455,17 @@ function _G.ensure_loaded_settings()
             )
             ensure_vitals_label_defaults(
                 v.morale.labels[2],
-                false,
-                "",
-                v.morale.font,
-                LUI_ENUMS.text_alignment.CENTER,
-                0,
-                LUI_ENUMS.vitals_label_link.MORALE
+                true,
+                v.power.string_format,
+                v.power.font,
+                v.power.text_alignment,
+                v.power.text_margin,
+                LUI_ENUMS.vitals_label_link.POWER
             )
             ensure_vitals_label_defaults(
                 v.power.labels[1],
-                true,
-                v.power.string_format,
+                false,
+                "",
                 v.power.font,
                 v.power.text_alignment,
                 v.power.text_margin,
