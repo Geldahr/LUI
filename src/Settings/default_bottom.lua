@@ -425,6 +425,10 @@ _G.DEFAULT_LAYOUT_BOTTOM =
 				["size"] = 10.000000
 			}
 		},
+		["info"] =
+		{
+			["height"] = 16.000000
+		},
 		["effects"] =
 		{
 			["debuffs"] =
