@@ -77,6 +77,22 @@ local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
 
+local function _stack_height(section_heights, border_width)
+    local total = 0
+    local visible_count = 0
+    for i = 1, #section_heights do
+        local height = section_heights[i]
+        if type(height) == "number" and height > 0 then
+            total = total + height
+            visible_count = visible_count + 1
+        end
+    end
+    if visible_count > 1 then
+        total = total - (border_width * (visible_count - 1))
+    end
+    return total
+end
+
 local _dim_color = lui_dim_color
 local _gradient_morale_color = lui_gradient_morale_color
 local HUD_KEY_BY_VITAL = {
@@ -498,22 +514,6 @@ local function _slot_order(slot)
         return 2
     end
     return 1
-end
-
-local function _stack_height(section_heights, border_width)
-    local total = 0
-    local visible_count = 0
-    for i = 1, #section_heights do
-        local height = section_heights[i]
-        if type(height) == "number" and height > 0 then
-            total = total + height
-            visible_count = visible_count + 1
-        end
-    end
-    if visible_count > 1 then
-        total = total - (border_width * (visible_count - 1))
-    end
-    return total
 end
 
 function VitalsBase:get_empty_morale_text()
