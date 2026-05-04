@@ -321,6 +321,7 @@ _G.DEFAULT_LAYOUT_TOP =
 			{
 				["buffs"] =
 				{
+					["slot"] = 3.000000,
 					["icon_size"] = 22.000000,
 					["timer_font"] =
 					{
@@ -345,6 +346,7 @@ _G.DEFAULT_LAYOUT_TOP =
 				},
 				["debuffs"] =
 				{
+					["slot"] = 4.000000,
 					["icon_size"] = 31.000000,
 					["timer_font"] =
 					{
@@ -867,6 +869,7 @@ _G.DEFAULT_LAYOUT_TOP =
 				},
 				["buffs"] =
 				{
+					["slot"] = 3.000000,
 					["icon_size"] = 22.000000,
 					["timer_font"] =
 					{
@@ -921,6 +924,7 @@ _G.DEFAULT_LAYOUT_TOP =
 				},
 				["debuffs"] =
 				{
+					["slot"] = 4.000000,
 					["icon_size"] = 31.000000,
 					["timer_font"] =
 					{

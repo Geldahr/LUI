@@ -20,8 +20,7 @@ local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
 
-local function _render_preview_vital_label(window, prefix, bar_key, label_index, label, raw_scale, width, height,
-                                           default_font_size, context)
+local function _render_preview_vital_label(window, prefix, bar_key, label_index, label, raw_scale, targets, context)
     local controls = window.controls
     local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
     local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
@@ -36,12 +35,23 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
     local text_alignment = _require_control_enum(controls, key .. "_text_alignment")
     local anchor = _require_control_enum(controls, key .. "_anchor")
     local width_mode = _require_control_enum(controls, key .. "_width_mode")
+    local link_to = _require_control_enum(controls, key .. "_link_to")
     local font_name = _require_control_enum(controls, key .. "_font_name")
     local font_size = _preview_scaled_number(raw_scale, _require_control_number(controls, key .. "_font_size"))
     local font_style_enum = _require_control_enum(controls, key .. "_font_style")
+    local target = targets[link_to]
+
+    if target == nil then
+        label:SetText("")
+        label:SetVisible(false)
+        return
+    end
 
     local rendered_text = lui_format_tokenized(lui_tokenize_format(text), context)
 
+    if label:GetParent() ~= target.parent then
+        label:SetParent(target.parent)
+    end
     label:SetFont(_require_font(font_name, font_size))
     label:SetFontStyle(LUI_TO_LOTRO.font_style[font_style_enum])
     label:SetForeColor(_require_control_color(controls, key .. "_font_color"))
@@ -49,8 +59,8 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
 
     lui_vitals_layout_label(
         label,
-        width,
-        height,
+        target.width,
+        target.height,
         anchor,
         width_mode,
         text_alignment,
@@ -64,11 +74,9 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
     label:SetVisible(true)
 end
 
-local function _render_preview_vital_labels(window, prefix, bar_key, labels, raw_scale, width, height,
-                                            default_font_size, context)
+local function _render_preview_vital_labels(window, prefix, bar_key, labels, raw_scale, targets, context)
     for i = 1, #labels do
-        _render_preview_vital_label(window, prefix, bar_key, i, labels[i], raw_scale, width, height,
-            default_font_size, context)
+        _render_preview_vital_label(window, prefix, bar_key, i, labels[i], raw_scale, targets, context)
     end
 end
 
@@ -216,6 +224,14 @@ function StandardVitalsPreview:Constructor(window, holder_key, prefix, name_text
     for i = 1, 2 do
         self.power_labels[i] = _new_preview_vital_label(self.power_border, 9 + i)
     end
+
+    self.info_border = Turbine.UI.Control()
+    self.info_border:SetParent(self.root)
+    self.info_border:SetMouseVisible(false)
+
+    self.info_background = Turbine.UI.Control()
+    self.info_background:SetParent(self.info_border)
+    self.info_background:SetMouseVisible(false)
 end
 
 function StandardVitalsPreview:update()
@@ -243,10 +259,8 @@ function StandardVitalsPreview:update()
 
     local raw_effects_h = _require_control_number(controls, prefix .. "_effects_height")
     local effects_height = _preview_scaled_int(raw_scale, raw_effects_h)
-    local effects_half = effects_height / 2
-
-    local raw_effects_position = _require_control_enum(controls, prefix .. "_effects_position")
-    local effects_below = raw_effects_position == LUI_ENUMS.vitals_effects_position.BELOW
+    local buff_slot = _require_control_enum(controls, prefix .. "_buff_slot")
+    local debuff_slot = _require_control_enum(controls, prefix .. "_debuff_slot")
 
     local raw_buff_size = _require_control_number(controls, prefix .. "_buff_size")
     local raw_debuff_size = _require_control_number(controls, prefix .. "_debuff_size")
@@ -260,6 +274,7 @@ function StandardVitalsPreview:update()
     local debuff_cols = math.floor(frame_w / debuff_icon)
     if debuff_cols < 1 then debuff_cols = 1 end
 
+    local effects_half = effects_height / 2
     local buff_rows = math.floor(effects_half / buff_icon)
     if buff_rows < 1 then buff_rows = 1 end
     local debuff_rows = math.floor(effects_half / debuff_icon)
@@ -269,11 +284,19 @@ function StandardVitalsPreview:update()
     local max_debuffs = debuff_cols * debuff_rows
 
     local label_font = window.field_label_font
-    local info_h = _scaled_int(46)
+    local info_enabled = controls[prefix .. "_info_enabled"].cb:IsChecked() == true
+    local info_h = 0
+    if info_enabled == true then
+        info_h = _preview_scaled_int(raw_scale, _require_control_number(controls, prefix .. "_info_height"))
+        if info_h < 1 then info_h = 1 end
+    end
     local preview_border = 1
     local root_inner_h = effects_height + morale_h + power_h - border
+    if info_h > 0 then
+        root_inner_h = root_inner_h + info_h - border
+    end
     if root_inner_h < 1 then root_inner_h = 1 end
-    local desired_h_inner = info_h + root_inner_h + _scaled_int(9)
+    local desired_h_inner = root_inner_h + _scaled_int(9)
     local desired_h = desired_h_inner + (2 * preview_border)
     _sync_preview_holder_height(window, self.holder, desired_h)
 
@@ -285,50 +308,77 @@ function StandardVitalsPreview:update()
     local y = _scaled_int(4)
     if y < 0 then y = 0 end
 
-    local info_w = cw
-    if info_w < 1 then
-        info_w = frame_w
-    end
-    local info_font = _scaled_font(LUI_ENUMS.font_name.VERDANA, 13)
-    self.info_label:SetPosition(0, y)
-    self.info_label:SetSize(info_w, info_h)
-    self.info_label:SetFont(info_font)
-    self.info_label:SetForeColor(Turbine.UI.Color(0.85, 0.85, 0.85))
-    self.info_label:SetText(
-        TR["Buffs area auto-resizes to the number of rows, up to the max height. Debuffs fill the remaining effects height. Effects can be placed above Morale or below Power."]
-    )
-
-    y = y + info_h
+    self.info_label:SetText("")
+    self.info_label:SetVisible(false)
     self.outer:SetPosition(x, y)
     self.outer:SetSize(outer_w, root_outer_h)
     self.root:SetPosition(preview_border, preview_border)
     self.root:SetSize(frame_w, root_inner_h)
     _apply_preview_border(self, outer_w, root_outer_h)
 
-    local reverse_fill = effects_below ~= true
-    local effects_top = 0
-    local morale_top = effects_height
-    if effects_below == true then
-        morale_top = 0
-    end
-    local power_top = morale_top + morale_h - border
-    if effects_below == true then
-        effects_top = power_top + power_h
-    end
-
     local buff_area_h = effects_half
     local debuff_area_h = effects_half
 
-    if effects_below == true then
-        self.effects_buffs:SetPosition(0, effects_top)
-        self.effects_buffs:SetSize(frame_w, buff_area_h)
-        self.effects_debuffs:SetPosition(0, effects_top + buff_area_h)
-        self.effects_debuffs:SetSize(frame_w, debuff_area_h)
-    else
-        self.effects_debuffs:SetPosition(0, effects_top)
-        self.effects_debuffs:SetSize(frame_w, debuff_area_h)
-        self.effects_buffs:SetPosition(0, effects_top + debuff_area_h)
-        self.effects_buffs:SetSize(frame_w, buff_area_h)
+    local function slot_is_top(slot)
+        return slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR
+    end
+
+    local function slot_is_bottom(slot)
+        return slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_NEAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR
+    end
+
+    local function slot_order(slot)
+        if slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR then
+            return 2
+        end
+        return 1
+    end
+
+    local top_entries = {}
+    local bottom_entries = {}
+
+    local function add_entry(list, order, area, height)
+        list[#list + 1] = { order = order, area = area, height = height }
+    end
+
+    if slot_is_top(buff_slot) then
+        add_entry(top_entries, slot_order(buff_slot), self.effects_buffs, buff_area_h)
+    elseif slot_is_bottom(buff_slot) then
+        add_entry(bottom_entries, slot_order(buff_slot), self.effects_buffs, buff_area_h)
+    end
+    if slot_is_top(debuff_slot) then
+        add_entry(top_entries, slot_order(debuff_slot), self.effects_debuffs, debuff_area_h)
+    elseif slot_is_bottom(debuff_slot) then
+        add_entry(bottom_entries, slot_order(debuff_slot), self.effects_debuffs, debuff_area_h)
+    end
+
+    table.sort(top_entries, function(a, b) return a.order > b.order end)
+    table.sort(bottom_entries, function(a, b) return a.order < b.order end)
+
+    local top_height = 0
+    local cursor = 0
+    for i = 1, #top_entries do
+        local entry = top_entries[i]
+        entry.area:SetPosition(0, cursor)
+        entry.area:SetSize(frame_w, entry.height)
+        cursor = cursor + entry.height
+        top_height = top_height + entry.height
+    end
+
+    local morale_top = top_height
+    local power_top = morale_top + morale_h - border
+    local info_top = power_top + power_h - border
+    local bottom_start = power_top + power_h
+    if info_h > 0 then
+        bottom_start = info_top + info_h - border
+    end
+
+    cursor = bottom_start
+    for i = 1, #bottom_entries do
+        local entry = bottom_entries[i]
+        entry.area:SetPosition(0, cursor)
+        entry.area:SetSize(frame_w, entry.height)
+        cursor = cursor + entry.height
     end
 
     local debuff_label_h = 16
@@ -444,13 +494,15 @@ function StandardVitalsPreview:update()
 
     local debuff_times = { 8.4, 2.6 }
     layout_icons(self.debuff_icons, frame_w, debuff_area_h, debuff_icon, debuff_cols, debuff_times, debuff_timer_font,
-        debuff_timer_style, debuff_timer_color, debuff_timer_outline, reverse_fill)
+        debuff_timer_style, debuff_timer_color, debuff_timer_outline, slot_is_top(debuff_slot))
 
     local buff_times = { 6.2, 1.8 }
     layout_icons(self.buff_icons, frame_w, buff_area_h, buff_icon, buff_cols, buff_times, buff_timer_font,
-        buff_timer_style, buff_timer_color, buff_timer_outline, reverse_fill)
+        buff_timer_style, buff_timer_color, buff_timer_outline, slot_is_top(buff_slot))
 
     local morale_bg = _require_control_color(controls, prefix .. "_morale_background_color")
+    local info_bg = _require_control_color(controls, prefix .. "_info_background_color")
+    local info_opacity = _require_control_number(controls, prefix .. "_info_opacity")
     local ressource_bg_matches_missing = controls[prefix .. "_ressource_background_matches_missing"].cb:IsChecked() == true
     local ressource_bg_dimming = _require_control_number(controls, prefix .. "_ressource_background_dimming")
     local border_color = _require_control_color(controls, prefix .. "_border_color")
@@ -468,9 +520,11 @@ function StandardVitalsPreview:update()
     local inner_w = frame_w - (2 * border)
     local inner_morale_h = morale_h - (2 * border)
     local inner_power_h = power_h - (2 * border)
+    local inner_info_h = info_h - (2 * border)
     if inner_w < 1 then inner_w = 1 end
     if inner_morale_h < 1 then inner_morale_h = 1 end
     if inner_power_h < 1 then inner_power_h = 1 end
+    if inner_info_h < 1 then inner_info_h = 1 end
 
     local morale_percent = 0.67
     local bubble_percent = 0.20
@@ -533,7 +587,38 @@ function StandardVitalsPreview:update()
         bubble_formatted = lui_format_tokenized(bubble_fmt_tokens, { b = bubble_text })
     end
 
-    _render_preview_vital_labels(window, prefix, "morale", self.morale_labels, raw_scale, frame_w, morale_h, 16, {
+    self.info_border:SetVisible(info_h > 0)
+    if info_h > 0 then
+        self.info_border:SetPosition(0, info_top)
+        self.info_border:SetSize(frame_w, info_h)
+        self.info_border:SetBackColor(border_color)
+        self.info_background:SetPosition(border, border)
+        self.info_background:SetSize(inner_w, inner_info_h)
+        self.info_background:SetBackColor(info_bg)
+        self.info_background:SetOpacity(info_opacity)
+    end
+
+    local label_targets = {
+        [LUI_ENUMS.vitals_label_link.MORALE] = {
+            parent = self.morale_border,
+            width = frame_w,
+            height = morale_h,
+        },
+        [LUI_ENUMS.vitals_label_link.POWER] = {
+            parent = self.power_border,
+            width = frame_w,
+            height = power_h,
+        },
+    }
+    if info_h > 0 then
+        label_targets[LUI_ENUMS.vitals_label_link.INFO] = {
+            parent = self.info_border,
+            width = frame_w,
+            height = info_h,
+        }
+    end
+
+    _render_preview_vital_labels(window, prefix, "morale", self.morale_labels, raw_scale, label_targets, {
         name = self.name_text,
         level = self.level_text,
         c = lui_abbrev_number(morale_cur),
@@ -560,7 +645,7 @@ function StandardVitalsPreview:update()
     local power_cur = math.floor(power_max * power_percent + 0.5)
     local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
 
-    _render_preview_vital_labels(window, prefix, "power", self.power_labels, raw_scale, frame_w, power_h, 14, {
+    _render_preview_vital_labels(window, prefix, "power", self.power_labels, raw_scale, label_targets, {
         name = self.name_text,
         level = self.level_text,
         c = lui_abbrev_number(power_cur),

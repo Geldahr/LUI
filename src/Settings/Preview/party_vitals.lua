@@ -19,8 +19,7 @@ local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
 
-local function _render_preview_vital_label(window, prefix, bar_key, label_index, label, raw_scale, width, height,
-                                           default_font_size, context)
+local function _render_preview_vital_label(window, prefix, bar_key, label_index, label, raw_scale, targets, context)
     local controls = window.controls
     local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
     local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
@@ -35,12 +34,23 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
     local text_alignment = _require_control_enum(controls, key .. "_text_alignment")
     local anchor = _require_control_enum(controls, key .. "_anchor")
     local width_mode = _require_control_enum(controls, key .. "_width_mode")
+    local link_to = _require_control_enum(controls, key .. "_link_to")
     local font_name = _require_control_enum(controls, key .. "_font_name")
     local font_size = _preview_scaled_number(raw_scale, _require_control_number(controls, key .. "_font_size"))
     local font_style_enum = _require_control_enum(controls, key .. "_font_style")
+    local target = targets[link_to]
+
+    if target == nil then
+        label:SetText("")
+        label:SetVisible(false)
+        return
+    end
 
     local rendered_text = lui_format_tokenized(lui_tokenize_format(text), context)
 
+    if label:GetParent() ~= target.parent then
+        label:SetParent(target.parent)
+    end
     label:SetFont(_require_font(font_name, font_size))
     label:SetFontStyle(LUI_TO_LOTRO.font_style[font_style_enum])
     label:SetForeColor(_require_control_color(controls, key .. "_font_color"))
@@ -48,8 +58,8 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
 
     lui_vitals_layout_label(
         label,
-        width,
-        height,
+        target.width,
+        target.height,
         anchor,
         width_mode,
         text_alignment,
@@ -63,11 +73,9 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
     label:SetVisible(true)
 end
 
-local function _render_preview_vital_labels(window, prefix, bar_key, labels, raw_scale, width, height,
-                                            default_font_size, context)
+local function _render_preview_vital_labels(window, prefix, bar_key, labels, raw_scale, targets, context)
     for i = 1, #labels do
-        _render_preview_vital_label(window, prefix, bar_key, i, labels[i], raw_scale, width, height,
-            default_font_size, context)
+        _render_preview_vital_label(window, prefix, bar_key, i, labels[i], raw_scale, targets, context)
     end
 end
 
@@ -180,6 +188,14 @@ function ConfigWindow:init_party_vitals_preview()
             m.power_labels[j] = label
         end
 
+        m.info_border = Turbine.UI.Control()
+        m.info_border:SetParent(m.root)
+        m.info_border:SetMouseVisible(false)
+
+        m.info_background = Turbine.UI.Control()
+        m.info_background:SetParent(m.info_border)
+        m.info_background:SetMouseVisible(false)
+
         table.insert(p.members, m)
     end
 
@@ -220,8 +236,12 @@ function ConfigWindow:update_party_vitals_preview()
     local raw_power_h = _require_control_number(self.controls, "party_power_height")
     local morale_h = _preview_scaled_int(raw_scale, raw_morale_h)
     local power_h = _preview_scaled_int(raw_scale, raw_power_h)
+    local info_enabled = self.controls.party_info_enabled.cb:IsChecked() == true
+    local info_h = info_enabled == true and
+        _preview_scaled_int(raw_scale, _require_control_number(self.controls, "party_info_height")) or 0
     if morale_h < 10 then morale_h = 10 end
     if power_h < 10 then power_h = 10 end
+    if info_h < 0 then info_h = 0 end
 
     local icon_enabled = self.controls.party_class_icon_enabled.cb:IsChecked()
 
@@ -246,11 +266,17 @@ function ConfigWindow:update_party_vitals_preview()
     if leader_size > 50 then leader_size = 50 end
 
     local power_y = morale_h - border
+    local info_y = power_y + power_h - border
     local member_h = morale_h + power_h - border
+    if info_h > 0 then
+        member_h = member_h + info_h - border
+    end
     if member_h < 1 then member_h = 1 end
 
     local morale_bg = _require_control_color(self.controls, "party_morale_background_color")
     local border_color = _require_control_color(self.controls, "party_border_color")
+    local info_bg = _require_control_color(self.controls, "party_info_background_color")
+    local info_opacity = _require_control_number(self.controls, "party_info_opacity")
     local bubble_color = _require_control_color(self.controls, "party_morale_bubble_color")
     local neutral_color = _require_control_color(self.controls, "party_morale_color_neutral")
     local high_color = _require_control_color(self.controls, "party_morale_color_high")
@@ -448,8 +474,25 @@ function ConfigWindow:update_party_vitals_preview()
                 ctx.B = lui_format_tokenized(bubble_fmt_tokens, { b = ctx.b })
             end
 
-            _render_preview_vital_labels(self, "party", "morale", m.morale_labels, raw_scale, frame_w, morale_h, 12,
-                ctx)
+            local label_targets = {
+                [LUI_ENUMS.vitals_label_link.MORALE] = {
+                    parent = m.morale_border,
+                    width = frame_w,
+                    height = morale_h,
+                },
+                [LUI_ENUMS.vitals_label_link.POWER] = {
+                    parent = m.power_border,
+                    width = frame_w,
+                    height = power_h,
+                },
+                [LUI_ENUMS.vitals_label_link.INFO] = info_h > 0 and {
+                    parent = m.info_border,
+                    width = frame_w,
+                    height = info_h,
+                } or nil,
+            }
+
+            _render_preview_vital_labels(self, "party", "morale", m.morale_labels, raw_scale, label_targets, ctx)
 
             m.power_border:SetPosition(0, power_y)
             m.power_border:SetSize(frame_w, power_h)
@@ -482,13 +525,27 @@ function ConfigWindow:update_party_vitals_preview()
             local power_max = 30000
             local power_cur = math.floor(power_max * power_percent + 0.5)
             local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
-            _render_preview_vital_labels(self, "party", "power", m.power_labels, raw_scale, frame_w, power_h, 10, {
+            _render_preview_vital_labels(self, "party", "power", m.power_labels, raw_scale, label_targets, {
                 c = lui_abbrev_number(power_cur),
                 t = lui_abbrev_number(power_max),
                 p = power_pct_text,
                 name = TR["Player "] .. tostring(i),
                 level = "150",
             })
+
+            m.info_border:SetVisible(info_h > 0)
+            m.info_background:SetVisible(info_h > 0)
+            if info_h > 0 then
+                local inner_info_h = info_h - (2 * border)
+                if inner_info_h < 1 then inner_info_h = 1 end
+                m.info_border:SetPosition(0, info_y)
+                m.info_border:SetSize(frame_w, info_h)
+                m.info_border:SetBackColor(border_color)
+                m.info_background:SetPosition(border, border)
+                m.info_background:SetSize(inner_w, inner_info_h)
+                m.info_background:SetBackColor(info_bg)
+                m.info_background:SetOpacity(info_opacity)
+            end
         end
     end
 

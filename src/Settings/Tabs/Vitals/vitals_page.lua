@@ -165,6 +165,15 @@ local function _add_vitals_label_controls(page, prefix, bar_key, label_index, la
         end,
         page.vital_format_help, true)
     page:add_row_break()
+    _add_dropdown_field(page, key .. "_link_to", TR["Section"], page.vitals_label_link_labels,
+        page.vitals_label_link_values,
+        function()
+            return label().link_to
+        end,
+        function(value)
+            label().link_to = value
+        end, nil, true)
+    page:add_row_break()
     _add_dropdown_field(page, key .. "_anchor", TR["Anchor"], page.vitals_label_anchor_labels,
         page.vitals_label_anchor_values,
         function()
@@ -210,6 +219,39 @@ local function _add_vitals_label_controls(page, prefix, bar_key, label_index, la
             return label().font
         end,
         TR["Font"], TR["Font Size"], TR["Font Style"])
+end
+
+local function _build_info_form(page, prefix, get)
+    _add_checkbox_field(page, prefix .. "_info_enabled", TR["Enabled"],
+        function()
+            return get().info.enabled
+        end,
+        function(value)
+            get().info.enabled = value
+        end, true)
+    page:add_row_break()
+    _add_number_field(page, prefix .. "_info_height", TR["Height"],
+        function()
+            return get().info.height
+        end,
+        function(value)
+            get().info.height = value
+        end)
+    _add_number_field(page, prefix .. "_info_opacity", TR["Opacity"],
+        function()
+            return get().info.opacity
+        end,
+        function(value)
+            get().info.opacity = value
+        end)
+    page:add_row_break()
+    _add_color_field(page, prefix .. "_info_background_color", TR["Background Color"],
+        function()
+            return get().info.color.background
+        end,
+        function(color)
+            _set_color(get().info.color.background, color)
+        end, nil, true)
 end
 
 local function _add_targets_target_label_controls(page, label_index, label)
@@ -458,6 +500,15 @@ local function _build_standard_power_colors_form(page, prefix, get)
 end
 
 local function _build_buffs_form(page, prefix, get)
+    _add_dropdown_field(page, prefix .. "_buff_slot", TR["Buffs Slot"], page.vitals_effect_slot_labels,
+        page.vitals_effect_slot_values,
+        function()
+            return get().effects.buffs.slot
+        end,
+        function(value)
+            get().effects.buffs.slot = value
+        end)
+    page:add_row_break()
     _add_number_field(page, prefix .. "_buff_size", TR["Icon Size"],
         function()
             return get().effects.buffs.icon_size
@@ -474,6 +525,15 @@ local function _build_buffs_form(page, prefix, get)
 end
 
 local function _build_debuffs_form(page, prefix, get)
+    _add_dropdown_field(page, prefix .. "_debuff_slot", TR["Debuffs Slot"], page.vitals_effect_slot_labels,
+        page.vitals_effect_slot_values,
+        function()
+            return get().effects.debuffs.slot
+        end,
+        function(value)
+            get().effects.debuffs.slot = value
+        end)
+    page:add_row_break()
     _add_checkbox_field(page, prefix .. "_debuff_track_curable", TR["Track curable debuffs"],
         function()
             return get().effects.debuffs.track_curable
@@ -505,28 +565,28 @@ local function _build_debuffs_form(page, prefix, get)
 end
 
 local function _build_standard_text_colors_form(page, prefix, get)
-    page:add_title(TR["Morale 1"])
+    page:add_title(TR["Label 1"])
     _add_font_color_controls(page, prefix .. "_morale_label1",
         function()
             return get().morale.labels[1].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
-    page:add_title(TR["Morale 2"])
+    page:add_title(TR["Label 2"])
     _add_font_color_controls(page, prefix .. "_morale_label2",
         function()
             return get().morale.labels[2].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
-    page:add_title(TR["Power 1"])
+    page:add_title(TR["Label 3"])
     _add_font_color_controls(page, prefix .. "_power_label1",
         function()
             return get().power.labels[1].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
-    page:add_title(TR["Power 2"])
+    page:add_title(TR["Label 4"])
     _add_font_color_controls(page, prefix .. "_power_label2",
         function()
             return get().power.labels[2].font
@@ -752,19 +812,19 @@ end
 local function _new_texts_section(window, refresh_preview_fn, prefix, get)
     local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.left, NESTED_TAB_SCALE,
         NESTED_TAB_FONT_SIZE)
-    page:add_tab(TR["Morale 1"], "morale_label1",
+    page:add_tab(TR["Label 1"], "morale_label1",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 1, function()
             return get().morale.labels[1]
         end))
-    page:add_tab(TR["Morale 2"], "morale_label2",
+    page:add_tab(TR["Label 2"], "morale_label2",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 2, function()
             return get().morale.labels[2]
         end))
-    page:add_tab(TR["Power 1"], "power_label1",
+    page:add_tab(TR["Label 3"], "power_label1",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "power", 1, function()
             return get().power.labels[1]
         end))
-    page:add_tab(TR["Power 2"], "power_label2",
+    page:add_tab(TR["Label 4"], "power_label2",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "power", 2, function()
             return get().power.labels[2]
         end))
@@ -816,10 +876,6 @@ local function _new_self_unit_page(window, root)
     _add_number_field(frame, "self_effects_height", TR["Effects Height"], function() return get().frame.effects_height end,
         function(value) get().frame.effects_height = value end)
     frame:add_row_break()
-    _add_dropdown_field(frame, "self_effects_position", TR["Effects Position"], frame.vitals_effects_position_labels,
-        frame.vitals_effects_position_values, function() return get().frame.effects_position end,
-        function(value) get().frame.effects_position = value end)
-    frame:add_row_break()
     _add_number_field(frame, "self_incombat_opacity", TR["In-combat opacity"], function() return get().frame.incombat_opacity end,
         function(value) get().frame.incombat_opacity = value end)
     _add_number_field(frame, "self_outcombat_opacity", TR["Out-of-combat opacity"], function() return get().frame.outcombat_opacity end,
@@ -842,6 +898,10 @@ local function _new_self_unit_page(window, root)
     local power = ConfigContent(window, 4, page.refresh_preview)
     _build_standard_power_form(power, "self", get, false)
     page:add_tab(TR["Power / Wrath"], "power", power)
+
+    local info = ConfigContent(window, 4, page.refresh_preview)
+    _build_info_form(info, "self", get)
+    page:add_tab(TR["Info"], "info", info)
 
     page:add_tab(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "self", get))
     page:add_tab(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "self", get))
@@ -867,10 +927,6 @@ local function _new_target_unit_page(window, root)
     _add_number_field(frame, "target_effects_height", TR["Effects Height"], function() return get().frame.effects_height end,
         function(value) get().frame.effects_height = value end)
     frame:add_row_break()
-    _add_dropdown_field(frame, "target_effects_position", TR["Effects Position"], frame.vitals_effects_position_labels,
-        frame.vitals_effects_position_values, function() return get().frame.effects_position end,
-        function(value) get().frame.effects_position = value end)
-    frame:add_row_break()
     _add_number_field(frame, "target_incombat_opacity", TR["In-combat opacity"], function() return get().frame.incombat_opacity end,
         function(value) get().frame.incombat_opacity = value end)
     _add_number_field(frame, "target_outcombat_opacity", TR["Out-of-combat opacity"], function() return get().frame.outcombat_opacity end,
@@ -893,6 +949,10 @@ local function _new_target_unit_page(window, root)
     local power = ConfigContent(window, 4, page.refresh_preview)
     _build_standard_power_form(power, "target", get, false)
     page:add_tab(TR["Power / Wrath"], "power", power)
+
+    local info = ConfigContent(window, 4, page.refresh_preview)
+    _build_info_form(info, "target", get)
+    page:add_tab(TR["Info"], "info", info)
 
     page:add_tab(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "target", get))
     page:add_tab(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "target", get))
@@ -940,6 +1000,10 @@ local function _new_boss_unit_page(window, root)
     local power = ConfigContent(window, 4, page.refresh_preview)
     _build_standard_power_form(power, "target_boss", get, true)
     page:add_tab(TR["Power / Wrath"], "power", power)
+
+    local info = ConfigContent(window, 4, page.refresh_preview)
+    _build_info_form(info, "target_boss", get)
+    page:add_tab(TR["Info"], "info", info)
 
     page:add_tab(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "target_boss", get))
     page:add_tab(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "target_boss", get))
@@ -1032,6 +1096,10 @@ local function _new_party_unit_page(window, root)
     local power = ConfigContent(window, 4, page.refresh_preview)
     _build_standard_power_form(power, "party", get, false)
     page:add_tab(TR["Power / Wrath"], "power", power)
+
+    local info = ConfigContent(window, 4, page.refresh_preview)
+    _build_info_form(info, "party", get)
+    page:add_tab(TR["Info"], "info", info)
 
     page:add_tab(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "party", get))
 

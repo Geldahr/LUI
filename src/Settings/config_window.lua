@@ -510,6 +510,30 @@ function ConfigWindow:build_controls()
         LUI_ENUMS.vitals_effects_position.BELOW,
     }
 
+    local vitals_effect_slot_labels = {
+        TR["Top - Near Vitals"],
+        TR["Top - Far from Vitals"],
+        TR["Bottom - Near Vitals"],
+        TR["Bottom - Far from Vitals"],
+    }
+    local vitals_effect_slot_values = {
+        LUI_ENUMS.vitals_effect_slot.TOP_NEAR,
+        LUI_ENUMS.vitals_effect_slot.TOP_FAR,
+        LUI_ENUMS.vitals_effect_slot.BOTTOM_NEAR,
+        LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR,
+    }
+
+    local vitals_label_link_labels = {
+        TR["Morale"],
+        TR["Power / Wrath"],
+        TR["Info"],
+    }
+    local vitals_label_link_values = {
+        LUI_ENUMS.vitals_label_link.MORALE,
+        LUI_ENUMS.vitals_label_link.POWER,
+        LUI_ENUMS.vitals_label_link.INFO,
+    }
+
     local vital_format_help = table.concat({
         TR["Text template tokens:"],
         TR["  %c = current value"],
@@ -554,6 +578,10 @@ function ConfigWindow:build_controls()
         abbrev_method_values = abbrev_method_values,
         vitals_effects_position_labels = vitals_effects_position_labels,
         vitals_effects_position_values = vitals_effects_position_values,
+        vitals_effect_slot_labels = vitals_effect_slot_labels,
+        vitals_effect_slot_values = vitals_effect_slot_values,
+        vitals_label_link_labels = vitals_label_link_labels,
+        vitals_label_link_values = vitals_label_link_values,
         vital_format_help = vital_format_help,
         bubble_format_help = bubble_format_help,
         color_to_hex = _color_to_hex,
