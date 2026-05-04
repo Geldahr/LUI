@@ -55,6 +55,7 @@ function _G.rebuild_settings()
                 frame = {},
                 morale = { font = {}, color = {} },
                 power = { font = {}, color = {} },
+                info = { color = {} },
                 effects = {
                     buffs = { timer_font = {} },
                     debuffs = { timer_font = {} },
@@ -69,6 +70,7 @@ function _G.rebuild_settings()
                 frame = {},
                 morale = { font = {}, color = {} },
                 power = { font = {}, color = {} },
+                info = { color = {} },
                 targets_target = { font = {}, color = {}, labels = {} },
                 effects = {
                     buffs = { timer_font = {} },
@@ -79,6 +81,7 @@ function _G.rebuild_settings()
                 frame = {},
                 morale = { font = {}, color = {} },
                 power = { font = {}, color = {} },
+                info = { color = {} },
                 effects = {
                     buffs = { timer_font = {} },
                     debuffs = { timer_font = {} },
@@ -90,6 +93,7 @@ function _G.rebuild_settings()
             frame = {},
             morale = { font = {}, color = {} },
             power = { font = {}, color = {} },
+            info = { color = {} },
             layout = {},
             class_icon = {},
             leader_icon = {},
@@ -127,6 +131,7 @@ function _G.rebuild_settings()
         dst.enabled = src.enabled == true
         dst.text = src.text
         dst.tokens = lui_tokenize_format(dst.text)
+        dst.link_to = src.link_to
         dst.anchor = src.anchor
         dst.width_mode = src.width_mode
         dst.text_alignment = src.text_alignment
@@ -181,6 +186,10 @@ function _G.rebuild_settings()
         dst.power.text_alignment = src.power.text_alignment
         dst.morale.text_margin = scaled_int(src.morale.text_margin)
         dst.power.text_margin = scaled_int(src.power.text_margin)
+        dst.info.enabled = src.info.enabled == true
+        dst.info.height = scaled_int(src.info.height)
+        dst.info.opacity = src.info.opacity
+        dst.info.color.background = src.info.color.background
         if src.morale.labels ~= nil then
             dst.morale.labels = {
                 build_vital_label(src.morale.labels[1]),
@@ -198,7 +207,9 @@ function _G.rebuild_settings()
         dst.frame.effects_position = src.frame.effects_position
 
         if src.effects ~= nil then
+            dst.effects.buffs.slot = src.effects.buffs.slot
             dst.effects.buffs.icon_size = scaled_int(src.effects.buffs.icon_size)
+            dst.effects.debuffs.slot = src.effects.debuffs.slot
             dst.effects.debuffs.icon_size = scaled_int(src.effects.debuffs.icon_size)
 
             dst.effects.buffs.timer_font.name = src.effects.buffs.timer_font.name
