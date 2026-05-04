@@ -461,9 +461,9 @@ function BossVitals:_layout_effect_windows(bottom_start_override)
     local effects_max_h = self._effects_height or 0
     local bottom_start = bottom_start_override
     if type(bottom_start) ~= "number" then
-        if self.info_frame:GetVisible() == true then
+        if self.info_frame:IsVisible() == true then
             bottom_start = self.info_frame:GetTop() + self.info_frame:GetHeight() - v.frame.border_width
-        elseif self.power_frame:GetVisible() == true then
+        elseif self.power_frame:IsVisible() == true then
             bottom_start = self.power_frame:GetTop() + self.power_frame:GetHeight() - v.frame.border_width
         else
             bottom_start = self.morale_frame:GetTop() + self.morale_frame:GetHeight() - v.frame.border_width
