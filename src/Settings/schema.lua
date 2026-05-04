@@ -443,7 +443,7 @@ function _G.ensure_loaded_settings()
         end
         v.info.color.background = v.info.color.background or v.morale.color.background
 
-        if hud_key == "self_vitals" or hud_key == "target_vitals" or hud_key == "boss_vitals" then
+        if hud_key == "self_vitals" or hud_key == "target_vitals" then
             ensure_vitals_label_defaults(
                 v.morale.labels[1],
                 true,
@@ -466,6 +466,43 @@ function _G.ensure_loaded_settings()
                 v.power.labels[1],
                 true,
                 v.power.string_format,
+                v.power.font,
+                v.power.text_alignment,
+                v.power.text_margin,
+                LUI_ENUMS.vitals_label_link.POWER
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[2],
+                false,
+                "",
+                v.power.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0,
+                LUI_ENUMS.vitals_label_link.POWER
+            )
+        elseif hud_key == "boss_vitals" then
+            ensure_vitals_label_defaults(
+                v.morale.labels[1],
+                true,
+                v.morale.string_format,
+                v.morale.font,
+                v.morale.text_alignment,
+                v.morale.text_margin,
+                LUI_ENUMS.vitals_label_link.MORALE
+            )
+            ensure_vitals_label_defaults(
+                v.morale.labels[2],
+                false,
+                "",
+                v.morale.font,
+                LUI_ENUMS.text_alignment.CENTER,
+                0,
+                LUI_ENUMS.vitals_label_link.MORALE
+            )
+            ensure_vitals_label_defaults(
+                v.power.labels[1],
+                false,
+                "",
                 v.power.font,
                 v.power.text_alignment,
                 v.power.text_margin,
