@@ -539,6 +539,19 @@ function VitalsBase:_bar_frame_and_settings(bar_key)
     return self.power_frame, v.power
 end
 
+function VitalsBase:_frame_for_label_link(link_to)
+    if link_to == LUI_ENUMS.vitals_label_link.POWER then
+        return self.power_frame
+    end
+    if link_to == LUI_ENUMS.vitals_label_link.INFO then
+        if self:get_info_height() > 0 then
+            return self.info_frame
+        end
+        return nil
+    end
+    return self.morale_frame
+end
+
 function VitalsBase:_single_bar_label(bar_key)
     if bar_key == "morale" then
         return self.morale_label
@@ -597,15 +610,24 @@ function VitalsBase:_apply_configurable_bar_label_layout(bar_key)
         return
     end
 
-    local frame, settings = self:_bar_frame_and_settings(bar_key)
-    local width, height = frame:GetSize()
+    local _, settings = self:_bar_frame_and_settings(bar_key)
     local specs = settings.labels
     for i = 1, #controls do
         local label = controls[i]
         local spec = specs[i]
-        lui_vitals_layout_label(label, width, height, spec.anchor, spec.width_mode, spec.text_alignment, spec.x_offset,
-            spec.y_offset, spec.font.name, spec.font.size, label:GetText())
-        label:SetVisible(spec.enabled == true and _label_text_is_blank(spec.text) ~= true)
+        local frame = self:_frame_for_label_link(spec.link_to)
+        if frame == nil then
+            label:SetText("")
+            label:SetVisible(false)
+        else
+            if label:GetParent() ~= frame then
+                label:SetParent(frame)
+            end
+            local width, height = frame:GetSize()
+            lui_vitals_layout_label(label, width, height, spec.anchor, spec.width_mode, spec.text_alignment,
+                spec.x_offset, spec.y_offset, spec.font.name, spec.font.size, label:GetText())
+            label:SetVisible(spec.enabled == true and _label_text_is_blank(spec.text) ~= true)
+        end
     end
 end
 
@@ -617,12 +639,15 @@ function VitalsBase:_render_configurable_bar_labels(bar_key, context)
 
     local _, settings = self:_bar_frame_and_settings(bar_key)
     local specs = settings.labels
-    local frame, _ = self:_bar_frame_and_settings(bar_key)
-    local width, height = frame:GetSize()
     for i = 1, #controls do
         local label = controls[i]
         local spec = specs[i]
-        if spec.enabled == true and _label_text_is_blank(spec.text) ~= true then
+        local frame = self:_frame_for_label_link(spec.link_to)
+        if frame ~= nil and spec.enabled == true and _label_text_is_blank(spec.text) ~= true then
+            if label:GetParent() ~= frame then
+                label:SetParent(frame)
+            end
+            local width, height = frame:GetSize()
             local rendered_text = lui_format_tokenized(spec.tokens, context)
             label:SetText(rendered_text)
             lui_vitals_layout_label(label, width, height, spec.anchor, spec.width_mode, spec.text_alignment,
@@ -640,12 +665,16 @@ function VitalsBase:_set_configurable_morale_fallback(text)
         return
     end
 
-    local frame, settings = self:_bar_frame_and_settings("morale")
-    local width, height = frame:GetSize()
+    local _, settings = self:_bar_frame_and_settings("morale")
     for i = 1, #self.morale_labels do
         local label = self.morale_labels[i]
         local spec = settings.labels[i]
-        if i == 1 and _label_text_is_blank(text) ~= true then
+        local frame = self:_frame_for_label_link(spec.link_to)
+        if frame ~= nil and i == 1 and _label_text_is_blank(text) ~= true then
+            if label:GetParent() ~= frame then
+                label:SetParent(frame)
+            end
+            local width, height = frame:GetSize()
             label:SetText(text)
             lui_vitals_layout_label(label, width, height, spec.anchor, spec.width_mode, spec.text_alignment,
                 spec.x_offset, spec.y_offset, spec.font.name, spec.font.size, text)
