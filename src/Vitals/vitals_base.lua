@@ -141,12 +141,13 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
 
     local effects_height = self:get_effects_height()
     local lower_bars_height = self:get_lower_bars_height()
+    local info_height = self:get_info_height()
 
     self.width = frame_width - (2 * frame.border_width)
     if self.width < 1 then self.width = 1 end
     self.bubble_width = 1000
 
-    local total_h = effects_height + v.morale.height + lower_bars_height - frame.border_width
+    local total_h = effects_height + _stack_height({ v.morale.height, lower_bars_height, info_height }, frame.border_width)
     if total_h < 1 then total_h = 1 end
     self:SetSize(frame_width, total_h)
     self:layout_move_chrome()
@@ -246,6 +247,34 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.power_bar:SetMouseVisible(false)
 
     ---------------------------------------------------------------------
+    -- INFO
+    ---------------------------------------------------------------------
+    self.info_frame = Turbine.UI.Control()
+    self.info_frame:SetParent(self)
+    self.info_frame:SetSize(frame_width, info_height)
+    self.info_frame:SetTop(self.power_frame:GetTop() + self.power_frame:GetHeight() - bw)
+    self.info_frame:SetMouseVisible(false)
+    self.info_frame:SetVisible(info_height > 0)
+    self.info_frame:SetZOrder(3)
+
+    self.info_border = Turbine.UI.Control()
+    self.info_border:SetParent(self.info_frame)
+    self.info_border:SetPosition(0, 0)
+    self.info_border:SetSize(frame_width, info_height)
+    self.info_border:SetBackColor(frame.border_color)
+    self.info_border:SetMouseVisible(false)
+    self.info_border:SetZOrder(1)
+
+    self.info_background = Turbine.UI.Control()
+    self.info_background:SetParent(self.info_border)
+    self.info_background:SetPosition(bw, bw)
+    self.info_background:SetSize(inner_w, math.max(1, info_height - (2 * bw)))
+    self.info_background:SetBackColor(v.info.color.background)
+    self.info_background:SetOpacity(v.info.opacity)
+    self.info_background:SetMouseVisible(false)
+    self.info_background:SetZOrder(2)
+
+    ---------------------------------------------------------------------
     -- LABELS
     ---------------------------------------------------------------------
     local function make_bar_label(parent, z_order)
@@ -284,7 +313,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.entity_control:SetParent(self)
     self.entity_control:SetSize(
         math.max(self.morale_frame:GetWidth(), self.power_frame:GetWidth()),
-        self.morale_frame:GetHeight() + self.power_frame:GetHeight()
+        _stack_height({ self.morale_frame:GetHeight(), self.power_frame:GetHeight(), info_height }, bw)
     )
     self.entity_control:SetPosition(self.morale_frame:GetPosition())
     self.entity_control:SetEntity(self.entity)
@@ -439,6 +468,14 @@ function VitalsBase:get_effects_height()
     return self:get_vitals_settings().frame.effects_height
 end
 
+function VitalsBase:get_info_height()
+    local info = self:get_vitals_settings().info
+    if info.enabled ~= true then
+        return 0
+    end
+    return info.height
+end
+
 function VitalsBase:effects_are_below()
     return self:get_vitals_settings().frame.effects_position == LUI_ENUMS.vitals_effects_position.BELOW
 end
@@ -446,6 +483,37 @@ end
 function VitalsBase:get_lower_bars_height()
     local v = self:get_vitals_settings()
     return v.power.height
+end
+
+local function _slot_is_top(slot)
+    return slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR
+end
+
+local function _slot_is_bottom(slot)
+    return slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_NEAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR
+end
+
+local function _slot_order(slot)
+    if slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR then
+        return 2
+    end
+    return 1
+end
+
+local function _stack_height(section_heights, border_width)
+    local total = 0
+    local visible_count = 0
+    for i = 1, #section_heights do
+        local height = section_heights[i]
+        if type(height) == "number" and height > 0 then
+            total = total + height
+            visible_count = visible_count + 1
+        end
+    end
+    if visible_count > 1 then
+        total = total - (border_width * (visible_count - 1))
+    end
+    return total
 end
 
 function VitalsBase:get_empty_morale_text()
@@ -1107,11 +1175,14 @@ function VitalsBase:resize()
     local frame_width = frame.width
     local effects_height = self:get_effects_height()
     local lower_bars_height = self:get_lower_bars_height()
+    local info_height = self:get_info_height()
+    local bw = frame.border_width
 
-    self.width = frame_width - (2 * frame.border_width)
+    self.width = frame_width - (2 * bw)
     if self.width < 1 then self.width = 1 end
 
-    local total_h = effects_height + v.morale.height + lower_bars_height - frame.border_width
+    local core_height = _stack_height({ v.morale.height, lower_bars_height, info_height }, bw)
+    local total_h = effects_height + core_height
     if total_h < 1 then total_h = 1 end
     self:SetSize(frame_width, total_h)
     self:layout_move_chrome()
@@ -1120,18 +1191,16 @@ function VitalsBase:resize()
     end
 
     self.morale_frame:SetSize(frame_width, v.morale.height)
-    local effects_above = self.show_effects == true and frame.effects_position ~= LUI_ENUMS.vitals_effects_position
-        .BELOW
-    local morale_top = effects_above and effects_height or 0
-    self.morale_frame:SetTop(morale_top)
-
-    local bw = frame.border_width
     local inner_w = frame_width - (2 * bw)
     local morale_inner_h = v.morale.height - (2 * bw)
     local power_inner_h = v.power.height - (2 * bw)
+    local info_inner_h = info_height - (2 * bw)
     if inner_w < 1 then inner_w = 1 end
     if morale_inner_h < 1 then morale_inner_h = 1 end
     if power_inner_h < 1 then power_inner_h = 1 end
+    if info_inner_h < 1 then info_inner_h = 1 end
+
+    self.morale_frame:SetTop(0)
 
     self.morale_border:SetSize(frame_width, v.morale.height)
     self.morale_border:SetBackColor(frame.border_color)
@@ -1160,6 +1229,15 @@ function VitalsBase:resize()
     self.power_bar:SetPosition(0, 0)
     self.power_bar:SetSize(inner_w, power_inner_h)
 
+    self.info_frame:SetSize(frame_width, info_height)
+    self.info_frame:SetVisible(info_height > 0)
+    self.info_border:SetSize(frame_width, info_height)
+    self.info_border:SetBackColor(frame.border_color)
+    self.info_background:SetPosition(bw, bw)
+    self.info_background:SetSize(inner_w, info_inner_h)
+    self.info_background:SetBackColor(v.info.color.background)
+    self.info_background:SetOpacity(v.info.opacity)
+
     if self:_uses_configurable_bar_labels() == true then
         self:_apply_configurable_bar_label_layout("morale")
         self:_apply_configurable_bar_label_layout("power")
@@ -1170,21 +1248,37 @@ function VitalsBase:resize()
     self:apply_fonts()
     self:apply_text_alignment()
 
-    self.entity_control:SetSize(
-        math.max(self.morale_frame:GetWidth(), self.power_frame:GetWidth()),
-        self.morale_frame:GetHeight() + self.power_frame:GetHeight()
-    )
-    self.entity_control:SetPosition(self.morale_frame:GetPosition())
-
     if self.show_effects and self.debuffs ~= nil then
         self.debuffs:apply_settings(frame_width, v.effects, frame.effects_height)
     end
     if self.show_effects and self.buffs ~= nil then
         self.buffs:apply_settings(frame_width, v.effects, frame.effects_height)
     end
-    self:_layout_effect_windows()
+
+    local top_height = self:_layout_effect_windows() or 0
+    local morale_top = top_height
+    local power_top = morale_top + v.morale.height - bw
+    local info_top = power_top + v.power.height - bw
+    local bottom_start = power_top + v.power.height
+
+    self.morale_frame:SetTop(morale_top)
+    self.power_frame:SetTop(power_top)
+    self.info_frame:SetTop(info_top)
+
+    if info_height > 0 then
+        bottom_start = info_top + info_height - bw
+    end
+
+    self.entity_control:SetSize(
+        math.max(self.morale_frame:GetWidth(), self.power_frame:GetWidth()),
+        core_height
+    )
+    self.entity_control:SetPosition(0, morale_top)
+
+    self:_layout_effect_windows(bottom_start)
 
     self:_resize_extra_controls()
+
     self:update()
 end
 
@@ -1192,21 +1286,16 @@ end
 -- Private functions
 ---------------------------------------------------------------------
 
-function VitalsBase:_layout_effect_windows()
+function VitalsBase:_layout_effect_windows(bottom_start_override)
     if self.show_effects ~= true then
-        return
+        return 0
     end
     if self.debuffs == nil or self.buffs == nil then
-        return
+        return 0
     end
 
     local v = self:get_vitals_settings()
     local effects_height = self:get_effects_height()
-
-    local below = self:effects_are_below()
-    local reverse_fill = below ~= true
-    self.buffs:set_reverse_fill(reverse_fill)
-    self.debuffs:set_reverse_fill(reverse_fill)
 
     local buffs_h = self.buffs:GetHeight()
     if type(buffs_h) ~= "number" then
@@ -1225,23 +1314,68 @@ function VitalsBase:_layout_effect_windows()
     end
     self.debuffs:set_max_height(debuffs_h)
 
-    if below == true then
-        local effects_top = self.power_frame:GetTop() + self.power_frame:GetHeight()
-        self.buffs:SetTop(effects_top)
-        self.debuffs:SetTop(effects_top + buffs_h)
-    else
-        local effects_top = 0
-        local bottom = self.morale_frame:GetTop()
-        if type(bottom) ~= "number" then
-            bottom = effects_top + effects_height
-        end
-        local buffs_top = bottom - buffs_h
-        if buffs_top < effects_top then
-            buffs_top = effects_top
-        end
-        self.buffs:SetTop(buffs_top)
-        self.debuffs:SetTop(effects_top)
+    local buff_slot = v.effects.buffs.slot
+    local debuff_slot = v.effects.debuffs.slot
+
+    self.buffs:set_reverse_fill(_slot_is_top(buff_slot))
+    self.debuffs:set_reverse_fill(_slot_is_top(debuff_slot))
+
+    local top_entries = {}
+    local bottom_entries = {}
+
+    local function add_entry(list, order, area, height)
+        list[#list + 1] = {
+            order = order,
+            area = area,
+            height = height,
+        }
     end
+
+    if _slot_is_top(buff_slot) then
+        add_entry(top_entries, _slot_order(buff_slot), self.buffs, buffs_h)
+    elseif _slot_is_bottom(buff_slot) then
+        add_entry(bottom_entries, _slot_order(buff_slot), self.buffs, buffs_h)
+    end
+
+    if _slot_is_top(debuff_slot) then
+        add_entry(top_entries, _slot_order(debuff_slot), self.debuffs, debuffs_h)
+    elseif _slot_is_bottom(debuff_slot) then
+        add_entry(bottom_entries, _slot_order(debuff_slot), self.debuffs, debuffs_h)
+    end
+
+    table.sort(top_entries, function(a, b)
+        return a.order > b.order
+    end)
+    table.sort(bottom_entries, function(a, b)
+        return a.order < b.order
+    end)
+
+    local top_height = 0
+    local cursor = 0
+    for i = 1, #top_entries do
+        local entry = top_entries[i]
+        entry.area:SetTop(cursor)
+        cursor = cursor + entry.height
+        top_height = top_height + entry.height
+    end
+
+    local bottom_start = bottom_start_override
+    if type(bottom_start) ~= "number" then
+        bottom_start = top_height + _stack_height({
+            v.morale.height,
+            self:get_lower_bars_height(),
+            self:get_info_height(),
+        }, v.frame.border_width)
+    end
+
+    cursor = bottom_start
+    for i = 1, #bottom_entries do
+        local entry = bottom_entries[i]
+        entry.area:SetTop(cursor)
+        cursor = cursor + entry.height
+    end
+
+    return top_height
 end
 
 function VitalsBase:_set_effect_areas_visible(visible)
