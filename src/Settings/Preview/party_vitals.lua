@@ -195,6 +195,8 @@ function ConfigWindow:init_party_vitals_preview()
         m.info_background = Turbine.UI.Control()
         m.info_background:SetParent(m.info_border)
         m.info_background:SetMouseVisible(false)
+        m.info_background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+        m.info_background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
         table.insert(p.members, m)
     end

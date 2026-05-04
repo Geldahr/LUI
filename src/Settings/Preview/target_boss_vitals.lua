@@ -196,6 +196,8 @@ function ConfigWindow:init_target_boss_vitals_preview()
     p.power_back:SetParent(p.power_border)
     p.power_fill:SetParent(p.power_back)
     p.info_back:SetParent(p.info_border)
+    p.info_back:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    p.info_back:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
     for i = 1, 2 do
         local label = UI.Widgets.LuiLabel()

@@ -232,6 +232,8 @@ function StandardVitalsPreview:Constructor(window, holder_key, prefix, name_text
     self.info_background = Turbine.UI.Control()
     self.info_background:SetParent(self.info_border)
     self.info_background:SetMouseVisible(false)
+    self.info_background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.info_background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 end
 
 function StandardVitalsPreview:update()
