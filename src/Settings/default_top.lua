@@ -253,7 +253,22 @@ _G.DEFAULT_LAYOUT_TOP =
 				["height"] = 50.000000,
 				["bubble_format"] = " - %b",
 				["text_alignment"] = 2.000000,
-				["background_matches_missing"] = true
+				["background_matches_missing"] = true,
+				["labels"] =
+				{
+					[1] =
+					{
+						["enabled"] = true,
+						["text"] = "%mc / %mt - %mp",
+						["link_to"] = 1.000000
+					},
+					[2] =
+					{
+						["enabled"] = true,
+						["text"] = "%pc / %pt - %pp",
+						["link_to"] = 2.000000
+					}
+				}
 			},
 			["background_dimming"] = 0.750000,
 			["power"] =
@@ -298,7 +313,28 @@ _G.DEFAULT_LAYOUT_TOP =
 					},
 					["style"] = 2.000000,
 					["size"] = 14.000000
+				},
+				["labels"] =
+				{
+					[1] =
+					{
+						["enabled"] = false,
+						["text"] = "",
+						["link_to"] = 2.000000
+					},
+					[2] =
+					{
+						["enabled"] = false,
+						["text"] = "",
+						["link_to"] = 2.000000
+					}
 				}
+			},
+			["info"] =
+			{
+				["enabled"] = false,
+				["height"] = 26.000000,
+				["opacity"] = 1.000000
 			},
 			["frame"] =
 			{
@@ -425,16 +461,34 @@ _G.DEFAULT_LAYOUT_TOP =
 				},
 				["style"] = 2.000000,
 				["size"] = 10.000000
+			},
+			["labels"] =
+			{
+				[1] =
+				{
+					["enabled"] = false,
+					["text"] = "",
+					["link_to"] = 2.000000
+				},
+				[2] =
+				{
+					["enabled"] = false,
+					["text"] = "",
+					["link_to"] = 2.000000
+				}
 			}
 		},
 		["info"] =
 		{
-			["height"] = 16.000000
+			["enabled"] = false,
+			["height"] = 16.000000,
+			["opacity"] = 1.000000
 		},
 		["effects"] =
 		{
 			["debuffs"] =
 			{
+				["slot"] = 2.000000,
 				["icon_size"] = 36.000000,
 				["timer_font"] =
 				{
@@ -461,6 +515,7 @@ _G.DEFAULT_LAYOUT_TOP =
 			},
 			["buffs"] =
 			{
+				["slot"] = 1.000000,
 				["icon_size"] = 32.000000,
 				["timer_font"] =
 				{
@@ -593,7 +648,22 @@ _G.DEFAULT_LAYOUT_TOP =
 			["height"] = 32.000000,
 			["bubble_format"] = " - %b",
 			["text_alignment"] = 2.000000,
-			["background_matches_missing"] = false
+			["background_matches_missing"] = false,
+			["labels"] =
+			{
+				[1] =
+				{
+					["enabled"] = true,
+					["text"] = "%name%\\n%mc / %mt",
+					["link_to"] = 1.000000
+				},
+				[2] =
+				{
+					["enabled"] = true,
+					["text"] = "%pc / %pt",
+					["link_to"] = 2.000000
+				}
+			}
 		},
 		["layout"] =
 		{
@@ -776,7 +846,22 @@ _G.DEFAULT_LAYOUT_TOP =
 				["height"] = 34.000000,
 				["string_format"] = "[%level%] %name%\\n%mc / %mt",
 				["text_alignment"] = 2.000000,
-				["background_matches_missing"] = false
+				["background_matches_missing"] = false,
+				["labels"] =
+				{
+					[1] =
+					{
+						["enabled"] = true,
+						["text"] = "[%level%] %name%\\n%mc / %mt",
+						["link_to"] = 1.000000
+					},
+					[2] =
+					{
+						["enabled"] = false,
+						["text"] = "",
+						["link_to"] = 1.000000
+					}
+				}
 			},
 			["background_dimming"] = 0.750000,
 			["power"] =
@@ -824,7 +909,28 @@ _G.DEFAULT_LAYOUT_TOP =
 				},
 				["height"] = 6.000000,
 				["text_alignment"] = 2.000000,
-				["hide"] = false
+				["hide"] = false,
+				["labels"] =
+				{
+					[1] =
+					{
+						["enabled"] = false,
+						["text"] = "",
+						["link_to"] = 2.000000
+					},
+					[2] =
+					{
+						["enabled"] = false,
+						["text"] = "",
+						["link_to"] = 2.000000
+					}
+				}
+			},
+			["info"] =
+			{
+				["enabled"] = false,
+				["height"] = 26.000000,
+				["opacity"] = 1.000000
 			},
 			["frame"] =
 			{
@@ -847,6 +953,7 @@ _G.DEFAULT_LAYOUT_TOP =
 			{
 				["debuffs"] =
 				{
+					["slot"] = 2.000000,
 					["icon_size"] = 31.000000,
 					["timer_font"] =
 					{
@@ -873,7 +980,7 @@ _G.DEFAULT_LAYOUT_TOP =
 				},
 				["buffs"] =
 				{
-					["slot"] = 3.000000,
+					["slot"] = 1.000000,
 					["icon_size"] = 22.000000,
 					["timer_font"] =
 					{
@@ -904,6 +1011,7 @@ _G.DEFAULT_LAYOUT_TOP =
 			{
 				["buffs"] =
 				{
+					["slot"] = 3.000000,
 					["icon_size"] = 22.000000,
 					["timer_font"] =
 					{
@@ -996,7 +1104,28 @@ _G.DEFAULT_LAYOUT_TOP =
 					},
 					["style"] = 2.000000,
 					["size"] = 14.000000
+				},
+				["labels"] =
+				{
+					[1] =
+					{
+						["enabled"] = false,
+						["text"] = "",
+						["link_to"] = 2.000000
+					},
+					[2] =
+					{
+						["enabled"] = false,
+						["text"] = "",
+						["link_to"] = 2.000000
+					}
 				}
+			},
+			["info"] =
+			{
+				["enabled"] = false,
+				["height"] = 26.000000,
+				["opacity"] = 1.000000
 			},
 			["frame"] =
 			{
@@ -1118,7 +1247,22 @@ _G.DEFAULT_LAYOUT_TOP =
 				["height"] = 50.000000,
 				["bubble_format"] = "- %b",
 				["text_alignment"] = 2.000000,
-				["background_matches_missing"] = false
+				["background_matches_missing"] = false,
+				["labels"] =
+				{
+					[1] =
+					{
+						["enabled"] = true,
+						["text"] = "[%level%] %name%\\n%mc / %mt - %mp",
+						["link_to"] = 1.000000
+					},
+					[2] =
+					{
+						["enabled"] = true,
+						["text"] = "%pc / %pt - %pp",
+						["link_to"] = 2.000000
+					}
+				}
 			},
 			["targets_target"] =
 			{
