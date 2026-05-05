@@ -117,6 +117,26 @@ function ConfigContent:set_compact_fields(enabled)
     self.compact_fields = enabled == true
 end
 
+local function _resolve_entry_span(value, grid_columns)
+    if value == true then
+        return grid_columns
+    end
+
+    local numeric = tonumber(value)
+    if numeric == nil then
+        return 1
+    end
+
+    local span = math.floor(numeric + 0.5)
+    if span < 1 then
+        return 1
+    end
+    if span > grid_columns then
+        return grid_columns
+    end
+    return span
+end
+
 function ConfigContent:_refresh_preview()
     if self.loading == true then
         return
@@ -209,14 +229,14 @@ function ConfigContent:add_custom(key, height)
     return entry
 end
 
-function ConfigContent:add_line_edit(key, label_text, save_fn, load_fn, help_text, full_width)
+function ConfigContent:add_line_edit(key, label_text, save_fn, load_fn, help_text, span)
     local entry = {}
     entry.kind = "text"
     entry.key = key
     entry.label_text = label_text
     entry.is_color = false
     entry.help_text = help_text
-    entry.full_width = full_width == true
+    entry.span = span
 
     entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(self.form)
@@ -271,14 +291,14 @@ function ConfigContent:add_line_edit(key, label_text, save_fn, load_fn, help_tex
     return entry
 end
 
-function ConfigContent:add_color_picker(key, label_text, save_fn, load_fn, help_text, full_width)
+function ConfigContent:add_color_picker(key, label_text, save_fn, load_fn, help_text, span)
     local entry = {}
     entry.kind = "text"
     entry.key = key
     entry.label_text = label_text
     entry.is_color = true
     entry.help_text = help_text
-    entry.full_width = full_width == true
+    entry.span = span
 
     entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(self.form)
@@ -348,7 +368,7 @@ function ConfigContent:add_color_picker(key, label_text, save_fn, load_fn, help_
 end
 
 function ConfigContent:add_dropdown(key, label_text, option_labels, option_values, save_fn, load_fn, help_text,
-                                    full_width)
+                                    span)
     local entry = {}
     entry.kind = "dropdown"
     entry.key = key
@@ -356,7 +376,7 @@ function ConfigContent:add_dropdown(key, label_text, option_labels, option_value
     entry.option_labels = option_labels
     entry.option_values = option_values
     entry.help_text = help_text
-    entry.full_width = full_width == true
+    entry.span = span
     entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(self.form)
     entry.label:SetFont(self.window.field_label_font)
@@ -412,12 +432,12 @@ function ConfigContent:add_dropdown(key, label_text, option_labels, option_value
     return entry
 end
 
-function ConfigContent:add_checkbox(key, label_text, save_fn, load_fn, full_width)
+function ConfigContent:add_checkbox(key, label_text, save_fn, load_fn, span)
     local entry = {}
     entry.kind = "checkbox"
     entry.key = key
     entry.label_text = label_text
-    entry.full_width = full_width == true
+    entry.span = span
 
     entry.cb = UI.Widgets.LuiCheckBox()
     entry.cb:SetParent(self.form)
@@ -600,8 +620,6 @@ function ConfigContent:layout()
     end
     local grid_gaps = (grid_columns - 1) * self.window.col_gap
     local col_width = math.floor((inner_width - grid_gaps) / grid_columns)
-    local label_width = math.floor(col_width * 0.55)
-    local input_width = col_width - label_width - self.window.inner_gap
 
     local y = form_pad
     local col = 0
@@ -708,127 +726,74 @@ function ConfigContent:layout()
             y = y + h + custom_gap
             col = 0
         elseif is_visible and self.compact_fields == true then
-            if field.full_width == true then
-                if col ~= 0 then
-                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
-                    col = 0
-                end
+            local field_span = _resolve_entry_span(field.span, grid_columns)
+            if col + field_span > grid_columns then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            end
 
-                local full_x = self.window.content_padding
-                local full_w = inner_width
+            local x = self.window.content_padding + (col * (col_width + self.window.col_gap))
+            local span_w = (col_width * field_span) + ((field_span - 1) * self.window.col_gap)
 
-                if field.kind == "checkbox" then
-                    field.cb:SetPosition(full_x, y + compact_label_h + compact_field_gap)
-                    field.cb:SetSize(full_w, self.window.field_label_height)
-                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
-                elseif field.kind == "text" then
-                    field.label:SetPosition(full_x, y)
-                    field.label:SetSize(full_w, compact_label_h)
-                    field.tb:SetPosition(full_x, y + compact_label_h + compact_field_gap)
-                    field.tb:SetSize(full_w, self.window.input_height)
-                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
-                elseif field.kind == "dropdown" then
-                    field.label:SetPosition(full_x, y)
-                    field.label:SetSize(full_w, compact_label_h)
-                    field.button:SetPosition(full_x, y + compact_label_h + compact_field_gap +
-                        self.window.dropdown_y_offset)
-                    field.button:SetSize(full_w, self.window.input_height)
-                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
-                end
-            else
-                local x = self.window.content_padding + (col * (col_width + self.window.col_gap))
+            if field.kind == "checkbox" then
+                field.cb:SetPosition(x, y + compact_label_h + compact_field_gap)
+                field.cb:SetSize(span_w, self.window.field_label_height)
+            elseif field.kind == "text" then
+                field.label:SetPosition(x, y)
+                field.label:SetSize(span_w, compact_label_h)
+                field.tb:SetPosition(x, y + compact_label_h + compact_field_gap)
+                field.tb:SetSize(span_w, self.window.input_height)
+            elseif field.kind == "dropdown" then
+                field.label:SetPosition(x, y)
+                field.label:SetSize(span_w, compact_label_h)
+                field.button:SetPosition(x, y + compact_label_h + compact_field_gap +
+                    self.window.dropdown_y_offset)
+                field.button:SetSize(span_w, self.window.input_height)
+            end
 
-                if field.kind == "checkbox" then
-                    field.cb:SetPosition(x, y + compact_label_h + compact_field_gap)
-                    field.cb:SetSize(col_width, self.window.field_label_height)
-                elseif field.kind == "text" then
-                    field.label:SetPosition(x, y)
-                    field.label:SetSize(col_width, compact_label_h)
-                    field.tb:SetPosition(x, y + compact_label_h + compact_field_gap)
-                    field.tb:SetSize(col_width, self.window.input_height)
-                elseif field.kind == "dropdown" then
-                    field.label:SetPosition(x, y)
-                    field.label:SetSize(col_width, compact_label_h)
-                    field.button:SetPosition(x, y + compact_label_h + compact_field_gap +
-                        self.window.dropdown_y_offset)
-                    field.button:SetSize(col_width, self.window.input_height)
-                end
-
-                col = col + 1
-                if col >= grid_columns then
-                    y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
-                    col = 0
-                end
+            col = col + field_span
+            if col >= grid_columns then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
             end
         elseif is_visible then
-            if field.kind == "checkbox" and field.full_width == true then
-                if col == 1 then
-                    y = y + self.window.row_height
-                    col = 0
-                end
-
-                field.cb:SetPosition(self.window.content_padding, y)
-                field.cb:SetSize(inner_width, self.window.field_label_height)
+            local field_span = _resolve_entry_span(field.span, grid_columns)
+            if col + field_span > grid_columns then
                 y = y + self.window.row_height
                 col = 0
-            elseif (field.kind == "text" or field.kind == "dropdown") and field.full_width == true then
-                if col == 1 then
-                    y = y + self.window.row_height
-                    col = 0
+            end
+
+            local x = self.window.content_padding + (col * (col_width + self.window.col_gap))
+            local span_w = (col_width * field_span) + ((field_span - 1) * self.window.col_gap)
+
+            if field.kind == "checkbox" then
+                field.cb:SetPosition(x, y)
+                field.cb:SetSize(span_w, self.window.field_label_height)
+            else
+                local label_width_span = math.floor(span_w * 0.55)
+                local input_width_span = span_w - label_width_span - self.window.inner_gap
+                if input_width_span < _scaled_int(59) then
+                    input_width_span = _scaled_int(59)
                 end
 
-                local label_width_full = label_width
-                local input_start_x = self.window.content_padding + label_width_full + self.window.inner_gap
-                local input_right_x = self.window.content_padding + (col_width + self.window.col_gap) + label_width +
-                    self.window.inner_gap + input_width
-                local input_width_full = input_right_x - input_start_x
-                if input_width_full < _scaled_int(59) then
-                    input_width_full = _scaled_int(59)
-                end
-
-                field.label:SetPosition(self.window.content_padding, y)
-                field.label:SetSize(label_width_full, self.window.field_label_height)
+                field.label:SetPosition(x, y)
+                field.label:SetSize(label_width_span, self.window.field_label_height)
 
                 local input_y = y + math.floor((self.window.field_label_height - self.window.input_height) / 2)
                 if field.kind == "text" then
-                    field.tb:SetPosition(input_start_x, input_y)
-                    field.tb:SetSize(input_width_full, self.window.input_height)
+                    field.tb:SetPosition(x + label_width_span + self.window.inner_gap, input_y)
+                    field.tb:SetSize(input_width_span, self.window.input_height)
                 else
-                    field.button:SetPosition(input_start_x, input_y + self.window.dropdown_y_offset)
-                    field.button:SetSize(input_width_full, self.window.input_height)
+                    field.button:SetPosition(x + label_width_span + self.window.inner_gap,
+                        input_y + self.window.dropdown_y_offset)
+                    field.button:SetSize(input_width_span, self.window.input_height)
                 end
+            end
 
+            col = col + field_span
+            if col >= grid_columns then
                 y = y + self.window.row_height
                 col = 0
-            else
-                local x = self.window.content_padding + (col * (col_width + self.window.col_gap))
-
-                if field.kind == "text" then
-                    field.label:SetPosition(x, y)
-                    field.label:SetSize(label_width, self.window.field_label_height)
-
-                    local input_y = y + math.floor((self.window.field_label_height - self.window.input_height) / 2)
-                    field.tb:SetPosition(x + label_width + self.window.inner_gap, input_y)
-                    field.tb:SetSize(input_width, self.window.input_height)
-                elseif field.kind == "dropdown" then
-                    field.label:SetPosition(x, y)
-                    field.label:SetSize(label_width, self.window.field_label_height)
-
-                    local input_y = y + math.floor((self.window.field_label_height - self.window.input_height) / 2)
-                    field.button:SetPosition(x + label_width + self.window.inner_gap,
-                        input_y + self.window.dropdown_y_offset)
-                    field.button:SetSize(input_width, self.window.input_height)
-                else
-                    field.cb:SetPosition(x, y)
-                    field.cb:SetSize(col_width, self.window.field_label_height)
-                end
-
-                if col == 0 then
-                    col = 1
-                else
-                    y = y + self.window.row_height
-                    col = 0
-                end
             end
         end
     end
