@@ -867,9 +867,8 @@ function FirstRunQuickSetup:use_selected_configuration()
 
     _G.loaded_settings_was_new = false
     _apply_runtime_settings()
-    save_settings()
-
     self.closing = true
+    save_settings()
     self.preview_overlay:SetVisible(false)
     self:SetVisible(false)
     FIRST_RUN_QUICK_SETUP_WINDOW = nil
@@ -1114,6 +1113,7 @@ function FirstRunQuickSetup:finish_settings()
     end
     self.closing = true
     self:_cleanup_preview(false)
+    save_settings()
     self:SetVisible(false)
     FIRST_RUN_QUICK_SETUP_WINDOW = nil
 

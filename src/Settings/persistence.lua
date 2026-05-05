@@ -37,6 +37,27 @@ local function _trim(text)
     return trimmed
 end
 
+local function _compute_next_profile_id(profiles)
+    local next_profile_id = 1
+    if type(profiles) ~= "table" then
+        return next_profile_id
+    end
+
+    for profile_id, profile in pairs(profiles) do
+        if type(profile) == "table" then
+            local numeric_profile_id = tonumber(profile_id)
+            if numeric_profile_id ~= nil then
+                local candidate = math.floor(numeric_profile_id + 1)
+                if candidate > next_profile_id then
+                    next_profile_id = candidate
+                end
+            end
+        end
+    end
+
+    return next_profile_id
+end
+
 local function _get_current_character_name()
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
     if player == nil or player.GetName == nil then
@@ -110,10 +131,12 @@ local function _migrate_account_profiles(account_settings)
     for profile_id, profile in pairs(profiles) do
         if type(profile) ~= "table" or type(profile.settings) ~= "table" then
             profiles[profile_id] = nil
+            changed = true
         else
             local migrated_settings, settings_changed = _G.migrate_profile_settings(profile.settings)
             if type(migrated_settings) ~= "table" then
                 profiles[profile_id] = nil
+                changed = true
             else
                 profile.settings = migrated_settings
                 if settings_changed == true then
@@ -155,13 +178,20 @@ function _G.ensure_account_settings()
     end
 
     local s = _G.account_settings
-    s.version = _G.get_settings_version()
     if type(s.profiles) ~= "table" then
         s.profiles = {}
     end
-    if type(s.next_profile_id) ~= "number" or s.next_profile_id < 1 then
-        s.next_profile_id = 1
+    local min_next_profile_id = _compute_next_profile_id(s.profiles)
+    local next_profile_id = tonumber(s.next_profile_id)
+    if next_profile_id == nil then
+        next_profile_id = min_next_profile_id
+    else
+        next_profile_id = math.floor(next_profile_id + 0.5)
+        if next_profile_id < min_next_profile_id then
+            next_profile_id = min_next_profile_id
+        end
     end
+    s.next_profile_id = next_profile_id
 end
 
 function _G.ensure_character_settings()
@@ -170,7 +200,6 @@ function _G.ensure_character_settings()
     end
 
     local s = _G.character_settings
-    s.version = _G.get_settings_version()
     if type(s.crafting) ~= "table" then
         s.crafting = {}
     end
@@ -487,6 +516,10 @@ function _G.delete_configuration(profile_id)
 end
 
 function _G.save_settings()
+    if FIRST_RUN_QUICK_SETUP_WINDOW ~= nil and FIRST_RUN_QUICK_SETUP_WINDOW.closing ~= true then
+        return
+    end
+
     _G.ensure_account_settings()
     _G.ensure_character_settings()
 
@@ -595,6 +628,7 @@ function _G.load_settings()
             end
         else
             _G.account_settings = nil
+            migrated_any = true
         end
     else
         _G.account_settings = nil
@@ -609,6 +643,7 @@ function _G.load_settings()
             end
         else
             _G.character_settings = nil
+            migrated_any = true
         end
     else
         _G.character_settings = nil
@@ -628,6 +663,7 @@ function _G.load_settings()
         if type(profile) ~= "table" or type(profile.settings) ~= "table" then
             _G.character_settings.profile_id = nil
             profile_id = nil
+            migrated_any = true
         end
     end
 
@@ -636,10 +672,11 @@ function _G.load_settings()
         if profile_id ~= nil then
             profile = _G.account_settings.profiles[profile_id]
             _G.character_settings.profile_id = profile_id
+            migrated_any = true
         end
     end
 
-    if migrated_any == true then
+    if migrated_any == true and type(profile) == "table" and type(profile.settings) == "table" then
         _stamp_account_settings_version(_G.account_settings)
         _stamp_character_settings_version(_G.character_settings)
         _save_settings_files_raw()
