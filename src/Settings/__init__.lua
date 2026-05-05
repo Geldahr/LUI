@@ -1,4 +1,5 @@
 import "LUI.src.Settings.enums"
+import "LUI.src.Settings.migrations"
 import "LUI.src.Settings.schema"
 import "LUI.src.Settings.colors"
 import "LUI.src.Settings.rebuild_settings"

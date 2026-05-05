@@ -1,4 +1,5 @@
 import "Turbine.UI"
+import "LUI.src.Settings.migrations"
 import "LUI.src.Settings.default_bottom"
 import "LUI.src.Settings.default_top"
 
@@ -125,6 +126,7 @@ function DefaultLayouts.build(layout_key, target_scale, preserved_config_geometr
     local layout = _copy_table(_load_layout_source(layout_key))
     local display_w, display_h = Turbine.UI.Display.GetSize()
     _adjust_window_positions(layout, display_w, display_h)
+    layout.version = _G.get_settings_version()
 
     if type(layout.global) ~= "table" then
         layout.global = {}
