@@ -1,4 +1,4 @@
-_G.DEFAULT_LAYOUT_TOP =
+_G.DEFAULT_LAYOUT_SCHEMA =
 {
 	["self"] = {
 		["vitals"] = {
