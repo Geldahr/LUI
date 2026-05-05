@@ -20,6 +20,7 @@ function _G.fix_colors()
 
         local morale = v.morale
         local power = v.power
+        local labels = v.labels
         local effects = v.effects
 
         morale.color.high = to_color(morale.color.high)
@@ -34,26 +35,10 @@ function _G.fix_colors()
         power.color.power = to_color(power.color.power)
         power.color.wrath = to_color(power.color.wrath)
 
-        morale.font.color = to_color(morale.font.color)
-        morale.font.outline_color = to_color(morale.font.outline_color)
-
-        power.font.color = to_color(power.font.color)
-        power.font.outline_color = to_color(power.font.outline_color)
-
-        if morale.labels ~= nil then
-            for i = 1, #morale.labels do
-                local label = morale.labels[i]
-                label.font.color = to_color(label.font.color)
-                label.font.outline_color = to_color(label.font.outline_color)
-            end
-        end
-
-        if power.labels ~= nil then
-            for i = 1, #power.labels do
-                local label = power.labels[i]
-                label.font.color = to_color(label.font.color)
-                label.font.outline_color = to_color(label.font.outline_color)
-            end
+        for i = 1, #labels do
+            local label = labels[i]
+            label.font.color = to_color(label.font.color)
+            label.font.outline_color = to_color(label.font.outline_color)
         end
 
         effects.buffs.timer_font.color = to_color(effects.buffs.timer_font.color)

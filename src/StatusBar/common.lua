@@ -50,7 +50,6 @@ S.STATUS_BAR_LAYOUT_TOKENS = {
     inventory = "inventory_space",
     durability = "equipment_wear",
     gold = "money",
-    money = "money",
     wallet = "wallet",
     config = "config",
     craft = "craft",
@@ -139,46 +138,6 @@ local function _refresh_status_bar_after_api_change()
         _G.STATUS_BAR:restore_edit_window_state(edit_window_state)
     end
     _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP()
-end
-
-local function _replace_status_bar_layout_token(text, old_token, new_token)
-    local source = tostring(text or "")
-    if source == "" or old_token == nil or new_token == nil or old_token == new_token then
-        return source, false
-    end
-
-    local tokens = {}
-    local changed = false
-    for token in source:gmatch("%%[^%%]+%%") do
-        if token == old_token then
-            token = new_token
-            changed = true
-        end
-        tokens[#tokens + 1] = token
-    end
-
-    if changed ~= true then
-        return source, false
-    end
-
-    return table.concat(tokens, " "), true
-end
-
-local function _migrate_status_bar_api_layout_token(old_token, new_token)
-    local raw_sb = _G.loaded_settings ~= nil and _G.loaded_settings.status_bar or nil
-    local layout = raw_sb ~= nil and raw_sb.layout or nil
-    if layout == nil then
-        return
-    end
-
-    local zone_keys = { "left", "center", "right" }
-    for i = 1, #zone_keys do
-        local zone_key = zone_keys[i]
-        local updated, changed = _replace_status_bar_layout_token(layout[zone_key], old_token, new_token)
-        if changed == true then
-            layout[zone_key] = updated
-        end
-    end
 end
 
 local WALLET_ITEM_NAMES = {
@@ -777,12 +736,14 @@ function S.get_status_bar_api_item(value)
             return entry
         end
     end
+    return nil
+end
 
-    local key = S.make_status_bar_api_registry_key(text)
+function S.get_status_bar_api_item_by_command(command)
+    local key = S.make_status_bar_api_registry_key(command)
     if key == nil then
         return nil
     end
-
     return STATUS_BAR_API_ITEMS.by_key[key]
 end
 
@@ -836,7 +797,6 @@ function S.register_status_bar_api_item(spec)
         STATUS_BAR_API_ITEMS.by_key[key] = entry
     end
 
-    local previous_token = entry.token
     local previous_token_key = entry.token_key
 
     entry.kind = "api_item"
@@ -851,10 +811,6 @@ function S.register_status_bar_api_item(spec)
 
     if entry.token == nil then
         return nil, "Failed to build the status bar button token."
-    end
-
-    if previous_token ~= nil and previous_token ~= entry.token then
-        _migrate_status_bar_api_layout_token(previous_token, entry.token)
     end
 
     if is_new == true then

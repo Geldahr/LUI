@@ -6,6 +6,29 @@ import "LUI.src.Vitals.vitals_base"
 import "LUI.src.Vitals.target_effect_manager"
 import "LUI.src.Settings.enums"
 
+local function _boss_stack_height(sections, border_width)
+    local total = 0
+    local visible = 0
+
+    for i = 1, #sections do
+        local height = sections[i]
+        if type(height) == "number" and height > 0 then
+            total = total + height
+            visible = visible + 1
+        end
+    end
+
+    if visible > 1 then
+        total = total - ((visible - 1) * border_width)
+    end
+
+    if total < 1 then
+        total = 1
+    end
+
+    return total
+end
+
 ---@class BossVitals : VitalsBase
 BossVitals = class(VitalsBase)
 
@@ -119,12 +142,11 @@ function BossVitals:use_stacked_effects_layout()
     return raw_frame_width < 400 or raw_power_width > (raw_frame_width / 2)
 end
 
-function BossVitals:_uses_configurable_bar_labels()
-    return true
-end
-
 function BossVitals:apply_text_alignment()
     VitalsBase.apply_text_alignment(self)
+    if self:get_vitals_settings().power.hide == true then
+        self:_clear_labels(3, 4)
+    end
 end
 
 function BossVitals:set_move_mode(enabled)
@@ -146,7 +168,7 @@ function BossVitals:self_power_changed()
     if v.power.hide == true then
         self.power_frame:SetVisible(false)
         self.power_border:SetVisible(false)
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
         self.power_bar:SetWidth(0)
         return
     end
@@ -157,7 +179,7 @@ function BossVitals:self_power_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(false)
         end
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
         if self.power_bar ~= nil then
             self.power_bar:SetWidth(0)
         end
@@ -171,19 +193,7 @@ function BossVitals:self_power_changed()
     if maxp > 0 then
         self.power_border:SetVisible(true)
         local percent = p / maxp
-        local pct = math.floor((percent * 100) + 0.5)
-        local level = ""
-        if self.entity.GetLevel ~= nil then
-            level = tostring(self.entity:GetLevel() or "")
-        end
-
-        self:_render_configurable_bar_labels("power", {
-            c = lui_abbrev_number(p),
-            t = lui_abbrev_number(maxp),
-            p = tostring(pct) .. "%",
-            name = self.entity:GetName(),
-            level = level,
-        })
+        self:_render_configurable_labels(self:_build_vitals_label_context())
 
         self.power_bar:SetWidth(math.floor((fill_width * percent) + 0.5))
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
@@ -191,7 +201,7 @@ function BossVitals:self_power_changed()
         self.power_background:SetBackColor(self:power_background_color(fill_color))
     else
         self.power_border:SetVisible(true)
-        self:_clear_configurable_power_labels()
+        self:_render_configurable_labels(self:_build_vitals_label_context())
         self.power_bar:SetWidth(fill_width)
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
         self.power_bar:SetBackColor(fill_color)
@@ -204,7 +214,7 @@ function BossVitals:self_wrath_changed()
     if v.power.hide == true then
         self.power_frame:SetVisible(false)
         self.power_border:SetVisible(false)
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
         self.power_bar:SetWidth(0)
         return
     end
@@ -215,19 +225,7 @@ function BossVitals:self_wrath_changed()
     local maxw = 100
     local w = self.entity:GetClassAttributes():GetWrath()
     local percent = w / maxw
-    local pct = math.floor((percent * 100) + 0.5)
-    local level = ""
-    if self.entity.GetLevel ~= nil then
-        level = tostring(self.entity:GetLevel() or "")
-    end
-
-    self:_render_configurable_bar_labels("power", {
-        c = lui_abbrev_number(w),
-        t = lui_abbrev_number(maxw),
-        p = tostring(pct) .. "%",
-        name = self.entity:GetName(),
-        level = level,
-    })
+    self:_render_configurable_labels(self:_build_vitals_label_context())
 
     self.power_bar:SetWidth(math.floor((self._power_fill_width * percent) + 0.5))
     self.power_bar:SetBackColor(v.power.color.wrath)
@@ -242,12 +240,23 @@ function BossVitals:resize()
     local frame_width = frame.width
     local border = frame.border_width
     local morale_h = v.morale.height
-    local effects_h = self.show_effects == true and frame.effects_height or 0
     local power_hidden = v.power.hide == true
-    local stacked_effects = self:use_stacked_effects_layout()
+    local power_h = power_hidden == true and 0 or v.power.height
+    local info_height = self:get_info_height()
+    local effects_h = self.show_effects == true and frame.effects_height or 0
 
     self.width = frame_width - (2 * border)
     if self.width < 1 then self.width = 1 end
+
+    local core_height = _boss_stack_height({ morale_h, power_h, info_height }, border)
+    local total_h = effects_h + core_height
+    if total_h < 1 then total_h = 1 end
+
+    self:SetSize(frame_width, total_h)
+    self:layout_move_chrome()
+    if not self.managed_position then
+        self:apply_hud_position()
+    end
 
     self.morale_frame:SetPosition(0, 0)
     self.morale_frame:SetSize(frame_width, morale_h)
@@ -270,18 +279,76 @@ function BossVitals:resize()
     if power_width > frame_width then
         power_width = frame_width
     end
-    if stacked_effects ~= true and power_width >= frame_width then
-        power_width = frame_width - 1
-    end
-    local effects_width = stacked_effects == true and frame_width or (frame_width - power_width)
-    if effects_width < 1 then effects_width = 1 end
 
     self._power_frame_width = power_width
-    self._effects_width = effects_width
     self._effects_height = effects_h
-    self._stacked_effects = stacked_effects
 
-    self:_layout_effect_windows()
+    self.power_frame:SetSize(power_width, v.power.height)
+    self.power_frame:SetVisible(power_hidden ~= true)
+    self.power_border:SetVisible(power_hidden ~= true)
+    self.power_border:SetSize(power_width, v.power.height)
+    self.power_border:SetBackColor(frame.border_color)
+
+    local power_inner_w = power_width - (2 * border)
+    local power_inner_h = v.power.height - (2 * border)
+    if power_inner_w < 1 then power_inner_w = 1 end
+    if power_inner_h < 1 then power_inner_h = 1 end
+    self._power_fill_width = power_inner_w
+
+    self.power_background:SetPosition(border, border)
+    self.power_background:SetSize(power_inner_w, power_inner_h)
+    self.power_background:SetBackColor(self:power_background_color(v.power.color.power))
+    self.power_bar:SetPosition(0, 0)
+    self.power_bar:SetHeight(power_inner_h)
+
+    self.info_frame:SetSize(frame_width, info_height)
+    self.info_frame:SetVisible(info_height > 0)
+    self.info_border:SetSize(frame_width, info_height)
+    self.info_border:SetBackColor(frame.border_color)
+
+    local info_inner_h = info_height - (2 * border)
+    if info_inner_h < 1 then info_inner_h = 1 end
+    self.info_background:SetPosition(border, border)
+    self.info_background:SetSize(self.width, info_inner_h)
+    self.info_background:SetBackColor(lui_apply_opacity_to_color(v.info.color.background, v.info.opacity))
+
+    local top_height = self:_layout_effect_windows() or 0
+
+    local morale_top = top_height
+    self.morale_frame:SetTop(morale_top)
+
+    local next_top = morale_top + morale_h - border
+    if power_hidden == true then
+        self.power_frame:SetVisible(false)
+        self.power_border:SetVisible(false)
+        self:_clear_labels(3, 4)
+        self.power_bar:SetWidth(0)
+    else
+        local power_left = 0
+        if v.power.side == LUI_ENUMS.side.RIGHT then
+            power_left = frame_width - power_width
+        end
+
+        self.power_frame:SetVisible(true)
+        self.power_frame:SetPosition(power_left, next_top)
+        self.power_frame:SetSize(power_width, v.power.height)
+        self.power_border:SetVisible(true)
+        self.power_border:SetSize(power_width, v.power.height)
+        next_top = next_top + v.power.height - border
+    end
+
+    self.info_frame:SetTop(next_top)
+    local bottom_start = next_top
+    if info_height > 0 then
+        bottom_start = next_top + info_height - border
+    end
+
+    self.entity_control:SetPosition(0, morale_top)
+    self.entity_control:SetSize(frame_width, core_height)
+
+    self:_apply_configurable_label_layout()
+    self:_layout_effect_windows(bottom_start)
+    self:_resize_extra_controls()
     self:apply_fonts()
     self:apply_text_alignment()
     self:update()
@@ -356,132 +423,116 @@ function BossVitals:_detach_effect_manager()
     self.em = nil
 end
 
-function BossVitals:_layout_effect_windows()
+function BossVitals:_layout_effect_windows(bottom_start_override)
     if self._layout_busy == true then
         return
     end
     self._layout_busy = true
 
     local v = self:get_vitals_settings()
-    local frame = v.frame
-    local border = frame.border_width
-    local frame_width = frame.width
-    local power_width = self._power_frame_width or math.floor(frame_width * 0.28)
-    local effects_width = self._effects_width or math.max(1, frame_width - power_width)
+    local frame_width = v.frame.width
     local effects_max_h = self._effects_height or 0
-    local power_hidden = v.power.hide == true
-    local stacked_effects = self._stacked_effects == true and power_hidden ~= true
-    local reverse_fill = self:effects_are_below() ~= true
-    local effects_content_h = math.max(0, effects_max_h - border)
-    local lower_top = self.morale_frame:GetTop() + self.morale_frame:GetHeight() - border
-
-    self.buffs:set_reverse_fill(reverse_fill)
-    self.debuffs:set_reverse_fill(reverse_fill)
-
-    local buffs_h = 0
-    local debuffs_h = 0
-
-    if self.show_effects == true and self.buffs ~= nil and self.debuffs ~= nil then
-        self.buffs:apply_settings(effects_width, v.effects, effects_content_h)
-        self.buffs:set_max_height(effects_content_h)
-        buffs_h = self.buffs:GetHeight() or 0
-
-        self.debuffs:apply_settings(effects_width, v.effects, effects_content_h)
-        self.debuffs:set_dynamic_height(true)
-        self.debuffs:set_max_height(math.max(0, effects_content_h - buffs_h))
-        debuffs_h = self.debuffs:GetHeight() or 0
-    else
-        if self.buffs ~= nil then
-            self.buffs:SetSize(effects_width, 0)
-        end
-        if self.debuffs ~= nil then
-            self.debuffs:SetSize(effects_width, 0)
+    local bottom_start = bottom_start_override
+    if type(bottom_start) ~= "number" then
+        if self.info_frame:IsVisible() == true then
+            bottom_start = self.info_frame:GetTop() + self.info_frame:GetHeight() - v.frame.border_width
+        elseif self.power_frame:IsVisible() == true then
+            bottom_start = self.power_frame:GetTop() + self.power_frame:GetHeight() - v.frame.border_width
+        else
+            bottom_start = self.morale_frame:GetTop() + self.morale_frame:GetHeight() - v.frame.border_width
         end
     end
 
-    local power_h = v.power.height
-    if power_h < 1 then power_h = 1 end
-
-    local effects_total_h = buffs_h + debuffs_h
-    local reserved_effects_h = border + effects_total_h
-    if self:is_move_mode() == true then
-        reserved_effects_h = math.max(reserved_effects_h, effects_max_h)
+    if self.show_effects ~= true or self.buffs == nil or self.debuffs == nil then
+        if self.effects_top_border ~= nil then
+            self.effects_top_border:SetVisible(false)
+        end
+        self._layout_busy = false
+        return 0
     end
-    local lower_h
-    local effects_top
-    if power_hidden == true then
-        lower_h = math.max(reserved_effects_h, border)
-        effects_top = lower_top
-    elseif stacked_effects == true then
-        lower_h = power_h + math.max(reserved_effects_h, border)
-        effects_top = lower_top + power_h - border
+
+    local buffs_h = self.buffs:GetHeight()
+    if type(buffs_h) ~= "number" then
+        buffs_h = 0
+    end
+    if buffs_h < 0 then
+        buffs_h = 0
+    end
+    if buffs_h > effects_max_h then
+        buffs_h = effects_max_h
+    end
+
+    local debuffs_h = effects_max_h - buffs_h
+    if debuffs_h < 0 then
+        debuffs_h = 0
+    end
+    self.debuffs:set_max_height(debuffs_h)
+
+    local buff_slot = v.effects.buffs.slot
+    local debuff_slot = v.effects.debuffs.slot
+
+    self.buffs:set_reverse_fill(buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR
+        or buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR)
+    self.debuffs:set_reverse_fill(debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR
+        or debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR)
+
+    local top_entries = {}
+    local bottom_entries = {}
+
+    local function slot_order(slot)
+        if slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR then
+            return 2
+        end
+        return 1
+    end
+
+    local function add_entry(list, order, area, height)
+        list[#list + 1] = {
+            order = order,
+            area = area,
+            height = height,
+        }
+    end
+
+    if buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR then
+        add_entry(top_entries, slot_order(buff_slot), self.buffs, buffs_h)
     else
-        lower_h = math.max(power_h, reserved_effects_h, border)
-        effects_top = lower_top
-    end
-    local total_h = lower_top + lower_h
-    if total_h < 1 then total_h = 1 end
-
-    self:SetSize(frame_width, total_h)
-    self:layout_move_chrome()
-    if not self.managed_position then
-        self:apply_hud_position()
+        add_entry(bottom_entries, slot_order(buff_slot), self.buffs, buffs_h)
     end
 
-    local power_left = 0
-    local effects_left = stacked_effects == true and 0 or power_width
-    if stacked_effects ~= true and v.power.side == LUI_ENUMS.side.RIGHT then
-        power_left = frame_width - power_width
-        effects_left = 0
-    elseif stacked_effects == true and v.power.side == LUI_ENUMS.side.RIGHT then
-        power_left = frame_width - power_width
-    end
-
-    if power_hidden == true then
-        self._power_fill_width = 0
-        self.power_frame:SetVisible(false)
-        self.power_border:SetVisible(false)
-        self:_clear_configurable_power_labels()
-        self.power_bar:SetWidth(0)
+    if debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR then
+        add_entry(top_entries, slot_order(debuff_slot), self.debuffs, debuffs_h)
     else
-        self.power_frame:SetVisible(true)
-        self.power_frame:SetPosition(power_left, lower_top)
-        self.power_frame:SetSize(power_width, power_h)
-        self.power_border:SetVisible(true)
-        self.power_border:SetSize(power_width, power_h)
-        self.power_border:SetBackColor(frame.border_color)
+        add_entry(bottom_entries, slot_order(debuff_slot), self.debuffs, debuffs_h)
+    end
 
-        local power_inner_w = power_width - (2 * border)
-        local power_inner_h = power_h - (2 * border)
-        if power_inner_w < 1 then power_inner_w = 1 end
-        if power_inner_h < 1 then power_inner_h = 1 end
-        self._power_fill_width = power_inner_w
+    table.sort(top_entries, function(a, b)
+        return a.order > b.order
+    end)
+    table.sort(bottom_entries, function(a, b)
+        return a.order < b.order
+    end)
 
-        self.power_background:SetPosition(border, border)
-        self.power_background:SetSize(power_inner_w, power_inner_h)
-        self.power_background:SetBackColor(self:power_background_color(v.power.color.power))
-        self.power_bar:SetPosition(0, 0)
-        self.power_bar:SetHeight(power_inner_h)
+    local top_height = 0
+    local top_cursor = 0
+    for i = 1, #top_entries do
+        local entry = top_entries[i]
+        entry.area:SetPosition(0, top_cursor)
+        top_cursor = top_cursor + entry.height
+    end
+    top_height = top_cursor
+
+    local bottom_cursor = bottom_start
+    for i = 1, #bottom_entries do
+        local entry = bottom_entries[i]
+        entry.area:SetPosition(0, bottom_cursor)
+        bottom_cursor = bottom_cursor + entry.height
     end
 
     if self.effects_top_border ~= nil then
-        if self.show_effects == true then
-            self.effects_top_border:SetVisible(true)
-            self.effects_top_border:SetPosition(effects_left, effects_top)
-            self.effects_top_border:SetSize(effects_width, border)
-            self.effects_top_border:SetBackColor(frame.border_color)
-        else
-            self.effects_top_border:SetVisible(false)
-        end
+        self.effects_top_border:SetVisible(false)
     end
-
-    if self.show_effects == true and self.buffs ~= nil and self.debuffs ~= nil then
-        self.buffs:SetPosition(effects_left, effects_top + border)
-        self.debuffs:SetPosition(effects_left, effects_top + border + buffs_h)
-    end
-
-    self.entity_control:SetPosition(0, 0)
-    self.entity_control:SetSize(frame_width, total_h)
 
     self._layout_busy = false
+    return top_height
 end

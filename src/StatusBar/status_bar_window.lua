@@ -225,7 +225,7 @@ local function _get_widget_menu_title(widget_key, widget_entry)
     elseif S.is_status_bar_api_entry(widget_entry) == true then
         return widget_entry.title or widget_entry.description or ""
     elseif S.is_status_bar_button_entry(widget_entry) == true then
-        local api_entry = S.get_status_bar_api_item(widget_entry.command)
+        local api_entry = S.get_status_bar_api_item_by_command(widget_entry.command)
         if api_entry ~= nil then
             return api_entry.title or api_entry.description or widget_entry.command or "button"
         end

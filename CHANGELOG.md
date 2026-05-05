@@ -20,6 +20,9 @@
 - Removed silent internal fallbacks across plugin wiring so missing internal modules, methods, and state now fail loudly instead of being masked.
 - Self, Target, and Party vitals now hand off cleanly to the built-in LotRO HUD when their LUI replacements are disabled.
 - Boss vitals now follow the Target vitals enable state, while Target's Target remains independently toggleable.
+- Added a new optional info box in the vitals, placed below power/wrath.
+- Effects can be independently placed above or below the vitals (below the info box). There are four selectable areas around the vitals.
+- Vitals now have four independent text items that can each be attached to morale, power/wrath, or the new info box.
 
 ### Fixed
 

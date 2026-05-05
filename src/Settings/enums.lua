@@ -96,6 +96,19 @@ e.vitals_effects_position = {
     BELOW = 2,
 }
 
+e.vitals_effect_slot = {
+    TOP_NEAR = 1,
+    TOP_FAR = 2,
+    BOTTOM_NEAR = 3,
+    BOTTOM_FAR = 4,
+}
+
+e.vitals_label_link = {
+    MORALE = 1,
+    POWER = 2,
+    INFO = 3,
+}
+
 e.bar_mode = {
     LOAD = 1,
     UNLOAD = 2,
@@ -109,12 +122,6 @@ e.list_flow = {
 e.vertical_align = {
     TOP = 1,
     BOTTOM = 2,
-}
-
-e.drop_animation_mode = {
-    FADE_THEN_COLLAPSE = 1,
-    INSTANT_THEN_COLLAPSE = 2,
-    OFF = 3,
 }
 
 e.assets_view_mode = {

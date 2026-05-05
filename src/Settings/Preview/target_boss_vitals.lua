@@ -20,14 +20,54 @@ local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
 
-local function _render_preview_boss_label(window, bar_key, label_index, label, raw_scale, width, height,
-                                          default_font_size, context)
+local function _boss_stack_height(sections, border_width)
+    local total = 0
+    local visible = 0
+
+    for i = 1, #sections do
+        local height = sections[i]
+        if type(height) == "number" and height > 0 then
+            total = total + height
+            visible = visible + 1
+        end
+    end
+
+    if visible > 1 then
+        total = total - ((visible - 1) * border_width)
+    end
+
+    if total < 1 then
+        total = 1
+    end
+
+    return total
+end
+
+local function _slot_is_top(slot)
+    return slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR
+end
+
+local function _slot_order(slot)
+    if slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR then
+        return 2
+    end
+    return 1
+end
+
+local function _render_preview_boss_label(window, label_index, label, raw_scale, targets, context)
     local controls = window.controls
-    local key = "target_boss_" .. bar_key .. "_label" .. tostring(label_index)
+    local key = "target_boss_label" .. tostring(label_index)
     local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
     local text = controls[key .. "_text"].tb:GetText()
 
     if enabled ~= true or _label_text_is_blank(text) == true then
+        label:SetText("")
+        label:SetVisible(false)
+        return
+    end
+
+    local target = targets[_require_control_enum(controls, key .. "_link_to")]
+    if target == nil then
         label:SetText("")
         label:SetVisible(false)
         return
@@ -42,14 +82,17 @@ local function _render_preview_boss_label(window, bar_key, label_index, label, r
     local font_style_enum = _require_control_enum(controls, key .. "_font_style")
     local rendered_text = lui_format_tokenized(lui_tokenize_format(text), context)
 
+    if label:GetParent() ~= target.parent then
+        label:SetParent(target.parent)
+    end
     label:SetFont(_require_font(font_name, font_size))
     label:SetFontStyle(LUI_TO_LOTRO.font_style[font_style_enum])
     label:SetForeColor(_require_control_color(controls, key .. "_font_color"))
     label:SetOutlineColor(_require_control_color(controls, key .. "_font_outline_color"))
     lui_vitals_layout_label(
         label,
-        width,
-        height,
+        target.width,
+        target.height,
         anchor,
         width_mode,
         text_alignment,
@@ -63,9 +106,45 @@ local function _render_preview_boss_label(window, bar_key, label_index, label, r
     label:SetVisible(true)
 end
 
-local function _render_preview_boss_labels(window, bar_key, labels, raw_scale, width, height, default_font_size, context)
+local function _render_preview_boss_labels(window, labels, raw_scale, targets, context)
     for i = 1, #labels do
-        _render_preview_boss_label(window, bar_key, i, labels[i], raw_scale, width, height, default_font_size, context)
+        _render_preview_boss_label(window, i, labels[i], raw_scale, targets, context)
+    end
+end
+
+local function _layout_preview_icons(icons, count, cols, icon_size, left, top, height, reverse_fill, colors, font,
+                                     font_style, font_color, font_outline, first_time, second_time)
+    for i = 1, #icons do
+        local icon = icons[i]
+        if i > count then
+            icon.root:SetVisible(false)
+        else
+            local idx = i - 1
+            local col = idx % cols
+            local row = math.floor(idx / cols)
+            local row_top = top + (row * icon_size)
+            if reverse_fill == true then
+                row_top = top + height - ((row + 1) * icon_size)
+            end
+
+            icon.root:SetVisible(true)
+            icon.root:SetPosition(left + (col * icon_size), row_top)
+            icon.root:SetSize(icon_size, icon_size)
+            icon.root:SetBackColor(colors[((i - 1) % #colors) + 1])
+            icon.label:SetPosition(0, 0)
+            icon.label:SetSize(icon_size, icon_size)
+            icon.label:SetFont(font)
+            icon.label:SetFontStyle(font_style)
+            icon.label:SetForeColor(font_color)
+            icon.label:SetOutlineColor(font_outline)
+            if i == 1 then
+                icon.label:SetText(lui_format_timeout(first_time))
+            elseif i == 2 then
+                icon.label:SetText(lui_format_timeout(second_time))
+            else
+                icon.label:SetText("")
+            end
+        end
     end
 end
 
@@ -82,16 +161,16 @@ function ConfigWindow:init_target_boss_vitals_preview()
         border_bottom = Turbine.UI.Control(),
         border_left = Turbine.UI.Control(),
         border_right = Turbine.UI.Control(),
-        effects_top_border = Turbine.UI.Control(),
         morale_border = Turbine.UI.Control(),
         morale_back = Turbine.UI.Control(),
         morale_fill = Turbine.UI.Control(),
         morale_bubble = Turbine.UI.Control(),
-        morale_labels = {},
         power_border = Turbine.UI.Control(),
         power_back = Turbine.UI.Control(),
         power_fill = Turbine.UI.Control(),
-        power_labels = {},
+        labels = {},
+        info_border = Turbine.UI.Control(),
+        info_back = Turbine.UI.Control(),
         buffs = {},
         debuffs = {},
     }
@@ -100,9 +179,9 @@ function ConfigWindow:init_target_boss_vitals_preview()
     local all = {
         p.root,
         p.border_top, p.border_bottom, p.border_left, p.border_right,
-        p.effects_top_border,
         p.morale_border, p.morale_back, p.morale_fill, p.morale_bubble,
         p.power_border, p.power_back, p.power_fill,
+        p.info_border, p.info_back,
     }
 
     for i = 1, #all do
@@ -115,25 +194,16 @@ function ConfigWindow:init_target_boss_vitals_preview()
     p.morale_bubble:SetParent(p.morale_back)
     p.power_back:SetParent(p.power_border)
     p.power_fill:SetParent(p.power_back)
+    p.info_back:SetParent(p.info_border)
 
-    for i = 1, 2 do
+    for i = 1, 4 do
         local label = UI.Widgets.LuiLabel()
-        label:SetParent(p.morale_border)
+        label:SetParent(i <= 2 and p.morale_border or p.power_border)
         label:SetMouseVisible(false)
         label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
         label:SetMultiline(true)
         label:SetZOrder(9 + i)
-        p.morale_labels[i] = label
-    end
-
-    for i = 1, 2 do
-        local label = UI.Widgets.LuiLabel()
-        label:SetParent(p.power_border)
-        label:SetMouseVisible(false)
-        label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-        label:SetMultiline(true)
-        label:SetZOrder(9 + i)
-        p.power_labels[i] = label
+        p.labels[i] = label
     end
 
     for i = 1, 12 do
@@ -176,70 +246,87 @@ function ConfigWindow:update_target_boss_vitals_preview()
         return style
     end
 
-    local raw_configured_frame_w = _require_control_number(self.controls, "target_boss_width")
-    local raw_configured_power_w = _require_control_number(self.controls, "target_boss_power_width")
-    local configured_frame_w = _preview_scaled_int(raw_scale, raw_configured_frame_w)
+    local raw_frame_w = _require_control_number(self.controls, "target_boss_width")
+    local raw_power_w = _require_control_number(self.controls, "target_boss_power_width")
+    local frame_w = _preview_scaled_int(raw_scale, raw_frame_w)
+    local power_w = _preview_scaled_int(raw_scale, raw_power_w)
     local border = _preview_scaled_border(raw_scale, _require_control_number(self.controls, "target_boss_border_width"))
     local morale_h = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_morale_height"))
     local power_h = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_power_height"))
-    local configured_power_w = _preview_scaled_int(raw_scale, raw_configured_power_w)
     local effects_h = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_effects_height"))
-    local buff_size = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_buff_size"))
-    local debuff_size = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_debuff_size"))
+    local info_enabled = self.controls.target_boss_info_enabled.cb:IsChecked() == true
+    local info_h = info_enabled == true and
+        _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_info_height")) or 0
     local power_side = _require_control_enum(self.controls, "target_boss_power_side")
     local power_hidden = self.controls.target_boss_power_hide.cb:IsChecked() == true
-    local stacked_effects = power_hidden ~= true and
-        (raw_configured_frame_w < 400 or raw_configured_power_w > (raw_configured_frame_w / 2))
+    local buff_slot = _require_control_enum(self.controls, "target_boss_buff_slot")
+    local debuff_slot = _require_control_enum(self.controls, "target_boss_debuff_slot")
 
+    local buff_size = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_buff_size"))
+    local debuff_size = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_debuff_size"))
     if buff_size < 1 then buff_size = 1 end
     if debuff_size < 1 then debuff_size = 1 end
 
     local holder = self.controls.target_boss_vitals_preview
     local holder_w = holder.control:GetWidth()
     local preview_border = 1
-    local frame_w = math.min(configured_frame_w, math.max(1, holder_w - (2 * preview_border)))
-    local power_w = power_hidden == true and 0 or configured_power_w
-
+    frame_w = math.min(frame_w, math.max(1, holder_w - (2 * preview_border)))
+    if frame_w < 40 then frame_w = 40 end
+    if border < 0 then border = 0 end
+    if border > math.floor(frame_w / 4) then
+        border = math.floor(frame_w / 4)
+    end
     if power_w > frame_w then
         power_w = frame_w
-    end
-    if stacked_effects ~= true and power_w >= frame_w then
-        power_w = frame_w - 1
     end
     if power_w < 0 then
         power_w = 0
     end
 
-    local effects_w = stacked_effects == true and frame_w or (frame_w - power_w)
-    if effects_w < 1 then effects_w = 1 end
-
-    local effects_content_h = math.max(0, effects_h - border)
-    local buff_cols = math.max(1, math.floor(effects_w / buff_size))
     local buff_count = 6
-    local buff_rows = math.ceil(buff_count / buff_cols)
-    local buffs_h = math.min(effects_content_h, buff_rows * buff_size)
-
-    local debuff_cols = math.max(1, math.floor(effects_w / debuff_size))
     local debuff_count = 10
-    local debuff_rows = math.ceil(debuff_count / debuff_cols)
-    local debuffs_h = math.min(math.max(0, effects_content_h - buffs_h), debuff_rows * debuff_size)
+    local buff_cols = math.max(1, math.floor(frame_w / buff_size))
+    local debuff_cols = math.max(1, math.floor(frame_w / debuff_size))
+    local buffs_h = math.min(effects_h, math.ceil(buff_count / buff_cols) * buff_size)
+    local debuffs_h = math.min(math.max(0, effects_h - buffs_h), math.ceil(debuff_count / debuff_cols) * debuff_size)
 
-    local effects_total_h = buffs_h + debuffs_h
-    local lower_top = morale_h - border
-    local reserved_effects_h = math.max(border + effects_total_h, border)
-    local lower_h
-    local effects_top
-    if power_hidden == true then
-        lower_h = reserved_effects_h
-        effects_top = lower_top
-    elseif stacked_effects == true then
-        lower_h = power_h + reserved_effects_h
-        effects_top = lower_top + power_h - border
-    else
-        lower_h = math.max(power_h, reserved_effects_h)
-        effects_top = lower_top
+    local top_entries = {}
+    local bottom_entries = {}
+
+    local function add_entry(list, area, slot, height)
+        list[#list + 1] = {
+            area = area,
+            slot = slot,
+            height = height,
+            order = _slot_order(slot),
+        }
     end
-    local total_h = lower_top + lower_h
+
+    if _slot_is_top(buff_slot) then
+        add_entry(top_entries, "buffs", buff_slot, buffs_h)
+    else
+        add_entry(bottom_entries, "buffs", buff_slot, buffs_h)
+    end
+    if _slot_is_top(debuff_slot) then
+        add_entry(top_entries, "debuffs", debuff_slot, debuffs_h)
+    else
+        add_entry(bottom_entries, "debuffs", debuff_slot, debuffs_h)
+    end
+
+    table.sort(top_entries, function(a, b)
+        return a.order > b.order
+    end)
+    table.sort(bottom_entries, function(a, b)
+        return a.order < b.order
+    end)
+
+    local core_h = _boss_stack_height({
+        morale_h,
+        power_hidden == true and 0 or power_h,
+        info_h,
+    }, border)
+    local total_h = effects_h + core_h
+
     local outer_w = frame_w + (2 * preview_border)
     local outer_h = total_h + (2 * preview_border)
     local holder_extra_h = _scaled_int(9)
@@ -274,6 +361,8 @@ function ConfigWindow:update_target_boss_vitals_preview()
         morale_gradient_mid, morale_gradient_low)
     local bubble_color = _require_control_color(self.controls, "target_boss_morale_bubble_color")
     local power_fill = _require_control_color(self.controls, "target_boss_power_color")
+    local info_back_color = _require_control_color(self.controls, "target_boss_info_background_color")
+    local info_opacity = _require_control_number(self.controls, "target_boss_info_opacity")
     local buff_colors = {
         Turbine.UI.Color(1, 0.15, 0.55, 0.55),
         Turbine.UI.Color(1, 0.20, 0.45, 0.72),
@@ -307,13 +396,49 @@ function ConfigWindow:update_target_boss_vitals_preview()
     p.border_bottom:SetBackColor(border_color)
     p.border_left:SetBackColor(border_color)
     p.border_right:SetBackColor(border_color)
-    p.effects_top_border:SetBackColor(border_color)
     p.border_top:SetPosition(off_x, outer_y)
     p.border_bottom:SetPosition(off_x, outer_y + outer_h - preview_border)
     p.border_left:SetPosition(off_x, outer_y)
     p.border_right:SetPosition(off_x + outer_w - preview_border, outer_y)
 
-    p.morale_border:SetPosition(off_x + preview_border, outer_y + preview_border)
+    local top_height = 0
+    local effect_positions = {
+        buffs = nil,
+        debuffs = nil,
+    }
+    for i = 1, #top_entries do
+        local entry = top_entries[i]
+        effect_positions[entry.area] = {
+            top = top_height,
+            height = entry.height,
+            reverse_fill = true,
+        }
+        top_height = top_height + entry.height
+    end
+
+    local morale_top = top_height
+    local power_top = morale_top + morale_h - border
+    local info_top = power_top
+    if power_hidden ~= true then
+        info_top = power_top + power_h - border
+    end
+    local bottom_start = info_top
+    if info_h > 0 then
+        bottom_start = info_top + info_h - border
+    end
+
+    local bottom_cursor = bottom_start
+    for i = 1, #bottom_entries do
+        local entry = bottom_entries[i]
+        effect_positions[entry.area] = {
+            top = bottom_cursor,
+            height = entry.height,
+            reverse_fill = false,
+        }
+        bottom_cursor = bottom_cursor + entry.height
+    end
+
+    p.morale_border:SetPosition(off_x + preview_border, outer_y + preview_border + morale_top)
     p.morale_border:SetSize(frame_w, morale_h)
     p.morale_border:SetBackColor(border_color)
     p.morale_back:SetPosition(border, border)
@@ -328,135 +453,163 @@ function ConfigWindow:update_target_boss_vitals_preview()
     p.morale_bubble:SetSize(math.floor((frame_w - (2 * border)) * bubble_percent + 0.5), morale_h - (2 * border))
     p.morale_bubble:SetBackColor(bubble_color)
 
-    do
-        local bubble_fmt = self.controls.target_boss_morale_bubble_text.tb:GetText()
-        local bubble_fmt_tokens = lui_tokenize_format(bubble_fmt)
-        local morale_max = 600000
-        local morale_cur = math.floor(morale_max * morale_percent + 0.5)
-        local bubble_value = math.floor(morale_max * bubble_percent + 0.5)
-        local bubble_text = bubble_value > 0 and lui_abbrev_number(bubble_value) or ""
-        local bubble_formatted = ""
-        if bubble_value > 0 and string.len(bubble_fmt) > 0 then
-            bubble_formatted = lui_format_tokenized(bubble_fmt_tokens, { b = bubble_text })
-        end
-
-        _render_preview_boss_labels(self, "morale", p.morale_labels, raw_scale, frame_w, morale_h, 16, {
-            name = "The Watcher in the Water",
-            level = "150",
-            c = lui_abbrev_number(morale_cur),
-            t = lui_abbrev_number(morale_max),
-            p = tostring(math.floor(morale_percent * 100 + 0.5)) .. "%",
-            b = bubble_text,
-            B = bubble_formatted,
-        })
+    local bubble_fmt = self.controls.target_boss_morale_bubble_text.tb:GetText()
+    local bubble_fmt_tokens = lui_tokenize_format(bubble_fmt)
+    local morale_max = 600000
+    local morale_cur = math.floor(morale_max * morale_percent + 0.5)
+    local bubble_value = math.floor(morale_max * bubble_percent + 0.5)
+    local bubble_text = bubble_value > 0 and lui_abbrev_number(bubble_value) or ""
+    local bubble_formatted = ""
+    if bubble_value > 0 and string.len(bubble_fmt) > 0 then
+        bubble_formatted = lui_format_tokenized(bubble_fmt_tokens, { b = bubble_text })
     end
 
-    local power_left = 0
-    local effects_left = stacked_effects == true and 0 or power_w
-    if stacked_effects ~= true and power_side == LUI_ENUMS.side.RIGHT then
-        power_left = frame_w - power_w
-        effects_left = 0
-    elseif stacked_effects == true and power_side == LUI_ENUMS.side.RIGHT then
-        power_left = frame_w - power_w
-    end
-
-    p.effects_top_border:SetPosition(off_x + preview_border + effects_left, outer_y + preview_border + effects_top)
-    p.effects_top_border:SetSize(effects_w, border)
     p.power_border:SetVisible(power_hidden ~= true)
     p.power_back:SetVisible(power_hidden ~= true)
     p.power_fill:SetVisible(power_hidden ~= true)
+
+    local power_left = 0
+    if power_side == LUI_ENUMS.side.RIGHT then
+        power_left = frame_w - power_w
+    end
     if power_hidden ~= true then
-        p.power_border:SetPosition(off_x + preview_border + power_left, outer_y + preview_border + lower_top)
+        p.power_border:SetPosition(off_x + preview_border + power_left, outer_y + preview_border + power_top)
         p.power_border:SetSize(power_w, power_h)
         p.power_border:SetBackColor(border_color)
         p.power_back:SetPosition(border, border)
         p.power_back:SetSize(power_w - (2 * border), power_h - (2 * border))
         p.power_back:SetBackColor(resource_background(power_fill))
         p.power_fill:SetPosition(0, 0)
-        p.power_fill:SetSize(math.floor((power_w - (2 * border)) * 0.55 + 0.5), power_h - (2 * border))
+        p.power_fill:SetSize(math.floor((power_w - (2 * border)) * power_percent + 0.5), power_h - (2 * border))
         p.power_fill:SetBackColor(power_fill)
+    else
+        for i = 3, 4 do
+            p.labels[i]:SetText("")
+            p.labels[i]:SetVisible(false)
+        end
+    end
 
+    p.info_border:SetVisible(info_h > 0)
+    p.info_back:SetVisible(info_h > 0)
+    if info_h > 0 then
+        p.info_border:SetPosition(off_x + preview_border, outer_y + preview_border + info_top)
+        p.info_border:SetSize(frame_w, info_h)
+        p.info_border:SetBackColor(border_color)
+        p.info_back:SetPosition(border, border)
+        p.info_back:SetSize(frame_w - (2 * border), info_h - (2 * border))
+        p.info_back:SetBackColor(lui_apply_opacity_to_color(info_back_color, info_opacity))
+    end
+
+    local label_targets = {
+        [LUI_ENUMS.vitals_label_link.MORALE] = {
+            parent = p.morale_border,
+            width = frame_w,
+            height = morale_h,
+        },
+        [LUI_ENUMS.vitals_label_link.POWER] = power_hidden ~= true and {
+            parent = p.power_border,
+            width = power_w,
+            height = power_h,
+        } or nil,
+        [LUI_ENUMS.vitals_label_link.INFO] = info_h > 0 and {
+            parent = p.info_border,
+            width = frame_w,
+            height = info_h,
+        } or nil,
+    }
+
+    local label_context = {
+        name = "The Watcher in the Water",
+        level = "150",
+        mc = lui_abbrev_number(morale_cur),
+        mt = lui_abbrev_number(morale_max),
+        mp = tostring(math.floor(morale_percent * 100 + 0.5)) .. "%",
+        b = bubble_text,
+        B = bubble_formatted,
+        pc = "-",
+        pt = "-",
+        pp = "-",
+    }
+
+    if power_hidden ~= true then
         local power_max = 120000
         local power_cur = math.floor(power_max * power_percent + 0.5)
-        _render_preview_boss_labels(self, "power", p.power_labels, raw_scale, power_w, power_h, 14, {
-            name = "The Watcher in the Water",
-            level = "150",
-            c = lui_abbrev_number(power_cur),
-            t = lui_abbrev_number(power_max),
-            p = tostring(math.floor(power_percent * 100 + 0.5)) .. "%",
-        })
-    else
-        for i = 1, #p.power_labels do
-            p.power_labels[i]:SetText("")
-            p.power_labels[i]:SetVisible(false)
+        label_context.pc = lui_abbrev_number(power_cur)
+        label_context.pt = lui_abbrev_number(power_max)
+        label_context.pp = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
+    end
+
+    _render_preview_boss_labels(self, p.labels, raw_scale, label_targets, label_context)
+    if power_hidden == true then
+        for i = 3, 4 do
+            p.labels[i]:SetText("")
+            p.labels[i]:SetVisible(false)
         end
     end
 
     local buff_timer_font_name = _require_control_enum(self.controls, "target_boss_buff_timer_font_name")
-    local raw_buff_timer_font_size = _require_control_number(self.controls, "target_boss_buff_timer_font_size")
-    local buff_timer_font_size = _preview_scaled_number(raw_scale, raw_buff_timer_font_size)
+    local buff_timer_font_size = _preview_scaled_number(raw_scale,
+        _require_control_number(self.controls, "target_boss_buff_timer_font_size"))
     local buff_timer_font = _require_font(buff_timer_font_name, buff_timer_font_size)
     local buff_timer_style = timer_style(_require_control_enum(self.controls, "target_boss_buff_timer_font_style"))
     local buff_timer_color = _require_control_color(self.controls, "target_boss_buff_timer_font_color")
     local buff_timer_outline = _require_control_color(self.controls, "target_boss_buff_timer_font_outline_color")
 
-    local buffs_top = effects_top + border
-    for i = 1, #p.buffs do
-        local icon = p.buffs[i]
-        if i <= buff_count then
-            local idx = i - 1
-            local col = idx % buff_cols
-            local row = math.floor(idx / buff_cols)
-            icon.root:SetVisible(true)
-            icon.root:SetPosition(
-                off_x + preview_border + effects_left + (col * buff_size),
-                outer_y + preview_border + buffs_top + (row * buff_size)
-            )
-            icon.root:SetSize(buff_size, buff_size)
-            icon.root:SetBackColor(buff_colors[((i - 1) % #buff_colors) + 1])
-            icon.label:SetPosition(0, 0)
-            icon.label:SetSize(buff_size, buff_size)
-            icon.label:SetFont(buff_timer_font)
-            icon.label:SetFontStyle(buff_timer_style)
-            icon.label:SetForeColor(buff_timer_color)
-            icon.label:SetOutlineColor(buff_timer_outline)
-            icon.label:SetText(i == 1 and lui_format_timeout(6) or (i == 2 and lui_format_timeout(2.4) or ""))
-        else
-            icon.root:SetVisible(false)
+    local buff_position = effect_positions.buffs
+    if buff_position ~= nil then
+        _layout_preview_icons(
+            p.buffs,
+            buff_count,
+            buff_cols,
+            buff_size,
+            off_x + preview_border,
+            outer_y + preview_border + buff_position.top,
+            buff_position.height,
+            buff_position.reverse_fill,
+            buff_colors,
+            buff_timer_font,
+            buff_timer_style,
+            buff_timer_color,
+            buff_timer_outline,
+            6,
+            2.4
+        )
+    else
+        for i = 1, #p.buffs do
+            p.buffs[i].root:SetVisible(false)
         end
     end
 
     local debuff_timer_font_name = _require_control_enum(self.controls, "target_boss_debuff_timer_font_name")
-    local raw_debuff_timer_font_size = _require_control_number(self.controls, "target_boss_debuff_timer_font_size")
-    local debuff_timer_font_size = _preview_scaled_number(raw_scale, raw_debuff_timer_font_size)
+    local debuff_timer_font_size = _preview_scaled_number(raw_scale,
+        _require_control_number(self.controls, "target_boss_debuff_timer_font_size"))
     local debuff_timer_font = _require_font(debuff_timer_font_name, debuff_timer_font_size)
     local debuff_timer_style = timer_style(_require_control_enum(self.controls, "target_boss_debuff_timer_font_style"))
     local debuff_timer_color = _require_control_color(self.controls, "target_boss_debuff_timer_font_color")
     local debuff_timer_outline = _require_control_color(self.controls, "target_boss_debuff_timer_font_outline_color")
 
-    local debuffs_top = buffs_top + buffs_h
-    for i = 1, #p.debuffs do
-        local icon = p.debuffs[i]
-        if i <= debuff_count then
-            local idx = i - 1
-            local col = idx % debuff_cols
-            local row = math.floor(idx / debuff_cols)
-            icon.root:SetVisible(true)
-            icon.root:SetPosition(
-                off_x + preview_border + effects_left + (col * debuff_size),
-                outer_y + preview_border + debuffs_top + (row * debuff_size)
-            )
-            icon.root:SetSize(debuff_size, debuff_size)
-            icon.root:SetBackColor(debuff_colors[((i - 1) % #debuff_colors) + 1])
-            icon.label:SetPosition(0, 0)
-            icon.label:SetSize(debuff_size, debuff_size)
-            icon.label:SetFont(debuff_timer_font)
-            icon.label:SetFontStyle(debuff_timer_style)
-            icon.label:SetForeColor(debuff_timer_color)
-            icon.label:SetOutlineColor(debuff_timer_outline)
-            icon.label:SetText(i == 1 and lui_format_timeout(7) or (i == 2 and lui_format_timeout(2.2) or ""))
-        else
-            icon.root:SetVisible(false)
+    local debuff_position = effect_positions.debuffs
+    if debuff_position ~= nil then
+        _layout_preview_icons(
+            p.debuffs,
+            debuff_count,
+            debuff_cols,
+            debuff_size,
+            off_x + preview_border,
+            outer_y + preview_border + debuff_position.top,
+            debuff_position.height,
+            debuff_position.reverse_fill,
+            debuff_colors,
+            debuff_timer_font,
+            debuff_timer_style,
+            debuff_timer_color,
+            debuff_timer_outline,
+            7,
+            2.2
+        )
+    else
+        for i = 1, #p.debuffs do
+            p.debuffs[i].root:SetVisible(false)
         end
     end
 

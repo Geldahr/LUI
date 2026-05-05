@@ -40,6 +40,11 @@ function _G.lui_lerp_color(start_color, end_color, ratio)
     )
 end
 
+function _G.lui_apply_opacity_to_color(color, opacity)
+    local alpha = lui_clamp_ratio(color.A * lui_clamp_ratio(opacity))
+    return Turbine.UI.Color(alpha, color.R, color.G, color.B)
+end
+
 function _G.lui_gradient_morale_color(percent, full_color, mid_color, low_color)
     local t = lui_clamp_ratio(percent)
     if t <= 0.5 then

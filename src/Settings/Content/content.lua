@@ -54,6 +54,10 @@ function ConfigContent:Constructor(window, columns, refresh_preview_fn)
     self.vitals_label_anchor_values = ui.vitals_label_anchor_values
     self.vitals_label_width_mode_labels = ui.vitals_label_width_mode_labels
     self.vitals_label_width_mode_values = ui.vitals_label_width_mode_values
+    self.vitals_label_link_labels = ui.vitals_label_link_labels
+    self.vitals_label_link_values = ui.vitals_label_link_values
+    self.vitals_effect_slot_labels = ui.vitals_effect_slot_labels
+    self.vitals_effect_slot_values = ui.vitals_effect_slot_values
     self.abbrev_digits_labels = ui.abbrev_digits_labels
     self.abbrev_digits_values = ui.abbrev_digits_values
     self.abbrev_width_labels = ui.abbrev_width_labels
