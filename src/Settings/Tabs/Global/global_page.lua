@@ -67,7 +67,7 @@ function GlobalPage:Constructor(window)
         end,
         function()
             return self._settings.global.move_mode_shortcut == true
-        end)
+        end, 2)
     general:add_row_break()
     general:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"],
         function(value)

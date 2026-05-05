@@ -37,6 +37,27 @@ local function _trim(text)
     return trimmed
 end
 
+local function _compute_next_profile_id(profiles)
+    local next_profile_id = 1
+    if type(profiles) ~= "table" then
+        return next_profile_id
+    end
+
+    for profile_id, profile in pairs(profiles) do
+        if type(profile) == "table" then
+            local numeric_profile_id = tonumber(profile_id)
+            if numeric_profile_id ~= nil then
+                local candidate = math.floor(numeric_profile_id + 1)
+                if candidate > next_profile_id then
+                    next_profile_id = candidate
+                end
+            end
+        end
+    end
+
+    return next_profile_id
+end
+
 local function _get_current_character_name()
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
     if player == nil or player.GetName == nil then
@@ -58,6 +79,74 @@ local function _profile_label(profile_id, profile)
     end
 
     return FALLBACK_PROFILE_NAME .. " " .. tostring(profile_id)
+end
+
+local function _stamp_profile_settings_version(settings)
+    if type(settings) ~= "table" then
+        return
+    end
+
+    settings.version = _G.get_settings_version()
+end
+
+local function _stamp_account_settings_version(account_settings)
+    if type(account_settings) ~= "table" then
+        return
+    end
+
+    account_settings.version = _G.get_settings_version()
+
+    local profiles = account_settings.profiles
+    if type(profiles) ~= "table" then
+        return
+    end
+
+    for _, profile in pairs(profiles) do
+        if type(profile) == "table" and type(profile.settings) == "table" then
+            _stamp_profile_settings_version(profile.settings)
+        end
+    end
+end
+
+local function _stamp_character_settings_version(character_settings)
+    if type(character_settings) ~= "table" then
+        return
+    end
+
+    character_settings.version = _G.get_settings_version()
+end
+
+local function _save_settings_files_raw()
+    Turbine.PluginData.Save(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, _G.account_settings)
+    Turbine.PluginData.Save(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY, _G.character_settings)
+end
+
+local function _migrate_account_profiles(account_settings)
+    local profiles = account_settings.profiles
+    if type(profiles) ~= "table" then
+        return false
+    end
+
+    local changed = false
+    for profile_id, profile in pairs(profiles) do
+        if type(profile) ~= "table" or type(profile.settings) ~= "table" then
+            profiles[profile_id] = nil
+            changed = true
+        else
+            local migrated_settings, settings_changed = _G.migrate_profile_settings(profile.settings)
+            if type(migrated_settings) ~= "table" then
+                profiles[profile_id] = nil
+                changed = true
+            else
+                profile.settings = migrated_settings
+                if settings_changed == true then
+                    changed = true
+                end
+            end
+        end
+    end
+
+    return changed
 end
 
 local function _sync_current_profile_settings()
@@ -92,9 +181,17 @@ function _G.ensure_account_settings()
     if type(s.profiles) ~= "table" then
         s.profiles = {}
     end
-    if type(s.next_profile_id) ~= "number" or s.next_profile_id < 1 then
-        s.next_profile_id = 1
+    local min_next_profile_id = _compute_next_profile_id(s.profiles)
+    local next_profile_id = tonumber(s.next_profile_id)
+    if next_profile_id == nil then
+        next_profile_id = min_next_profile_id
+    else
+        next_profile_id = math.floor(next_profile_id + 0.5)
+        if next_profile_id < min_next_profile_id then
+            next_profile_id = min_next_profile_id
+        end
     end
+    s.next_profile_id = next_profile_id
 end
 
 function _G.ensure_character_settings()
@@ -271,8 +368,10 @@ function _G.create_configuration(name, settings)
     _G.ensure_account_settings()
 
     local s = _G.account_settings
+    _stamp_account_settings_version(s)
     local profile_id = tostring(s.next_profile_id)
     s.next_profile_id = s.next_profile_id + 1
+    _stamp_profile_settings_version(settings)
 
     s.profiles[profile_id] = {
         name = name,
@@ -417,6 +516,10 @@ function _G.delete_configuration(profile_id)
 end
 
 function _G.save_settings()
+    if FIRST_RUN_QUICK_SETUP_WINDOW ~= nil and FIRST_RUN_QUICK_SETUP_WINDOW.closing ~= true then
+        return
+    end
+
     _G.ensure_account_settings()
     _G.ensure_character_settings()
 
@@ -425,9 +528,10 @@ function _G.save_settings()
     end
 
     _sync_current_profile_settings()
+    _stamp_account_settings_version(_G.account_settings)
+    _stamp_character_settings_version(_G.character_settings)
 
-    Turbine.PluginData.Save(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, _G.account_settings)
-    Turbine.PluginData.Save(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY, _G.character_settings)
+    _save_settings_files_raw()
 end
 
 function _G.capture_runtime_geometry()
@@ -510,6 +614,41 @@ function _G.load_settings()
     _G.bestiary_cache_loading = false
     _G.bestiary_cache_dirty = false
 
+    local migrated_any = false
+
+    if type(_G.account_settings) == "table" then
+        local migrated_account_settings, account_changed = _G.migrate_account_settings(_G.account_settings)
+        if type(migrated_account_settings) == "table" then
+            _G.account_settings = migrated_account_settings
+            if account_changed == true then
+                migrated_any = true
+            end
+            if _migrate_account_profiles(_G.account_settings) == true then
+                migrated_any = true
+            end
+        else
+            _G.account_settings = nil
+            migrated_any = true
+        end
+    else
+        _G.account_settings = nil
+    end
+
+    if type(_G.character_settings) == "table" then
+        local migrated_character_settings, character_changed = _G.migrate_character_settings(_G.character_settings)
+        if type(migrated_character_settings) == "table" then
+            _G.character_settings = migrated_character_settings
+            if character_changed == true then
+                migrated_any = true
+            end
+        else
+            _G.character_settings = nil
+            migrated_any = true
+        end
+    else
+        _G.character_settings = nil
+    end
+
     _G.ensure_account_settings()
     _G.ensure_character_settings()
 
@@ -521,10 +660,26 @@ function _G.load_settings()
     local profile = nil
     if profile_id ~= nil then
         profile = _G.account_settings.profiles[profile_id]
-        if type(profile) ~= "table" then
+        if type(profile) ~= "table" or type(profile.settings) ~= "table" then
             _G.character_settings.profile_id = nil
             profile_id = nil
+            migrated_any = true
         end
+    end
+
+    if profile_id == nil then
+        profile_id = _G.get_first_configuration_id()
+        if profile_id ~= nil then
+            profile = _G.account_settings.profiles[profile_id]
+            _G.character_settings.profile_id = profile_id
+            migrated_any = true
+        end
+    end
+
+    if migrated_any == true and type(profile) == "table" and type(profile.settings) == "table" then
+        _stamp_account_settings_version(_G.account_settings)
+        _stamp_character_settings_version(_G.character_settings)
+        _save_settings_files_raw()
     end
 
     _G.loaded_settings_was_new = true

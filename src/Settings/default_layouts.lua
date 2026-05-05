@@ -1,6 +1,7 @@
 import "Turbine.UI"
+import "LUI.src.Settings.migrations"
 import "LUI.src.Settings.default_bottom"
-import "LUI.src.Settings.default_top"
+import "LUI.src.Settings.default_schema"
 
 _G.DefaultLayouts = _G.DefaultLayouts or {}
 local DefaultLayouts = _G.DefaultLayouts
@@ -8,15 +9,6 @@ local DefaultLayouts = _G.DefaultLayouts
 local BASE_DISPLAY_W = 2560
 local BASE_DISPLAY_H = 1440
 local BASE_SCALE = 1.35
-
-local SOURCE_BY_KEY = {
-    bottom = function()
-        return _G.DEFAULT_LAYOUT_BOTTOM
-    end,
-    top = function()
-        return _G.DEFAULT_LAYOUT_TOP
-    end,
-}
 
 local function _round(n)
     return math.floor(n + 0.5)
@@ -35,18 +27,43 @@ local function _copy_table(value)
     return copy
 end
 
-local function _load_layout_source(layout_key)
-    local get_source = SOURCE_BY_KEY[layout_key]
-    if get_source == nil then
-        error("Unknown default layout: " .. tostring(layout_key))
+local function _merge_table(base, override)
+    if type(base) ~= "table" or type(override) ~= "table" then
+        return
     end
 
-    local mod = get_source()
-    if type(mod) ~= "table" then
-        error("Failed to load default layout: " .. tostring(layout_key))
+    for key, value in pairs(override) do
+        if type(value) == "table" then
+            if type(base[key]) ~= "table" then
+                base[key] = {}
+            end
+            _merge_table(base[key], value)
+        else
+            base[key] = value
+        end
+    end
+end
+
+local function _build_layout_source(layout_key)
+    local base = _G.DEFAULT_LAYOUT_SCHEMA
+    if type(base) ~= "table" then
+        error("Failed to load default schema")
     end
 
-    return mod
+    local layout = _copy_table(base)
+    if layout_key == "top" then
+        return layout
+    end
+    if layout_key == "bottom" then
+        local override = _G.DEFAULT_LAYOUT_BOTTOM
+        if type(override) ~= "table" then
+            error("Failed to load default bottom overrides")
+        end
+        _merge_table(layout, override)
+        return layout
+    end
+
+    error("Unknown default layout: " .. tostring(layout_key))
 end
 
 local function _scale_left(base_left, display_w)
@@ -122,9 +139,10 @@ function DefaultLayouts.get_base_scale()
 end
 
 function DefaultLayouts.build(layout_key, target_scale, preserved_config_geometry)
-    local layout = _copy_table(_load_layout_source(layout_key))
+    local layout = _build_layout_source(layout_key)
     local display_w, display_h = Turbine.UI.Display.GetSize()
     _adjust_window_positions(layout, display_w, display_h)
+    layout.version = _G.get_settings_version()
 
     if type(layout.global) ~= "table" then
         layout.global = {}
