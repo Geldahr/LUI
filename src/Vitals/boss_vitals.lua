@@ -142,10 +142,6 @@ function BossVitals:use_stacked_effects_layout()
     return raw_frame_width < 400 or raw_power_width > (raw_frame_width / 2)
 end
 
-function BossVitals:_uses_configurable_bar_labels()
-    return true
-end
-
 function BossVitals:apply_text_alignment()
     VitalsBase.apply_text_alignment(self)
 end

@@ -8,7 +8,7 @@ function BuildStatusBarLayoutHelp()
         TR["  %time% - local time (HH:MM)"],
         TR["  %inventory% - backpack used/total"],
         TR["  %durability% - equipped wear average% (weakest%)"],
-        TR["  %gold% / %money% - money (g/s/c)"],
+        TR["  %gold% - money (g/s/c)"],
         TR["  %wallet% - selected wallet items"],
         TR["  %item:[Simple Fish]% - tracked total for one inventory item"],
         TR["  %config% - toggle configuration window"],

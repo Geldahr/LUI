@@ -1007,6 +1007,7 @@ end
 
 function FirstRunQuickSetup:commit_preview_settings()
     _G.loaded_settings.global.scale = self.selected_scale
+    ensure_loaded_settings()
 
     _persist_window_position(PLAYER_VITAL, _G.get_ui_hud_state("self_vitals"))
     _persist_window_position(TARGET_VITAL, _G.get_ui_hud_state("target_vitals"))

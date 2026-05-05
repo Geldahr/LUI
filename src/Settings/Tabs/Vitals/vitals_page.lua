@@ -568,28 +568,28 @@ local function _build_standard_text_colors_form(page, prefix, get)
     page:add_title(TR["Label 1"])
     _add_font_color_controls(page, prefix .. "_morale_label1",
         function()
-            return get().morale.labels[1].font
+            return get().labels[1].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
     page:add_title(TR["Label 2"])
     _add_font_color_controls(page, prefix .. "_morale_label2",
         function()
-            return get().morale.labels[2].font
+            return get().labels[2].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
     page:add_title(TR["Label 3"])
     _add_font_color_controls(page, prefix .. "_power_label1",
         function()
-            return get().power.labels[1].font
+            return get().labels[3].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
     page:add_title(TR["Label 4"])
     _add_font_color_controls(page, prefix .. "_power_label2",
         function()
-            return get().power.labels[2].font
+            return get().labels[4].font
         end,
         TR["Font Color"], TR["Outline Color"])
 end
@@ -814,19 +814,19 @@ local function _new_texts_section(window, refresh_preview_fn, prefix, get)
         NESTED_TAB_FONT_SIZE)
     page:add_tab(TR["Label 1"], "morale_label1",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 1, function()
-            return get().morale.labels[1]
+            return get().labels[1]
         end))
     page:add_tab(TR["Label 2"], "morale_label2",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 2, function()
-            return get().morale.labels[2]
+            return get().labels[2]
         end))
     page:add_tab(TR["Label 3"], "power_label1",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "power", 1, function()
-            return get().power.labels[1]
+            return get().labels[3]
         end))
     page:add_tab(TR["Label 4"], "power_label2",
         _new_label_page(window, refresh_preview_fn, 3, prefix, "power", 2, function()
-            return get().power.labels[2]
+            return get().labels[4]
         end))
     return page
 end

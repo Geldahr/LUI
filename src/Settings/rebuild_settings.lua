@@ -53,8 +53,9 @@ function _G.rebuild_settings()
         self = {
             vitals = {
                 frame = {},
-                morale = { font = {}, color = {} },
-                power = { font = {}, color = {} },
+                morale = { color = {} },
+                power = { color = {} },
+                labels = {},
                 info = { color = {} },
                 effects = {
                     buffs = { timer_font = {} },
@@ -68,10 +69,11 @@ function _G.rebuild_settings()
         target = {
             vitals = {
                 frame = {},
-                morale = { font = {}, color = {} },
-                power = { font = {}, color = {} },
+                morale = { color = {} },
+                power = { color = {} },
+                labels = {},
                 info = { color = {} },
-                targets_target = { font = {}, color = {}, labels = {} },
+                targets_target = { color = {}, labels = {} },
                 effects = {
                     buffs = { timer_font = {} },
                     debuffs = { timer_font = {} },
@@ -79,8 +81,9 @@ function _G.rebuild_settings()
             },
             boss_vitals = {
                 frame = {},
-                morale = { font = {}, color = {} },
-                power = { font = {}, color = {} },
+                morale = { color = {} },
+                power = { color = {} },
+                labels = {},
                 info = { color = {} },
                 effects = {
                     buffs = { timer_font = {} },
@@ -91,8 +94,9 @@ function _G.rebuild_settings()
         },
         party = {
             frame = {},
-            morale = { font = {}, color = {} },
-            power = { font = {}, color = {} },
+            morale = { color = {} },
+            power = { color = {} },
+            labels = {},
             info = { color = {} },
             layout = {},
             class_icon = {},
@@ -157,51 +161,23 @@ function _G.rebuild_settings()
         dst.morale.height = scaled_int(src.morale.height)
         dst.power.height = scaled_int(src.power.height)
 
-        dst.morale.font.name = src.morale.font.name
-        dst.morale.font.size = scaled_number(src.morale.font.size)
-        dst.morale.font.lotro = FONT_TO_LOTRO(dst.morale.font.name, dst.morale.font.size)
-        dst.morale.font.style = src.morale.font.style
-        dst.morale.font.color = src.morale.font.color
-        dst.morale.font.outline_color = src.morale.font.outline_color
-
-        dst.power.font.name = src.power.font.name
-        dst.power.font.size = scaled_number(src.power.font.size)
-        dst.power.font.lotro = FONT_TO_LOTRO(dst.power.font.name, dst.power.font.size)
-        dst.power.font.style = src.power.font.style
-        dst.power.font.color = src.power.font.color
-        dst.power.font.outline_color = src.power.font.outline_color
-
         dst.morale.color = src.morale.color
         dst.power.color = src.power.color
 
-        dst.morale.string_format = src.morale.string_format
         dst.morale.bubble_format = src.morale.bubble_format
-        dst.power.string_format = src.power.string_format
-        dst.morale.string_tokens = lui_tokenize_format(dst.morale.string_format)
         dst.morale.bubble_tokens = lui_tokenize_format(dst.morale.bubble_format)
-        dst.power.string_tokens = lui_tokenize_format(dst.power.string_format)
         dst.background_matches_missing = src.background_matches_missing
         dst.background_dimming = src.background_dimming
-        dst.morale.text_alignment = src.morale.text_alignment
-        dst.power.text_alignment = src.power.text_alignment
-        dst.morale.text_margin = scaled_int(src.morale.text_margin)
-        dst.power.text_margin = scaled_int(src.power.text_margin)
         dst.info.enabled = src.info.enabled == true
         dst.info.height = scaled_int(src.info.height)
         dst.info.opacity = src.info.opacity
         dst.info.color.background = src.info.color.background
-        if src.morale.labels ~= nil then
-            dst.morale.labels = {
-                build_vital_label(src.morale.labels[1]),
-                build_vital_label(src.morale.labels[2]),
-            }
-        end
-        if src.power.labels ~= nil then
-            dst.power.labels = {
-                build_vital_label(src.power.labels[1]),
-                build_vital_label(src.power.labels[2]),
-            }
-        end
+        dst.labels = {
+            build_vital_label(src.labels[1]),
+            build_vital_label(src.labels[2]),
+            build_vital_label(src.labels[3]),
+            build_vital_label(src.labels[4]),
+        }
 
         dst.frame.effects_height = scaled_int(src.frame.effects_height)
         dst.frame.effects_position = src.frame.effects_position
