@@ -20,9 +20,9 @@ local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
 
-local function _render_preview_vital_label(window, prefix, bar_key, label_index, label, raw_scale, targets, context)
+local function _render_preview_vital_label(window, prefix, label_index, label, raw_scale, targets, context)
     local controls = window.controls
-    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+    local key = prefix .. "_label" .. tostring(label_index)
     local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
     local text = controls[key .. "_text"].tb:GetText()
 
@@ -74,9 +74,9 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
     label:SetVisible(true)
 end
 
-local function _render_preview_vital_labels(window, prefix, bar_key, labels, raw_scale, targets, context)
+local function _render_preview_vital_labels(window, prefix, labels, raw_scale, targets, context)
     for i = 1, #labels do
-        _render_preview_vital_label(window, prefix, bar_key, i, labels[i], raw_scale, targets, context)
+        _render_preview_vital_label(window, prefix, i, labels[i], raw_scale, targets, context)
     end
 end
 
@@ -203,11 +203,6 @@ function StandardVitalsPreview:Constructor(window, holder_key, prefix, name_text
     self.bubble_bar:SetMouseVisible(false)
     self.bubble_bar:SetZOrder(2)
 
-    self.morale_labels = {}
-    for i = 1, 2 do
-        self.morale_labels[i] = _new_preview_vital_label(self.morale_border, 9 + i)
-    end
-
     self.power_border = Turbine.UI.Control()
     self.power_border:SetParent(self.root)
     self.power_border:SetMouseVisible(false)
@@ -220,9 +215,10 @@ function StandardVitalsPreview:Constructor(window, holder_key, prefix, name_text
     self.power_bar:SetParent(self.power_background)
     self.power_bar:SetMouseVisible(false)
 
-    self.power_labels = {}
-    for i = 1, 2 do
-        self.power_labels[i] = _new_preview_vital_label(self.power_border, 9 + i)
+    self.labels = {}
+    for i = 1, 4 do
+        local parent = i <= 2 and self.morale_border or self.power_border
+        self.labels[i] = _new_preview_vital_label(parent, 9 + i)
     end
 
     self.info_border = Turbine.UI.Control()
@@ -647,8 +643,7 @@ function StandardVitalsPreview:update()
         pp = power_pct_text,
     }
 
-    _render_preview_vital_labels(window, prefix, "morale", self.morale_labels, raw_scale, label_targets, label_context)
-    _render_preview_vital_labels(window, prefix, "power", self.power_labels, raw_scale, label_targets, label_context)
+    _render_preview_vital_labels(window, prefix, self.labels, raw_scale, label_targets, label_context)
 
     lui_clear_number_abbrev_preview_settings()
 end

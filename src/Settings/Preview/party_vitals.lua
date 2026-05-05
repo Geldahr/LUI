@@ -19,9 +19,9 @@ local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
 
-local function _render_preview_vital_label(window, prefix, bar_key, label_index, label, raw_scale, targets, context)
+local function _render_preview_vital_label(window, prefix, label_index, label, raw_scale, targets, context)
     local controls = window.controls
-    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+    local key = prefix .. "_label" .. tostring(label_index)
     local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
     local text = controls[key .. "_text"].tb:GetText()
 
@@ -73,9 +73,9 @@ local function _render_preview_vital_label(window, prefix, bar_key, label_index,
     label:SetVisible(true)
 end
 
-local function _render_preview_vital_labels(window, prefix, bar_key, labels, raw_scale, targets, context)
+local function _render_preview_vital_labels(window, prefix, labels, raw_scale, targets, context)
     for i = 1, #labels do
-        _render_preview_vital_label(window, prefix, bar_key, i, labels[i], raw_scale, targets, context)
+        _render_preview_vital_label(window, prefix, i, labels[i], raw_scale, targets, context)
     end
 end
 
@@ -154,17 +154,6 @@ function ConfigWindow:init_party_vitals_preview()
         m.bubble_bar:SetMouseVisible(false)
         m.bubble_bar:SetZOrder(2)
 
-        m.morale_labels = {}
-        for j = 1, 2 do
-            local label = UI.Widgets.LuiLabel()
-            label:SetParent(m.morale_border)
-            label:SetMouseVisible(false)
-            label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-            label:SetMultiline(true)
-            label:SetZOrder(9 + j)
-            m.morale_labels[j] = label
-        end
-
         m.power_border = Turbine.UI.Control()
         m.power_border:SetParent(m.root)
         m.power_border:SetMouseVisible(false)
@@ -177,15 +166,15 @@ function ConfigWindow:init_party_vitals_preview()
         m.power_bar:SetParent(m.power_background)
         m.power_bar:SetMouseVisible(false)
 
-        m.power_labels = {}
-        for j = 1, 2 do
+        m.labels = {}
+        for j = 1, 4 do
             local label = UI.Widgets.LuiLabel()
-            label:SetParent(m.power_border)
+            label:SetParent(j <= 2 and m.morale_border or m.power_border)
             label:SetMouseVisible(false)
             label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
             label:SetMultiline(true)
             label:SetZOrder(9 + j)
-            m.power_labels[j] = label
+            m.labels[j] = label
         end
 
         m.info_border = Turbine.UI.Control()
@@ -528,10 +517,7 @@ function ConfigWindow:update_party_vitals_preview()
             label_context.pc = lui_abbrev_number(power_cur)
             label_context.pt = lui_abbrev_number(power_max)
             label_context.pp = power_pct_text
-            _render_preview_vital_labels(self, "party", "morale", m.morale_labels, raw_scale, label_targets,
-                label_context)
-            _render_preview_vital_labels(self, "party", "power", m.power_labels, raw_scale, label_targets,
-                label_context)
+            _render_preview_vital_labels(self, "party", m.labels, raw_scale, label_targets, label_context)
 
             m.info_border:SetVisible(info_h > 0)
             m.info_background:SetVisible(info_h > 0)

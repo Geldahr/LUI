@@ -283,13 +283,11 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
         return label
     end
 
-    self.morale_labels = {
+    self.labels = {
         make_bar_label(self.morale_frame, 50),
         make_bar_label(self.morale_frame, 51),
-    }
-    self.power_labels = {
-        make_bar_label(self.power_frame, 50),
-        make_bar_label(self.power_frame, 51),
+        make_bar_label(self.power_frame, 52),
+        make_bar_label(self.power_frame, 53),
     }
 
     ---------------------------------------------------------------------
@@ -488,21 +486,6 @@ function VitalsBase:get_empty_morale_text()
     return ""
 end
 
-function VitalsBase:_bar_label_controls(bar_key)
-    if bar_key == "morale" then
-        return self.morale_labels
-    end
-    return self.power_labels
-end
-
-function VitalsBase:_bar_label_specs(bar_key)
-    local labels = self:get_vitals_settings().labels
-    if bar_key == "morale" then
-        return labels, 1
-    end
-    return labels, 3
-end
-
 function VitalsBase:_frame_for_label_link(link_to)
     if link_to == LUI_ENUMS.vitals_label_link.POWER then
         return self.power_frame
@@ -516,12 +499,11 @@ function VitalsBase:_frame_for_label_link(link_to)
     return self.morale_frame
 end
 
-function VitalsBase:_apply_configurable_bar_label_fonts(bar_key)
-    local controls = self:_bar_label_controls(bar_key)
-    local specs, start_index = self:_bar_label_specs(bar_key)
-    for i = 1, #controls do
-        local label = controls[i]
-        local spec = specs[start_index + i - 1]
+function VitalsBase:_apply_configurable_label_fonts()
+    local specs = self:get_vitals_settings().labels
+    for i = 1, #self.labels do
+        local label = self.labels[i]
+        local spec = specs[i]
         local font = spec.font
         local style = LUI_TO_LOTRO.font_style[font.style]
         label:SetFont(font.lotro)
@@ -533,12 +515,11 @@ function VitalsBase:_apply_configurable_bar_label_fonts(bar_key)
     end
 end
 
-function VitalsBase:_apply_configurable_bar_label_layout(bar_key)
-    local controls = self:_bar_label_controls(bar_key)
-    local specs, start_index = self:_bar_label_specs(bar_key)
-    for i = 1, #controls do
-        local label = controls[i]
-        local spec = specs[start_index + i - 1]
+function VitalsBase:_apply_configurable_label_layout()
+    local specs = self:get_vitals_settings().labels
+    for i = 1, #self.labels do
+        local label = self.labels[i]
+        local spec = specs[i]
         local frame = self:_frame_for_label_link(spec.link_to)
         if frame == nil then
             label:SetText("")
@@ -555,12 +536,11 @@ function VitalsBase:_apply_configurable_bar_label_layout(bar_key)
     end
 end
 
-function VitalsBase:_render_configurable_bar_labels(bar_key, context)
-    local controls = self:_bar_label_controls(bar_key)
-    local specs, start_index = self:_bar_label_specs(bar_key)
-    for i = 1, #controls do
-        local label = controls[i]
-        local spec = specs[start_index + i - 1]
+function VitalsBase:_render_configurable_labels(context)
+    local specs = self:get_vitals_settings().labels
+    for i = 1, #self.labels do
+        local label = self.labels[i]
+        local spec = specs[i]
         local frame = self:_frame_for_label_link(spec.link_to)
         if frame ~= nil and spec.enabled == true and _label_text_is_blank(spec.text) ~= true then
             if label:GetParent() ~= frame then
@@ -577,11 +557,6 @@ function VitalsBase:_render_configurable_bar_labels(bar_key, context)
             label:SetVisible(false)
         end
     end
-end
-
-function VitalsBase:_render_all_configurable_bar_labels(context)
-    self:_render_configurable_bar_labels("morale", context)
-    self:_render_configurable_bar_labels("power", context)
 end
 
 function VitalsBase:_build_vitals_label_context()
@@ -652,10 +627,10 @@ function VitalsBase:_build_vitals_label_context()
     return ctx
 end
 
-function VitalsBase:_set_configurable_morale_fallback(text)
+function VitalsBase:_set_primary_label_fallback(text)
     local specs = self:get_vitals_settings().labels
-    for i = 1, #self.morale_labels do
-        local label = self.morale_labels[i]
+    for i = 1, 2 do
+        local label = self.labels[i]
         local spec = specs[i]
         local frame = self:_frame_for_label_link(spec.link_to)
         if frame ~= nil and i == 1 and _label_text_is_blank(text) ~= true then
@@ -674,22 +649,20 @@ function VitalsBase:_set_configurable_morale_fallback(text)
     end
 end
 
-function VitalsBase:_clear_configurable_power_labels()
-    for i = 1, #self.power_labels do
-        local label = self.power_labels[i]
+function VitalsBase:_clear_labels(start_index, end_index)
+    for i = start_index, end_index do
+        local label = self.labels[i]
         label:SetText("")
         label:SetVisible(false)
     end
 end
 
 function VitalsBase:apply_fonts()
-    self:_apply_configurable_bar_label_fonts("morale")
-    self:_apply_configurable_bar_label_fonts("power")
+    self:_apply_configurable_label_fonts()
 end
 
 function VitalsBase:apply_text_alignment()
-    self:_apply_configurable_bar_label_layout("morale")
-    self:_apply_configurable_bar_label_layout("power")
+    self:_apply_configurable_label_layout()
 end
 
 function VitalsBase:is_move_mode()
@@ -735,21 +708,21 @@ function VitalsBase:self_bubble_changed()
 
     if b <= 0 then
         self.bubble_bar:SetVisible(false)
-        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        self:_render_configurable_labels(self:_build_vitals_label_context())
         return
     end
 
     local maxm = self.entity:GetMaxMorale() or 0
     if maxm <= 0 then
         self.bubble_bar:SetVisible(false)
-        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        self:_render_configurable_labels(self:_build_vitals_label_context())
         return
     end
 
     local bubble_w = math.floor(((b / maxm) * self.width) + 0.5)
     if bubble_w <= 0 then
         self.bubble_bar:SetVisible(false)
-        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        self:_render_configurable_labels(self:_build_vitals_label_context())
         return
     end
     if bubble_w > self.width then bubble_w = self.width end
@@ -777,7 +750,7 @@ function VitalsBase:self_bubble_changed()
     self.bubble_bar:SetLeft(left_inner)
     self.bubble_bar:SetWidth(bubble_w)
     self.bubble_bar:SetVisible(true)
-    self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+    self:_render_configurable_labels(self:_build_vitals_label_context())
 end
 
 function VitalsBase:self_morale_changed()
@@ -795,7 +768,7 @@ function VitalsBase:self_morale_changed()
         self._no_morale = false
         local percent = m / maxm
         local ctx = self:_build_vitals_label_context()
-        self:_render_all_configurable_bar_labels(ctx)
+        self:_render_configurable_labels(ctx)
 
         local fill_color = self:morale_color(percent)
         self.morale_bar:SetBackColor(fill_color)
@@ -811,7 +784,7 @@ function VitalsBase:self_morale_changed()
         if self.entity.GetName ~= nil then
             name = tostring(self.entity:GetName() or "")
         end
-        self:_set_configurable_morale_fallback(name)
+        self:_set_primary_label_fallback(name)
         self.morale_bar:SetWidth(self.width)
         self.morale_bar:SetBackColor(v.morale.color.neutral)
         self.morale_background:SetBackColor(self:morale_background_color(v.morale.color.neutral))
@@ -821,7 +794,7 @@ function VitalsBase:self_morale_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(false)
         end
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
     end
 end
 
@@ -833,7 +806,7 @@ function VitalsBase:self_power_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(false)
         end
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
         if self.power_bar ~= nil then
             self.power_bar:SetWidth(0)
         end
@@ -854,7 +827,7 @@ function VitalsBase:self_power_changed()
             self.power_border:SetVisible(true)
         end
         local percent = p / maxp
-        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        self:_render_configurable_labels(self:_build_vitals_label_context())
         self.power_bar:SetWidth(self.width * percent)
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
         self.power_bar:SetBackColor(fill_color)
@@ -863,7 +836,7 @@ function VitalsBase:self_power_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(true)
         end
-        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        self:_render_configurable_labels(self:_build_vitals_label_context())
         self.power_bar:SetWidth(self.width)
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
         self.power_bar:SetBackColor(fill_color)
@@ -880,7 +853,7 @@ function VitalsBase:self_wrath_changed()
     local w = self.entity:GetClassAttributes():GetWrath()
 
     local percent = w / maxw
-    self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+    self:_render_configurable_labels(self:_build_vitals_label_context())
     self.power_bar:SetWidth(self.width * percent)
     self.power_bar:SetBackColor(v.power.color.wrath)
     self.power_background:SetBackColor(self:power_background_color(v.power.color.wrath))
@@ -945,8 +918,8 @@ function VitalsBase:set_entity(entity)
         self.power_border:SetVisible(true)
         self.bubble_bar:SetVisible(false)
 
-        self:_set_configurable_morale_fallback(self:get_empty_morale_text())
-        self:_clear_configurable_power_labels()
+        self:_set_primary_label_fallback(self:get_empty_morale_text())
+        self:_clear_labels(3, 4)
 
         self.morale_bar:SetWidth(self.width)
         self.morale_bar:SetBackColor(v.morale.color.neutral)
@@ -973,8 +946,8 @@ function VitalsBase:set_entity(entity)
         self.morale_bar:SetWidth(0)
         self.power_bar:SetWidth(0)
         self.bubble_bar:SetWidth(0)
-        self:_set_configurable_morale_fallback(self.entity:GetName())
-        self:_clear_configurable_power_labels()
+        self:_set_primary_label_fallback(self.entity:GetName())
+        self:_clear_labels(3, 4)
         self.power_border:SetVisible(false)
 
         if self.show_effects then
@@ -1083,8 +1056,7 @@ function VitalsBase:resize()
     self.info_background:SetSize(inner_w, info_inner_h)
     self.info_background:SetBackColor(lui_apply_opacity_to_color(v.info.color.background, v.info.opacity))
 
-    self:_apply_configurable_bar_label_layout("morale")
-    self:_apply_configurable_bar_label_layout("power")
+    self:_apply_configurable_label_layout()
     self:apply_fonts()
     self:apply_text_alignment()
 

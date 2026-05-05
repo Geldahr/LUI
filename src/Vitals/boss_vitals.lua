@@ -144,6 +144,9 @@ end
 
 function BossVitals:apply_text_alignment()
     VitalsBase.apply_text_alignment(self)
+    if self:get_vitals_settings().power.hide == true then
+        self:_clear_labels(3, 4)
+    end
 end
 
 function BossVitals:set_move_mode(enabled)
@@ -165,7 +168,7 @@ function BossVitals:self_power_changed()
     if v.power.hide == true then
         self.power_frame:SetVisible(false)
         self.power_border:SetVisible(false)
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
         self.power_bar:SetWidth(0)
         return
     end
@@ -176,7 +179,7 @@ function BossVitals:self_power_changed()
         if self.power_border ~= nil then
             self.power_border:SetVisible(false)
         end
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
         if self.power_bar ~= nil then
             self.power_bar:SetWidth(0)
         end
@@ -190,7 +193,7 @@ function BossVitals:self_power_changed()
     if maxp > 0 then
         self.power_border:SetVisible(true)
         local percent = p / maxp
-        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        self:_render_configurable_labels(self:_build_vitals_label_context())
 
         self.power_bar:SetWidth(math.floor((fill_width * percent) + 0.5))
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
@@ -198,7 +201,7 @@ function BossVitals:self_power_changed()
         self.power_background:SetBackColor(self:power_background_color(fill_color))
     else
         self.power_border:SetVisible(true)
-        self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+        self:_render_configurable_labels(self:_build_vitals_label_context())
         self.power_bar:SetWidth(fill_width)
         local fill_color = is_wrath and v.power.color.wrath or v.power.color.power
         self.power_bar:SetBackColor(fill_color)
@@ -211,7 +214,7 @@ function BossVitals:self_wrath_changed()
     if v.power.hide == true then
         self.power_frame:SetVisible(false)
         self.power_border:SetVisible(false)
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
         self.power_bar:SetWidth(0)
         return
     end
@@ -222,7 +225,7 @@ function BossVitals:self_wrath_changed()
     local maxw = 100
     local w = self.entity:GetClassAttributes():GetWrath()
     local percent = w / maxw
-    self:_render_all_configurable_bar_labels(self:_build_vitals_label_context())
+    self:_render_configurable_labels(self:_build_vitals_label_context())
 
     self.power_bar:SetWidth(math.floor((self._power_fill_width * percent) + 0.5))
     self.power_bar:SetBackColor(v.power.color.wrath)
@@ -318,7 +321,7 @@ function BossVitals:resize()
     if power_hidden == true then
         self.power_frame:SetVisible(false)
         self.power_border:SetVisible(false)
-        self:_clear_configurable_power_labels()
+        self:_clear_labels(3, 4)
         self.power_bar:SetWidth(0)
     else
         local power_left = 0
@@ -343,8 +346,7 @@ function BossVitals:resize()
     self.entity_control:SetPosition(0, morale_top)
     self.entity_control:SetSize(frame_width, core_height)
 
-    self:_apply_configurable_bar_label_layout("morale")
-    self:_apply_configurable_bar_label_layout("power")
+    self:_apply_configurable_label_layout()
     self:_layout_effect_windows(bottom_start)
     self:_resize_extra_controls()
     self:apply_fonts()

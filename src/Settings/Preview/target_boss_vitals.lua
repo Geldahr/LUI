@@ -54,9 +54,9 @@ local function _slot_order(slot)
     return 1
 end
 
-local function _render_preview_boss_label(window, bar_key, label_index, label, raw_scale, targets, context)
+local function _render_preview_boss_label(window, label_index, label, raw_scale, targets, context)
     local controls = window.controls
-    local key = "target_boss_" .. bar_key .. "_label" .. tostring(label_index)
+    local key = "target_boss_label" .. tostring(label_index)
     local enabled = controls[key .. "_enabled"].cb:IsChecked() == true
     local text = controls[key .. "_text"].tb:GetText()
 
@@ -106,9 +106,9 @@ local function _render_preview_boss_label(window, bar_key, label_index, label, r
     label:SetVisible(true)
 end
 
-local function _render_preview_boss_labels(window, bar_key, labels, raw_scale, targets, context)
+local function _render_preview_boss_labels(window, labels, raw_scale, targets, context)
     for i = 1, #labels do
-        _render_preview_boss_label(window, bar_key, i, labels[i], raw_scale, targets, context)
+        _render_preview_boss_label(window, i, labels[i], raw_scale, targets, context)
     end
 end
 
@@ -165,11 +165,10 @@ function ConfigWindow:init_target_boss_vitals_preview()
         morale_back = Turbine.UI.Control(),
         morale_fill = Turbine.UI.Control(),
         morale_bubble = Turbine.UI.Control(),
-        morale_labels = {},
         power_border = Turbine.UI.Control(),
         power_back = Turbine.UI.Control(),
         power_fill = Turbine.UI.Control(),
-        power_labels = {},
+        labels = {},
         info_border = Turbine.UI.Control(),
         info_back = Turbine.UI.Control(),
         buffs = {},
@@ -197,24 +196,14 @@ function ConfigWindow:init_target_boss_vitals_preview()
     p.power_fill:SetParent(p.power_back)
     p.info_back:SetParent(p.info_border)
 
-    for i = 1, 2 do
+    for i = 1, 4 do
         local label = UI.Widgets.LuiLabel()
-        label:SetParent(p.morale_border)
+        label:SetParent(i <= 2 and p.morale_border or p.power_border)
         label:SetMouseVisible(false)
         label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
         label:SetMultiline(true)
         label:SetZOrder(9 + i)
-        p.morale_labels[i] = label
-    end
-
-    for i = 1, 2 do
-        local label = UI.Widgets.LuiLabel()
-        label:SetParent(p.power_border)
-        label:SetMouseVisible(false)
-        label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-        label:SetMultiline(true)
-        label:SetZOrder(9 + i)
-        p.power_labels[i] = label
+        p.labels[i] = label
     end
 
     for i = 1, 12 do
@@ -494,9 +483,9 @@ function ConfigWindow:update_target_boss_vitals_preview()
         p.power_fill:SetSize(math.floor((power_w - (2 * border)) * power_percent + 0.5), power_h - (2 * border))
         p.power_fill:SetBackColor(power_fill)
     else
-        for i = 1, #p.power_labels do
-            p.power_labels[i]:SetText("")
-            p.power_labels[i]:SetVisible(false)
+        for i = 3, 4 do
+            p.labels[i]:SetText("")
+            p.labels[i]:SetVisible(false)
         end
     end
 
@@ -550,8 +539,13 @@ function ConfigWindow:update_target_boss_vitals_preview()
         label_context.pp = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
     end
 
-    _render_preview_boss_labels(self, "morale", p.morale_labels, raw_scale, label_targets, label_context)
-    _render_preview_boss_labels(self, "power", p.power_labels, raw_scale, label_targets, label_context)
+    _render_preview_boss_labels(self, p.labels, raw_scale, label_targets, label_context)
+    if power_hidden == true then
+        for i = 3, 4 do
+            p.labels[i]:SetText("")
+            p.labels[i]:SetVisible(false)
+        end
+    end
 
     local buff_timer_font_name = _require_control_enum(self.controls, "target_boss_buff_timer_font_name")
     local buff_timer_font_size = _preview_scaled_number(raw_scale,

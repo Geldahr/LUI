@@ -145,8 +145,8 @@ local function _bind_outline_visibility(owner_page, colors_page, outline_page, s
     end
 end
 
-local function _add_vitals_label_controls(page, prefix, bar_key, label_index, label)
-    local key = prefix .. "_" .. bar_key .. "_label" .. tostring(label_index)
+local function _add_vitals_label_controls(page, prefix, label_index, label)
+    local key = prefix .. "_label" .. tostring(label_index)
 
     _add_checkbox_field(page, key .. "_enabled", TR["Enabled"],
         function()
@@ -565,29 +565,29 @@ local function _build_debuffs_form(page, prefix, get)
 end
 
 local function _build_standard_text_colors_form(page, prefix, get)
-    page:add_title(TR["Label 1"])
-    _add_font_color_controls(page, prefix .. "_morale_label1",
+    page:add_title(TR["Text 1"])
+    _add_font_color_controls(page, prefix .. "_label1",
         function()
             return get().labels[1].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
-    page:add_title(TR["Label 2"])
-    _add_font_color_controls(page, prefix .. "_morale_label2",
+    page:add_title(TR["Text 2"])
+    _add_font_color_controls(page, prefix .. "_label2",
         function()
             return get().labels[2].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
-    page:add_title(TR["Label 3"])
-    _add_font_color_controls(page, prefix .. "_power_label1",
+    page:add_title(TR["Text 3"])
+    _add_font_color_controls(page, prefix .. "_label3",
         function()
             return get().labels[3].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
-    page:add_title(TR["Label 4"])
-    _add_font_color_controls(page, prefix .. "_power_label2",
+    page:add_title(TR["Text 4"])
+    _add_font_color_controls(page, prefix .. "_label4",
         function()
             return get().labels[4].font
         end,
@@ -595,14 +595,14 @@ local function _build_standard_text_colors_form(page, prefix, get)
 end
 
 local function _build_targets_target_text_colors_form(page, get)
-    page:add_title(TR["Label 1"])
+    page:add_title(TR["Text 1"])
     _add_font_color_controls(page, "target_targets_target_label1",
         function()
             return get().labels[1].font
         end,
         TR["Font Color"], TR["Outline Color"])
     page:add_break()
-    page:add_title(TR["Label 2"])
+    page:add_title(TR["Text 2"])
     _add_font_color_controls(page, "target_targets_target_label2",
         function()
             return get().labels[2].font
@@ -773,14 +773,11 @@ local function _new_targets_target_colors_section(window, refresh_preview_fn, ge
 end
 
 local function _bind_standard_outline_visibility(owner_page, colors_page, prefix, include_effects)
-    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, prefix .. "_morale_label1_font_style",
-        prefix .. "_morale_label1_font_outline_color")
-    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, prefix .. "_morale_label2_font_style",
-        prefix .. "_morale_label2_font_outline_color")
-    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, prefix .. "_power_label1_font_style",
-        prefix .. "_power_label1_font_outline_color")
-    _bind_outline_visibility(owner_page, colors_page, colors_page._text_page, prefix .. "_power_label2_font_style",
-        prefix .. "_power_label2_font_outline_color")
+    for i = 1, 4 do
+        _bind_outline_visibility(owner_page, colors_page, colors_page._text_page,
+            prefix .. "_label" .. tostring(i) .. "_font_style",
+            prefix .. "_label" .. tostring(i) .. "_font_outline_color")
+    end
 
     if include_effects == true then
         _bind_outline_visibility(owner_page, colors_page, colors_page._effects_page, prefix .. "_buff_timer_font_style",
@@ -797,9 +794,9 @@ local function _bind_targets_target_outline_visibility(owner_page, colors_page)
         "target_targets_target_label2_font_outline_color")
 end
 
-local function _new_label_page(window, refresh_preview_fn, columns, prefix, bar_key, label_index, label)
+local function _new_label_page(window, refresh_preview_fn, columns, prefix, label_index, label)
     local page = ConfigContent(window, columns, refresh_preview_fn)
-    _add_vitals_label_controls(page, prefix, bar_key, label_index, label)
+    _add_vitals_label_controls(page, prefix, label_index, label)
     return page
 end
 
@@ -812,20 +809,20 @@ end
 local function _new_texts_section(window, refresh_preview_fn, prefix, get)
     local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.left, NESTED_TAB_SCALE,
         NESTED_TAB_FONT_SIZE)
-    page:add_tab(TR["Label 1"], "morale_label1",
-        _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 1, function()
+    page:add_tab(TR["Text 1"], "label1",
+        _new_label_page(window, refresh_preview_fn, 3, prefix, 1, function()
             return get().labels[1]
         end))
-    page:add_tab(TR["Label 2"], "morale_label2",
-        _new_label_page(window, refresh_preview_fn, 3, prefix, "morale", 2, function()
+    page:add_tab(TR["Text 2"], "label2",
+        _new_label_page(window, refresh_preview_fn, 3, prefix, 2, function()
             return get().labels[2]
         end))
-    page:add_tab(TR["Label 3"], "power_label1",
-        _new_label_page(window, refresh_preview_fn, 3, prefix, "power", 1, function()
+    page:add_tab(TR["Text 3"], "label3",
+        _new_label_page(window, refresh_preview_fn, 3, prefix, 3, function()
             return get().labels[3]
         end))
-    page:add_tab(TR["Label 4"], "power_label2",
-        _new_label_page(window, refresh_preview_fn, 3, prefix, "power", 2, function()
+    page:add_tab(TR["Text 4"], "label4",
+        _new_label_page(window, refresh_preview_fn, 3, prefix, 4, function()
             return get().labels[4]
         end))
     return page
@@ -834,11 +831,11 @@ end
 local function _new_targets_target_texts_section(window, refresh_preview_fn, get)
     local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.left, NESTED_TAB_SCALE,
         NESTED_TAB_FONT_SIZE)
-    page:add_tab(TR["Label 1"], "label1",
+    page:add_tab(TR["Text 1"], "label1",
         _new_targets_target_label_page(window, refresh_preview_fn, 3, 1, function()
             return get().labels[1]
         end))
-    page:add_tab(TR["Label 2"], "label2",
+    page:add_tab(TR["Text 2"], "label2",
         _new_targets_target_label_page(window, refresh_preview_fn, 3, 2, function()
             return get().labels[2]
         end))
