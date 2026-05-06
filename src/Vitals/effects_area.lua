@@ -98,6 +98,7 @@ function EffectsArea:Constructor(frame_width, effects_settings, effects_height)
     self.dynamic_height = self:_default_dynamic_height() == true
     self.items_per_row = 1
     self.reverse_fill = true
+    self.horizontal_alignment = self:_default_horizontal_alignment()
     self.is_compact = false
     self.compact_icon_size = nil
     self.compact_timer_font_size = nil
@@ -114,6 +115,7 @@ function EffectsArea:Constructor(frame_width, effects_settings, effects_height)
     self.list:SetMaxColumns(self.items_per_row)
     self.list:SetMouseVisible(false)
     self.list:SetReverseFill(true)
+    self.list:SetFlippedLayout(false)
 
     self:apply_settings(frame_width, effects_settings, effects_height)
     self:_apply_dynamic_height()
@@ -146,13 +148,17 @@ function EffectsArea:set_reverse_fill(reverse_fill)
     end
 
     self.reverse_fill = on
+    self:_apply_layout_flags()
+end
 
-    if self.list ~= nil and self.list.SetReverseFill ~= nil then
-        self.list:SetReverseFill(on)
+function EffectsArea:set_horizontal_alignment(alignment)
+    local next_alignment = self:_normalize_horizontal_alignment(alignment)
+    if self.horizontal_alignment == next_alignment then
+        return
     end
-    if self.list ~= nil and self.list.GetItemCount ~= nil and self.list:GetItemCount() > 1 then
-        self:sort()
-    end
+
+    self.horizontal_alignment = next_alignment
+    self:_apply_layout_flags()
 end
 
 function EffectsArea:set_dynamic_height(enabled)
@@ -226,12 +232,14 @@ function EffectsArea:apply_settings(frame_width, effects_settings, effects_heigh
 
     local width = _as_number(self.frame_width, 1)
     self.items_per_row = self:_active_items_per_row()
+    self.horizontal_alignment = self:_settings_horizontal_alignment()
 
     self:SetSize(width, self.max_height)
     if self.list ~= nil then
         self.list:SetSize(self:GetSize())
         self.list:SetMaxColumns(self.items_per_row)
     end
+    self:_apply_layout_flags()
 
     if self.list ~= nil and self.list:GetItemCount() > 0 then
         self:_rebuild_icons()
@@ -348,6 +356,10 @@ function EffectsArea:_default_dynamic_height()
     return false
 end
 
+function EffectsArea:_default_horizontal_alignment()
+    return LUI_ENUMS.side.LEFT
+end
+
 function EffectsArea:_reset_max_height_on_apply_settings()
     return false
 end
@@ -362,6 +374,29 @@ function EffectsArea:_area_settings()
         return nil
     end
     return self.effects_settings[group]
+end
+
+function EffectsArea:_normalize_horizontal_alignment(alignment)
+    if alignment == LUI_ENUMS.side.RIGHT then
+        return LUI_ENUMS.side.RIGHT
+    end
+    return LUI_ENUMS.side.LEFT
+end
+
+function EffectsArea:_settings_horizontal_alignment()
+    local settings = self:_area_settings()
+    if settings == nil then
+        return self:_default_horizontal_alignment()
+    end
+    return self:_normalize_horizontal_alignment(settings.alignment)
+end
+
+function EffectsArea:_apply_layout_flags()
+    local align_right = self.horizontal_alignment == LUI_ENUMS.side.RIGHT
+    local flip_rows = self.reverse_fill ~= align_right
+
+    self.list:SetReverseFill(align_right)
+    self.list:SetFlippedLayout(flip_rows)
 end
 
 function EffectsArea:_normal_icon_size()

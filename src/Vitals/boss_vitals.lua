@@ -473,8 +473,10 @@ function BossVitals:_layout_effect_windows(bottom_start_override)
 
     self.buffs:set_reverse_fill(buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR
         or buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR)
+    self.buffs:set_horizontal_alignment(v.effects.buffs.alignment)
     self.debuffs:set_reverse_fill(debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR
         or debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR)
+    self.debuffs:set_horizontal_alignment(v.effects.debuffs.alignment)
 
     local top_entries = {}
     local bottom_entries = {}

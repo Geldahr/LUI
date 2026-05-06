@@ -112,8 +112,23 @@ local function _render_preview_boss_labels(window, labels, raw_scale, targets, c
     end
 end
 
-local function _layout_preview_icons(icons, count, cols, icon_size, left, top, height, reverse_fill, colors, font,
-                                     font_style, font_color, font_outline, first_time, second_time)
+local function _layout_preview_icons(icons, count, cols, icon_size, left, top, width, height, reverse_fill,
+                                     alignment, colors, font, font_style, font_color, font_outline, first_time,
+                                     second_time)
+    local used_columns = math.min(count, cols)
+    local used_width = used_columns * icon_size
+    if used_width > width then
+        used_width = width
+    end
+
+    local area_left = left
+    if alignment == LUI_ENUMS.side.RIGHT then
+        area_left = left + width - used_width
+        if area_left < left then
+            area_left = left
+        end
+    end
+
     for i = 1, #icons do
         local icon = icons[i]
         if i > count then
@@ -122,13 +137,18 @@ local function _layout_preview_icons(icons, count, cols, icon_size, left, top, h
             local idx = i - 1
             local col = idx % cols
             local row = math.floor(idx / cols)
+            local col_left = area_left + (col * icon_size)
             local row_top = top + (row * icon_size)
             if reverse_fill == true then
                 row_top = top + height - ((row + 1) * icon_size)
             end
 
             icon.root:SetVisible(true)
-            icon.root:SetPosition(left + (col * icon_size), row_top)
+            if alignment == LUI_ENUMS.side.RIGHT then
+                icon.root:SetPosition(area_left + used_width - ((col + 1) * icon_size), row_top)
+            else
+                icon.root:SetPosition(col_left, row_top)
+            end
             icon.root:SetSize(icon_size, icon_size)
             icon.root:SetBackColor(colors[((i - 1) % #colors) + 1])
             icon.label:SetPosition(0, 0)
@@ -261,6 +281,8 @@ function ConfigWindow:update_target_boss_vitals_preview()
     local power_hidden = self.controls.target_boss_power_hide.cb:IsChecked() == true
     local buff_slot = _require_control_enum(self.controls, "target_boss_buff_slot")
     local debuff_slot = _require_control_enum(self.controls, "target_boss_debuff_slot")
+    local buff_alignment = _require_control_enum(self.controls, "target_boss_buff_alignment")
+    local debuff_alignment = _require_control_enum(self.controls, "target_boss_debuff_alignment")
 
     local buff_size = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_buff_size"))
     local debuff_size = _preview_scaled_int(raw_scale, _require_control_number(self.controls, "target_boss_debuff_size"))
@@ -564,8 +586,10 @@ function ConfigWindow:update_target_boss_vitals_preview()
             buff_size,
             off_x + preview_border,
             outer_y + preview_border + buff_position.top,
+            frame_w,
             buff_position.height,
             buff_position.reverse_fill,
+            buff_alignment,
             buff_colors,
             buff_timer_font,
             buff_timer_style,
@@ -597,8 +621,10 @@ function ConfigWindow:update_target_boss_vitals_preview()
             debuff_size,
             off_x + preview_border,
             outer_y + preview_border + debuff_position.top,
+            frame_w,
             debuff_position.height,
             debuff_position.reverse_fill,
+            debuff_alignment,
             debuff_colors,
             debuff_timer_font,
             debuff_timer_style,

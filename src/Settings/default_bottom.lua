@@ -7,6 +7,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
                     ["slot"] = 2.000000,
                 },
                 ["buffs"] = {
+                    ["alignment"] = 2.000000,
                     ["slot"] = 1.000000,
                 },
             },
@@ -22,6 +23,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
                     ["slot"] = 2.000000,
                 },
                 ["buffs"] = {
+                    ["alignment"] = 2.000000,
                     ["slot"] = 1.000000,
                 },
             },

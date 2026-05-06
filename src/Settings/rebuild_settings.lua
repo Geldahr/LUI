@@ -184,8 +184,10 @@ function _G.rebuild_settings()
 
         if src.effects ~= nil then
             dst.effects.buffs.slot = src.effects.buffs.slot
+            dst.effects.buffs.alignment = src.effects.buffs.alignment
             dst.effects.buffs.icon_size = scaled_int(src.effects.buffs.icon_size)
             dst.effects.debuffs.slot = src.effects.debuffs.slot
+            dst.effects.debuffs.alignment = src.effects.debuffs.alignment
             dst.effects.debuffs.icon_size = scaled_int(src.effects.debuffs.icon_size)
 
             dst.effects.buffs.timer_font.name = src.effects.buffs.timer_font.name
