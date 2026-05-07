@@ -508,6 +508,13 @@ local function _build_buffs_form(page, prefix, get)
         function(value)
             get().effects.buffs.slot = value
         end)
+    _add_dropdown_field(page, prefix .. "_buff_alignment", TR["Alignment"], page.side_labels, page.side_values,
+        function()
+            return get().effects.buffs.alignment
+        end,
+        function(value)
+            get().effects.buffs.alignment = value
+        end)
     page:add_row_break()
     _add_number_field(page, prefix .. "_buff_size", TR["Icon Size"],
         function()
@@ -532,6 +539,13 @@ local function _build_debuffs_form(page, prefix, get)
         end,
         function(value)
             get().effects.debuffs.slot = value
+        end)
+    _add_dropdown_field(page, prefix .. "_debuff_alignment", TR["Alignment"], page.side_labels, page.side_values,
+        function()
+            return get().effects.debuffs.alignment
+        end,
+        function(value)
+            get().effects.debuffs.alignment = value
         end)
     page:add_row_break()
     _add_checkbox_field(page, prefix .. "_debuff_track_curable", TR["Track curable debuffs"],

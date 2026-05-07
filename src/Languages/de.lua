@@ -338,6 +338,7 @@ DE = {
     ["Show leader icon"] = "Gruppenleiter-Symbol anzeigen",
     ["Show when less than seconds remaining"] = "Anzeigen, wenn weniger als diese Sekunden verbleiben",
     ["Side"] = "Seite",
+    ["Alignment"] = "Ausrichtung",
     ["Small (32)"] = "Klein (32)",
     ["Spacing"] = "Abstand",
     ["Spacing (px)"] = "Abstand (px)",

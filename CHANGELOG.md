@@ -11,6 +11,7 @@
 - Added the Drops HUD with chat-driven loot rows, move-mode support, preview, and layout settings.
 - Added configurable multi-label text layouts for self, target, boss, target's target, and party vitals.
 - Added `Vitals > General` enable toggles for Self, Target, Boss, Target's Target, and Party vitals.
+- Added left/right alignment settings for self, target, and boss vitals effects.
 
 ### Changed
 

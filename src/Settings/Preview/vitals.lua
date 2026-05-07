@@ -257,6 +257,8 @@ function StandardVitalsPreview:update()
     local effects_height = _preview_scaled_int(raw_scale, raw_effects_h)
     local buff_slot = _require_control_enum(controls, prefix .. "_buff_slot")
     local debuff_slot = _require_control_enum(controls, prefix .. "_debuff_slot")
+    local buff_alignment = _require_control_enum(controls, prefix .. "_buff_alignment")
+    local debuff_alignment = _require_control_enum(controls, prefix .. "_debuff_alignment")
 
     local raw_buff_size = _require_control_number(controls, prefix .. "_buff_size")
     local raw_debuff_size = _require_control_number(controls, prefix .. "_debuff_size")
@@ -439,9 +441,20 @@ function StandardVitalsPreview:update()
     local debuff_timer_outline = _require_control_color(controls, prefix .. "_debuff_timer_font_outline_color")
 
     local function layout_icons(icons, area_w, area_h, icon_size, cols, times, font, style, color, outline,
-                                reverse_fill_enabled)
+                                reverse_fill_enabled, alignment)
         local columns = cols
         if columns < 1 then columns = 1 end
+        local used_width = math.min(#icons, columns) * icon_size
+        if used_width > area_w then
+            used_width = area_w
+        end
+
+        local area_left = 0
+        if alignment == LUI_ENUMS.side.RIGHT then
+            area_left = area_w - used_width
+            if area_left < 0 then area_left = 0 end
+        end
+
         for i = 1, #icons do
             local icon = icons[i]
             local size = icon_size
@@ -455,15 +468,18 @@ function StandardVitalsPreview:update()
             local idx = i - 1
             local x = 0
             local y = 0
-            if reverse_fill_enabled == true then
-                local col_from_right = idx % columns
-                local row_from_bottom = math.floor(idx / columns)
-                x = area_w - ((col_from_right + 1) * size)
-                y = area_h - ((row_from_bottom + 1) * size)
+            local col = idx % columns
+            local row = math.floor(idx / columns)
+
+            if alignment == LUI_ENUMS.side.RIGHT then
+                x = area_left + used_width - ((col + 1) * size)
             else
-                local col = idx % columns
-                local row = math.floor(idx / columns)
-                x = col * size
+                x = area_left + (col * size)
+            end
+
+            if reverse_fill_enabled == true then
+                y = area_h - ((row + 1) * size)
+            else
                 y = row * size
             end
             if x < 0 then x = 0 end
@@ -490,11 +506,11 @@ function StandardVitalsPreview:update()
 
     local debuff_times = { 8.4, 2.6 }
     layout_icons(self.debuff_icons, frame_w, debuff_area_h, debuff_icon, debuff_cols, debuff_times, debuff_timer_font,
-        debuff_timer_style, debuff_timer_color, debuff_timer_outline, slot_is_top(debuff_slot))
+        debuff_timer_style, debuff_timer_color, debuff_timer_outline, slot_is_top(debuff_slot), debuff_alignment)
 
     local buff_times = { 6.2, 1.8 }
     layout_icons(self.buff_icons, frame_w, buff_area_h, buff_icon, buff_cols, buff_times, buff_timer_font,
-        buff_timer_style, buff_timer_color, buff_timer_outline, slot_is_top(buff_slot))
+        buff_timer_style, buff_timer_color, buff_timer_outline, slot_is_top(buff_slot), buff_alignment)
 
     local morale_bg = _require_control_color(controls, prefix .. "_morale_background_color")
     local info_bg = _require_control_color(controls, prefix .. "_info_background_color")

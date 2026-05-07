@@ -338,6 +338,7 @@ FR = {
     ["Show leader icon"] = "Afficher l'icône de chef",
     ["Show when less than seconds remaining"] = "Afficher quand il reste moins de secondes",
     ["Side"] = "Côté",
+    ["Alignment"] = "Alignement",
     ["Small (32)"] = "Petit (32)",
     ["Spacing"] = "Espacement",
     ["Spacing (px)"] = "Espacement (px)",

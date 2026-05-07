@@ -1130,7 +1130,9 @@ function VitalsBase:_layout_effect_windows(bottom_start_override)
     local debuff_slot = v.effects.debuffs.slot
 
     self.buffs:set_reverse_fill(_slot_is_top(buff_slot))
+    self.buffs:set_horizontal_alignment(v.effects.buffs.alignment)
     self.debuffs:set_reverse_fill(_slot_is_top(debuff_slot))
+    self.debuffs:set_horizontal_alignment(v.effects.debuffs.alignment)
 
     local top_entries = {}
     local bottom_entries = {}
