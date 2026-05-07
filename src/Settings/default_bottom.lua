@@ -4,6 +4,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
         ["vitals"] = {
             ["effects"] = {
                 ["debuffs"] = {
+                    ["alignment"] = 2.000000,
                     ["slot"] = 2.000000,
                 },
                 ["buffs"] = {
@@ -20,6 +21,7 @@ _G.DEFAULT_LAYOUT_BOTTOM =
         ["vitals"] = {
             ["effects"] = {
                 ["debuffs"] = {
+                    ["alignment"] = 2.000000,
                     ["slot"] = 2.000000,
                 },
                 ["buffs"] = {
