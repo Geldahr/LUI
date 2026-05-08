@@ -8,17 +8,32 @@ import "LUI.src.UI.native_scaling"
 local S = _G.STATUS_BAR_COMMON
 
 function _G.rebuild_settings()
+    _G.ensure_loaded_settings()
     local raw = _G.loaded_settings
     local configured_scaling = UI.NativeScaling.get_configured_scale(raw)
     local scaling = UI.NativeScaling.get_effective_scale(raw)
     local refresh_rate = raw.global.refresh_rate
 
     local function scaled_int(value)
-        return math.floor((value * scaling) + 0.5)
+        local n = value
+        if type(n) ~= "number" then
+            n = tonumber(n)
+        end
+        if n == nil then
+            error("Invalid numeric setting in rebuild_settings", 2)
+        end
+        return math.floor((n * scaling) + 0.5)
     end
 
     local function scaled_number(value)
-        return value * scaling
+        local n = value
+        if type(n) ~= "number" then
+            n = tonumber(n)
+        end
+        if n == nil then
+            error("Invalid numeric setting in rebuild_settings", 2)
+        end
+        return n * scaling
     end
 
     local function scaled_border(value)
@@ -150,11 +165,11 @@ function _G.rebuild_settings()
         dst.text = src.text
         dst.tokens = lui_tokenize_format(dst.text)
         dst.link_to = src.link_to
-        dst.anchor = src.anchor
-        dst.width_mode = src.width_mode
-        dst.text_alignment = src.text_alignment
-        dst.x_offset = scaled_int(src.x_offset)
-        dst.y_offset = scaled_int(src.y_offset)
+        dst.anchor = src.anchor or LUI_ENUMS.vitals_label_anchor.CENTER
+        dst.width_mode = src.width_mode or LUI_ENUMS.vitals_label_width_mode.FILL
+        dst.text_alignment = src.text_alignment or LUI_ENUMS.text_alignment.CENTER
+        dst.x_offset = scaled_int(src.x_offset or 0)
+        dst.y_offset = scaled_int(src.y_offset or 0)
         dst.font.name = src.font.name
         dst.font.size = scaled_number(src.font.size)
         dst.font.lotro = FONT_TO_LOTRO(dst.font.name, dst.font.size)

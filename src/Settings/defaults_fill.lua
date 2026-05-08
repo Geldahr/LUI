@@ -151,7 +151,7 @@ function _G.ensure_loaded_settings()
     end
 
     local defaults = _defaults_source()
-    _apply_missing_values(_G.loaded_settings, defaults)
+    _G.loaded_settings = _sanitize_with_defaults(_G.loaded_settings, defaults)
     _seed_group_vitals_compatibility(_G.loaded_settings, defaults)
 
     local ui = _ensure_table(_G.loaded_settings, "ui")

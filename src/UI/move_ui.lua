@@ -271,6 +271,10 @@ local function _restore_saved_move_settings()
     _restore_position(hud.cooldowns, MOVE_UI_POSITION_SNAPSHOT.cooldowns)
     _restore_position(hud.drops, MOVE_UI_POSITION_SNAPSHOT.drops)
 
+    ensure_loaded_settings()
+    fix_colors()
+    rebuild_settings()
+
     if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:resize()
     end
