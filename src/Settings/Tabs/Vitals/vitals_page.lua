@@ -5,26 +5,25 @@ import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.nested_tabs"
 import "LUI.src.Settings.Content.section_page"
 import "LUI.src.Settings.Content.tabs"
-
+import "LUI.src.Settings.Tabs.Vitals.group_vitals_page"
+import "LUI.src.Settings.Tabs.Vitals.standard_vitals_pages"
 local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
 local ConfigNestedTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_nested_tabs) or
     ConfigNestedTabs
 local ConfigSectionPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_section_page) or
     ConfigSectionPage
 local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
-
+local GroupVitalsPageBuilder = SettingsGroupVitalsPageBuilder
+local StandardVitalsPageBuilder = SettingsStandardVitalsPageBuilder
 local NESTED_TAB_SCALE = 0.78
 local NESTED_TAB_FONT_SIZE = 11
 local SECTION_FRAME_PADDING = 8
-
 local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
 end
-
 local function _set_color(dest, color)
     dest.R, dest.G, dest.B = color.R, color.G, color.B
 end
-
 local function _add_number_field(page, key, label, get_value, set_value, help_text, full_width)
     page:add_line_edit(key, label,
         function(value)
@@ -38,7 +37,6 @@ local function _add_number_field(page, key, label, get_value, set_value, help_te
         end,
         help_text, full_width)
 end
-
 local function _add_text_field(page, key, label, get_value, set_value, help_text, full_width)
     page:add_line_edit(key, label,
         function(value)
@@ -49,7 +47,6 @@ local function _add_text_field(page, key, label, get_value, set_value, help_text
         end,
         help_text, full_width)
 end
-
 local function _add_checkbox_field(page, key, label, get_value, set_value, full_width)
     page:add_checkbox(key, label,
         function(value)
@@ -60,7 +57,6 @@ local function _add_checkbox_field(page, key, label, get_value, set_value, full_
         end,
         full_width)
 end
-
 local function _add_dropdown_field(page, key, label, labels, values, get_value, set_value, help_text, full_width)
     page:add_dropdown(key, label, labels, values,
         function(value)
@@ -71,7 +67,6 @@ local function _add_dropdown_field(page, key, label, labels, values, get_value, 
         end,
         help_text, full_width)
 end
-
 local function _add_color_field(page, key, label, get_value, set_value, help_text, full_width)
     page:add_color_picker(key, label,
         function(value)
@@ -82,7 +77,6 @@ local function _add_color_field(page, key, label, get_value, set_value, help_tex
         end,
         help_text, full_width)
 end
-
 local function _add_font_identity_controls(page, base_key, font, font_label, size_label, style_label)
     _add_dropdown_field(page, base_key .. "_font_name", font_label or TR["Font"], page.font_name_labels,
         page.font_name_values,
@@ -108,7 +102,6 @@ local function _add_font_identity_controls(page, base_key, font, font_label, siz
             font().style = value
         end)
 end
-
 local function _add_font_color_controls(page, base_key, font, color_label, outline_label)
     _add_color_field(page, base_key .. "_font_color", color_label or TR["Font Color"],
         function()
@@ -870,316 +863,6 @@ local function _new_effects_section(window, refresh_preview_fn, prefix, get)
     return page
 end
 
-local function _new_self_unit_page(window, root)
-    local get = function()
-        return root._settings.self.vitals
-    end
-    local page = ConfigSectionPage(window, "self_vitals_preview", 207, function(win)
-        win:update_self_vitals_preview()
-    end)
-
-    local frame = ConfigContent(window, 4, page.refresh_preview)
-    _add_number_field(frame, "self_width", TR["Frame Width"], function() return get().frame.width end,
-        function(value) get().frame.width = value end)
-    _add_number_field(frame, "self_border_width", TR["Border Width"], function() return get().frame.border_width end,
-        function(value) get().frame.border_width = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "self_effects_height", TR["Effects Height"], function() return get().frame.effects_height end,
-        function(value) get().frame.effects_height = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "self_incombat_opacity", TR["In-combat opacity"], function() return get().frame.incombat_opacity end,
-        function(value) get().frame.incombat_opacity = value end)
-    _add_number_field(frame, "self_outcombat_opacity", TR["Out-of-combat opacity"], function() return get().frame.outcombat_opacity end,
-        function(value) get().frame.outcombat_opacity = value end)
-    frame:add_row_break()
-    _add_checkbox_field(frame, "self_ressource_background_matches_missing", TR["Matching background"],
-        function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end)
-    _add_number_field(frame, "self_ressource_background_dimming", TR["Dimming"], function() return get().background_dimming end,
-        function(value) get().background_dimming = value end)
-    page:add_tab(TR["Frame"], "frame", frame)
-    local colors = _new_standard_colors_section(window, page.refresh_preview, "self", get, true)
-    page:add_tab(TR["Colors"], "colors", colors)
-
-    local morale = ConfigContent(window, 4, page.refresh_preview)
-    _build_standard_morale_form(morale, "self", get)
-    page:add_tab(TR["Morale"], "morale", morale)
-
-    local power = ConfigContent(window, 4, page.refresh_preview)
-    _build_standard_power_form(power, "self", get, false)
-    page:add_tab(TR["Power / Wrath"], "power", power)
-
-    local info = ConfigContent(window, 4, page.refresh_preview)
-    _build_info_form(info, "self", get)
-    page:add_tab(TR["Info"], "info", info)
-
-    page:add_tab(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "self", get))
-    page:add_tab(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "self", get))
-    _bind_standard_outline_visibility(page, colors, "self", true)
-
-    return page
-end
-
-local function _new_target_unit_page(window, root)
-    local get = function()
-        return root._settings.target.vitals
-    end
-    local page = ConfigSectionPage(window, "target_vitals_preview", 222, function(win)
-        win:update_target_vitals_preview()
-    end)
-
-    local frame = ConfigContent(window, 4, page.refresh_preview)
-    _add_number_field(frame, "target_width", TR["Frame Width"], function() return get().frame.width end,
-        function(value) get().frame.width = value end)
-    _add_number_field(frame, "target_border_width", TR["Border Width"], function() return get().frame.border_width end,
-        function(value) get().frame.border_width = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "target_effects_height", TR["Effects Height"], function() return get().frame.effects_height end,
-        function(value) get().frame.effects_height = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "target_incombat_opacity", TR["In-combat opacity"], function() return get().frame.incombat_opacity end,
-        function(value) get().frame.incombat_opacity = value end)
-    _add_number_field(frame, "target_outcombat_opacity", TR["Out-of-combat opacity"], function() return get().frame.outcombat_opacity end,
-        function(value) get().frame.outcombat_opacity = value end)
-    frame:add_row_break()
-    _add_checkbox_field(frame, "target_ressource_background_matches_missing", TR["Matching background"],
-        function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end)
-    _add_number_field(frame, "target_ressource_background_dimming", TR["Dimming"], function() return get().background_dimming end,
-        function(value) get().background_dimming = value end)
-    page:add_tab(TR["Frame"], "frame", frame)
-    local colors = _new_standard_colors_section(window, page.refresh_preview, "target", get, true)
-    page:add_tab(TR["Colors"], "colors", colors)
-
-    local morale = ConfigContent(window, 4, page.refresh_preview)
-    _build_standard_morale_form(morale, "target", get)
-    page:add_tab(TR["Morale"], "morale", morale)
-
-    local power = ConfigContent(window, 4, page.refresh_preview)
-    _build_standard_power_form(power, "target", get, false)
-    page:add_tab(TR["Power / Wrath"], "power", power)
-
-    local info = ConfigContent(window, 4, page.refresh_preview)
-    _build_info_form(info, "target", get)
-    page:add_tab(TR["Info"], "info", info)
-
-    page:add_tab(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "target", get))
-    page:add_tab(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "target", get))
-    _bind_standard_outline_visibility(page, colors, "target", true)
-
-    return page
-end
-
-local function _new_boss_unit_page(window, root)
-    local get = function()
-        return root._settings.target.boss_vitals
-    end
-    local page = ConfigSectionPage(window, "target_boss_vitals_preview", 178, function(win)
-        win:update_target_boss_vitals_preview()
-    end)
-
-    local frame = ConfigContent(window, 4, page.refresh_preview)
-    _add_number_field(frame, "target_boss_width", TR["Frame Width"], function() return get().frame.width end,
-        function(value) get().frame.width = value end)
-    _add_number_field(frame, "target_boss_border_width", TR["Border Width"], function() return get().frame.border_width end,
-        function(value) get().frame.border_width = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "target_boss_effects_height", TR["Effects Height"], function() return get().frame.effects_height end,
-        function(value) get().frame.effects_height = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "target_boss_incombat_opacity", TR["In-combat opacity"], function() return get().frame.incombat_opacity end,
-        function(value) get().frame.incombat_opacity = value end)
-    _add_number_field(frame, "target_boss_outcombat_opacity", TR["Out-of-combat opacity"], function() return get().frame.outcombat_opacity end,
-        function(value) get().frame.outcombat_opacity = value end)
-    frame:add_row_break()
-    _add_checkbox_field(frame, "target_boss_ressource_background_matches_missing", TR["Matching background"],
-        function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end)
-    _add_number_field(frame, "target_boss_ressource_background_dimming", TR["Dimming"], function() return get().background_dimming end,
-        function(value) get().background_dimming = value end)
-    page:add_tab(TR["Frame"], "frame", frame)
-    local colors = _new_standard_colors_section(window, page.refresh_preview, "target_boss", get, true)
-    page:add_tab(TR["Colors"], "colors", colors)
-
-    local morale = ConfigContent(window, 4, page.refresh_preview)
-    _build_standard_morale_form(morale, "target_boss", get)
-    page:add_tab(TR["Morale"], "morale", morale)
-
-    local power = ConfigContent(window, 4, page.refresh_preview)
-    _build_standard_power_form(power, "target_boss", get, true)
-    page:add_tab(TR["Power / Wrath"], "power", power)
-
-    local info = ConfigContent(window, 4, page.refresh_preview)
-    _build_info_form(info, "target_boss", get)
-    page:add_tab(TR["Info"], "info", info)
-
-    page:add_tab(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "target_boss", get))
-    page:add_tab(TR["Effects"], "effects", _new_effects_section(window, page.refresh_preview, "target_boss", get))
-    _bind_standard_outline_visibility(page, colors, "target_boss", true)
-
-    return page
-end
-
-local function _new_targets_target_unit_page(window, root)
-    local get = function()
-        return root._settings.target.vitals.targets_target
-    end
-    local page = ConfigSectionPage(window, "target_targets_target_preview", 133, function(win)
-        win:update_target_targets_target_preview()
-    end)
-
-    local frame = ConfigContent(window, 4, page.refresh_preview)
-    _add_number_field(frame, "target_targets_target_width", TR["Frame Width"], function() return get().width end,
-        function(value) get().width = value end)
-    _add_number_field(frame, "target_targets_target_height", TR["Bar Height"], function() return get().height end,
-        function(value) get().height = value end)
-    _add_number_field(frame, "target_targets_target_border_width", TR["Border Width"], function() return get().border_width end,
-        function(value) get().border_width = value end)
-    frame:add_row_break()
-    _add_checkbox_field(frame, "target_targets_target_background_matches_missing", TR["Matching background"],
-        function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end)
-    _add_number_field(frame, "target_targets_target_background_dimming", TR["Dimming"], function() return get().background_dimming end,
-        function(value) get().background_dimming = value end)
-    frame:add_row_break()
-    _add_text_field(frame, "target_targets_target_bubble_text", TR["Bubble Format (%B)"],
-        function() return get().bubble_format end,
-        function(value) get().bubble_format = value end,
-        frame.bubble_format_help, true)
-    page:add_tab(TR["Frame"], "frame", frame)
-    local colors = _new_targets_target_colors_section(window, page.refresh_preview, get)
-    page:add_tab(TR["Colors"], "colors", colors)
-
-    page:add_tab(TR["Texts"], "texts", _new_targets_target_texts_section(window, page.refresh_preview, get))
-    _bind_targets_target_outline_visibility(page, colors)
-
-    return page
-end
-
-local function _new_party_unit_page(window, root)
-    local get = function()
-        return root._settings.party
-    end
-    local page = ConfigSectionPage(window, "party_vitals_preview", 178, function(win)
-        win:update_party_vitals_preview()
-    end)
-
-    local frame = ConfigContent(window, 4, page.refresh_preview)
-    frame.on_scroll_changed = function()
-        window:update_party_vitals_preview()
-    end
-    _add_number_field(frame, "party_width", TR["Frame Width"], function() return get().frame.width end,
-        function(value) get().frame.width = value end)
-    _add_number_field(frame, "party_border_width", TR["Border Width"], function() return get().frame.border_width end,
-        function(value) get().frame.border_width = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "party_rows", TR["Rows per Column"], function() return get().layout.rows end,
-        function(value) get().layout.rows = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "party_spacing_x", TR["Column Spacing"], function() return get().layout.spacing_x end,
-        function(value) get().layout.spacing_x = value end)
-    _add_number_field(frame, "party_spacing_y", TR["Row Spacing"], function() return get().layout.spacing_y end,
-        function(value) get().layout.spacing_y = value end)
-    frame:add_row_break()
-    _add_number_field(frame, "party_incombat_opacity", TR["In-combat opacity"], function() return get().frame.incombat_opacity end,
-        function(value) get().frame.incombat_opacity = value end)
-    _add_number_field(frame, "party_outcombat_opacity", TR["Out-of-combat opacity"], function() return get().frame.outcombat_opacity end,
-        function(value) get().frame.outcombat_opacity = value end)
-    frame:add_row_break()
-    _add_checkbox_field(frame, "party_ressource_background_matches_missing", TR["Matching background"],
-        function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end)
-    _add_number_field(frame, "party_ressource_background_dimming", TR["Dimming"], function() return get().background_dimming end,
-        function(value) get().background_dimming = value end)
-    page:add_tab(TR["Frame"], "frame", frame)
-    local colors = _new_standard_colors_section(window, page.refresh_preview, "party", get, false)
-    page:add_tab(TR["Colors"], "colors", colors)
-
-    local morale = ConfigContent(window, 4, page.refresh_preview)
-    _build_standard_morale_form(morale, "party", get)
-    page:add_tab(TR["Morale"], "morale", morale)
-
-    local power = ConfigContent(window, 4, page.refresh_preview)
-    _build_standard_power_form(power, "party", get, false)
-    page:add_tab(TR["Power / Wrath"], "power", power)
-
-    local info = ConfigContent(window, 4, page.refresh_preview)
-    _build_info_form(info, "party", get)
-    page:add_tab(TR["Info"], "info", info)
-
-    page:add_tab(TR["Texts"], "texts", _new_texts_section(window, page.refresh_preview, "party", get))
-
-    local icons = ConfigContent(window, 4, page.refresh_preview)
-    _add_checkbox_field(icons, "party_class_icon_enabled", TR["Show class icon"],
-        function() return get().class_icon.enabled end,
-        function(value) get().class_icon.enabled = value end, true)
-    icons:add_row_break()
-    _add_number_field(icons, "party_class_icon_size", TR["Icon Size"], function() return get().class_icon.size end,
-        function(value) get().class_icon.size = value end)
-    icons:add_row_break()
-    _add_number_field(icons, "party_class_icon_x", TR["Icon X"], function() return get().class_icon.x end,
-        function(value) get().class_icon.x = value end)
-    _add_number_field(icons, "party_class_icon_y", TR["Icon Y"], function() return get().class_icon.y end,
-        function(value) get().class_icon.y = value end)
-    icons:add_row_break()
-    _add_checkbox_field(icons, "party_leader_icon_enabled", TR["Show leader icon"],
-        function() return get().leader_icon.enabled end,
-        function(value) get().leader_icon.enabled = value end, true)
-    icons:add_row_break()
-    _add_number_field(icons, "party_leader_icon_size", TR["Leader Icon Size"], function() return get().leader_icon.size end,
-        function(value) get().leader_icon.size = value end)
-    icons:add_row_break()
-    _add_number_field(icons, "party_leader_icon_x", TR["Leader Icon X"], function() return get().leader_icon.x end,
-        function(value) get().leader_icon.x = value end)
-    _add_number_field(icons, "party_leader_icon_y", TR["Leader Icon Y"], function() return get().leader_icon.y end,
-        function(value) get().leader_icon.y = value end)
-    page:add_tab(TR["Icons"], "icons", icons)
-    _bind_standard_outline_visibility(page, colors, "party", false)
-
-    return page
-end
-
-local function _new_general_page(window, root)
-    local page = ConfigContent(window, 4)
-    page:add_title(TR["General"])
-    page:add_checkbox("self_vitals_enabled", TR["Enable self vitals"],
-        function(value)
-            root._settings.self.vitals.enabled = value == true
-        end,
-        function()
-            return root._settings.self.vitals.enabled == true
-        end)
-    page:add_checkbox("target_vitals_enabled", TR["Enable target vitals"],
-        function(value)
-            root._settings.target.vitals.enabled = value == true
-        end,
-        function()
-            return root._settings.target.vitals.enabled == true
-        end)
-    page:add_checkbox("target_boss_enabled", TR["Enable boss vitals"],
-        function(value)
-            root._settings.target.boss_vitals.enabled = value == true
-        end,
-        function()
-            return root._settings.target.boss_vitals.enabled == true
-        end)
-    page:add_checkbox("target_targets_target_enabled", TR["Enable target's target"],
-        function(value)
-            root._settings.target.vitals.targets_target.enabled = value == true
-        end,
-        function()
-            return root._settings.target.vitals.targets_target.enabled == true
-        end)
-    page:add_checkbox("party_vitals_enabled", TR["Enable party vitals"],
-        function(value)
-            root._settings.party.enabled = value == true
-        end,
-        function()
-            return root._settings.party.enabled == true
-        end)
-    return page
-end
-
 VitalsPage = class(ConfigTabs)
 
 function VitalsPage:Constructor(window)
@@ -1187,12 +870,127 @@ function VitalsPage:Constructor(window)
     self.show_main_content_border = false
     self.sub_tab_bar:set_content_padding(_scaled_int(SECTION_FRAME_PADDING))
 
-    self:add_tab(TR["General"], "general", _new_general_page(window, self))
-    self:add_tab(TR["Self"], "self", _new_self_unit_page(window, self))
-    self:add_tab(TR["Target"], "target", _new_target_unit_page(window, self))
-    self:add_tab(TR["Boss"], "boss", _new_boss_unit_page(window, self))
-    self:add_tab(TR["Target's Target"], "target_targets_target", _new_targets_target_unit_page(window, self))
-    self:add_tab(TR["Party"], "party", _new_party_unit_page(window, self))
+    self:add_tab(TR["General"], "general", StandardVitalsPageBuilder.new_general_page(window, self, {
+        ConfigContent = ConfigContent,
+    }))
+    self:add_tab(TR["Self"], "self", StandardVitalsPageBuilder.new_standard_unit_page(window, self, {
+        get_settings = function(root)
+            return root._settings.self.vitals
+        end,
+        prefix = "self",
+        preview_key = "self_vitals_preview",
+        preview_method = "update_self_vitals_preview",
+        preview_height = 207,
+        show_outline_settings = true,
+        boss_power_mode = false,
+    }, {
+        ConfigContent = ConfigContent,
+        ConfigSectionPage = ConfigSectionPage,
+        add_number_field = _add_number_field,
+        add_checkbox_field = _add_checkbox_field,
+        new_standard_colors_section = _new_standard_colors_section,
+        build_standard_morale_form = _build_standard_morale_form,
+        build_standard_power_form = _build_standard_power_form,
+        build_info_form = _build_info_form,
+        new_texts_section = _new_texts_section,
+        new_effects_section = _new_effects_section,
+        bind_standard_outline_visibility = _bind_standard_outline_visibility,
+    }))
+    self:add_tab(TR["Target"], "target", StandardVitalsPageBuilder.new_standard_unit_page(window, self, {
+        get_settings = function(root)
+            return root._settings.target.vitals
+        end,
+        prefix = "target",
+        preview_key = "target_vitals_preview",
+        preview_method = "update_target_vitals_preview",
+        preview_height = 222,
+        show_outline_settings = true,
+        boss_power_mode = false,
+    }, {
+        ConfigContent = ConfigContent,
+        ConfigSectionPage = ConfigSectionPage,
+        add_number_field = _add_number_field,
+        add_checkbox_field = _add_checkbox_field,
+        new_standard_colors_section = _new_standard_colors_section,
+        build_standard_morale_form = _build_standard_morale_form,
+        build_standard_power_form = _build_standard_power_form,
+        build_info_form = _build_info_form,
+        new_texts_section = _new_texts_section,
+        new_effects_section = _new_effects_section,
+        bind_standard_outline_visibility = _bind_standard_outline_visibility,
+    }))
+    self:add_tab(TR["Boss"], "boss", StandardVitalsPageBuilder.new_standard_unit_page(window, self, {
+        get_settings = function(root)
+            return root._settings.target.boss_vitals
+        end,
+        prefix = "target_boss",
+        preview_key = "target_boss_vitals_preview",
+        preview_method = "update_target_boss_vitals_preview",
+        preview_height = 178,
+        show_outline_settings = true,
+        boss_power_mode = true,
+    }, {
+        ConfigContent = ConfigContent,
+        ConfigSectionPage = ConfigSectionPage,
+        add_number_field = _add_number_field,
+        add_checkbox_field = _add_checkbox_field,
+        new_standard_colors_section = _new_standard_colors_section,
+        build_standard_morale_form = _build_standard_morale_form,
+        build_standard_power_form = _build_standard_power_form,
+        build_info_form = _build_info_form,
+        new_texts_section = _new_texts_section,
+        new_effects_section = _new_effects_section,
+        bind_standard_outline_visibility = _bind_standard_outline_visibility,
+    }))
+    self:add_tab(TR["Target's Target"], "target_targets_target",
+        StandardVitalsPageBuilder.new_targets_target_unit_page(window, self, {
+            ConfigContent = ConfigContent,
+            ConfigSectionPage = ConfigSectionPage,
+            add_number_field = _add_number_field,
+            add_checkbox_field = _add_checkbox_field,
+            add_text_field = _add_text_field,
+            new_targets_target_colors_section = _new_targets_target_colors_section,
+            new_targets_target_texts_section = _new_targets_target_texts_section,
+            bind_targets_target_outline_visibility = _bind_targets_target_outline_visibility,
+        }))
+    self:add_tab(TR["Fellowship"], "fellowship", GroupVitalsPageBuilder.new_group_unit_page(window, self, {
+        settings_root = "fellowship",
+        prefix = "fellowship",
+        preview_key = "fellowship_vitals_preview",
+        preview_method = "update_fellowship_vitals_preview",
+        include_self_toggle = true,
+    }, {
+        ConfigContent = ConfigContent,
+        ConfigSectionPage = ConfigSectionPage,
+        add_number_field = _add_number_field,
+        add_checkbox_field = _add_checkbox_field,
+        new_standard_colors_section = _new_standard_colors_section,
+        build_standard_morale_form = _build_standard_morale_form,
+        build_standard_power_form = _build_standard_power_form,
+        build_info_form = _build_info_form,
+        new_texts_section = _new_texts_section,
+        new_effects_section = _new_effects_section,
+        bind_standard_outline_visibility = _bind_standard_outline_visibility,
+    }))
+    self:add_tab(TR["Raid"], "raid", GroupVitalsPageBuilder.new_group_unit_page(window, self, {
+        settings_root = "raid",
+        prefix = "raid",
+        preview_key = "raid_vitals_preview",
+        preview_method = "update_raid_vitals_preview",
+        include_self_toggle = false,
+    }, {
+        ConfigContent = ConfigContent,
+        ConfigSectionPage = ConfigSectionPage,
+        add_number_field = _add_number_field,
+        add_checkbox_field = _add_checkbox_field,
+        new_standard_colors_section = _new_standard_colors_section,
+        build_standard_morale_form = _build_standard_morale_form,
+        build_standard_power_form = _build_standard_power_form,
+        build_info_form = _build_info_form,
+        new_texts_section = _new_texts_section,
+        new_effects_section = _new_effects_section,
+        bind_standard_outline_visibility = _bind_standard_outline_visibility,
+    }))
 end
 
 function VitalsPage:apply_ui_scale()

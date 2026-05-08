@@ -5,7 +5,8 @@ import "LUI.src.Settings.Preview.drops"
 import "LUI.src.Settings.Preview.expiring_target_effects"
 import "LUI.src.Settings.Preview.target_boss_vitals"
 import "LUI.src.Settings.Preview.target_targets_target"
-import "LUI.src.Settings.Preview.party_vitals"
+import "LUI.src.Settings.Preview.fellowship_vitals"
+import "LUI.src.Settings.Preview.raid_vitals"
 import "LUI.src.Settings.Preview.vitals"
 
 local function _selected_leaf_page(page)

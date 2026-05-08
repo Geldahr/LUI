@@ -51,7 +51,8 @@ function _G.fix_colors()
     fix_vital(s.self.vitals)
     fix_vital(s.target.vitals)
     fix_vital(s.target.boss_vitals)
-    fix_vital(s.party)
+    fix_vital(s.fellowship)
+    fix_vital(s.raid)
 
     if s.target ~= nil and s.target.vitals ~= nil and s.target.vitals.targets_target ~= nil then
         local tt = s.target.vitals.targets_target

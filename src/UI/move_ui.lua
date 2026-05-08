@@ -240,7 +240,8 @@ local function _capture_move_settings_snapshot()
         target_vitals = _snapshot_position(hud.target_vitals),
         target_target_vitals = _snapshot_position(hud.target_target_vitals),
         boss_vitals = _snapshot_position(hud.boss_vitals),
-        party_vitals = _snapshot_position(hud.party_vitals),
+        fellowship_vitals = _snapshot_position(hud.fellowship_vitals),
+        raid_vitals = _snapshot_position(hud.raid_vitals),
         self_effects = _snapshot_position(hud.self_effects),
         target_effects = _snapshot_position(hud.target_effects),
         cooldowns = _snapshot_position(hud.cooldowns),
@@ -263,7 +264,8 @@ local function _restore_saved_move_settings()
     _restore_position(hud.target_vitals, MOVE_UI_POSITION_SNAPSHOT.target_vitals)
     _restore_position(hud.target_target_vitals, MOVE_UI_POSITION_SNAPSHOT.target_target_vitals)
     _restore_position(hud.boss_vitals, MOVE_UI_POSITION_SNAPSHOT.boss_vitals)
-    _restore_position(hud.party_vitals, MOVE_UI_POSITION_SNAPSHOT.party_vitals)
+    _restore_position(hud.fellowship_vitals, MOVE_UI_POSITION_SNAPSHOT.fellowship_vitals)
+    _restore_position(hud.raid_vitals, MOVE_UI_POSITION_SNAPSHOT.raid_vitals)
     _restore_position(hud.self_effects, MOVE_UI_POSITION_SNAPSHOT.self_effects)
     _restore_position(hud.target_effects, MOVE_UI_POSITION_SNAPSHOT.target_effects)
     _restore_position(hud.cooldowns, MOVE_UI_POSITION_SNAPSHOT.cooldowns)
@@ -278,8 +280,11 @@ local function _restore_saved_move_settings()
     if BOSS_VITAL ~= nil then
         BOSS_VITAL:resize()
     end
-    if PARTY_VITALS ~= nil then
-        PARTY_VITALS:apply_settings()
+    if FELLOWSHIP_VITALS ~= nil then
+        FELLOWSHIP_VITALS:apply_settings()
+    end
+    if RAID_VITALS ~= nil then
+        RAID_VITALS:apply_settings()
     end
     if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
         EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()
@@ -421,8 +426,11 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes, show_don
     if BOSS_VITAL ~= nil then
         BOSS_VITAL:set_move_mode(enabled)
     end
-    if PARTY_VITALS ~= nil then
-        PARTY_VITALS:set_move_mode(enabled)
+    if FELLOWSHIP_VITALS ~= nil then
+        FELLOWSHIP_VITALS:set_move_mode(enabled)
+    end
+    if RAID_VITALS ~= nil then
+        RAID_VITALS:set_move_mode(enabled)
     end
     if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
         EXPIRING_SELF_EFFECTS_WINDOW:set_move_mode(enabled)

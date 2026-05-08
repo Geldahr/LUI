@@ -80,6 +80,8 @@ local HUD_KEY_BY_VITAL = {
     target = "target_vitals",
     boss = "boss_vitals",
     party = "party_vitals",
+    fellowship = "fellowship_vitals",
+    raid = "raid_vitals",
 }
 
 ---@class VitalsBase : LuiHUD

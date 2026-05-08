@@ -92,7 +92,21 @@ function _G.rebuild_settings()
             },
             expiring_effects = { font = {}, color = {} },
         },
-        party = {
+        fellowship = {
+            frame = {},
+            morale = { color = {} },
+            power = { color = {} },
+            labels = {},
+            info = { color = {} },
+            layout = {},
+            class_icon = {},
+            leader_icon = {},
+            effects = {
+                buffs = { timer_font = {} },
+                debuffs = { timer_font = {} },
+            },
+        },
+        raid = {
             frame = {},
             morale = { color = {} },
             power = { color = {} },
@@ -211,10 +225,33 @@ function _G.rebuild_settings()
         end
     end
 
+    local function build_group_vital(dst, src)
+        build_vital(dst, src)
+
+        local raw_class_icon = src.class_icon
+        dst.class_icon.enabled = raw_class_icon.enabled
+        dst.class_icon.size = scaled_int(raw_class_icon.size)
+        dst.class_icon.x = scaled_int(raw_class_icon.x)
+        dst.class_icon.y = scaled_int(raw_class_icon.y)
+
+        local raw_leader_icon = src.leader_icon
+        dst.leader_icon.enabled = raw_leader_icon.enabled
+        dst.leader_icon.size = scaled_int(raw_leader_icon.size)
+        dst.leader_icon.x = scaled_int(raw_leader_icon.x)
+        dst.leader_icon.y = scaled_int(raw_leader_icon.y)
+
+        local raw_layout = src.layout
+        dst.layout.rows = raw_layout.rows
+        dst.layout.spacing_x = scaled_int(raw_layout.spacing_x)
+        dst.layout.spacing_y = scaled_int(raw_layout.spacing_y)
+    end
+
     build_vital(_G.settings.self.vitals, raw.self.vitals)
     build_vital(_G.settings.target.vitals, raw.target.vitals)
     build_vital(_G.settings.target.boss_vitals, raw.target.boss_vitals)
-    build_vital(_G.settings.party, raw.party)
+    build_group_vital(_G.settings.fellowship, raw.fellowship)
+    build_group_vital(_G.settings.raid, raw.raid)
+    _G.settings.fellowship.show_self_in_fellowship = raw.fellowship.show_self_in_fellowship == true
 
     local raw_inv = raw.inventory
     if raw_inv ~= nil then
@@ -248,18 +285,6 @@ function _G.rebuild_settings()
         _G.settings.travel.enabled = raw_travel.enabled
     end
 
-    local raw_party_ci = raw.party.class_icon
-    _G.settings.party.class_icon.enabled = raw_party_ci.enabled
-    _G.settings.party.class_icon.size = scaled_int(raw_party_ci.size)
-    _G.settings.party.class_icon.x = scaled_int(raw_party_ci.x)
-    _G.settings.party.class_icon.y = scaled_int(raw_party_ci.y)
-
-    local raw_party_li = raw.party.leader_icon
-    _G.settings.party.leader_icon.enabled = raw_party_li.enabled
-    _G.settings.party.leader_icon.size = scaled_int(raw_party_li.size)
-    _G.settings.party.leader_icon.x = scaled_int(raw_party_li.x)
-    _G.settings.party.leader_icon.y = scaled_int(raw_party_li.y)
-
     local raw_tt = raw.target.vitals.targets_target
     local dst_tt = _G.settings.target.vitals.targets_target
     dst_tt.enabled = raw_tt.enabled == true
@@ -282,11 +307,6 @@ function _G.rebuild_settings()
     dst_bv.power.width = scaled_int(raw_bv.power.width)
     dst_bv.power.hide = raw_bv.power.hide
     dst_bv.power.side = raw_bv.power.side
-
-    local raw_party_layout = raw.party.layout
-    _G.settings.party.layout.rows = raw_party_layout.rows
-    _G.settings.party.layout.spacing_x = scaled_int(raw_party_layout.spacing_x)
-    _G.settings.party.layout.spacing_y = scaled_int(raw_party_layout.spacing_y)
 
     local raw_self_ee = raw.self.expiring_effects
     local self_ee = _G.settings.self.expiring_effects

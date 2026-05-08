@@ -44,7 +44,29 @@ local function set_backpacks_enabled(enabled)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Backpack6, enabled == true)
 end
 
+local function _current_group_member_count()
+    local local_player = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if local_player == nil or local_player.GetParty == nil then
+        return 0
+    end
+
+    local group = local_player:GetParty()
+    if group == nil or group.GetMemberCount == nil then
+        return 0
+    end
+
+    return group:GetMemberCount() or 0
+end
+
 function _G.apply_lotro_vitals_handoff()
+    local group_member_count = _current_group_member_count()
+    local disable_group_ui = false
+    if group_member_count >= 7 then
+        disable_group_ui = _G.settings.raid.enabled == true
+    elseif group_member_count > 0 then
+        disable_group_ui = _G.settings.fellowship.enabled == true
+    end
+
     Turbine.UI.Lotro.LotroUI.SetEnabled(
         Turbine.UI.Lotro.LotroUIElement.Vitals,
         _G.settings.self.vitals.enabled ~= true
@@ -55,7 +77,7 @@ function _G.apply_lotro_vitals_handoff()
     )
     Turbine.UI.Lotro.LotroUI.SetEnabled(
         Turbine.UI.Lotro.LotroUIElement.Party,
-        _G.settings.party.enabled ~= true
+        disable_group_ui ~= true
     )
 end
 
@@ -365,7 +387,8 @@ TARGET_VITAL = UI.TargetVitals(nil)
 BOSS_VITAL = UI.BossVitals(nil)
 PLAYER_VITAL = UI.SelfVitals(Turbine.Gameplay.LocalPlayer.GetInstance())
 PLAYER_VITAL:set_target_vitals(TARGET_VITAL, BOSS_VITAL)
-PARTY_VITALS = UI.PartyVitals()
+FELLOWSHIP_VITALS = UI.FellowshipVitals()
+RAID_VITALS = UI.RaidVitals()
 EXPIRING_SELF_EFFECTS_WINDOW = ExpiringEffects.SelfExpiringEffectsWindow()
 EXPIRING_TARGET_EFFECTS_WINDOW = ExpiringEffects.TargetExpiringEffectsWindow()
 INVENTORY_WINDOW = nil

@@ -35,6 +35,42 @@ local function _apply_missing_values(target, defaults)
     end
 end
 
+local function _seed_group_vitals_compatibility(loaded, defaults)
+    local fellowship_source = loaded.party
+    local raid_source = defaults.party
+
+    if type(loaded.fellowship) ~= "table" then
+        loaded.fellowship = _copy_table(fellowship_source)
+    else
+        _apply_missing_values(loaded.fellowship, fellowship_source)
+    end
+    if loaded.fellowship.show_self_in_fellowship == nil then
+        loaded.fellowship.show_self_in_fellowship = true
+    end
+
+    if type(loaded.raid) ~= "table" then
+        loaded.raid = _copy_table(raid_source)
+    else
+        _apply_missing_values(loaded.raid, raid_source)
+    end
+
+    local hud = _ensure_table(_ensure_table(loaded, "ui"), "hud")
+    local fellowship_hud_source = hud.party_vitals
+    local raid_hud_source = defaults.ui.hud.party_vitals
+
+    if type(hud.fellowship_vitals) ~= "table" then
+        hud.fellowship_vitals = _copy_table(fellowship_hud_source)
+    else
+        _apply_missing_values(hud.fellowship_vitals, fellowship_hud_source)
+    end
+
+    if type(hud.raid_vitals) ~= "table" then
+        hud.raid_vitals = _copy_table(raid_hud_source)
+    else
+        _apply_missing_values(hud.raid_vitals, raid_hud_source)
+    end
+end
+
 local function _ensure_window_tiles(windows)
     if type(windows) ~= "table" then
         return
@@ -96,6 +132,7 @@ function _G.ensure_loaded_settings()
 
     local defaults = _defaults_source()
     _apply_missing_values(_G.loaded_settings, defaults)
+    _seed_group_vitals_compatibility(_G.loaded_settings, defaults)
 
     local ui = _ensure_table(_G.loaded_settings, "ui")
     local windows = _ensure_table(ui, "windows")
