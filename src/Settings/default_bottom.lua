@@ -36,7 +36,14 @@ _G.DEFAULT_LAYOUT_BOTTOM =
     },
     ["ui"] = {
         ["hud"] = {
+            ["fellowship_vitals"] = {
+                ["top"] = 146.000000,
+            },
             ["party_vitals"] = {
+                ["top"] = 146.000000,
+            },
+            ["raid_vitals"] = {
+                ["left"] = 260.000000,
                 ["top"] = 146.000000,
             },
             ["self_vitals"] = {

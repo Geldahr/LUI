@@ -1583,8 +1583,16 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["left"] = 453.000000,
 				["top"] = 1054.000000,
 			},
+			["fellowship_vitals"] = {
+				["left"] = 0.000000,
+				["top"] = 420.000000,
+			},
 			["party_vitals"] = {
 				["left"] = 0.000000,
+				["top"] = 420.000000,
+			},
+			["raid_vitals"] = {
+				["left"] = 270.000000,
 				["top"] = 420.000000,
 			},
 			["self_effects"] = {

@@ -66,6 +66,14 @@ local function _apply_missing_values(target, defaults)
     end
 end
 
+local function _hud_position_matches(lhs, rhs)
+    if type(lhs) ~= "table" or type(rhs) ~= "table" then
+        return false
+    end
+
+    return lhs.left == rhs.left and lhs.top == rhs.top
+end
+
 local function _seed_group_vitals_compatibility(loaded, defaults)
     local default_party_source = defaults.party
     local fellowship_source = _sanitize_with_defaults(loaded.party, default_party_source)
@@ -82,13 +90,18 @@ local function _seed_group_vitals_compatibility(loaded, defaults)
 
     local hud = _ensure_table(_ensure_table(loaded, "ui"), "hud")
     local default_party_hud_source = defaults.ui.hud.party_vitals
-    local fellowship_hud_source = _sanitize_with_defaults(hud.party_vitals, default_party_hud_source)
+    local default_fellowship_hud_source = defaults.ui.hud.fellowship_vitals
+    local default_raid_hud_source = defaults.ui.hud.raid_vitals
+    local fellowship_hud_source = _sanitize_with_defaults(hud.party_vitals, default_fellowship_hud_source)
     hud.party_vitals = fellowship_hud_source
 
-    local raid_hud_source = default_party_hud_source
+    local raid_hud_source = hud.raid_vitals
+    if _hud_position_matches(raid_hud_source, fellowship_hud_source) == true then
+        raid_hud_source = default_raid_hud_source
+    end
 
     hud.fellowship_vitals = _sanitize_with_defaults(hud.fellowship_vitals, fellowship_hud_source)
-    hud.raid_vitals = _sanitize_with_defaults(hud.raid_vitals, raid_hud_source)
+    hud.raid_vitals = _sanitize_with_defaults(raid_hud_source, default_raid_hud_source)
 end
 
 local function _ensure_window_tiles(windows)
