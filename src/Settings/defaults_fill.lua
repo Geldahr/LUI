@@ -20,6 +20,37 @@ local function _copy_table(value)
     return copy
 end
 
+local function _sanitize_with_defaults(source, defaults)
+    if type(defaults) ~= "table" then
+        if source == nil then
+            return defaults
+        end
+        return source
+    end
+
+    local sanitized = _copy_table(defaults)
+    if type(source) ~= "table" then
+        return sanitized
+    end
+
+    for key, default_value in pairs(defaults) do
+        local source_value = source[key]
+        if type(default_value) == "table" then
+            sanitized[key] = _sanitize_with_defaults(source_value, default_value)
+        elseif source_value ~= nil then
+            sanitized[key] = source_value
+        end
+    end
+
+    for key, source_value in pairs(source) do
+        if defaults[key] == nil and source_value ~= nil then
+            sanitized[key] = _copy_table(source_value)
+        end
+    end
+
+    return sanitized
+end
+
 local function _apply_missing_values(target, defaults)
     if type(target) ~= "table" or type(defaults) ~= "table" then
         return
@@ -37,50 +68,27 @@ end
 
 local function _seed_group_vitals_compatibility(loaded, defaults)
     local default_party_source = defaults.party
-    local fellowship_source = loaded.party
-    if type(fellowship_source) ~= "table" then
-        fellowship_source = default_party_source
-        loaded.party = _copy_table(default_party_source)
-    end
+    local fellowship_source = _sanitize_with_defaults(loaded.party, default_party_source)
+    loaded.party = fellowship_source
 
     local raid_source = default_party_source
 
-    if type(loaded.fellowship) ~= "table" then
-        loaded.fellowship = _copy_table(fellowship_source)
-    else
-        _apply_missing_values(loaded.fellowship, fellowship_source)
-    end
+    loaded.fellowship = _sanitize_with_defaults(loaded.fellowship, fellowship_source)
     if loaded.fellowship.show_self_in_fellowship == nil then
         loaded.fellowship.show_self_in_fellowship = true
     end
 
-    if type(loaded.raid) ~= "table" then
-        loaded.raid = _copy_table(raid_source)
-    else
-        _apply_missing_values(loaded.raid, raid_source)
-    end
+    loaded.raid = _sanitize_with_defaults(loaded.raid, raid_source)
 
     local hud = _ensure_table(_ensure_table(loaded, "ui"), "hud")
     local default_party_hud_source = defaults.ui.hud.party_vitals
-    local fellowship_hud_source = hud.party_vitals
-    if type(fellowship_hud_source) ~= "table" then
-        fellowship_hud_source = default_party_hud_source
-        hud.party_vitals = _copy_table(default_party_hud_source)
-    end
+    local fellowship_hud_source = _sanitize_with_defaults(hud.party_vitals, default_party_hud_source)
+    hud.party_vitals = fellowship_hud_source
 
     local raid_hud_source = default_party_hud_source
 
-    if type(hud.fellowship_vitals) ~= "table" then
-        hud.fellowship_vitals = _copy_table(fellowship_hud_source)
-    else
-        _apply_missing_values(hud.fellowship_vitals, fellowship_hud_source)
-    end
-
-    if type(hud.raid_vitals) ~= "table" then
-        hud.raid_vitals = _copy_table(raid_hud_source)
-    else
-        _apply_missing_values(hud.raid_vitals, raid_hud_source)
-    end
+    hud.fellowship_vitals = _sanitize_with_defaults(hud.fellowship_vitals, fellowship_hud_source)
+    hud.raid_vitals = _sanitize_with_defaults(hud.raid_vitals, raid_hud_source)
 end
 
 local function _ensure_window_tiles(windows)
