@@ -36,8 +36,14 @@ local function _apply_missing_values(target, defaults)
 end
 
 local function _seed_group_vitals_compatibility(loaded, defaults)
+    local default_party_source = defaults.party
     local fellowship_source = loaded.party
-    local raid_source = defaults.party
+    if type(fellowship_source) ~= "table" then
+        fellowship_source = default_party_source
+        loaded.party = _copy_table(default_party_source)
+    end
+
+    local raid_source = default_party_source
 
     if type(loaded.fellowship) ~= "table" then
         loaded.fellowship = _copy_table(fellowship_source)
@@ -55,8 +61,14 @@ local function _seed_group_vitals_compatibility(loaded, defaults)
     end
 
     local hud = _ensure_table(_ensure_table(loaded, "ui"), "hud")
+    local default_party_hud_source = defaults.ui.hud.party_vitals
     local fellowship_hud_source = hud.party_vitals
-    local raid_hud_source = defaults.ui.hud.party_vitals
+    if type(fellowship_hud_source) ~= "table" then
+        fellowship_hud_source = default_party_hud_source
+        hud.party_vitals = _copy_table(default_party_hud_source)
+    end
+
+    local raid_hud_source = default_party_hud_source
 
     if type(hud.fellowship_vitals) ~= "table" then
         hud.fellowship_vitals = _copy_table(fellowship_hud_source)
