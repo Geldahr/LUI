@@ -128,6 +128,7 @@ function _G.rebuild_settings()
             labels = {},
             info = { color = {} },
             layout = {},
+            group_border_width = 0,
             group_colors = {},
             class_icon = {},
             leader_icon = {},
@@ -269,6 +270,7 @@ function _G.rebuild_settings()
     build_group_vital(_G.settings.fellowship, raw.fellowship)
     build_group_vital(_G.settings.raid, raw.raid)
     _G.settings.fellowship.show_self_in_fellowship = raw.fellowship.show_self_in_fellowship == true
+    _G.settings.raid.group_border_width = scaled_border(raw.raid.group_border_width)
     _G.settings.raid.split_by_group = raw.raid.split_by_group == true
     _G.settings.raid.group_colors.a = build_color(raw.raid.group_colors.a)
     _G.settings.raid.group_colors.b = build_color(raw.raid.group_colors.b)

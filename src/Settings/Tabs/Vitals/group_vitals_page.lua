@@ -40,11 +40,20 @@ function Builder.new_group_unit_page(window, root, options, deps)
     frame.on_scroll_changed = function()
         window[options.preview_method](window)
     end
+    local border_width_label = TR["Border Width"]
+    if options.raid_layout_dropdown == true then
+        border_width_label = TR["In-between Border Width"]
+    end
     deps.add_number_field(frame, options.prefix .. "_width", TR["Frame Width"], function() return get().frame.width end,
         function(value) get().frame.width = value end)
-    deps.add_number_field(frame, options.prefix .. "_border_width", TR["Border Width"],
+    deps.add_number_field(frame, options.prefix .. "_border_width", border_width_label,
         function() return get().frame.border_width end,
         function(value) get().frame.border_width = value end)
+    if options.raid_layout_dropdown == true then
+        deps.add_number_field(frame, options.prefix .. "_group_border_width", TR["Group Border Width"],
+            function() return get().group_border_width end,
+            function(value) get().group_border_width = value end)
+    end
     frame:add_row_break()
     if options.raid_layout_dropdown == true then
         deps.add_dropdown_field(frame, options.prefix .. "_layout_mode", TR["Columns"], RAID_LAYOUT_LABELS,
@@ -91,13 +100,18 @@ function Builder.new_group_unit_page(window, root, options, deps)
 
     local colors = deps.new_standard_colors_section(window, page.refresh_preview, options.prefix, get, false)
     if options.raid_group_colors == true then
-        colors:add_title(TR["Raid Groups"])
+        local colors_frame = colors._frame_page
+        colors_frame:add_break()
         for i = 1, #RAID_GROUP_COLOR_KEYS do
             local group_key = RAID_GROUP_COLOR_KEYS[i]
-            deps.add_color_field(colors, options.prefix .. "_group_" .. group_key .. "_border_color",
+            local control_key = options.prefix .. "_group_" .. group_key .. "_border_color"
+            deps.add_color_field(colors_frame, control_key,
                 RAID_GROUP_COLOR_LABELS[i],
                 function() return get().group_colors[group_key] end,
                 function(value) get().group_colors[group_key] = value end)
+            colors.controls[control_key] = colors_frame.controls[control_key]
+            page.controls[control_key] = colors_frame.controls[control_key]
+            window.controls[control_key] = colors_frame.controls[control_key]
         end
     end
     page:add_tab(TR["Colors"], "colors", colors)

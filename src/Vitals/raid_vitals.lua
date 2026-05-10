@@ -22,6 +22,35 @@ local function _raid_active(snapshot)
     return snapshot.member_count >= 7
 end
 
+local function _set_border_visible(border, visible)
+    border.top:SetVisible(visible)
+    border.bottom:SetVisible(visible)
+    border.left:SetVisible(visible)
+    border.right:SetVisible(visible)
+end
+
+local function _apply_border(border, x, y, width, height, thickness, color)
+    if thickness <= 0 or width <= 0 or height <= 0 then
+        _set_border_visible(border, false)
+        return
+    end
+
+    border.top:SetBackColor(color)
+    border.bottom:SetBackColor(color)
+    border.left:SetBackColor(color)
+    border.right:SetBackColor(color)
+
+    border.top:SetPosition(x, y)
+    border.top:SetSize(width, thickness)
+    border.bottom:SetPosition(x, y + height - thickness)
+    border.bottom:SetSize(width, thickness)
+    border.left:SetPosition(x, y)
+    border.left:SetSize(thickness, height)
+    border.right:SetPosition(x + width - thickness, y)
+    border.right:SetSize(thickness, height)
+    _set_border_visible(border, true)
+end
+
 ---@class RaidVitals : LuiHUD
 RaidVitals = class(LuiHUD)
 
@@ -34,6 +63,7 @@ function RaidVitals:Constructor()
     self.lp = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.group = nil
     self.members = {}
+    self.group_borders = {}
     self.group_windows = {
         RaidGroupVitalsWindow("a", 1),
         RaidGroupVitalsWindow("b", 2),
@@ -50,6 +80,29 @@ function RaidVitals:Constructor()
 
     self:SetMouseVisible(false)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+
+    for i = 1, RaidLayout.group_count() do
+        local border = {
+            top = Turbine.UI.Control(),
+            bottom = Turbine.UI.Control(),
+            left = Turbine.UI.Control(),
+            right = Turbine.UI.Control(),
+        }
+        border.top:SetParent(self)
+        border.bottom:SetParent(self)
+        border.left:SetParent(self)
+        border.right:SetParent(self)
+        border.top:SetMouseVisible(false)
+        border.bottom:SetMouseVisible(false)
+        border.left:SetMouseVisible(false)
+        border.right:SetMouseVisible(false)
+        border.top:SetZOrder(30)
+        border.bottom:SetZOrder(30)
+        border.left:SetZOrder(30)
+        border.right:SetZOrder(30)
+        _set_border_visible(border, false)
+        self.group_borders[i] = border
+    end
 
     local vitals_settings = _G.settings.raid
     local initial_height = GroupLayout.member_height(vitals_settings)
@@ -144,16 +197,78 @@ function RaidVitals:layout_members(count)
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
-    local total_width, total_height = GroupLayout.compute_raid_size(count, layout.mode, layout.spacing_x, layout.spacing_y,
-        member_width, member_height)
+    local outer_border = vitals_settings.group_border_width
+    local shape_cells = RaidLayout.group_shape_cells(layout.mode)
+    local full_group_width, full_group_height = GroupLayout.compute_raid_group_size(RaidLayout.group_size(), layout.mode,
+        layout.spacing_x, layout.spacing_y, member_width, member_height)
+    local group_slot_width = full_group_width + (2 * outer_border)
+    local group_slot_height = full_group_height + (2 * outer_border)
 
+    for i = 1, count do
+        local member_window = self.members[i]
+        local member_index_in_group = ((i - 1) % RaidLayout.group_size()) + 1
+        local group_index = RaidLayout.member_group_index(i)
+        local tile = RaidLayout.group_tile_position(layout.mode, group_index)
+        local cell = shape_cells[member_index_in_group]
+        local x = (tile.column * group_slot_width) + outer_border + (cell.column * (member_width + layout.spacing_x))
+        local y = (tile.row * group_slot_height) + outer_border + (cell.row * (member_height + layout.spacing_y))
+        member_window:SetPosition(x, y)
+    end
+    for i = count + 1, #self.members do
+        self.members[i]:SetPosition(0, 0)
+    end
+
+    local total_width, total_height = GroupLayout.compute_raid_outer_size(count, layout.mode, layout.spacing_x,
+        layout.spacing_y, member_width, member_height, outer_border)
     self:SetSize(total_width, total_height)
-    GroupLayout.apply_raid_positions(self.members, count, layout.mode, layout.spacing_x, layout.spacing_y, member_width,
-        member_height)
 
     if self:is_move_mode() then
         self:layout_move_chrome()
         self:sync_move_inputs_from_position()
+    end
+end
+
+function RaidVitals:update_group_borders(total_count)
+    if self:is_move_mode() == true or _raid_split_enabled() == true then
+        for i = 1, #self.group_borders do
+            _set_border_visible(self.group_borders[i], false)
+        end
+        return
+    end
+
+    local vitals_settings = _G.settings.raid
+    local member_width = vitals_settings.frame.width
+    local member_height = GroupLayout.member_height(vitals_settings)
+    local layout = vitals_settings.layout
+    local border_width = vitals_settings.group_border_width
+    local group_size = RaidLayout.group_size()
+    local full_group_width, full_group_height = GroupLayout.compute_raid_group_size(group_size, layout.mode,
+        layout.spacing_x, layout.spacing_y, member_width, member_height)
+    local group_slot_width = full_group_width + (2 * border_width)
+    local group_slot_height = full_group_height + (2 * border_width)
+
+    for group_index = 1, #self.group_borders do
+        local group_first_member = ((group_index - 1) * group_size) + 1
+        local group_member_count = total_count - group_first_member + 1
+        if group_member_count > group_size then
+            group_member_count = group_size
+        end
+        if group_member_count < 0 then
+            group_member_count = 0
+        end
+
+        if group_member_count <= 0 then
+            _set_border_visible(self.group_borders[group_index], false)
+        else
+            local group_tile = RaidLayout.group_tile_position(layout.mode, group_index)
+            local group_x = group_tile.column * group_slot_width
+            local group_y = group_tile.row * group_slot_height
+            local group_width, group_height = GroupLayout.compute_raid_group_size(group_member_count, layout.mode,
+                layout.spacing_x, layout.spacing_y, member_width, member_height)
+            _apply_border(self.group_borders[group_index], group_x, group_y,
+                group_width + (2 * border_width), group_height + (2 * border_width), border_width,
+                self.group_windows[group_index]:get_border_color())
+        end
     end
 end
 
@@ -198,6 +313,9 @@ function RaidVitals:hide_combined_members()
         member_window:set_is_leader(false)
         member_window:SetVisible(false)
     end
+    for i = 1, #self.group_borders do
+        _set_border_visible(self.group_borders[i], false)
+    end
 
     self:SetVisible(false)
 end
@@ -224,11 +342,12 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
             member_window.entity_control:SetMouseVisible(false)
             member_window:set_entity(nil)
             member_window:set_is_leader(false)
-            member_window:set_frame_border_color_override(self:group_border_color(i))
+            member_window:set_frame_border_color_override(nil)
             member_window:SetVisible(false)
         end
 
         self:layout_members(desired_count)
+        self:update_group_borders(desired_count)
         self:update_visibility(active, #ordered_members)
         return
     end
@@ -236,7 +355,7 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
     for i = 1, #self.members do
         local member_window = self.members[i]
         member_window.entity_control:SetMouseVisible(true)
-        member_window:set_frame_border_color_override(self:group_border_color(i))
+        member_window:set_frame_border_color_override(nil)
 
         if i <= #ordered_members then
             local entity = ordered_members[i]
@@ -251,6 +370,7 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
     end
 
     self:layout_members(desired_count)
+    self:update_group_borders(#ordered_members)
     self:update_visibility(active, #ordered_members)
 end
 

@@ -9,6 +9,35 @@ local function _raid_group_windows_enabled()
     return _G.loaded_settings.raid.enabled == true and _G.loaded_settings.raid.split_by_group == true
 end
 
+local function _set_border_visible(border, visible)
+    border.top:SetVisible(visible)
+    border.bottom:SetVisible(visible)
+    border.left:SetVisible(visible)
+    border.right:SetVisible(visible)
+end
+
+local function _apply_border(border, width, height, thickness, color)
+    if thickness <= 0 or width <= 0 or height <= 0 then
+        _set_border_visible(border, false)
+        return
+    end
+
+    border.top:SetBackColor(color)
+    border.bottom:SetBackColor(color)
+    border.left:SetBackColor(color)
+    border.right:SetBackColor(color)
+
+    border.top:SetPosition(0, 0)
+    border.top:SetSize(width, thickness)
+    border.bottom:SetPosition(0, height - thickness)
+    border.bottom:SetSize(width, thickness)
+    border.left:SetPosition(0, 0)
+    border.left:SetSize(thickness, height)
+    border.right:SetPosition(width - thickness, 0)
+    border.right:SetSize(thickness, height)
+    _set_border_visible(border, true)
+end
+
 ---@class RaidGroupVitalsWindow : LuiHUD
 RaidGroupVitalsWindow = class(LuiHUD)
 
@@ -19,6 +48,7 @@ function RaidGroupVitalsWindow:Constructor(group_key, group_index)
     self.current_members = {}
     self.current_leader_name = nil
     self.current_active = false
+    self.group_border = nil
 
     LuiHUD.Constructor(self, {
         hud_key = "raid_group_" .. group_key .. "_vitals",
@@ -28,6 +58,26 @@ function RaidGroupVitalsWindow:Constructor(group_key, group_index)
     self:SetMouseVisible(false)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
     self:SetVisible(false)
+
+    self.group_border = {
+        top = Turbine.UI.Control(),
+        bottom = Turbine.UI.Control(),
+        left = Turbine.UI.Control(),
+        right = Turbine.UI.Control(),
+    }
+    self.group_border.top:SetParent(self)
+    self.group_border.bottom:SetParent(self)
+    self.group_border.left:SetParent(self)
+    self.group_border.right:SetParent(self)
+    self.group_border.top:SetMouseVisible(false)
+    self.group_border.bottom:SetMouseVisible(false)
+    self.group_border.left:SetMouseVisible(false)
+    self.group_border.right:SetMouseVisible(false)
+    self.group_border.top:SetZOrder(30)
+    self.group_border.bottom:SetZOrder(30)
+    self.group_border.left:SetZOrder(30)
+    self.group_border.right:SetZOrder(30)
+    _set_border_visible(self.group_border, false)
 
     local vitals_settings = _G.settings.raid
     local initial_height = GroupLayout.member_height(vitals_settings)
@@ -69,17 +119,35 @@ function RaidGroupVitalsWindow:layout_members(count)
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
+    local outer_border = vitals_settings.group_border_width
     local total_width, total_height = GroupLayout.compute_raid_group_size(count, layout.mode, layout.spacing_x,
         layout.spacing_y, member_width, member_height)
 
-    self:SetSize(total_width, total_height)
+    self:SetSize(total_width + (2 * outer_border), total_height + (2 * outer_border))
     GroupLayout.apply_raid_group_positions(self.members, count, layout.mode, layout.spacing_x, layout.spacing_y,
         member_width, member_height)
+    for i = 1, count do
+        local member_window = self.members[i]
+        local x, y = member_window:GetPosition()
+        member_window:SetPosition(x + outer_border, y + outer_border)
+    end
+    self:update_group_border(count)
 
     if self:is_move_mode() then
         self:layout_move_chrome()
         self:sync_move_inputs_from_position()
     end
+end
+
+function RaidGroupVitalsWindow:update_group_border(count)
+    if self:is_move_mode() == true or count <= 0 then
+        _set_border_visible(self.group_border, false)
+        return
+    end
+
+    local border_width = _G.settings.raid.group_border_width
+    local width, height = self:GetSize()
+    _apply_border(self.group_border, width, height, border_width, self:get_border_color())
 end
 
 function RaidGroupVitalsWindow:update_visibility(active, visible_members)
@@ -120,15 +188,13 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
 
     self:ensure_member_windows(desired_count)
 
-    local border_color = self:get_border_color()
-
     if move_mode == true then
         for i = 1, #self.members do
             local member_window = self.members[i]
             member_window.entity_control:SetMouseVisible(false)
             member_window:set_entity(nil)
             member_window:set_is_leader(false)
-            member_window:set_frame_border_color_override(border_color)
+            member_window:set_frame_border_color_override(nil)
             member_window:SetVisible(false)
         end
 
@@ -140,7 +206,7 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
     for i = 1, #self.members do
         local member_window = self.members[i]
         member_window.entity_control:SetMouseVisible(true)
-        member_window:set_frame_border_color_override(border_color)
+        member_window:set_frame_border_color_override(nil)
 
         if i <= #ordered_members then
             local entity = ordered_members[i]

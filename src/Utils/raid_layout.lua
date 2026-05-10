@@ -5,6 +5,7 @@ local RAID_GROUP_COUNT = 4
 local LAYOUT_CELLS = {}
 local GROUP_CELLS = {}
 local GROUP_SHAPE_CELLS = {}
+local GROUP_SHAPE_DIMENSIONS = {}
 
 local function _build_group_cells(start_column, start_row, columns_per_group)
     local cells = {}
@@ -64,6 +65,26 @@ local function _normalize_group_shape_cells(group_cells)
     return normalized
 end
 
+local function _cells_dimensions(cells)
+    local max_column = 0
+    local max_row = 0
+
+    for i = 1, #cells do
+        local cell = cells[i]
+        if cell.column > max_column then
+            max_column = cell.column
+        end
+        if cell.row > max_row then
+            max_row = cell.row
+        end
+    end
+
+    return {
+        columns = max_column + 1,
+        rows = max_row + 1,
+    }
+end
+
 local function _register_layout(layout_mode, group_specs)
     local layout_cells = {}
     local layout_groups = {}
@@ -78,6 +99,7 @@ local function _register_layout(layout_mode, group_specs)
     LAYOUT_CELLS[layout_mode] = layout_cells
     GROUP_CELLS[layout_mode] = layout_groups
     GROUP_SHAPE_CELLS[layout_mode] = _normalize_group_shape_cells(layout_groups[1])
+    GROUP_SHAPE_DIMENSIONS[layout_mode] = _cells_dimensions(GROUP_SHAPE_CELLS[layout_mode])
 end
 
 local function _build_layouts()
@@ -175,6 +197,25 @@ end
 function RaidLayout.group_origin_cell(layout_mode, group_index)
     local group_cells = RaidLayout.group_cells(layout_mode, group_index)
     return group_cells[1]
+end
+
+function RaidLayout.group_shape_dimensions(layout_mode)
+    local dimensions = GROUP_SHAPE_DIMENSIONS[layout_mode]
+    if dimensions == nil then
+        error("Unknown raid layout mode: " .. tostring(layout_mode))
+    end
+
+    return dimensions
+end
+
+function RaidLayout.group_tile_position(layout_mode, group_index)
+    local origin = RaidLayout.group_origin_cell(layout_mode, group_index)
+    local dimensions = RaidLayout.group_shape_dimensions(layout_mode)
+
+    return {
+        column = math.floor(origin.column / dimensions.columns),
+        row = math.floor(origin.row / dimensions.rows),
+    }
 end
 
 function RaidLayout.copy_cells(cells)

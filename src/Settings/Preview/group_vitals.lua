@@ -146,6 +146,54 @@ local function _preview_compute_raid_group_size(member_count, layout_mode, spaci
         member_width, member_height)
 end
 
+local function _preview_compute_raid_outer_size(member_count, layout_mode, spacing_x, spacing_y, member_width,
+                                                member_height, group_border_width)
+    local normalized_count = member_count
+    if normalized_count < 0 then
+        normalized_count = 0
+    end
+
+    local group_size = RaidLayout.group_size()
+    local full_group_width, full_group_height = _preview_compute_raid_group_size(group_size, layout_mode, spacing_x,
+        spacing_y, member_width, member_height)
+    local group_slot_width = full_group_width + (2 * group_border_width)
+    local group_slot_height = full_group_height + (2 * group_border_width)
+    local occupied_groups = math.ceil(normalized_count / group_size)
+
+    if occupied_groups < 1 then
+        occupied_groups = 1
+    end
+
+    local max_right = group_slot_width
+    local max_bottom = group_slot_height
+
+    for group_index = 1, occupied_groups do
+        local group_first_member = ((group_index - 1) * group_size) + 1
+        local group_member_count = normalized_count - group_first_member + 1
+        if group_member_count > group_size then
+            group_member_count = group_size
+        end
+        if group_member_count < 1 then
+            group_member_count = 1
+        end
+
+        local group_width, group_height = _preview_compute_raid_group_size(group_member_count, layout_mode, spacing_x,
+            spacing_y, member_width, member_height)
+        local tile = RaidLayout.group_tile_position(layout_mode, group_index)
+        local right = (tile.column * group_slot_width) + group_width + (2 * group_border_width)
+        local bottom = (tile.row * group_slot_height) + group_height + (2 * group_border_width)
+
+        if right > max_right then
+            max_right = right
+        end
+        if bottom > max_bottom then
+            max_bottom = bottom
+        end
+    end
+
+    return max_right, max_bottom
+end
+
 local function _preview_apply_raid_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y, member_width,
                                              member_height)
     _preview_apply_positions_from_cells(member_windows, _preview_raid_layout_cells(layout_mode), member_count, spacing_x,
@@ -165,13 +213,42 @@ local function _hide_preview_border(border)
     border.border_right:SetVisible(false)
 end
 
-local function _preview_group_border_color(index, colors, fallback_color)
-    if colors == nil then
-        return fallback_color
+local function _set_preview_border_color(border, color)
+    border.border_top:SetBackColor(color)
+    border.border_bottom:SetBackColor(color)
+    border.border_left:SetBackColor(color)
+    border.border_right:SetBackColor(color)
+end
+
+local function _apply_preview_group_border(border, x, y, width, height, thickness)
+    if thickness <= 0 or width <= 0 or height <= 0 then
+        _hide_preview_border(border)
+        return
     end
 
-    local group_key = RAID_GROUP_KEYS[RaidLayout.member_group_index(index)]
-    return colors[group_key]
+    border.border_top:SetVisible(true)
+    border.border_top:SetZOrder(999)
+    border.border_top:SetPosition(x, y)
+    border.border_top:SetSize(width, thickness)
+
+    border.border_bottom:SetVisible(true)
+    border.border_bottom:SetZOrder(999)
+    border.border_bottom:SetPosition(x, y + height - thickness)
+    border.border_bottom:SetSize(width, thickness)
+
+    border.border_left:SetVisible(true)
+    border.border_left:SetZOrder(999)
+    border.border_left:SetPosition(x, y)
+    border.border_left:SetSize(thickness, height)
+
+    border.border_right:SetVisible(true)
+    border.border_right:SetZOrder(999)
+    border.border_right:SetPosition(x + width - thickness, y)
+    border.border_right:SetSize(thickness, height)
+end
+
+local function _preview_group_border_color(group_index, colors)
+    return colors[RAID_GROUP_KEYS[group_index]]
 end
 
 local function _label_text_is_blank(text)
@@ -471,12 +548,15 @@ function Preview.update(window, spec)
     local total_w = nil
     local total_h = nil
     local raid_layout_mode = nil
+    local raid_group_border_width = nil
     local split_by_group = false
     local raid_group_border_colors = nil
     if spec.raid_layout_mode_control_key ~= nil then
         raid_layout_mode = window.controls[spec.raid_layout_mode_control_key]:get_value()
-        total_w, total_h = _preview_compute_raid_size(preview_count, raid_layout_mode, spacing_x, spacing_y, frame_w,
-            member_h)
+        raid_group_border_width = _preview_scaled_border(raw_scale,
+            _require_control_number(window.controls, prefix .. "_group_border_width"))
+        total_w, total_h = _preview_compute_raid_outer_size(preview_count, raid_layout_mode, spacing_x, spacing_y,
+            frame_w, member_h, raid_group_border_width)
         raid_group_border_colors = {
             a = _require_control_color(window.controls, prefix .. "_group_a_border_color"),
             b = _require_control_color(window.controls, prefix .. "_group_b_border_color"),
@@ -573,7 +653,7 @@ function Preview.update(window, spec)
 
             member.morale_border:SetPosition(0, 0)
             member.morale_border:SetSize(frame_w, morale_h)
-            member.morale_border:SetBackColor(_preview_group_border_color(i, raid_group_border_colors, border_color))
+            member.morale_border:SetBackColor(border_color)
 
             local inner_w = frame_w - (2 * border)
             local inner_morale_h = morale_h - (2 * border)
@@ -678,7 +758,7 @@ function Preview.update(window, spec)
 
             member.power_border:SetPosition(0, power_y)
             member.power_border:SetSize(frame_w, power_h)
-            member.power_border:SetBackColor(_preview_group_border_color(i, raid_group_border_colors, border_color))
+            member.power_border:SetBackColor(border_color)
 
             local inner_power_h = power_h - (2 * border)
             if inner_power_h < 1 then inner_power_h = 1 end
@@ -718,7 +798,7 @@ function Preview.update(window, spec)
                 if inner_info_h < 1 then inner_info_h = 1 end
                 member.info_border:SetPosition(0, info_y)
                 member.info_border:SetSize(frame_w, info_h)
-                member.info_border:SetBackColor(_preview_group_border_color(i, raid_group_border_colors, border_color))
+                member.info_border:SetBackColor(border_color)
                 member.info_background:SetPosition(border, border)
                 member.info_background:SetSize(inner_w, inner_info_h)
                 member.info_background:SetBackColor(lui_apply_opacity_to_color(info_bg, info_opacity))
@@ -728,21 +808,34 @@ function Preview.update(window, spec)
 
     if spec.raid_layout_mode_control_key ~= nil then
         if split_by_group == true then
-            local group_w, group_h = _preview_compute_raid_group_size(RaidLayout.group_size(), raid_layout_mode, spacing_x,
-                spacing_y, frame_w, member_h)
+            local full_group_w, full_group_h = _preview_compute_raid_group_size(RaidLayout.group_size(), raid_layout_mode,
+                spacing_x, spacing_y, frame_w, member_h)
+            local group_slot_width = full_group_w + (2 * raid_group_border_width)
+            local group_slot_height = full_group_h + (2 * raid_group_border_width)
             for group_index = 1, #state.group_windows do
                 local group_window = state.group_windows[group_index]
-                local group_cell = RaidLayout.group_origin_cell(raid_layout_mode, group_index)
-                local group_x = off_x + preview_border + (group_cell.column * (frame_w + spacing_x))
-                local group_y = off_y + preview_border + (group_cell.row * (member_h + spacing_y))
-                local outer_group_w = group_w + (2 * preview_border)
-                local outer_group_h = group_h + (2 * preview_border)
+                local group_tile = RaidLayout.group_tile_position(raid_layout_mode, group_index)
+                local group_x = off_x + preview_border + (group_tile.column * group_slot_width)
+                local group_y = off_y + preview_border + (group_tile.row * group_slot_height)
+                local group_first_member = ((group_index - 1) * RAID_GROUP_SIZE) + 1
+                local group_member_count = preview_count - group_first_member + 1
+                if group_member_count > RAID_GROUP_SIZE then
+                    group_member_count = RAID_GROUP_SIZE
+                end
+                if group_member_count < 0 then
+                    group_member_count = 0
+                end
+                local group_w, group_h = _preview_compute_raid_group_size(group_member_count, raid_layout_mode, spacing_x,
+                    spacing_y, frame_w, member_h)
+                local group_outer_w = group_w + (2 * raid_group_border_width)
+                local group_outer_h = group_h + (2 * raid_group_border_width)
 
                 group_window.root:SetVisible(true)
                 group_window.root:SetPosition(group_x, group_y)
-                group_window.root:SetSize(group_w, group_h)
-                _apply_preview_border(group_window, outer_group_w, outer_group_h, group_x - preview_border,
-                    group_y - preview_border)
+                group_window.root:SetSize(group_outer_w, group_outer_h)
+                _apply_preview_group_border(group_window, group_x, group_y, group_outer_w, group_outer_h,
+                    raid_group_border_width)
+                _set_preview_border_color(group_window, _preview_group_border_color(group_index, raid_group_border_colors))
 
                 local group_member_windows = {}
                 local group_start = ((group_index - 1) * RAID_GROUP_SIZE) + 1
@@ -757,12 +850,45 @@ function Preview.update(window, spec)
 
                 _preview_apply_raid_group_positions(group_member_windows, #group_member_windows, raid_layout_mode, spacing_x,
                     spacing_y, frame_w, member_h)
+                for i = 1, #group_member_windows do
+                    local member_window = group_member_windows[i]
+                    local x, y = member_window:GetPosition()
+                    member_window:SetPosition(x + raid_group_border_width, y + raid_group_border_width)
+                end
             end
         else
+            local full_group_width, full_group_height = _preview_compute_raid_group_size(RaidLayout.group_size(),
+                raid_layout_mode, spacing_x, spacing_y, frame_w, member_h)
+            local group_slot_width = full_group_width + (2 * raid_group_border_width)
+            local group_slot_height = full_group_height + (2 * raid_group_border_width)
             for group_index = 1, #state.group_windows do
                 local group_window = state.group_windows[group_index]
+                local group_x = nil
+                local group_y = nil
+                local group_first_member = ((group_index - 1) * RAID_GROUP_SIZE) + 1
+                local group_member_count = preview_count - group_first_member + 1
+                if group_member_count > RAID_GROUP_SIZE then
+                    group_member_count = RAID_GROUP_SIZE
+                end
+                if group_member_count < 0 then
+                    group_member_count = 0
+                end
+
                 group_window.root:SetVisible(false)
-                _hide_preview_border(group_window)
+
+                if group_member_count <= 0 then
+                    _hide_preview_border(group_window)
+                else
+                    local group_width, group_height = _preview_compute_raid_group_size(group_member_count, raid_layout_mode,
+                        spacing_x, spacing_y, frame_w, member_h)
+                    local group_tile = RaidLayout.group_tile_position(raid_layout_mode, group_index)
+                    group_x = off_x + preview_border + (group_tile.column * group_slot_width)
+                    group_y = off_y + preview_border + (group_tile.row * group_slot_height)
+                    _apply_preview_group_border(group_window, group_x, group_y, group_width + (2 * raid_group_border_width),
+                        group_height + (2 * raid_group_border_width),
+                        raid_group_border_width)
+                    _set_preview_border_color(group_window, _preview_group_border_color(group_index, raid_group_border_colors))
+                end
             end
 
             for i = 1, preview_count do
@@ -772,8 +898,26 @@ function Preview.update(window, spec)
                 end
             end
 
-            _preview_apply_raid_positions(root_windows, preview_count, raid_layout_mode, spacing_x, spacing_y, frame_w,
-                member_h)
+            local shape_cells = RaidLayout.group_shape_cells(raid_layout_mode)
+            local full_group_width, full_group_height = _preview_compute_raid_group_size(RaidLayout.group_size(),
+                raid_layout_mode, spacing_x, spacing_y, frame_w, member_h)
+            local group_slot_width = full_group_width + (2 * raid_group_border_width)
+            local group_slot_height = full_group_height + (2 * raid_group_border_width)
+            for i = 1, #root_windows do
+                local member_window = root_windows[i]
+                if i <= preview_count then
+                    local group_index = RaidLayout.member_group_index(i)
+                    local tile = RaidLayout.group_tile_position(raid_layout_mode, group_index)
+                    local cell = shape_cells[((i - 1) % RaidLayout.group_size()) + 1]
+                    local x = (tile.column * group_slot_width) + raid_group_border_width +
+                        (cell.column * (frame_w + spacing_x))
+                    local y = (tile.row * group_slot_height) + raid_group_border_width +
+                        (cell.row * (member_h + spacing_y))
+                    member_window:SetPosition(x, y)
+                else
+                    member_window:SetPosition(0, 0)
+                end
+            end
         end
     else
         _preview_apply_grid_positions(root_windows, preview_count, rows, spacing_x, spacing_y, frame_w, member_h)

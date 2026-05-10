@@ -10,6 +10,14 @@ local function _normalize_rows(rows)
     return rows
 end
 
+local function _normalize_member_count(member_count)
+    if member_count == nil or member_count < 0 then
+        return 0
+    end
+
+    return member_count
+end
+
 local function _grid_size_from_cells(cells, member_count, spacing_x, spacing_y, member_width, member_height)
     local normalized_count = member_count
     if normalized_count < 0 then
@@ -60,10 +68,7 @@ end
 
 function GroupLayout.compute_size(member_count, rows, spacing_x, spacing_y, member_width, member_height)
     local normalized_rows = _normalize_rows(rows)
-    local normalized_count = member_count
-    if normalized_count < 0 then
-        normalized_count = 0
-    end
+    local normalized_count = _normalize_member_count(member_count)
 
     local columns = 1
     if normalized_count > 0 then
@@ -136,6 +141,50 @@ end
 function GroupLayout.compute_raid_group_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
     return _grid_size_from_cells(RaidLayout.group_shape_cells(layout_mode), member_count, spacing_x, spacing_y,
         member_width, member_height)
+end
+
+function GroupLayout.compute_raid_outer_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height,
+                                             outer_border)
+    local normalized_count = _normalize_member_count(member_count)
+    local group_size = RaidLayout.group_size()
+    local full_group_width, full_group_height = GroupLayout.compute_raid_group_size(group_size, layout_mode, spacing_x,
+        spacing_y, member_width, member_height)
+    local group_slot_width = full_group_width + (2 * outer_border)
+    local group_slot_height = full_group_height + (2 * outer_border)
+    local occupied_groups = math.ceil(normalized_count / group_size)
+
+    if occupied_groups < 1 then
+        occupied_groups = 1
+    end
+
+    local max_right = group_slot_width
+    local max_bottom = group_slot_height
+
+    for group_index = 1, occupied_groups do
+        local group_first_member = ((group_index - 1) * group_size) + 1
+        local group_member_count = normalized_count - group_first_member + 1
+        if group_member_count > group_size then
+            group_member_count = group_size
+        end
+        if group_member_count < 1 then
+            group_member_count = 1
+        end
+
+        local group_width, group_height = GroupLayout.compute_raid_group_size(group_member_count, layout_mode, spacing_x,
+            spacing_y, member_width, member_height)
+        local tile = RaidLayout.group_tile_position(layout_mode, group_index)
+        local right = (tile.column * group_slot_width) + group_width + (2 * outer_border)
+        local bottom = (tile.row * group_slot_height) + group_height + (2 * outer_border)
+
+        if right > max_right then
+            max_right = right
+        end
+        if bottom > max_bottom then
+            max_bottom = bottom
+        end
+    end
+
+    return max_right, max_bottom
 end
 
 function GroupLayout.apply_raid_group_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y,

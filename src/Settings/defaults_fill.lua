@@ -269,12 +269,15 @@ local function _defaults_source()
     if type(defaults.raid) ~= "table" then
         defaults.raid = _copy_table(defaults.party)
     end
+    if defaults.raid.group_border_width == nil then
+        defaults.raid.group_border_width = defaults.raid.frame.border_width
+    end
     defaults.raid.split_by_group = false
     defaults.raid.group_colors = {
-        a = _raid_group_color(0.82, 0.28, 0.28),
-        b = _raid_group_color(0.82, 0.67, 0.20),
-        c = _raid_group_color(0.25, 0.49, 0.84),
-        d = _raid_group_color(0.24, 0.70, 0.37),
+        a = _raid_group_color(0.85, 0.22, 0.22),
+        b = _raid_group_color(0.25, 0.45, 0.85),
+        c = _raid_group_color(0.20, 0.70, 0.28),
+        d = _raid_group_color(0.85, 0.58, 0.16),
     }
     local raid_layout = _ensure_table(defaults.raid, "layout")
     if raid_layout.mode == nil then
