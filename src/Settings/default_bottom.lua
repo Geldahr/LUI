@@ -46,6 +46,22 @@ _G.DEFAULT_LAYOUT_BOTTOM =
                 ["left"] = 260.000000,
                 ["top"] = 146.000000,
             },
+            ["raid_group_a_vitals"] = {
+                ["left"] = 260.000000,
+                ["top"] = 146.000000,
+            },
+            ["raid_group_b_vitals"] = {
+                ["left"] = 260.000000,
+                ["top"] = 146.000000,
+            },
+            ["raid_group_c_vitals"] = {
+                ["left"] = 260.000000,
+                ["top"] = 146.000000,
+            },
+            ["raid_group_d_vitals"] = {
+                ["left"] = 260.000000,
+                ["top"] = 146.000000,
+            },
             ["self_vitals"] = {
                 ["left"] = 682.000000,
                 ["top"] = 820.000000,

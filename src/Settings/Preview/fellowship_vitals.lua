@@ -1,10 +1,10 @@
 import "LUI.src.Settings.Preview.group_vitals"
 
 local _fellowship_preview_spec = {
-    state_key = "fellowship_vitals_preview",
+    state_key = "_fellowship_vitals_preview_state",
     holder_key = "fellowship_vitals_preview",
     prefix = "fellowship",
-    max_members = 24,
+    max_members = 6,
     leader_slot = 1,
     get_preview_count = function(window)
         if window.controls.fellowship_show_self_in_fellowship.cb:IsChecked() == true then

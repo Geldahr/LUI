@@ -242,6 +242,10 @@ local function _capture_move_settings_snapshot()
         boss_vitals = _snapshot_position(hud.boss_vitals),
         fellowship_vitals = _snapshot_position(hud.fellowship_vitals),
         raid_vitals = _snapshot_position(hud.raid_vitals),
+        raid_group_a_vitals = _snapshot_position(hud.raid_group_a_vitals),
+        raid_group_b_vitals = _snapshot_position(hud.raid_group_b_vitals),
+        raid_group_c_vitals = _snapshot_position(hud.raid_group_c_vitals),
+        raid_group_d_vitals = _snapshot_position(hud.raid_group_d_vitals),
         self_effects = _snapshot_position(hud.self_effects),
         target_effects = _snapshot_position(hud.target_effects),
         cooldowns = _snapshot_position(hud.cooldowns),
@@ -266,6 +270,10 @@ local function _restore_saved_move_settings()
     _restore_position(hud.boss_vitals, MOVE_UI_POSITION_SNAPSHOT.boss_vitals)
     _restore_position(hud.fellowship_vitals, MOVE_UI_POSITION_SNAPSHOT.fellowship_vitals)
     _restore_position(hud.raid_vitals, MOVE_UI_POSITION_SNAPSHOT.raid_vitals)
+    _restore_position(hud.raid_group_a_vitals, MOVE_UI_POSITION_SNAPSHOT.raid_group_a_vitals)
+    _restore_position(hud.raid_group_b_vitals, MOVE_UI_POSITION_SNAPSHOT.raid_group_b_vitals)
+    _restore_position(hud.raid_group_c_vitals, MOVE_UI_POSITION_SNAPSHOT.raid_group_c_vitals)
+    _restore_position(hud.raid_group_d_vitals, MOVE_UI_POSITION_SNAPSHOT.raid_group_d_vitals)
     _restore_position(hud.self_effects, MOVE_UI_POSITION_SNAPSHOT.self_effects)
     _restore_position(hud.target_effects, MOVE_UI_POSITION_SNAPSHOT.target_effects)
     _restore_position(hud.cooldowns, MOVE_UI_POSITION_SNAPSHOT.cooldowns)

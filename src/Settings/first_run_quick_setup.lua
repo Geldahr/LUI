@@ -184,6 +184,38 @@ local function _get_preview_window_specs()
         },
         {
             get_window = function()
+                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[1] or nil
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_group_a_vitals")
+            end,
+        },
+        {
+            get_window = function()
+                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[2] or nil
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_group_b_vitals")
+            end,
+        },
+        {
+            get_window = function()
+                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[3] or nil
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_group_c_vitals")
+            end,
+        },
+        {
+            get_window = function()
+                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[4] or nil
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_group_d_vitals")
+            end,
+        },
+        {
+            get_window = function()
                 return EXPIRING_SELF_EFFECTS_WINDOW
             end,
             get_raw_window = function()
@@ -1027,6 +1059,12 @@ function FirstRunQuickSetup:commit_preview_settings()
     _persist_window_position(BOSS_VITAL, _G.get_ui_hud_state("boss_vitals"))
     _persist_window_position(FELLOWSHIP_VITALS, _G.get_ui_hud_state("fellowship_vitals"))
     _persist_window_position(RAID_VITALS, _G.get_ui_hud_state("raid_vitals"))
+    if RAID_VITALS ~= nil then
+        _persist_window_position(RAID_VITALS.group_windows[1], _G.get_ui_hud_state("raid_group_a_vitals"))
+        _persist_window_position(RAID_VITALS.group_windows[2], _G.get_ui_hud_state("raid_group_b_vitals"))
+        _persist_window_position(RAID_VITALS.group_windows[3], _G.get_ui_hud_state("raid_group_c_vitals"))
+        _persist_window_position(RAID_VITALS.group_windows[4], _G.get_ui_hud_state("raid_group_d_vitals"))
+    end
     _persist_window_position(EXPIRING_SELF_EFFECTS_WINDOW, _G.get_ui_hud_state("self_effects"))
     _persist_window_position(EXPIRING_TARGET_EFFECTS_WINDOW, _G.get_ui_hud_state("target_effects"))
     _persist_window_position(COOLDOWNS_WINDOW, _G.get_ui_hud_state("cooldowns"))

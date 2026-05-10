@@ -1,6 +1,29 @@
 SettingsGroupVitalsPageBuilder = SettingsGroupVitalsPageBuilder or {}
 
 local Builder = SettingsGroupVitalsPageBuilder
+local RAID_LAYOUT_LABELS = {
+    "2",
+    "3",
+    "4 (Mode 1)",
+    "4 (Mode 2)",
+    "6 (Mode 1)",
+    "6 (Mode 2)",
+}
+local RAID_LAYOUT_VALUES = {
+    LUI_ENUMS.raid_layout_mode.TWO_COLUMNS,
+    LUI_ENUMS.raid_layout_mode.THREE_COLUMNS,
+    LUI_ENUMS.raid_layout_mode.FOUR_COLUMNS_MODE_1,
+    LUI_ENUMS.raid_layout_mode.FOUR_COLUMNS_MODE_2,
+    LUI_ENUMS.raid_layout_mode.SIX_COLUMNS_MODE_1,
+    LUI_ENUMS.raid_layout_mode.SIX_COLUMNS_MODE_2,
+}
+local RAID_GROUP_COLOR_KEYS = { "a", "b", "c", "d" }
+local RAID_GROUP_COLOR_LABELS = {
+    TR["Group A Border"],
+    TR["Group B Border"],
+    TR["Group C Border"],
+    TR["Group D Border"],
+}
 
 function Builder.new_group_unit_page(window, root, options, deps)
     local get = function()
@@ -23,8 +46,20 @@ function Builder.new_group_unit_page(window, root, options, deps)
         function() return get().frame.border_width end,
         function(value) get().frame.border_width = value end)
     frame:add_row_break()
-    deps.add_number_field(frame, options.prefix .. "_rows", TR["Rows per Column"], function() return get().layout.rows end,
-        function(value) get().layout.rows = value end)
+    if options.raid_layout_dropdown == true then
+        deps.add_dropdown_field(frame, options.prefix .. "_layout_mode", TR["Columns"], RAID_LAYOUT_LABELS,
+            RAID_LAYOUT_VALUES,
+            function() return get().layout.mode end,
+            function(value) get().layout.mode = value end)
+        frame:add_row_break()
+        deps.add_checkbox_field(frame, options.prefix .. "_split_by_group", TR["Split by groups"],
+            function() return get().split_by_group end,
+            function(value) get().split_by_group = value end, true)
+    else
+        deps.add_number_field(frame, options.prefix .. "_rows", TR["Rows per Column"],
+            function() return get().layout.rows end,
+            function(value) get().layout.rows = value end)
+    end
     if options.include_self_toggle == true then
         frame:add_row_break()
         deps.add_checkbox_field(frame, options.prefix .. "_show_self_in_fellowship", TR["Show self in fellowship"],
@@ -55,6 +90,16 @@ function Builder.new_group_unit_page(window, root, options, deps)
     page:add_tab(TR["Frame"], "frame", frame)
 
     local colors = deps.new_standard_colors_section(window, page.refresh_preview, options.prefix, get, false)
+    if options.raid_group_colors == true then
+        colors:add_title(TR["Raid Groups"])
+        for i = 1, #RAID_GROUP_COLOR_KEYS do
+            local group_key = RAID_GROUP_COLOR_KEYS[i]
+            deps.add_color_field(colors, options.prefix .. "_group_" .. group_key .. "_border_color",
+                RAID_GROUP_COLOR_LABELS[i],
+                function() return get().group_colors[group_key] end,
+                function(value) get().group_colors[group_key] = value end)
+        end
+    end
     page:add_tab(TR["Colors"], "colors", colors)
 
     local morale = deps.ConfigContent(window, 4, page.refresh_preview)

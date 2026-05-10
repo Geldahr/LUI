@@ -128,6 +128,7 @@ function _G.rebuild_settings()
             labels = {},
             info = { color = {} },
             layout = {},
+            group_colors = {},
             class_icon = {},
             leader_icon = {},
             effects = {
@@ -257,6 +258,7 @@ function _G.rebuild_settings()
 
         local raw_layout = src.layout
         dst.layout.rows = raw_layout.rows
+        dst.layout.mode = raw_layout.mode
         dst.layout.spacing_x = scaled_int(raw_layout.spacing_x)
         dst.layout.spacing_y = scaled_int(raw_layout.spacing_y)
     end
@@ -267,6 +269,11 @@ function _G.rebuild_settings()
     build_group_vital(_G.settings.fellowship, raw.fellowship)
     build_group_vital(_G.settings.raid, raw.raid)
     _G.settings.fellowship.show_self_in_fellowship = raw.fellowship.show_self_in_fellowship == true
+    _G.settings.raid.split_by_group = raw.raid.split_by_group == true
+    _G.settings.raid.group_colors.a = build_color(raw.raid.group_colors.a)
+    _G.settings.raid.group_colors.b = build_color(raw.raid.group_colors.b)
+    _G.settings.raid.group_colors.c = build_color(raw.raid.group_colors.c)
+    _G.settings.raid.group_colors.d = build_color(raw.raid.group_colors.d)
 
     local raw_inv = raw.inventory
     if raw_inv ~= nil then

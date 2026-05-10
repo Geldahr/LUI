@@ -1,11 +1,48 @@
 GroupLayout = GroupLayout or {}
 
+import "LUI.src.Utils.raid_layout"
+
 local function _normalize_rows(rows)
     if rows == nil or rows < 1 then
         return 1
     end
 
     return rows
+end
+
+local function _grid_size_from_cells(cells, member_count, spacing_x, spacing_y, member_width, member_height)
+    local normalized_count = member_count
+    if normalized_count < 0 then
+        normalized_count = 0
+    end
+
+    local max_column = 0
+    local max_row = 0
+    local used = normalized_count
+    if used < 1 then
+        used = 1
+    end
+
+    for i = 1, used do
+        local cell = cells[i]
+        if cell.column > max_column then
+            max_column = cell.column
+        end
+        if cell.row > max_row then
+            max_row = cell.row
+        end
+    end
+
+    local total_width = ((max_column + 1) * member_width) + (max_column * spacing_x)
+    local total_height = ((max_row + 1) * member_height) + (max_row * spacing_y)
+    if total_width < member_width then
+        total_width = member_width
+    end
+    if total_height < member_height then
+        total_height = member_height
+    end
+
+    return total_width, total_height
 end
 
 function GroupLayout.member_height(vitals_settings)
@@ -67,6 +104,50 @@ function GroupLayout.apply_positions(member_windows, member_count, rows, spacing
             local row = index - (column * normalized_rows)
             local x = column * (member_width + spacing_x)
             local y = row * (member_height + spacing_y)
+            member_window:SetPosition(x, y)
+        else
+            member_window:SetPosition(0, 0)
+        end
+    end
+end
+
+function GroupLayout.compute_raid_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
+    return _grid_size_from_cells(RaidLayout.layout_cells(layout_mode), member_count, spacing_x, spacing_y, member_width,
+        member_height)
+end
+
+function GroupLayout.apply_raid_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y, member_width,
+                                          member_height)
+    local cells = RaidLayout.layout_cells(layout_mode)
+
+    for i = 1, #member_windows do
+        local member_window = member_windows[i]
+        if i <= member_count then
+            local cell = cells[i]
+            local x = cell.column * (member_width + spacing_x)
+            local y = cell.row * (member_height + spacing_y)
+            member_window:SetPosition(x, y)
+        else
+            member_window:SetPosition(0, 0)
+        end
+    end
+end
+
+function GroupLayout.compute_raid_group_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
+    return _grid_size_from_cells(RaidLayout.group_shape_cells(layout_mode), member_count, spacing_x, spacing_y,
+        member_width, member_height)
+end
+
+function GroupLayout.apply_raid_group_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y,
+                                                member_width, member_height)
+    local cells = RaidLayout.group_shape_cells(layout_mode)
+
+    for i = 1, #member_windows do
+        local member_window = member_windows[i]
+        if i <= member_count then
+            local cell = cells[i]
+            local x = cell.column * (member_width + spacing_x)
+            local y = cell.row * (member_height + spacing_y)
             member_window:SetPosition(x, y)
         else
             member_window:SetPosition(0, 0)

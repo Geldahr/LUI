@@ -1,7 +1,6 @@
 import "LUI.src.UI.Widgets"
+import "LUI.src.Utils.raid_layout"
 import "LUI.src.Utils.vitals_labels"
-import "LUI.src.Vitals.group_layout"
-
 SettingsGroupVitalsPreview = SettingsGroupVitalsPreview or {}
 
 local Preview = SettingsGroupVitalsPreview
@@ -19,6 +18,161 @@ local _preview_scaled_border = Common.preview_scaled_border
 local _preview_scaled_number = Common.preview_scaled_number
 local _preview_resource_background = Common.preview_resource_background
 local _sync_preview_holder_height = Common.sync_preview_holder_height
+local RAID_GROUP_SIZE = 6
+local RAID_GROUP_KEYS = { "a", "b", "c", "d" }
+
+local function _preview_compute_grid_size(member_count, rows, spacing_x, spacing_y, member_width, member_height)
+    local normalized_count = member_count
+    if normalized_count < 0 then
+        normalized_count = 0
+    end
+
+    local columns = 1
+    if normalized_count > 0 then
+        columns = math.ceil(normalized_count / rows)
+        if columns < 1 then
+            columns = 1
+        end
+    end
+
+    local used_rows = normalized_count
+    if used_rows > rows then
+        used_rows = rows
+    end
+    if used_rows < 1 then
+        used_rows = 1
+    end
+
+    local total_width = (columns * member_width) + ((columns - 1) * spacing_x)
+    local total_height = (used_rows * member_height) + ((used_rows - 1) * spacing_y)
+    if total_width < member_width then
+        total_width = member_width
+    end
+    if total_height < member_height then
+        total_height = member_height
+    end
+
+    return total_width, total_height
+end
+
+local function _preview_apply_grid_positions(member_windows, member_count, rows, spacing_x, spacing_y, member_width,
+                                             member_height)
+    for i = 1, #member_windows do
+        local member_window = member_windows[i]
+        if i <= member_count then
+            local index = i - 1
+            local column = math.floor(index / rows)
+            local row = index - (column * rows)
+            local x = column * (member_width + spacing_x)
+            local y = row * (member_height + spacing_y)
+            member_window:SetPosition(x, y)
+        else
+            member_window:SetPosition(0, 0)
+        end
+    end
+end
+
+local function _append_raid_group_cells(layout_cells, start_column, start_row, columns_per_group)
+    for i = 1, RAID_GROUP_SIZE do
+        local index = i - 1
+        layout_cells[#layout_cells + 1] = {
+            column = start_column + (index % columns_per_group),
+            row = start_row + math.floor(index / columns_per_group),
+        }
+    end
+end
+
+local function _preview_raid_layout_cells(layout_mode)
+    return RaidLayout.layout_cells(layout_mode)
+end
+
+local function _preview_compute_size_from_cells(cells, member_count, spacing_x, spacing_y, member_width, member_height)
+    local normalized_count = member_count
+    if normalized_count < 0 then
+        normalized_count = 0
+    end
+
+    local used = normalized_count
+    if used < 1 then
+        used = 1
+    end
+
+    local max_column = 0
+    local max_row = 0
+    for i = 1, used do
+        local cell = cells[i]
+        if cell.column > max_column then
+            max_column = cell.column
+        end
+        if cell.row > max_row then
+            max_row = cell.row
+        end
+    end
+
+    local total_width = ((max_column + 1) * member_width) + (max_column * spacing_x)
+    local total_height = ((max_row + 1) * member_height) + (max_row * spacing_y)
+    if total_width < member_width then
+        total_width = member_width
+    end
+    if total_height < member_height then
+        total_height = member_height
+    end
+
+    return total_width, total_height
+end
+
+local function _preview_apply_positions_from_cells(member_windows, cells, member_count, spacing_x, spacing_y, member_width,
+                                                   member_height)
+    for i = 1, #member_windows do
+        local member_window = member_windows[i]
+        if i <= member_count then
+            local cell = cells[i]
+            local x = cell.column * (member_width + spacing_x)
+            local y = cell.row * (member_height + spacing_y)
+            member_window:SetPosition(x, y)
+        else
+            member_window:SetPosition(0, 0)
+        end
+    end
+end
+
+local function _preview_compute_raid_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
+    return _preview_compute_size_from_cells(_preview_raid_layout_cells(layout_mode), member_count, spacing_x, spacing_y,
+        member_width, member_height)
+end
+
+local function _preview_compute_raid_group_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
+    return _preview_compute_size_from_cells(RaidLayout.group_shape_cells(layout_mode), member_count, spacing_x, spacing_y,
+        member_width, member_height)
+end
+
+local function _preview_apply_raid_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y, member_width,
+                                             member_height)
+    _preview_apply_positions_from_cells(member_windows, _preview_raid_layout_cells(layout_mode), member_count, spacing_x,
+        spacing_y, member_width, member_height)
+end
+
+local function _preview_apply_raid_group_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y,
+                                                   member_width, member_height)
+    _preview_apply_positions_from_cells(member_windows, RaidLayout.group_shape_cells(layout_mode), member_count, spacing_x,
+        spacing_y, member_width, member_height)
+end
+
+local function _hide_preview_border(border)
+    border.border_top:SetVisible(false)
+    border.border_bottom:SetVisible(false)
+    border.border_left:SetVisible(false)
+    border.border_right:SetVisible(false)
+end
+
+local function _preview_group_border_color(index, colors, fallback_color)
+    if colors == nil then
+        return fallback_color
+    end
+
+    local group_key = RAID_GROUP_KEYS[RaidLayout.member_group_index(index)]
+    return colors[group_key]
+end
 
 local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
@@ -123,6 +277,42 @@ function Preview.init(window, spec)
     state.root:SetParent(state.container)
     state.root:SetMouseVisible(false)
 
+    state.group_windows = {}
+    for i = 1, #RAID_GROUP_KEYS do
+        local group_window = {}
+
+        group_window.border_top = Turbine.UI.Control()
+        group_window.border_top:SetParent(state.container)
+        group_window.border_top:SetMouseVisible(false)
+        group_window.border_top:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+        group_window.border_top:SetVisible(false)
+
+        group_window.border_bottom = Turbine.UI.Control()
+        group_window.border_bottom:SetParent(state.container)
+        group_window.border_bottom:SetMouseVisible(false)
+        group_window.border_bottom:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+        group_window.border_bottom:SetVisible(false)
+
+        group_window.border_left = Turbine.UI.Control()
+        group_window.border_left:SetParent(state.container)
+        group_window.border_left:SetMouseVisible(false)
+        group_window.border_left:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+        group_window.border_left:SetVisible(false)
+
+        group_window.border_right = Turbine.UI.Control()
+        group_window.border_right:SetParent(state.container)
+        group_window.border_right:SetMouseVisible(false)
+        group_window.border_right:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+        group_window.border_right:SetVisible(false)
+
+        group_window.root = Turbine.UI.Control()
+        group_window.root:SetParent(state.container)
+        group_window.root:SetMouseVisible(false)
+        group_window.root:SetVisible(false)
+
+        state.group_windows[i] = group_window
+    end
+
     for i = 1, state.max_members do
         local member = {}
 
@@ -202,8 +392,11 @@ function Preview.update(window, spec)
     lui_set_number_abbrev_preview_settings(_preview_number_abbrev_settings(window))
 
     local prefix = spec.prefix
-    local rows = _require_control_number(window.controls, prefix .. "_rows")
-    if rows < 1 then rows = 1 end
+    local rows = nil
+    if spec.raid_layout_mode_control_key == nil then
+        rows = _require_control_number(window.controls, prefix .. "_rows")
+        if rows < 1 then rows = 1 end
+    end
 
     local spacing_x = _preview_scaled_int(raw_scale, _require_control_number(window.controls, prefix .. "_spacing_x"))
     local spacing_y = _preview_scaled_int(raw_scale, _require_control_number(window.controls, prefix .. "_spacing_y"))
@@ -273,8 +466,35 @@ function Preview.update(window, spec)
     local bubble_fmt = window.controls[prefix .. "_morale_bubble_text"].tb:GetText()
     local bubble_fmt_tokens = lui_tokenize_format(bubble_fmt)
 
+    local state = window[spec.state_key]
     local preview_count = spec.get_preview_count(window)
-    local total_w, total_h = GroupLayout.compute_size(preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
+    local total_w = nil
+    local total_h = nil
+    local raid_layout_mode = nil
+    local split_by_group = false
+    local raid_group_border_colors = nil
+    if spec.raid_layout_mode_control_key ~= nil then
+        raid_layout_mode = window.controls[spec.raid_layout_mode_control_key]:get_value()
+        total_w, total_h = _preview_compute_raid_size(preview_count, raid_layout_mode, spacing_x, spacing_y, frame_w,
+            member_h)
+        raid_group_border_colors = {
+            a = _require_control_color(window.controls, prefix .. "_group_a_border_color"),
+            b = _require_control_color(window.controls, prefix .. "_group_b_border_color"),
+            c = _require_control_color(window.controls, prefix .. "_group_c_border_color"),
+            d = _require_control_color(window.controls, prefix .. "_group_d_border_color"),
+        }
+        if spec.split_by_group_control_key ~= nil then
+            split_by_group = window.controls[spec.split_by_group_control_key].cb:IsChecked() == true
+        end
+    else
+        for group_index = 1, #state.group_windows do
+            local group_window = state.group_windows[group_index]
+            group_window.root:SetVisible(false)
+            _hide_preview_border(group_window)
+        end
+
+        total_w, total_h = _preview_compute_grid_size(preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
+    end
 
     local holder = window.controls[spec.holder_key]
     local preview_border = 1
@@ -282,7 +502,6 @@ function Preview.update(window, spec)
     if desired_height < 80 then desired_height = 80 end
     _sync_preview_holder_height(window, holder, desired_height)
 
-    local state = window[spec.state_key]
     local outer_w = total_w + (2 * preview_border)
     local outer_h = total_h + (2 * preview_border)
     local container_w = state.container:GetWidth() or outer_w
@@ -292,14 +511,14 @@ function Preview.update(window, spec)
     state.root:SetPosition(off_x + preview_border, off_y + preview_border)
     state.root:SetSize(total_w, total_h)
     _apply_preview_border(state, outer_w, outer_h, off_x, off_y)
+    state.root:SetVisible(split_by_group ~= true)
 
+    local icon_classes = _G.CLASS_ICON_CLASSES
     local root_windows = {}
     for i = 1, #state.members do
         root_windows[i] = state.members[i].root
     end
-    GroupLayout.apply_positions(root_windows, preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
 
-    local icon_classes = _G.CLASS_ICON_CLASSES
     local morale_samples = {
         { max = 9999, cur = 9999, bubble = 0 },
         { max = 200000, cur = 101234, bubble = 0 },
@@ -354,7 +573,7 @@ function Preview.update(window, spec)
 
             member.morale_border:SetPosition(0, 0)
             member.morale_border:SetSize(frame_w, morale_h)
-            member.morale_border:SetBackColor(border_color)
+            member.morale_border:SetBackColor(_preview_group_border_color(i, raid_group_border_colors, border_color))
 
             local inner_w = frame_w - (2 * border)
             local inner_morale_h = morale_h - (2 * border)
@@ -459,7 +678,7 @@ function Preview.update(window, spec)
 
             member.power_border:SetPosition(0, power_y)
             member.power_border:SetSize(frame_w, power_h)
-            member.power_border:SetBackColor(border_color)
+            member.power_border:SetBackColor(_preview_group_border_color(i, raid_group_border_colors, border_color))
 
             local inner_power_h = power_h - (2 * border)
             if inner_power_h < 1 then inner_power_h = 1 end
@@ -499,12 +718,65 @@ function Preview.update(window, spec)
                 if inner_info_h < 1 then inner_info_h = 1 end
                 member.info_border:SetPosition(0, info_y)
                 member.info_border:SetSize(frame_w, info_h)
-                member.info_border:SetBackColor(border_color)
+                member.info_border:SetBackColor(_preview_group_border_color(i, raid_group_border_colors, border_color))
                 member.info_background:SetPosition(border, border)
                 member.info_background:SetSize(inner_w, inner_info_h)
                 member.info_background:SetBackColor(lui_apply_opacity_to_color(info_bg, info_opacity))
             end
         end
+    end
+
+    if spec.raid_layout_mode_control_key ~= nil then
+        if split_by_group == true then
+            local group_w, group_h = _preview_compute_raid_group_size(RaidLayout.group_size(), raid_layout_mode, spacing_x,
+                spacing_y, frame_w, member_h)
+            for group_index = 1, #state.group_windows do
+                local group_window = state.group_windows[group_index]
+                local group_cell = RaidLayout.group_origin_cell(raid_layout_mode, group_index)
+                local group_x = off_x + preview_border + (group_cell.column * (frame_w + spacing_x))
+                local group_y = off_y + preview_border + (group_cell.row * (member_h + spacing_y))
+                local outer_group_w = group_w + (2 * preview_border)
+                local outer_group_h = group_h + (2 * preview_border)
+
+                group_window.root:SetVisible(true)
+                group_window.root:SetPosition(group_x, group_y)
+                group_window.root:SetSize(group_w, group_h)
+                _apply_preview_border(group_window, outer_group_w, outer_group_h, group_x - preview_border,
+                    group_y - preview_border)
+
+                local group_member_windows = {}
+                local group_start = ((group_index - 1) * RAID_GROUP_SIZE) + 1
+                for member_offset = 0, RAID_GROUP_SIZE - 1 do
+                    local member_index = group_start + member_offset
+                    local member = state.members[member_index]
+                    if member.root:GetParent() ~= group_window.root then
+                        member.root:SetParent(group_window.root)
+                    end
+                    group_member_windows[#group_member_windows + 1] = member.root
+                end
+
+                _preview_apply_raid_group_positions(group_member_windows, #group_member_windows, raid_layout_mode, spacing_x,
+                    spacing_y, frame_w, member_h)
+            end
+        else
+            for group_index = 1, #state.group_windows do
+                local group_window = state.group_windows[group_index]
+                group_window.root:SetVisible(false)
+                _hide_preview_border(group_window)
+            end
+
+            for i = 1, preview_count do
+                local member = state.members[i]
+                if member.root:GetParent() ~= state.root then
+                    member.root:SetParent(state.root)
+                end
+            end
+
+            _preview_apply_raid_positions(root_windows, preview_count, raid_layout_mode, spacing_x, spacing_y, frame_w,
+                member_h)
+        end
+    else
+        _preview_apply_grid_positions(root_windows, preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
     end
 
     lui_clear_number_abbrev_preview_settings()

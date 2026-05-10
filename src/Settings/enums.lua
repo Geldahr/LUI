@@ -109,6 +109,15 @@ e.vitals_label_link = {
     INFO = 3,
 }
 
+e.raid_layout_mode = {
+    TWO_COLUMNS = "two_columns",
+    THREE_COLUMNS = "three_columns",
+    FOUR_COLUMNS_MODE_1 = "four_columns_mode_1",
+    FOUR_COLUMNS_MODE_2 = "four_columns_mode_2",
+    SIX_COLUMNS_MODE_1 = "six_columns_mode_1",
+    SIX_COLUMNS_MODE_2 = "six_columns_mode_2",
+}
+
 e.bar_mode = {
     LOAD = 1,
     UNLOAD = 2,

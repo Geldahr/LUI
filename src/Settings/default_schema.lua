@@ -1272,6 +1272,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 			["y"] = 8.000000,
 		},
 		["layout"] = {
+			["mode"] = "four_columns_mode_1",
 			["rows"] = 6.000000,
 			["spacing_x"] = 0.000000,
 			["spacing_y"] = 0.000000,
@@ -1592,6 +1593,22 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["top"] = 420.000000,
 			},
 			["raid_vitals"] = {
+				["left"] = 270.000000,
+				["top"] = 420.000000,
+			},
+			["raid_group_a_vitals"] = {
+				["left"] = 270.000000,
+				["top"] = 420.000000,
+			},
+			["raid_group_b_vitals"] = {
+				["left"] = 270.000000,
+				["top"] = 420.000000,
+			},
+			["raid_group_c_vitals"] = {
+				["left"] = 270.000000,
+				["top"] = 420.000000,
+			},
+			["raid_group_d_vitals"] = {
 				["left"] = 270.000000,
 				["top"] = 420.000000,
 			},

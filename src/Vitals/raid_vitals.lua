@@ -3,13 +3,19 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.hud"
+import "LUI.src.Utils.raid_layout"
 import "LUI.src.Vitals.group_snapshot"
 import "LUI.src.Vitals.group_ordering"
 import "LUI.src.Vitals.group_layout"
 import "LUI.src.Vitals.group_member_vitals"
+import "LUI.src.Vitals.raid_group_vitals"
 
 local function _raid_vitals_enabled()
     return _G.loaded_settings.raid.enabled == true
+end
+
+local function _raid_split_enabled()
+    return _G.loaded_settings.raid.split_by_group == true
 end
 
 local function _raid_active(snapshot)
@@ -28,6 +34,12 @@ function RaidVitals:Constructor()
     self.lp = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.group = nil
     self.members = {}
+    self.group_windows = {
+        RaidGroupVitalsWindow("a", 1),
+        RaidGroupVitalsWindow("b", 2),
+        RaidGroupVitalsWindow("c", 3),
+        RaidGroupVitalsWindow("d", 4),
+    }
     self.events = {
         party_changed = nil,
         raid_changed = nil,
@@ -58,11 +70,14 @@ function RaidVitals:Constructor()
 end
 
 function RaidVitals:set_move_mode(enabled)
-    if enabled == true and _raid_vitals_enabled() == true then
+    if enabled == true and _raid_vitals_enabled() == true and _raid_split_enabled() ~= true then
         self:SetVisible(true)
     end
 
     LuiHUD.set_move_mode(self, enabled)
+    for i = 1, #self.group_windows do
+        self.group_windows[i]:set_move_mode(enabled)
+    end
     self:update_members()
 end
 
@@ -129,11 +144,11 @@ function RaidVitals:layout_members(count)
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
-    local total_width, total_height = GroupLayout.compute_size(count, layout.rows, layout.spacing_x, layout.spacing_y,
+    local total_width, total_height = GroupLayout.compute_raid_size(count, layout.mode, layout.spacing_x, layout.spacing_y,
         member_width, member_height)
 
     self:SetSize(total_width, total_height)
-    GroupLayout.apply_positions(self.members, count, layout.rows, layout.spacing_x, layout.spacing_y, member_width,
+    GroupLayout.apply_raid_positions(self.members, count, layout.mode, layout.spacing_x, layout.spacing_y, member_width,
         member_height)
 
     if self:is_move_mode() then
@@ -143,7 +158,7 @@ function RaidVitals:layout_members(count)
 end
 
 function RaidVitals:update_visibility(active, visible_members)
-    if _raid_vitals_enabled() ~= true then
+    if _raid_vitals_enabled() ~= true or _raid_split_enabled() == true then
         self:SetVisible(false)
         return
     end
@@ -162,17 +177,35 @@ function RaidVitals:apply_settings()
     for i = 1, #self.members do
         self.members[i]:resize()
     end
+    for i = 1, #self.group_windows do
+        self.group_windows[i]:apply_settings()
+    end
 
     self:update_members()
     _G.apply_lotro_vitals_handoff()
 end
 
-function RaidVitals:update_members(snapshot)
-    local current_snapshot = snapshot or GroupSnapshot.read(self.lp)
-    local active = _raid_active(current_snapshot)
-    local ordered_members = {}
-    if active == true then
-        ordered_members = GroupOrdering.raid_members(current_snapshot)
+function RaidVitals:group_border_color(member_index)
+    local group_index = RaidLayout.member_group_index(member_index)
+    return self.group_windows[group_index]:get_border_color()
+end
+
+function RaidVitals:hide_combined_members()
+    for i = 1, #self.members do
+        local member_window = self.members[i]
+        member_window.entity_control:SetMouseVisible(false)
+        member_window:set_entity(nil)
+        member_window:set_is_leader(false)
+        member_window:SetVisible(false)
+    end
+
+    self:SetVisible(false)
+end
+
+function RaidVitals:update_combined_members(active, ordered_members, leader_name)
+    if _raid_split_enabled() == true then
+        self:hide_combined_members()
+        return
     end
 
     local move_mode = self:is_move_mode()
@@ -191,6 +224,7 @@ function RaidVitals:update_members(snapshot)
             member_window.entity_control:SetMouseVisible(false)
             member_window:set_entity(nil)
             member_window:set_is_leader(false)
+            member_window:set_frame_border_color_override(self:group_border_color(i))
             member_window:SetVisible(false)
         end
 
@@ -199,10 +233,10 @@ function RaidVitals:update_members(snapshot)
         return
     end
 
-    local leader_name = current_snapshot.leader_name
     for i = 1, #self.members do
         local member_window = self.members[i]
         member_window.entity_control:SetMouseVisible(true)
+        member_window:set_frame_border_color_override(self:group_border_color(i))
 
         if i <= #ordered_members then
             local entity = ordered_members[i]
@@ -218,4 +252,34 @@ function RaidVitals:update_members(snapshot)
 
     self:layout_members(desired_count)
     self:update_visibility(active, #ordered_members)
+end
+
+function RaidVitals:update_split_members(active, ordered_members, leader_name)
+    local group_size = RaidLayout.group_size()
+
+    for group_index = 1, #self.group_windows do
+        local first_member = ((group_index - 1) * group_size) + 1
+        local group_members = {}
+        for offset = 0, group_size - 1 do
+            local entity = ordered_members[first_member + offset]
+            if entity ~= nil then
+                group_members[#group_members + 1] = entity
+            end
+        end
+
+        self.group_windows[group_index]:update_members(group_members, leader_name, active)
+    end
+end
+
+function RaidVitals:update_members(snapshot)
+    local current_snapshot = snapshot or GroupSnapshot.read(self.lp)
+    local active = _raid_active(current_snapshot)
+    local ordered_members = {}
+    if active == true then
+        ordered_members = GroupOrdering.raid_members(current_snapshot)
+    end
+
+    local leader_name = current_snapshot.leader_name
+    self:update_combined_members(active, ordered_members, leader_name)
+    self:update_split_members(active, ordered_members, leader_name)
 end
