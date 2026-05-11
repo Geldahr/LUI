@@ -155,10 +155,56 @@ function _G.rebuild_settings()
     _G.settings.ui.hud = raw.ui.hud
 
     local function build_color(value)
+        if value == nil then
+            error("Missing color setting in rebuild_settings", 2)
+        end
         if value.A ~= nil and value.R ~= nil and value.G ~= nil and value.B ~= nil then
             return Turbine.UI.Color(value.A, value.R, value.G, value.B)
         end
+        if type(value) == "table" then
+            error("Invalid color setting in rebuild_settings", 2)
+        end
         return value
+    end
+
+    local function build_morale_colors(src)
+        return {
+            gradient = src.gradient == true,
+            gradient_full = build_color(src.gradient_full),
+            gradient_mid = build_color(src.gradient_mid),
+            gradient_low = build_color(src.gradient_low),
+            high = build_color(src.high),
+            medium = build_color(src.medium),
+            low = build_color(src.low),
+            critical = build_color(src.critical),
+            neutral = build_color(src.neutral),
+            background = build_color(src.background),
+            bubble = build_color(src.bubble),
+        }
+    end
+
+    local function build_power_colors(src)
+        return {
+            power = build_color(src.power),
+            wrath = build_color(src.wrath),
+        }
+    end
+
+    local function build_target_target_colors(src)
+        return {
+            gradient = src.gradient == true,
+            gradient_full = build_color(src.gradient_full),
+            gradient_mid = build_color(src.gradient_mid),
+            gradient_low = build_color(src.gradient_low),
+            high = build_color(src.high),
+            medium = build_color(src.medium),
+            low = build_color(src.low),
+            critical = build_color(src.critical),
+            neutral = build_color(src.neutral),
+            background = build_color(src.background),
+            border = build_color(src.border),
+            bubble = build_color(src.bubble),
+        }
     end
 
     local function build_vital_label(src)
@@ -185,15 +231,15 @@ function _G.rebuild_settings()
         dst.enabled = src.enabled == true
         dst.frame.width = scaled_int(src.frame.width)
         dst.frame.border_width = scaled_border(src.frame.border_width)
-        dst.frame.border_color = src.frame.border_color
+        dst.frame.border_color = build_color(src.frame.border_color)
         dst.frame.incombat_opacity = src.frame.incombat_opacity
         dst.frame.outcombat_opacity = src.frame.outcombat_opacity
 
         dst.morale.height = scaled_int(src.morale.height)
         dst.power.height = scaled_int(src.power.height)
 
-        dst.morale.color = src.morale.color
-        dst.power.color = src.power.color
+        dst.morale.color = build_morale_colors(src.morale.color)
+        dst.power.color = build_power_colors(src.power.color)
 
         dst.morale.bubble_format = src.morale.bubble_format
         dst.morale.bubble_tokens = lui_tokenize_format(dst.morale.bubble_format)
@@ -202,7 +248,7 @@ function _G.rebuild_settings()
         dst.info.enabled = src.info.enabled == true
         dst.info.height = scaled_int(src.info.height)
         dst.info.opacity = src.info.opacity
-        dst.info.color.background = src.info.color.background
+        dst.info.color.background = build_color(src.info.color.background)
         dst.labels = {
             build_vital_label(src.labels[1]),
             build_vital_label(src.labels[2]),
@@ -226,16 +272,16 @@ function _G.rebuild_settings()
             dst.effects.buffs.timer_font.lotro = FONT_TO_LOTRO(dst.effects.buffs.timer_font.name,
                 dst.effects.buffs.timer_font.size)
             dst.effects.buffs.timer_font.style = src.effects.buffs.timer_font.style
-            dst.effects.buffs.timer_font.color = src.effects.buffs.timer_font.color
-            dst.effects.buffs.timer_font.outline_color = src.effects.buffs.timer_font.outline_color
+            dst.effects.buffs.timer_font.color = build_color(src.effects.buffs.timer_font.color)
+            dst.effects.buffs.timer_font.outline_color = build_color(src.effects.buffs.timer_font.outline_color)
 
             dst.effects.debuffs.timer_font.name = src.effects.debuffs.timer_font.name
             dst.effects.debuffs.timer_font.size = scaled_number(src.effects.debuffs.timer_font.size)
             dst.effects.debuffs.timer_font.lotro = FONT_TO_LOTRO(dst.effects.debuffs.timer_font.name,
                 dst.effects.debuffs.timer_font.size)
             dst.effects.debuffs.timer_font.style = src.effects.debuffs.timer_font.style
-            dst.effects.debuffs.timer_font.color = src.effects.debuffs.timer_font.color
-            dst.effects.debuffs.timer_font.outline_color = src.effects.debuffs.timer_font.outline_color
+            dst.effects.debuffs.timer_font.color = build_color(src.effects.debuffs.timer_font.color)
+            dst.effects.debuffs.timer_font.outline_color = build_color(src.effects.debuffs.timer_font.outline_color)
 
             dst.effects.debuffs.track_curable = src.effects.debuffs.track_curable
             dst.effects.debuffs.track_noncurable = src.effects.debuffs.track_noncurable
@@ -315,7 +361,7 @@ function _G.rebuild_settings()
     dst_tt.width = scaled_int(raw_tt.width)
     dst_tt.height = scaled_int(raw_tt.height)
     dst_tt.border_width = scaled_border(raw_tt.border_width)
-    dst_tt.color = raw_tt.color
+    dst_tt.color = build_target_target_colors(raw_tt.color)
     dst_tt.bubble_format = raw_tt.bubble_format
     dst_tt.bubble_tokens = lui_tokenize_format(dst_tt.bubble_format)
     dst_tt.background_matches_missing = raw_tt.background_matches_missing
