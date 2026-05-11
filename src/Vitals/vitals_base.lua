@@ -704,6 +704,10 @@ function VitalsBase:self_bubble_changed()
     if self.entity == nil or self.entity.GetMaxMorale == nil or self.entity.GetMaxTemporaryMorale == nil then
         return
     end
+    if self._no_morale == true then
+        self.bubble_bar:SetVisible(false)
+        return
+    end
     local b = self.entity:GetTemporaryMorale() or 0
 
     if b <= 0 then
