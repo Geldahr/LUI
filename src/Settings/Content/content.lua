@@ -737,7 +737,7 @@ function ConfigContent:layout()
 
             if field.kind == "checkbox" then
                 field.cb:SetPosition(x, y + compact_label_h + compact_field_gap)
-                field.cb:SetSize(span_w, self.window.field_label_height)
+                field.cb:SetSize(span_w, self.window.input_height)
             elseif field.kind == "text" then
                 field.label:SetPosition(x, y)
                 field.label:SetSize(span_w, compact_label_h)

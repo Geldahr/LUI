@@ -894,8 +894,7 @@ local function _new_self_unit_page(window, root)
     frame:add_row_break()
     _add_checkbox_field(frame, "self_ressource_background_matches_missing", TR["Matching background"],
         function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end, true)
-    frame:add_row_break()
+        function(value) get().background_matches_missing = value end)
     _add_number_field(frame, "self_ressource_background_dimming", TR["Dimming"], function() return get().background_dimming end,
         function(value) get().background_dimming = value end)
     page:add_tab(TR["Frame"], "frame", frame)
@@ -945,8 +944,7 @@ local function _new_target_unit_page(window, root)
     frame:add_row_break()
     _add_checkbox_field(frame, "target_ressource_background_matches_missing", TR["Matching background"],
         function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end, true)
-    frame:add_row_break()
+        function(value) get().background_matches_missing = value end)
     _add_number_field(frame, "target_ressource_background_dimming", TR["Dimming"], function() return get().background_dimming end,
         function(value) get().background_dimming = value end)
     page:add_tab(TR["Frame"], "frame", frame)
@@ -996,8 +994,7 @@ local function _new_boss_unit_page(window, root)
     frame:add_row_break()
     _add_checkbox_field(frame, "target_boss_ressource_background_matches_missing", TR["Matching background"],
         function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end, true)
-    frame:add_row_break()
+        function(value) get().background_matches_missing = value end)
     _add_number_field(frame, "target_boss_ressource_background_dimming", TR["Dimming"], function() return get().background_dimming end,
         function(value) get().background_dimming = value end)
     page:add_tab(TR["Frame"], "frame", frame)
@@ -1041,8 +1038,7 @@ local function _new_targets_target_unit_page(window, root)
     frame:add_row_break()
     _add_checkbox_field(frame, "target_targets_target_background_matches_missing", TR["Matching background"],
         function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end, true)
-    frame:add_row_break()
+        function(value) get().background_matches_missing = value end)
     _add_number_field(frame, "target_targets_target_background_dimming", TR["Dimming"], function() return get().background_dimming end,
         function(value) get().background_dimming = value end)
     frame:add_row_break()
@@ -1092,8 +1088,7 @@ local function _new_party_unit_page(window, root)
     frame:add_row_break()
     _add_checkbox_field(frame, "party_ressource_background_matches_missing", TR["Matching background"],
         function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end, true)
-    frame:add_row_break()
+        function(value) get().background_matches_missing = value end)
     _add_number_field(frame, "party_ressource_background_dimming", TR["Dimming"], function() return get().background_dimming end,
         function(value) get().background_dimming = value end)
     page:add_tab(TR["Frame"], "frame", frame)
