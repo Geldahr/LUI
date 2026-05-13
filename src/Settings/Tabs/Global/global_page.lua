@@ -61,6 +61,7 @@ function GlobalPage:Constructor(window)
         function()
             return tostring(self._settings.global.refresh_rate)
         end)
+    general:add_row_break()
     general:add_checkbox("move_mode_shortcut", TR["Use LotRO move mode shortcut"],
         function(value)
             self._settings.global.move_mode_shortcut = value == true

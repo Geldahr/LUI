@@ -224,6 +224,7 @@ _G.LUI_MOVE_UI = _G.LUI_MOVE_UI or {}
 local LUI_MOVE_UI = _G.LUI_MOVE_UI
 
 local MOVE_UI_POSITION_SNAPSHOT = nil
+local move_ui_show_done_button = true
 
 local function _snapshot_position(window)
     return {
@@ -313,7 +314,8 @@ local function _refresh_move_ui_chrome()
     if MOVE_UI_DONE_WINDOW ~= nil then
         local show_done = GLOBAL_MOVE_ENABLED == true and
             GRID.hud_visible ~= false and
-            MOVE_UI_PREVIEW_LOCKED ~= true
+            MOVE_UI_PREVIEW_LOCKED ~= true and
+            move_ui_show_done_button == true
         MOVE_UI_DONE_WINDOW:SetVisible(show_done)
         if show_done then
             _apply_done_window_style()
@@ -348,7 +350,7 @@ function center_move_ui_done_window()
     MOVE_UI_DONE_WINDOW:SetPosition(math.floor((display_width - w) / 2), math.floor((display_height - h) / 2))
 end
 
-function _G.toggle_move_mode()
+function _G.toggle_move_mode(show_done_button)
     if FIRST_RUN_QUICK_SETUP_WINDOW ~= nil and
         FIRST_RUN_QUICK_SETUP_WINDOW:IsVisible() == true and
         FIRST_RUN_QUICK_SETUP_WINDOW.closing ~= true then
@@ -358,7 +360,7 @@ function _G.toggle_move_mode()
     if PLAYER_VITAL == nil then
         return
     end
-    set_move_ui_mode(not PLAYER_VITAL:is_move_mode())
+    set_move_ui_mode(not PLAYER_VITAL:is_move_mode(), nil, nil, show_done_button)
 end
 
 function _G.cancel_move_mode()
@@ -389,7 +391,7 @@ function _G.set_move_ui_preview_lock(locked)
     _refresh_move_ui_chrome()
 end
 
-function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
+function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes, show_done_button)
     if PLAYER_VITAL == nil or TARGET_VITAL == nil then
         return
     end
@@ -408,6 +410,7 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
     end
 
     GLOBAL_MOVE_ENABLED = enabled == true
+    move_ui_show_done_button = enabled == true and show_done_button ~= false
 
     if enabled then
         _capture_move_settings_snapshot()
@@ -434,13 +437,11 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes)
         DROPS_WINDOW:set_move_mode(enabled)
     end
 
-    if enabled then
+    if enabled and move_ui_show_done_button == true then
         _ensure_move_ui_done_window()
     end
 
-    if MOVE_UI_DONE_WINDOW ~= nil then
-        _refresh_move_ui_chrome()
-    end
+    _refresh_move_ui_chrome()
 
     if not enabled then
         if save_changes == true then

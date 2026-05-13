@@ -18,7 +18,7 @@ HUD_ACTION_SINK.KeyDown = function(_, args)
         toggle_lui_hud_visible()
     elseif args.Action == MOVE_MODE_TOGGLE then
         if _G.settings.global.move_mode_shortcut == true then
-            toggle_move_mode()
+            toggle_move_mode(false)
         end
     end
 end
