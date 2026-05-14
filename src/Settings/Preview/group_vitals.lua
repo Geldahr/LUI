@@ -247,6 +247,36 @@ local function _apply_preview_group_border(border, x, y, width, height, thicknes
     border.border_right:SetSize(thickness, height)
 end
 
+local function _new_preview_border(parent)
+    local border = {}
+
+    border.border_top = Turbine.UI.Control()
+    border.border_top:SetParent(parent)
+    border.border_top:SetMouseVisible(false)
+    border.border_top:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+    border.border_top:SetVisible(false)
+
+    border.border_bottom = Turbine.UI.Control()
+    border.border_bottom:SetParent(parent)
+    border.border_bottom:SetMouseVisible(false)
+    border.border_bottom:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+    border.border_bottom:SetVisible(false)
+
+    border.border_left = Turbine.UI.Control()
+    border.border_left:SetParent(parent)
+    border.border_left:SetMouseVisible(false)
+    border.border_left:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+    border.border_left:SetVisible(false)
+
+    border.border_right = Turbine.UI.Control()
+    border.border_right:SetParent(parent)
+    border.border_right:SetMouseVisible(false)
+    border.border_right:SetBackColor(Turbine.UI.Color(1, 1, 1, 1))
+    border.border_right:SetVisible(false)
+
+    return border
+end
+
 local function _preview_group_border_color(group_index, colors)
     return colors[RAID_GROUP_KEYS[group_index]]
 end
@@ -407,6 +437,8 @@ function Preview.init(window, spec)
         member.leader_icon:SetZOrder(10)
         member.leader_icon:SetVisible(false)
 
+        member.select_border = _new_preview_border(member.root)
+
         member.morale_border = Turbine.UI.Control()
         member.morale_border:SetParent(member.root)
         member.morale_border:SetMouseVisible(false)
@@ -521,6 +553,10 @@ function Preview.update(window, spec)
 
     local morale_bg = _require_control_color(window.controls, prefix .. "_morale_background_color")
     local border_color = _require_control_color(window.controls, prefix .. "_border_color")
+    local select_enabled = window.controls[prefix .. "_select_enabled"].cb:IsChecked() == true
+    local select_border_width = _preview_scaled_border(raw_scale,
+        _require_control_number(window.controls, prefix .. "_select_border_width"))
+    local select_border_color = _require_control_color(window.controls, prefix .. "_select_border_color")
     local info_bg = _require_control_color(window.controls, prefix .. "_info_background_color")
     local info_opacity = _require_control_number(window.controls, prefix .. "_info_opacity")
     local bubble_color = _require_control_color(window.controls, prefix .. "_morale_bubble_color")
@@ -545,6 +581,7 @@ function Preview.update(window, spec)
 
     local state = window[spec.state_key]
     local preview_count = spec.get_preview_count(window)
+    local selected_preview_slot = preview_count >= 2 and 2 or 1
     local total_w = nil
     local total_h = nil
     local raid_layout_mode = nil
@@ -621,6 +658,7 @@ function Preview.update(window, spec)
         local member = state.members[i]
         if i > preview_count then
             member.root:SetVisible(false)
+            _hide_preview_border(member.select_border)
         else
             member.root:SetVisible(true)
             member.root:SetSize(frame_w, member_h)
@@ -649,6 +687,13 @@ function Preview.update(window, spec)
                 end
             else
                 member.leader_icon:SetVisible(false)
+            end
+
+            if select_enabled == true and i == selected_preview_slot then
+                _set_preview_border_color(member.select_border, select_border_color)
+                _apply_preview_group_border(member.select_border, 0, 0, frame_w, member_h, select_border_width)
+            else
+                _hide_preview_border(member.select_border)
             end
 
             member.morale_border:SetPosition(0, 0)

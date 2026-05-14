@@ -12,7 +12,45 @@ local DEAD_STATE_COLOR = Turbine.UI.Color(0.78, 0.20, 0.02, 0.02)
 local OFFLINE_STATE_COLOR = Turbine.UI.Color(0.78, 0.03, 0.03, 0.03)
 local STATE_TEXT_COLOR = Turbine.UI.Color(1, 1, 1, 1)
 local STATE_OUTLINE_COLOR = Turbine.UI.Color(1, 0, 0, 0)
-local TARGET_HIGHLIGHT_COLOR = Turbine.UI.Color(1, 1, 0.82, 0.12)
+
+local function _set_select_border_visible(border, visible)
+    border.top:SetVisible(visible)
+    border.bottom:SetVisible(visible)
+    border.left:SetVisible(visible)
+    border.right:SetVisible(visible)
+end
+
+local function _set_select_border_color(border, color)
+    border.top:SetBackColor(color)
+    border.bottom:SetBackColor(color)
+    border.left:SetBackColor(color)
+    border.right:SetBackColor(color)
+end
+
+local function _apply_select_border(border, x, y, width, height, thickness, color)
+    if thickness <= 0 or width <= 0 or height <= 0 then
+        _set_select_border_visible(border, false)
+        return
+    end
+
+    _set_select_border_color(border, color)
+
+    border.top:SetPosition(x, y)
+    border.top:SetSize(width, thickness)
+    border.top:SetVisible(true)
+
+    border.bottom:SetPosition(x, y + height - thickness)
+    border.bottom:SetSize(width, thickness)
+    border.bottom:SetVisible(true)
+
+    border.left:SetPosition(x, y)
+    border.left:SetSize(thickness, height)
+    border.left:SetVisible(true)
+
+    border.right:SetPosition(x + width - thickness, y)
+    border.right:SetSize(thickness, height)
+    border.right:SetVisible(true)
+end
 
 ---@class GroupMemberVitals : VitalsBase
 GroupMemberVitals = class(VitalsBase)
@@ -155,11 +193,16 @@ function GroupMemberVitals:_clear_member_state()
 end
 
 function GroupMemberVitals:_apply_target_highlight()
-    if self.target_highlighted == true then
-        self:set_frame_border_color_override(TARGET_HIGHLIGHT_COLOR)
-    else
-        self:set_frame_border_color_override(nil)
+    local select_settings = self:get_vitals_settings().select
+    if self.target_highlighted ~= true or select_settings.enabled ~= true then
+        _set_select_border_visible(self.select_border, false)
+        return
     end
+
+    local x, y = self.entity_control:GetPosition()
+    local width, height = self.entity_control:GetSize()
+    _apply_select_border(self.select_border, x, y, width, height, select_settings.border_width,
+        select_settings.border_color)
 end
 
 function GroupMemberVitals:_update_member_state()
@@ -258,6 +301,29 @@ function GroupMemberVitals:_update_leader_icon()
 end
 
 function GroupMemberVitals:_build_extra_controls()
+    self.select_border = {
+        top = Turbine.UI.Control(),
+        bottom = Turbine.UI.Control(),
+        left = Turbine.UI.Control(),
+        right = Turbine.UI.Control(),
+    }
+    self.select_border.top:SetParent(self)
+    self.select_border.top:SetMouseVisible(false)
+    self.select_border.top:SetZOrder(75)
+    self.select_border.top:SetVisible(false)
+    self.select_border.bottom:SetParent(self)
+    self.select_border.bottom:SetMouseVisible(false)
+    self.select_border.bottom:SetZOrder(75)
+    self.select_border.bottom:SetVisible(false)
+    self.select_border.left:SetParent(self)
+    self.select_border.left:SetMouseVisible(false)
+    self.select_border.left:SetZOrder(75)
+    self.select_border.left:SetVisible(false)
+    self.select_border.right:SetParent(self)
+    self.select_border.right:SetMouseVisible(false)
+    self.select_border.right:SetZOrder(75)
+    self.select_border.right:SetVisible(false)
+
     self.state_overlay = Turbine.UI.Control()
     self.state_overlay:SetParent(self)
     self.state_overlay:SetMouseVisible(false)

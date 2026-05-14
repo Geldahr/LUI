@@ -965,6 +965,7 @@ function VitalsPage:Constructor(window)
         ConfigSectionPage = ConfigSectionPage,
         add_number_field = _add_number_field,
         add_checkbox_field = _add_checkbox_field,
+        add_color_field = _add_color_field,
         new_standard_colors_section = _new_standard_colors_section,
         build_standard_morale_form = _build_standard_morale_form,
         build_standard_power_form = _build_standard_power_form,

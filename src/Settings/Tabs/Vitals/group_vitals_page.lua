@@ -60,28 +60,28 @@ function Builder.new_group_unit_page(window, root, options, deps)
             RAID_LAYOUT_VALUES,
             function() return get().layout.mode end,
             function(value) get().layout.mode = value end)
-        frame:add_row_break()
-        deps.add_checkbox_field(frame, options.prefix .. "_split_by_group", TR["Split by groups"],
-            function() return get().split_by_group end,
-            function(value) get().split_by_group = value end, true)
     else
         deps.add_number_field(frame, options.prefix .. "_rows", TR["Rows per Column"],
             function() return get().layout.rows end,
             function(value) get().layout.rows = value end)
     end
-    if options.include_self_toggle == true then
-        frame:add_row_break()
-        deps.add_checkbox_field(frame, options.prefix .. "_show_self_in_fellowship", TR["Show self in fellowship"],
-            function() return get().show_self_in_fellowship end,
-            function(value) get().show_self_in_fellowship = value end, true)
-    end
-    frame:add_row_break()
     deps.add_number_field(frame, options.prefix .. "_spacing_x", TR["Column Spacing"],
         function() return get().layout.spacing_x end,
         function(value) get().layout.spacing_x = value end)
     deps.add_number_field(frame, options.prefix .. "_spacing_y", TR["Row Spacing"],
         function() return get().layout.spacing_y end,
         function(value) get().layout.spacing_y = value end)
+    if options.raid_layout_dropdown == true then
+        frame:add_row_break()
+        deps.add_checkbox_field(frame, options.prefix .. "_split_by_group", TR["Split by groups"],
+            function() return get().split_by_group end,
+            function(value) get().split_by_group = value end, true)
+    elseif options.include_self_toggle == true then
+        frame:add_row_break()
+        deps.add_checkbox_field(frame, options.prefix .. "_show_self_in_fellowship", TR["Show self in fellowship"],
+            function() return get().show_self_in_fellowship end,
+            function(value) get().show_self_in_fellowship = value end, true)
+    end
     frame:add_row_break()
     deps.add_number_field(frame, options.prefix .. "_incombat_opacity", TR["In-combat opacity"],
         function() return get().frame.incombat_opacity end,
@@ -96,11 +96,18 @@ function Builder.new_group_unit_page(window, root, options, deps)
     deps.add_number_field(frame, options.prefix .. "_ressource_background_dimming", TR["Dimming"],
         function() return get().background_dimming end,
         function(value) get().background_dimming = value end)
+    frame:add_row_break()
+    deps.add_checkbox_field(frame, options.prefix .. "_select_enabled", TR["Select"],
+        function() return get().select.enabled end,
+        function(value) get().select.enabled = value end)
+    deps.add_number_field(frame, options.prefix .. "_select_border_width", TR["Select Border Width"],
+        function() return get().select.border_width end,
+        function(value) get().select.border_width = value end)
     page:add_tab(TR["Frame"], "frame", frame)
 
     local colors = deps.new_standard_colors_section(window, page.refresh_preview, options.prefix, get, false)
+    local colors_frame = colors._frame_page
     if options.raid_group_colors == true then
-        local colors_frame = colors._frame_page
         colors_frame:add_break()
         for i = 1, #RAID_GROUP_COLOR_KEYS do
             local group_key = RAID_GROUP_COLOR_KEYS[i]
@@ -114,6 +121,14 @@ function Builder.new_group_unit_page(window, root, options, deps)
             window.controls[control_key] = colors_frame.controls[control_key]
         end
     end
+    colors_frame:add_break()
+    local select_color_key = options.prefix .. "_select_border_color"
+    deps.add_color_field(colors_frame, select_color_key, TR["Select Border Color"],
+        function() return get().select.border_color end,
+        function(value) get().select.border_color = value end)
+    colors.controls[select_color_key] = colors_frame.controls[select_color_key]
+    page.controls[select_color_key] = colors_frame.controls[select_color_key]
+    window.controls[select_color_key] = colors_frame.controls[select_color_key]
     page:add_tab(TR["Colors"], "colors", colors)
 
     local morale = deps.ConfigContent(window, 4, page.refresh_preview)

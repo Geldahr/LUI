@@ -152,15 +152,6 @@ local function _raw_group_member_height(vitals_settings)
     return member_height
 end
 
-local function _raid_group_color(r, g, b)
-    return {
-        A = 1,
-        R = r,
-        G = g,
-        B = b,
-    }
-end
-
 local function _build_raid_group_hud_defaults(raid_hud, raid_settings)
     local out = {}
     local layout = raid_settings.layout
@@ -266,23 +257,6 @@ local function _defaults_source()
         defaults.fellowship.show_self_in_fellowship = true
     end
 
-    if type(defaults.raid) ~= "table" then
-        defaults.raid = _copy_table(defaults.party)
-    end
-    if defaults.raid.group_border_width == nil then
-        defaults.raid.group_border_width = defaults.raid.frame.border_width
-    end
-    defaults.raid.split_by_group = false
-    defaults.raid.group_colors = {
-        a = _raid_group_color(0.85, 0.22, 0.22),
-        b = _raid_group_color(0.25, 0.45, 0.85),
-        c = _raid_group_color(0.20, 0.70, 0.28),
-        d = _raid_group_color(0.85, 0.58, 0.16),
-    }
-    local raid_layout = _ensure_table(defaults.raid, "layout")
-    if raid_layout.mode == nil then
-        raid_layout.mode = LUI_ENUMS.raid_layout_mode.FOUR_COLUMNS_MODE_1
-    end
     local default_raid_group_positions = _build_raid_group_hud_defaults(defaults.ui.hud.raid_vitals, defaults.raid)
     for i = 1, #RAID_GROUP_KEYS do
         local group_key = RAID_GROUP_KEYS[i]

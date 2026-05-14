@@ -116,6 +116,7 @@ function _G.rebuild_settings()
             layout = {},
             class_icon = {},
             leader_icon = {},
+            select = {},
             effects = {
                 buffs = { timer_font = {} },
                 debuffs = { timer_font = {} },
@@ -132,6 +133,7 @@ function _G.rebuild_settings()
             group_colors = {},
             class_icon = {},
             leader_icon = {},
+            select = {},
             effects = {
                 buffs = { timer_font = {} },
                 debuffs = { timer_font = {} },
@@ -302,6 +304,11 @@ function _G.rebuild_settings()
         dst.leader_icon.size = scaled_int(raw_leader_icon.size)
         dst.leader_icon.x = scaled_int(raw_leader_icon.x)
         dst.leader_icon.y = scaled_int(raw_leader_icon.y)
+
+        local raw_select = src.select
+        dst.select.enabled = raw_select.enabled == true
+        dst.select.border_width = scaled_border(raw_select.border_width)
+        dst.select.border_color = build_color(raw_select.border_color)
 
         local raw_layout = src.layout
         dst.layout.rows = raw_layout.rows
