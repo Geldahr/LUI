@@ -12,6 +12,7 @@ local DEAD_STATE_COLOR = Turbine.UI.Color(0.78, 0.20, 0.02, 0.02)
 local OFFLINE_STATE_COLOR = Turbine.UI.Color(0.78, 0.03, 0.03, 0.03)
 local STATE_TEXT_COLOR = Turbine.UI.Color(1, 1, 1, 1)
 local STATE_OUTLINE_COLOR = Turbine.UI.Color(1, 0, 0, 0)
+local TARGET_HIGHLIGHT_COLOR = Turbine.UI.Color(1, 1, 0.82, 0.12)
 
 ---@class GroupMemberVitals : VitalsBase
 GroupMemberVitals = class(VitalsBase)
@@ -19,6 +20,7 @@ GroupMemberVitals = class(VitalsBase)
 function GroupMemberVitals:Constructor(settings_root, entity)
     self.settings_root = settings_root
     self.is_leader = false
+    self.target_highlighted = false
     self.link_dead_event = nil
     self.em = nil
     self.em_added_event = nil
@@ -37,9 +39,11 @@ function GroupMemberVitals:set_is_leader(is_leader)
 end
 
 function GroupMemberVitals:set_entity(entity)
-    if self.entity ~= entity then
+    local entity_changed = self.entity ~= entity
+    if entity_changed == true then
         self:_detach_silent_effect_manager()
         self:_detach_link_dead_event()
+        self.target_highlighted = false
     end
 
     VitalsBase.set_entity(self, entity)
@@ -48,6 +52,7 @@ function GroupMemberVitals:set_entity(entity)
     self:_update_leader_icon()
     self:_setup_silent_effect_manager()
     self:_update_member_state()
+    self:_apply_target_highlight()
 end
 
 function GroupMemberVitals:Update()
@@ -58,6 +63,20 @@ end
 
 function GroupMemberVitals:get_lower_bars_height()
     return self:get_vitals_settings().power.height
+end
+
+function GroupMemberVitals:set_target_highlighted(highlighted)
+    self.target_highlighted = highlighted == true
+    self:_apply_target_highlight()
+end
+
+function GroupMemberVitals:set_target_name(target_name)
+    if target_name == nil or self.entity == nil or self.entity.GetName == nil then
+        self:set_target_highlighted(false)
+        return
+    end
+
+    self:set_target_highlighted(self.entity:GetName() == target_name)
 end
 
 function GroupMemberVitals:self_morale_changed()
@@ -133,6 +152,14 @@ function GroupMemberVitals:_clear_member_state()
     self.state_label:SetText("")
     self.state_label:SetVisible(false)
     self.state_overlay:SetVisible(false)
+end
+
+function GroupMemberVitals:_apply_target_highlight()
+    if self.target_highlighted == true then
+        self:set_frame_border_color_override(TARGET_HIGHLIGHT_COLOR)
+    else
+        self:set_frame_border_color_override(nil)
+    end
 end
 
 function GroupMemberVitals:_update_member_state()
@@ -268,6 +295,7 @@ function GroupMemberVitals:_resize_extra_controls()
     local vitals_settings = self:get_vitals_settings()
     self.state_label:SetFont(vitals_settings.labels[1].font.lotro)
     self:_update_member_state()
+    self:_apply_target_highlight()
 
     local class_icon_settings = vitals_settings.class_icon
     if class_icon_settings.enabled == true and class_icon_settings.size > 0 then

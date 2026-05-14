@@ -47,6 +47,7 @@ function RaidGroupVitalsWindow:Constructor(group_key, group_index)
     self.members = {}
     self.current_members = {}
     self.current_leader_name = nil
+    self.current_target_name = nil
     self.current_active = false
     self.group_border = nil
 
@@ -174,6 +175,17 @@ function RaidGroupVitalsWindow:apply_settings()
     self:update_members(self.current_members, self.current_leader_name, self.current_active)
 end
 
+function RaidGroupVitalsWindow:set_target_name(target_name)
+    self.current_target_name = target_name
+    self:update_target_highlight()
+end
+
+function RaidGroupVitalsWindow:update_target_highlight()
+    for i = 1, #self.members do
+        self.members[i]:set_target_name(self.current_target_name)
+    end
+end
+
 function RaidGroupVitalsWindow:update_members(members, leader_name, active)
     self.current_members = members
     self.current_leader_name = leader_name
@@ -199,6 +211,7 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
         end
 
         self:layout_members(desired_count)
+        self:update_target_highlight()
         self:update_visibility(active, #ordered_members)
         return
     end
@@ -221,5 +234,6 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
     end
 
     self:layout_members(desired_count)
+    self:update_target_highlight()
     self:update_visibility(active, #ordered_members)
 end

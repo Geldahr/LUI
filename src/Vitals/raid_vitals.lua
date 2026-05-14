@@ -76,6 +76,7 @@ function RaidVitals:Constructor()
         member_added = nil,
         member_removed = nil,
         leader_changed = nil,
+        target_changed = nil,
     }
 
     self:SetMouseVisible(false)
@@ -118,6 +119,9 @@ function RaidVitals:Constructor()
             self:refresh_group()
         end)
     end
+    self.events.target_changed = add_callback(self.lp, "TargetChanged", function()
+        self:update_target_highlight()
+    end)
 
     self:refresh_group()
 end
@@ -305,6 +309,29 @@ function RaidVitals:group_border_color(member_index)
     return self.group_windows[group_index]:get_border_color()
 end
 
+function RaidVitals:current_target_name()
+    if self.lp == nil or self.lp.GetTarget == nil then
+        return nil
+    end
+
+    local target = self.lp:GetTarget()
+    if target == nil or target.GetName == nil then
+        return nil
+    end
+
+    return target:GetName()
+end
+
+function RaidVitals:update_target_highlight()
+    local target_name = self:current_target_name()
+    for i = 1, #self.members do
+        self.members[i]:set_target_name(target_name)
+    end
+    for i = 1, #self.group_windows do
+        self.group_windows[i]:set_target_name(target_name)
+    end
+end
+
 function RaidVitals:hide_combined_members()
     for i = 1, #self.members do
         local member_window = self.members[i]
@@ -348,6 +375,7 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
 
         self:layout_members(desired_count)
         self:update_group_borders(desired_count)
+        self:update_target_highlight()
         self:update_visibility(active, #ordered_members)
         return
     end
@@ -371,6 +399,7 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
 
     self:layout_members(desired_count)
     self:update_group_borders(#ordered_members)
+    self:update_target_highlight()
     self:update_visibility(active, #ordered_members)
 end
 
@@ -402,4 +431,5 @@ function RaidVitals:update_members(snapshot)
     local leader_name = current_snapshot.leader_name
     self:update_combined_members(active, ordered_members, leader_name)
     self:update_split_members(active, ordered_members, leader_name)
+    self:update_target_highlight()
 end

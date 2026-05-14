@@ -34,6 +34,7 @@ function FellowshipVitals:Constructor()
         member_added = nil,
         member_removed = nil,
         leader_changed = nil,
+        target_changed = nil,
     }
 
     self:SetMouseVisible(false)
@@ -53,6 +54,9 @@ function FellowshipVitals:Constructor()
             self:refresh_group()
         end)
     end
+    self.events.target_changed = add_callback(self.lp, "TargetChanged", function()
+        self:update_target_highlight()
+    end)
 
     self:refresh_group()
 end
@@ -171,6 +175,26 @@ function FellowshipVitals:apply_settings()
     _G.apply_lotro_vitals_handoff()
 end
 
+function FellowshipVitals:current_target_name()
+    if self.lp == nil or self.lp.GetTarget == nil then
+        return nil
+    end
+
+    local target = self.lp:GetTarget()
+    if target == nil or target.GetName == nil then
+        return nil
+    end
+
+    return target:GetName()
+end
+
+function FellowshipVitals:update_target_highlight()
+    local target_name = self:current_target_name()
+    for i = 1, #self.members do
+        self.members[i]:set_target_name(target_name)
+    end
+end
+
 function FellowshipVitals:update_members(snapshot)
     local current_snapshot = snapshot or GroupSnapshot.read(self.lp)
     local active = _fellowship_active(current_snapshot)
@@ -200,6 +224,7 @@ function FellowshipVitals:update_members(snapshot)
         end
 
         self:layout_members(desired_count)
+        self:update_target_highlight()
         self:update_visibility(active, #ordered_members)
         return
     end
@@ -222,5 +247,6 @@ function FellowshipVitals:update_members(snapshot)
     end
 
     self:layout_members(desired_count)
+    self:update_target_highlight()
     self:update_visibility(active, #ordered_members)
 end
