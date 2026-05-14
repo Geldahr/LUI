@@ -8,12 +8,18 @@ import "LUI.src.UI.Widgets.hud"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.icons"
 
+local DEAD_STATE_COLOR = Turbine.UI.Color(0.78, 0.20, 0.02, 0.02)
+local OFFLINE_STATE_COLOR = Turbine.UI.Color(0.78, 0.03, 0.03, 0.03)
+local STATE_TEXT_COLOR = Turbine.UI.Color(1, 1, 1, 1)
+local STATE_OUTLINE_COLOR = Turbine.UI.Color(1, 0, 0, 0)
+
 ---@class GroupMemberVitals : VitalsBase
 GroupMemberVitals = class(VitalsBase)
 
 function GroupMemberVitals:Constructor(settings_root, entity)
     self.settings_root = settings_root
     self.is_leader = false
+    self.link_dead_event = nil
     self.em = nil
     self.em_added_event = nil
 
@@ -33,12 +39,15 @@ end
 function GroupMemberVitals:set_entity(entity)
     if self.entity ~= entity then
         self:_detach_silent_effect_manager()
+        self:_detach_link_dead_event()
     end
 
     VitalsBase.set_entity(self, entity)
+    self:_attach_link_dead_event()
     self:_update_class_icon()
     self:_update_leader_icon()
     self:_setup_silent_effect_manager()
+    self:_update_member_state()
 end
 
 function GroupMemberVitals:Update()
@@ -51,6 +60,11 @@ function GroupMemberVitals:get_lower_bars_height()
     return self:get_vitals_settings().power.height
 end
 
+function GroupMemberVitals:self_morale_changed()
+    VitalsBase.self_morale_changed(self)
+    self:_update_member_state()
+end
+
 function GroupMemberVitals:_is_local_player(entity)
     local local_player = Turbine.Gameplay.LocalPlayer.GetInstance()
     if entity == nil or local_player == nil then
@@ -61,6 +75,74 @@ function GroupMemberVitals:_is_local_player(entity)
     end
 
     return entity:GetName() == local_player:GetName()
+end
+
+function GroupMemberVitals:_entity_is_link_dead()
+    if self.entity == nil or self.entity.IsLinkDead == nil then
+        return false
+    end
+
+    return self.entity:IsLinkDead() == true
+end
+
+function GroupMemberVitals:_entity_is_dead()
+    if self.entity == nil or self.entity.GetMorale == nil then
+        return false
+    end
+
+    local morale = self.entity:GetMorale()
+    return type(morale) == "number" and morale <= 0
+end
+
+function GroupMemberVitals:_attach_link_dead_event()
+    if self.link_dead_event ~= nil then
+        return
+    end
+    if self.entity == nil or self.entity.IsLinkDead == nil then
+        return
+    end
+
+    self.link_dead_event = add_callback(self.entity, "IsLinkDeadChanged", function()
+        self:_update_member_state()
+    end)
+end
+
+function GroupMemberVitals:_detach_link_dead_event()
+    if self.link_dead_event == nil then
+        return
+    end
+
+    remove_callback(self.entity, "IsLinkDeadChanged", self.link_dead_event)
+    self.link_dead_event = nil
+end
+
+function GroupMemberVitals:_set_member_state(text, color)
+    local x, y = self.entity_control:GetPosition()
+    local width, height = self.entity_control:GetSize()
+
+    self.state_overlay:SetPosition(x, y)
+    self.state_overlay:SetSize(width, height)
+    self.state_overlay:SetBackColor(color)
+    self.state_label:SetSize(width, height)
+    self.state_label:SetText(text)
+    self.state_overlay:SetVisible(true)
+    self.state_label:SetVisible(true)
+end
+
+function GroupMemberVitals:_clear_member_state()
+    self.state_label:SetText("")
+    self.state_label:SetVisible(false)
+    self.state_overlay:SetVisible(false)
+end
+
+function GroupMemberVitals:_update_member_state()
+    if self:_entity_is_link_dead() == true then
+        self:_set_member_state(TR["OFFLINE"], OFFLINE_STATE_COLOR)
+    elseif self:_entity_is_dead() == true then
+        self:_set_member_state(TR["DEAD"], DEAD_STATE_COLOR)
+    else
+        self:_clear_member_state()
+    end
 end
 
 function GroupMemberVitals:_setup_silent_effect_manager()
@@ -149,6 +231,24 @@ function GroupMemberVitals:_update_leader_icon()
 end
 
 function GroupMemberVitals:_build_extra_controls()
+    self.state_overlay = Turbine.UI.Control()
+    self.state_overlay:SetParent(self)
+    self.state_overlay:SetMouseVisible(false)
+    self.state_overlay:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.state_overlay:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    self.state_overlay:SetZOrder(60)
+    self.state_overlay:SetVisible(false)
+
+    self.state_label = UI.Widgets.LuiLabel()
+    self.state_label:SetParent(self.state_overlay)
+    self.state_label:SetMouseVisible(false)
+    self.state_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.state_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    self.state_label:SetForeColor(STATE_TEXT_COLOR)
+    self.state_label:SetOutlineColor(STATE_OUTLINE_COLOR)
+    self.state_label:SetZOrder(1)
+    self.state_label:SetVisible(false)
+
     self.class_icon = Image()
     self.class_icon:SetParent(self)
     self.class_icon:SetZOrder(10)
@@ -166,6 +266,9 @@ end
 
 function GroupMemberVitals:_resize_extra_controls()
     local vitals_settings = self:get_vitals_settings()
+    self.state_label:SetFont(vitals_settings.labels[1].font.lotro)
+    self:_update_member_state()
+
     local class_icon_settings = vitals_settings.class_icon
     if class_icon_settings.enabled == true and class_icon_settings.size > 0 then
         self.class_icon:set_size(class_icon_settings.size, class_icon_settings.size)
