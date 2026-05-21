@@ -2,6 +2,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 {
 	["self"] = {
 		["vitals"] = {
+			["enabled"] = true,
 			["morale"] = {
 				["color"] = {
 					["gradient"] = true,
@@ -184,6 +185,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "%mc / %mt - %mp",
 					["link_to"] = 1.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[2] = {
 					["font"] = {
@@ -207,6 +212,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "%pc / %pt - %pp",
 					["link_to"] = 2.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[3] = {
 					["font"] = {
@@ -230,6 +239,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "",
 					["link_to"] = 2.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[4] = {
 					["font"] = {
@@ -253,6 +266,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "",
 					["link_to"] = 2.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 			},
 			["background_matches_missing"] = true,
@@ -390,7 +407,9 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 	},
 	["target"] = {
 		["vitals"] = {
+			["enabled"] = true,
 			["targets_target"] = {
+				["enabled"] = true,
 				["color"] = {
 					["gradient"] = true,
 					["gradient_full"] = {
@@ -482,6 +501,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 						["enabled"] = true,
 						["text"] = "%name%",
 						["text_alignment"] = 2.000000,
+						["anchor"] = 5.000000,
+						["width_mode"] = 2.000000,
+						["x_offset"] = 0.000000,
+						["y_offset"] = 0.000000,
 					},
 					[2] = {
 						["font"] = {
@@ -504,6 +527,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 						["enabled"] = false,
 						["text"] = "",
 						["text_alignment"] = 2.000000,
+						["anchor"] = 5.000000,
+						["width_mode"] = 2.000000,
+						["x_offset"] = 0.000000,
+						["y_offset"] = 0.000000,
 					},
 				},
 				["width"] = 250.000000,
@@ -695,6 +722,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "[%level%] %name%\\n%mc / %mt - %mp",
 					["link_to"] = 1.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[2] = {
 					["font"] = {
@@ -718,6 +749,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "%pc / %pt - %pp",
 					["link_to"] = 2.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[3] = {
 					["font"] = {
@@ -741,6 +776,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "",
 					["link_to"] = 2.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[4] = {
 					["font"] = {
@@ -764,6 +803,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "",
 					["link_to"] = 2.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 			},
 			["background_matches_missing"] = true,
@@ -955,6 +998,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "[%level%] %name%\\n%mc / %mt",
 					["link_to"] = 1.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[2] = {
 					["font"] = {
@@ -978,6 +1025,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "",
 					["link_to"] = 1.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[3] = {
 					["font"] = {
@@ -1001,6 +1052,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "",
 					["link_to"] = 2.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 				[4] = {
 					["font"] = {
@@ -1024,6 +1079,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["text"] = "",
 					["link_to"] = 2.000000,
 					["text_alignment"] = 2.000000,
+					["anchor"] = 5.000000,
+					["width_mode"] = 2.000000,
+					["x_offset"] = 0.000000,
+					["y_offset"] = 0.000000,
 				},
 			},
 			["enabled"] = true,
@@ -1104,6 +1163,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 		},
 	},
 	["party"] = {
+		["enabled"] = true,
 		["morale"] = {
 			["color"] = {
 				["gradient"] = true,
@@ -1312,6 +1372,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["text"] = "%name%\\n%mc / %mt",
 				["link_to"] = 1.000000,
 				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
 			},
 			[2] = {
 				["font"] = {
@@ -1335,6 +1399,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["text"] = "%pc / %pt",
 				["link_to"] = 2.000000,
 				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
 			},
 			[3] = {
 				["font"] = {
@@ -1358,6 +1426,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["text"] = "",
 				["link_to"] = 2.000000,
 				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
 			},
 			[4] = {
 				["font"] = {
@@ -1381,12 +1453,318 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["text"] = "",
 				["link_to"] = 2.000000,
 				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
 			},
 		},
 		["background_matches_missing"] = true,
 		["background_dimming"] = 0.750000,
 	},
+	["fellowship"] = {
+		["enabled"] = true,
+		["morale"] = {
+			["color"] = {
+				["gradient"] = true,
+				["gradient_full"] = {
+					["A"] = 1.000000,
+					["R"] = 0.290196,
+					["G"] = 0.639216,
+					["B"] = 0.286275,
+				},
+				["gradient_mid"] = {
+					["A"] = 1.000000,
+					["R"] = 0.847059,
+					["G"] = 0.776471,
+					["B"] = 0.235294,
+				},
+				["gradient_low"] = {
+					["A"] = 1.000000,
+					["R"] = 0.870588,
+					["G"] = 0.109804,
+					["B"] = 0.000000,
+				},
+				["high"] = {
+					["A"] = 1.000000,
+					["R"] = 0.290196,
+					["G"] = 0.639216,
+					["B"] = 0.286275,
+				},
+				["medium"] = {
+					["A"] = 1.000000,
+					["R"] = 0.650980,
+					["G"] = 0.803922,
+					["B"] = 0.196078,
+				},
+				["low"] = {
+					["A"] = 1.000000,
+					["R"] = 0.870588,
+					["G"] = 0.549020,
+					["B"] = 0.000000,
+				},
+				["critical"] = {
+					["A"] = 1.000000,
+					["R"] = 0.870588,
+					["G"] = 0.109804,
+					["B"] = 0.000000,
+				},
+				["bubble"] = {
+					["A"] = 1.000000,
+					["R"] = 0.529412,
+					["G"] = 0.800000,
+					["B"] = 0.980392,
+				},
+				["neutral"] = {
+					["A"] = 1.000000,
+					["R"] = 0.501961,
+					["G"] = 0.600000,
+					["B"] = 0.501961,
+				},
+				["background"] = {
+					["A"] = 1.000000,
+					["R"] = 0.000000,
+					["G"] = 0.000000,
+					["B"] = 0.000000,
+				},
+			},
+			["height"] = 40.000000,
+			["bubble_format"] = " - %b",
+		},
+		["power"] = {
+			["color"] = {
+				["power"] = {
+					["A"] = 1.000000,
+					["R"] = 0.200000,
+					["G"] = 0.600000,
+					["B"] = 0.980392,
+				},
+				["wrath"] = {
+					["A"] = 1.000000,
+					["R"] = 1.000000,
+					["G"] = 0.329412,
+					["B"] = 0.129412,
+				},
+			},
+			["height"] = 20.000000,
+		},
+		["info"] = {
+			["color"] = {
+				["background"] = {
+					["A"] = 1.000000,
+					["R"] = 0.000000,
+					["G"] = 0.000000,
+					["B"] = 0.000000,
+				},
+			},
+			["enabled"] = false,
+			["height"] = 16.000000,
+			["opacity"] = 0.700000,
+		},
+		["effects"] = {
+			["debuffs"] = {
+				["timer_font"] = {
+					["name"] = 1.000000,
+					["color"] = {
+						["A"] = 1.000000,
+						["R"] = 1.000000,
+						["G"] = 1.000000,
+						["B"] = 1.000000,
+					},
+					["outline_color"] = {
+						["A"] = 1.000000,
+						["R"] = 0.000000,
+						["G"] = 0.000000,
+						["B"] = 0.000000,
+					},
+					["style"] = 2.000000,
+					["size"] = 25.000000,
+				},
+				["icon_size"] = 36.000000,
+				["slot"] = 2.000000,
+				["track_curable"] = true,
+				["track_noncurable"] = true,
+			},
+			["buffs"] = {
+				["timer_font"] = {
+					["name"] = 1.000000,
+					["color"] = {
+						["A"] = 1.000000,
+						["R"] = 1.000000,
+						["G"] = 1.000000,
+						["B"] = 1.000000,
+					},
+					["outline_color"] = {
+						["A"] = 1.000000,
+						["R"] = 0.000000,
+						["G"] = 0.000000,
+						["B"] = 0.000000,
+					},
+					["style"] = 2.000000,
+					["size"] = 12.000000,
+				},
+				["icon_size"] = 32.000000,
+				["slot"] = 1.000000,
+			},
+		},
+		["frame"] = {
+			["width"] = 140.000000,
+			["border_width"] = 1.000000,
+			["border_color"] = {
+				["A"] = 1.000000,
+				["R"] = 0.000000,
+				["G"] = 0.000000,
+				["B"] = 0.000000,
+			},
+			["effects_height"] = 200.000000,
+			["effects_position"] = 1.000000,
+			["incombat_opacity"] = 1.000000,
+			["outcombat_opacity"] = 1.000000,
+		},
+		["class_icon"] = {
+			["enabled"] = true,
+			["size"] = 20.000000,
+			["x"] = 1.000000,
+			["y"] = 10.000000,
+		},
+		["leader_icon"] = {
+			["enabled"] = true,
+			["size"] = 20.000000,
+			["x"] = 120.000000,
+			["y"] = 10.000000,
+		},
+		["select"] = {
+			["enabled"] = true,
+			["border_width"] = 2.000000,
+			["border_color"] = {
+				["A"] = 1.000000,
+				["R"] = 1.000000,
+				["G"] = 0.309804,
+				["B"] = 0.847059,
+			},
+		},
+		["layout"] = {
+			["mode"] = "four_columns_mode_1",
+			["rows"] = 6.000000,
+			["spacing_x"] = 0.000000,
+			["spacing_y"] = 0.000000,
+		},
+		["labels"] = {
+			[1] = {
+				["font"] = {
+					["name"] = 1.000000,
+					["color"] = {
+						["A"] = 1.000000,
+						["R"] = 1.000000,
+						["G"] = 1.000000,
+						["B"] = 1.000000,
+					},
+					["outline_color"] = {
+						["A"] = 1.000000,
+						["R"] = 0.000000,
+						["G"] = 0.000000,
+						["B"] = 0.000000,
+					},
+					["style"] = 2.000000,
+					["size"] = 13.000000,
+				},
+				["enabled"] = true,
+				["text"] = "%name%\\n%mc / %mt",
+				["link_to"] = 1.000000,
+				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
+			},
+			[2] = {
+				["font"] = {
+					["name"] = 1.000000,
+					["color"] = {
+						["A"] = 1.000000,
+						["R"] = 1.000000,
+						["G"] = 1.000000,
+						["B"] = 1.000000,
+					},
+					["outline_color"] = {
+						["A"] = 1.000000,
+						["R"] = 0.000000,
+						["G"] = 0.000000,
+						["B"] = 0.000000,
+					},
+					["style"] = 2.000000,
+					["size"] = 13.000000,
+				},
+				["enabled"] = true,
+				["text"] = "%pc / %pt",
+				["link_to"] = 2.000000,
+				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
+			},
+			[3] = {
+				["font"] = {
+					["name"] = 1.000000,
+					["color"] = {
+						["A"] = 1.000000,
+						["R"] = 1.000000,
+						["G"] = 1.000000,
+						["B"] = 1.000000,
+					},
+					["outline_color"] = {
+						["A"] = 1.000000,
+						["R"] = 0.000000,
+						["G"] = 0.000000,
+						["B"] = 0.000000,
+					},
+					["style"] = 2.000000,
+					["size"] = 10.000000,
+				},
+				["enabled"] = false,
+				["text"] = "",
+				["link_to"] = 1.000000,
+				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
+			},
+			[4] = {
+				["font"] = {
+					["name"] = 1.000000,
+					["color"] = {
+						["A"] = 1.000000,
+						["R"] = 1.000000,
+						["G"] = 1.000000,
+						["B"] = 1.000000,
+					},
+					["outline_color"] = {
+						["A"] = 1.000000,
+						["R"] = 0.000000,
+						["G"] = 0.000000,
+						["B"] = 0.000000,
+					},
+					["style"] = 2.000000,
+					["size"] = 10.000000,
+				},
+				["enabled"] = false,
+				["text"] = "",
+				["link_to"] = 2.000000,
+				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
+			},
+		},
+		["show_self_in_fellowship"] = false,
+		["background_matches_missing"] = true,
+		["background_dimming"] = 0.750000,
+	},
 	["raid"] = {
+		["enabled"] = true,
 		["morale"] = {
 			["color"] = {
 				["gradient"] = true,
@@ -1623,6 +2001,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["text"] = "%name%\\n%mc / %mt",
 				["link_to"] = 1.000000,
 				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
 			},
 			[2] = {
 				["font"] = {
@@ -1646,6 +2028,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["text"] = "%pc / %pt",
 				["link_to"] = 2.000000,
 				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
 			},
 			[3] = {
 				["font"] = {
@@ -1669,6 +2055,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["text"] = "",
 				["link_to"] = 2.000000,
 				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
 			},
 			[4] = {
 				["font"] = {
@@ -1692,6 +2082,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["text"] = "",
 				["link_to"] = 2.000000,
 				["text_alignment"] = 2.000000,
+				["anchor"] = 5.000000,
+				["width_mode"] = 2.000000,
+				["x_offset"] = 0.000000,
+				["y_offset"] = 0.000000,
 			},
 		},
 		["background_matches_missing"] = true,
@@ -1726,6 +2120,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 			["background_opacity"] = 0.000000,
 		},
 		["icon_size"] = 24.000000,
+		["icon_side"] = 1.000000,
 		["item"] = {
 			["background_color"] = {
 				["A"] = 1.000000,
@@ -1745,17 +2140,29 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 		["replace"] = true,
 		["tile_size"] = 40.000000,
 	},
+	["crafting"] = {
+		["enabled"] = true,
+		["display_mode"] = "pages",
+	},
+	["travel"] = {
+		["enabled"] = true,
+		["display_mode"] = "grid",
+	},
 	["assets"] = {
 		["enabled"] = true,
 		["layouts"] = {
 			["details"] = {
 				["cols"] = 4.000000,
+				["width"] = 1154.000000,
+				["height"] = 1333.000000,
 				["left"] = 860.000000,
 				["rows"] = 10.000000,
 				["top"] = 180.000000,
 			},
 			["icons"] = {
 				["cols"] = 16.000000,
+				["width"] = 1154.000000,
+				["height"] = 1333.000000,
 				["left"] = 860.000000,
 				["rows"] = 8.000000,
 				["top"] = 180.000000,
@@ -1768,7 +2175,12 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 		},
 		["view_mode"] = 2.000000,
 	},
-	["bestiary"] = {},
+	["bestiary"] = {
+		["card_window"] = {
+			["left"] = 1791.000000,
+			["top"] = 515.000000,
+		},
+	},
 	["status_bar"] = {
 		["layout"] = {
 			["center"] = "",
@@ -1958,11 +2370,15 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 		},
 		["windows"] = {
 			["inventory"] = {
+				["width"] = 607.000000,
+				["height"] = 956.000000,
 				["left"] = 1980.000000,
 				["tile"] = "none",
 				["top"] = 476.000000,
 			},
 			["assets"] = {
+				["width"] = 1154.000000,
+				["height"] = 1333.000000,
 				["left"] = 860.000000,
 				["tile"] = "none",
 				["top"] = 180.000000,
@@ -1980,6 +2396,13 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["left"] = 720.000000,
 				["tile"] = "none",
 				["top"] = 150.000000,
+			},
+			["travel"] = {
+				["width"] = 361.000000,
+				["height"] = 225.000000,
+				["left"] = 0.000000,
+				["tile"] = "none",
+				["top"] = 27.000000,
 			},
 			["config"] = {
 				["width"] = 1052.000000,

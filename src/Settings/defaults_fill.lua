@@ -190,16 +190,13 @@ end
 
 local function _seed_group_vitals_compatibility(loaded, defaults)
     local default_party_source = defaults.party
+    local default_fellowship_source = defaults.fellowship
     local fellowship_source = _sanitize_with_defaults(loaded.party, default_party_source)
     loaded.party = fellowship_source
 
     local raid_source = defaults.raid
 
-    loaded.fellowship = _sanitize_with_defaults(loaded.fellowship, fellowship_source)
-    if loaded.fellowship.show_self_in_fellowship == nil then
-        loaded.fellowship.show_self_in_fellowship = true
-    end
-
+    loaded.fellowship = _sanitize_with_defaults(loaded.fellowship, default_fellowship_source)
     loaded.raid = _sanitize_with_defaults(loaded.raid, raid_source)
 
     local hud = _ensure_table(_ensure_table(loaded, "ui"), "hud")
@@ -251,10 +248,7 @@ local function _defaults_source()
     end
 
     if type(defaults.fellowship) ~= "table" then
-        defaults.fellowship = _copy_table(defaults.party)
-    end
-    if defaults.fellowship.show_self_in_fellowship == nil then
-        defaults.fellowship.show_self_in_fellowship = true
+        error("Missing default fellowship settings")
     end
 
     local default_raid_group_positions = _build_raid_group_hud_defaults(defaults.ui.hud.raid_vitals, defaults.raid)

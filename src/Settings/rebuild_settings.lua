@@ -140,8 +140,8 @@ function _G.rebuild_settings()
         },
         inventory = {},
         drops = { hud = {}, item = {} },
-        crafting = { display_mode = "pages", enabled = true },
-        travel = { display_mode = "list", enabled = true },
+        crafting = {},
+        travel = {},
         assets = { tile = {}, layouts = { icons = {}, details = {} } },
         bestiary = {},
     }
@@ -225,11 +225,11 @@ function _G.rebuild_settings()
         dst.text = src.text
         dst.tokens = lui_tokenize_format(dst.text)
         dst.link_to = src.link_to
-        dst.anchor = src.anchor or LUI_ENUMS.vitals_label_anchor.CENTER
-        dst.width_mode = src.width_mode or LUI_ENUMS.vitals_label_width_mode.FILL
-        dst.text_alignment = src.text_alignment or LUI_ENUMS.text_alignment.CENTER
-        dst.x_offset = scaled_int(src.x_offset or 0)
-        dst.y_offset = scaled_int(src.y_offset or 0)
+        dst.anchor = src.anchor
+        dst.width_mode = src.width_mode
+        dst.text_alignment = src.text_alignment
+        dst.x_offset = scaled_int(src.x_offset)
+        dst.y_offset = scaled_int(src.y_offset)
         dst.font.name = src.font.name
         dst.font.size = scaled_number(src.font.size)
         dst.font.lotro = FONT_TO_LOTRO(dst.font.name, dst.font.size)
@@ -361,16 +361,12 @@ function _G.rebuild_settings()
     end
 
     local raw_crafting = raw.crafting
-    if raw_crafting ~= nil then
-        _G.settings.crafting.display_mode = raw_crafting.display_mode
-        _G.settings.crafting.enabled = raw_crafting.enabled
-    end
+    _G.settings.crafting.display_mode = raw_crafting.display_mode
+    _G.settings.crafting.enabled = raw_crafting.enabled
 
     local raw_travel = raw.travel
-    if raw_travel ~= nil then
-        _G.settings.travel.display_mode = raw_travel.display_mode
-        _G.settings.travel.enabled = raw_travel.enabled
-    end
+    _G.settings.travel.display_mode = raw_travel.display_mode
+    _G.settings.travel.enabled = raw_travel.enabled
 
     local raw_tt = raw.target.vitals.targets_target
     local dst_tt = _G.settings.target.vitals.targets_target

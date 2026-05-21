@@ -82,6 +82,16 @@ local function _scale_height(base_height, display_h)
     return math.max(1, _round((base_height / BASE_DISPLAY_H) * display_h))
 end
 
+local function _clip_position(left, top, width, height, display_w, display_h)
+    if type(left) == "number" and type(width) == "number" then
+        left = math.min(math.max(0, left), math.max(0, display_w - width))
+    end
+    if type(top) == "number" and type(height) == "number" then
+        top = math.min(math.max(0, top), math.max(0, display_h - height))
+    end
+    return left, top
+end
+
 local function _adjust_window_positions(node, display_w, display_h)
     if type(node) ~= "table" then
         return
@@ -104,6 +114,8 @@ local function _adjust_window_positions(node, display_w, display_h)
                         if type(window.height) == "number" then
                             window.height = _scale_height(window.height, display_h)
                         end
+                        window.left, window.top = _clip_position(window.left, window.top, window.width, window.height,
+                            display_w, display_h)
                     end
                 end
             elseif key == "hud" then
