@@ -190,7 +190,11 @@ function ConfigWindow:update_expiring_target_effects_preview()
     local icon_left = LUI_ENUMS.side_is_left[icon_side] == true
 
     local bar_expire_towards = _require_control_enum(self.controls, "expiring_target_effects_bar_expire_towards")
-    local expire_towards_right = bar_expire_towards == LUI_ENUMS.side.RIGHT
+    local bar_mode = _require_control_enum(self.controls, "expiring_target_effects_bar_mode")
+    local anchor_right = bar_expire_towards == LUI_ENUMS.side.RIGHT
+    if bar_mode == LUI_ENUMS.bar_mode.LOAD then
+        anchor_right = anchor_right ~= true
+    end
 
     local name_max_chars = _require_control_number(self.controls, "expiring_target_effects_name_max_chars")
 
@@ -273,7 +277,12 @@ function ConfigWindow:update_expiring_target_effects_preview()
         local bar_inner_w = bar_width - border
         if bar_inner_w < 1 then bar_inner_w = 1 end
 
-        local preview_fill_width = math.floor(inner_width * 0.5 + 0.5)
+        local preview_percent = 0.6
+        if bar_mode == LUI_ENUMS.bar_mode.LOAD then
+            preview_percent = 1 - preview_percent
+        end
+
+        local preview_fill_width = math.floor(inner_width * preview_percent + 0.5)
         if preview_fill_width < 0 then preview_fill_width = 0 end
         if preview_fill_width > inner_width then preview_fill_width = inner_width end
         local bar_bg_x = icon_left and 0 or border
@@ -281,7 +290,7 @@ function ConfigWindow:update_expiring_target_effects_preview()
         row.bar_background:SetSize(bar_inner_w, inner_height)
         row.bar_background:SetBackColor(background_color)
 
-        if expire_towards_right then
+        if anchor_right then
             row.bar_fill:SetPosition(bar_inner_w - preview_fill_width, 0)
         else
             row.bar_fill:SetPosition(0, 0)

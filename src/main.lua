@@ -375,9 +375,7 @@ if _G.loaded_settings_was_new == true then
     _G.fix_colors()
     _G.rebuild_settings()
 end
-_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = (
-    _G.settings.crafting.display_mode
-) or "pages"
+_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = _G.settings.crafting.display_mode
 
 BESTIARY_CARD = Bestiary.BestiaryCard()
 _G.BESTIARY_CARD = BESTIARY_CARD

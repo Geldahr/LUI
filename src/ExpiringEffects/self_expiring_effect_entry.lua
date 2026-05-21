@@ -57,6 +57,7 @@ function SelfExpiringEffectEntry:Constructor()
     self.effect = nil
     self.effect_key = 0
     self.bar_inner_w = 0
+    self.bar_anchor_right = false
 
     self:SetMouseVisible(false)
 
@@ -198,6 +199,13 @@ function SelfExpiringEffectEntry:apply_settings()
 
     self.icon:SetPosition(0, 0)
     self.icon:SetSize(icon_inner, icon_inner)
+
+    local towards_right = s.bar_expire_towards == LUI_ENUMS.side.RIGHT
+    if s.bar_mode == LUI_ENUMS.bar_mode.LOAD then
+        self.bar_anchor_right = towards_right ~= true
+    else
+        self.bar_anchor_right = towards_right
+    end
 end
 
 function SelfExpiringEffectEntry:set_effect(effect)
@@ -248,13 +256,15 @@ function SelfExpiringEffectEntry:update_remaining(remaining_seconds, initial_sec
     local percent = remaining_seconds / base
     if percent < 0 then percent = 0 end
     if percent > 1 then percent = 1 end
+    if s.bar_mode == LUI_ENUMS.bar_mode.LOAD then
+        percent = 1 - percent
+    end
 
     local fill_width = math.floor(inner_width * percent + 0.5)
     if fill_width < 0 then fill_width = 0 end
     if fill_width > inner_width then fill_width = inner_width end
 
-    local expire_towards_right = s.bar_expire_towards == LUI_ENUMS.side.RIGHT
-    if expire_towards_right then
+    if self.bar_anchor_right then
         self.bar_fill:SetPosition(inner_width - fill_width, 0)
     else
         self.bar_fill:SetPosition(0, 0)

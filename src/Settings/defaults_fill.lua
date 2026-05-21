@@ -23,6 +23,28 @@ local function _copy_table(value)
     return copy
 end
 
+local function _deep_equal(left, right)
+    if type(left) ~= type(right) then
+        return false
+    end
+    if type(left) ~= "table" then
+        return left == right
+    end
+
+    for key, value in pairs(left) do
+        if _deep_equal(value, right[key]) ~= true then
+            return false
+        end
+    end
+    for key, value in pairs(right) do
+        if left[key] == nil and value ~= nil then
+            return false
+        end
+    end
+
+    return true
+end
+
 local function _sanitize_with_defaults(source, defaults)
     if type(defaults) ~= "table" then
         if source == nil then
@@ -292,6 +314,7 @@ function _G.ensure_loaded_settings()
         _G.loaded_settings = {}
     end
 
+    local original = _G.loaded_settings
     local defaults = _defaults_source()
     _G.loaded_settings = _sanitize_with_defaults(_G.loaded_settings, defaults)
     _seed_group_vitals_compatibility(_G.loaded_settings, defaults)
@@ -306,4 +329,6 @@ function _G.ensure_loaded_settings()
         local global = _ensure_table(_G.loaded_settings, "global")
         global.bestiary_capture = false
     end
+
+    return _deep_equal(original, _G.loaded_settings) ~= true
 end

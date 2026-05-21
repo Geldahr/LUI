@@ -466,7 +466,7 @@ function _G.rebuild_settings()
     sb.font.outline_color = raw_sb.font.outline_color
 
     sb.layout = raw_sb.layout
-    sb.item_registry = raw_sb.item_registry or {}
+    sb.item_registry = raw_sb.item_registry
     sb.zones.left = S.parse_status_bar_layout(raw_sb.layout.left, sb.item_registry)
     sb.zones.center = S.parse_status_bar_layout(raw_sb.layout.center, sb.item_registry)
     sb.zones.right = S.parse_status_bar_layout(raw_sb.layout.right, sb.item_registry)
@@ -529,7 +529,7 @@ function _G.rebuild_settings()
     sb.widgets.craft_plan = {
         enabled = in_zones("craft_plan"),
         width = scaled_int(raw_sb.widgets.craft_plan.width),
-        max_visible = math.max(1, tonumber(raw_sb.widgets.craft_plan.max_visible) or 4),
+        max_visible = math.max(1, tonumber(raw_sb.widgets.craft_plan.max_visible)),
     }
 
     sb.widgets.button = {
