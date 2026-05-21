@@ -8,7 +8,6 @@ import "LUI.src.UI.native_scaling"
 local S = _G.STATUS_BAR_COMMON
 
 function _G.rebuild_settings()
-    _G.ensure_loaded_settings()
     local raw = _G.loaded_settings
     local configured_scaling = UI.NativeScaling.get_configured_scale(raw)
     local scaling = UI.NativeScaling.get_effective_scale(raw)
@@ -209,6 +208,17 @@ function _G.rebuild_settings()
         }
     end
 
+    local function build_expiring_effect_colors(src)
+        return {
+            background = build_color(src.background),
+            border = build_color(src.border),
+            bar = build_color(src.bar),
+            bar_buff = build_color(src.bar_buff),
+            bar_debuff_curable = build_color(src.bar_debuff_curable),
+            bar_debuff_noncurable = build_color(src.bar_debuff_noncurable),
+        }
+    end
+
     local function build_vital_label(src)
         local dst = { font = {} }
         dst.enabled = src.enabled == true
@@ -402,14 +412,14 @@ function _G.rebuild_settings()
     self_ee.bar_width = scaled_int(raw_self_ee.bar_width)
     self_ee.bar_height = scaled_int(raw_self_ee.bar_height)
     self_ee.border_width = scaled_border(raw_self_ee.border_width)
-    self_ee.color = raw_self_ee.color
+    self_ee.color = build_expiring_effect_colors(raw_self_ee.color)
 
     self_ee.font.name = raw_self_ee.font.name
     self_ee.font.size = scaled_number(raw_self_ee.font.size)
     self_ee.font.lotro = FONT_TO_LOTRO(self_ee.font.name, self_ee.font.size)
     self_ee.font.style = raw_self_ee.font.style
-    self_ee.font.color = raw_self_ee.font.color
-    self_ee.font.outline_color = raw_self_ee.font.outline_color
+    self_ee.font.color = build_color(raw_self_ee.font.color)
+    self_ee.font.outline_color = build_color(raw_self_ee.font.outline_color)
 
     local raw_expiring_target_effects = raw.target.expiring_effects
     local target_ee = _G.settings.target.expiring_effects
@@ -428,14 +438,14 @@ function _G.rebuild_settings()
     target_ee.bar_width = scaled_int(raw_expiring_target_effects.bar_width)
     target_ee.bar_height = scaled_int(raw_expiring_target_effects.bar_height)
     target_ee.border_width = scaled_border(raw_expiring_target_effects.border_width)
-    target_ee.color = raw_expiring_target_effects.color
+    target_ee.color = build_expiring_effect_colors(raw_expiring_target_effects.color)
 
     target_ee.font.name = raw_expiring_target_effects.font.name
     target_ee.font.size = scaled_number(raw_expiring_target_effects.font.size)
     target_ee.font.lotro = FONT_TO_LOTRO(target_ee.font.name, target_ee.font.size)
     target_ee.font.style = raw_expiring_target_effects.font.style
-    target_ee.font.color = raw_expiring_target_effects.font.color
-    target_ee.font.outline_color = raw_expiring_target_effects.font.outline_color
+    target_ee.font.color = build_color(raw_expiring_target_effects.font.color)
+    target_ee.font.outline_color = build_color(raw_expiring_target_effects.font.outline_color)
 
     local raw_abbrev = raw.global.number_abbrev
     _G.settings.global.number_abbrev.enabled = raw_abbrev.enabled
