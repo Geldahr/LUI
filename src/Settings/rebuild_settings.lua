@@ -393,6 +393,7 @@ function _G.rebuild_settings()
     self_ee.show_noncurable_debuffs = raw_self_ee.show_noncurable_debuffs
     self_ee.icon_side = raw_self_ee.icon_side
     self_ee.bar_expire_towards = raw_self_ee.bar_expire_towards
+    self_ee.bar_mode = raw_self_ee.bar_mode
     self_ee.name_max_chars = raw_self_ee.name_max_chars
     self_ee.threshold = raw_self_ee.threshold
     self_ee.columns = raw_self_ee.columns
@@ -418,6 +419,7 @@ function _G.rebuild_settings()
     target_ee.show_noncurable_debuffs = raw_expiring_target_effects.show_noncurable_debuffs
     target_ee.icon_side = raw_expiring_target_effects.icon_side
     target_ee.bar_expire_towards = raw_expiring_target_effects.bar_expire_towards
+    target_ee.bar_mode = raw_expiring_target_effects.bar_mode
     target_ee.name_max_chars = raw_expiring_target_effects.name_max_chars
     target_ee.threshold = raw_expiring_target_effects.threshold
     target_ee.columns = raw_expiring_target_effects.columns
