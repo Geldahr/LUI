@@ -175,7 +175,6 @@ function Builder.new_group_unit_page(window, root, options, deps)
         function(value) get().leader_icon.y = value end)
     page:add_tab(TR["Icons"], "icons", icons)
 
-    page:add_tab(TR["Effects"], "effects", deps.new_effects_section(window, page.refresh_preview, options.prefix, get))
     deps.bind_standard_outline_visibility(page, colors, options.prefix, false)
 
     return page

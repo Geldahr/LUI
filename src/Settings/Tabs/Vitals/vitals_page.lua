@@ -971,7 +971,6 @@ function VitalsPage:Constructor(window)
         build_standard_power_form = _build_standard_power_form,
         build_info_form = _build_info_form,
         new_texts_section = _new_texts_section,
-        new_effects_section = _new_effects_section,
         bind_standard_outline_visibility = _bind_standard_outline_visibility,
     }))
     self:add_tab(TR["Raid"], "raid", GroupVitalsPageBuilder.new_group_unit_page(window, self, {
@@ -994,7 +993,6 @@ function VitalsPage:Constructor(window)
         build_standard_power_form = _build_standard_power_form,
         build_info_form = _build_info_form,
         new_texts_section = _new_texts_section,
-        new_effects_section = _new_effects_section,
         bind_standard_outline_visibility = _bind_standard_outline_visibility,
     }))
 end

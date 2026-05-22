@@ -76,6 +76,19 @@ local function _sanitize_with_defaults(source, defaults)
     return sanitized
 end
 
+local function _optional_table_child(source, key)
+    if type(source) ~= "table" then
+        return nil
+    end
+
+    local child = source[key]
+    if type(child) ~= "table" then
+        return nil
+    end
+
+    return child
+end
+
 local function _apply_missing_values(target, defaults)
     if type(target) ~= "table" or type(defaults) ~= "table" then
         return
@@ -192,7 +205,7 @@ local function _build_raid_group_hud_defaults(raid_hud, raid_settings)
     return out
 end
 
-local function _seed_raid_group_hud_positions(hud, raid_settings, defaults)
+local function _seed_raid_group_hud_positions(hud, raid_settings, defaults, source_hud)
     local default_group_positions = defaults.ui.hud
     local computed_positions = _build_raid_group_hud_defaults(hud.raid_vitals, raid_settings)
 
@@ -201,8 +214,11 @@ local function _seed_raid_group_hud_positions(hud, raid_settings, defaults)
         local hud_key = "raid_group_" .. group_key .. "_vitals"
         local current = hud[hud_key]
         local seeded = computed_positions[hud_key]
+        local source_group = _optional_table_child(source_hud, hud_key)
 
-        if _hud_position_matches(current, default_group_positions[hud_key]) == true then
+        if source_group == nil
+            or _hud_position_matches(current, default_group_positions[hud_key]) == true
+            or (i > 1 and _hud_position_matches(current, hud.raid_vitals) == true) then
             current = seeded
         end
 
@@ -210,32 +226,68 @@ local function _seed_raid_group_hud_positions(hud, raid_settings, defaults)
     end
 end
 
-local function _seed_group_vitals_compatibility(loaded, defaults)
+local function _seed_group_vitals_compatibility(loaded, defaults, source)
     local default_party_source = defaults.party
     local default_fellowship_source = defaults.fellowship
-    local fellowship_source = _sanitize_with_defaults(loaded.party, default_party_source)
-    loaded.party = fellowship_source
+    local source_party = _optional_table_child(source, "party")
+    local source_fellowship = _optional_table_child(source, "fellowship")
+    local source_raid = _optional_table_child(source, "raid")
 
-    local raid_source = defaults.raid
+    local party_source = source_party
+    if party_source == nil then
+        party_source = loaded.party
+    end
+    loaded.party = _sanitize_with_defaults(party_source, default_party_source)
 
-    loaded.fellowship = _sanitize_with_defaults(loaded.fellowship, default_fellowship_source)
-    loaded.raid = _sanitize_with_defaults(loaded.raid, raid_source)
+    local fellowship_source = source_fellowship
+    if fellowship_source == nil then
+        fellowship_source = source_party
+    end
+    if fellowship_source == nil then
+        fellowship_source = loaded.fellowship
+    end
+    loaded.fellowship = _sanitize_with_defaults(fellowship_source, default_fellowship_source)
+
+    local raid_source = source_raid
+    if raid_source == nil then
+        raid_source = source_party
+    end
+    if raid_source == nil then
+        raid_source = loaded.raid
+    end
+    loaded.raid = _sanitize_with_defaults(raid_source, defaults.raid)
 
     local hud = _ensure_table(_ensure_table(loaded, "ui"), "hud")
+    local source_ui = _optional_table_child(source, "ui")
+    local source_hud = _optional_table_child(source_ui, "hud")
     local default_party_hud_source = defaults.ui.hud.party_vitals
     local default_fellowship_hud_source = defaults.ui.hud.fellowship_vitals
     local default_raid_hud_source = defaults.ui.hud.raid_vitals
-    local fellowship_hud_source = _sanitize_with_defaults(hud.party_vitals, default_fellowship_hud_source)
-    hud.party_vitals = fellowship_hud_source
+    local party_hud_source = _optional_table_child(source_hud, "party_vitals")
+    if party_hud_source == nil then
+        party_hud_source = hud.party_vitals
+    end
+    hud.party_vitals = _sanitize_with_defaults(party_hud_source, default_party_hud_source)
 
-    local raid_hud_source = hud.raid_vitals
-    if _hud_position_matches(raid_hud_source, fellowship_hud_source) == true then
+    local fellowship_hud_source = _optional_table_child(source_hud, "fellowship_vitals")
+    if fellowship_hud_source == nil then
+        fellowship_hud_source = party_hud_source
+    end
+    if fellowship_hud_source == nil then
+        fellowship_hud_source = hud.fellowship_vitals
+    end
+
+    local raid_hud_source = _optional_table_child(source_hud, "raid_vitals")
+    if raid_hud_source == nil then
+        raid_hud_source = hud.raid_vitals
+    end
+    if _hud_position_matches(raid_hud_source, hud.party_vitals) == true then
         raid_hud_source = default_raid_hud_source
     end
 
-    hud.fellowship_vitals = _sanitize_with_defaults(hud.fellowship_vitals, fellowship_hud_source)
+    hud.fellowship_vitals = _sanitize_with_defaults(fellowship_hud_source, default_fellowship_hud_source)
     hud.raid_vitals = _sanitize_with_defaults(raid_hud_source, default_raid_hud_source)
-    _seed_raid_group_hud_positions(hud, loaded.raid, defaults)
+    _seed_raid_group_hud_positions(hud, loaded.raid, defaults, source_hud)
 end
 
 local function _ensure_window_tiles(windows)
@@ -317,7 +369,7 @@ function _G.ensure_loaded_settings()
     local original = _G.loaded_settings
     local defaults = _defaults_source()
     _G.loaded_settings = _sanitize_with_defaults(_G.loaded_settings, defaults)
-    _seed_group_vitals_compatibility(_G.loaded_settings, defaults)
+    _seed_group_vitals_compatibility(_G.loaded_settings, defaults, original)
     _ensure_preview_label_defaults(_G.loaded_settings)
     _ensure_raid_layout_defaults(_G.loaded_settings, defaults)
 

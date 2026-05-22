@@ -14,7 +14,9 @@ local _preview_scaled_int = Common.preview_scaled_int
 local _preview_scaled_border = Common.preview_scaled_border
 local _preview_scaled_number = Common.preview_scaled_number
 local _preview_resource_background = Common.preview_resource_background
+local _preview_power_max = Common.preview_power_max
 local _sync_preview_holder_height = Common.sync_preview_holder_height
+local PREVIEW_WRATH_MAX = Common.PREVIEW_WRATH_MAX
 local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
@@ -506,12 +508,13 @@ function ConfigWindow:update_party_vitals_preview()
             if power_fill_w > inner_w then power_fill_w = inner_w end
 
             m.power_bar:SetWidth(power_fill_w)
-            local power_fill_color = (i % 3) == 0 and wrath_color or power_color
+            local is_wrath = (i % 3) == 0
+            local power_fill_color = is_wrath == true and wrath_color or power_color
             m.power_bar:SetBackColor(power_fill_color)
             m.power_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing,
                 ressource_bg_dimming, morale_bg, power_fill_color))
 
-            local power_max = 30000
+            local power_max = is_wrath == true and PREVIEW_WRATH_MAX or _preview_power_max(morale_max)
             local power_cur = math.floor(power_max * power_percent + 0.5)
             local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
             label_context.pc = lui_abbrev_number(power_cur)

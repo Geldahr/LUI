@@ -1,6 +1,7 @@
 SettingsPreviewCommon = SettingsPreviewCommon or {}
 
 local Common = SettingsPreviewCommon
+Common.PREVIEW_WRATH_MAX = 100
 
 function Common.scaled_size(value)
     return value * _G.settings.global.scale
@@ -105,6 +106,18 @@ function Common.preview_resource_background(matches_missing, dimming, background
         return Common.dim_color(fill_color, dimming)
     end
     return background
+end
+
+function Common.preview_power_max(morale_max)
+    local morale = Common.require_number(morale_max, "preview_power_morale_max")
+    local power = math.floor((morale * 0.30) + 0.5)
+    if power < 1 then
+        power = 1
+    end
+    if morale > 1 and power >= morale then
+        power = morale - 1
+    end
+    return power
 end
 
 function Common.morale_color_preview(percent, gradient_enabled, gradient_full_color, gradient_mid_color,

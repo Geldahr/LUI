@@ -1759,7 +1759,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["y_offset"] = 0.000000,
 			},
 		},
-		["show_self_in_fellowship"] = false,
+		["show_self_in_fellowship"] = true,
 		["background_matches_missing"] = true,
 		["background_dimming"] = 0.750000,
 	},
@@ -2336,15 +2336,15 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["top"] = 420.000000,
 			},
 			["raid_group_b_vitals"] = {
-				["left"] = 270.000000,
+				["left"] = 380.000000,
 				["top"] = 420.000000,
 			},
 			["raid_group_c_vitals"] = {
-				["left"] = 270.000000,
+				["left"] = 490.000000,
 				["top"] = 420.000000,
 			},
 			["raid_group_d_vitals"] = {
-				["left"] = 270.000000,
+				["left"] = 600.000000,
 				["top"] = 420.000000,
 			},
 			["self_effects"] = {

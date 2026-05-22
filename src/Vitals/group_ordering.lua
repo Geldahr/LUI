@@ -19,6 +19,17 @@ local function _is_local_player(entity, local_player_name)
     return entity:GetName() == local_player_name
 end
 
+local function _copy_snapshot_members(snapshot)
+    local ordered = {}
+    local members = snapshot.members
+
+    for i = 1, #members do
+        ordered[i] = members[i]
+    end
+
+    return ordered
+end
+
 function GroupOrdering.fellowship_members(snapshot, show_self)
     local local_player_name = _local_player_name()
     local ordered = {}
@@ -35,23 +46,5 @@ function GroupOrdering.fellowship_members(snapshot, show_self)
 end
 
 function GroupOrdering.raid_members(snapshot)
-    local local_player_name = _local_player_name()
-    local ordered = {}
-    local local_player_entity = nil
-    local members = snapshot.members
-
-    for i = 1, #members do
-        local member = members[i]
-        if local_player_entity == nil and _is_local_player(member, local_player_name) == true then
-            local_player_entity = member
-        else
-            table.insert(ordered, member)
-        end
-    end
-
-    if local_player_entity ~= nil then
-        table.insert(ordered, 1, local_player_entity)
-    end
-
-    return ordered
+    return _copy_snapshot_members(snapshot)
 end

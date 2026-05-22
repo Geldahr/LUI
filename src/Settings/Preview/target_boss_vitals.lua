@@ -12,6 +12,7 @@ local _scaled_int = Common.scaled_int
 local _apply_preview_border = Common.apply_preview_border
 local _preview_number_abbrev_settings = Common.preview_number_abbrev_settings
 local _morale_color_preview = Common.morale_color_preview
+local _preview_power_max = Common.preview_power_max
 local _sync_preview_holder_height = Common.sync_preview_holder_height
 
 import "LUI.src.Utils.vitals_labels"
@@ -554,7 +555,7 @@ function ConfigWindow:update_target_boss_vitals_preview()
     }
 
     if power_hidden ~= true then
-        local power_max = 120000
+        local power_max = _preview_power_max(morale_max)
         local power_cur = math.floor(power_max * power_percent + 0.5)
         label_context.pc = lui_abbrev_number(power_cur)
         label_context.pt = lui_abbrev_number(power_max)
