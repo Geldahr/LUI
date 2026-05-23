@@ -135,7 +135,7 @@ LUI uses pixel-based scaling instead of LotRO UI scaling. That keeps borders and
 ## Known Issues
 
 - Target effect tracking can behave incorrectly when the target is the local player. This has not been seen since February 26, 2026.
-- If you use labels that include level, they may not refresh when the target or a party member levels up unless morale or power also changes.
+- If you use labels that include level, they may not refresh when the target or a group member levels up unless morale or power also changes.
 
 ## Recent fixes to verify
 

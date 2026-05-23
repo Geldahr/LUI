@@ -283,6 +283,26 @@ local function _preview_group_border_color(group_index, colors)
     return colors[RAID_GROUP_KEYS[group_index]]
 end
 
+local function _sync_preview_member_parents(state, split_by_group)
+    if split_by_group == true then
+        for i = 1, #state.members do
+            local member = state.members[i]
+            local group_window = state.group_windows[RaidLayout.member_group_index(i)]
+            if member.root:GetParent() ~= group_window.root then
+                member.root:SetParent(group_window.root)
+            end
+        end
+        return
+    end
+
+    for i = 1, #state.members do
+        local member = state.members[i]
+        if member.root:GetParent() ~= state.root then
+            member.root:SetParent(state.root)
+        end
+    end
+end
+
 local function _label_text_is_blank(text)
     return type(text) ~= "string" or string.len((text:gsub("%s+", ""))) == 0
 end
@@ -614,6 +634,7 @@ function Preview.update(window, spec)
 
         total_w, total_h = _preview_compute_grid_size(preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
     end
+    _sync_preview_member_parents(state, split_by_group)
 
     local holder = window.controls[spec.holder_key]
     local preview_border = 1
@@ -890,9 +911,6 @@ function Preview.update(window, spec)
                 for member_offset = 0, RAID_GROUP_SIZE - 1 do
                     local member_index = group_start + member_offset
                     local member = state.members[member_index]
-                    if member.root:GetParent() ~= group_window.root then
-                        member.root:SetParent(group_window.root)
-                    end
                     group_member_windows[#group_member_windows + 1] = member.root
                 end
 
@@ -936,13 +954,6 @@ function Preview.update(window, spec)
                         group_height + (2 * raid_group_border_width),
                         raid_group_border_width)
                     _set_preview_border_color(group_window, _preview_group_border_color(group_index, raid_group_border_colors))
-                end
-            end
-
-            for i = 1, preview_count do
-                local member = state.members[i]
-                if member.root:GetParent() ~= state.root then
-                    member.root:SetParent(state.root)
                 end
             end
 

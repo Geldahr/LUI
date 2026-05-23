@@ -50,7 +50,7 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
     if main_key == "expiring_target_effects" then
         return "expiring_effects", "target"
     end
-    if main_key == "party_layout" or main_key == "party_vitals" or main_key == "fellowship_vitals" then
+    if main_key == "fellowship_vitals" then
         return "vitals", "fellowship"
     end
     if main_key == "raid_vitals" then

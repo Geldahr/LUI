@@ -149,7 +149,6 @@ local function _ensure_preview_label_defaults(loaded)
     _ensure_vital_labels_defaults(loaded.target and loaded.target.vitals)
     _ensure_targets_target_labels_defaults(loaded.target and loaded.target.vitals)
     _ensure_vital_labels_defaults(loaded.target and loaded.target.boss_vitals)
-    _ensure_vital_labels_defaults(loaded.party)
     _ensure_vital_labels_defaults(loaded.fellowship)
     _ensure_vital_labels_defaults(loaded.raid)
 end
@@ -226,32 +225,34 @@ local function _seed_raid_group_hud_positions(hud, raid_settings, defaults, sour
     end
 end
 
-local function _seed_group_vitals_compatibility(loaded, defaults, source)
-    local default_party_source = defaults.party
+local function _strip_legacy_party_settings(loaded)
+    loaded.party = nil
+
+    local ui = loaded.ui
+    if type(ui) ~= "table" then
+        return
+    end
+
+    local hud = ui.hud
+    if type(hud) ~= "table" then
+        return
+    end
+
+    hud.party_vitals = nil
+end
+
+local function _seed_group_vitals_settings(loaded, defaults, source)
     local default_fellowship_source = defaults.fellowship
-    local source_party = _optional_table_child(source, "party")
     local source_fellowship = _optional_table_child(source, "fellowship")
     local source_raid = _optional_table_child(source, "raid")
 
-    local party_source = source_party
-    if party_source == nil then
-        party_source = loaded.party
-    end
-    loaded.party = _sanitize_with_defaults(party_source, default_party_source)
-
     local fellowship_source = source_fellowship
-    if fellowship_source == nil then
-        fellowship_source = source_party
-    end
     if fellowship_source == nil then
         fellowship_source = loaded.fellowship
     end
     loaded.fellowship = _sanitize_with_defaults(fellowship_source, default_fellowship_source)
 
     local raid_source = source_raid
-    if raid_source == nil then
-        raid_source = source_party
-    end
     if raid_source == nil then
         raid_source = loaded.raid
     end
@@ -260,19 +261,10 @@ local function _seed_group_vitals_compatibility(loaded, defaults, source)
     local hud = _ensure_table(_ensure_table(loaded, "ui"), "hud")
     local source_ui = _optional_table_child(source, "ui")
     local source_hud = _optional_table_child(source_ui, "hud")
-    local default_party_hud_source = defaults.ui.hud.party_vitals
     local default_fellowship_hud_source = defaults.ui.hud.fellowship_vitals
     local default_raid_hud_source = defaults.ui.hud.raid_vitals
-    local party_hud_source = _optional_table_child(source_hud, "party_vitals")
-    if party_hud_source == nil then
-        party_hud_source = hud.party_vitals
-    end
-    hud.party_vitals = _sanitize_with_defaults(party_hud_source, default_party_hud_source)
 
     local fellowship_hud_source = _optional_table_child(source_hud, "fellowship_vitals")
-    if fellowship_hud_source == nil then
-        fellowship_hud_source = party_hud_source
-    end
     if fellowship_hud_source == nil then
         fellowship_hud_source = hud.fellowship_vitals
     end
@@ -280,9 +272,6 @@ local function _seed_group_vitals_compatibility(loaded, defaults, source)
     local raid_hud_source = _optional_table_child(source_hud, "raid_vitals")
     if raid_hud_source == nil then
         raid_hud_source = hud.raid_vitals
-    end
-    if _hud_position_matches(raid_hud_source, hud.party_vitals) == true then
-        raid_hud_source = default_raid_hud_source
     end
 
     hud.fellowship_vitals = _sanitize_with_defaults(fellowship_hud_source, default_fellowship_hud_source)
@@ -316,10 +305,6 @@ local function _defaults_source()
     end
 
     local defaults = _G.DefaultLayouts.build("top", target_scale)
-
-    if type(defaults.party) ~= "table" then
-        error("Missing default party settings")
-    end
 
     if type(defaults.fellowship) ~= "table" then
         error("Missing default fellowship settings")
@@ -369,7 +354,8 @@ function _G.ensure_loaded_settings()
     local original = _G.loaded_settings
     local defaults = _defaults_source()
     _G.loaded_settings = _sanitize_with_defaults(_G.loaded_settings, defaults)
-    _seed_group_vitals_compatibility(_G.loaded_settings, defaults, original)
+    _seed_group_vitals_settings(_G.loaded_settings, defaults, original)
+    _strip_legacy_party_settings(_G.loaded_settings)
     _ensure_preview_label_defaults(_G.loaded_settings)
     _ensure_raid_layout_defaults(_G.loaded_settings, defaults)
 
