@@ -28,12 +28,16 @@ function _G.fix_colors()
         morale.color.low = to_color(morale.color.low)
         morale.color.critical = to_color(morale.color.critical)
         morale.color.neutral = to_color(morale.color.neutral)
+        morale.color.gradient_full = to_color(morale.color.gradient_full)
+        morale.color.gradient_mid = to_color(morale.color.gradient_mid)
+        morale.color.gradient_low = to_color(morale.color.gradient_low)
 
         morale.color.background = to_color(morale.color.background)
         morale.color.bubble = to_color(morale.color.bubble)
 
         power.color.power = to_color(power.color.power)
         power.color.wrath = to_color(power.color.wrath)
+        v.info.color.background = to_color(v.info.color.background)
 
         for i = 1, #labels do
             local label = labels[i]
@@ -51,7 +55,8 @@ function _G.fix_colors()
     fix_vital(s.self.vitals)
     fix_vital(s.target.vitals)
     fix_vital(s.target.boss_vitals)
-    fix_vital(s.party)
+    fix_vital(s.fellowship)
+    fix_vital(s.raid)
 
     if s.target ~= nil and s.target.vitals ~= nil and s.target.vitals.targets_target ~= nil then
         local tt = s.target.vitals.targets_target
@@ -73,6 +78,9 @@ function _G.fix_colors()
         c.medium = to_color(c.medium)
         c.low = to_color(c.low)
         c.critical = to_color(c.critical)
+        c.gradient_full = to_color(c.gradient_full)
+        c.gradient_mid = to_color(c.gradient_mid)
+        c.gradient_low = to_color(c.gradient_low)
     end
 
     if self_expiring_effects ~= nil then

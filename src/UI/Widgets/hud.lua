@@ -220,7 +220,14 @@ function LuiHUD:apply_hud_position()
         return
     end
 
-    self:SetPosition(_int(hud.left) or 0, _int(hud.top) or 0)
+    local left = _int(hud.left)
+    local top = _int(hud.top)
+    if left == nil or top == nil then
+        error("Invalid HUD position for " .. tostring(self._hud_key))
+    end
+
+    left, top = self:_clamp_to_screen(left, top)
+    self:SetPosition(left, top)
     self:sync_move_inputs_from_position()
 end
 

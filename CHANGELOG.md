@@ -9,8 +9,8 @@
 - Added locale-aware Bestiary data loading with localized drop table support.
 - Added shared structured search filters across Bestiary, Crafting, and Assets, including Bestiary `loc:` / `gen:` / `lvl:` filters, Crafting rank filters, and Assets `owner:` / `store:` filters.
 - Added the Drops HUD with chat-driven loot rows, move-mode support, preview, and layout settings.
-- Added configurable multi-label text layouts for self, target, boss, target's target, and party vitals.
-- Added `Vitals > General` enable toggles for Self, Target, Boss, Target's Target, and Party vitals.
+- Added configurable multi-label text layouts for self, target, boss, target's target, fellowship, and raid vitals.
+- Added `Vitals > General` enable toggles for Self, Target, Boss, Target's Target, Fellowship, and Raid vitals.
 - Added left/right alignment settings for self, target, and boss vitals effects.
 
 ### Changed
@@ -19,7 +19,7 @@
 - Improved Bestiary search opening for item and multi-resource queries from Crafting.
 - Reorganized the configuration window around feature-first tabs with unified layouts for Vitals, Expiring Effects, Cooldowns, Drops, Inventory, Travel, and the remaining feature pages.
 - Removed silent internal fallbacks across plugin wiring so missing internal modules, methods, and state now fail loudly instead of being masked.
-- Self, Target, and Party vitals now hand off cleanly to the built-in LotRO HUD when their LUI replacements are disabled.
+- Self, Target, Fellowship, and Raid vitals now hand off cleanly to the built-in LotRO HUD when their LUI replacements are disabled.
 - Boss vitals now follow the Target vitals enable state, while Target's Target remains independently toggleable.
 - Added a new optional info box in the vitals, placed below power/wrath.
 - Effects can be independently placed above or below the vitals (below the info box). There are four selectable areas around the vitals.
@@ -32,7 +32,7 @@
 - Fixed crafting dependency expansion to ignore obsolete item conversion recipes, preventing obsolete ingredients from polluting material chains.
 - Fixed cooldown rows so long skill names no longer hide timers by giving the timer its own reserved column and wrapping long titles.
 - Fixed self and target expiring effect rows to use the same reserved timer column layout, width clamping, and title wrapping behavior.
-- Fixed party vitals move mode to keep the move overlay inside the real widget footprint while clearing live member content and stale bindings.
+- Fixed group vitals move mode to keep the move overlay inside the real widget footprint while clearing live member content and stale bindings.
 - Fixed timed row and drop row width calculations to reserve space from real timer and quantity text widths instead of fixed guesses.
 
 ### Removed

@@ -14,11 +14,25 @@ function _G.rebuild_settings()
     local refresh_rate = raw.global.refresh_rate
 
     local function scaled_int(value)
-        return math.floor((value * scaling) + 0.5)
+        local n = value
+        if type(n) ~= "number" then
+            n = tonumber(n)
+        end
+        if n == nil then
+            error("Invalid numeric setting in rebuild_settings", 2)
+        end
+        return math.floor((n * scaling) + 0.5)
     end
 
     local function scaled_number(value)
-        return value * scaling
+        local n = value
+        if type(n) ~= "number" then
+            n = tonumber(n)
+        end
+        if n == nil then
+            error("Invalid numeric setting in rebuild_settings", 2)
+        end
+        return n * scaling
     end
 
     local function scaled_border(value)
@@ -92,7 +106,7 @@ function _G.rebuild_settings()
             },
             expiring_effects = { font = {}, color = {} },
         },
-        party = {
+        fellowship = {
             frame = {},
             morale = { color = {} },
             power = { color = {} },
@@ -101,6 +115,24 @@ function _G.rebuild_settings()
             layout = {},
             class_icon = {},
             leader_icon = {},
+            select = {},
+            effects = {
+                buffs = { timer_font = {} },
+                debuffs = { timer_font = {} },
+            },
+        },
+        raid = {
+            frame = {},
+            morale = { color = {} },
+            power = { color = {} },
+            labels = {},
+            info = { color = {} },
+            layout = {},
+            group_border_width = 0,
+            group_colors = {},
+            class_icon = {},
+            leader_icon = {},
+            select = {},
             effects = {
                 buffs = { timer_font = {} },
                 debuffs = { timer_font = {} },
@@ -108,8 +140,8 @@ function _G.rebuild_settings()
         },
         inventory = {},
         drops = { hud = {}, item = {} },
-        crafting = { display_mode = "pages", enabled = true },
-        travel = { display_mode = "list", enabled = true },
+        crafting = {},
+        travel = {},
         assets = { tile = {}, layouts = { icons = {}, details = {} } },
         bestiary = {},
     }
@@ -124,10 +156,67 @@ function _G.rebuild_settings()
     _G.settings.ui.hud = raw.ui.hud
 
     local function build_color(value)
+        if value == nil then
+            error("Missing color setting in rebuild_settings", 2)
+        end
         if value.A ~= nil and value.R ~= nil and value.G ~= nil and value.B ~= nil then
             return Turbine.UI.Color(value.A, value.R, value.G, value.B)
         end
+        if type(value) == "table" then
+            error("Invalid color setting in rebuild_settings", 2)
+        end
         return value
+    end
+
+    local function build_morale_colors(src)
+        return {
+            gradient = src.gradient == true,
+            gradient_full = build_color(src.gradient_full),
+            gradient_mid = build_color(src.gradient_mid),
+            gradient_low = build_color(src.gradient_low),
+            high = build_color(src.high),
+            medium = build_color(src.medium),
+            low = build_color(src.low),
+            critical = build_color(src.critical),
+            neutral = build_color(src.neutral),
+            background = build_color(src.background),
+            bubble = build_color(src.bubble),
+        }
+    end
+
+    local function build_power_colors(src)
+        return {
+            power = build_color(src.power),
+            wrath = build_color(src.wrath),
+        }
+    end
+
+    local function build_target_target_colors(src)
+        return {
+            gradient = src.gradient == true,
+            gradient_full = build_color(src.gradient_full),
+            gradient_mid = build_color(src.gradient_mid),
+            gradient_low = build_color(src.gradient_low),
+            high = build_color(src.high),
+            medium = build_color(src.medium),
+            low = build_color(src.low),
+            critical = build_color(src.critical),
+            neutral = build_color(src.neutral),
+            background = build_color(src.background),
+            border = build_color(src.border),
+            bubble = build_color(src.bubble),
+        }
+    end
+
+    local function build_expiring_effect_colors(src)
+        return {
+            background = build_color(src.background),
+            border = build_color(src.border),
+            bar = build_color(src.bar),
+            bar_buff = build_color(src.bar_buff),
+            bar_debuff_curable = build_color(src.bar_debuff_curable),
+            bar_debuff_noncurable = build_color(src.bar_debuff_noncurable),
+        }
     end
 
     local function build_vital_label(src)
@@ -154,15 +243,15 @@ function _G.rebuild_settings()
         dst.enabled = src.enabled == true
         dst.frame.width = scaled_int(src.frame.width)
         dst.frame.border_width = scaled_border(src.frame.border_width)
-        dst.frame.border_color = src.frame.border_color
+        dst.frame.border_color = build_color(src.frame.border_color)
         dst.frame.incombat_opacity = src.frame.incombat_opacity
         dst.frame.outcombat_opacity = src.frame.outcombat_opacity
 
         dst.morale.height = scaled_int(src.morale.height)
         dst.power.height = scaled_int(src.power.height)
 
-        dst.morale.color = src.morale.color
-        dst.power.color = src.power.color
+        dst.morale.color = build_morale_colors(src.morale.color)
+        dst.power.color = build_power_colors(src.power.color)
 
         dst.morale.bubble_format = src.morale.bubble_format
         dst.morale.bubble_tokens = lui_tokenize_format(dst.morale.bubble_format)
@@ -171,7 +260,7 @@ function _G.rebuild_settings()
         dst.info.enabled = src.info.enabled == true
         dst.info.height = scaled_int(src.info.height)
         dst.info.opacity = src.info.opacity
-        dst.info.color.background = src.info.color.background
+        dst.info.color.background = build_color(src.info.color.background)
         dst.labels = {
             build_vital_label(src.labels[1]),
             build_vital_label(src.labels[2]),
@@ -195,26 +284,61 @@ function _G.rebuild_settings()
             dst.effects.buffs.timer_font.lotro = FONT_TO_LOTRO(dst.effects.buffs.timer_font.name,
                 dst.effects.buffs.timer_font.size)
             dst.effects.buffs.timer_font.style = src.effects.buffs.timer_font.style
-            dst.effects.buffs.timer_font.color = src.effects.buffs.timer_font.color
-            dst.effects.buffs.timer_font.outline_color = src.effects.buffs.timer_font.outline_color
+            dst.effects.buffs.timer_font.color = build_color(src.effects.buffs.timer_font.color)
+            dst.effects.buffs.timer_font.outline_color = build_color(src.effects.buffs.timer_font.outline_color)
 
             dst.effects.debuffs.timer_font.name = src.effects.debuffs.timer_font.name
             dst.effects.debuffs.timer_font.size = scaled_number(src.effects.debuffs.timer_font.size)
             dst.effects.debuffs.timer_font.lotro = FONT_TO_LOTRO(dst.effects.debuffs.timer_font.name,
                 dst.effects.debuffs.timer_font.size)
             dst.effects.debuffs.timer_font.style = src.effects.debuffs.timer_font.style
-            dst.effects.debuffs.timer_font.color = src.effects.debuffs.timer_font.color
-            dst.effects.debuffs.timer_font.outline_color = src.effects.debuffs.timer_font.outline_color
+            dst.effects.debuffs.timer_font.color = build_color(src.effects.debuffs.timer_font.color)
+            dst.effects.debuffs.timer_font.outline_color = build_color(src.effects.debuffs.timer_font.outline_color)
 
             dst.effects.debuffs.track_curable = src.effects.debuffs.track_curable
             dst.effects.debuffs.track_noncurable = src.effects.debuffs.track_noncurable
         end
     end
 
+    local function build_group_vital(dst, src)
+        build_vital(dst, src)
+
+        local raw_class_icon = src.class_icon
+        dst.class_icon.enabled = raw_class_icon.enabled
+        dst.class_icon.size = scaled_int(raw_class_icon.size)
+        dst.class_icon.x = scaled_int(raw_class_icon.x)
+        dst.class_icon.y = scaled_int(raw_class_icon.y)
+
+        local raw_leader_icon = src.leader_icon
+        dst.leader_icon.enabled = raw_leader_icon.enabled
+        dst.leader_icon.size = scaled_int(raw_leader_icon.size)
+        dst.leader_icon.x = scaled_int(raw_leader_icon.x)
+        dst.leader_icon.y = scaled_int(raw_leader_icon.y)
+
+        local raw_select = src.select
+        dst.select.enabled = raw_select.enabled == true
+        dst.select.border_width = scaled_border(raw_select.border_width)
+        dst.select.border_color = build_color(raw_select.border_color)
+
+        local raw_layout = src.layout
+        dst.layout.rows = raw_layout.rows
+        dst.layout.mode = raw_layout.mode
+        dst.layout.spacing_x = scaled_int(raw_layout.spacing_x)
+        dst.layout.spacing_y = scaled_int(raw_layout.spacing_y)
+    end
+
     build_vital(_G.settings.self.vitals, raw.self.vitals)
     build_vital(_G.settings.target.vitals, raw.target.vitals)
     build_vital(_G.settings.target.boss_vitals, raw.target.boss_vitals)
-    build_vital(_G.settings.party, raw.party)
+    build_group_vital(_G.settings.fellowship, raw.fellowship)
+    build_group_vital(_G.settings.raid, raw.raid)
+    _G.settings.fellowship.show_self_in_fellowship = raw.fellowship.show_self_in_fellowship == true
+    _G.settings.raid.group_border_width = scaled_border(raw.raid.group_border_width)
+    _G.settings.raid.split_by_group = raw.raid.split_by_group == true
+    _G.settings.raid.group_colors.a = build_color(raw.raid.group_colors.a)
+    _G.settings.raid.group_colors.b = build_color(raw.raid.group_colors.b)
+    _G.settings.raid.group_colors.c = build_color(raw.raid.group_colors.c)
+    _G.settings.raid.group_colors.d = build_color(raw.raid.group_colors.d)
 
     local raw_inv = raw.inventory
     if raw_inv ~= nil then
@@ -237,28 +361,12 @@ function _G.rebuild_settings()
     end
 
     local raw_crafting = raw.crafting
-    if raw_crafting ~= nil then
-        _G.settings.crafting.display_mode = raw_crafting.display_mode
-        _G.settings.crafting.enabled = raw_crafting.enabled
-    end
+    _G.settings.crafting.display_mode = raw_crafting.display_mode
+    _G.settings.crafting.enabled = raw_crafting.enabled
 
     local raw_travel = raw.travel
-    if raw_travel ~= nil then
-        _G.settings.travel.display_mode = raw_travel.display_mode
-        _G.settings.travel.enabled = raw_travel.enabled
-    end
-
-    local raw_party_ci = raw.party.class_icon
-    _G.settings.party.class_icon.enabled = raw_party_ci.enabled
-    _G.settings.party.class_icon.size = scaled_int(raw_party_ci.size)
-    _G.settings.party.class_icon.x = scaled_int(raw_party_ci.x)
-    _G.settings.party.class_icon.y = scaled_int(raw_party_ci.y)
-
-    local raw_party_li = raw.party.leader_icon
-    _G.settings.party.leader_icon.enabled = raw_party_li.enabled
-    _G.settings.party.leader_icon.size = scaled_int(raw_party_li.size)
-    _G.settings.party.leader_icon.x = scaled_int(raw_party_li.x)
-    _G.settings.party.leader_icon.y = scaled_int(raw_party_li.y)
+    _G.settings.travel.display_mode = raw_travel.display_mode
+    _G.settings.travel.enabled = raw_travel.enabled
 
     local raw_tt = raw.target.vitals.targets_target
     local dst_tt = _G.settings.target.vitals.targets_target
@@ -266,7 +374,7 @@ function _G.rebuild_settings()
     dst_tt.width = scaled_int(raw_tt.width)
     dst_tt.height = scaled_int(raw_tt.height)
     dst_tt.border_width = scaled_border(raw_tt.border_width)
-    dst_tt.color = raw_tt.color
+    dst_tt.color = build_target_target_colors(raw_tt.color)
     dst_tt.bubble_format = raw_tt.bubble_format
     dst_tt.bubble_tokens = lui_tokenize_format(dst_tt.bubble_format)
     dst_tt.background_matches_missing = raw_tt.background_matches_missing
@@ -283,11 +391,6 @@ function _G.rebuild_settings()
     dst_bv.power.hide = raw_bv.power.hide
     dst_bv.power.side = raw_bv.power.side
 
-    local raw_party_layout = raw.party.layout
-    _G.settings.party.layout.rows = raw_party_layout.rows
-    _G.settings.party.layout.spacing_x = scaled_int(raw_party_layout.spacing_x)
-    _G.settings.party.layout.spacing_y = scaled_int(raw_party_layout.spacing_y)
-
     local raw_self_ee = raw.self.expiring_effects
     local self_ee = _G.settings.self.expiring_effects
     self_ee.enabled = raw_self_ee.enabled
@@ -296,6 +399,7 @@ function _G.rebuild_settings()
     self_ee.show_noncurable_debuffs = raw_self_ee.show_noncurable_debuffs
     self_ee.icon_side = raw_self_ee.icon_side
     self_ee.bar_expire_towards = raw_self_ee.bar_expire_towards
+    self_ee.bar_mode = raw_self_ee.bar_mode
     self_ee.name_max_chars = raw_self_ee.name_max_chars
     self_ee.threshold = raw_self_ee.threshold
     self_ee.columns = raw_self_ee.columns
@@ -304,14 +408,14 @@ function _G.rebuild_settings()
     self_ee.bar_width = scaled_int(raw_self_ee.bar_width)
     self_ee.bar_height = scaled_int(raw_self_ee.bar_height)
     self_ee.border_width = scaled_border(raw_self_ee.border_width)
-    self_ee.color = raw_self_ee.color
+    self_ee.color = build_expiring_effect_colors(raw_self_ee.color)
 
     self_ee.font.name = raw_self_ee.font.name
     self_ee.font.size = scaled_number(raw_self_ee.font.size)
     self_ee.font.lotro = FONT_TO_LOTRO(self_ee.font.name, self_ee.font.size)
     self_ee.font.style = raw_self_ee.font.style
-    self_ee.font.color = raw_self_ee.font.color
-    self_ee.font.outline_color = raw_self_ee.font.outline_color
+    self_ee.font.color = build_color(raw_self_ee.font.color)
+    self_ee.font.outline_color = build_color(raw_self_ee.font.outline_color)
 
     local raw_expiring_target_effects = raw.target.expiring_effects
     local target_ee = _G.settings.target.expiring_effects
@@ -321,6 +425,7 @@ function _G.rebuild_settings()
     target_ee.show_noncurable_debuffs = raw_expiring_target_effects.show_noncurable_debuffs
     target_ee.icon_side = raw_expiring_target_effects.icon_side
     target_ee.bar_expire_towards = raw_expiring_target_effects.bar_expire_towards
+    target_ee.bar_mode = raw_expiring_target_effects.bar_mode
     target_ee.name_max_chars = raw_expiring_target_effects.name_max_chars
     target_ee.threshold = raw_expiring_target_effects.threshold
     target_ee.columns = raw_expiring_target_effects.columns
@@ -329,14 +434,14 @@ function _G.rebuild_settings()
     target_ee.bar_width = scaled_int(raw_expiring_target_effects.bar_width)
     target_ee.bar_height = scaled_int(raw_expiring_target_effects.bar_height)
     target_ee.border_width = scaled_border(raw_expiring_target_effects.border_width)
-    target_ee.color = raw_expiring_target_effects.color
+    target_ee.color = build_expiring_effect_colors(raw_expiring_target_effects.color)
 
     target_ee.font.name = raw_expiring_target_effects.font.name
     target_ee.font.size = scaled_number(raw_expiring_target_effects.font.size)
     target_ee.font.lotro = FONT_TO_LOTRO(target_ee.font.name, target_ee.font.size)
     target_ee.font.style = raw_expiring_target_effects.font.style
-    target_ee.font.color = raw_expiring_target_effects.font.color
-    target_ee.font.outline_color = raw_expiring_target_effects.font.outline_color
+    target_ee.font.color = build_color(raw_expiring_target_effects.font.color)
+    target_ee.font.outline_color = build_color(raw_expiring_target_effects.font.outline_color)
 
     local raw_abbrev = raw.global.number_abbrev
     _G.settings.global.number_abbrev.enabled = raw_abbrev.enabled
@@ -361,7 +466,7 @@ function _G.rebuild_settings()
     sb.font.outline_color = raw_sb.font.outline_color
 
     sb.layout = raw_sb.layout
-    sb.item_registry = raw_sb.item_registry or {}
+    sb.item_registry = raw_sb.item_registry
     sb.zones.left = S.parse_status_bar_layout(raw_sb.layout.left, sb.item_registry)
     sb.zones.center = S.parse_status_bar_layout(raw_sb.layout.center, sb.item_registry)
     sb.zones.right = S.parse_status_bar_layout(raw_sb.layout.right, sb.item_registry)
@@ -424,7 +529,7 @@ function _G.rebuild_settings()
     sb.widgets.craft_plan = {
         enabled = in_zones("craft_plan"),
         width = scaled_int(raw_sb.widgets.craft_plan.width),
-        max_visible = math.max(1, tonumber(raw_sb.widgets.craft_plan.max_visible) or 4),
+        max_visible = math.max(1, tonumber(raw_sb.widgets.craft_plan.max_visible)),
     }
 
     sb.widgets.button = {

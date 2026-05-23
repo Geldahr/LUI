@@ -36,7 +36,27 @@ _G.DEFAULT_LAYOUT_BOTTOM =
     },
     ["ui"] = {
         ["hud"] = {
-            ["party_vitals"] = {
+            ["fellowship_vitals"] = {
+                ["top"] = 146.000000,
+            },
+            ["raid_vitals"] = {
+                ["left"] = 260.000000,
+                ["top"] = 146.000000,
+            },
+            ["raid_group_a_vitals"] = {
+                ["left"] = 260.000000,
+                ["top"] = 146.000000,
+            },
+            ["raid_group_b_vitals"] = {
+                ["left"] = 370.000000,
+                ["top"] = 146.000000,
+            },
+            ["raid_group_c_vitals"] = {
+                ["left"] = 480.000000,
+                ["top"] = 146.000000,
+            },
+            ["raid_group_d_vitals"] = {
+                ["left"] = 590.000000,
                 ["top"] = 146.000000,
             },
             ["self_vitals"] = {

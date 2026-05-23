@@ -254,7 +254,7 @@ function TargetEffectManager:set_source_target(source_target)
     self:attach_callbacks()
 end
 
--- Return a shared party manager to its background source after target vitals releases it.
+-- Return a shared group manager to its background source after target vitals releases it.
 function TargetEffectManager:restore_background_source_target()
     if self.background_source_target ~= nil then
         self:set_source_target(self.background_source_target)

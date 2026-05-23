@@ -119,7 +119,7 @@ local function _new_about_section(window)
 
     local about_text = table.concat({
         TR["LUI replaces and extends key LotRO UI elements with a cleaner and more configurable layout."],
-        TR["It focuses on combat-related UI such as self vitals, target vitals, boss vitals, party vitals, expiring effects, cooldowns elements and also inventory, and status bar."],
+        TR["It focuses on combat-related UI such as self vitals, target vitals, boss vitals, fellowship vitals, raid vitals, expiring effects, cooldowns elements and also inventory, and status bar."],
         "",
         TR["The global LUI UI scale applies uniformly across the whole LUI interface."],
         TR["By default it is separate from the built-in LotRO UI scaling; native scaling can be enabled in Global settings."],

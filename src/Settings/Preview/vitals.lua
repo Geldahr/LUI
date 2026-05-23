@@ -13,6 +13,7 @@ local _preview_scaled_int = Common.preview_scaled_int
 local _preview_scaled_border = Common.preview_scaled_border
 local _preview_scaled_number = Common.preview_scaled_number
 local _preview_resource_background = Common.preview_resource_background
+local _preview_power_max = Common.preview_power_max
 local _sync_preview_holder_height = Common.sync_preview_holder_height
 import "LUI.src.Utils.vitals_labels"
 
@@ -642,7 +643,7 @@ function StandardVitalsPreview:update()
     self.power_bar:SetSize(math.floor(inner_w * power_percent + 0.5), inner_power_h)
     self.power_bar:SetBackColor(power_color)
 
-    local power_max = 30000
+    local power_max = _preview_power_max(morale_max)
     local power_cur = math.floor(power_max * power_percent + 0.5)
     local power_pct_text = tostring(math.floor(power_percent * 100 + 0.5)) .. "%"
 

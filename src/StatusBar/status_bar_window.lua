@@ -75,12 +75,12 @@ local function _sync_status_bar_after_raw_edit(edit_window_state_override)
             local function sync_layout_box(key, value)
                 local control = controls[key]
                 if control ~= nil and control.tb ~= nil and control.tb.SetText ~= nil then
-                    control.tb:SetText(tostring(value or ""))
+                    control.tb:SetText(value)
                 end
             end
-            sync_layout_box("sb_layout_left", raw_sb.layout ~= nil and raw_sb.layout.left or "")
-            sync_layout_box("sb_layout_center", raw_sb.layout ~= nil and raw_sb.layout.center or "")
-            sync_layout_box("sb_layout_right", raw_sb.layout ~= nil and raw_sb.layout.right or "")
+            sync_layout_box("sb_layout_left", raw_sb.layout.left)
+            sync_layout_box("sb_layout_center", raw_sb.layout.center)
+            sync_layout_box("sb_layout_right", raw_sb.layout.right)
         end
     end
     if _G.save_settings ~= nil then
@@ -174,27 +174,14 @@ end
 
 local function _get_raw_status_bar_settings()
     local raw = _G.loaded_settings
-    local raw_sb = raw ~= nil and raw.status_bar or nil
-    if raw_sb == nil then
-        return nil
-    end
-
-    raw_sb.layout = raw_sb.layout or {}
-    raw_sb.layout.left = raw_sb.layout.left or ""
-    raw_sb.layout.center = raw_sb.layout.center or ""
-    raw_sb.layout.right = raw_sb.layout.right or ""
-    raw_sb.item_registry = raw_sb.item_registry or {}
-    return raw_sb
+    return raw.status_bar
 end
 
 local function _get_combined_layout_text(raw_sb)
-    if raw_sb == nil or raw_sb.layout == nil then
-        return ""
-    end
     return table.concat({
-        tostring(raw_sb.layout.left or ""),
-        tostring(raw_sb.layout.center or ""),
-        tostring(raw_sb.layout.right or ""),
+        raw_sb.layout.left,
+        raw_sb.layout.center,
+        raw_sb.layout.right,
     }, " ")
 end
 
@@ -1286,14 +1273,14 @@ end
 
 function StatusBarWindow:_apply_widget_move(session, zone_key, insert_index)
     local raw_sb = _get_raw_status_bar_settings()
-    if raw_sb == nil or session == nil or session.source_zone_key == nil or session.source_visible_index == nil then
+    if session == nil or session.source_zone_key == nil or session.source_visible_index == nil then
         self:_restore_widget_after_failed_edit_drag(session)
         return
     end
 
-    local before_left = tostring(raw_sb.layout.left or "")
-    local before_center = tostring(raw_sb.layout.center or "")
-    local before_right = tostring(raw_sb.layout.right or "")
+    local before_left = raw_sb.layout.left
+    local before_center = raw_sb.layout.center
+    local before_right = raw_sb.layout.right
     local removed_token = self:_remove_token_from_zone(raw_sb, session.source_zone_key, session.source_visible_index)
     if removed_token == nil then
         self:_restore_widget_after_failed_edit_drag(session)
@@ -1303,8 +1290,8 @@ function StatusBarWindow:_apply_widget_move(session, zone_key, insert_index)
     local target_index = insert_index
     raw_sb.layout[zone_key] = _insert_layout_token_at_visible_index(raw_sb.layout[zone_key], removed_token, target_index)
 
-    if before_left == tostring(raw_sb.layout.left or "") and before_center == tostring(raw_sb.layout.center or "") and
-        before_right == tostring(raw_sb.layout.right or "") then
+    if before_left == raw_sb.layout.left and before_center == raw_sb.layout.center and
+        before_right == raw_sb.layout.right then
         self:_restore_widget_after_failed_edit_drag(session)
         return
     end

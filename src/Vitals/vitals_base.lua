@@ -79,7 +79,8 @@ local HUD_KEY_BY_VITAL = {
     self = "self_vitals",
     target = "target_vitals",
     boss = "boss_vitals",
-    party = "party_vitals",
+    fellowship = "fellowship_vitals",
+    raid = "raid_vitals",
 }
 
 ---@class VitalsBase : LuiHUD
@@ -107,6 +108,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.show_move_ui = opts.move_ui ~= false
     self.managed_position = opts.managed_position == true
     self.hud_key = hud_key
+    self.frame_border_color_override = nil
 
     self.events = {
         mmc = nil,
@@ -162,6 +164,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     local effects_above = self.show_effects == true and frame.effects_position ~= LUI_ENUMS.vitals_effects_position
         .BELOW
     local morale_top = effects_above and effects_height or 0
+    local frame_border_color = self:get_frame_border_color()
 
     self.morale_frame = Turbine.UI.Control()
     self.morale_frame:SetParent(self)
@@ -180,7 +183,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.morale_border:SetParent(self.morale_frame)
     self.morale_border:SetPosition(0, 0)
     self.morale_border:SetSize(frame_width, v.morale.height)
-    self.morale_border:SetBackColor(frame.border_color)
+    self.morale_border:SetBackColor(frame_border_color)
     self.morale_border:SetMouseVisible(false)
     self.morale_border:SetZOrder(1)
 
@@ -225,7 +228,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.power_border:SetParent(self.power_frame)
     self.power_border:SetPosition(0, 0)
     self.power_border:SetSize(frame_width, v.power.height)
-    self.power_border:SetBackColor(frame.border_color)
+    self.power_border:SetBackColor(frame_border_color)
     self.power_border:SetMouseVisible(false)
     self.power_border:SetZOrder(1)
 
@@ -257,7 +260,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.info_border:SetParent(self.info_frame)
     self.info_border:SetPosition(0, 0)
     self.info_border:SetSize(frame_width, info_height)
-    self.info_border:SetBackColor(frame.border_color)
+    self.info_border:SetBackColor(frame_border_color)
     self.info_border:SetMouseVisible(false)
     self.info_border:SetZOrder(1)
 
@@ -1026,7 +1029,7 @@ function VitalsBase:resize()
     self.morale_frame:SetTop(0)
 
     self.morale_border:SetSize(frame_width, v.morale.height)
-    self.morale_border:SetBackColor(frame.border_color)
+    self:_apply_frame_border_color()
 
     self.morale_background:SetPosition(bw, bw)
     self.morale_background:SetSize(inner_w, morale_inner_h)
@@ -1044,8 +1047,6 @@ function VitalsBase:resize()
     self.power_frame:SetSize(frame_width, v.power.height)
 
     self.power_border:SetSize(frame_width, v.power.height)
-    self.power_border:SetBackColor(frame.border_color)
-
     self.power_background:SetPosition(bw, bw)
     self.power_background:SetSize(inner_w, power_inner_h)
     self.power_background:SetBackColor(self:power_background_color(v.power.color.power))
@@ -1055,7 +1056,6 @@ function VitalsBase:resize()
     self.info_frame:SetSize(frame_width, info_height)
     self.info_frame:SetVisible(info_height > 0)
     self.info_border:SetSize(frame_width, info_height)
-    self.info_border:SetBackColor(frame.border_color)
     self.info_background:SetPosition(bw, bw)
     self.info_background:SetSize(inner_w, info_inner_h)
     self.info_background:SetBackColor(lui_apply_opacity_to_color(v.info.color.background, v.info.opacity))
@@ -1096,6 +1096,26 @@ function VitalsBase:resize()
     self:_resize_extra_controls()
 
     self:update()
+end
+
+function VitalsBase:get_frame_border_color()
+    if self.frame_border_color_override ~= nil then
+        return self.frame_border_color_override
+    end
+
+    return self:get_vitals_settings().frame.border_color
+end
+
+function VitalsBase:_apply_frame_border_color()
+    local color = self:get_frame_border_color()
+    self.morale_border:SetBackColor(color)
+    self.power_border:SetBackColor(color)
+    self.info_border:SetBackColor(color)
+end
+
+function VitalsBase:set_frame_border_color_override(color)
+    self.frame_border_color_override = color
+    self:_apply_frame_border_color()
 end
 
 ---------------------------------------------------------------------

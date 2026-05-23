@@ -623,7 +623,7 @@ function CooldownsWindow:_discover_skills(force)
     local bl_prefixes = self._bl_prefixes
     local settings = self:get_settings()
     local threshold = settings.threshold
-    local min_base_cooldown = settings.min_base_cooldown or 0
+    local min_base_cooldown = settings.min_base_cooldown
 
     local lp = Turbine.Gameplay.LocalPlayer.GetInstance()
     if lp == nil or lp.GetTrainedSkills == nil then

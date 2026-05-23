@@ -691,7 +691,13 @@ function _G.load_settings()
         _G.loaded_settings = {}
     end
 
-    _G.ensure_loaded_settings()
+    local defaults_filled = _G.ensure_loaded_settings()
+    if defaults_filled == true and type(profile) == "table" and type(profile.settings) == "table" then
+        profile.settings = _G.loaded_settings
+        _stamp_account_settings_version(_G.account_settings)
+        _stamp_character_settings_version(_G.character_settings)
+        _save_settings_files_raw()
+    end
     _G.fix_colors()
     _G.rebuild_settings()
 end

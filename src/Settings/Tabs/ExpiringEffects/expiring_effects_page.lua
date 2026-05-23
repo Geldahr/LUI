@@ -95,6 +95,8 @@ end
 
 local function _new_actor_page(window, preview_key, preview_height, refresh_preview_fn, prefix, settings_getter, bar_specs)
     local page = ConfigSectionPage(window, preview_key, preview_height, refresh_preview_fn)
+    local bar_mode_labels = { TR["Load"], TR["Unload"] }
+    local bar_mode_values = { LUI_ENUMS.bar_mode.LOAD, LUI_ENUMS.bar_mode.UNLOAD }
 
     local general = ConfigContent(window, 4, page.refresh_preview)
     general:add_checkbox(prefix .. "_enabled", TR["Enabled"],
@@ -208,6 +210,13 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         end,
         function()
             return settings_getter().icon_side
+        end)
+    layout:add_dropdown(prefix .. "_bar_mode", TR["Bar mode"], bar_mode_labels, bar_mode_values,
+        function(value)
+            settings_getter().bar_mode = value
+        end,
+        function()
+            return settings_getter().bar_mode
         end)
     layout:add_dropdown(prefix .. "_bar_expire_towards", TR["Bar expires towards"], layout.side_labels,
         layout.side_values,

@@ -14,13 +14,15 @@ VitalsBase = Vitals.VitalsBase
 SelfVitals = Vitals.SelfVitals
 TargetVitals = Vitals.TargetVitals
 BossVitals = Vitals.BossVitals
-PartyVitals = Vitals.PartyVitals
+FellowshipVitals = Vitals.FellowshipVitals
+RaidVitals = Vitals.RaidVitals
 
 UI.VitalsBase = VitalsBase
 UI.SelfVitals = SelfVitals
 UI.TargetVitals = TargetVitals
 UI.BossVitals = BossVitals
-UI.PartyVitals = PartyVitals
+UI.FellowshipVitals = FellowshipVitals
+UI.RaidVitals = RaidVitals
 
 InventoryWindow = Inventory.InventoryWindow
 UI.InventoryWindow = InventoryWindow

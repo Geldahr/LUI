@@ -1160,9 +1160,15 @@ function AssetsWindow:_apply_layout_for_mode(mode)
     local min_w, min_h = self:_get_min_window_size(mode, tile_size)
     if width < min_w then width = min_w end
     if height < min_h then height = min_h end
+    width, height = self:_fit_size_to_screen(width, height)
+    local left, top = self:_clamp_position_to_screen(layout.left, layout.top, width, height)
+    layout.left = left
+    layout.top = top
+    layout.width = width
+    layout.height = height
 
     self._suppress_size_changed = true
-    self:SetPosition(layout.left, layout.top)
+    self:SetPosition(left, top)
     self:SetSize(width, height)
     self._suppress_size_changed = false
 end

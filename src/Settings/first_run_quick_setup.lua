@@ -168,10 +168,50 @@ local function _get_preview_window_specs()
         },
         {
             get_window = function()
-                return PARTY_VITALS
+                return FELLOWSHIP_VITALS
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("party_vitals")
+                return _G.get_ui_hud_state("fellowship_vitals")
+            end,
+        },
+        {
+            get_window = function()
+                return RAID_VITALS
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_vitals")
+            end,
+        },
+        {
+            get_window = function()
+                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[1] or nil
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_group_a_vitals")
+            end,
+        },
+        {
+            get_window = function()
+                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[2] or nil
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_group_b_vitals")
+            end,
+        },
+        {
+            get_window = function()
+                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[3] or nil
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_group_c_vitals")
+            end,
+        },
+        {
+            get_window = function()
+                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[4] or nil
+            end,
+            get_raw_window = function()
+                return _G.get_ui_hud_state("raid_group_d_vitals")
             end,
         },
         {
@@ -231,8 +271,11 @@ local function _apply_runtime_settings()
     if BOSS_VITAL ~= nil then
         BOSS_VITAL:resize()
     end
-    if PARTY_VITALS ~= nil then
-        PARTY_VITALS:apply_settings()
+    if FELLOWSHIP_VITALS ~= nil then
+        FELLOWSHIP_VITALS:apply_settings()
+    end
+    if RAID_VITALS ~= nil then
+        RAID_VITALS:apply_settings()
     end
     if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
         EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()
@@ -257,8 +300,11 @@ local function _apply_runtime_settings()
         if BOSS_VITAL ~= nil and BOSS_VITAL.set_move_mode ~= nil then
             BOSS_VITAL:set_move_mode(true)
         end
-        if PARTY_VITALS ~= nil and PARTY_VITALS.set_move_mode ~= nil then
-            PARTY_VITALS:set_move_mode(true)
+        if FELLOWSHIP_VITALS ~= nil and FELLOWSHIP_VITALS.set_move_mode ~= nil then
+            FELLOWSHIP_VITALS:set_move_mode(true)
+        end
+        if RAID_VITALS ~= nil and RAID_VITALS.set_move_mode ~= nil then
+            RAID_VITALS:set_move_mode(true)
         end
         if EXPIRING_SELF_EFFECTS_WINDOW ~= nil and EXPIRING_SELF_EFFECTS_WINDOW.set_move_mode ~= nil then
             EXPIRING_SELF_EFFECTS_WINDOW:set_move_mode(true)
@@ -1011,7 +1057,14 @@ function FirstRunQuickSetup:commit_preview_settings()
     _persist_window_position(PLAYER_VITAL, _G.get_ui_hud_state("self_vitals"))
     _persist_window_position(TARGET_VITAL, _G.get_ui_hud_state("target_vitals"))
     _persist_window_position(BOSS_VITAL, _G.get_ui_hud_state("boss_vitals"))
-    _persist_window_position(PARTY_VITALS, _G.get_ui_hud_state("party_vitals"))
+    _persist_window_position(FELLOWSHIP_VITALS, _G.get_ui_hud_state("fellowship_vitals"))
+    _persist_window_position(RAID_VITALS, _G.get_ui_hud_state("raid_vitals"))
+    if RAID_VITALS ~= nil then
+        _persist_window_position(RAID_VITALS.group_windows[1], _G.get_ui_hud_state("raid_group_a_vitals"))
+        _persist_window_position(RAID_VITALS.group_windows[2], _G.get_ui_hud_state("raid_group_b_vitals"))
+        _persist_window_position(RAID_VITALS.group_windows[3], _G.get_ui_hud_state("raid_group_c_vitals"))
+        _persist_window_position(RAID_VITALS.group_windows[4], _G.get_ui_hud_state("raid_group_d_vitals"))
+    end
     _persist_window_position(EXPIRING_SELF_EFFECTS_WINDOW, _G.get_ui_hud_state("self_effects"))
     _persist_window_position(EXPIRING_TARGET_EFFECTS_WINDOW, _G.get_ui_hud_state("target_effects"))
     _persist_window_position(COOLDOWNS_WINDOW, _G.get_ui_hud_state("cooldowns"))

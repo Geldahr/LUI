@@ -658,8 +658,11 @@ function ConfigWindow:refresh_runtime_settings()
     if BOSS_VITAL ~= nil then
         BOSS_VITAL:resize()
     end
-    if PARTY_VITALS ~= nil then
-        PARTY_VITALS:apply_settings()
+    if FELLOWSHIP_VITALS ~= nil then
+        FELLOWSHIP_VITALS:apply_settings()
+    end
+    if RAID_VITALS ~= nil then
+        RAID_VITALS:apply_settings()
     end
     if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
         EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()

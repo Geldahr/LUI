@@ -511,7 +511,7 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
 
     self.widget_key = "craft_plan"
     self.font = font
-    self._max_visible = math.max(1, tonumber(max_visible) or 4)
+    self._max_visible = math.max(1, tonumber(max_visible))
     self._interaction_enabled = true
     self._chips = {}
     self._popup_rows = {}
