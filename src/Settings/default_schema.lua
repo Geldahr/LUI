@@ -1803,6 +1803,8 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 		},
 		["refresh_rate"] = 60.000000,
 		["scale"] = 1.350000,
+		["style"] = {
+		},
 	},
 	["drops"] = {
 		["enabled"] = false,

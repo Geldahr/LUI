@@ -52,6 +52,7 @@ function _G.rebuild_settings()
         global = {
             number_abbrev = {},
             bestiary_capture = false,
+            style = {},
         },
         ui = {
             windows = {},
@@ -152,6 +153,7 @@ function _G.rebuild_settings()
     _G.settings.global.native_scaling = raw.global.native_scaling == true
     _G.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
     _G.settings.global.bestiary_capture = raw.global.bestiary_capture == true
+    _G.settings.global.style = raw.global.style
     _G.settings.ui.windows = raw.ui.windows
     _G.settings.ui.hud = raw.ui.hud
 
