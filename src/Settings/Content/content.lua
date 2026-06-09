@@ -3,9 +3,8 @@ import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 
-local HINT_FONT_NAME = "Verdana"
-local HINT_FONT_SIZE = 10
 local BASE_SCROLL_W = 10
+local Style = UI.Widgets.Style
 
 local function _scaled_size(value)
     return value * _G.settings.global.scale
@@ -175,10 +174,10 @@ function ConfigContent:add_info(text, height)
 
     entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(self.form)
-    entry.label:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
+    entry.label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
     entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     entry.label:SetMultiline(true)
-    entry.label:SetForeColor(Turbine.UI.Color(0.85, 0.85, 0.85))
+    entry.label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     entry.label:SetText(text)
     entry.label:SetMouseVisible(false)
 
@@ -193,7 +192,7 @@ function ConfigContent:add_hr()
     entry.line = Turbine.UI.Control()
     entry.line:SetParent(self.form)
     entry.line:SetMouseVisible(false)
-    entry.line:SetBackColor(Turbine.UI.Color(0.35, 0.35, 0.35))
+    entry.line:SetBackColor(Style.CONTROL_BORDER)
 
     self.fields[#self.fields + 1] = entry
     return entry
@@ -223,6 +222,30 @@ function ConfigContent:add_custom(key, height)
     entry.control = Turbine.UI.Control()
     entry.control:SetParent(self.form)
     entry.control:SetMouseVisible(false)
+
+    self.controls[key] = entry
+    self.fields[#self.fields + 1] = entry
+    return entry
+end
+
+function ConfigContent:add_button(key, text, click_fn, help_text, span)
+    local entry = {}
+    entry.kind = "button"
+    entry.key = key
+    entry.help_text = help_text
+    entry.span = span
+
+    entry.button = UI.Widgets.LuiButton()
+    entry.button:SetParent(self.form)
+    entry.button:set_scale(_G.settings.global.scale)
+    entry.button:set_font(self.window.input_font)
+    entry.button:set_text(text)
+    entry.button:SetZOrder(2)
+    entry.button.Click = click_fn
+
+    self:_bind_hint(entry.button, function()
+        return entry.help_text
+    end)
 
     self.controls[key] = entry
     self.fields[#self.fields + 1] = entry
@@ -505,7 +528,7 @@ function ConfigContent:apply_ui_scale()
                 field.label:SetFont(self.window.title_font)
             elseif field.kind == "info" then
                 if field.label ~= nil then
-                    field.label:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
+                    field.label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
                 end
                 if field.base_height ~= nil then
                     field.height = _scaled_int(field.base_height)
@@ -535,6 +558,9 @@ function ConfigContent:apply_ui_scale()
                 if field.kind == "custom" and field.apply_ui_scale ~= nil then
                     field:apply_ui_scale()
                 end
+            elseif field.kind == "button" and field.button ~= nil then
+                field.button:set_scale(scale)
+                field.button:set_font(self.window.input_font)
             elseif field.kind == "checkbox" and field.cb ~= nil then
                 if field.cb.set_scale ~= nil then
                     field.cb:set_scale(scale)
@@ -641,6 +667,8 @@ function ConfigContent:layout()
             field.spacer:SetVisible(is_visible)
         elseif field.kind == "custom" then
             field.control:SetVisible(is_visible)
+        elseif field.kind == "button" then
+            field.button:SetVisible(is_visible)
         elseif field.kind == "text" then
             field.label:SetVisible(is_visible)
             field.tb:SetVisible(is_visible)
@@ -738,6 +766,9 @@ function ConfigContent:layout()
             if field.kind == "checkbox" then
                 field.cb:SetPosition(x, y + compact_label_h + compact_field_gap)
                 field.cb:SetSize(span_w, self.window.input_height)
+            elseif field.kind == "button" then
+                field.button:SetPosition(x, y + compact_label_h + compact_field_gap)
+                field.button:SetSize(span_w, self.window.input_height)
             elseif field.kind == "text" then
                 field.label:SetPosition(x, y)
                 field.label:SetSize(span_w, compact_label_h)
@@ -769,6 +800,9 @@ function ConfigContent:layout()
             if field.kind == "checkbox" then
                 field.cb:SetPosition(x, y)
                 field.cb:SetSize(span_w, self.window.field_label_height)
+            elseif field.kind == "button" then
+                field.button:SetPosition(x, y)
+                field.button:SetSize(span_w, self.window.input_height)
             else
                 local label_width_span = math.floor(span_w * 0.55)
                 local input_width_span = span_w - label_width_span - self.window.inner_gap
