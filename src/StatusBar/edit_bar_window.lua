@@ -4,6 +4,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
+local Style = UI.Widgets.Style
 
 local WINDOW_W = 300
 local WINDOW_H = 338
@@ -21,17 +22,6 @@ local BUTTON_W = 84
 local BUTTON_H = 21
 local LIST_SCROLL_W = 10
 local LIST_SCROLL_GAP = 4
-
-local BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
-local ROW_BACK = Turbine.UI.Color(1, 0.12, 0.12, 0.12)
-local ROW_HOVER = Turbine.UI.Color(1, 0.17, 0.24, 0.34)
-local ROW_DISABLED = Turbine.UI.Color(1, 0.10, 0.10, 0.10)
-local TEXT_COLOR = Turbine.UI.Color(1, 1, 1, 1)
-local DISABLED_TEXT_COLOR = Turbine.UI.Color(0.48, 0.82, 0.82, 0.82)
-local STATUS_COLOR = Turbine.UI.Color(1, 0.80, 0.86, 0.96)
-local WINDOW_BACK = Turbine.UI.Color(0.96, 0.08, 0.08, 0.08)
-local WINDOW_HEADER_BACK = Turbine.UI.Color(1, 0.16, 0.16, 0.16)
-local WINDOW_TITLE_COLOR = Turbine.UI.Color(1, 1, 1, 1)
 
 local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
@@ -65,41 +55,41 @@ function EditBarPaletteEntry:Constructor(palette_entry, on_mouse_down, on_mouse_
     self._on_mouse_up = on_mouse_up
 
     self:SetMouseVisible(true)
-    self:SetBackColor(ROW_BACK)
+    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
 
     self.title = UI.Widgets.LuiLabel()
     self.title:SetParent(self)
     self.title:SetMouseVisible(false)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.title:SetForeColor(TEXT_COLOR)
+    self.title:SetForeColor(Style.FOREGROUND)
     self.title:SetText(self.palette_entry.title or S.get_status_bar_widget_display_name(self.widget_key))
 
     self.status = UI.Widgets.LuiLabel()
     self.status:SetParent(self)
     self.status:SetMouseVisible(false)
     self.status:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.status:SetForeColor(STATUS_COLOR)
+    self.status:SetForeColor(Style.INFO_FOREGROUND)
     self.status:SetText("")
 
     self.border_top = Turbine.UI.Control()
     self.border_top:SetParent(self)
     self.border_top:SetMouseVisible(false)
-    self.border_top:SetBackColor(BORDER_COLOR)
+    self.border_top:SetBackColor(Style.CONTROL_BORDER)
 
     self.border_bottom = Turbine.UI.Control()
     self.border_bottom:SetParent(self)
     self.border_bottom:SetMouseVisible(false)
-    self.border_bottom:SetBackColor(BORDER_COLOR)
+    self.border_bottom:SetBackColor(Style.CONTROL_BORDER)
 
     self.border_left = Turbine.UI.Control()
     self.border_left:SetParent(self)
     self.border_left:SetMouseVisible(false)
-    self.border_left:SetBackColor(BORDER_COLOR)
+    self.border_left:SetBackColor(Style.CONTROL_BORDER)
 
     self.border_right = Turbine.UI.Control()
     self.border_right:SetParent(self)
     self.border_right:SetMouseVisible(false)
-    self.border_right:SetBackColor(BORDER_COLOR)
+    self.border_right:SetBackColor(Style.CONTROL_BORDER)
 
     self.SizeChanged = function()
         self:_layout()
@@ -154,8 +144,8 @@ function EditBarPaletteEntry:Constructor(palette_entry, on_mouse_down, on_mouse_
 end
 
 function EditBarPaletteEntry:apply_scale()
-    self.title:SetFont(_scaled_font("Verdana", 11))
-    self.status:SetFont(_scaled_font("Verdana", 10))
+    self.title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.status:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
 end
 
 function EditBarPaletteEntry:set_available(available)
@@ -187,16 +177,16 @@ end
 
 function EditBarPaletteEntry:_update_visual_state()
     if self._available ~= true then
-        self:SetBackColor(ROW_DISABLED)
-        self.title:SetForeColor(DISABLED_TEXT_COLOR)
+        self:SetBackColor(Style.CONTROL_BACKGROUND_DISABLED)
+        self.title:SetForeColor(Style.FOREGROUND_DISABLED)
         return
     end
 
-    self.title:SetForeColor(TEXT_COLOR)
+    self.title:SetForeColor(Style.FOREGROUND)
     if self._hover == true then
-        self:SetBackColor(ROW_HOVER)
+        self:SetBackColor(Style.CONTROL_BACKGROUND_HOVER)
     else
-        self:SetBackColor(ROW_BACK)
+        self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
     end
 end
 
@@ -228,45 +218,45 @@ function StatusBarEditWindow:Constructor(owner)
     self:SetVisible(false)
     self:SetMouseVisible(true)
     self:SetZOrder(3000)
-    self:SetBackColor(WINDOW_BACK)
+    self:SetBackColor(Style.BACKGROUND)
 
     self.border_top = Turbine.UI.Control()
     self.border_top:SetParent(self)
     self.border_top:SetMouseVisible(false)
-    self.border_top:SetBackColor(BORDER_COLOR)
+    self.border_top:SetBackColor(Style.CONTROL_BORDER)
 
     self.border_bottom = Turbine.UI.Control()
     self.border_bottom:SetParent(self)
     self.border_bottom:SetMouseVisible(false)
-    self.border_bottom:SetBackColor(BORDER_COLOR)
+    self.border_bottom:SetBackColor(Style.CONTROL_BORDER)
 
     self.border_left = Turbine.UI.Control()
     self.border_left:SetParent(self)
     self.border_left:SetMouseVisible(false)
-    self.border_left:SetBackColor(BORDER_COLOR)
+    self.border_left:SetBackColor(Style.CONTROL_BORDER)
 
     self.border_right = Turbine.UI.Control()
     self.border_right:SetParent(self)
     self.border_right:SetMouseVisible(false)
-    self.border_right:SetBackColor(BORDER_COLOR)
+    self.border_right:SetBackColor(Style.CONTROL_BORDER)
 
     self.header = Turbine.UI.Control()
     self.header:SetParent(self)
     self.header:SetMouseVisible(true)
-    self.header:SetBackColor(WINDOW_HEADER_BACK)
+    self.header:SetBackColor(Style.CONTROL_BACKGROUND)
 
     self.header_divider = Turbine.UI.Control()
     self.header_divider:SetParent(self)
     self.header_divider:SetMouseVisible(false)
-    self.header_divider:SetBackColor(BORDER_COLOR)
+    self.header_divider:SetBackColor(Style.CONTROL_BORDER)
 
     self.title = UI.Widgets.LuiLabel()
     self.title:SetParent(self.header)
     self.title:SetMouseVisible(false)
     self.title:SetMultiline(false)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.title:SetForeColor(WINDOW_TITLE_COLOR)
-    self.title:SetFont(_scaled_font("Verdana", 12))
+    self.title:SetForeColor(Style.FOREGROUND)
+    self.title:SetFont(_scaled_font(Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE))
     self.title:SetText(TR["Edit Bar"])
 
     self.hint = UI.Widgets.LuiLabel()
@@ -275,7 +265,7 @@ function StatusBarEditWindow:Constructor(owner)
     self.hint:SetMultiline(true)
     self.hint:SetMouseVisible(false)
     self.hint:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
-    self.hint:SetForeColor(TEXT_COLOR)
+    self.hint:SetForeColor(Style.FOREGROUND)
     self.hint:SetText(TR["Drag entries onto the status bar. Drag an existing bar item outside the bar to remove it."])
 
     self.note = UI.Widgets.LuiLabel()
@@ -284,7 +274,7 @@ function StatusBarEditWindow:Constructor(owner)
     self.note:SetMultiline(true)
     self.note:SetMouseVisible(false)
     self.note:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
-    self.note:SetForeColor(STATUS_COLOR)
+    self.note:SetForeColor(Style.INFO_FOREGROUND)
     self.note:SetText(TR["Tracked inventory items are still added by dragging them from the inventory window."])
 
     self.rows_list = Turbine.UI.ListBox()
@@ -396,11 +386,11 @@ end
 
 function StatusBarEditWindow:apply_scale()
     self:SetSize(_scaled_int(WINDOW_W), _scaled_int(WINDOW_H))
-    self.title:SetFont(_scaled_font("Verdana", 12))
+    self.title:SetFont(_scaled_font(Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE))
     self.title:SetText(TR["Edit Bar"])
-    self.hint:SetFont(_scaled_font("Verdana", 11))
-    self.note:SetFont(_scaled_font("Verdana", 10))
-    self.done_button:set_font(_scaled_font("Verdana", 12))
+    self.hint:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.note:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
+    self.done_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
     self.done_button:SetSize(_scaled_int(BUTTON_W), _scaled_int(BUTTON_H))
 
     for i = 1, #self.entries do

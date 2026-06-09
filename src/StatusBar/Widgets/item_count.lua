@@ -1,6 +1,7 @@
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
+local Style = UI.Widgets.Style
 
 local ItemCountWidget = class(Turbine.UI.Control)
 _G.ItemCountWidget = ItemCountWidget
@@ -45,7 +46,7 @@ function ItemCountWidget:Constructor(item_name, widget_w, bar_h, font, icon_imag
     self:SetMouseVisible(false)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self:SetSize(widget_w, bar_h)
 
     self.icon_back = Image()

@@ -1,8 +1,7 @@
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
-local BUTTON_FILL_COLOR = Turbine.UI.Color(1.00, 0.08, 0.10, 0.12)
-local BUTTON_FILL_HOVER_COLOR = Turbine.UI.Color(1.00, 0.12, 0.15, 0.18)
+local Style = UI.Widgets.Style
 local BUTTON_MARGIN = 1
 local BUTTON_BORDER = 1
 
@@ -26,15 +25,15 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.button:SetParent(self)
     self._interaction_target = self.button
     self.button:set_border_thickness(BUTTON_BORDER)
-    self.button:set_border_color(S.SHORTCUT_BORDER_COLOR)
-    self.button:set_hover_border_color(S.SHORTCUT_BORDER_HOVER_COLOR)
-    self.button:set_active_border_color(S.SHORTCUT_BORDER_HOVER_COLOR)
-    self.button:set_disabled_border_color(S.SHORTCUT_BORDER_COLOR)
-    self.button:set_back_color(BUTTON_FILL_COLOR)
-    self.button:set_hover_back_color(BUTTON_FILL_HOVER_COLOR)
-    self.button:set_pressed_back_color(BUTTON_FILL_HOVER_COLOR)
-    self.button:set_active_back_color(BUTTON_FILL_COLOR)
-    self.button:set_disabled_back_color(BUTTON_FILL_COLOR)
+    self.button:set_border_color(Style.CONTROL_BORDER)
+    self.button:set_hover_border_color(Style.CONTROL_BORDER_HOVER)
+    self.button:set_active_border_color(Style.CONTROL_BORDER_ACTIVE)
+    self.button:set_disabled_border_color(Style.CONTROL_BORDER_DISABLED)
+    self.button:set_back_color(Style.CONTROL_BACKGROUND)
+    self.button:set_hover_back_color(Style.CONTROL_BACKGROUND_HOVER)
+    self.button:set_pressed_back_color(Style.CONTROL_BACKGROUND_PRESSED)
+    self.button:set_active_back_color(Style.CONTROL_BACKGROUND_ACTIVE)
+    self.button:set_disabled_back_color(Style.CONTROL_BACKGROUND_DISABLED)
     self.button:set_padding(0)
     self.button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleCenter)
 

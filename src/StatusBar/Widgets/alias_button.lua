@@ -3,8 +3,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
-local BUTTON_FILL_COLOR = Turbine.UI.Color(1.00, 0.08, 0.10, 0.12)
-local BUTTON_FILL_HOVER_COLOR = Turbine.UI.Color(1.00, 0.12, 0.15, 0.18)
+local Style = UI.Widgets.Style
 local BUTTON_MARGIN = 1
 local BUTTON_BORDER = 1
 
@@ -48,14 +47,14 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self:SetMouseVisible(true)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
 
     self.border_top = Turbine.UI.Control()
     self.border_top:SetParent(self)
     self.border_top:SetMouseVisible(false)
     self.border_top:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_top:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.border_top:SetBackColor(S.SHORTCUT_BORDER_COLOR)
+    self.border_top:SetBackColor(Style.CONTROL_BORDER)
     self.border_top:SetZOrder(3)
 
     self.border_bottom = Turbine.UI.Control()
@@ -63,7 +62,7 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self.border_bottom:SetMouseVisible(false)
     self.border_bottom:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_bottom:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.border_bottom:SetBackColor(S.SHORTCUT_BORDER_COLOR)
+    self.border_bottom:SetBackColor(Style.CONTROL_BORDER)
     self.border_bottom:SetZOrder(3)
 
     self.border_left = Turbine.UI.Control()
@@ -71,7 +70,7 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self.border_left:SetMouseVisible(false)
     self.border_left:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_left:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.border_left:SetBackColor(S.SHORTCUT_BORDER_COLOR)
+    self.border_left:SetBackColor(Style.CONTROL_BORDER)
     self.border_left:SetZOrder(3)
 
     self.border_right = Turbine.UI.Control()
@@ -79,7 +78,7 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self.border_right:SetMouseVisible(false)
     self.border_right:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.border_right:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.border_right:SetBackColor(S.SHORTCUT_BORDER_COLOR)
+    self.border_right:SetBackColor(Style.CONTROL_BORDER)
     self.border_right:SetZOrder(3)
 
     self.background = Turbine.UI.Control()
@@ -87,7 +86,7 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self.background:SetMouseVisible(false)
     self.background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.background:SetBackColor(BUTTON_FILL_COLOR)
+    self.background:SetBackColor(Style.CONTROL_BACKGROUND)
     self.background:SetZOrder(1)
 
     self.icon = Image(self.icon_background)
@@ -270,12 +269,12 @@ function AliasButtonWidget:_set_border_color(color)
 end
 
 function AliasButtonWidget:_update_visual_state()
-    local border_color = S.SHORTCUT_BORDER_COLOR
-    local fill_color = BUTTON_FILL_COLOR
+    local border_color = Style.CONTROL_BORDER
+    local fill_color = Style.CONTROL_BACKGROUND
 
     if self._hover or self._pressed then
-        border_color = S.SHORTCUT_BORDER_HOVER_COLOR
-        fill_color = BUTTON_FILL_HOVER_COLOR
+        border_color = Style.CONTROL_BORDER_HOVER
+        fill_color = self._pressed == true and Style.CONTROL_BACKGROUND_PRESSED or Style.CONTROL_BACKGROUND_HOVER
     end
 
     self:_set_border_color(border_color)
