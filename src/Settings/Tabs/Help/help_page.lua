@@ -9,11 +9,10 @@ local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.f
 local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
 local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
 local scaled_int = FeatureShell.scaled_int
+local Style = UI.Widgets.Style
 
-local HELP_FONT_NAME = "Verdana"
-local HELP_FONT_SIZE = 13
+local HELP_PAGE_FONT_SIZE_OFFSET = 3
 local GITHUB_URL = "https://github.com/Geldahr/LUI"
-local LINK_BACKGROUND = Turbine.UI.Color(1.0, 0.2, 0.2, 0.2)
 local GITHUB_LABEL_TEXT =
     TR["For more information, feature requests, or bug reports, please visit the GitHub repository:"]
 local ABOUT_HEIGHT = 156
@@ -31,9 +30,10 @@ local function _scaled_help_int(value)
 end
 
 local function _scaled_help_font()
-    local font = FONT_TO_LOTRO(HELP_FONT_NAME, _scaled_help_size(HELP_FONT_SIZE))
+    local size = Style.HELP_FONT_SIZE + HELP_PAGE_FONT_SIZE_OFFSET
+    local font = FONT_TO_LOTRO(Style.HELP_FONT_NAME, _scaled_help_size(size))
     if font == nil then
-        error("Missing help font: " .. tostring(HELP_FONT_NAME) .. " " .. tostring(HELP_FONT_SIZE))
+        error("Missing help font: " .. tostring(Style.HELP_FONT_NAME) .. " " .. tostring(size))
     end
     return font
 end
@@ -52,6 +52,7 @@ local function _create_help_text(page, key, text, height)
     entry.body:SetFont(_scaled_help_font())
     entry.body:SetMultiline(true)
     entry.body:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
+    entry.body:SetForeColor(Style.FOREGROUND)
     entry.body:SetText(text)
 
     entry.control.SizeChanged = function()
@@ -88,16 +89,18 @@ local function _create_link_box(page, key, label_text, link_text, height)
     entry.label:SetFont(_scaled_help_font())
     entry.label:SetMultiline(true)
     entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
+    entry.label:SetForeColor(Style.FOREGROUND)
     entry.label:SetText(label_text)
 
     entry.link_tb = UI.Widgets.LuiLineEdit()
     entry.link_tb:SetParent(entry.control)
     entry.link_tb:SetFont(_scaled_help_font())
+    entry.link_tb:SetForeColor(Style.CONTROL_FOREGROUND)
     entry.link_tb:SetMultiline(false)
     entry.link_tb:SetReadOnly(true)
     entry.link_tb:SetSelectable(true)
     entry.link_tb:SetText(link_text)
-    entry.link_tb:SetBackColor(LINK_BACKGROUND)
+    entry.link_tb:SetBackColor(Style.CONTROL_BACKGROUND_READONLY)
     entry.link_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     entry.link_tb:SetZOrder(2)
 

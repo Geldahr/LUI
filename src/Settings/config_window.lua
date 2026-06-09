@@ -9,16 +9,9 @@ import "LUI.src.Utils.time_format"
 import "LUI.src.Utils.token_format"
 import "LUI.src.Settings.enums"
 
-local SETTINGS_FONT_NAME = "Verdana"
-local SETTINGS_FONT_SIZE = 13
-local TAB_FONT_NAME = "Verdana"
-local TAB_FONT_SIZE = 15
-local TITLE_FONT_NAME = "BookAntiquaBold"
-local TITLE_FONT_SIZE = 18
-local FIELD_FONT_NAME = "Verdana"
-local FIELD_FONT_SIZE = 12
-local HINT_FONT_NAME = "Verdana"
-local HINT_FONT_SIZE = 10
+local Style = UI.Widgets.Style
+local SETTINGS_ACTION_FONT_SIZE_OFFSET = 1
+local CONFIG_TAB_FONT_SIZE_OFFSET = 3
 local CONFIG_MIN_WIDTH = 900
 local CONFIG_MIN_HEIGHT = 800
 local function _scaled_size(value)
@@ -108,21 +101,21 @@ function ConfigWindow:Constructor()
 
     self.tooltip = UI.Widgets.LuiTooltip()
     self.tooltip:set_scale(_G.settings.global.scale)
-    self.tooltip:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
+    self.tooltip:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
 
     self.confirm_overlay = Turbine.UI.Control()
     self.confirm_overlay:SetParent(content)
     self.confirm_overlay:SetVisible(false)
     self.confirm_overlay:SetMouseVisible(true)
     self.confirm_overlay:SetZOrder(2000)
-    self.confirm_overlay:SetBackColor(Turbine.UI.Color(0.45, 0, 0, 0))
+    self.confirm_overlay:SetBackColor(Style.MODAL_OVERLAY_BACKGROUND)
     self.confirm_overlay:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.confirm_overlay:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
     self.confirm_dialog = Turbine.UI.Control()
     self.confirm_dialog:SetParent(self.confirm_overlay)
     self.confirm_dialog:SetMouseVisible(true)
-    self.confirm_dialog:SetBackColor(Turbine.UI.Color(0.95, 0.08, 0.08, 0.08))
+    self.confirm_dialog:SetBackColor(Style.MODAL_DIALOG_BACKGROUND)
     self.confirm_dialog:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.confirm_dialog:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
@@ -130,7 +123,7 @@ function ConfigWindow:Constructor()
     self.confirm_dialog_label:SetParent(self.confirm_dialog)
     self.confirm_dialog_label:SetMultiline(true)
     self.confirm_dialog_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
-    self.confirm_dialog_label:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
+    self.confirm_dialog_label:SetForeColor(Style.FOREGROUND)
 
     self.confirm_cancel_button = UI.Widgets.LuiButton()
     self.confirm_cancel_button:SetParent(self.confirm_dialog)
@@ -239,8 +232,9 @@ end
 ---------------------------------------------------------------------
 
 function ConfigWindow:_update_ui_scale_metrics()
-    self.settings_font = _scaled_font(SETTINGS_FONT_NAME, SETTINGS_FONT_SIZE)
-    self.tab_font = _scaled_font(TAB_FONT_NAME, TAB_FONT_SIZE)
+    self.settings_font = _scaled_font(Style.CONTROL_FONT_NAME,
+        Style.CONTROL_FONT_SIZE + SETTINGS_ACTION_FONT_SIZE_OFFSET)
+    self.tab_font = _scaled_font(Style.TAB_FONT_NAME, Style.TAB_FONT_SIZE + CONFIG_TAB_FONT_SIZE_OFFSET)
 
     self.margin_left = _scaled_int(6)
     self.margin_top = _scaled_int(6)
@@ -254,9 +248,9 @@ function ConfigWindow:_update_ui_scale_metrics()
     self.content_padding = _scaled_int(7)
     self.scroll_bar_gap = _scaled_int(3)
 
-    self.title_font = _scaled_font(TITLE_FONT_NAME, TITLE_FONT_SIZE)
-    self.field_label_font = _scaled_font(FIELD_FONT_NAME, FIELD_FONT_SIZE)
-    self.input_font = _scaled_font(FIELD_FONT_NAME, FIELD_FONT_SIZE)
+    self.title_font = _scaled_font(Style.SETTINGS_TITLE_FONT_NAME, Style.SETTINGS_TITLE_FONT_SIZE)
+    self.field_label_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
+    self.input_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
     self.field_label_height = _scaled_int(31)
     self.input_height = _scaled_int(21)
     self.dropdown_y_offset = _scaled_int(1)
@@ -279,7 +273,7 @@ function ConfigWindow:apply_ui_scale()
 
     if self.tooltip ~= nil then
         self.tooltip:set_scale(scale)
-        self.tooltip:SetFont(_scaled_font(HINT_FONT_NAME, HINT_FONT_SIZE))
+        self.tooltip:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
     end
 
     if self.cancel_button ~= nil then

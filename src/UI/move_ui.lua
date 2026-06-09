@@ -3,6 +3,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets"
 
+local Style = UI.Widgets.Style
 GLOBAL_MOVE_ENABLED = false
 local MOVE_UI_PREVIEW_LOCKED = false
 
@@ -56,7 +57,7 @@ function CloseWindow:Constructor()
     self.button:SetParent(self)
     self.button:SetSize(self:GetWidth(), self:GetHeight())
     self.button:SetPosition(0, 0)
-    self.button:set_font(_scaled_font("Verdana", 13))
+    self.button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 1))
     self.button:set_text(TR["Done moving UI"])
 
     self.button.Click = function()
@@ -72,7 +73,7 @@ function CloseWindow:apply_style()
 
     self:SetSize(w, h)
     self.button:SetSize(w, h)
-    self.button:set_font(_scaled_font("Verdana", 13))
+    self.button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 1))
 end
 
 local function _apply_done_window_style()
@@ -146,16 +147,16 @@ local function _ensure_grid()
     GRID.display_height = display_height
 
     GRID.window:SetSize(display_width, display_height)
-    GRID.window:SetBackColor(Turbine.UI.Color(0.10, 0, 0, 0))
+    GRID.window:SetBackColor(Style.MOVE_GRID_BACKGROUND)
 
     _clear_lines()
 
     local center_x = math.floor(display_width / 2)
     local center_y = math.floor(display_height / 2)
 
-    local main_color = Turbine.UI.Color(0.30, 1, 1, 1)
-    local hundred_color = Turbine.UI.Color(0.16, 1, 1, 1)
-    local twenty_five_color = Turbine.UI.Color(0.08, 1, 1, 1)
+    local main_color = Style.MOVE_GRID_CENTER_LINE
+    local hundred_color = Style.MOVE_GRID_MAJOR_LINE
+    local twenty_five_color = Style.MOVE_GRID_MINOR_LINE
 
     local main_thickness = 2
     local other_thickness = 1

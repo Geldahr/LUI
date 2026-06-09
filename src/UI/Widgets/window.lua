@@ -20,7 +20,6 @@ local BASE_GAP = 4
 local BASE_MARGIN = 8
 local BASE_ICON = 20
 local BASE_TITLE_ACTION_ICON = 10
-local BASE_TITLE_FONT = 12
 local BASE_RESIZE_EDGE = 4
 local BASE_RESIZE_CORNER = 8
 local BASE_RESIZE_HANDLE = 32
@@ -47,8 +46,8 @@ local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
 end
 
-local function _scaled_font(scale, size)
-    return FONT_TO_LOTRO("Verdana", size * scale)
+local function _scaled_font(scale, name, size)
+    return FONT_TO_LOTRO(name, size * scale)
 end
 
 local function _clamp(value, min_value, max_value)
@@ -660,9 +659,9 @@ function LuiWindow:_apply_style()
     self._divider:SetBackColor(Style.CONTROL_BORDER)
     self._menu_bar:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self._title_label:SetForeColor(Style.FOREGROUND)
-    self._title_label:SetFont(_scaled_font(self._scale, BASE_TITLE_FONT))
+    self._title_label:SetFont(_scaled_font(self._scale, Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE))
     self._menu_bar:set_scale(self._scale)
-    self._menu_bar:set_font(_scaled_font(self._scale, BASE_TITLE_FONT))
+    self._menu_bar:set_font(_scaled_font(self._scale, Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE))
     self:_sync_resize_handle_icons()
 
     self:_style_title_button(self._maximize_button)

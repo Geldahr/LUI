@@ -4,6 +4,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.Settings.default_layouts"
 import "LUI.src.UI.Widgets"
 
+local Style = UI.Widgets.Style
 local WINDOW_W = 260
 local WINDOW_H = 140
 local FRAME_BORDER = 2
@@ -26,12 +27,6 @@ local LAYOUT_BUTTON_W = 100
 local LAYOUT_BUTTON_H = 22
 local LAYOUT_LABEL_Y = 63
 local LAYOUT_ROW_Y = 80
-
-local FRAME_BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
-local FRAME_BACKGROUND_COLOR = Turbine.UI.Color(1, 0.15, 0.15, 0.15)
-local FRAME_RULE_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
-
-local OVERLAY_COLOR = Turbine.UI.Color(0.14, 0, 0, 0)
 
 local function _scaled_size(value)
     return value * _G.settings.global.scale
@@ -329,7 +324,7 @@ function FirstRunQuickSetup:Constructor(options)
 
     self:SetVisible(false)
     self:SetZOrder(1500)
-    self:SetBackColor(FRAME_BORDER_COLOR)
+    self:SetBackColor(Style.CONTROL_BORDER)
     self:SetMouseVisible(true)
 
     self.step = 1
@@ -351,35 +346,35 @@ function FirstRunQuickSetup:Constructor(options)
     self.preview_overlay:SetVisible(false)
     self.preview_overlay:SetMouseVisible(true)
     self.preview_overlay:SetZOrder(1000)
-    self.preview_overlay:SetBackColor(OVERLAY_COLOR)
+    self.preview_overlay:SetBackColor(Style.PREVIEW_OVERLAY_BACKGROUND)
 
     self.inner = Turbine.UI.Control()
     self.inner:SetParent(self)
     self.inner:SetMouseVisible(false)
-    self.inner:SetBackColor(FRAME_BACKGROUND_COLOR)
+    self.inner:SetBackColor(Style.CONTROL_BACKGROUND)
 
     self.title = UI.Widgets.LuiLabel()
     self.title:SetParent(self.inner)
     self.title:SetMouseVisible(false)
     self.title:SetSelectable(false)
-    self.title:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
-    self.title:SetFont(_scaled_font("BookAntiqua", 22))
+    self.title:SetForeColor(Style.FOREGROUND)
+    self.title:SetFont(_scaled_font(Style.FIRST_RUN_TITLE_FONT_NAME, Style.FIRST_RUN_TITLE_FONT_SIZE))
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.title:SetText(TR["LUI"])
 
     self.title_rule = Turbine.UI.Control()
     self.title_rule:SetParent(self.inner)
     self.title_rule:SetMouseVisible(false)
-    self.title_rule:SetBackColor(FRAME_RULE_COLOR)
+    self.title_rule:SetBackColor(Style.CONTROL_BORDER)
 
     self.body = UI.Widgets.LuiLabel()
     self.body:SetParent(self.inner)
     self.body:SetMouseVisible(false)
     self.body:SetSelectable(false)
     self.body:SetMultiline(true)
-    self.body:SetFont(_scaled_font("Verdana", 13))
+    self.body:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 1))
     self.body:SetTextAlignment(Turbine.UI.ContentAlignment.TopCenter)
-    self.body:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
+    self.body:SetForeColor(Style.FOREGROUND)
 
     self.scale_minus = UI.Widgets.LuiButton()
     self.scale_minus:SetParent(self.inner)
@@ -428,7 +423,7 @@ function FirstRunQuickSetup:Constructor(options)
     self.layout_label:SetSelectable(false)
     self.layout_label:SetMultiline(true)
     self.layout_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopCenter)
-    self.layout_label:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
+    self.layout_label:SetForeColor(Style.FOREGROUND)
 
     self.layout_bottom = UI.Widgets.LuiButton()
     self.layout_bottom:SetParent(self.inner)
@@ -569,9 +564,9 @@ function FirstRunQuickSetup:apply_ui_scale()
     self:SetSize(_scaled_int(WINDOW_W), _scaled_int(WINDOW_H))
 
     local title_font = _scaled_font("BookAntiqua", 22)
-    local body_font = _scaled_font("Verdana", 13)
-    local hint_font = _scaled_font("Verdana", 12)
-    local button_font = _scaled_font("Verdana", 12)
+    local body_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 1)
+    local hint_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
+    local button_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
 
     self.title:SetFont(title_font)
 

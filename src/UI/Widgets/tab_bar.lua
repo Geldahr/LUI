@@ -14,7 +14,6 @@ local SELECTION_STYLE_BUTTON = "button"
 
 local BASE_WIDGET_W = 320
 local BASE_WIDGET_H = 200
-local BASE_FONT_SIZE = 12
 local BASE_TAB_HEIGHT = 24
 local BASE_SIDE_TAB_WIDTH = 124
 local BASE_SIDE_TAB_HEIGHT = 24
@@ -876,7 +875,7 @@ function LuiTabBar:refresh_layout()
 end
 
 function LuiTabBar:_apply_default_font()
-    self._font = _scaled_font(self._scale, "Verdana", BASE_FONT_SIZE)
+    self._font = _scaled_font(self._scale, Style.TAB_FONT_NAME, Style.TAB_FONT_SIZE)
     for i = 1, #self._tabs do
         local button = self._tabs[i].button
         if button ~= nil then
