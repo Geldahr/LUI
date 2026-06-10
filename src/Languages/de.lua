@@ -171,6 +171,7 @@ DE = {
     ["Background color"] = "Hintergrundfarbe",
     ["Background matches missing ressource"] = "Hintergrund entspricht fehlender Ressource",
     ["Matching background"] = "Passender Hintergrund",
+    ["Match bar color"] = "An Balkenfarbe anpassen",
     ["Background opacity (0..1)"] = "Hintergrund-Deckkraft (0..1)",
     ["Backpack"] = "Rucksack",
     ["Bank"] = "Bank",

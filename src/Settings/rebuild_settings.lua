@@ -410,6 +410,8 @@ function _G.rebuild_settings()
     self_ee.bar_width = scaled_int(raw_self_ee.bar_width)
     self_ee.bar_height = scaled_int(raw_self_ee.bar_height)
     self_ee.border_width = scaled_border(raw_self_ee.border_width)
+    self_ee.bar_background_matches_fill = raw_self_ee.bar_background_matches_fill
+    self_ee.bar_background_dimming = raw_self_ee.bar_background_dimming
     self_ee.color = build_expiring_effect_colors(raw_self_ee.color)
 
     self_ee.font.name = raw_self_ee.font.name
@@ -436,6 +438,8 @@ function _G.rebuild_settings()
     target_ee.bar_width = scaled_int(raw_expiring_target_effects.bar_width)
     target_ee.bar_height = scaled_int(raw_expiring_target_effects.bar_height)
     target_ee.border_width = scaled_border(raw_expiring_target_effects.border_width)
+    target_ee.bar_background_matches_fill = raw_expiring_target_effects.bar_background_matches_fill
+    target_ee.bar_background_dimming = raw_expiring_target_effects.bar_background_dimming
     target_ee.color = build_expiring_effect_colors(raw_expiring_target_effects.color)
 
     target_ee.font.name = raw_expiring_target_effects.font.name
@@ -573,6 +577,8 @@ function _G.rebuild_settings()
     cd.name_max_chars = raw_cd.name_max_chars
     cd.whitelist = raw_cd.whitelist
     cd.blacklist = raw_cd.blacklist
+    cd.bar_background_matches_fill = raw_cd.bar_background_matches_fill
+    cd.bar_background_dimming = raw_cd.bar_background_dimming
     cd.color = raw_cd.color
 
     cd.font.name = raw_cd.font.name

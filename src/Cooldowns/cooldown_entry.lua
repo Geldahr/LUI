@@ -33,6 +33,13 @@ local function _truncate_name(name, max_chars)
     return string.sub(name, 1, m)
 end
 
+local function _bar_background_color(settings)
+    if settings.bar_background_matches_fill == true then
+        return lui_dim_color(settings.color.bar, settings.bar_background_dimming)
+    end
+    return settings.color.background
+end
+
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
@@ -176,6 +183,7 @@ function CooldownEntry:apply_settings()
     local icon_left = LUI_ENUMS.side_is_left[s.icon_side] == true
 
     local back = s.color.background
+    local bar_back = _bar_background_color(s)
     self.separator:SetBackColor(s.color.border)
     self.separator:SetVisible(sep_w > 0)
 
@@ -199,7 +207,7 @@ function CooldownEntry:apply_settings()
     end
 
     self.bar_background:SetSize(bar_width, inner_h)
-    self.bar_background:SetBackColor(back)
+    self.bar_background:SetBackColor(bar_back)
 
     -- The background should be exactly the content size (no extra inner border).
     self.bar_fill:SetPosition(0, 0)

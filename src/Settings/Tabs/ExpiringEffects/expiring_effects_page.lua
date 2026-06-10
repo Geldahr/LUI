@@ -67,6 +67,24 @@ local function _new_colors_section(window, refresh_preview, settings_getter, pre
                 return ui.color_to_hex(spec.get_target(settings_getter))
             end)
     end
+    bars:add_row_break()
+    bars:add_checkbox(prefix .. "_bar_background_matches_fill", TR["Match bar color"],
+        function(value)
+            settings_getter().bar_background_matches_fill = value == true
+        end,
+        function()
+            return settings_getter().bar_background_matches_fill == true
+        end)
+    bars:add_line_edit(prefix .. "_bar_background_dimming", TR["Dimming"],
+        function(value)
+            local dimming = tonumber(value)
+            if dimming ~= nil then
+                settings_getter().bar_background_dimming = dimming
+            end
+        end,
+        function()
+            return tostring(settings_getter().bar_background_dimming)
+        end)
 
     local text = ConfigContent(window, 3, refresh_preview)
     text:add_color_picker(prefix .. "_font_color", TR["Font Color"],

@@ -117,6 +117,23 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         function()
             return ui.color_to_hex(settings_getter().color.bar)
         end)
+    bar:add_checkbox("cd_bar_background_matches_fill", TR["Match bar color"],
+        function(value)
+            settings_getter().bar_background_matches_fill = value == true
+        end,
+        function()
+            return settings_getter().bar_background_matches_fill == true
+        end)
+    bar:add_line_edit("cd_bar_background_dimming", TR["Dimming"],
+        function(value)
+            local dimming = tonumber(value)
+            if dimming ~= nil then
+                settings_getter().bar_background_dimming = dimming
+            end
+        end,
+        function()
+            return tostring(settings_getter().bar_background_dimming)
+        end)
 
     local text = ConfigContent(window, 3, refresh_preview)
     text:add_color_picker("cd_font_color", TR["Font color"],

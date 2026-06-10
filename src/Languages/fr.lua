@@ -171,6 +171,7 @@ FR = {
     ["Background color"] = "Couleur d'arrière-plan",
     ["Background matches missing ressource"] = "L'arrière-plan correspond à la ressource manquante",
     ["Matching background"] = "Arrière-plan assorti",
+    ["Match bar color"] = "Assortir à la couleur de barre",
     ["Background opacity (0..1)"] = "Opacité de l'arrière-plan (0..1)",
     ["Backpack"] = "Sac",
     ["Bank"] = "Banque",
