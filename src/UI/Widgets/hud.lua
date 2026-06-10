@@ -294,10 +294,10 @@ function LuiHUD:_sync_move_ui_scale()
 
     self._move_ui_scale = scale
     self._move_title_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
-    self._move_x_label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
-    self._move_x_box:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
-    self._move_y_label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
-    self._move_y_box:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
+    self._move_x_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self._move_x_box:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self._move_y_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self._move_y_box:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 end
 
 function LuiHUD:apply_move_ui_scale()

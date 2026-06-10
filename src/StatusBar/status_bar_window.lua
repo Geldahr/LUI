@@ -19,10 +19,10 @@ local EDIT_DRAG_START_DISTANCE = 4
 local EDIT_DRAG_GHOST_FONT_SIZE_OFFSET = 1
 
 local function _edit_drag_ghost_font()
-    local size = Style.HELP_FONT_SIZE + EDIT_DRAG_GHOST_FONT_SIZE_OFFSET
-    local font = FONT_TO_LOTRO(Style.HELP_FONT_NAME, size * _G.settings.global.scale)
+    local size = Style.CONTENT_SMALL_FONT_SIZE + EDIT_DRAG_GHOST_FONT_SIZE_OFFSET
+    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, size * _G.settings.global.scale)
     if font == nil then
-        error("Missing edit drag ghost font: " .. tostring(Style.HELP_FONT_NAME) .. " " .. tostring(size))
+        error("Missing edit drag ghost font: " .. tostring(Style.CONTENT_SMALL_FONT_NAME) .. " " .. tostring(size))
     end
     return font
 end

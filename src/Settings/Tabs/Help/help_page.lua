@@ -30,10 +30,10 @@ local function _scaled_help_int(value)
 end
 
 local function _scaled_help_font()
-    local size = Style.HELP_FONT_SIZE + HELP_PAGE_FONT_SIZE_OFFSET
-    local font = FONT_TO_LOTRO(Style.HELP_FONT_NAME, _scaled_help_size(size))
+    local size = Style.CONTENT_SMALL_FONT_SIZE + HELP_PAGE_FONT_SIZE_OFFSET
+    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, _scaled_help_size(size))
     if font == nil then
-        error("Missing help font: " .. tostring(Style.HELP_FONT_NAME) .. " " .. tostring(size))
+        error("Missing help font: " .. tostring(Style.CONTENT_SMALL_FONT_NAME) .. " " .. tostring(size))
     end
     return font
 end

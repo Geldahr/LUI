@@ -174,7 +174,7 @@ function ConfigContent:add_info(text, height)
 
     entry.label = UI.Widgets.LuiLabel()
     entry.label:SetParent(self.form)
-    entry.label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
+    entry.label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     entry.label:SetMultiline(true)
     entry.label:SetForeColor(Style.ALTERNATE_FOREGROUND)
@@ -528,7 +528,7 @@ function ConfigContent:apply_ui_scale()
                 field.label:SetFont(self.window.title_font)
             elseif field.kind == "info" then
                 if field.label ~= nil then
-                    field.label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
+                    field.label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
                 end
                 if field.base_height ~= nil then
                     field.height = _scaled_int(field.base_height)

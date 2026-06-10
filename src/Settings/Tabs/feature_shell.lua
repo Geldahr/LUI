@@ -29,7 +29,7 @@ local function _scaled_font(name, size)
 end
 
 local function _scaled_tab_font(size)
-    return _scaled_font(Style.TAB_FONT_NAME, Style.TAB_FONT_SIZE + (size - STYLE_TAB_BASE_FONT_SIZE))
+    return _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + (size - STYLE_TAB_BASE_FONT_SIZE))
 end
 
 local function _refresh_preview_noop()

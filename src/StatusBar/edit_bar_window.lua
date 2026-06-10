@@ -145,7 +145,7 @@ end
 
 function EditBarPaletteEntry:apply_scale()
     self.title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
-    self.status:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
+    self.status:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 end
 
 function EditBarPaletteEntry:set_available(available)
@@ -389,7 +389,7 @@ function StatusBarEditWindow:apply_scale()
     self.title:SetFont(_scaled_font(Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE))
     self.title:SetText(TR["Edit Bar"])
     self.hint:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
-    self.note:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
+    self.note:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.done_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
     self.done_button:SetSize(_scaled_int(BUTTON_W), _scaled_int(BUTTON_H))
 

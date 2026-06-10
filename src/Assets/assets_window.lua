@@ -101,7 +101,7 @@ local function _scaled_control_font(size)
 end
 
 local function _scaled_help_font(size)
-    return _scaled_font(Style.HELP_FONT_NAME, size)
+    return _scaled_font(Style.CONTENT_SMALL_FONT_NAME, size)
 end
 
 local function _clamp(value, min_value, max_value)
@@ -1045,7 +1045,7 @@ function AssetsWindow:apply_settings()
     self.recipes_button:set_font(button_font)
     self.order_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.group_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
-    self.hint_label:SetFont(_scaled_help_font(Style.HELP_FONT_SIZE))
+    self.hint_label:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
     self.empty_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE))
     if self.stack_hint ~= nil then
         self.stack_hint:set_scale(_G.settings.global.scale)
@@ -1531,21 +1531,21 @@ function AssetsWindow:_ensure_stack_hint_rows(count)
         row.owner:SetMouseVisible(false)
         row.owner:SetMultiline(false)
         row.owner:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        row.owner:SetFont(_scaled_help_font(Style.HELP_FONT_SIZE))
+        row.owner:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
 
         row.detail = UI.Widgets.LuiLabel()
         row.detail:SetParent(row.holder)
         row.detail:SetMouseVisible(false)
         row.detail:SetMultiline(false)
         row.detail:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        row.detail:SetFont(_scaled_help_font(Style.HELP_FONT_SIZE))
+        row.detail:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
 
         row.quantity = UI.Widgets.LuiLabel()
         row.quantity:SetParent(row.holder)
         row.quantity:SetMouseVisible(false)
         row.quantity:SetMultiline(false)
         row.quantity:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-        row.quantity:SetFont(_scaled_help_font(Style.HELP_FONT_SIZE))
+        row.quantity:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
 
         self.stack_hint_rows[#self.stack_hint_rows + 1] = row
     end
@@ -1600,7 +1600,7 @@ function AssetsWindow:_show_stack_hint(anchor_control, record)
                 local owner_w = math.max(0, detail_x - col_gap)
                 row.owner:SetPosition(0, 0)
                 row.owner:SetSize(owner_w, line_height)
-                row.owner:SetFont(_scaled_help_font(Style.HELP_FONT_SIZE))
+                row.owner:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
                 row.owner:SetForeColor(_owner_hint_color(owner_text))
                 row.owner:SetText(owner_text)
                 row.owner:SetVisible(true)
@@ -1613,14 +1613,14 @@ function AssetsWindow:_show_stack_hint(anchor_control, record)
                 row.detail:SetSize(math.max(0, quantity_x - col_gap), line_height)
             end
 
-            row.detail:SetFont(_scaled_help_font(Style.HELP_FONT_SIZE))
+            row.detail:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
             row.detail:SetForeColor(_source_hint_color(part.source_key))
             row.detail:SetText(detail_text)
             row.detail:SetVisible(true)
 
             row.quantity:SetPosition(quantity_x, 0)
             row.quantity:SetSize(quantity_w, line_height)
-            row.quantity:SetFont(_scaled_help_font(Style.HELP_FONT_SIZE))
+            row.quantity:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
             row.quantity:SetForeColor(_source_hint_color(part.source_key))
             row.quantity:SetText(quantity_text)
             row.quantity:SetVisible(true)

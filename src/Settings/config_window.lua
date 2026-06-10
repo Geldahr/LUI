@@ -33,26 +33,6 @@ end
 local _color_to_hex = lui_color_to_hex
 local _hex_to_color = lui_hex_to_color
 
-Options = class(Turbine.UI.Control)
-
----------------------------------------------------------------------
--- Constructor
----------------------------------------------------------------------
-
-function Options:Constructor()
-    Turbine.UI.Control.Constructor(self)
-
-    self:SetSize(_scaled_int(444), _scaled_int(89))
-
-    self.help = UI.Widgets.LuiLabel()
-    self.help:SetParent(self)
-    self.help:SetFont(_scaled_font(SETTINGS_FONT_NAME, SETTINGS_FONT_SIZE))
-    self.help:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
-    self.help:SetPosition(_scaled_int(7), _scaled_int(7))
-    self.help:SetSize(_scaled_int(430), _scaled_int(74))
-    self.help:SetText(TR["Use '/LUI config' to toggle the configuration window."])
-end
-
 ConfigWindow = class(LuiWindow)
 
 import "LUI.src.Settings.Window.window_geometry"
@@ -101,7 +81,7 @@ function ConfigWindow:Constructor()
 
     self.tooltip = UI.Widgets.LuiTooltip()
     self.tooltip:set_scale(_G.settings.global.scale)
-    self.tooltip:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
+    self.tooltip:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 
     self.confirm_overlay = Turbine.UI.Control()
     self.confirm_overlay:SetParent(content)
@@ -234,7 +214,7 @@ end
 function ConfigWindow:_update_ui_scale_metrics()
     self.settings_font = _scaled_font(Style.CONTROL_FONT_NAME,
         Style.CONTROL_FONT_SIZE + SETTINGS_ACTION_FONT_SIZE_OFFSET)
-    self.tab_font = _scaled_font(Style.TAB_FONT_NAME, Style.TAB_FONT_SIZE + CONFIG_TAB_FONT_SIZE_OFFSET)
+    self.tab_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + CONFIG_TAB_FONT_SIZE_OFFSET)
 
     self.margin_left = _scaled_int(6)
     self.margin_top = _scaled_int(6)
@@ -248,7 +228,7 @@ function ConfigWindow:_update_ui_scale_metrics()
     self.content_padding = _scaled_int(7)
     self.scroll_bar_gap = _scaled_int(3)
 
-    self.title_font = _scaled_font(Style.SETTINGS_TITLE_FONT_NAME, Style.SETTINGS_TITLE_FONT_SIZE)
+    self.title_font = _scaled_font(Style.FONT_H2_NAME, Style.FONT_H2_SIZE)
     self.field_label_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
     self.input_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
     self.field_label_height = _scaled_int(31)
@@ -273,7 +253,7 @@ function ConfigWindow:apply_ui_scale()
 
     if self.tooltip ~= nil then
         self.tooltip:set_scale(scale)
-        self.tooltip:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
+        self.tooltip:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     end
 
     if self.cancel_button ~= nil then

@@ -37,7 +37,7 @@ local function _set_blend(control)
 end
 
 local function _scaled_font(scale)
-    return FONT_TO_LOTRO(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE * scale)
+    return FONT_TO_LOTRO(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE * scale)
 end
 
 local function _close_other_popups()

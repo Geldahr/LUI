@@ -71,9 +71,9 @@ end
 local function _quantity_font(quantity)
     local text = tostring(quantity or "")
     if string.len(text) > 4 then
-        return _scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE - 2)
+        return _scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE - 2)
     end
-    return _scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE - 1)
+    return _scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE - 1)
 end
 
 local function _source_meta_color(source_key)
@@ -437,9 +437,9 @@ end
 
 function AssetsEntry:_apply_fonts()
     self.name_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
-    self.owner_label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
-    self.source_label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE))
-    self.qty_label:SetFont(_scaled_font(Style.HELP_FONT_NAME, Style.HELP_FONT_SIZE - 1))
+    self.owner_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.source_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.qty_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE - 1))
 end
 
 function AssetsEntry:_layout_icon_controls(icon_w, icon_h)

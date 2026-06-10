@@ -17,10 +17,10 @@ local function _scaled_profile_info_size(value)
 end
 
 local function _scaled_profile_info_font()
-    local size = Style.HELP_FONT_SIZE + PROFILE_INFO_FONT_SIZE_OFFSET
-    local font = FONT_TO_LOTRO(Style.HELP_FONT_NAME, _scaled_profile_info_size(size))
+    local size = Style.CONTENT_SMALL_FONT_SIZE + PROFILE_INFO_FONT_SIZE_OFFSET
+    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, _scaled_profile_info_size(size))
     if font == nil then
-        error("Missing profile info font: " .. tostring(Style.HELP_FONT_NAME) .. " " .. tostring(size))
+        error("Missing profile info font: " .. tostring(Style.CONTENT_SMALL_FONT_NAME) .. " " .. tostring(size))
     end
     return font
 end
