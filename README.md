@@ -114,6 +114,7 @@ When an item is registered, it becomes available in two places:
 - On first launch, LUI opens a quick setup flow for UI scale and a default top or bottom layout.
 - The global LUI scale is separate from the built-in LotRO UI scale.
 - Profile management is available from the configuration window and lets multiple characters share or switch settings.
+- Shared UI styling is available under `Global > UI`; see [Global UI Style Settings Reference](GLOBAL_STYLE_SETTINGS_REFERENCE.md).
 - Bestiary capture is only available on English clients.
 
 ## Scaling Notes
