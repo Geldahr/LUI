@@ -558,7 +558,7 @@ function ConfigContent:apply_ui_scale()
                 if field.kind == "custom" and field.apply_ui_scale ~= nil then
                     field:apply_ui_scale()
                 end
-            elseif field.kind == "button" and field.button ~= nil then
+            elseif field.kind == "button" then
                 field.button:set_scale(scale)
                 field.button:set_font(self.window.input_font)
             elseif field.kind == "checkbox" and field.cb ~= nil then

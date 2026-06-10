@@ -1,6 +1,6 @@
 # Global UI Style Settings Reference
 
-This document describes the proposed `Global > UI` settings and what each one changes.
+This document describes the `Global > UI` settings and what each one changes.
 
 These settings affect shared LUI chrome: common windows, panels, tabs, buttons, dropdowns, checkboxes, menus, tooltips, form fields, move/edit overlays, and other generic plugin UI that is routed through `UI.Widgets.Style`.
 
@@ -15,7 +15,7 @@ Style changes are applied after a plugin reload.
 | Setting | What it changes |
 | --- | --- |
 | Reload notice | Explains that saved UI style changes apply after reloading the plugin. |
-| Reset shared UI style | Clears exposed shared UI user overrides. Apply/Save persists the cleared user layer, so developer style or built-in defaults are visible after reload. |
+| Reset shared UI style | Clears saved shared UI user overrides. Apply/Save persists the cleared user layer, so developer style or built-in defaults are visible after reload. |
 
 ## Global > UI > Layout
 
