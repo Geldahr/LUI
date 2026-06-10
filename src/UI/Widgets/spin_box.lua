@@ -12,7 +12,6 @@ local BASE_BUTTON_FONT_SIZE = 8
 local BASE_TEXTBOX_INSET_X = 2
 local BASE_TEXTBOX_INSET_Y = 2
 local BASE_BUTTONS_INSET_Y = 0
-local BASE_FONT_SIZE = 12
 
 local RENDER_PLUS_MINUS = "plus_minus"
 local RENDER_ARROWS = "arrows"
@@ -189,7 +188,7 @@ function LuiSpinBox:Constructor()
 end
 
 function LuiSpinBox:_apply_default_font()
-    self.text_box:SetFont(_scaled_font(self._scale, "Verdana", BASE_FONT_SIZE))
+    self.text_box:SetFont(_scaled_font(self._scale, Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
     local button_font = _scaled_font(self._scale, "Verdana", BASE_BUTTON_FONT_SIZE)
     self.increment_button:set_font(button_font)
     self.decrement_button:set_font(button_font)

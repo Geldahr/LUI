@@ -4,9 +4,9 @@ import "LUI.src.Settings.Content.content"
 import "LUI.src.UI.Widgets"
 
 local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
+local Style = UI.Widgets.Style
 
-local PROFILE_INFO_FONT_NAME = "Verdana"
-local PROFILE_INFO_FONT_SIZE = 13
+local PROFILE_INFO_FONT_SIZE_OFFSET = 3
 local INFO_HEIGHT = 59
 local ACTION_ROW_HEIGHT = 24
 local BLOCK_GAP = 24
@@ -17,10 +17,10 @@ local function _scaled_profile_info_size(value)
 end
 
 local function _scaled_profile_info_font()
-    local font = FONT_TO_LOTRO(PROFILE_INFO_FONT_NAME, _scaled_profile_info_size(PROFILE_INFO_FONT_SIZE))
+    local size = Style.CONTENT_SMALL_FONT_SIZE + PROFILE_INFO_FONT_SIZE_OFFSET
+    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, _scaled_profile_info_size(size))
     if font == nil then
-        error("Missing profile info font: " .. tostring(PROFILE_INFO_FONT_NAME) .. " " ..
-            tostring(PROFILE_INFO_FONT_SIZE))
+        error("Missing profile info font: " .. tostring(Style.CONTENT_SMALL_FONT_NAME) .. " " .. tostring(size))
     end
     return font
 end
@@ -122,7 +122,7 @@ function ProfileManagerPage:Constructor(window)
     info_entry.body:SetMultiline(true)
     info_entry.body:SetFont(_scaled_profile_info_font())
     info_entry.body:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
-    info_entry.body:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
+    info_entry.body:SetForeColor(Style.FOREGROUND)
     info_entry.body:SetText(table.concat({
         TR["Profile actions here apply immediately."],
         TR["Deleting a profile removes it for all characters using it."],

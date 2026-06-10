@@ -6,9 +6,9 @@ UI.Widgets = UI.Widgets or {}
 
 --[[
 Widget style sheet:
-Define _G.STYLE before importing or creating LUI widgets to override the shared
-widget look globally. LUI does not create _G.STYLE; if it is nil, widgets use
-the complete DEFAULTS table below.
+Define _G.STYLE before creating LUI widgets to provide the developer/plugin
+style layer. Saved user style overrides live in _G.USER_STYLE. If both are nil,
+widgets use the complete DEFAULTS table below.
 
 Example:
 _G.STYLE = {
@@ -22,14 +22,18 @@ _G.STYLE = {
 }
 
 Widgets read values as UI.Widgets.Style.CONTROL_BORDER or Style["CONTROL_BORDER"].
-Keys are exact uppercase names. If _G.STYLE omits a state-specific value such as
-CONTROL_BORDER_HOVER, the lookup tries its fallback key in _G.STYLE and then the
-fully populated DEFAULTS value.
+Keys are exact uppercase names. Resolution order is:
+DEFAULTS < _G.STYLE < _G.USER_STYLE.
+
+If a layer omits a state-specific value such as CONTROL_BORDER_HOVER, lookup
+tries that layer's fallback chain before moving to the next lower layer.
 ]]
 local DEFAULTS = {
     BACKGROUND = Turbine.UI.Color(1, 0.08, 0.08, 0.08),
     FOREGROUND = Turbine.UI.Color(1, 1, 1, 1),
+    INFO_FOREGROUND = Turbine.UI.Color(1, 0.80, 0.86, 0.96),
     FOREGROUND_DISABLED = Turbine.UI.Color(0.55, 0.85, 0.85, 0.85),
+    TEXT_OUTLINE = Turbine.UI.Color(1, 0, 0, 0),
 
     ALTERNATE_BACKGROUND = Turbine.UI.Color(1, 0.06, 0.06, 0.06),
     ALTERNATE_FOREGROUND = Turbine.UI.Color(0.88, 0.88, 0.88),
@@ -39,6 +43,7 @@ local DEFAULTS = {
     CONTROL_BACKGROUND_PRESSED = Turbine.UI.Color(1, 0.10, 0.14, 0.20),
     CONTROL_BACKGROUND_ACTIVE = Turbine.UI.Color(1, 0.18, 0.30, 0.46),
     CONTROL_BACKGROUND_DISABLED = Turbine.UI.Color(1, 0.10, 0.10, 0.10),
+    CONTROL_BACKGROUND_READONLY = Turbine.UI.Color(1, 0.20, 0.20, 0.20),
     CONTROL_FOREGROUND = Turbine.UI.Color(1, 1, 1, 1),
     CONTROL_FOREGROUND_HOVER = Turbine.UI.Color(1, 1, 1, 1),
     CONTROL_FOREGROUND_PRESSED = Turbine.UI.Color(1, 1, 1, 1),
@@ -51,6 +56,21 @@ local DEFAULTS = {
     BORDER_WIDTH = 1.5,
     BORDER_WIDTH_THIN = 1,
     BORDER_WIDTH_LARGE = 2,
+
+    CONTROL_FONT_NAME = "Verdana",
+    CONTROL_FONT_SIZE = 12,
+    WINDOW_TITLE_FONT_NAME = "Verdana",
+    WINDOW_TITLE_FONT_SIZE = 12,
+    FONT_H1_NAME = "BookAntiqua",
+    FONT_H1_SIZE = 22,
+    FONT_H2_NAME = "BookAntiquaBold",
+    FONT_H2_SIZE = 18,
+    CONTENT_LARGE_FONT_NAME = "Verdana",
+    CONTENT_LARGE_FONT_SIZE = 14,
+    CONTENT_MEDIUM_FONT_NAME = "Verdana",
+    CONTENT_MEDIUM_FONT_SIZE = 12,
+    CONTENT_SMALL_FONT_NAME = "Verdana",
+    CONTENT_SMALL_FONT_SIZE = 10,
 
     ACCENT_BACKGROUND = Turbine.UI.Color(1, 0.68, 0.74, 0.88),
     ACCENT_BACKGROUND_DISABLED = Turbine.UI.Color(0.50, 0.68, 0.68, 0.68),
@@ -68,6 +88,22 @@ local DEFAULTS = {
     INVALID_BACKGROUND = Turbine.UI.Color(0.20, 0.20, 0.20),
     TRANSPARENT_BACKGROUND = Turbine.UI.Color(0, 0, 0, 0),
 
+    MODAL_OVERLAY_BACKGROUND = Turbine.UI.Color(0.45, 0, 0, 0),
+    MODAL_DIALOG_BACKGROUND = Turbine.UI.Color(0.95, 0.08, 0.08, 0.08),
+    PREVIEW_OVERLAY_BACKGROUND = Turbine.UI.Color(0.14, 0, 0, 0),
+    MOVE_OVERLAY_BACKGROUND = Turbine.UI.Color(0.35, 0, 0, 0),
+    MOVE_OVERLAY_HEADER_BACKGROUND = Turbine.UI.Color(0.45, 0, 0, 0),
+    MOVE_OVERLAY_FOREGROUND = Turbine.UI.Color(1, 1, 1),
+    MOVE_GRID_BACKGROUND = Turbine.UI.Color(0.10, 0, 0, 0),
+    MOVE_GRID_CENTER_LINE = Turbine.UI.Color(0.30, 1, 1, 1),
+    MOVE_GRID_MAJOR_LINE = Turbine.UI.Color(0.16, 1, 1, 1),
+    MOVE_GRID_MINOR_LINE = Turbine.UI.Color(0.08, 1, 1, 1),
+    DRAG_GHOST_BACKGROUND = Turbine.UI.Color(0.92, 0.09, 0.09, 0.09),
+    DRAG_GHOST_BORDER = Turbine.UI.Color(1.00, 0.35, 0.40, 0.50),
+    DRAG_GHOST_FOREGROUND = Turbine.UI.Color(1.00, 1.00, 1.00, 1.00),
+    DRAG_PREVIEW_FILL = Turbine.UI.Color(0.28, 1.00, 1.00, 1.00),
+    DRAG_PREVIEW_EDGE = Turbine.UI.Color(0.95, 1.00, 1.00, 1.00),
+
     DROPDOWN_ARROW = 0x41007e1a,
     DROPDOWN_ARROW_HOVER = 0x41007e1b,
     DROPDOWN_ARROW_PRESSED = 0x41007e19,
@@ -84,6 +120,8 @@ local FALLBACKS = {
     CONTROL_BACKGROUND_PRESSED = "CONTROL_BACKGROUND",
     CONTROL_BACKGROUND_ACTIVE = "SELECTION_BACKGROUND",
     CONTROL_BACKGROUND_DISABLED = "CONTROL_BACKGROUND",
+    CONTROL_BACKGROUND_READONLY = "CONTROL_BACKGROUND_DISABLED",
+    INFO_FOREGROUND = "ALTERNATE_FOREGROUND",
     CONTROL_FOREGROUND = "FOREGROUND",
     CONTROL_FOREGROUND_HOVER = "CONTROL_FOREGROUND",
     CONTROL_FOREGROUND_PRESSED = "CONTROL_FOREGROUND",
@@ -101,21 +139,59 @@ local FALLBACKS = {
     PANEL_BACKGROUND = "BACKGROUND",
     PANEL_INNER_BACKGROUND = "BACKGROUND",
     PLACEHOLDER_FOREGROUND = "ALTERNATE_FOREGROUND",
+    MODAL_DIALOG_BACKGROUND = "PANEL_BACKGROUND",
+    PREVIEW_OVERLAY_BACKGROUND = "MODAL_OVERLAY_BACKGROUND",
+    MOVE_OVERLAY_HEADER_BACKGROUND = "MOVE_OVERLAY_BACKGROUND",
+    MOVE_OVERLAY_FOREGROUND = "FOREGROUND",
+    MOVE_GRID_BACKGROUND = "MOVE_OVERLAY_BACKGROUND",
+    MOVE_GRID_CENTER_LINE = "MOVE_OVERLAY_FOREGROUND",
+    MOVE_GRID_MAJOR_LINE = "MOVE_GRID_CENTER_LINE",
+    MOVE_GRID_MINOR_LINE = "MOVE_GRID_MAJOR_LINE",
+    DRAG_GHOST_BORDER = "CONTROL_BORDER",
+    DRAG_GHOST_FOREGROUND = "FOREGROUND",
+    DRAG_PREVIEW_FILL = "DRAG_GHOST_FOREGROUND",
+    DRAG_PREVIEW_EDGE = "DRAG_GHOST_FOREGROUND",
     DROPDOWN_ARROW_HOVER = "DROPDOWN_ARROW",
     DROPDOWN_ARROW_PRESSED = "DROPDOWN_ARROW_HOVER",
     DROPDOWN_ARROW_DISABLED = "DROPDOWN_ARROW",
 }
 
+local function _style_override(style, key)
+    local value = style[key]
+    if value ~= nil then
+        return value
+    end
+
+    local fallback = FALLBACKS[key]
+    if fallback ~= nil then
+        return _style_override(style, fallback)
+    end
+
+    return nil
+end
+
 local Style = setmetatable({}, {
     __index = function(_, key)
+        if _G["USER_STYLE"] then
+            local value = _style_override(_G.USER_STYLE, key)
+            if value ~= nil then
+                return value
+            end
+        end
+
         if _G["STYLE"] then
-            local fallback = FALLBACKS[key]
-            return _G.STYLE[key] or (fallback ~= nil and _G.STYLE[fallback]) or DEFAULTS[key]
+            local value = _style_override(_G.STYLE, key)
+            if value ~= nil then
+                return value
+            end
         end
 
         return DEFAULTS[key]
     end,
 })
+
+Style.DEFAULTS = DEFAULTS
+Style.FALLBACKS = FALLBACKS
 
 function Style.apply_transparent_button(button)
     if button == nil then

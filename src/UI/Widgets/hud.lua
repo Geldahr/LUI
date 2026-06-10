@@ -3,11 +3,10 @@ import "Turbine.UI"
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.line_edit"
+import "LUI.src.UI.Widgets.style"
 
 local DEFAULT_TITLE = "HUD"
-local MOVE_BACK_COLOR = Turbine.UI.Color(0.35, 0, 0, 0)
-local MOVE_HEADER_COLOR = Turbine.UI.Color(0.45, 0, 0, 0)
-local MOVE_TEXT_COLOR = Turbine.UI.Color(1, 1, 1)
+local Style = UI.Widgets.Style
 
 local function _scale()
     if _G.settings == nil or _G.settings.global == nil then
@@ -124,18 +123,18 @@ function LuiHUD:Constructor(opts)
     self._move_layer:SetMouseVisible(false)
     self._move_layer:SetVisible(false)
     self._move_layer:SetZOrder(999)
-    self._move_layer:SetBackColor(MOVE_BACK_COLOR)
+    self._move_layer:SetBackColor(Style.MOVE_OVERLAY_BACKGROUND)
 
     self._move_header = Turbine.UI.Control()
     self._move_header:SetParent(self._move_layer)
     self._move_header:SetMouseVisible(false)
-    self._move_header:SetBackColor(MOVE_HEADER_COLOR)
+    self._move_header:SetBackColor(Style.MOVE_OVERLAY_HEADER_BACKGROUND)
 
     self._move_title_label = LuiLabel()
     self._move_title_label:SetParent(self._move_header)
     self._move_title_label:SetMouseVisible(false)
     self._move_title_label:SetSelectable(false)
-    self._move_title_label:SetForeColor(MOVE_TEXT_COLOR)
+    self._move_title_label:SetForeColor(Style.MOVE_OVERLAY_FOREGROUND)
     self._move_title_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self._move_xy_container = Turbine.UI.Control()
@@ -146,7 +145,7 @@ function LuiHUD:Constructor(opts)
     self._move_x_label:SetParent(self._move_xy_container)
     self._move_x_label:SetMouseVisible(false)
     self._move_x_label:SetSelectable(false)
-    self._move_x_label:SetForeColor(MOVE_TEXT_COLOR)
+    self._move_x_label:SetForeColor(Style.MOVE_OVERLAY_FOREGROUND)
     self._move_x_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self._move_x_label:SetText("X")
 
@@ -159,7 +158,7 @@ function LuiHUD:Constructor(opts)
     self._move_y_label:SetParent(self._move_xy_container)
     self._move_y_label:SetMouseVisible(false)
     self._move_y_label:SetSelectable(false)
-    self._move_y_label:SetForeColor(MOVE_TEXT_COLOR)
+    self._move_y_label:SetForeColor(Style.MOVE_OVERLAY_FOREGROUND)
     self._move_y_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self._move_y_label:SetText("Y")
 
@@ -294,11 +293,11 @@ function LuiHUD:_sync_move_ui_scale()
     end
 
     self._move_ui_scale = scale
-    self._move_title_label:SetFont(_scaled_font("Verdana", 12))
-    self._move_x_label:SetFont(_scaled_font("Verdana", 10))
-    self._move_x_box:SetFont(_scaled_font("Verdana", 10))
-    self._move_y_label:SetFont(_scaled_font("Verdana", 10))
-    self._move_y_box:SetFont(_scaled_font("Verdana", 10))
+    self._move_title_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
+    self._move_x_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self._move_x_box:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self._move_y_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self._move_y_box:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 end
 
 function LuiHUD:apply_move_ui_scale()

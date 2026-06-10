@@ -17,8 +17,7 @@ import "LUI.src.Crafting"
 import "LUI.src.Travel"
 import "LUI.src.StatusBar.api_chat_bridge"
 
-_G.STYLE = _G.STYLE or {}
-_G.STYLE.WINDOW_WORK_AREA = function()
+local function _lui_window_work_area()
     local display_w, display_h = Turbine.UI.Display.GetSize()
     display_w = tonumber(display_w) or 0
     display_h = tonumber(display_h) or 0
@@ -32,6 +31,19 @@ _G.STYLE.WINDOW_WORK_AREA = function()
     reserved_top = math.min(display_h, reserved_top)
     return 0, reserved_top, display_w, math.max(0, display_h - reserved_top)
 end
+
+function _G.apply_saved_global_style()
+    local user_style = {}
+    for key, value in pairs(_G.loaded_settings.global.style) do
+        user_style[key] = value
+    end
+    _G.USER_STYLE = user_style
+    _G.STYLE.WINDOW_WORK_AREA = _lui_window_work_area
+end
+
+_G.STYLE = _G.STYLE or {}
+_G.STYLE.WINDOW_WORK_AREA = _lui_window_work_area
+_G.USER_STYLE = _G.USER_STYLE or {}
 
 _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
 
@@ -375,6 +387,7 @@ if _G.loaded_settings_was_new == true then
     _G.fix_colors()
     _G.rebuild_settings()
 end
+_G.apply_saved_global_style()
 _G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = _G.settings.crafting.display_mode
 
 BESTIARY_CARD = Bestiary.BestiaryCard()

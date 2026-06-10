@@ -43,8 +43,6 @@ S.TRAVEL_SHORTCUT_ICON = UI.AssetIds.compass
 S.ASSETS_SHORTCUT_ICON = UI.AssetIds.chest
 S.BESTIARY_SHORTCUT_ICON = UI.AssetIds.book_orange_cover
 
-S.SHORTCUT_BORDER_COLOR = Turbine.UI.Color(0.90, 0.28, 0.35, 0.45)
-S.SHORTCUT_BORDER_HOVER_COLOR = Turbine.UI.Color(0.98, 0.38, 0.46, 0.56)
 S.STATUS_BAR_LAYOUT_TOKENS = {
     time = "time_local",
     inventory = "inventory_space",

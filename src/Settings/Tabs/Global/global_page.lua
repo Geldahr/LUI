@@ -1,11 +1,465 @@
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
+import "LUI.src.Settings.Content.nested_tabs"
+import "LUI.src.Settings.Content.section_page"
 import "LUI.src.Settings.Content.tabs"
 
 local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
 local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
+local ConfigNestedTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_nested_tabs) or
+    ConfigNestedTabs
+local ConfigSectionPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_section_page) or
+    ConfigSectionPage
 local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
 local scaled_int = FeatureShell.scaled_int
+local Style = UI.Widgets.Style
+
+local STYLE_FONT_NAME_LABELS = {
+    "Verdana",
+    "BookAntiqua",
+    "BookAntiquaBold",
+    "TrajanPro",
+    "TrajanProBold",
+    "Arial",
+    "FixedSys",
+    "LucidaConsole",
+    "VerdanaBold",
+}
+
+local STYLE_FONT_NAME_VALUES = {
+    "Verdana",
+    "BookAntiqua",
+    "BookAntiquaBold",
+    "TrajanPro",
+    "TrajanProBold",
+    "Arial",
+    "FixedSys",
+    "LucidaConsole",
+    "VerdanaBold",
+}
+
+local function _style_settings(settings)
+    return settings.global.style
+end
+
+local function _style_override_value(style, key)
+    local value = style[key]
+    if value ~= nil then
+        return value
+    end
+
+    local fallback = Style.FALLBACKS[key]
+    if fallback ~= nil then
+        return _style_override_value(style, fallback)
+    end
+
+    return nil
+end
+
+local function _dev_style_value(key)
+    if _G.STYLE ~= nil then
+        local value = _style_override_value(_G.STYLE, key)
+        if value ~= nil then
+            return value
+        end
+    end
+
+    return Style.DEFAULTS[key]
+end
+
+local function _style_value(settings, key)
+    local style = _style_settings(settings)
+    local value = style[key]
+    if value ~= nil then
+        return value, true
+    end
+
+    local fallback = Style.FALLBACKS[key]
+    if fallback ~= nil then
+        local inherited = _style_override_value(style, fallback)
+        if inherited ~= nil then
+            return inherited, false
+        end
+    end
+
+    return _dev_style_value(key), false
+end
+
+local function _style_inherited_value(settings, key)
+    local style = _style_settings(settings)
+    local fallback = Style.FALLBACKS[key]
+    if fallback ~= nil then
+        local inherited = _style_override_value(style, fallback)
+        if inherited ~= nil then
+            return inherited
+        end
+    end
+    return _dev_style_value(key)
+end
+
+local function _same_color_hex(page, left, right)
+    return page.color_to_hex(left) == page.color_to_hex(right)
+end
+
+local function _color_alpha(color)
+    local value = tonumber(color.A)
+    if value == nil then
+        return 1
+    end
+    return value
+end
+
+local function _color_with_alpha(color, alpha)
+    return Turbine.UI.Color(alpha, color.R, color.G, color.B)
+end
+
+local function _opacity_value(value)
+    local number = tonumber(value)
+    if number == nil then
+        return nil
+    end
+    if number < 0 then
+        number = 0
+    elseif number > 1 then
+        number = 1
+    end
+    return math.floor((number * 100) + 0.5) / 100
+end
+
+local function _opacity_text(value)
+    return string.format("%.2f", _opacity_value(value) or 1)
+end
+
+local function _same_style_color(page, left, right)
+    return _same_color_hex(page, left, right) == true and _opacity_text(_color_alpha(left)) == _opacity_text(_color_alpha(right))
+end
+
+local function _style_control_key(key)
+    return "global_ui_style_" .. string.lower(key)
+end
+
+local function _add_style_color(page, settings_getter, key, label)
+    local entry = nil
+    entry = page:add_color_picker(_style_control_key(key), label,
+        function(value)
+            if entry._loaded_direct ~= true and value == entry._loaded_value then
+                return
+            end
+
+            local color = page.hex_to_color(value)
+            local current = _style_value(settings_getter(), key)
+            color = _color_with_alpha(color, _color_alpha(current))
+            local style = _style_settings(settings_getter())
+            if _same_style_color(page, color, _style_inherited_value(settings_getter(), key)) == true then
+                style[key] = nil
+            else
+                style[key] = color
+            end
+        end,
+        function()
+            local value, direct = _style_value(settings_getter(), key)
+            local hex = page.color_to_hex(value)
+            entry._loaded_value = hex
+            entry._loaded_direct = direct == true
+            entry._style_default_value = page.color_to_hex(Style.DEFAULTS[key])
+            return hex
+        end)
+    return entry
+end
+
+local function _add_style_opacity(page, settings_getter, key, label)
+    local entry = nil
+    entry = page:add_line_edit(_style_control_key(key) .. "_opacity", label,
+        function(value)
+            if entry._loaded_direct ~= true and value == entry._loaded_value then
+                return
+            end
+
+            local alpha = _opacity_value(value)
+            if alpha ~= nil then
+                local current = _style_value(settings_getter(), key)
+                local color = _color_with_alpha(current, alpha)
+                local style = _style_settings(settings_getter())
+                if _same_style_color(page, color, _style_inherited_value(settings_getter(), key)) == true then
+                    style[key] = nil
+                else
+                    style[key] = color
+                end
+            end
+        end,
+        function()
+            local value, direct = _style_value(settings_getter(), key)
+            local text = _opacity_text(_color_alpha(value))
+            entry._loaded_value = text
+            entry._loaded_direct = direct == true
+            entry._style_default_value = _opacity_text(_color_alpha(Style.DEFAULTS[key]))
+            return text
+        end)
+    return entry
+end
+
+local function _add_style_number(page, settings_getter, key, label)
+    local entry = nil
+    entry = page:add_line_edit(_style_control_key(key), label,
+        function(value)
+            if entry._loaded_direct ~= true and value == entry._loaded_value then
+                return
+            end
+
+            local number = tonumber(value)
+            if number ~= nil then
+                local style = _style_settings(settings_getter())
+                if number == tonumber(_style_inherited_value(settings_getter(), key)) then
+                    style[key] = nil
+                else
+                    style[key] = number
+                end
+            end
+        end,
+        function()
+            local value, direct = _style_value(settings_getter(), key)
+            local text = tostring(value)
+            entry._loaded_value = text
+            entry._loaded_direct = direct == true
+            entry._style_default_value = tostring(Style.DEFAULTS[key])
+            return text
+        end)
+    return entry
+end
+
+local function _add_style_font_name(page, settings_getter, key, label)
+    local entry = nil
+    entry = page:add_dropdown(_style_control_key(key), label, STYLE_FONT_NAME_LABELS, STYLE_FONT_NAME_VALUES,
+        function(value)
+            if entry._loaded_direct ~= true and value == entry._loaded_value then
+                return
+            end
+
+            local style = _style_settings(settings_getter())
+            if value == _style_inherited_value(settings_getter(), key) then
+                style[key] = nil
+            else
+                style[key] = value
+            end
+        end,
+        function()
+            local value, direct = _style_value(settings_getter(), key)
+            entry._loaded_value = value
+            entry._loaded_direct = direct == true
+            entry._style_default_value = Style.DEFAULTS[key]
+            return value
+        end)
+    return entry
+end
+
+local function _reset_style_controls(page)
+    page:stage_style_reset()
+    page.window:update_all_swatches()
+    page:layout()
+end
+
+local function _add_reset_button(page, content)
+    return content:add_button("global_ui_style_reset", TR["Reset shared UI style"], function()
+        _reset_style_controls(page)
+    end)
+end
+
+local function _new_ui_colors_section(window, settings_getter)
+    local frame = ConfigContent(window, 3)
+    _add_style_color(frame, settings_getter, "CONTROL_BORDER", TR["Border color"])
+    _add_style_color(frame, settings_getter, "CONTROL_BORDER_HOVER", TR["Hover border color"])
+    _add_style_color(frame, settings_getter, "CONTROL_BORDER_ACTIVE", TR["Active border color"])
+    frame:add_row_break()
+    _add_style_color(frame, settings_getter, "CONTROL_BORDER_DISABLED", TR["Disabled border color"])
+
+    local backgrounds = ConfigContent(window, 3)
+    _add_style_color(backgrounds, settings_getter, "BACKGROUND", TR["Window background"])
+    _add_style_color(backgrounds, settings_getter, "ALTERNATE_BACKGROUND", TR["Alternate background"])
+    backgrounds:add_row_break()
+    _add_style_color(backgrounds, settings_getter, "PANEL_BACKGROUND", TR["Panel background"])
+    _add_style_color(backgrounds, settings_getter, "PANEL_INNER_BACKGROUND", TR["Panel inner background"])
+    backgrounds:add_row_break()
+    _add_style_color(backgrounds, settings_getter, "CONTROL_BACKGROUND", TR["Control background"])
+
+    local controls = ConfigContent(window, 3)
+    _add_style_color(controls, settings_getter, "CONTROL_BACKGROUND_HOVER", TR["Hover background"])
+    _add_style_color(controls, settings_getter, "CONTROL_BACKGROUND_PRESSED", TR["Pressed background"])
+    _add_style_color(controls, settings_getter, "CONTROL_BACKGROUND_ACTIVE", TR["Active background"])
+    controls:add_row_break()
+    _add_style_color(controls, settings_getter, "CONTROL_BACKGROUND_DISABLED", TR["Disabled background"])
+    _add_style_color(controls, settings_getter, "CONTROL_BACKGROUND_READONLY", TR["Read-only background"])
+
+    local selection = ConfigContent(window, 3)
+    _add_style_color(selection, settings_getter, "SELECTION_BACKGROUND", TR["Selection background"])
+    _add_style_color(selection, settings_getter, "SELECTION_BACKGROUND_HOVER", TR["Selection hover background"])
+    _add_style_color(selection, settings_getter, "SELECTION_FOREGROUND", TR["Selection text"])
+    selection:add_row_break()
+    _add_style_color(selection, settings_getter, "ALTERNATE_SELECTION_BACKGROUND", TR["Alternate selection background"])
+    _add_style_color(selection, settings_getter, "ALTERNATE_SELECTION_FOREGROUND", TR["Alternate selection text"])
+
+    local text = ConfigContent(window, 3)
+    _add_style_color(text, settings_getter, "FOREGROUND", TR["Main text"])
+    _add_style_color(text, settings_getter, "ALTERNATE_FOREGROUND", TR["Secondary text"])
+    _add_style_color(text, settings_getter, "INFO_FOREGROUND", TR["Info text"])
+    text:add_row_break()
+    _add_style_color(text, settings_getter, "FOREGROUND_DISABLED", TR["Disabled text"])
+    _add_style_color(text, settings_getter, "PLACEHOLDER_FOREGROUND", TR["Placeholder text"])
+    _add_style_color(text, settings_getter, "TEXT_OUTLINE", TR["Text outline"])
+
+    local control_text = ConfigContent(window, 3)
+    _add_style_color(control_text, settings_getter, "CONTROL_FOREGROUND", TR["Control text"])
+    _add_style_color(control_text, settings_getter, "CONTROL_FOREGROUND_HOVER", TR["Control hover text"])
+    _add_style_color(control_text, settings_getter, "CONTROL_FOREGROUND_PRESSED", TR["Control pressed text"])
+    control_text:add_row_break()
+    _add_style_color(control_text, settings_getter, "CONTROL_FOREGROUND_ACTIVE", TR["Control active text"])
+    _add_style_color(control_text, settings_getter, "CONTROL_FOREGROUND_DISABLED", TR["Control disabled text"])
+
+    local accents = ConfigContent(window, 3)
+    _add_style_color(accents, settings_getter, "ACCENT_BACKGROUND", TR["Accent background"])
+    _add_style_color(accents, settings_getter, "ACCENT_FOREGROUND", TR["Accent text"])
+    accents:add_row_break()
+    _add_style_color(accents, settings_getter, "ACCENT_BACKGROUND_DISABLED", TR["Disabled accent"])
+    _add_style_color(accents, settings_getter, "INVALID_BACKGROUND", TR["Invalid background"])
+
+    local overlays = ConfigContent(window, 3)
+    _add_style_color(overlays, settings_getter, "MODAL_OVERLAY_BACKGROUND", TR["Modal overlay background"])
+    _add_style_opacity(overlays, settings_getter, "MODAL_OVERLAY_BACKGROUND", TR["Modal overlay opacity"])
+    overlays:add_row_break()
+    _add_style_color(overlays, settings_getter, "MODAL_DIALOG_BACKGROUND", TR["Modal dialog background"])
+    _add_style_opacity(overlays, settings_getter, "MODAL_DIALOG_BACKGROUND", TR["Modal dialog opacity"])
+    overlays:add_row_break()
+    _add_style_color(overlays, settings_getter, "PREVIEW_OVERLAY_BACKGROUND", TR["Preview overlay background"])
+    _add_style_opacity(overlays, settings_getter, "PREVIEW_OVERLAY_BACKGROUND", TR["Preview overlay opacity"])
+    overlays:add_row_break()
+    _add_style_color(overlays, settings_getter, "DRAG_GHOST_BACKGROUND", TR["Drag ghost background"])
+    _add_style_opacity(overlays, settings_getter, "DRAG_GHOST_BACKGROUND", TR["Drag ghost opacity"])
+    overlays:add_row_break()
+    _add_style_color(overlays, settings_getter, "DRAG_GHOST_BORDER", TR["Drag ghost border"])
+    _add_style_color(overlays, settings_getter, "DRAG_GHOST_FOREGROUND", TR["Drag ghost text"])
+    overlays:add_row_break()
+    _add_style_color(overlays, settings_getter, "DRAG_PREVIEW_FILL", TR["Drag preview fill"])
+    _add_style_opacity(overlays, settings_getter, "DRAG_PREVIEW_FILL", TR["Drag preview fill opacity"])
+    overlays:add_row_break()
+    _add_style_color(overlays, settings_getter, "DRAG_PREVIEW_EDGE", TR["Drag preview edge"])
+    _add_style_opacity(overlays, settings_getter, "DRAG_PREVIEW_EDGE", TR["Drag preview edge opacity"])
+
+    local move_mode = ConfigContent(window, 3)
+    _add_style_color(move_mode, settings_getter, "MOVE_OVERLAY_BACKGROUND", TR["Move overlay background"])
+    _add_style_opacity(move_mode, settings_getter, "MOVE_OVERLAY_BACKGROUND", TR["Move overlay opacity"])
+    move_mode:add_row_break()
+    _add_style_color(move_mode, settings_getter, "MOVE_OVERLAY_HEADER_BACKGROUND", TR["Move header background"])
+    _add_style_opacity(move_mode, settings_getter, "MOVE_OVERLAY_HEADER_BACKGROUND", TR["Move header opacity"])
+    move_mode:add_row_break()
+    _add_style_color(move_mode, settings_getter, "MOVE_OVERLAY_FOREGROUND", TR["Move text"])
+    move_mode:add_row_break()
+    _add_style_color(move_mode, settings_getter, "MOVE_GRID_BACKGROUND", TR["Move grid background"])
+    _add_style_opacity(move_mode, settings_getter, "MOVE_GRID_BACKGROUND", TR["Move grid opacity"])
+    move_mode:add_row_break()
+    _add_style_color(move_mode, settings_getter, "MOVE_GRID_CENTER_LINE", TR["Move grid center line"])
+    _add_style_opacity(move_mode, settings_getter, "MOVE_GRID_CENTER_LINE", TR["Move grid center opacity"])
+    move_mode:add_row_break()
+    _add_style_color(move_mode, settings_getter, "MOVE_GRID_MAJOR_LINE", TR["Move grid major line"])
+    _add_style_opacity(move_mode, settings_getter, "MOVE_GRID_MAJOR_LINE", TR["Move grid major opacity"])
+    move_mode:add_row_break()
+    _add_style_color(move_mode, settings_getter, "MOVE_GRID_MINOR_LINE", TR["Move grid minor line"])
+    _add_style_opacity(move_mode, settings_getter, "MOVE_GRID_MINOR_LINE", TR["Move grid minor opacity"])
+
+    local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.left,
+        FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
+    page:add_tab(TR["Frame"], "frame", frame)
+    page:add_tab(TR["Backgrounds"], "backgrounds", backgrounds)
+    page:add_tab(TR["Controls"], "controls", controls)
+    page:add_tab(TR["Selection"], "selection", selection)
+    page:add_tab(TR["Text"], "text", text)
+    page:add_tab(TR["Control Text"], "control_text", control_text)
+    page:add_tab(TR["Accents"], "accents", accents)
+    page:add_tab(TR["Overlays"], "overlays", overlays)
+    page:add_tab(TR["Move Mode"], "move_mode", move_mode)
+    return page
+end
+
+local function _new_ui_page(window, settings_getter)
+    local page = ConfigSectionPage(window, nil, nil, nil)
+    local load_page = page.load
+    local save_page = page.save
+    local function style_settings_getter()
+        return page._staged_style_settings or settings_getter()
+    end
+
+    function page:stage_style_reset()
+        self._staged_style_settings = {
+            global = {
+                style = {},
+            },
+        }
+        load_page(self)
+    end
+
+    function page:load()
+        self._staged_style_settings = nil
+        load_page(self)
+    end
+
+    function page:save()
+        local staged = self._staged_style_settings
+        if staged ~= nil then
+            save_page(self)
+
+            local style = _style_settings(settings_getter())
+            for key in pairs(style) do
+                style[key] = nil
+            end
+
+            local staged_style = _style_settings(staged)
+            for key, value in pairs(staged_style) do
+                style[key] = value
+            end
+
+            self._staged_style_settings = nil
+            return
+        end
+
+        save_page(self)
+    end
+
+    local general = ConfigContent(window, 4)
+    general:add_info(TR["Style changes apply after reloading the plugin."], 34)
+    _add_reset_button(page, general)
+    page:add_tab(TR["General"], "general", general)
+
+    local layout = ConfigContent(window, 4)
+    _add_style_number(layout, style_settings_getter, "BORDER_WIDTH", TR["Border width"])
+    _add_style_number(layout, style_settings_getter, "BORDER_WIDTH_THIN", TR["Thin border width"])
+    _add_style_number(layout, style_settings_getter, "BORDER_WIDTH_LARGE", TR["Large border width"])
+    page:add_tab(TR["Layout"], "layout", layout)
+
+    page:add_tab(TR["Colors"], "colors", _new_ui_colors_section(window, style_settings_getter))
+
+    local text = ConfigContent(window, 4)
+    _add_style_font_name(text, style_settings_getter, "CONTROL_FONT_NAME", TR["Default control font"])
+    _add_style_number(text, style_settings_getter, "CONTROL_FONT_SIZE", TR["Default control font size"])
+    text:add_row_break()
+    _add_style_font_name(text, style_settings_getter, "WINDOW_TITLE_FONT_NAME", TR["Window title font"])
+    _add_style_number(text, style_settings_getter, "WINDOW_TITLE_FONT_SIZE", TR["Window title font size"])
+    text:add_row_break()
+    _add_style_font_name(text, style_settings_getter, "FONT_H1_NAME", TR["H1 font"])
+    _add_style_number(text, style_settings_getter, "FONT_H1_SIZE", TR["H1 font size"])
+    text:add_row_break()
+    _add_style_font_name(text, style_settings_getter, "FONT_H2_NAME", TR["H2 font"])
+    _add_style_number(text, style_settings_getter, "FONT_H2_SIZE", TR["H2 font size"])
+    text:add_row_break()
+    _add_style_font_name(text, style_settings_getter, "CONTENT_LARGE_FONT_NAME", TR["Large content font"])
+    _add_style_number(text, style_settings_getter, "CONTENT_LARGE_FONT_SIZE", TR["Large content font size"])
+    text:add_row_break()
+    _add_style_font_name(text, style_settings_getter, "CONTENT_MEDIUM_FONT_NAME", TR["Medium content font"])
+    _add_style_number(text, style_settings_getter, "CONTENT_MEDIUM_FONT_SIZE", TR["Medium content font size"])
+    text:add_row_break()
+    _add_style_font_name(text, style_settings_getter, "CONTENT_SMALL_FONT_NAME", TR["Small content font"])
+    _add_style_number(text, style_settings_getter, "CONTENT_SMALL_FONT_SIZE", TR["Small content font size"])
+    page:add_tab(TR["Text"], "text", text)
+
+    return page
+end
 
 GlobalPage = class(ConfigTabs)
 
@@ -122,6 +576,10 @@ function GlobalPage:Constructor(window)
             return self._settings.global.number_abbrev.method
         end, method_help)
     self:add_tab(TR["Numbers"], "numbers", numbers)
+
+    self:add_tab(TR["UI"], "ui", _new_ui_page(window, function()
+        return self._settings
+    end))
 end
 
 function GlobalPage:apply_ui_scale()

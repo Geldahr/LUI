@@ -4,6 +4,7 @@ import "LUI.src.StatusBar.Widgets"
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
+local Style = UI.Widgets.Style
 
 local SHORTCUT_WIDGETS = {
     config = { shortcut_key = "config", display_mode = "icon" },
@@ -13,13 +14,18 @@ local SHORTCUT_WIDGETS = {
     bestiary = { shortcut_key = "bestiary", display_mode = "icon" },
 }
 
-local DRAG_PREVIEW_FILL_COLOR = Turbine.UI.Color(0.28, 1.00, 1.00, 1.00)
-local DRAG_PREVIEW_EDGE_COLOR = Turbine.UI.Color(0.95, 1.00, 1.00, 1.00)
 local DRAG_PREVIEW_EDGE_W = 2
-local EDIT_DRAG_GHOST_BACK = Turbine.UI.Color(0.92, 0.09, 0.09, 0.09)
-local EDIT_DRAG_GHOST_BORDER = Turbine.UI.Color(1.00, 0.35, 0.40, 0.50)
-local EDIT_DRAG_GHOST_TEXT = Turbine.UI.Color(1.00, 1.00, 1.00, 1.00)
 local EDIT_DRAG_START_DISTANCE = 4
+local EDIT_DRAG_GHOST_FONT_SIZE_OFFSET = 1
+
+local function _edit_drag_ghost_font()
+    local size = Style.CONTENT_SMALL_FONT_SIZE + EDIT_DRAG_GHOST_FONT_SIZE_OFFSET
+    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, size * _G.settings.global.scale)
+    if font == nil then
+        error("Missing edit drag ghost font: " .. tostring(Style.CONTENT_SMALL_FONT_NAME) .. " " .. tostring(size))
+    end
+    return font
+end
 
 local function _widget_participates_in_layout(widget)
     return widget ~= nil and widget._status_bar_drag_hidden ~= true
@@ -516,7 +522,7 @@ function StatusBarWindow:Constructor()
     self._drag_preview_window = Turbine.UI.Window()
     self:apply_native_scaling(self._drag_preview_window)
     self._drag_preview_window:SetMouseVisible(false)
-    self._drag_preview_window:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self._drag_preview_window:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self._drag_preview_window:SetVisible(true)
     self._drag_preview_window:SetZOrder(200)
 
@@ -525,7 +531,7 @@ function StatusBarWindow:Constructor()
     self._drag_preview_fill:SetMouseVisible(false)
     self._drag_preview_fill:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self._drag_preview_fill:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self._drag_preview_fill:SetBackColor(DRAG_PREVIEW_FILL_COLOR)
+    self._drag_preview_fill:SetBackColor(Style.DRAG_PREVIEW_FILL)
     self._drag_preview_fill:SetVisible(false)
     self._drag_preview_fill:SetZOrder(100)
 
@@ -534,7 +540,7 @@ function StatusBarWindow:Constructor()
     self._drag_preview_edge:SetMouseVisible(false)
     self._drag_preview_edge:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self._drag_preview_edge:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self._drag_preview_edge:SetBackColor(DRAG_PREVIEW_EDGE_COLOR)
+    self._drag_preview_edge:SetBackColor(Style.DRAG_PREVIEW_EDGE)
     self._drag_preview_edge:SetVisible(false)
     self._drag_preview_edge:SetZOrder(101)
 
@@ -543,7 +549,7 @@ function StatusBarWindow:Constructor()
     self._drag_preview_trailing_edge:SetMouseVisible(false)
     self._drag_preview_trailing_edge:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self._drag_preview_trailing_edge:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self._drag_preview_trailing_edge:SetBackColor(DRAG_PREVIEW_EDGE_COLOR)
+    self._drag_preview_trailing_edge:SetBackColor(Style.DRAG_PREVIEW_EDGE)
     self._drag_preview_trailing_edge:SetVisible(false)
     self._drag_preview_trailing_edge:SetZOrder(101)
 
@@ -554,7 +560,7 @@ function StatusBarWindow:Constructor()
     self._edit_drag_overlay:SetVisible(false)
     self._edit_drag_overlay:SetMouseVisible(false)
     self._edit_drag_overlay:SetZOrder(3500)
-    self._edit_drag_overlay:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self._edit_drag_overlay:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self._edit_drag_overlay.MouseMove = function(_, args)
         self:_handle_edit_drag_overlay_mouse_move(args)
     end
@@ -566,36 +572,36 @@ function StatusBarWindow:Constructor()
     self._edit_drag_ghost:SetParent(self._edit_drag_overlay)
     self._edit_drag_ghost:SetVisible(false)
     self._edit_drag_ghost:SetMouseVisible(false)
-    self._edit_drag_ghost:SetBackColor(EDIT_DRAG_GHOST_BACK)
+    self._edit_drag_ghost:SetBackColor(Style.DRAG_GHOST_BACKGROUND)
     self._edit_drag_ghost:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self._edit_drag_ghost:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
     self._edit_drag_ghost_top = Turbine.UI.Control()
     self._edit_drag_ghost_top:SetParent(self._edit_drag_ghost)
     self._edit_drag_ghost_top:SetMouseVisible(false)
-    self._edit_drag_ghost_top:SetBackColor(EDIT_DRAG_GHOST_BORDER)
+    self._edit_drag_ghost_top:SetBackColor(Style.DRAG_GHOST_BORDER)
 
     self._edit_drag_ghost_bottom = Turbine.UI.Control()
     self._edit_drag_ghost_bottom:SetParent(self._edit_drag_ghost)
     self._edit_drag_ghost_bottom:SetMouseVisible(false)
-    self._edit_drag_ghost_bottom:SetBackColor(EDIT_DRAG_GHOST_BORDER)
+    self._edit_drag_ghost_bottom:SetBackColor(Style.DRAG_GHOST_BORDER)
 
     self._edit_drag_ghost_left = Turbine.UI.Control()
     self._edit_drag_ghost_left:SetParent(self._edit_drag_ghost)
     self._edit_drag_ghost_left:SetMouseVisible(false)
-    self._edit_drag_ghost_left:SetBackColor(EDIT_DRAG_GHOST_BORDER)
+    self._edit_drag_ghost_left:SetBackColor(Style.DRAG_GHOST_BORDER)
 
     self._edit_drag_ghost_right = Turbine.UI.Control()
     self._edit_drag_ghost_right:SetParent(self._edit_drag_ghost)
     self._edit_drag_ghost_right:SetMouseVisible(false)
-    self._edit_drag_ghost_right:SetBackColor(EDIT_DRAG_GHOST_BORDER)
+    self._edit_drag_ghost_right:SetBackColor(Style.DRAG_GHOST_BORDER)
 
     self._edit_drag_ghost_label = UI.Widgets.LuiLabel()
     self._edit_drag_ghost_label:SetParent(self._edit_drag_ghost)
     self._edit_drag_ghost_label:SetMouseVisible(false)
     self._edit_drag_ghost_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self._edit_drag_ghost_label:SetForeColor(EDIT_DRAG_GHOST_TEXT)
-    self._edit_drag_ghost_label:SetFont(FONT_TO_LOTRO("Verdana", 11 * _G.settings.global.scale))
+    self._edit_drag_ghost_label:SetForeColor(Style.DRAG_GHOST_FOREGROUND)
+    self._edit_drag_ghost_label:SetFont(_edit_drag_ghost_font())
 
     self:SetMouseVisible(false)
     self:SetVisible(true)
@@ -883,7 +889,7 @@ function StatusBarWindow:_refresh_edit_drag_ghost_text(text)
     local ghost_h = math.max(22, math.floor(self:GetHeight() + 6))
 
     self._edit_drag_ghost_label:SetText(title)
-    self._edit_drag_ghost_label:SetFont(FONT_TO_LOTRO("Verdana", 11 * _G.settings.global.scale))
+    self._edit_drag_ghost_label:SetFont(_edit_drag_ghost_font())
     self:_layout_edit_drag_ghost(ghost_w, ghost_h)
 end
 

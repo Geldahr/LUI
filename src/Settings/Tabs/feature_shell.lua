@@ -11,10 +11,10 @@ local SECTION_TAB_SCALE = 0.88
 local NESTED_TAB_SCALE = 0.78
 local SECTION_TAB_FONT_SIZE = 12
 local NESTED_TAB_FONT_SIZE = 11
+local STYLE_TAB_BASE_FONT_SIZE = 12
 local BASE_TAB_HEIGHT = 24
 local PREVIEW_GAP = 10
 local SECTION_FRAME_PADDING = 8
-local CONTENT_BORDER_COLOR = Turbine.UI.Color(1, 0.2, 0.2, 0.2)
 
 local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
@@ -28,13 +28,17 @@ local function _scaled_font(name, size)
     return font
 end
 
+local function _scaled_tab_font(size)
+    return _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + (size - STYLE_TAB_BASE_FONT_SIZE))
+end
+
 local function _refresh_preview_noop()
 end
 
 local function _apply_button_tab_bar_theme(tab_bar)
     tab_bar._strip_back = Style.BACKGROUND
     tab_bar._content_back = Style.BACKGROUND
-    tab_bar._content_border_color = CONTENT_BORDER_COLOR
+    tab_bar._content_border_color = Style.CONTROL_BORDER
     tab_bar:refresh_layout()
 end
 
@@ -72,7 +76,7 @@ function SettingsFeatureNestedPage:apply_ui_scale()
     self.sub_tab_bar:set_button_content_gap(_scaled_int(SECTION_FRAME_PADDING))
     self.sub_tab_bar:set_content_padding(0)
     self.sub_tab_bar:set_scale(_G.settings.global.scale * self._compact_tab_scale_factor)
-    self.sub_tab_bar:set_font(_scaled_font("Verdana", self._compact_tab_font_size))
+    self.sub_tab_bar:set_font(_scaled_tab_font(self._compact_tab_font_size))
     _apply_button_tab_bar_theme(self.sub_tab_bar)
 
     self.sub_tab_bar:each_widget(function(_, page)
@@ -148,7 +152,7 @@ function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_hei
 
     self.section_frame = Turbine.UI.Control()
     self.section_frame:SetParent(self)
-    self.section_frame:SetBackColor(CONTENT_BORDER_COLOR)
+    self.section_frame:SetBackColor(Style.CONTROL_BORDER)
 
     self.section_frame_inner = Turbine.UI.Control()
     self.section_frame_inner:SetParent(self.section_frame)
@@ -277,7 +281,7 @@ function SettingsFeatureSectionPage:apply_ui_scale()
         self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.button)
         self.section_tab_bar:set_content_padding(0)
         self.section_tab_bar:set_scale(_G.settings.global.scale * SECTION_TAB_SCALE)
-        self.section_tab_bar:set_font(_scaled_font("Verdana", SECTION_TAB_FONT_SIZE))
+        self.section_tab_bar:set_font(_scaled_tab_font(SECTION_TAB_FONT_SIZE))
         _apply_button_tab_bar_theme(self.section_tab_bar)
     else
         self.section_tab_bar:set_show_content_border(true)

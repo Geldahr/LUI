@@ -21,7 +21,6 @@ local BASE_MARK_W = 20
 local BASE_ARROW_W = 16
 local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
-local BASE_FONT_SIZE = 10
 local BASE_ICON_SIZE = 16
 
 local function _scaled_int(scale, value)
@@ -38,7 +37,7 @@ local function _set_blend(control)
 end
 
 local function _scaled_font(scale)
-    return FONT_TO_LOTRO("Verdana", BASE_FONT_SIZE * scale)
+    return FONT_TO_LOTRO(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE * scale)
 end
 
 local function _close_other_popups()

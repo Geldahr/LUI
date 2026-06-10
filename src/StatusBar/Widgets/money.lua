@@ -1,6 +1,7 @@
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
+local Style = UI.Widgets.Style
 
 local MoneyWidget = class(Turbine.UI.Control)
 _G.MoneyWidget = MoneyWidget
@@ -16,7 +17,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
     self:SetMouseVisible(false)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self:SetSize(widget_w, bar_h)
 
     self.g_icon = Image(S.GOLD_ICON)

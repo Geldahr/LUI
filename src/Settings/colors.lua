@@ -58,6 +58,10 @@ function _G.fix_colors()
     fix_vital(s.fellowship)
     fix_vital(s.raid)
 
+    for key, value in pairs(s.global.style) do
+        s.global.style[key] = to_color(value)
+    end
+
     if s.target ~= nil and s.target.vitals ~= nil and s.target.vitals.targets_target ~= nil then
         local tt = s.target.vitals.targets_target
 

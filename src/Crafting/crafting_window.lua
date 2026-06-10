@@ -6,6 +6,7 @@ import "LUI.src.Utils.font"
 import "LUI.src.Utils.search_query"
 
 Crafting = Crafting or {}
+local Style = UI.Widgets.Style
 
 local FILTER_ALL = "__all"
 local AVAILABILITY_ALL = "all"
@@ -101,10 +102,6 @@ local BASE_RECIPE_ROW_H = 46
 local BASE_INGREDIENT_ROW_H = 38
 local BASE_PLAN_ROW_H = 38
 local BASE_CRITICAL_RESULT_ROW_H = 34
-local BASE_TITLE_FONT = 14
-local BASE_BODY_FONT = 11
-local BASE_META_FONT = 10
-local BASE_BUTTON_FONT = 10
 local BASE_ICON_SIDE = 32
 local BASE_SCROLL_W = 10
 local BASE_PAGE_LABEL_W = 52
@@ -133,17 +130,11 @@ local ITEM_INFO_CONTROL_OFFSET = -3
 local ITEM_INFO_CONTROL_EXTRA = 3
 local BESTIARY_ACTION_ICON = UI.AssetIds.book_orange_cover
 
-local PANEL_BACK = Turbine.UI.Color(1.00, 0.07, 0.08, 0.10)
-local PANEL_BORDER = Turbine.UI.Color(1.00, 0.19, 0.22, 0.28)
-local SECTION_BACK = Turbine.UI.Color(1.00, 0.09, 0.11, 0.13)
-local SECTION_HEADER_BACK = Turbine.UI.Color(1.00, 0.13, 0.16, 0.20)
-local SELECTED_BACK = Turbine.UI.Color(1.00, 0.15, 0.22, 0.32)
-local HOVER_BACK = Turbine.UI.Color(1.00, 0.12, 0.14, 0.18)
-local TEXT_MAIN = Turbine.UI.Color(1.00, 0.92, 0.95, 0.98)
-local TEXT_META = Turbine.UI.Color(1.00, 0.64, 0.70, 0.78)
 local STATUS_READY = Turbine.UI.Color(1.00, 0.31, 0.78, 0.43)
 local STATUS_MISSING = Turbine.UI.Color(1.00, 0.86, 0.30, 0.30)
 local STATUS_AUTO = Turbine.UI.Color(1.00, 0.35, 0.75, 0.90)
+local PLAN_ROW_READY_BACKGROUND = Turbine.UI.Color(1.00, 0.09, 0.15, 0.11)
+local PLAN_ROW_MISSING_BACKGROUND = Turbine.UI.Color(1.00, 0.16, 0.09, 0.09)
 local SOURCE_BACKPACK_COLOR = Turbine.UI.Color(1.00, 0.43, 0.88, 0.43)
 local SOURCE_BANK_COLOR = Turbine.UI.Color(1.00, 0.94, 0.78, 0.28)
 local SOURCE_VAULT_COLOR = Turbine.UI.Color(1.00, 0.42, 0.78, 0.96)
@@ -359,7 +350,7 @@ local function _ratio_text(current, total)
 end
 
 local function _source_hint_color(source_key)
-    return SOURCE_HINT_COLORS[source_key] or TEXT_META
+    return SOURCE_HINT_COLORS[source_key] or Style.ALTERNATE_FOREGROUND
 end
 
 local function _format_percent(value)
@@ -755,7 +746,7 @@ function CraftingRecipeRow:Constructor(on_click, on_favorite_toggle)
     self.status = nil
 
     self:SetMouseVisible(true)
-    self:SetBackColor(SECTION_BACK)
+    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
 
     self.status_strip = Turbine.UI.Control()
     self.status_strip:SetParent(self)
@@ -782,13 +773,13 @@ function CraftingRecipeRow:Constructor(on_click, on_favorite_toggle)
     self.title:SetParent(self)
     self.title:SetMouseVisible(false)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.title:SetForeColor(TEXT_MAIN)
+    self.title:SetForeColor(Style.FOREGROUND)
 
     self.subtitle = UI.Widgets.LuiLabel()
     self.subtitle:SetParent(self)
     self.subtitle:SetMouseVisible(false)
     self.subtitle:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.subtitle:SetForeColor(TEXT_META)
+    self.subtitle:SetForeColor(Style.ALTERNATE_FOREGROUND)
 
     self.status_label = UI.Widgets.LuiLabel()
     self.status_label:SetParent(self)
@@ -825,9 +816,9 @@ end
 
 function CraftingRecipeRow:set_scale(scale)
     self._scale = scale
-    self.title:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.subtitle:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.status_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.subtitle:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.status_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.favorite_button:set_scale(1)
     _apply_favorite_icon(self.favorite_button, self._favorite)
 end
@@ -883,11 +874,11 @@ end
 
 function CraftingRecipeRow:_refresh_visual()
     if self._selected == true then
-        self:SetBackColor(SELECTED_BACK)
+        self:SetBackColor(Style.SELECTION_BACKGROUND)
     elseif self._hover == true then
-        self:SetBackColor(HOVER_BACK)
+        self:SetBackColor(Style.CONTROL_BACKGROUND_HOVER)
     else
-        self:SetBackColor(SECTION_BACK)
+        self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
     end
 
     self.status_strip:SetBackColor(CraftingWindow._status_color(nil, self.status))
@@ -955,7 +946,7 @@ function CraftingIngredientRow:Constructor()
     self._indent_level = 0
     self._detail_text = ""
     self._source_hint_text = ""
-    self._source_hint_color = TEXT_META
+    self._source_hint_color = Style.ALTERNATE_FOREGROUND
     self._source_breakdown = nil
     self._show_source_breakdown = nil
     self._hide_source_breakdown = nil
@@ -971,19 +962,19 @@ function CraftingIngredientRow:Constructor()
     self.name = UI.Widgets.LuiLabel()
     self.name:SetParent(self)
     self.name:SetMouseVisible(false)
-    self.name:SetForeColor(TEXT_MAIN)
+    self.name:SetForeColor(Style.FOREGROUND)
     self.name:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.detail = UI.Widgets.LuiLabel()
     self.detail:SetParent(self)
     self.detail:SetMouseVisible(false)
-    self.detail:SetForeColor(TEXT_META)
+    self.detail:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.detail:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.source_hint = UI.Widgets.LuiLabel()
     self.source_hint:SetParent(self)
     self.source_hint:SetMouseVisible(true)
-    self.source_hint:SetForeColor(TEXT_META)
+    self.source_hint:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.source_hint:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.source_hint:SetMultiline(false)
     self.source_hint:SetVisible(false)
@@ -1026,10 +1017,10 @@ end
 
 function CraftingIngredientRow:set_scale(scale)
     self._scale = scale
-    self.name:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.detail:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.source_hint:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.amount:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.name:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.detail:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.source_hint:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.amount:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.bestiary_button:set_scale(1)
     _apply_bestiary_icon(self.bestiary_button)
 end
@@ -1043,16 +1034,16 @@ function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id,
     self._indent_level = math.max(0, math.floor((tonumber(indent_level) or 0) + 0.5))
     self._detail_text = detail_text or ""
     self._source_hint_text = source_hint_text or ""
-    self._source_hint_color = source_hint_color or TEXT_META
+    self._source_hint_color = source_hint_color or Style.ALTERNATE_FOREGROUND
     self.icon:bind_item(item_info, icon_id, background_image_id)
     self.name:SetText(label_text or "")
     self.detail:SetText(self._detail_text)
     self.source_hint:SetText(self._source_hint_text)
     self.source_hint:SetForeColor(self._source_hint_color)
     self.amount:SetText(amount_text or "")
-    self.amount:SetForeColor(color or TEXT_META)
-    self.status_strip:SetBackColor(color or TEXT_META)
-    self:SetBackColor(SECTION_BACK)
+    self.amount:SetForeColor(color or Style.ALTERNATE_FOREGROUND)
+    self.status_strip:SetBackColor(color or Style.ALTERNATE_FOREGROUND)
+    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
     self:_layout()
 end
 
@@ -1169,7 +1160,7 @@ function CraftingResultInfoRow:Constructor()
 
     self._scale = 1
 
-    self:SetBackColor(SECTION_BACK)
+    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
     self:SetMouseVisible(false)
 
     self.status_strip = Turbine.UI.Control()
@@ -1182,20 +1173,20 @@ function CraftingResultInfoRow:Constructor()
     self.title = UI.Widgets.LuiLabel()
     self.title:SetParent(self)
     self.title:SetMouseVisible(false)
-    self.title:SetForeColor(TEXT_MAIN)
+    self.title:SetForeColor(Style.FOREGROUND)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.detail = UI.Widgets.LuiLabel()
     self.detail:SetParent(self)
     self.detail:SetMouseVisible(false)
-    self.detail:SetForeColor(TEXT_META)
+    self.detail:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.detail:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 end
 
 function CraftingResultInfoRow:set_scale(scale)
     self._scale = scale
-    self.title:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.detail:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.detail:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 end
 
 function CraftingResultInfoRow:set_width(width)
@@ -1207,8 +1198,8 @@ function CraftingResultInfoRow:set_data(item_info, icon_id, background_image_id,
     self.icon:bind_item(item_info, icon_id, background_image_id)
     self.title:SetText(title or "")
     self.detail:SetText(detail or "")
-    self.status_strip:SetBackColor(color or TEXT_META)
-    self:SetBackColor(SECTION_BACK)
+    self.status_strip:SetBackColor(color or Style.ALTERNATE_FOREGROUND)
+    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
     self:_layout()
 end
 
@@ -1263,7 +1254,7 @@ function CraftingPlanRow:Constructor(on_count_changed, on_remove)
     self.recipe = nil
     self._read_only = false
 
-    self:SetBackColor(SECTION_BACK)
+    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
 
     self.icon = CraftingItemIcon()
     self.icon:SetParent(self)
@@ -1271,7 +1262,7 @@ function CraftingPlanRow:Constructor(on_count_changed, on_remove)
     self.name = UI.Widgets.LuiLabel()
     self.name:SetParent(self)
     self.name:SetMouseVisible(false)
-    self.name:SetForeColor(TEXT_MAIN)
+    self.name:SetForeColor(Style.FOREGROUND)
     self.name:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.status_label = UI.Widgets.LuiLabel()
@@ -1304,12 +1295,12 @@ end
 
 function CraftingPlanRow:set_scale(scale)
     self._scale = scale
-    self.name:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.status_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.name:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.status_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.count_box:set_scale(scale)
-    self.count_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.count_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.remove_button:set_scale(scale)
-    self.remove_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
+    self.remove_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
 end
 
 function CraftingPlanRow:set_width(width)
@@ -1339,8 +1330,7 @@ function CraftingPlanRow:set_data(recipe, result_item, result_name, plan_count, 
     local all_ready = craftable_count >= plan_total and plan_total > 0
     self.status_label:SetText(_ratio_text(craftable_count, plan_count))
     self.status_label:SetForeColor(all_ready == true and CraftingWindow._status_color(nil, evaluation) or STATUS_MISSING)
-    self:SetBackColor(all_ready == true and Turbine.UI.Color(1.00, 0.09, 0.15, 0.11) or
-        Turbine.UI.Color(1.00, 0.16, 0.09, 0.09))
+    self:SetBackColor(all_ready == true and PLAN_ROW_READY_BACKGROUND or PLAN_ROW_MISSING_BACKGROUND)
 end
 
 function CraftingPlanRow:set_placeholder_data(label_text, plan_count, loading)
@@ -1352,8 +1342,8 @@ function CraftingPlanRow:set_placeholder_data(label_text, plan_count, loading)
     self.count_box:SetVisible(false)
     self.remove_button:SetVisible(false)
     self.status_label:SetText(loading == true and "..." or "?")
-    self.status_label:SetForeColor(TEXT_META)
-    self:SetBackColor(Turbine.UI.Color(1.00, 0.12, 0.12, 0.12))
+    self.status_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
+    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
 end
 
 function CraftingPlanRow:_layout()
@@ -1545,7 +1535,7 @@ function CraftingWindow:Constructor()
     self.scope_label = UI.Widgets.LuiLabel()
     self.scope_label:SetParent(self.top_bar)
     self.scope_label:SetMouseVisible(false)
-    self.scope_label:SetForeColor(TEXT_META)
+    self.scope_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.scope_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.scope_label:SetText(TR["Materials"])
 
@@ -1563,7 +1553,7 @@ function CraftingWindow:Constructor()
     self.profession_label = UI.Widgets.LuiLabel()
     self.profession_label:SetParent(self.top_bar)
     self.profession_label:SetMouseVisible(false)
-    self.profession_label:SetForeColor(TEXT_META)
+    self.profession_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.profession_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.profession_label:SetText(TR["Profession"])
 
@@ -1580,7 +1570,7 @@ function CraftingWindow:Constructor()
     self.rank_label = UI.Widgets.LuiLabel()
     self.rank_label:SetParent(self.top_bar)
     self.rank_label:SetMouseVisible(false)
-    self.rank_label:SetForeColor(TEXT_META)
+    self.rank_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.rank_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.rank_label:SetText(TR["Rank"])
 
@@ -1596,7 +1586,7 @@ function CraftingWindow:Constructor()
     self.availability_label = UI.Widgets.LuiLabel()
     self.availability_label:SetParent(self.top_bar)
     self.availability_label:SetMouseVisible(false)
-    self.availability_label:SetForeColor(TEXT_META)
+    self.availability_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.availability_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.availability_label:SetText(TR["Show"])
 
@@ -1617,7 +1607,7 @@ function CraftingWindow:Constructor()
     self.level_label = UI.Widgets.LuiLabel()
     self.level_label:SetParent(self.top_bar)
     self.level_label:SetMouseVisible(false)
-    self.level_label:SetForeColor(TEXT_META)
+    self.level_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.level_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.level_label:SetText(TR["Equip lvl"])
 
@@ -1631,7 +1621,7 @@ function CraftingWindow:Constructor()
     self.level_dash_label = UI.Widgets.LuiLabel()
     self.level_dash_label:SetParent(self.top_bar)
     self.level_dash_label:SetMouseVisible(false)
-    self.level_dash_label:SetForeColor(TEXT_META)
+    self.level_dash_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.level_dash_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.level_dash_label:SetText("-")
 
@@ -1644,7 +1634,7 @@ function CraftingWindow:Constructor()
 
     self.left_panel = Turbine.UI.Control()
     self.left_panel:SetParent(content_host)
-    _set_control_border(self.left_panel, PANEL_BORDER, PANEL_BACK)
+    _set_control_border(self.left_panel, Style.CONTROL_BORDER, Style.BACKGROUND)
 
     self.recipe_list = Turbine.UI.ListBox()
     self.recipe_list:SetParent(self.left_panel.inner)
@@ -1702,12 +1692,12 @@ function CraftingWindow:Constructor()
     self.recipe_empty:SetMouseVisible(false)
     self.recipe_empty:SetMultiline(true)
     self.recipe_empty:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.recipe_empty:SetForeColor(TEXT_META)
+    self.recipe_empty:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.recipe_empty:SetText(TR["No matching recipes."])
 
     self.right_panel = Turbine.UI.Control()
     self.right_panel:SetParent(content_host)
-    self.right_panel:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self.right_panel:SetBackColor(Style.TRANSPARENT_BACKGROUND)
 
     self.right_tab_bar = UI.Widgets.LuiTabBar()
     self.right_tab_bar:SetParent(self.right_panel)
@@ -1726,12 +1716,12 @@ function CraftingWindow:Constructor()
 
     self.detail_panel = Turbine.UI.Control()
     self.detail_panel:SetParent(self.recipe_page)
-    _set_control_fill(self.detail_panel, PANEL_BACK)
+    _set_control_fill(self.detail_panel, Style.BACKGROUND)
 
     self.recipe_split_border = Turbine.UI.Control()
     self.recipe_split_border:SetParent(self.recipe_page)
     self.recipe_split_border:SetMouseVisible(false)
-    self.recipe_split_border:SetBackColor(PANEL_BORDER)
+    self.recipe_split_border:SetBackColor(Style.CONTROL_BORDER)
 
     self.detail_icon = CraftingItemIcon()
     self.detail_icon:SetParent(self.detail_panel.inner)
@@ -1739,13 +1729,13 @@ function CraftingWindow:Constructor()
     self.detail_title = UI.Widgets.LuiLabel()
     self.detail_title:SetParent(self.detail_panel.inner)
     self.detail_title:SetMouseVisible(false)
-    self.detail_title:SetForeColor(TEXT_MAIN)
+    self.detail_title:SetForeColor(Style.FOREGROUND)
     self.detail_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.detail_meta = UI.Widgets.LuiLabel()
     self.detail_meta:SetParent(self.detail_panel.inner)
     self.detail_meta:SetMouseVisible(false)
-    self.detail_meta:SetForeColor(TEXT_META)
+    self.detail_meta:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.detail_meta:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.detail_status = UI.Widgets.LuiLabel()
@@ -1760,7 +1750,7 @@ function CraftingWindow:Constructor()
     self.plan_label = UI.Widgets.LuiLabel()
     self.plan_label:SetParent(self.detail_panel.inner)
     self.plan_label:SetMouseVisible(false)
-    self.plan_label:SetForeColor(TEXT_META)
+    self.plan_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.plan_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.plan_label:SetText(TR["Build plan"])
 
@@ -1781,14 +1771,14 @@ function CraftingWindow:Constructor()
     self.ingredients_title = UI.Widgets.LuiLabel()
     self.ingredients_title:SetParent(self.detail_panel.inner)
     self.ingredients_title:SetMouseVisible(false)
-    self.ingredients_title:SetForeColor(TEXT_META)
+    self.ingredients_title:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.ingredients_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.ingredients_title:SetText(TR["Ingredients"])
 
     self.ingredients_header_bar = Turbine.UI.Control()
     self.ingredients_header_bar:SetParent(self.detail_panel.inner)
     self.ingredients_header_bar:SetMouseVisible(false)
-    self.ingredients_header_bar:SetBackColor(SECTION_HEADER_BACK)
+    self.ingredients_header_bar:SetBackColor(Style.CONTROL_BACKGROUND)
     self.ingredients_header_bar:SetZOrder(1)
     self.ingredients_title:SetZOrder(2)
 
@@ -1805,31 +1795,31 @@ function CraftingWindow:Constructor()
     self.detail_empty:SetParent(self.detail_panel.inner)
     self.detail_empty:SetMouseVisible(false)
     self.detail_empty:SetMultiline(true)
-    self.detail_empty:SetForeColor(TEXT_META)
+    self.detail_empty:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.detail_empty:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.detail_empty:SetText(TR["Select a recipe to see the breakdown."])
 
     self.queue_panel = Turbine.UI.Control()
     self.queue_panel:SetParent(self.recipe_page)
-    _set_control_fill(self.queue_panel, PANEL_BACK)
+    _set_control_fill(self.queue_panel, Style.BACKGROUND)
 
     self.queue_header_bar = Turbine.UI.Control()
     self.queue_header_bar:SetParent(self.queue_panel.inner)
     self.queue_header_bar:SetMouseVisible(false)
-    self.queue_header_bar:SetBackColor(SECTION_HEADER_BACK)
+    self.queue_header_bar:SetBackColor(Style.CONTROL_BACKGROUND)
     self.queue_header_bar:SetZOrder(1)
 
     self.queue_title = UI.Widgets.LuiLabel()
     self.queue_title:SetParent(self.queue_panel.inner)
     self.queue_title:SetMouseVisible(false)
-    self.queue_title:SetForeColor(TEXT_META)
+    self.queue_title:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.queue_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.queue_title:SetText(TR["Plan queue"])
 
     self.queue_summary = UI.Widgets.LuiLabel()
     self.queue_summary:SetParent(self.queue_panel.inner)
     self.queue_summary:SetMouseVisible(false)
-    self.queue_summary:SetForeColor(TEXT_MAIN)
+    self.queue_summary:SetForeColor(Style.FOREGROUND)
     self.queue_summary:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.queue_title:SetZOrder(2)
     self.queue_summary:SetZOrder(2)
@@ -1847,24 +1837,24 @@ function CraftingWindow:Constructor()
     self.queue_empty:SetParent(self.queue_panel.inner)
     self.queue_empty:SetMouseVisible(false)
     self.queue_empty:SetMultiline(true)
-    self.queue_empty:SetForeColor(TEXT_META)
+    self.queue_empty:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.queue_empty:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.queue_empty:SetText(TR["Add recipes to the plan to keep a short queue here."])
 
     self.plan_panel = Turbine.UI.Control()
     self.plan_panel:SetParent(self.plan_page)
-    _set_control_fill(self.plan_panel, PANEL_BACK)
+    _set_control_fill(self.plan_panel, Style.BACKGROUND)
 
     self.plan_header_bar = Turbine.UI.Control()
     self.plan_header_bar:SetParent(self.plan_panel.inner)
     self.plan_header_bar:SetMouseVisible(false)
-    self.plan_header_bar:SetBackColor(SECTION_HEADER_BACK)
+    self.plan_header_bar:SetBackColor(Style.CONTROL_BACKGROUND)
     self.plan_header_bar:SetZOrder(1)
 
     self.plan_title = UI.Widgets.LuiLabel()
     self.plan_title:SetParent(self.plan_panel.inner)
     self.plan_title:SetMouseVisible(false)
-    self.plan_title:SetForeColor(TEXT_META)
+    self.plan_title:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.plan_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.plan_title:SetText(TR["Build plan"])
 
@@ -1905,7 +1895,7 @@ function CraftingWindow:Constructor()
     self.missing_title = UI.Widgets.LuiLabel()
     self.missing_title:SetParent(self.plan_panel.inner)
     self.missing_title:SetMouseVisible(false)
-    self.missing_title:SetForeColor(TEXT_META)
+    self.missing_title:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.missing_title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.missing_title:SetText(TR["Resources"])
 
@@ -1921,7 +1911,7 @@ function CraftingWindow:Constructor()
     self.missing_header_bar = Turbine.UI.Control()
     self.missing_header_bar:SetParent(self.plan_panel.inner)
     self.missing_header_bar:SetMouseVisible(false)
-    self.missing_header_bar:SetBackColor(SECTION_HEADER_BACK)
+    self.missing_header_bar:SetBackColor(Style.CONTROL_BACKGROUND)
     self.missing_header_bar:SetZOrder(1)
     self.missing_title:SetZOrder(2)
     self.missing_bestiary_button:SetZOrder(2)
@@ -1929,7 +1919,7 @@ function CraftingWindow:Constructor()
     self.plan_resources_border = Turbine.UI.Control()
     self.plan_resources_border:SetParent(self.plan_panel.inner)
     self.plan_resources_border:SetMouseVisible(false)
-    self.plan_resources_border:SetBackColor(PANEL_BORDER)
+    self.plan_resources_border:SetBackColor(Style.CONTROL_BORDER)
 
     self.missing_list = Turbine.UI.ListBox()
     self.missing_list:SetParent(self.plan_panel.inner)
@@ -1944,30 +1934,30 @@ function CraftingWindow:Constructor()
     self.plan_empty:SetParent(self.plan_panel.inner)
     self.plan_empty:SetMouseVisible(false)
     self.plan_empty:SetMultiline(true)
-    self.plan_empty:SetForeColor(TEXT_META)
+    self.plan_empty:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.plan_empty:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.plan_empty:SetText(TR["Add recipes to the plan to see total shortages."])
 
     self.loading_panel = Turbine.UI.Control()
     self.loading_panel:SetParent(content_host)
-    _set_control_border(self.loading_panel, PANEL_BORDER, PANEL_BACK)
+    _set_control_border(self.loading_panel, Style.CONTROL_BORDER, Style.BACKGROUND)
     self.loading_panel:SetVisible(false)
 
     self.loading_text = UI.Widgets.LuiLabel()
     self.loading_text:SetParent(self.loading_panel.inner)
     self.loading_text:SetMouseVisible(false)
-    self.loading_text:SetForeColor(TEXT_META)
+    self.loading_text:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.loading_text:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.loading_track = Turbine.UI.Control()
     self.loading_track:SetParent(self.loading_panel.inner)
     self.loading_track:SetMouseVisible(false)
-    self.loading_track:SetBackColor(PANEL_BORDER)
+    self.loading_track:SetBackColor(Style.CONTROL_BORDER)
 
     self.loading_track_inner = Turbine.UI.Control()
     self.loading_track_inner:SetParent(self.loading_track)
     self.loading_track_inner:SetMouseVisible(false)
-    self.loading_track_inner:SetBackColor(SECTION_BACK)
+    self.loading_track_inner:SetBackColor(Style.PANEL_INNER_BACKGROUND)
 
     self.loading_fill = Turbine.UI.Control()
     self.loading_fill:SetParent(self.loading_track_inner)
@@ -2120,7 +2110,7 @@ end
 
 function CraftingWindow:_source_breakdown_hint_text(breakdown)
     if type(breakdown) ~= "table" or type(breakdown.entries) ~= "table" then
-        return "", TEXT_META
+        return "", Style.ALTERNATE_FOREGROUND
     end
 
     local positive = {}
@@ -2132,7 +2122,7 @@ function CraftingWindow:_source_breakdown_hint_text(breakdown)
     end
 
     if #positive == 0 then
-        return "", TEXT_META
+        return "", Style.ALTERNATE_FOREGROUND
     end
     if #positive == 1 then
         local entry = positive[1]
@@ -2144,7 +2134,7 @@ function CraftingWindow:_source_breakdown_hint_text(breakdown)
         end
         return label, _source_hint_color(entry.key)
     end
-    return _format_count(#positive) .. " " .. TR["locations"], TEXT_META
+    return _format_count(#positive) .. " " .. TR["locations"], Style.ALTERNATE_FOREGROUND
 end
 
 function CraftingWindow:_ensure_source_breakdown_hint_rows(count)
@@ -2163,14 +2153,14 @@ function CraftingWindow:_ensure_source_breakdown_hint_rows(count)
         row.source:SetMouseVisible(false)
         row.source:SetMultiline(false)
         row.source:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        row.source:SetFont(_scaled_font("Verdana", 10))
+        row.source:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 
         row.quantity = UI.Widgets.LuiLabel()
         row.quantity:SetParent(row.holder)
         row.quantity:SetMouseVisible(false)
         row.quantity:SetMultiline(false)
         row.quantity:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-        row.quantity:SetFont(_scaled_font("Verdana", 10))
+        row.quantity:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 
         self.source_breakdown_hint_rows[#self.source_breakdown_hint_rows + 1] = row
     end
@@ -2249,21 +2239,21 @@ function CraftingWindow:_show_source_breakdown_hint(anchor_control, breakdown)
         if i <= #lines then
             local line = lines[i]
             local row_y = _scaled_int(4) + ((i - 1) * line_height)
-            local color = line.color or TEXT_META
+            local color = line.color or Style.ALTERNATE_FOREGROUND
 
             row.holder:SetPosition(row_x, row_y)
             row.holder:SetSize(row_w, line_height)
 
             row.source:SetPosition(0, 0)
             row.source:SetSize(source_w, line_height)
-            row.source:SetFont(_scaled_font("Verdana", 10))
+            row.source:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
             row.source:SetForeColor(color)
             row.source:SetText(line.label or "")
             row.source:SetVisible(true)
 
             row.quantity:SetPosition(source_w + col_gap, 0)
             row.quantity:SetSize(quantity_w, line_height)
-            row.quantity:SetFont(_scaled_font("Verdana", 10))
+            row.quantity:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
             row.quantity:SetForeColor(color)
             row.quantity:SetText(line.quantity or "")
             row.quantity:SetVisible(true)
@@ -2347,7 +2337,7 @@ end
 
 function CraftingWindow._node_status_color(_, node)
     if type(node) ~= "table" then
-        return TEXT_META
+        return Style.ALTERNATE_FOREGROUND
     end
     if node.satisfied == true then
         if node.expanded == true then
@@ -2848,52 +2838,52 @@ function CraftingWindow:apply_settings()
     self:set_minimum_size(self:_minimum_window_size())
     self:_enforce_min_size()
 
-    self.search_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.clear_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
+    self.search_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.clear_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
     self.favorite_filter_button:set_scale(1)
-    self.scope_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.scope_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.scope_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.scope_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
     self.scope_dropdown:set_scale(_G.settings.global.scale)
-    self.profession_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.profession_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.profession_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.profession_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
     self.profession_dropdown:set_scale(_G.settings.global.scale)
-    self.rank_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.rank_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.rank_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.rank_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
     self.rank_dropdown:set_scale(_G.settings.global.scale)
-    self.availability_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.availability_dropdown:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.availability_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.availability_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
     self.availability_dropdown:set_scale(_G.settings.global.scale)
-    self.level_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.level_min_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.level_dash_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.level_max_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.recipe_page_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.level_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.level_min_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.level_dash_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.level_max_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.recipe_page_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 
-    self.recipe_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.right_tab_bar:set_font(_scaled_font("Verdana", BASE_META_FONT))
+    self.recipe_empty:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.right_tab_bar:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
     self.right_tab_bar:set_scale(_G.settings.global.scale)
-    self.detail_title:SetFont(_scaled_font("Verdana", BASE_TITLE_FONT))
-    self.detail_meta:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.detail_status:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.detail_title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 2))
+    self.detail_meta:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.detail_status:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.critical_result_row:set_scale(_G.settings.global.scale)
-    self.plan_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.plan_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.plan_spin_box:set_scale(_G.settings.global.scale)
-    self.plan_spin_box:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.ingredients_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.detail_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.queue_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.queue_summary:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.queue_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
+    self.plan_spin_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.ingredients_title:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.detail_empty:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.queue_title:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.queue_summary:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.queue_empty:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
 
-    self.plan_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.plan_track_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
-    self.plan_revert_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
-    self.plan_clear_button:set_font(_scaled_font("Verdana", BASE_BUTTON_FONT))
-    self.missing_title:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.plan_title:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.plan_track_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
+    self.plan_revert_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
+    self.plan_clear_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
+    self.missing_title:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.missing_bestiary_button:set_scale(1)
     _apply_bestiary_icon(self.missing_bestiary_button)
-    self.plan_empty:SetFont(_scaled_font("Verdana", BASE_BODY_FONT))
-    self.loading_text:SetFont(_scaled_font("Verdana", BASE_META_FONT))
+    self.plan_empty:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.loading_text:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     if self.source_breakdown_hint ~= nil then
         self.source_breakdown_hint:set_scale(_G.settings.global.scale)
     end
@@ -3488,7 +3478,7 @@ end
 function CraftingWindow:_clear_critical_result_detail()
     self._critical_result_visible = false
     if self.critical_result_row ~= nil then
-        self.critical_result_row:set_data(nil, nil, nil, "", "", TEXT_META)
+        self.critical_result_row:set_data(nil, nil, nil, "", "", Style.ALTERNATE_FOREGROUND)
         self.critical_result_row:SetVisible(false)
     end
 end

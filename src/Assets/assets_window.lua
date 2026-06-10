@@ -48,12 +48,9 @@ local MIN_LAYOUT_COLS = 2
 
 local SUMMARY_TRACK_WIDTH_FACTOR = 0.70
 
-local SUMMARY_BORDER_COLOR = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
 local SUMMARY_TOTAL_COLOR = Turbine.UI.Color(1, 0.35, 0.35, 0.35)
 local SUMMARY_FILTERED_COLOR = Turbine.UI.Color(1, 0.20, 0.45, 0.80)
 local SUMMARY_VISIBLE_COLOR = Turbine.UI.Color(1, 0.24, 0.72, 0.28)
-local SUMMARY_TEXT_COLOR = Turbine.UI.Color(1, 1, 1, 1)
-local SUMMARY_TEXT_OUTLINE = Turbine.UI.Color(1, 0, 0, 0)
 
 local SORT_NAME_ASC = "name_asc"
 local SORT_NAME_DESC = "name_desc"
@@ -97,6 +94,14 @@ end
 
 local function _scaled_font(name, size)
     return FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+end
+
+local function _scaled_control_font(size)
+    return _scaled_font(Style.CONTROL_FONT_NAME, size)
+end
+
+local function _scaled_help_font(size)
+    return _scaled_font(Style.CONTENT_SMALL_FONT_NAME, size)
 end
 
 local function _clamp(value, min_value, max_value)
@@ -252,7 +257,7 @@ local function _build_owner_options(records)
 end
 
 local function _source_hint_color(source_key)
-    return SOURCE_HINT_COLORS[source_key] or SUMMARY_TEXT_COLOR
+    return SOURCE_HINT_COLORS[source_key] or Style.FOREGROUND
 end
 
 local function _color_luminance(red, green, blue)
@@ -265,7 +270,7 @@ end
 
 local function _owner_hint_color(owner)
     if type(owner) ~= "string" or string.len(owner) == 0 then
-        return SUMMARY_TEXT_COLOR
+        return Style.FOREGROUND
     end
 
     local hash = 0
@@ -636,7 +641,7 @@ function AssetsWindow:Constructor()
     self.stack_items_label:SetMouseVisible(true)
     self.stack_items_label:SetSelectable(false)
     self.stack_items_label:SetMultiline(false)
-    self.stack_items_label:SetFont(_scaled_font("Verdana", 11))
+    self.stack_items_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.stack_items_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.stack_items_label:SetText(TR[STACK_ITEMS_LABEL])
     self.stack_items_label.MouseClick = function(_, args)
@@ -651,7 +656,7 @@ function AssetsWindow:Constructor()
     self.owner_label:SetMouseVisible(false)
     self.owner_label:SetSelectable(false)
     self.owner_label:SetMultiline(false)
-    self.owner_label:SetFont(_scaled_font("Verdana", 11))
+    self.owner_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.owner_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.owner_label:SetText(TR["Character"] .. ":")
 
@@ -673,7 +678,7 @@ function AssetsWindow:Constructor()
     self.storage_label:SetMouseVisible(false)
     self.storage_label:SetSelectable(false)
     self.storage_label:SetMultiline(false)
-    self.storage_label:SetFont(_scaled_font("Verdana", 11))
+    self.storage_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.storage_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.storage_label:SetText(TR["Storage"] .. ":")
 
@@ -695,7 +700,7 @@ function AssetsWindow:Constructor()
     self.summary_track = Turbine.UI.Control()
     self.summary_track:SetParent(self.summary_bar)
     self.summary_track:SetMouseVisible(false)
-    self.summary_track:SetBackColor(SUMMARY_BORDER_COLOR)
+    self.summary_track:SetBackColor(Style.CONTROL_BORDER)
 
     self.summary_track_inner = Turbine.UI.Control()
     self.summary_track_inner:SetParent(self.summary_track)
@@ -716,8 +721,8 @@ function AssetsWindow:Constructor()
     self.summary_text:SetParent(self.summary_track)
     self.summary_text:SetMouseVisible(false)
     self.summary_text:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.summary_text:SetForeColor(SUMMARY_TEXT_COLOR)
-    self.summary_text:SetOutlineColor(SUMMARY_TEXT_OUTLINE)
+    self.summary_text:SetForeColor(Style.FOREGROUND)
+    self.summary_text:SetOutlineColor(Style.TEXT_OUTLINE)
     self.summary_text:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.summary_text:SetZOrder(2)
 
@@ -744,7 +749,7 @@ function AssetsWindow:Constructor()
     self.order_label:SetMouseVisible(false)
     self.order_label:SetSelectable(false)
     self.order_label:SetMultiline(false)
-    self.order_label:SetFont(_scaled_font("Verdana", 11))
+    self.order_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.order_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.order_label:SetText(TR["Order"] .. ":")
 
@@ -765,7 +770,7 @@ function AssetsWindow:Constructor()
     self.group_label:SetMouseVisible(false)
     self.group_label:SetSelectable(false)
     self.group_label:SetMultiline(false)
-    self.group_label:SetFont(_scaled_font("Verdana", 11))
+    self.group_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.group_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.group_label:SetText(TR["Group by"] .. ":")
 
@@ -1009,7 +1014,7 @@ function AssetsWindow:apply_settings()
     self.stack_items = s.stack_items == true
     self.tile_size = self:_get_mode_tile_size(self.view_mode)
 
-    local button_font = _scaled_font("Verdana", 11)
+    local button_font = _scaled_control_font(Style.CONTROL_FONT_SIZE - 1)
     self.prev_button:set_font(button_font)
     self.next_button:set_font(button_font)
     self.clear_button:set_font(button_font)
@@ -1017,9 +1022,9 @@ function AssetsWindow:apply_settings()
     self.stack_items_cb:set_scale(_G.settings.global.scale)
     self.stack_items_cb:SetFont(button_font)
     self.stack_items_label:SetFont(button_font)
-    self.owner_label:SetFont(_scaled_font("Verdana", 11))
+    self.owner_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.owner_dropdown:SetFont(button_font)
-    self.storage_label:SetFont(_scaled_font("Verdana", 11))
+    self.storage_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.storage_dropdown:SetFont(button_font)
     self.sort_dropdown:SetFont(button_font)
     self.group_dropdown:SetFont(button_font)
@@ -1038,10 +1043,10 @@ function AssetsWindow:apply_settings()
     self.page_label:SetFont(button_font)
     self.summary_text:SetFont(button_font)
     self.recipes_button:set_font(button_font)
-    self.order_label:SetFont(_scaled_font("Verdana", 11))
-    self.group_label:SetFont(_scaled_font("Verdana", 11))
-    self.hint_label:SetFont(_scaled_font("Verdana", 10))
-    self.empty_label:SetFont(_scaled_font("Verdana", 12))
+    self.order_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
+    self.group_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
+    self.hint_label:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
+    self.empty_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE))
     if self.stack_hint ~= nil then
         self.stack_hint:set_scale(_G.settings.global.scale)
     end
@@ -1526,21 +1531,21 @@ function AssetsWindow:_ensure_stack_hint_rows(count)
         row.owner:SetMouseVisible(false)
         row.owner:SetMultiline(false)
         row.owner:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        row.owner:SetFont(_scaled_font("Verdana", 10))
+        row.owner:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
 
         row.detail = UI.Widgets.LuiLabel()
         row.detail:SetParent(row.holder)
         row.detail:SetMouseVisible(false)
         row.detail:SetMultiline(false)
         row.detail:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        row.detail:SetFont(_scaled_font("Verdana", 10))
+        row.detail:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
 
         row.quantity = UI.Widgets.LuiLabel()
         row.quantity:SetParent(row.holder)
         row.quantity:SetMouseVisible(false)
         row.quantity:SetMultiline(false)
         row.quantity:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-        row.quantity:SetFont(_scaled_font("Verdana", 10))
+        row.quantity:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
 
         self.stack_hint_rows[#self.stack_hint_rows + 1] = row
     end
@@ -1595,7 +1600,7 @@ function AssetsWindow:_show_stack_hint(anchor_control, record)
                 local owner_w = math.max(0, detail_x - col_gap)
                 row.owner:SetPosition(0, 0)
                 row.owner:SetSize(owner_w, line_height)
-                row.owner:SetFont(_scaled_font("Verdana", 10))
+                row.owner:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
                 row.owner:SetForeColor(_owner_hint_color(owner_text))
                 row.owner:SetText(owner_text)
                 row.owner:SetVisible(true)
@@ -1608,14 +1613,14 @@ function AssetsWindow:_show_stack_hint(anchor_control, record)
                 row.detail:SetSize(math.max(0, quantity_x - col_gap), line_height)
             end
 
-            row.detail:SetFont(_scaled_font("Verdana", 10))
+            row.detail:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
             row.detail:SetForeColor(_source_hint_color(part.source_key))
             row.detail:SetText(detail_text)
             row.detail:SetVisible(true)
 
             row.quantity:SetPosition(quantity_x, 0)
             row.quantity:SetSize(quantity_w, line_height)
-            row.quantity:SetFont(_scaled_font("Verdana", 10))
+            row.quantity:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
             row.quantity:SetForeColor(_source_hint_color(part.source_key))
             row.quantity:SetText(quantity_text)
             row.quantity:SetVisible(true)

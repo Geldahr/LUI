@@ -5,6 +5,7 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.StatusBar.common"
 
 local S = _G.STATUS_BAR_COMMON
+local Style = UI.Widgets.Style
 
 local WALLET_SELECTOR_HEIGHT = 209
 local WALLET_SELECTOR_GAP = 6
@@ -13,8 +14,6 @@ local WALLET_SELECTOR_BUTTON_H = 22
 local WALLET_SELECTOR_SCROLL_W = 10
 local WALLET_SELECTOR_MIN_LIST_W = 90
 local WALLET_SELECTOR_BOX_PAD = 1
-local WALLET_SELECTOR_BOX_BORDER = Turbine.UI.Color(1, 0.35, 0.40, 0.50)
-local WALLET_SELECTOR_BOX_FILL = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
 
 local function _scaled_int(value)
     return math.floor((value * _G.settings.global.scale) + 0.5)
@@ -423,12 +422,12 @@ function CreateStatusBarWalletSelector(page, key)
 
     entry.available_box = Turbine.UI.Control()
     entry.available_box:SetParent(entry.control)
-    entry.available_box:SetBackColor(WALLET_SELECTOR_BOX_BORDER)
+    entry.available_box:SetBackColor(Style.CONTROL_BORDER)
     entry.available_box:SetMouseVisible(false)
 
     entry.available_fill = Turbine.UI.Control()
     entry.available_fill:SetParent(entry.available_box)
-    entry.available_fill:SetBackColor(WALLET_SELECTOR_BOX_FILL)
+    entry.available_fill:SetBackColor(Style.BACKGROUND)
     entry.available_fill:SetMouseVisible(false)
 
     entry.available_list = Turbine.UI.ListBox()
@@ -443,12 +442,12 @@ function CreateStatusBarWalletSelector(page, key)
 
     entry.selected_box = Turbine.UI.Control()
     entry.selected_box:SetParent(entry.control)
-    entry.selected_box:SetBackColor(WALLET_SELECTOR_BOX_BORDER)
+    entry.selected_box:SetBackColor(Style.CONTROL_BORDER)
     entry.selected_box:SetMouseVisible(false)
 
     entry.selected_fill = Turbine.UI.Control()
     entry.selected_fill:SetParent(entry.selected_box)
-    entry.selected_fill:SetBackColor(WALLET_SELECTOR_BOX_FILL)
+    entry.selected_fill:SetBackColor(Style.BACKGROUND)
     entry.selected_fill:SetMouseVisible(false)
 
     entry.selected_list = Turbine.UI.ListBox()

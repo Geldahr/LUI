@@ -4,6 +4,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
 Bestiary = Bestiary or {}
+local Style = UI.Widgets.Style
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
 local DATA_ACCESS = Bestiary.DataAccess
@@ -49,38 +50,15 @@ local BASE_VARIANT_TAB_GAP_Y = 4
 local BASE_VARIANT_TAB_PAD_X = 10
 local BASE_VARIANT_TAB_MIN_W = 84
 
-local COLOR_OUTLINE = Turbine.UI.Color(1, 0, 0, 0)
-local COLOR_WINDOW_BG = Turbine.UI.Color(0.98, 0.02, 0.04, 0.08)
-local COLOR_BORDER = Turbine.UI.Color(1, 0.22, 0.31, 0.44)
-local COLOR_INNER_BG = Turbine.UI.Color(0.98, 0.03, 0.06, 0.10)
-local COLOR_HEADER_BG = Turbine.UI.Color(1, 0.05, 0.10, 0.18)
-local COLOR_HEADER_RULE = Turbine.UI.Color(1, 0.66, 0.53, 0.28)
-local COLOR_PANEL_BORDER = Turbine.UI.Color(1, 0.24, 0.35, 0.49)
-local COLOR_PANEL_BG = Turbine.UI.Color(0.98, 0.02, 0.05, 0.09)
-local COLOR_PANEL_HEADER = Turbine.UI.Color(1, 0.05, 0.09, 0.16)
-local COLOR_PANEL_DIVIDER = Turbine.UI.Color(1, 0.16, 0.24, 0.35)
-local COLOR_TITLE = Turbine.UI.Color(1, 0.94, 0.82, 0.55)
-local COLOR_SUBTITLE = Turbine.UI.Color(1, 0.83, 0.78, 0.69)
-local COLOR_META = Turbine.UI.Color(1, 0.44, 0.88, 0.95)
-local COLOR_LABEL = Turbine.UI.Color(1, 0.92, 0.82, 0.56)
-local COLOR_VALUE = Turbine.UI.Color(1, 0.93, 0.90, 0.84)
 local COLOR_VALUE_CYAN = Turbine.UI.Color(1, 0.30, 0.92, 1.00)
 local COLOR_VALUE_GREEN = Turbine.UI.Color(1, 0.34, 0.82, 0.30)
 local COLOR_VALUE_GREY = Turbine.UI.Color(1, 0.56, 0.59, 0.61)
-local COLOR_HINT = Turbine.UI.Color(1, 0.55, 0.60, 0.63)
 local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
 local COLOR_DROP_CHIP_TEXT = Turbine.UI.Color(1, 0.76, 0.88, 0.79)
 local COLOR_CHEST_CHIP_BORDER = Turbine.UI.Color(1, 0.45, 0.32, 0.12)
 local COLOR_CHEST_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
 local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.95, 0.83, 0.49)
-local COLOR_VARIANT_TAB_BORDER = Turbine.UI.Color(1, 0.22, 0.31, 0.44)
-local COLOR_VARIANT_TAB_BG = Turbine.UI.Color(0.98, 0.04, 0.08, 0.12)
-local COLOR_VARIANT_TAB_BG_HOVER = Turbine.UI.Color(1, 0.08, 0.14, 0.22)
-local COLOR_VARIANT_TAB_BG_SELECTED = Turbine.UI.Color(1, 0.10, 0.18, 0.28)
-local COLOR_VARIANT_TAB_TEXT = Turbine.UI.Color(1, 0.83, 0.78, 0.69)
-local COLOR_VARIANT_TAB_TEXT_SELECTED = Turbine.UI.Color(1, 0.94, 0.82, 0.55)
-
 local COMBAT_SCALE_COLORS = {
     feeble = Turbine.UI.Color(1, 0.26, 0.77, 0.42),
     poor = Turbine.UI.Color(1, 0.49, 0.81, 0.31),
@@ -898,7 +876,7 @@ local function _create_text(parent, multiline, alignment)
     text:SetMouseVisible(false)
     text:SetSelectable(false)
     text:SetMultiline(multiline == true)
-    text:SetFont(_scaled_font("Verdana", BASE_TEXT_SIZE))
+    text:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     text:SetTextAlignment(alignment or Turbine.UI.ContentAlignment.TopLeft)
     return text
 end
@@ -912,9 +890,10 @@ local function _apply_scroll_label_style(area)
         return
     end
 
-    area.label:SetFont(_scaled_font(area.font_name, area.font_size))
+    local font_name = area.font_name == "Verdana" and Style.CONTROL_FONT_NAME or area.font_name
+    area.label:SetFont(_scaled_font(font_name, area.font_size))
     area.label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    area.label:SetOutlineColor(COLOR_OUTLINE)
+    area.label:SetOutlineColor(Style.TEXT_OUTLINE)
     area.label:SetForeColor(area.color)
 end
 
@@ -1009,9 +988,10 @@ local function _measure_scroll_label_panel(panel_w, text)
 end
 
 local function _style_text(text, font_name, font_size, color)
-    text:SetFont(_scaled_font(font_name, font_size))
+    local resolved_font_name = font_name == "Verdana" and Style.CONTROL_FONT_NAME or font_name
+    text:SetFont(_scaled_font(resolved_font_name, font_size))
     text:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    text:SetOutlineColor(COLOR_OUTLINE)
+    text:SetOutlineColor(Style.TEXT_OUTLINE)
     text:SetForeColor(color)
 end
 
@@ -1020,14 +1000,14 @@ local function _style_variant_tab_bar(tab_bar)
         return
     end
 
-    tab_bar._border_color = COLOR_VARIANT_TAB_BORDER
-    tab_bar._strip_back = COLOR_VARIANT_TAB_BG
-    tab_bar._content_back = COLOR_VARIANT_TAB_BG_SELECTED
-    tab_bar._hover_back = COLOR_VARIANT_TAB_BG_HOVER
-    tab_bar._tab_text = COLOR_VARIANT_TAB_TEXT
-    tab_bar._tab_text_hover = COLOR_VARIANT_TAB_TEXT_SELECTED
-    tab_bar._tab_text_selected = COLOR_VARIANT_TAB_TEXT_SELECTED
-    tab_bar._tab_text_disabled = COLOR_HINT
+    tab_bar._border_color = Style.CONTROL_BORDER
+    tab_bar._strip_back = Style.CONTROL_BACKGROUND
+    tab_bar._content_back = Style.SELECTION_BACKGROUND
+    tab_bar._hover_back = Style.CONTROL_BACKGROUND_HOVER
+    tab_bar._tab_text = Style.ALTERNATE_FOREGROUND
+    tab_bar._tab_text_hover = Style.SELECTION_FOREGROUND
+    tab_bar._tab_text_selected = Style.SELECTION_FOREGROUND
+    tab_bar._tab_text_disabled = Style.ALTERNATE_FOREGROUND
 
     if type(tab_bar._tabs) == "table" then
         for i = 1, #tab_bar._tabs do
@@ -1061,10 +1041,10 @@ local function _create_panel(parent, title_text)
 end
 
 local function _style_panel(panel)
-    panel.frame:SetBackColor(COLOR_PANEL_BORDER)
-    panel.header:SetBackColor(COLOR_PANEL_HEADER)
-    panel.body:SetBackColor(COLOR_PANEL_BG)
-    _style_text(panel.title, "Verdana", BASE_SECTION_TITLE_SIZE, COLOR_TITLE)
+    panel.frame:SetBackColor(Style.CONTROL_BORDER)
+    panel.header:SetBackColor(Style.CONTROL_BACKGROUND)
+    panel.body:SetBackColor(Style.PANEL_BACKGROUND)
+    _style_text(panel.title, "Verdana", BASE_SECTION_TITLE_SIZE, Style.FOREGROUND)
 end
 
 local function _create_row_set(parent, field_order)
@@ -1083,8 +1063,8 @@ end
 
 local function _style_row_set(rows, value_color)
     for i = 1, #rows do
-        _style_text(rows[i].label, "Verdana", BASE_TEXT_SIZE, COLOR_LABEL)
-        _style_text(rows[i].value, "Verdana", BASE_TEXT_SIZE, value_color or COLOR_VALUE)
+        _style_text(rows[i].label, "Verdana", BASE_TEXT_SIZE, Style.ALTERNATE_FOREGROUND)
+        _style_text(rows[i].value, "Verdana", BASE_TEXT_SIZE, value_color or Style.FOREGROUND)
     end
 end
 
@@ -1142,7 +1122,7 @@ local function _layout_parallel_row_sets(left_rows, right_rows, x_left, x_right,
 end
 
 local function _bind_row_set(rows, values, color_resolver, default_value_color)
-    default_value_color = default_value_color or COLOR_VALUE
+    default_value_color = default_value_color or Style.FOREGROUND
     for i = 1, #rows do
         local raw_value = nil
         local value = "-"
@@ -1177,7 +1157,7 @@ function DropChip:Constructor()
     self.label:SetMouseVisible(false)
     self.label:SetSelectable(false)
     self.label:SetMultiline(false)
-    self.label:SetFont(_scaled_font("Verdana", BASE_TEXT_SIZE))
+    self.label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 end
 
@@ -1218,12 +1198,12 @@ function BestiaryVariantTab:Constructor(owner)
     self.hovered = false
 
     self:SetMouseVisible(true)
-    self:SetBackColor(COLOR_VARIANT_TAB_BORDER)
+    self:SetBackColor(Style.CONTROL_BORDER)
 
     self.inner = Turbine.UI.Control()
     self.inner:SetParent(self)
     self.inner:SetMouseVisible(false)
-    self.inner:SetBackColor(COLOR_VARIANT_TAB_BG)
+    self.inner:SetBackColor(Style.CONTROL_BACKGROUND)
 
     self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self.inner)
@@ -1261,14 +1241,14 @@ function BestiaryVariantTab:_layout()
 end
 
 function BestiaryVariantTab:_apply_style()
-    local fill = COLOR_VARIANT_TAB_BG
-    local text_color = COLOR_VARIANT_TAB_TEXT
+    local fill = Style.CONTROL_BACKGROUND
+    local text_color = Style.ALTERNATE_FOREGROUND
 
     if self.selected == true then
-        fill = COLOR_VARIANT_TAB_BG_SELECTED
-        text_color = COLOR_VARIANT_TAB_TEXT_SELECTED
+        fill = Style.SELECTION_BACKGROUND
+        text_color = Style.SELECTION_FOREGROUND
     elseif self.hovered == true then
-        fill = COLOR_VARIANT_TAB_BG_HOVER
+        fill = Style.CONTROL_BACKGROUND_HOVER
     end
 
     self.inner:SetBackColor(fill)
@@ -1441,7 +1421,7 @@ function BestiaryCard:_create_variant_bar()
     bar:SetMouseVisible(true)
     bar:SetVisible(false)
     bar:set_scale(_G.settings.global.scale)
-    bar:set_font(_scaled_font("Verdana", BASE_TEXT_SIZE))
+    bar:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
     bar:set_content_padding(0)
     bar:set_show_content_border(false)
@@ -1984,16 +1964,16 @@ function BestiaryCard:_apply_record(record)
     self.morale_value:SetText(_format_morale_text(record))
     self.power_value:SetText(_format_power_text(record))
 
-    _bind_row_set(self.location_rows, record, nil, COLOR_VALUE)
+    _bind_row_set(self.location_rows, record, nil, Style.FOREGROUND)
     _bind_row_set(self.creature_rows, {
         type = record.type,
         genus = record.genus,
         species = record.species or record.subcategory,
-    }, nil, COLOR_VALUE)
-    _bind_row_set(self.combat_rows, record.combat_effectiveness, _combat_value_color, COLOR_VALUE)
-    _bind_row_set(self.resistance_rows, record.resistances, _resistance_value_color, COLOR_VALUE)
-    _bind_row_set(self.mitigation_left_rows, record.mitigation, _mitigation_value_color, COLOR_VALUE)
-    _bind_row_set(self.mitigation_right_rows, record.mitigation, _mitigation_value_color, COLOR_VALUE)
+    }, nil, Style.FOREGROUND)
+    _bind_row_set(self.combat_rows, record.combat_effectiveness, _combat_value_color, Style.FOREGROUND)
+    _bind_row_set(self.resistance_rows, record.resistances, _resistance_value_color, Style.FOREGROUND)
+    _bind_row_set(self.mitigation_left_rows, record.mitigation, _mitigation_value_color, Style.FOREGROUND)
+    _bind_row_set(self.mitigation_right_rows, record.mitigation, _mitigation_value_color, Style.FOREGROUND)
 
     _bind_scroll_label_area(self.abilities_area, record.abilities)
     _bind_scroll_label_area(self.quests_area, record.quest_involvement)
@@ -2021,21 +2001,21 @@ function BestiaryCard:apply_settings()
     _style_panel(self.combat_panel)
     _style_panel(self.resistances_panel)
     _style_panel(self.mitigation_panel)
-    self.mitigation_divider:SetBackColor(COLOR_PANEL_DIVIDER)
+    self.mitigation_divider:SetBackColor(Style.CONTROL_BORDER)
     _style_panel(self.abilities_panel)
     _style_panel(self.quests_panel)
     _style_panel(self.deeds_panel)
 
-    _style_row_set(self.location_rows, COLOR_VALUE)
-    _style_row_set(self.creature_rows, COLOR_VALUE)
-    _style_row_set(self.combat_rows, COLOR_VALUE)
-    _style_row_set(self.resistance_rows, COLOR_VALUE)
-    _style_row_set(self.mitigation_left_rows, COLOR_VALUE)
-    _style_row_set(self.mitigation_right_rows, COLOR_VALUE)
+    _style_row_set(self.location_rows, Style.FOREGROUND)
+    _style_row_set(self.creature_rows, Style.FOREGROUND)
+    _style_row_set(self.combat_rows, Style.FOREGROUND)
+    _style_row_set(self.resistance_rows, Style.FOREGROUND)
+    _style_row_set(self.mitigation_left_rows, Style.FOREGROUND)
+    _style_row_set(self.mitigation_right_rows, Style.FOREGROUND)
 
-    _style_scroll_label_area(self.abilities_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
-    _style_scroll_label_area(self.quests_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
-    _style_scroll_label_area(self.deeds_area, "Verdana", BASE_TEXT_SIZE, COLOR_VALUE)
+    _style_scroll_label_area(self.abilities_area, "Verdana", BASE_TEXT_SIZE, Style.FOREGROUND)
+    _style_scroll_label_area(self.quests_area, "Verdana", BASE_TEXT_SIZE, Style.FOREGROUND)
+    _style_scroll_label_area(self.deeds_area, "Verdana", BASE_TEXT_SIZE, Style.FOREGROUND)
 
     _bind_scroll_label_area(self.abilities_area, self.current_record ~= nil and self.current_record.abilities or nil)
     _bind_scroll_label_area(self.quests_area, self.current_record ~= nil and self.current_record.quest_involvement or nil)
@@ -2043,7 +2023,7 @@ function BestiaryCard:apply_settings()
 
     if self.variant_bar ~= nil then
         self.variant_bar:set_scale(_G.settings.global.scale)
-        self.variant_bar:set_font(_scaled_font("Verdana", BASE_TEXT_SIZE))
+        self.variant_bar:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
         _style_variant_tab_bar(self.variant_bar)
     end
 

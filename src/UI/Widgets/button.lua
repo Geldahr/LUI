@@ -6,7 +6,6 @@ import "LUI.src.UI.Widgets.style"
 
 local BASE_BUTTON_W = 89
 local BASE_BUTTON_H = 21
-local BASE_FONT_SIZE = 12
 local ICON_POSITION_LEFT = "left"
 local ICON_POSITION_RIGHT = "right"
 local Style = UI.Widgets.Style
@@ -497,7 +496,7 @@ function LuiButton:_current_icon()
 end
 
 function LuiButton:_apply_default_font()
-    local font = _scaled_font(self._scale, "Verdana", BASE_FONT_SIZE)
+    local font = _scaled_font(self._scale, Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
     if self._label ~= nil then
         self._label:SetFont(font)
     end

@@ -1,6 +1,7 @@
 import "LUI.src.UI.Widgets"
 
 local S = _G.STATUS_BAR_COMMON
+local Style = UI.Widgets.Style
 
 local WalletWidget = class(Turbine.UI.Control)
 _G.WalletWidget = WalletWidget
@@ -63,7 +64,7 @@ function WalletWidget:Constructor(widget_w, bar_h, font, content_alignment, item
     self:SetMouseVisible(false)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self:SetSize(widget_w, bar_h)
 
     self.placeholder = LuiLabel()

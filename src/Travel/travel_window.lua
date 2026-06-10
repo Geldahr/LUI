@@ -5,6 +5,7 @@ import "LUI.src.UI.Widgets"
 
 TravelWindow = class(LuiWindow)
 
+local Style = UI.Widgets.Style
 local BASE_MARGIN = 6
 local BASE_GAP = 6
 local BASE_EMPTY_FONT = 12
@@ -28,13 +29,13 @@ local function _scaled_int(value)
 end
 
 local function _scaled_font(size)
-    return FONT_TO_LOTRO("Verdana", size * _ui_scale())
+    return FONT_TO_LOTRO(Style.CONTROL_FONT_NAME, size * _ui_scale())
 end
 
 local function _apply_body_label_style(label, size)
     label:SetFont(_scaled_font(size))
-    label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
-    label:SetForeColor(Turbine.UI.Color(1, 0.88, 0.88, 0.88))
+    label:SetOutlineColor(Style.TEXT_OUTLINE)
+    label:SetForeColor(Style.ALTERNATE_FOREGROUND)
 end
 
 local function _has_resize_dir(mask, dir)

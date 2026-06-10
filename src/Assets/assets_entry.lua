@@ -8,17 +8,10 @@ import "LUI.src.Utils.number_abbrev"
 
 AssetsEntry = class(Turbine.UI.Control)
 
+local Style = UI.Widgets.Style
 local BORDER = 2
 local BASE_ICON_SIZE = 32
-local BASE_NAME_FONT = 12
-local BASE_META_FONT = 10
-local BASE_QTY_FONT = 9
-local BASE_QTY_SMALL_FONT = 8
 local BASE_QTY_PADDING = 1
-local BASE_INNER_COLOR = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
-local BASE_META_COLOR = Turbine.UI.Color(1, 0.68, 0.68, 0.68)
-local BASE_QTY_COLOR = Turbine.UI.Color(1, 1, 1, 1)
-local BASE_QTY_OUTLINE = Turbine.UI.Color(1, 0, 0, 0)
 local ITEM_INFO_CONTROL_EXTRA = 3
 local ITEM_CONTROL_OFFSET = -3
 local ITEM_CONTROL_EXTRA = 4
@@ -78,13 +71,13 @@ end
 local function _quantity_font(quantity)
     local text = tostring(quantity or "")
     if string.len(text) > 4 then
-        return _scaled_font("Verdana", BASE_QTY_SMALL_FONT)
+        return _scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE - 2)
     end
-    return _scaled_font("Verdana", BASE_QTY_FONT)
+    return _scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE - 1)
 end
 
 local function _source_meta_color(source_key)
-    return SOURCE_META_COLORS[source_key] or BASE_META_COLOR
+    return SOURCE_META_COLORS[source_key] or Style.ALTERNATE_FOREGROUND
 end
 
 local function _color_luminance(red, green, blue)
@@ -107,7 +100,7 @@ end
 
 local function _owner_hint_color(owner)
     if type(owner) ~= "string" or string.len(owner) == 0 then
-        return BASE_META_COLOR
+        return Style.ALTERNATE_FOREGROUND
     end
 
     local hash = 0
@@ -219,7 +212,7 @@ function AssetsEntry:Constructor(on_hover)
     self.inner = Turbine.UI.Control()
     self.inner:SetParent(self)
     self.inner:SetMouseVisible(true)
-    self.inner:SetBackColor(BASE_INNER_COLOR)
+    self.inner:SetBackColor(Style.BACKGROUND)
 
     self.icon_slot = Turbine.UI.Control()
     self.icon_slot:SetParent(self.inner)
@@ -260,8 +253,8 @@ function AssetsEntry:Constructor(on_hover)
     self.qty_label:SetParent(self.icon_fore)
     self.qty_label:SetMouseVisible(false)
     self.qty_label:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
-    self.qty_label:SetForeColor(BASE_QTY_COLOR)
-    self.qty_label:SetOutlineColor(BASE_QTY_OUTLINE)
+    self.qty_label:SetForeColor(Style.FOREGROUND)
+    self.qty_label:SetOutlineColor(Style.TEXT_OUTLINE)
     self.qty_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.qty_label:SetZOrder(3)
 
@@ -277,14 +270,14 @@ function AssetsEntry:Constructor(on_hover)
     self.owner_label:SetMouseVisible(false)
     self.owner_label:SetSelectable(false)
     self.owner_label:SetMultiline(false)
-    self.owner_label:SetForeColor(BASE_META_COLOR)
+    self.owner_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
 
     self.source_label = UI.Widgets.LuiLabel()
     self.source_label:SetParent(self.inner)
     self.source_label:SetMouseVisible(false)
     self.source_label:SetSelectable(false)
     self.source_label:SetMultiline(false)
-    self.source_label:SetForeColor(BASE_META_COLOR)
+    self.source_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
 
     local function _hover_in(icon_hover)
         if type(self.on_hover) == "function" then
@@ -366,14 +359,14 @@ function AssetsEntry:bind(record)
     local owner_color = _owner_hint_color(owner_text)
     if record.has_multiple_owners == true then
         owner_text = MULTIPLE_META_TEXT
-        owner_color = BASE_META_COLOR
+        owner_color = Style.ALTERNATE_FOREGROUND
     end
 
     local source_text = record.source_name or ""
     local source_color = _source_meta_color(record.source_key)
     if record.has_multiple_sources == true then
         source_text = MULTIPLE_META_TEXT
-        source_color = BASE_META_COLOR
+        source_color = Style.ALTERNATE_FOREGROUND
     end
 
     self.name_label:SetText(record.name or "")
@@ -443,10 +436,10 @@ end
 ---------------------------------------------------------------------
 
 function AssetsEntry:_apply_fonts()
-    self.name_label:SetFont(_scaled_font("Verdana", BASE_NAME_FONT))
-    self.owner_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.source_label:SetFont(_scaled_font("Verdana", BASE_META_FONT))
-    self.qty_label:SetFont(_scaled_font("Verdana", BASE_QTY_FONT))
+    self.name_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
+    self.owner_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.source_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.qty_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE - 1))
 end
 
 function AssetsEntry:_layout_icon_controls(icon_w, icon_h)

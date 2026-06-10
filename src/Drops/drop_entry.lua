@@ -5,9 +5,9 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.Utils.timed_row_layout"
 
+local Style = UI.Widgets.Style
 local BASE_ROW_PADDING = 4
 local BASE_GAP = 6
-local BASE_FONT_SIZE = 12
 local MIN_WIDTH = 140
 local ITEM_INFO_CONTROL_OFFSET = -3
 local ITEM_INFO_CONTROL_EXTRA = 3
@@ -31,16 +31,16 @@ local function _scaled_font(name, size)
 end
 
 local function _drops_font_size()
-    return BASE_FONT_SIZE * _G.settings.global.scale
+    return Style.CONTROL_FONT_SIZE * _G.settings.global.scale
 end
 
 local function _drops_qty_width()
-    return lui_timed_row_estimate_text_width("999", "Verdana", _drops_font_size())
+    return lui_timed_row_estimate_text_width("999", Style.CONTROL_FONT_NAME, _drops_font_size())
 end
 
 local function _drops_min_width(icon_size, padding, gap)
     local qty_width = _drops_qty_width()
-    local name_width = lui_timed_row_min_name_width("Verdana", _drops_font_size())
+    local name_width = lui_timed_row_min_name_width(Style.CONTROL_FONT_NAME, _drops_font_size())
     return math.max(MIN_WIDTH, (2 * padding) + icon_size + gap + qty_width + gap + name_width)
 end
 
@@ -164,16 +164,16 @@ function DropEntry:apply_settings()
     self.item_info_control:SetPosition(ITEM_INFO_CONTROL_OFFSET, ITEM_INFO_CONTROL_OFFSET)
     self.item_info_control:SetSize(self._icon_side + ITEM_INFO_CONTROL_EXTRA, self._icon_side + ITEM_INFO_CONTROL_EXTRA)
 
-    local font = _scaled_font("Verdana", BASE_FONT_SIZE)
+    local font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
     self.name_label:SetFont(font)
     self.name_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.name_label:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
-    self.name_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.name_label:SetForeColor(Style.FOREGROUND)
+    self.name_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
     self.qty_label:SetFont(font)
     self.qty_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.qty_label:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
-    self.qty_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.qty_label:SetForeColor(Style.FOREGROUND)
+    self.qty_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
     local content_h = self._row_height - (2 * self._padding)
     if s.icon_side == LUI_ENUMS.side.RIGHT then

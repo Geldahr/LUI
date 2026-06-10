@@ -10,6 +10,7 @@ Bestiary = Bestiary or {}
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
 local DATA_ACCESS = Bestiary.DataAccess
+local Style = UI.Widgets.Style
 
 -- Bestiary icon for shortcut button: 0x410E0435
 -- Parchment icon: 0x410E9288
@@ -711,7 +712,7 @@ end
 
 local function _apply_separator_style(control)
     control:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    control:SetBackColor(Turbine.UI.Color(1, 0.20, 0.20, 0.20))
+    control:SetBackColor(Style.CONTROL_BACKGROUND_READONLY)
 end
 
 local function _build_taxonomy_text(record)
@@ -858,7 +859,7 @@ end
 function DropChip:apply_settings(chest, matched)
     local border_w = _scaled_int(BASE_CHIP_BORDER)
     self.inner:SetPosition(border_w, border_w)
-    self.label:SetFont(_scaled_font("Verdana", BASE_TEXT_FONT_SIZE))
+    self.label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     if matched == true then
         self:SetBackColor(COLOR_DROP_MATCH_CHIP_BORDER)
@@ -874,7 +875,7 @@ function DropChip:apply_settings(chest, matched)
         self.inner:SetBackColor(COLOR_DROP_CHIP_BG)
         self.label:SetForeColor(COLOR_DROP_CHIP_TEXT)
     end
-    self.label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.label:SetOutlineColor(Style.TEXT_OUTLINE)
 end
 
 function DropChip:bind(text, width, height)
@@ -953,38 +954,38 @@ function BestiaryRow:Constructor(owner_window)
 end
 
 function BestiaryRow:apply_settings()
-    self.name_label:SetFont(_scaled_font("Verdana", BASE_NAME_FONT_SIZE))
+    self.name_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
     self.name_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.name_label:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
-    self.name_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.name_label:SetForeColor(Style.FOREGROUND)
+    self.name_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
-    local meta_font = _scaled_font("Verdana", BASE_TEXT_FONT_SIZE)
-    local taxonomy_font = _scaled_font("Verdana", BASE_TAXONOMY_FONT_SIZE)
+    local meta_font = _scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE)
+    local taxonomy_font = _scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE)
 
     self.taxonomy_label:SetFont(taxonomy_font)
     self.taxonomy_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.taxonomy_label:SetForeColor(Turbine.UI.Color(1, 0.82, 0.78, 0.55))
-    self.taxonomy_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.taxonomy_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
     self.level_label:SetFont(meta_font)
     self.level_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.level_label:SetForeColor(Turbine.UI.Color(1, 0.72, 0.58, 0.20))
-    self.level_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.level_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
     self.morale_label:SetFont(meta_font)
     self.morale_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.morale_label:SetForeColor(Turbine.UI.Color(1, 0.42, 0.86, 0.44))
-    self.morale_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.morale_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
     self.power_label:SetFont(meta_font)
     self.power_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.power_label:SetForeColor(Turbine.UI.Color(1, 0.40, 0.68, 0.96))
-    self.power_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.power_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
     self.location_label:SetFont(taxonomy_font)
     self.location_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.location_label:SetForeColor(Turbine.UI.Color(1, 0.67, 0.82, 0.93))
-    self.location_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.location_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
     _apply_separator_style(self.separator)
 
@@ -1171,7 +1172,7 @@ function BestiaryWindow:Constructor()
     self.order_label:SetMouseVisible(false)
     self.order_label:SetSelectable(false)
     self.order_label:SetMultiline(false)
-    self.order_label:SetFont(_scaled_font("Verdana", 10))
+    self.order_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.order_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.order_label:SetText(TR["Order"] .. ":")
 
@@ -1240,7 +1241,7 @@ function BestiaryWindow:Constructor()
     self.level_label:SetMouseVisible(false)
     self.level_label:SetSelectable(false)
     self.level_label:SetMultiline(false)
-    self.level_label:SetFont(_scaled_font("Verdana", 10))
+    self.level_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.level_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.level_label:SetText(TR["Level"] .. ":")
 
@@ -1253,7 +1254,7 @@ function BestiaryWindow:Constructor()
     self.level_dash_label:SetMouseVisible(false)
     self.level_dash_label:SetSelectable(false)
     self.level_dash_label:SetMultiline(false)
-    self.level_dash_label:SetFont(_scaled_font("Verdana", 10))
+    self.level_dash_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.level_dash_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.level_dash_label:SetText("-")
 
@@ -1347,7 +1348,7 @@ function BestiaryWindow:Constructor()
     self.area_slot_cover:SetParent(self.filter_bar)
     self.area_slot_cover:SetMouseVisible(false)
     self.area_slot_cover:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.area_slot_cover:SetBackColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.area_slot_cover:SetBackColor(Style.TEXT_OUTLINE)
     self.area_slot_cover:SetZOrder(2)
 
     self.area_slot_icon = Image()
@@ -1364,7 +1365,7 @@ function BestiaryWindow:Constructor()
     self.genus_label:SetMouseVisible(false)
     self.genus_label:SetSelectable(false)
     self.genus_label:SetMultiline(false)
-    self.genus_label:SetFont(_scaled_font("Verdana", 10))
+    self.genus_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.genus_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.genus_label:SetText(TR["Genus"] .. ":")
 
@@ -1505,7 +1506,7 @@ function BestiaryWindow:apply_settings()
     local min_w, min_h = self:_minimum_window_size()
     self:set_minimum_size(min_w, min_h)
 
-    local button_font = _scaled_font("Verdana", 10)
+    local button_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
     self.order_label:SetFont(button_font)
     self.sort_dropdown:SetFont(button_font)
     self.sort_dropdown:set_scale(_G.settings.global.scale)
@@ -1527,9 +1528,9 @@ function BestiaryWindow:apply_settings()
     self.subcategory_label:SetFont(button_font)
     self.subcategory_dropdown:SetFont(button_font)
     self.subcategory_dropdown:set_scale(_G.settings.global.scale)
-    self.empty_label:SetFont(_scaled_font("Verdana", 12))
+    self.empty_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
     self.empty_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    self.empty_label:SetOutlineColor(Turbine.UI.Color(1, 0, 0, 0))
+    self.empty_label:SetOutlineColor(Style.TEXT_OUTLINE)
 
     for i = 1, #self.entries do
         self.entries[i]:apply_settings()

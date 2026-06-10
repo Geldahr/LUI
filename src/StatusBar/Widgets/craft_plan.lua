@@ -9,11 +9,8 @@ local CHIP_GAP = 0
 local CHIP_ICON_GAP = 2
 local CHIP_PAD_X = 3
 local CHIP_ICON_MARGIN = 2
-local CHIP_BACK = Turbine.UI.Color(0.00, 0.00, 0.00, 0.00)
-local CHIP_HOVER = CHIP_BACK
 local READY_TEXT = Turbine.UI.Color(1.00, 0.55, 0.92, 0.55)
 local MISSING_TEXT = Turbine.UI.Color(1.00, 0.88, 0.35, 0.35)
-local META_TEXT = Turbine.UI.Color(0.85, 0.82, 0.82, 0.82)
 local LOADING_TRACK_BACK = Turbine.UI.Color(0.35, 0.10, 0.12, 0.16)
 local LOADING_FILL_BACK = Turbine.UI.Color(0.65, 0.38, 0.54, 0.78)
 local POPUP_ROW_GAP = 2
@@ -44,7 +41,7 @@ local function _apply_font(label, font, color, alignment)
             label:SetOutlineColor(font.outline_color)
         end
     end
-    label:SetForeColor(color or (font ~= nil and font.color) or META_TEXT)
+    label:SetForeColor(color or (font ~= nil and font.color) or Style.ALTERNATE_FOREGROUND)
 end
 
 local function _rough_text_width(text, bar_h)
@@ -223,14 +220,14 @@ function CraftPlanChip:Constructor(owner, font)
     self:SetMouseVisible(true)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
 
     self.background = Turbine.UI.Control()
     self.background:SetParent(self)
     self.background:SetMouseVisible(true)
     self.background:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.background:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self.background:SetBackColor(CHIP_BACK)
+    self.background:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self.background:SetVisible(true)
 
     self.slot = CraftPlanItemSlot(self)
@@ -238,7 +235,7 @@ function CraftPlanChip:Constructor(owner, font)
 
     self.label = LuiLabel()
     self.label:SetParent(self)
-    _apply_font(self.label, font, META_TEXT, Turbine.UI.ContentAlignment.MiddleLeft)
+    _apply_font(self.label, font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleLeft)
     self.label:SetMouseVisible(true)
 
     local function _owner_mouse(name, args)
@@ -383,7 +380,7 @@ function CraftPlanChip:bind_text(text, color, show_popup)
     self._show_popup = show_popup == true
     self._display_text = tostring(text or "")
     self.label:SetText(self._display_text)
-    self.label:SetForeColor(color or META_TEXT)
+    self.label:SetForeColor(color or Style.ALTERNATE_FOREGROUND)
     self.slot:bind_item(nil, nil, nil)
     self:_layout()
     self:_refresh_visual()
@@ -401,7 +398,7 @@ function CraftPlanChip:set_bounds(width, height)
 end
 
 function CraftPlanChip:_refresh_visual()
-    self.background:SetBackColor(CHIP_BACK)
+    self.background:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self.background:SetVisible(false)
 end
 
@@ -458,11 +455,11 @@ function CraftPlanPopupRow:Constructor(font)
 
     self.name = LuiLabel()
     self.name:SetParent(self)
-    _apply_font(self.name, font, META_TEXT, Turbine.UI.ContentAlignment.MiddleLeft)
+    _apply_font(self.name, font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.amount = LuiLabel()
     self.amount:SetParent(self)
-    _apply_font(self.amount, font, META_TEXT, Turbine.UI.ContentAlignment.MiddleRight)
+    _apply_font(self.amount, font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleRight)
 end
 
 function CraftPlanPopupRow:set_font(font)
@@ -524,7 +521,7 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
     self:SetMouseVisible(true)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
+    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
 
     self.loading_track = Turbine.UI.Control()
     self.loading_track:SetParent(self)
@@ -551,12 +548,12 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
 
     self.popup_header = LuiLabel()
     self.popup_header:SetParent(self.popup_inner)
-    _apply_font(self.popup_header, self.font, META_TEXT, Turbine.UI.ContentAlignment.MiddleLeft)
+    _apply_font(self.popup_header, self.font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleLeft)
     self.popup_header:SetVisible(false)
 
     self.popup_note = LuiLabel()
     self.popup_note:SetParent(self.popup_inner)
-    _apply_font(self.popup_note, self.font, META_TEXT, Turbine.UI.ContentAlignment.MiddleLeft)
+    _apply_font(self.popup_note, self.font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleLeft)
     self.popup_note:SetVisible(false)
 
     self.MouseClick = function(_, args)
@@ -680,12 +677,12 @@ function CraftPlanWidget:_refresh_from_state(state)
         end
         local has_hidden_details = (#resources > self._max_visible) or (state.unresolved_count or 0) > 0 or state.loading == true
         if #visible_specs == 0 and state.loading == true then
-            visible_specs[1] = { text = TR["Loading"] .. "...", color = META_TEXT, popup = true }
+            visible_specs[1] = { text = TR["Loading"] .. "...", color = Style.ALTERNATE_FOREGROUND, popup = true }
         elseif has_hidden_details == true then
-            visible_specs[#visible_specs + 1] = { text = "[...]", color = META_TEXT, popup = true }
+            visible_specs[#visible_specs + 1] = { text = "[...]", color = Style.ALTERNATE_FOREGROUND, popup = true }
         end
         if #visible_specs == 0 then
-            visible_specs[1] = { text = "[...]", color = META_TEXT, popup = true }
+            visible_specs[1] = { text = "[...]", color = Style.ALTERNATE_FOREGROUND, popup = true }
         end
     end
 
