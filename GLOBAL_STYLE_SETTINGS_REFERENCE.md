@@ -141,20 +141,22 @@ These settings control shared UI font identity and size. They do not affect feat
 
 | Setting | What it changes |
 | --- | --- |
-| Default control font | Font family for shared controls where the control uses the global UI font, such as default buttons, spin-box text fields, settings form labels, settings inputs, and settings action buttons. |
-| Default control font size | Font size for shared controls where the control uses the global UI font, such as default buttons, spin-box text fields, settings form labels, settings inputs, and settings action buttons. Settings action buttons keep their current one-point larger hierarchy. |
+| Default control font | Font family for shared controls, such as buttons, tabs, dropdowns, menus, spin-box text fields, settings form labels, settings inputs, and settings action buttons. |
+| Default control font size | Font size for shared controls, such as buttons, tabs, dropdowns, menus, spin-box text fields, settings form labels, settings inputs, and settings action buttons. Settings action buttons and some tab levels keep their current relative hierarchy. |
 | Window title font | Font family for shared LUI window title bars. |
 | Window title font size | Font size for shared LUI window title bars. |
-| Settings title font | Font family for settings page section titles. |
-| Settings title font size | Font size for settings page section titles. |
-| First-run title font | Font family for the first-run setup title. If this is not customized, it follows the settings title font when that font is customized. |
-| First-run title font size | Font size for the first-run setup title. If this is not customized, it follows the settings title font size when that size is customized. |
-| Tab font | Font family for shared tab bars, including settings main tabs, settings section tabs, nested settings tabs, and default widget tab bars. |
-| Tab font size | Font size for shared tab bars. Settings main tabs and nested tabs keep their current relative size offsets. |
-| Help / tooltip font | Font family for shared help text, hints, tooltip text, small informational text, and edit-mode ghost labels. |
-| Help / tooltip font size | Font size for shared help text, hints, tooltip text, small informational text, and edit-mode ghost labels. Edit-mode ghost labels keep their current one-point larger hierarchy. |
+| H1 font | Font family for top-level shared UI headings. |
+| H1 font size | Font size for top-level shared UI headings. |
+| H2 font | Font family for secondary shared UI headings. |
+| H2 font size | Font size for secondary shared UI headings. |
+| Large content font | Font family for prominent regular content text that is not a heading. |
+| Large content font size | Font size for prominent regular content text that is not a heading. |
+| Medium content font | Font family for normal regular content text that is not a heading or control. |
+| Medium content font size | Font size for normal regular content text that is not a heading or control. |
+| Small content font | Font family for supporting regular content text, hints, tooltip text, metadata, and edit-mode ghost labels. |
+| Small content font size | Font size for supporting regular content text, hints, tooltip text, metadata, and edit-mode ghost labels. Edit-mode ghost labels keep their current one-point larger hierarchy. |
 
-## Feature-Specific Exceptions
+## Feature-Specific Settings Outside Global UI
 
 The following are intentionally not controlled by `Global > UI`:
 
