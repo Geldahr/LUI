@@ -252,19 +252,15 @@ local function _add_style_font_name(page, settings_getter, key, label)
     return entry
 end
 
-local function _reset_style_controls(page, settings_getter)
-    local style = _style_settings(settings_getter())
-    for key in pairs(style) do
-        style[key] = nil
-    end
-    page:load()
+local function _reset_style_controls(page)
+    page:stage_style_reset()
     page.window:update_all_swatches()
     page:layout()
 end
 
-local function _add_reset_button(page, content, settings_getter)
+local function _add_reset_button(page, content)
     return content:add_button("global_ui_style_reset", TR["Reset shared UI style"], function()
-        _reset_style_controls(page, settings_getter)
+        _reset_style_controls(page)
     end)
 end
 
@@ -384,41 +380,82 @@ end
 
 local function _new_ui_page(window, settings_getter)
     local page = ConfigSectionPage(window, nil, nil, nil)
+    local load_page = page.load
+    local save_page = page.save
+    local function style_settings_getter()
+        return page._staged_style_settings or settings_getter()
+    end
+
+    function page:stage_style_reset()
+        self._staged_style_settings = {
+            global = {
+                style = {},
+            },
+        }
+        load_page(self)
+    end
+
+    function page:load()
+        self._staged_style_settings = nil
+        load_page(self)
+    end
+
+    function page:save()
+        local staged = self._staged_style_settings
+        if staged ~= nil then
+            save_page(self)
+
+            local style = _style_settings(settings_getter())
+            for key in pairs(style) do
+                style[key] = nil
+            end
+
+            local staged_style = _style_settings(staged)
+            for key, value in pairs(staged_style) do
+                style[key] = value
+            end
+
+            self._staged_style_settings = nil
+            return
+        end
+
+        save_page(self)
+    end
 
     local general = ConfigContent(window, 4)
     general:add_info(TR["Style changes apply after reloading the plugin."], 34)
-    _add_reset_button(page, general, settings_getter)
+    _add_reset_button(page, general)
     page:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4)
-    _add_style_number(layout, settings_getter, "BORDER_WIDTH", TR["Border width"])
-    _add_style_number(layout, settings_getter, "BORDER_WIDTH_THIN", TR["Thin border width"])
-    _add_style_number(layout, settings_getter, "BORDER_WIDTH_LARGE", TR["Large border width"])
+    _add_style_number(layout, style_settings_getter, "BORDER_WIDTH", TR["Border width"])
+    _add_style_number(layout, style_settings_getter, "BORDER_WIDTH_THIN", TR["Thin border width"])
+    _add_style_number(layout, style_settings_getter, "BORDER_WIDTH_LARGE", TR["Large border width"])
     page:add_tab(TR["Layout"], "layout", layout)
 
-    page:add_tab(TR["Colors"], "colors", _new_ui_colors_section(window, settings_getter))
+    page:add_tab(TR["Colors"], "colors", _new_ui_colors_section(window, style_settings_getter))
 
     local text = ConfigContent(window, 4)
-    _add_style_font_name(text, settings_getter, "CONTROL_FONT_NAME", TR["Default control font"])
-    _add_style_number(text, settings_getter, "CONTROL_FONT_SIZE", TR["Default control font size"])
+    _add_style_font_name(text, style_settings_getter, "CONTROL_FONT_NAME", TR["Default control font"])
+    _add_style_number(text, style_settings_getter, "CONTROL_FONT_SIZE", TR["Default control font size"])
     text:add_row_break()
-    _add_style_font_name(text, settings_getter, "WINDOW_TITLE_FONT_NAME", TR["Window title font"])
-    _add_style_number(text, settings_getter, "WINDOW_TITLE_FONT_SIZE", TR["Window title font size"])
+    _add_style_font_name(text, style_settings_getter, "WINDOW_TITLE_FONT_NAME", TR["Window title font"])
+    _add_style_number(text, style_settings_getter, "WINDOW_TITLE_FONT_SIZE", TR["Window title font size"])
     text:add_row_break()
-    _add_style_font_name(text, settings_getter, "FONT_H1_NAME", TR["H1 font"])
-    _add_style_number(text, settings_getter, "FONT_H1_SIZE", TR["H1 font size"])
+    _add_style_font_name(text, style_settings_getter, "FONT_H1_NAME", TR["H1 font"])
+    _add_style_number(text, style_settings_getter, "FONT_H1_SIZE", TR["H1 font size"])
     text:add_row_break()
-    _add_style_font_name(text, settings_getter, "FONT_H2_NAME", TR["H2 font"])
-    _add_style_number(text, settings_getter, "FONT_H2_SIZE", TR["H2 font size"])
+    _add_style_font_name(text, style_settings_getter, "FONT_H2_NAME", TR["H2 font"])
+    _add_style_number(text, style_settings_getter, "FONT_H2_SIZE", TR["H2 font size"])
     text:add_row_break()
-    _add_style_font_name(text, settings_getter, "CONTENT_LARGE_FONT_NAME", TR["Large content font"])
-    _add_style_number(text, settings_getter, "CONTENT_LARGE_FONT_SIZE", TR["Large content font size"])
+    _add_style_font_name(text, style_settings_getter, "CONTENT_LARGE_FONT_NAME", TR["Large content font"])
+    _add_style_number(text, style_settings_getter, "CONTENT_LARGE_FONT_SIZE", TR["Large content font size"])
     text:add_row_break()
-    _add_style_font_name(text, settings_getter, "CONTENT_MEDIUM_FONT_NAME", TR["Medium content font"])
-    _add_style_number(text, settings_getter, "CONTENT_MEDIUM_FONT_SIZE", TR["Medium content font size"])
+    _add_style_font_name(text, style_settings_getter, "CONTENT_MEDIUM_FONT_NAME", TR["Medium content font"])
+    _add_style_number(text, style_settings_getter, "CONTENT_MEDIUM_FONT_SIZE", TR["Medium content font size"])
     text:add_row_break()
-    _add_style_font_name(text, settings_getter, "CONTENT_SMALL_FONT_NAME", TR["Small content font"])
-    _add_style_number(text, settings_getter, "CONTENT_SMALL_FONT_SIZE", TR["Small content font size"])
+    _add_style_font_name(text, style_settings_getter, "CONTENT_SMALL_FONT_NAME", TR["Small content font"])
+    _add_style_number(text, style_settings_getter, "CONTENT_SMALL_FONT_SIZE", TR["Small content font size"])
     page:add_tab(TR["Text"], "text", text)
 
     return page
