@@ -13,6 +13,8 @@
 - Added `Vitals > General` enable toggles for Self, Target, Boss, Target's Target, Fellowship, and Raid vitals.
 - Added left/right alignment settings for self, target, and boss vitals effects.
 - Added Global UI settings for customizing LUI colors, backgrounds, borders, fonts, and overlays.
+- Added configurable background opacity for vitals, cooldowns, and expiring effects.
+- Added configurable bar opacity and matching background controls for cooldowns and expiring effects.
 
 ### Changed
 
@@ -26,6 +28,7 @@
 - Effects can be independently placed above or below the vitals (below the info box). There are four selectable areas around the vitals.
 - Vitals now have four independent text items that can each be attached to morale, power/wrath, or the new info box.
 - Made LUI windows and controls use the Global UI style settings consistently.
+- Aligned color-related settings and configuration columns across feature pages.
 
 ### Fixed
 
@@ -37,8 +40,11 @@
 - Fixed group vitals move mode to keep the move overlay inside the real widget footprint while clearing live member content and stale bindings.
 - Fixed timed row and drop row width calculations to reserve space from real timer and quantity text widths instead of fixed guesses.
 - Fixed canceling Global UI style edits so unapplied changes are not kept.
+- Fixed previews when temporarily clearing numeric settings fields.
 
 ### Removed
+
+- Removed the old single expiring-effect bar color setting.
 
 ## v0.5.0
 
