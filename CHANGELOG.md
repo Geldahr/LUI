@@ -12,6 +12,7 @@
 - Added configurable multi-label text layouts for self, target, boss, target's target, fellowship, and raid vitals.
 - Added `Vitals > General` enable toggles for Self, Target, Boss, Target's Target, Fellowship, and Raid vitals.
 - Added left/right alignment settings for self, target, and boss vitals effects.
+- Added Global UI settings for customizing LUI colors, backgrounds, borders, fonts, and overlays.
 
 ### Changed
 
@@ -24,6 +25,7 @@
 - Added a new optional info box in the vitals, placed below power/wrath.
 - Effects can be independently placed above or below the vitals (below the info box). There are four selectable areas around the vitals.
 - Vitals now have four independent text items that can each be attached to morale, power/wrath, or the new info box.
+- Made LUI windows and controls use the Global UI style settings consistently.
 
 ### Fixed
 
@@ -34,6 +36,7 @@
 - Fixed self and target expiring effect rows to use the same reserved timer column layout, width clamping, and title wrapping behavior.
 - Fixed group vitals move mode to keep the move overlay inside the real widget footprint while clearing live member content and stale bindings.
 - Fixed timed row and drop row width calculations to reserve space from real timer and quantity text widths instead of fixed guesses.
+- Fixed canceling Global UI style edits so unapplied changes are not kept.
 
 ### Removed
 
