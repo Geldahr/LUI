@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v1.0.0
+
+### Added
+
 - Highlight matching bestiary drops in search results, including split matches across multiple drop chips.
 - Added Crafting to Bestiary links for ingredients and planned resources.
 - Added locale-aware Bestiary data loading with localized drop table support.
