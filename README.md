@@ -144,7 +144,7 @@ LUI uses pixel-based scaling instead of LotRO UI scaling. That keeps borders and
 
 ## Acknowledgements
 
-- `src/Travel/travel_data.lua` uses a travel skill dataset adapted from [TravelWindowII](https://github.com/wduda/TravelWindowII). Credit goes to the TravelWindowII maintainers, including wduda / Hyoss, and to the original Travel Window authors credited upstream, including Dhor and later contributors.
+- See [Attributions](ATTRIBUTIONS.md) for third-party data credits, Lotro-Wiki data licensing, and the unofficial fan project disclaimer.
 
 ## Support
 

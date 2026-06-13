@@ -59,6 +59,8 @@ jobs:
           cp LUIReloader.plugin "$payload_root/"
           cp LICENSE "$payload_root/"
           cp README.md "$payload_root/"
+          cp ATTRIBUTIONS.md "$payload_root/"
+          cp -R LICENSES "$payload_root/"
 
       - name: Package zip
         shell: bash

@@ -1,0 +1,43 @@
+# Attributions
+
+## Lotro-Wiki Data
+
+This plugin uses the official The Lord of the Rings Online plugin API.
+
+Some structured bestiary data included with this plugin is derived from
+Lotro-Wiki.com creature pages.
+
+Lotro-Wiki.com is an unofficial fan site for The Lord of the Rings Online.
+Its contributor-created content is available under the GNU Free Documentation
+License 1.3 or later unless otherwise noted:
+
+- https://lotro-wiki.com/
+- https://lotro-wiki.com/wiki/Lotro-Wiki.com:Copyrights
+- https://lotro-wiki.com/wiki/Lotro-Wiki.com:General_disclaimer
+
+Wiki-derived data has been extracted, transformed, and modified for plugin use.
+A copy of the GNU Free Documentation License 1.3 is included at
+`LICENSES/GFDL-1.3.txt`.
+
+Copyright belongs to the respective Lotro-Wiki contributors and other rights
+holders.
+
+## Unofficial Fan Project
+
+This plugin is an unofficial fan project and is not endorsed by or affiliated
+with Standing Stone Games, Daybreak Game Company, WB Games Boston/Turbine,
+Middle-earth Enterprises, or Lotro-Wiki.com.
+
+The Lord of the Rings Online, LOTRO, and related names, places, items,
+characters, and trademarks are the property of their respective owners.
+
+## TravelWindowII Data
+
+`src/Travel/travel_data.lua` uses a travel skill dataset adapted from
+TravelWindowII:
+
+- https://github.com/wduda/TravelWindowII
+
+Credit goes to the TravelWindowII maintainers, including wduda / Hyoss, and to
+the original Travel Window authors credited upstream, including Dhor and later
+contributors.
