@@ -1,3 +1,5 @@
+import "LUI.src.Utils.color"
+
 local Common = SettingsPreviewCommon
 local _dim_color = Common.dim_color
 local _require_font = Common.require_font
@@ -201,6 +203,7 @@ function ConfigWindow:update_target_targets_target_preview()
     local ressource_bg_matches_missing =
         self.controls.target_targets_target_background_matches_missing.cb:IsChecked() == true
     local ressource_bg_dimming = _require_control_number(self.controls, "target_targets_target_background_dimming")
+    local background_opacity = _require_control_number(self.controls, "target_targets_target_background_opacity")
     local border_color = _require_control_color(self.controls, "target_targets_target_border_color")
     local bubble_color = _require_control_color(self.controls, "target_targets_target_bubble_color")
     local gradient_enabled = self.controls.target_targets_target_color_gradient.cb:IsChecked() == true
@@ -220,10 +223,13 @@ function ConfigWindow:update_target_targets_target_preview()
     end
 
     local function resource_background(fill_color)
+        local color
         if ressource_bg_matches_missing == true then
-            return _dim_color(fill_color, ressource_bg_dimming)
+            color = _dim_color(fill_color, ressource_bg_dimming)
+        else
+            color = morale_bg
         end
-        return morale_bg
+        return lui_apply_opacity_to_color(color, background_opacity)
     end
 
     p.root:SetBackColor(border_color)

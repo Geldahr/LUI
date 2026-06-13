@@ -3,6 +3,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Settings.enums"
 import "LUI.src.Utils.timed_row_layout"
+import "LUI.src.Utils.color"
 
 SelfExpiringEffectEntry = class(Turbine.UI.Control)
 
@@ -115,7 +116,7 @@ function SelfExpiringEffectEntry:apply_settings()
     local s = _G.settings.self.expiring_effects
     local border = s.border_width
     local border_color = s.color.border
-    local back = s.color.background
+    local back = lui_apply_opacity_to_color(s.color.background, s.background_opacity)
 
     local height = s.bar_height
     local bar_width = s.bar_width
@@ -280,19 +281,23 @@ end
 ---------------------------------------------------------------------
 
 function SelfExpiringEffectEntry:_apply_bar_colors()
+    local s = _G.settings.self.expiring_effects
     local bar_color = self:_resolve_bar_color()
     self.bar_background:SetBackColor(self:_resolve_bar_background_color(bar_color))
-    self.bar_fill:SetBackColor(bar_color)
+    self.bar_fill:SetBackColor(lui_apply_opacity_to_color(bar_color, s.bar_opacity))
 end
 
 function SelfExpiringEffectEntry:_resolve_bar_background_color(bar_color)
     local s = _G.settings.self.expiring_effects
+    local color
 
     if s.bar_background_matches_fill == true then
-        return lui_dim_color(bar_color, s.bar_background_dimming)
+        color = lui_dim_color(bar_color, s.bar_background_dimming)
+    else
+        color = s.color.background
     end
 
-    return s.color.background
+    return lui_apply_opacity_to_color(color, s.background_opacity)
 end
 
 function SelfExpiringEffectEntry:_resolve_bar_color()

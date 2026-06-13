@@ -28,13 +28,6 @@ function Builder.new_standard_unit_page(window, root, options, deps)
     deps.add_number_field(frame, options.prefix .. "_outcombat_opacity", TR["Out-of-combat opacity"],
         function() return get().frame.outcombat_opacity end,
         function(value) get().frame.outcombat_opacity = value end)
-    frame:add_row_break()
-    deps.add_checkbox_field(frame, options.prefix .. "_ressource_background_matches_missing", TR["Matching background"],
-        function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end)
-    deps.add_number_field(frame, options.prefix .. "_ressource_background_dimming", TR["Dimming"],
-        function() return get().background_dimming end,
-        function(value) get().background_dimming = value end)
     page:add_tab(TR["Frame"], "frame", frame)
 
     local colors = deps.new_standard_colors_section(window, page.refresh_preview, options.prefix, get,
@@ -77,13 +70,6 @@ function Builder.new_targets_target_unit_page(window, root, deps)
     deps.add_number_field(frame, "target_targets_target_border_width", TR["Border Width"],
         function() return get().border_width end,
         function(value) get().border_width = value end)
-    frame:add_row_break()
-    deps.add_checkbox_field(frame, "target_targets_target_background_matches_missing", TR["Matching background"],
-        function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end)
-    deps.add_number_field(frame, "target_targets_target_background_dimming", TR["Dimming"],
-        function() return get().background_dimming end,
-        function(value) get().background_dimming = value end)
     frame:add_row_break()
     deps.add_text_field(frame, "target_targets_target_bubble_text", TR["Bubble Format (%B)"],
         function() return get().bubble_format end,

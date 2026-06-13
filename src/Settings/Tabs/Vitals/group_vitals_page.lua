@@ -90,13 +90,6 @@ function Builder.new_group_unit_page(window, root, options, deps)
         function() return get().frame.outcombat_opacity end,
         function(value) get().frame.outcombat_opacity = value end)
     frame:add_row_break()
-    deps.add_checkbox_field(frame, options.prefix .. "_ressource_background_matches_missing", TR["Matching background"],
-        function() return get().background_matches_missing end,
-        function(value) get().background_matches_missing = value end)
-    deps.add_number_field(frame, options.prefix .. "_ressource_background_dimming", TR["Dimming"],
-        function() return get().background_dimming end,
-        function(value) get().background_dimming = value end)
-    frame:add_row_break()
     deps.add_checkbox_field(frame, options.prefix .. "_select_enabled", TR["Select"],
         function() return get().select.enabled end,
         function(value) get().select.enabled = value end)

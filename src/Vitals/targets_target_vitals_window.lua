@@ -3,6 +3,7 @@ import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.UI.Widgets.hud"
+import "LUI.src.Utils.color"
 
 TargetsTargetVitalsWindow = class(LuiHUD)
 
@@ -101,7 +102,10 @@ function TargetsTargetVitalsWindow:apply_settings()
 
     self.targets_target_background:SetPosition(border, border)
     self.targets_target_background:SetSize(inner_w, inner_h)
-    self.targets_target_background:SetBackColor(tt.color.background)
+    self.targets_target_background:SetBackColor(lui_apply_opacity_to_color(
+        tt.color.background,
+        tt.background_opacity
+    ))
 
     self.targets_target_morale:SetPosition(0, 0)
     self.targets_target_morale:SetSize(inner_w, inner_h)

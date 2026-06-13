@@ -1,3 +1,5 @@
+import "LUI.src.Utils.color"
+
 local Common = SettingsPreviewCommon
 local _dim_color = Common.dim_color
 local _require_font = Common.require_font
@@ -372,6 +374,7 @@ function ConfigWindow:update_target_boss_vitals_preview()
     local ressource_back_matches_missing =
         self.controls.target_boss_ressource_background_matches_missing.cb:IsChecked() == true
     local ressource_back_dimming = _require_control_number(self.controls, "target_boss_ressource_background_dimming")
+    local background_opacity = _require_control_number(self.controls, "target_boss_background_opacity")
     local morale_high = _require_control_color(self.controls, "target_boss_morale_color_high")
     local morale_medium = _require_control_color(self.controls, "target_boss_morale_color_medium")
     local morale_low = _require_control_color(self.controls, "target_boss_morale_color_low")
@@ -407,10 +410,13 @@ function ConfigWindow:update_target_boss_vitals_preview()
     local power_percent = 0.55
 
     local function resource_background(fill_color)
+        local color
         if ressource_back_matches_missing == true then
-            return _dim_color(fill_color, ressource_back_dimming)
+            color = _dim_color(fill_color, ressource_back_dimming)
+        else
+            color = morale_back
         end
-        return morale_back
+        return lui_apply_opacity_to_color(color, background_opacity)
     end
 
     lui_set_number_abbrev_preview_settings(_preview_number_abbrev_settings(self))

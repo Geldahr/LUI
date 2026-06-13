@@ -1,4 +1,5 @@
 import "LUI.src.Utils.timed_row_layout"
+import "LUI.src.Utils.color"
 
 local Common = SettingsPreviewCommon
 local _require_font = Common.require_font
@@ -175,6 +176,8 @@ function ConfigWindow:update_expiring_effects_preview()
     if border > max_border then border = max_border end
 
     local background_color = _require_control_color(self.controls, "expiring_effects_background_color")
+    local background_opacity = _require_control_number(self.controls, "expiring_effects_background_opacity")
+    local bar_opacity = _require_control_number(self.controls, "expiring_effects_bar_opacity")
     local border_color = _require_control_color(self.controls, "expiring_effects_border_color")
     local buff_bar_color = _require_control_color(self.controls, "expiring_effects_bar_color")
     local curable_debuff_bar_color = _require_control_color(self.controls, "expiring_effects_debuff_curable_bar_color")
@@ -290,11 +293,9 @@ function ConfigWindow:update_expiring_effects_preview()
         local bar_bg_x = icon_left and 0 or border
         row.bar_background:SetPosition(bar_bg_x, border)
         row.bar_background:SetSize(bar_inner_w, inner_height)
-        row.bar_background:SetBackColor(_preview_bar_background(
-            bar_bg_matches_fill,
-            bar_bg_dimming,
-            background_color,
-            row_bar_color
+        row.bar_background:SetBackColor(lui_apply_opacity_to_color(
+            _preview_bar_background(bar_bg_matches_fill, bar_bg_dimming, background_color, row_bar_color),
+            background_opacity
         ))
 
         if anchor_right then
@@ -303,7 +304,7 @@ function ConfigWindow:update_expiring_effects_preview()
             row.bar_fill:SetPosition(0, 0)
         end
         row.bar_fill:SetSize(preview_fill_width, inner_height)
-        row.bar_fill:SetBackColor(row_bar_color)
+        row.bar_fill:SetBackColor(lui_apply_opacity_to_color(row_bar_color, bar_opacity))
 
         local title_width = bar_inner_w - (2 * LABEL_PAD) - time_width - text_gap
         if title_width < 1 then title_width = 1 end
@@ -331,7 +332,7 @@ function ConfigWindow:update_expiring_effects_preview()
         if icon_inner < 1 then icon_inner = 1 end
         row.icon_background:SetPosition(border, border)
         row.icon_background:SetSize(icon_inner, icon_inner)
-        row.icon_background:SetBackColor(background_color)
+        row.icon_background:SetBackColor(lui_apply_opacity_to_color(background_color, background_opacity))
 
         row.icon:SetPosition(0, 0)
         row.icon:SetSize(icon_inner, icon_inner)

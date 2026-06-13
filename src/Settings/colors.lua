@@ -88,7 +88,6 @@ function _G.fix_colors()
     end
 
     if self_expiring_effects ~= nil then
-        self_expiring_effects.color.bar = to_color(self_expiring_effects.color.bar)
         self_expiring_effects.color.bar_buff = to_color(self_expiring_effects.color.bar_buff)
         self_expiring_effects.color.bar_debuff_curable = to_color(self_expiring_effects.color.bar_debuff_curable)
         self_expiring_effects.color.bar_debuff_noncurable = to_color(self_expiring_effects.color.bar_debuff_noncurable)
@@ -99,7 +98,6 @@ function _G.fix_colors()
     end
 
     if expiring_target_effects ~= nil then
-        expiring_target_effects.color.bar = to_color(expiring_target_effects.color.bar)
         expiring_target_effects.color.bar_buff = to_color(expiring_target_effects.color.bar_buff)
         expiring_target_effects.color.bar_debuff_curable = to_color(expiring_target_effects.color.bar_debuff_curable)
         expiring_target_effects.color.bar_debuff_noncurable = to_color(expiring_target_effects.color

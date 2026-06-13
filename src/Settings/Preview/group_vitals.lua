@@ -1,4 +1,5 @@
 import "LUI.src.UI.Widgets"
+import "LUI.src.Utils.color"
 import "LUI.src.Utils.raid_layout"
 import "LUI.src.Utils.vitals_labels"
 SettingsGroupVitalsPreview = SettingsGroupVitalsPreview or {}
@@ -595,6 +596,7 @@ function Preview.update(window, spec)
     local resource_bg_matches_missing = window.controls[prefix .. "_ressource_background_matches_missing"].cb:IsChecked() ==
         true
     local resource_bg_dimming = _require_control_number(window.controls, prefix .. "_ressource_background_dimming")
+    local background_opacity = _require_control_number(window.controls, prefix .. "_background_opacity")
     local power_color = _require_control_color(window.controls, prefix .. "_power_color")
     local wrath_color = _require_control_color(window.controls, prefix .. "_wrath_color")
 
@@ -755,8 +757,9 @@ function Preview.update(window, spec)
             if morale_fill_w > inner_w then morale_fill_w = inner_w end
             local fill_color = _morale_color_preview(morale_percent, morale_gradient, gradient_full, gradient_mid,
                 gradient_low, high_color, med_color, low_color, crit_color)
-            member.morale_background:SetBackColor(_preview_resource_background(resource_bg_matches_missing,
-                resource_bg_dimming, morale_bg, fill_color))
+            member.morale_background:SetBackColor(lui_apply_opacity_to_color(
+                _preview_resource_background(resource_bg_matches_missing, resource_bg_dimming, morale_bg, fill_color),
+                background_opacity))
             member.morale_bar:SetBackColor(fill_color)
             member.morale_bar:SetWidth(morale_fill_w)
 
@@ -850,8 +853,10 @@ function Preview.update(window, spec)
             local is_wrath = (i % 3) == 0
             local power_fill_color = is_wrath == true and wrath_color or power_color
             member.power_bar:SetBackColor(power_fill_color)
-            member.power_background:SetBackColor(_preview_resource_background(resource_bg_matches_missing,
-                resource_bg_dimming, morale_bg, power_fill_color))
+            member.power_background:SetBackColor(lui_apply_opacity_to_color(
+                _preview_resource_background(resource_bg_matches_missing, resource_bg_dimming, morale_bg,
+                    power_fill_color),
+                background_opacity))
 
             local power_max = is_wrath == true and PREVIEW_WRATH_MAX or _preview_power_max(morale_max)
             local power_cur = math.floor(power_max * power_percent + 0.5)

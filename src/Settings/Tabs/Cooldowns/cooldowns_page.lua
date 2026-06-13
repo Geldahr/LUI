@@ -101,6 +101,36 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         function()
             return ui.color_to_hex(settings_getter().color.background)
         end)
+    frame:add_row_break()
+    frame:add_checkbox("cd_bar_background_matches_fill", TR["Matching background"],
+        function(value)
+            settings_getter().bar_background_matches_fill = value == true
+        end,
+        function()
+            return settings_getter().bar_background_matches_fill == true
+        end)
+    frame:add_line_edit("cd_bar_background_dimming", TR["Dimming"],
+        function(value)
+            local dimming = tonumber(value)
+            if dimming ~= nil then
+                settings_getter().bar_background_dimming = dimming
+            end
+        end,
+        function()
+            return tostring(settings_getter().bar_background_dimming)
+        end)
+    frame:add_row_break()
+    frame:add_line_edit("cd_background_opacity", TR["Background opacity"],
+        function(value)
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().background_opacity = opacity
+            end
+        end,
+        function()
+            return tostring(settings_getter().background_opacity)
+        end)
+    frame:add_row_break()
     frame:add_color_picker("cd_border_color", TR["Border color"],
         function(value)
             settings_getter().color.border = ui.hex_to_color(value)
@@ -117,24 +147,16 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         function()
             return ui.color_to_hex(settings_getter().color.bar)
         end)
-    bar:add_checkbox("cd_bar_background_matches_fill", TR["Match bar color"],
+    bar:add_line_edit("cd_bar_opacity", TR["Bar opacity"],
         function(value)
-            settings_getter().bar_background_matches_fill = value == true
-        end,
-        function()
-            return settings_getter().bar_background_matches_fill == true
-        end)
-    bar:add_line_edit("cd_bar_background_dimming", TR["Dimming"],
-        function(value)
-            local dimming = tonumber(value)
-            if dimming ~= nil then
-                settings_getter().bar_background_dimming = dimming
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().bar_opacity = opacity
             end
         end,
         function()
-            return tostring(settings_getter().bar_background_dimming)
+            return tostring(settings_getter().bar_opacity)
         end)
-
     local text = ConfigContent(window, 3, refresh_preview)
     text:add_color_picker("cd_font_color", TR["Font color"],
         function(value)
@@ -154,7 +176,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
     local page = ConfigNestedTabs(window, UI.Widgets.LuiTabBar.position.top,
         FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
     page:add_tab(TR["Frame"], "frame", frame)
-    page:add_tab(TR["Bar"], "bar", bar)
+    page:add_tab(TR["Bars"], "bars", bar)
     page:add_tab(TR["Text"], "text", text)
 
     return page, text
@@ -309,7 +331,7 @@ function CooldownsFeaturePage:Constructor(window)
         function()
             return settings_getter().bar_expire_towards
         end)
-    self:add_tab(TR["Layout"], "layout", layout)
+    self:add_tab(TR["Frame"], "frame", layout)
 
     local colors, colors_text = _new_colors_section(window, refresh_preview, settings_getter)
     self:add_tab(TR["Colors"], "colors", colors)

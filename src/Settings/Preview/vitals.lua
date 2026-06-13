@@ -1,3 +1,5 @@
+import "LUI.src.Utils.color"
+
 local Common = SettingsPreviewCommon
 local _require_font = Common.require_font
 local _require_control_color = Common.require_control_color
@@ -518,6 +520,7 @@ function StandardVitalsPreview:update()
     local info_opacity = _require_control_number(controls, prefix .. "_info_opacity")
     local ressource_bg_matches_missing = controls[prefix .. "_ressource_background_matches_missing"].cb:IsChecked() == true
     local ressource_bg_dimming = _require_control_number(controls, prefix .. "_ressource_background_dimming")
+    local background_opacity = _require_control_number(controls, prefix .. "_background_opacity")
     local border_color = _require_control_color(controls, prefix .. "_border_color")
     local bubble_color = _require_control_color(controls, prefix .. "_morale_bubble_color")
     local high_color = _require_control_color(controls, prefix .. "_morale_color_high")
@@ -551,8 +554,9 @@ function StandardVitalsPreview:update()
     self.morale_background:SetSize(inner_w, inner_morale_h)
     local morale_fill_color = _morale_color_preview(morale_percent, morale_gradient, gradient_full, gradient_mid,
         gradient_low, high_color, med_color, low_color, crit_color)
-    self.morale_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing, ressource_bg_dimming,
-        morale_bg, morale_fill_color))
+    self.morale_background:SetBackColor(lui_apply_opacity_to_color(
+        _preview_resource_background(ressource_bg_matches_missing, ressource_bg_dimming, morale_bg, morale_fill_color),
+        background_opacity))
 
     local morale_fill_w = math.floor(inner_w * morale_percent + 0.5)
     if morale_fill_w < 0 then morale_fill_w = 0 end
@@ -637,8 +641,9 @@ function StandardVitalsPreview:update()
     self.power_background:SetPosition(border, border)
     self.power_background:SetSize(inner_w, inner_power_h)
     local power_color = _require_control_color(controls, prefix .. "_power_color")
-    self.power_background:SetBackColor(_preview_resource_background(ressource_bg_matches_missing, ressource_bg_dimming,
-        morale_bg, power_color))
+    self.power_background:SetBackColor(lui_apply_opacity_to_color(
+        _preview_resource_background(ressource_bg_matches_missing, ressource_bg_dimming, morale_bg, power_color),
+        background_opacity))
     self.power_bar:SetPosition(0, 0)
     self.power_bar:SetSize(math.floor(inner_w * power_percent + 0.5), inner_power_h)
     self.power_bar:SetBackColor(power_color)
