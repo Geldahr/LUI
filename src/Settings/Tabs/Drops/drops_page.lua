@@ -21,7 +21,7 @@ end
 local function _new_colors_section(window, refresh_preview, settings_getter)
     local ui = window._ui
 
-    local hud = ConfigContent(window, 3, refresh_preview)
+    local hud = ConfigContent(window, 4, refresh_preview)
     hud:add_line_edit("drops_hud_background_opacity", TR["Background opacity (0..1)"],
         function(value)
             local opacity = tonumber(value)
@@ -40,7 +40,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
             return ui.color_to_hex(settings_getter().hud.background_color)
         end)
 
-    local item = ConfigContent(window, 3, refresh_preview)
+    local item = ConfigContent(window, 4, refresh_preview)
     item:add_line_edit("drops_item_background_opacity", TR["Background opacity (0..1)"],
         function(value)
             local opacity = tonumber(value)

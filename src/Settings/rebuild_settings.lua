@@ -214,7 +214,6 @@ function _G.rebuild_settings()
         return {
             background = build_color(src.background),
             border = build_color(src.border),
-            bar = build_color(src.bar),
             bar_buff = build_color(src.bar_buff),
             bar_debuff_curable = build_color(src.bar_debuff_curable),
             bar_debuff_noncurable = build_color(src.bar_debuff_noncurable),

@@ -93,7 +93,7 @@ end
 local function _new_colors_section(window, refresh_preview, settings_getter)
     local ui = window._ui
 
-    local frame = ConfigContent(window, 3, refresh_preview)
+    local frame = ConfigContent(window, 4, refresh_preview)
     frame:add_color_picker("cd_bg_color", TR["Background color"],
         function(value)
             settings_getter().color.background = ui.hex_to_color(value)
@@ -139,7 +139,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
             return ui.color_to_hex(settings_getter().color.border)
         end)
 
-    local bar = ConfigContent(window, 3, refresh_preview)
+    local bar = ConfigContent(window, 4, refresh_preview)
     bar:add_color_picker("cd_bar_color", TR["Bar color"],
         function(value)
             settings_getter().color.bar = ui.hex_to_color(value)
@@ -157,7 +157,7 @@ local function _new_colors_section(window, refresh_preview, settings_getter)
         function()
             return tostring(settings_getter().bar_opacity)
         end)
-    local text = ConfigContent(window, 3, refresh_preview)
+    local text = ConfigContent(window, 4, refresh_preview)
     text:add_color_picker("cd_font_color", TR["Font color"],
         function(value)
             settings_getter().font.color = ui.hex_to_color(value)
