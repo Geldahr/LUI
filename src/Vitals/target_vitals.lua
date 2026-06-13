@@ -371,10 +371,13 @@ end
 
 function TargetVitals:targets_target_background_color(fill_color)
     local tt = self:get_vitals_settings().targets_target
+    local color
     if tt.background_matches_missing == true then
-        return self:dimmed_color(fill_color, tt.background_dimming)
+        color = self:dimmed_color(fill_color, tt.background_dimming)
+    else
+        color = tt.color.background
     end
-    return tt.color.background
+    return lui_apply_opacity_to_color(color, tt.background_opacity)
 end
 
 function TargetVitals:update_targets_target()

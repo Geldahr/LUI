@@ -1,4 +1,5 @@
 import "LUI.src.Cooldowns.time_display"
+import "LUI.src.Utils.color"
 
 local Common = SettingsPreviewCommon
 local _require_font = Common.require_font
@@ -6,6 +7,7 @@ local _require_control_color = Common.require_control_color
 local _require_control_enum = Common.require_control_enum
 local _require_control_number = Common.require_control_number
 local _require_positive_scale = Common.require_positive_scale
+local _preview_bar_background = Common.preview_resource_background
 
 local function _truncate_name(name, max_chars)
     if type(name) ~= "string" then
@@ -186,8 +188,17 @@ function ConfigWindow:update_cooldowns_preview()
     if item_h < 10 then item_h = 10 end
 
     local bg = _require_control_color(self.controls, "cd_bg_color")
+    local bg_opacity = _require_control_number(self.controls, "cd_background_opacity")
     local bar = _require_control_color(self.controls, "cd_bar_color")
+    local bar_fill = lui_apply_opacity_to_color(bar, _require_control_number(self.controls, "cd_bar_opacity"))
     local border_color = _require_control_color(self.controls, "cd_border_color")
+    local bg_matches_fill = self.controls.cd_bar_background_matches_fill.cb:IsChecked() == true
+    local bg_dimming = _require_control_number(self.controls, "cd_bar_background_dimming")
+    local icon_bg = lui_apply_opacity_to_color(bg, bg_opacity)
+    local bar_bg = lui_apply_opacity_to_color(
+        _preview_bar_background(bg_matches_fill, bg_dimming, bg, bar),
+        bg_opacity
+    )
 
     local raw_border_w = _require_control_number(self.controls, "cd_border_width")
     local border = scaled_border(raw_border_w)
@@ -332,7 +343,7 @@ function ConfigWindow:update_cooldowns_preview()
     if icon_left then
         row.icon_background:SetPosition(0, 0)
         row.icon_background:SetSize(icon_size, icon_size)
-        row.icon_background:SetBackColor(bg)
+        row.icon_background:SetBackColor(icon_bg)
 
         row.separator:SetPosition(icon_size, 0)
         row.separator:SetSize(sep_w, inner_h)
@@ -346,11 +357,11 @@ function ConfigWindow:update_cooldowns_preview()
 
         row.icon_background:SetPosition(bar_width + sep_w, 0)
         row.icon_background:SetSize(icon_size, icon_size)
-        row.icon_background:SetBackColor(bg)
+        row.icon_background:SetBackColor(icon_bg)
     end
 
     row.bar_background:SetSize(bar_width, inner_h)
-    row.bar_background:SetBackColor(bg)
+    row.bar_background:SetBackColor(bar_bg)
 
     local bar_inner_w = bar_width
     local bar_inner_h = inner_h
@@ -389,7 +400,7 @@ function ConfigWindow:update_cooldowns_preview()
         row.bar_fill:SetPosition(0, 0)
     end
     row.bar_fill:SetSize(fill_width, bar_inner_h)
-    row.bar_fill:SetBackColor(bar)
+    row.bar_fill:SetBackColor(bar_fill)
 
     local time_width = lui_cooldown_time_label_width(font_name, font_size, threshold, time_format)
     local text_gap = lui_cooldown_text_gap(font_size)

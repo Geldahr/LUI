@@ -38,7 +38,7 @@ end
 local function _new_colors_section(window, settings_getter)
     local ui = window._ui
 
-    local background = ConfigContent(window, 3)
+    local background = ConfigContent(window, 4)
     background:add_color_picker("sb_bg_color", TR["Background color"],
         function(value)
             settings_getter().bg.color = ui.hex_to_color(value)
@@ -47,7 +47,7 @@ local function _new_colors_section(window, settings_getter)
             return ui.color_to_hex(settings_getter().bg.color)
         end)
 
-    local font = ConfigContent(window, 3)
+    local font = ConfigContent(window, 4)
     font:add_color_picker("sb_font_color", TR["Font color"],
         function(value)
             settings_getter().font.color = ui.hex_to_color(value)
@@ -63,7 +63,7 @@ local function _new_colors_section(window, settings_getter)
             return ui.color_to_hex(settings_getter().font.outline_color)
         end)
 
-    local inventory = ConfigContent(window, 3)
+    local inventory = ConfigContent(window, 4)
     inventory:add_color_picker("sb_inv_yellow", TR["Warn color (30%)"],
         function(value)
             settings_getter().widgets.inventory_space.color.yellow = ui.hex_to_color(value)
@@ -86,7 +86,7 @@ local function _new_colors_section(window, settings_getter)
             return ui.color_to_hex(settings_getter().widgets.inventory_space.color.red)
         end)
 
-    local durability = ConfigContent(window, 3)
+    local durability = ConfigContent(window, 4)
     durability:add_color_picker("sb_durability_green", TR["Green color"],
         function(value)
             settings_getter().widgets.equipment_wear.color.green = ui.hex_to_color(value)

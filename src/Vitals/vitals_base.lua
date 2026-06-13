@@ -191,7 +191,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     self.morale_background:SetParent(self.morale_border)
     self.morale_background:SetPosition(bw, bw)
     self.morale_background:SetSize(inner_w, morale_inner_h)
-    self.morale_background:SetBackColor(v.morale.color.background)
+    self.morale_background:SetBackColor(self:morale_background_color(v.morale.color.background))
     self.morale_background:SetMouseVisible(false)
     self.morale_background:SetZOrder(2)
 
@@ -406,10 +406,13 @@ end
 
 function VitalsBase:resource_background_color(fill_color, static_color)
     local v = self:get_vitals_settings()
+    local color
     if v.background_matches_missing == true then
-        return self:dimmed_color(fill_color, v.background_dimming)
+        color = self:dimmed_color(fill_color, v.background_dimming)
+    else
+        color = static_color
     end
-    return static_color
+    return lui_apply_opacity_to_color(color, v.background_opacity)
 end
 
 function VitalsBase:morale_background_color(fill_color)
@@ -1033,7 +1036,7 @@ function VitalsBase:resize()
 
     self.morale_background:SetPosition(bw, bw)
     self.morale_background:SetSize(inner_w, morale_inner_h)
-    self.morale_background:SetBackColor(v.morale.color.background)
+    self.morale_background:SetBackColor(self:morale_background_color(v.morale.color.background))
 
     self.morale_bar:SetPosition(0, 0)
     self.morale_bar:SetSize(inner_w, morale_inner_h)

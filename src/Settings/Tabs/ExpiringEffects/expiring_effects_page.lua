@@ -48,6 +48,36 @@ local function _new_colors_section(window, refresh_preview, settings_getter, pre
         function()
             return ui.color_to_hex(settings_getter().color.background)
         end)
+    frame:add_row_break()
+    frame:add_checkbox(prefix .. "_bar_background_matches_fill", TR["Matching background"],
+        function(value)
+            settings_getter().bar_background_matches_fill = value == true
+        end,
+        function()
+            return settings_getter().bar_background_matches_fill == true
+        end)
+    frame:add_line_edit(prefix .. "_bar_background_dimming", TR["Dimming"],
+        function(value)
+            local dimming = tonumber(value)
+            if dimming ~= nil then
+                settings_getter().bar_background_dimming = dimming
+            end
+        end,
+        function()
+            return tostring(settings_getter().bar_background_dimming)
+        end)
+    frame:add_row_break()
+    frame:add_line_edit(prefix .. "_background_opacity", TR["Background opacity"],
+        function(value)
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().background_opacity = opacity
+            end
+        end,
+        function()
+            return tostring(settings_getter().background_opacity)
+        end)
+    frame:add_row_break()
     frame:add_color_picker(prefix .. "_border_color", TR["Border Color"],
         function(value)
             _apply_color(ui, settings_getter().color.border, value)
@@ -67,7 +97,17 @@ local function _new_colors_section(window, refresh_preview, settings_getter, pre
                 return ui.color_to_hex(spec.get_target(settings_getter))
             end)
     end
-
+    bars:add_row_break()
+    bars:add_line_edit(prefix .. "_bar_opacity", TR["Bar opacity"],
+        function(value)
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().bar_opacity = opacity
+            end
+        end,
+        function()
+            return tostring(settings_getter().bar_opacity)
+        end)
     local text = ConfigContent(window, 3, refresh_preview)
     text:add_color_picker(prefix .. "_font_color", TR["Font Color"],
         function(value)
@@ -172,7 +212,6 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function()
             return tostring(settings_getter().border_width)
         end)
-    layout:add_row_break()
     layout:add_line_edit(prefix .. "_columns", TR["Columns"],
         function(value)
             local columns = tonumber(value)
@@ -226,7 +265,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function()
             return settings_getter().bar_expire_towards
         end)
-    page:add_tab(TR["Layout"], "layout", layout)
+    page:add_tab(TR["Frame"], "frame", layout)
 
     local colors, colors_text = _new_colors_section(window, page.refresh_preview, settings_getter, prefix, bar_specs)
     page:add_tab(TR["Colors"], "colors", colors)
@@ -286,7 +325,7 @@ function ExpiringEffectsPage:Constructor(window)
             label = TR["Buff Bar Color"],
             get_target = function(settings_getter)
                 local settings = settings_getter()
-                return settings.color.bar_buff or settings.color.bar
+                return settings.color.bar_buff
             end,
         },
         {
@@ -294,7 +333,7 @@ function ExpiringEffectsPage:Constructor(window)
             label = TR["Curable Debuff Bar Color"],
             get_target = function(settings_getter)
                 local settings = settings_getter()
-                return settings.color.bar_debuff_curable or settings.color.bar
+                return settings.color.bar_debuff_curable
             end,
         },
         {
@@ -302,7 +341,7 @@ function ExpiringEffectsPage:Constructor(window)
             label = TR["Non-curable Debuff Bar Color"],
             get_target = function(settings_getter)
                 local settings = settings_getter()
-                return settings.color.bar_debuff_noncurable or settings.color.bar
+                return settings.color.bar_debuff_noncurable
             end,
         },
     }
@@ -319,7 +358,7 @@ function ExpiringEffectsPage:Constructor(window)
             label = TR["Curable Debuff Bar Color"],
             get_target = function(settings_getter)
                 local settings = settings_getter()
-                return settings.color.bar_debuff_curable or settings.color.bar
+                return settings.color.bar_debuff_curable
             end,
         },
         {
@@ -327,7 +366,7 @@ function ExpiringEffectsPage:Constructor(window)
             label = TR["Non-curable Debuff Bar Color"],
             get_target = function(settings_getter)
                 local settings = settings_getter()
-                return settings.color.bar_debuff_noncurable or settings.color.bar
+                return settings.color.bar_debuff_noncurable
             end,
         },
     }

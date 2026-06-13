@@ -230,13 +230,6 @@ local function _build_info_form(page, prefix, get)
         function(value)
             get().info.height = value
         end)
-    _add_number_field(page, prefix .. "_info_opacity", TR["Opacity"],
-        function()
-            return get().info.opacity
-        end,
-        function(value)
-            get().info.opacity = value
-        end)
 end
 
 local function _add_targets_target_label_controls(page, label_index, label)
@@ -314,6 +307,30 @@ local function _build_standard_frame_colors_form(page, prefix, get)
         function(color)
             _set_color(get().morale.color.background, color)
         end)
+    page:add_row_break()
+    _add_checkbox_field(page, prefix .. "_ressource_background_matches_missing", TR["Matching background"],
+        function()
+            return get().background_matches_missing
+        end,
+        function(value)
+            get().background_matches_missing = value
+        end)
+    _add_number_field(page, prefix .. "_ressource_background_dimming", TR["Dimming"],
+        function()
+            return get().background_dimming
+        end,
+        function(value)
+            get().background_dimming = value
+        end)
+    page:add_row_break()
+    _add_number_field(page, prefix .. "_background_opacity", TR["Background opacity"],
+        function()
+            return get().background_opacity
+        end,
+        function(value)
+            get().background_opacity = value
+        end)
+    page:add_row_break()
     _add_color_field(page, prefix .. "_border_color", TR["Border Color"],
         function()
             return get().frame.border_color
@@ -328,6 +345,13 @@ local function _build_standard_frame_colors_form(page, prefix, get)
         end,
         function(color)
             _set_color(get().info.color.background, color)
+        end)
+    _add_number_field(page, prefix .. "_info_opacity", TR["Info opacity"],
+        function()
+            return get().info.opacity
+        end,
+        function(value)
+            get().info.opacity = value
         end)
 end
 
@@ -676,6 +700,30 @@ local function _new_targets_target_colors_section(window, refresh_preview_fn, ge
         function(color)
             _set_color(get().color.background, color)
         end)
+    frame:add_row_break()
+    _add_checkbox_field(frame, "target_targets_target_background_matches_missing", TR["Matching background"],
+        function()
+            return get().background_matches_missing
+        end,
+        function(value)
+            get().background_matches_missing = value
+        end)
+    _add_number_field(frame, "target_targets_target_background_dimming", TR["Dimming"],
+        function()
+            return get().background_dimming
+        end,
+        function(value)
+            get().background_dimming = value
+        end)
+    frame:add_row_break()
+    _add_number_field(frame, "target_targets_target_background_opacity", TR["Background opacity"],
+        function()
+            return get().background_opacity
+        end,
+        function(value)
+            get().background_opacity = value
+        end)
+    frame:add_row_break()
     _add_color_field(frame, "target_targets_target_border_color", TR["Border Color"],
         function()
             return get().color.border

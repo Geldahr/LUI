@@ -88,6 +88,8 @@ function ConfigContent:Constructor(window, columns, refresh_preview_fn)
     self.form = Turbine.UI.Control()
     self.scroll:AddItem(self.form)
 
+    -- Settings pages use a four-column visual grid. A left nested tab bar counts
+    -- as one column, so its content pages use 3; pages without one use 4.
     if columns ~= nil then
         self:set_grid_columns(columns)
     end

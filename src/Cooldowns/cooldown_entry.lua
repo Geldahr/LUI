@@ -4,6 +4,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Settings.enums"
 import "LUI.src.Cooldowns.time_display"
+import "LUI.src.Utils.color"
 
 CooldownEntry = class(Turbine.UI.Control)
 
@@ -31,6 +32,20 @@ local function _truncate_name(name, max_chars)
     end
 
     return string.sub(name, 1, m)
+end
+
+local function _bar_background_color(settings)
+    local color
+    if settings.bar_background_matches_fill == true then
+        color = lui_dim_color(settings.color.bar, settings.bar_background_dimming)
+    else
+        color = settings.color.background
+    end
+    return lui_apply_opacity_to_color(color, settings.background_opacity)
+end
+
+local function _icon_background_color(settings)
+    return lui_apply_opacity_to_color(settings.color.background, settings.background_opacity)
 end
 
 ---------------------------------------------------------------------
@@ -175,7 +190,8 @@ function CooldownEntry:apply_settings()
 
     local icon_left = LUI_ENUMS.side_is_left[s.icon_side] == true
 
-    local back = s.color.background
+    local back = _icon_background_color(s)
+    local bar_back = _bar_background_color(s)
     self.separator:SetBackColor(s.color.border)
     self.separator:SetVisible(sep_w > 0)
 
@@ -199,12 +215,12 @@ function CooldownEntry:apply_settings()
     end
 
     self.bar_background:SetSize(bar_width, inner_h)
-    self.bar_background:SetBackColor(back)
+    self.bar_background:SetBackColor(bar_back)
 
     -- The background should be exactly the content size (no extra inner border).
     self.bar_fill:SetPosition(0, 0)
     self.bar_fill:SetSize(bar_width, inner_h)
-    self.bar_fill:SetBackColor(s.color.bar)
+    self.bar_fill:SetBackColor(lui_apply_opacity_to_color(s.color.bar, s.bar_opacity))
 
     local pad = s.text_margin
     local time_width = lui_cooldown_time_label_width(s.font.name, s.font.size, s.threshold, s.time_format)

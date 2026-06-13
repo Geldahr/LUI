@@ -3,6 +3,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Settings.enums"
 import "LUI.src.Utils.timed_row_layout"
+import "LUI.src.Utils.color"
 
 local LABEL_PAD = 3
 local EFFECT_TIME_FORMAT = lui_timed_row_time_format.AUTO
@@ -115,7 +116,7 @@ function TargetExpiringEffectEntry:apply_settings()
     local s = _G.settings.target.expiring_effects
     local border = s.border_width
     local border_color = s.color.border
-    local back = s.color.background
+    local back = lui_apply_opacity_to_color(s.color.background, s.background_opacity)
 
     local height = s.bar_height
     local bar_width = s.bar_width
@@ -158,11 +159,10 @@ function TargetExpiringEffectEntry:apply_settings()
     local bar_bg_x = icon_left and 0 or border
     self.bar_background:SetPosition(bar_bg_x, border)
     self.bar_background:SetSize(bar_inner_w, inner_height)
-    self.bar_background:SetBackColor(back)
 
     self.bar_fill:SetPosition(0, 0)
     self.bar_fill:SetSize(bar_inner_w, inner_height)
-    self.bar_fill:SetBackColor(self:_resolve_bar_color())
+    self:_apply_bar_colors()
 
     local time_width = lui_timed_row_time_label_width(
         s.font.name,
@@ -215,7 +215,7 @@ function TargetExpiringEffectEntry:set_effect(effect)
         end
         self.effect = nil
         self.effect_key = 0
-        self.bar_fill:SetBackColor(self:_resolve_bar_color())
+        self:_apply_bar_colors()
         self.icon:SetEffect(nil)
         self.icon:SetVisible(false)
         return
@@ -225,14 +225,14 @@ function TargetExpiringEffectEntry:set_effect(effect)
     if next_key ~= 0 and next_key == self.effect_key then
         -- Same underlying effect (possibly new wrapper) -> avoid EffectDisplay rebinding.
         self.effect = effect
-        self.bar_fill:SetBackColor(self:_resolve_bar_color())
+        self:_apply_bar_colors()
         self.icon:SetVisible(true)
         return
     end
 
     self.effect = effect
     self.effect_key = next_key
-    self.bar_fill:SetBackColor(self:_resolve_bar_color())
+    self:_apply_bar_colors()
     self.icon:SetVisible(true)
     self.icon:SetEffect(effect)
 end
@@ -291,6 +291,26 @@ end
 ---------------------------------------------------------------------
 -- Private functions
 ---------------------------------------------------------------------
+
+function TargetExpiringEffectEntry:_apply_bar_colors()
+    local s = _G.settings.target.expiring_effects
+    local bar_color = self:_resolve_bar_color()
+    self.bar_background:SetBackColor(self:_resolve_bar_background_color(bar_color))
+    self.bar_fill:SetBackColor(lui_apply_opacity_to_color(bar_color, s.bar_opacity))
+end
+
+function TargetExpiringEffectEntry:_resolve_bar_background_color(bar_color)
+    local s = _G.settings.target.expiring_effects
+    local color
+
+    if s.bar_background_matches_fill == true then
+        color = lui_dim_color(bar_color, s.bar_background_dimming)
+    else
+        color = s.color.background
+    end
+
+    return lui_apply_opacity_to_color(color, s.background_opacity)
+end
 
 function TargetExpiringEffectEntry:_resolve_bar_color()
     local s = _G.settings.target.expiring_effects

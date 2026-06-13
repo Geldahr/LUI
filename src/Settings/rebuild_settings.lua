@@ -214,7 +214,6 @@ function _G.rebuild_settings()
         return {
             background = build_color(src.background),
             border = build_color(src.border),
-            bar = build_color(src.bar),
             bar_buff = build_color(src.bar_buff),
             bar_debuff_curable = build_color(src.bar_debuff_curable),
             bar_debuff_noncurable = build_color(src.bar_debuff_noncurable),
@@ -259,6 +258,7 @@ function _G.rebuild_settings()
         dst.morale.bubble_tokens = lui_tokenize_format(dst.morale.bubble_format)
         dst.background_matches_missing = src.background_matches_missing
         dst.background_dimming = src.background_dimming
+        dst.background_opacity = src.background_opacity
         dst.info.enabled = src.info.enabled == true
         dst.info.height = scaled_int(src.info.height)
         dst.info.opacity = src.info.opacity
@@ -381,6 +381,7 @@ function _G.rebuild_settings()
     dst_tt.bubble_tokens = lui_tokenize_format(dst_tt.bubble_format)
     dst_tt.background_matches_missing = raw_tt.background_matches_missing
     dst_tt.background_dimming = raw_tt.background_dimming
+    dst_tt.background_opacity = raw_tt.background_opacity
     dst_tt.labels = {
         build_vital_label(raw_tt.labels[1]),
         build_vital_label(raw_tt.labels[2]),
@@ -410,6 +411,10 @@ function _G.rebuild_settings()
     self_ee.bar_width = scaled_int(raw_self_ee.bar_width)
     self_ee.bar_height = scaled_int(raw_self_ee.bar_height)
     self_ee.border_width = scaled_border(raw_self_ee.border_width)
+    self_ee.bar_background_matches_fill = raw_self_ee.bar_background_matches_fill
+    self_ee.bar_background_dimming = raw_self_ee.bar_background_dimming
+    self_ee.background_opacity = raw_self_ee.background_opacity
+    self_ee.bar_opacity = raw_self_ee.bar_opacity
     self_ee.color = build_expiring_effect_colors(raw_self_ee.color)
 
     self_ee.font.name = raw_self_ee.font.name
@@ -436,6 +441,10 @@ function _G.rebuild_settings()
     target_ee.bar_width = scaled_int(raw_expiring_target_effects.bar_width)
     target_ee.bar_height = scaled_int(raw_expiring_target_effects.bar_height)
     target_ee.border_width = scaled_border(raw_expiring_target_effects.border_width)
+    target_ee.bar_background_matches_fill = raw_expiring_target_effects.bar_background_matches_fill
+    target_ee.bar_background_dimming = raw_expiring_target_effects.bar_background_dimming
+    target_ee.background_opacity = raw_expiring_target_effects.background_opacity
+    target_ee.bar_opacity = raw_expiring_target_effects.bar_opacity
     target_ee.color = build_expiring_effect_colors(raw_expiring_target_effects.color)
 
     target_ee.font.name = raw_expiring_target_effects.font.name
@@ -573,6 +582,10 @@ function _G.rebuild_settings()
     cd.name_max_chars = raw_cd.name_max_chars
     cd.whitelist = raw_cd.whitelist
     cd.blacklist = raw_cd.blacklist
+    cd.bar_background_matches_fill = raw_cd.bar_background_matches_fill
+    cd.bar_background_dimming = raw_cd.bar_background_dimming
+    cd.background_opacity = raw_cd.background_opacity
+    cd.bar_opacity = raw_cd.bar_opacity
     cd.color = raw_cd.color
 
     cd.font.name = raw_cd.font.name

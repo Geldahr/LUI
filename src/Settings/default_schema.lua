@@ -274,6 +274,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 			},
 			["background_matches_missing"] = true,
 			["background_dimming"] = 0.750000,
+			["background_opacity"] = 1.000000,
 		},
 		["expiring_effects"] = {
 			["color"] = {
@@ -288,12 +289,6 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["R"] = 0.000000,
 					["G"] = 0.000000,
 					["B"] = 0.000000,
-				},
-				["bar"] = {
-					["A"] = 1.000000,
-					["R"] = 0.200000,
-					["G"] = 0.333333,
-					["B"] = 0.600000,
 				},
 				["bar_buff"] = {
 					["A"] = 1.000000,
@@ -332,6 +327,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["size"] = 14.000000,
 			},
 			["enabled"] = true,
+			["bar_background_matches_fill"] = true,
+			["bar_background_dimming"] = 0.750000,
+			["background_opacity"] = 1.000000,
+			["bar_opacity"] = 1.000000,
 			["border_width"] = 1.000000,
 			["bar_expire_towards"] = 2.000000,
 			["bar_mode"] = 2.000000,
@@ -386,6 +385,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["size"] = 12.000000,
 			},
 			["enabled"] = true,
+			["bar_background_matches_fill"] = true,
+			["bar_background_dimming"] = 0.750000,
+			["background_opacity"] = 1.000000,
+			["bar_opacity"] = 1.000000,
 			["border_width"] = 1.000000,
 			["bar_expire_towards"] = 2.000000,
 			["bar_mode"] = 2.000000,
@@ -538,6 +541,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["border_width"] = 1.000000,
 				["background_matches_missing"] = true,
 				["background_dimming"] = 0.750000,
+				["background_opacity"] = 1.000000,
 				["bubble_format"] = " - %b",
 			},
 			["morale"] = {
@@ -811,6 +815,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 			},
 			["background_matches_missing"] = true,
 			["background_dimming"] = 0.750000,
+			["background_opacity"] = 1.000000,
 		},
 		["boss_vitals"] = {
 			["morale"] = {
@@ -1088,6 +1093,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 			["enabled"] = true,
 			["background_matches_missing"] = true,
 			["background_dimming"] = 0.750000,
+			["background_opacity"] = 1.000000,
 		},
 		["expiring_effects"] = {
 			["color"] = {
@@ -1102,12 +1108,6 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 					["R"] = 0.000000,
 					["G"] = 0.000000,
 					["B"] = 0.000000,
-				},
-				["bar"] = {
-					["A"] = 1.000000,
-					["R"] = 0.898039,
-					["G"] = 0.250980,
-					["B"] = 0.250980,
 				},
 				["bar_buff"] = {
 					["A"] = 1.000000,
@@ -1146,6 +1146,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["size"] = 14.000000,
 			},
 			["enabled"] = true,
+			["bar_background_matches_fill"] = true,
+			["bar_background_dimming"] = 0.750000,
+			["background_opacity"] = 1.000000,
+			["bar_opacity"] = 1.000000,
 			["border_width"] = 1.000000,
 			["bar_expire_towards"] = 2.000000,
 			["bar_mode"] = 2.000000,
@@ -1462,6 +1466,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 		["show_self_in_fellowship"] = true,
 		["background_matches_missing"] = true,
 		["background_dimming"] = 0.750000,
+		["background_opacity"] = 1.000000,
 	},
 	["raid"] = {
 		["enabled"] = true,
@@ -1790,6 +1795,7 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 		},
 		["background_matches_missing"] = true,
 		["background_dimming"] = 0.750000,
+		["background_opacity"] = 1.000000,
 	},
 	["global"] = {
 		["bestiary_capture"] = false,

@@ -51,7 +51,11 @@ function Common.require_control_text(controls, key)
 end
 
 function Common.require_control_number(controls, key)
-    return Common.require_number(Common.require_control_text(controls, key), key)
+    local text = Common.require_control_text(controls, key)
+    if type(text) == "string" and string.len(text:gsub("%s+", "")) == 0 then
+        return Common.require_number(controls[key].load_fn(), key)
+    end
+    return Common.require_number(text, key)
 end
 
 function Common.require_control_color(controls, key)
