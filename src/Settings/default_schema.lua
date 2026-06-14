@@ -2032,23 +2032,23 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 				["top"] = 420.000000,
 			},
 			["raid_vitals"] = {
-				["left"] = 270.000000,
+				["left"] = 0.000000,
 				["top"] = 420.000000,
 			},
 			["raid_group_a_vitals"] = {
-				["left"] = 270.000000,
+				["left"] = 0.000000,
 				["top"] = 420.000000,
 			},
 			["raid_group_b_vitals"] = {
-				["left"] = 380.000000,
+				["left"] = 110.000000,
 				["top"] = 420.000000,
 			},
 			["raid_group_c_vitals"] = {
-				["left"] = 490.000000,
+				["left"] = 220.000000,
 				["top"] = 420.000000,
 			},
 			["raid_group_d_vitals"] = {
-				["left"] = 600.000000,
+				["left"] = 330.000000,
 				["top"] = 420.000000,
 			},
 			["self_effects"] = {

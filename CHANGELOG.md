@@ -6,6 +6,8 @@
 
 ### Changed
 
+- Changed default raid vitals HUD X position to `0px`.
+
 ### Fixed
 
 - Fixed hard PluginData parse failures by replacing corrupted save files with clean encoded files.
