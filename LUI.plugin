@@ -3,7 +3,7 @@
 	<Information>
 		<Name>LUI</Name>
 		<Author>Geldahr</Author>
-		<Version>1.0.2</Version>
+		<Version>1.0.3</Version>
 		<Description>A customizable LotRO UI focused on cleaner combat frames, tools, and flexible layout control.</Description>
 		<Image>LUI/assets/logo2.tga</Image>
 	</Information>

@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v1.0.3
+
+### Added
+
 - Added Help coverage for LUI features, hidden interactions, search syntax, status bar tokens, and command aliases.
 
 ### Changed
@@ -16,8 +26,6 @@
 - Fixed typed PluginData decoding so malformed table values are dropped at load instead of reaching the save encoder.
 - Fixed Bestiary cache merging so level morale/power observations keep their table shape.
 - Fixed first-run quick setup text wrapping and spacing so longer localized text is not clipped.
-
-### Removed
 
 ## v1.0.2
 
