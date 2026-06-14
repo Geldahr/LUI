@@ -8,6 +8,8 @@
 
 ### Fixed
 
+- Fixed asset cache unload snapshots so dirty character asset changes are saved through the typed PluginData encoder.
+
 ### Removed
 
 ## v1.0.1

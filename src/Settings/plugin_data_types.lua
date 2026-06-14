@@ -496,4 +496,3 @@ Types.ACCOUNT = account_schema
 Types.CHARACTER = character_schema
 Types.ASSETS_CACHE = assets_cache_schema
 Types.BESTIARY_CACHE = _map_schema(bestiary_entry_schema)
-

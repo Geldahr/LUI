@@ -488,14 +488,12 @@ end
 ---------------------------------------------------------------------
 
 function AssetsStore:destroy()
-    if _G.LUI_IS_UNLOADING ~= true then
-        self:_mark_all_dirty()
-        self:_refresh_availability_flags()
-        local changed = self:_flush_dirty_snapshots()
-        if changed == true then
-            self.generation = self.generation + 1
-            _G.assets_cache_dirty = true
-        end
+    self:_mark_all_dirty()
+    self:_refresh_availability_flags()
+    local changed = self:_flush_dirty_snapshots()
+    if changed == true then
+        self.generation = self.generation + 1
+        _G.assets_cache_dirty = true
     end
 
     self:_detach_callbacks()
