@@ -3,30 +3,36 @@ import "Turbine.UI.Lotro"
 
 import "LUI.src.Settings.default_layouts"
 import "LUI.src.UI.Widgets"
+import "LUI.src.Utils.timed_row_layout"
 
 local Style = UI.Widgets.Style
 local WINDOW_W = 260
-local WINDOW_H = 140
+local WINDOW_H = 160
 local FRAME_BORDER = 2
 local WINDOW_MARGIN = 6
 local TITLE_TOP = 4
 local TITLE_H = 20
-local TITLE_RULE_GAP = 2
-local BODY_TOP = 40
-local BODY_H = 30
+local TITLE_RULE_GAP = 0
+local BODY_TOP = 30
+local BODY_H = 48
+local BODY_INTRO_H = 88
+local BODY_FINAL_H = 58
+local BODY_LINE_H = 24
+local BODY_LINE_PAD = 14
+local BODY_CONTROL_GAP = 8
+local BODY_LABEL_GAP = 4
+local BOTTOM_BUTTON_GAP = 10
 local BUTTON_W = 80
 local BUTTON_H = 18
 local BUTTON_GAP = 5
 local SCALE_INPUT_W = 55
 local SCALE_INPUT_H = 18
 local SCALE_BUTTON_W = 22
-local SCALE_ROW_Y = 72
 local CONFIG_DROPDOWN_W = 180
 local CONFIG_DROPDOWN_H = 20
 local LAYOUT_BUTTON_W = 100
 local LAYOUT_BUTTON_H = 22
-local LAYOUT_LABEL_Y = 63
-local LAYOUT_ROW_Y = 80
+local LAYOUT_LABEL_H = 18
 
 local function _scaled_size(value)
     return value * _G.settings.global.scale
@@ -42,6 +48,44 @@ local function _scaled_font(name, size)
         error("Missing scaled font: " .. tostring(name) .. " " .. tostring(_scaled_size(size)))
     end
     return font
+end
+
+local function _body_text_width(text)
+    return lui_timed_row_estimate_text_width(text, Style.CONTENT_LARGE_FONT_NAME, _scaled_size(Style.CONTENT_LARGE_FONT_SIZE))
+end
+
+local function _wrap_line_for_width(line, max_width, out)
+    local current = ""
+    for word in string.gmatch(line, "%S+") do
+        local candidate = current == "" and word or current .. " " .. word
+        if current == "" or _body_text_width(candidate) <= max_width then
+            current = candidate
+        else
+            out[#out + 1] = current
+            current = word
+        end
+    end
+
+    if current == "" then
+        out[#out + 1] = ""
+    else
+        out[#out + 1] = current
+    end
+end
+
+local function _wrap_text_for_width(text, max_width)
+    local lines = {}
+    local source = tostring(text or "")
+
+    for line in string.gmatch(source .. "\n", "(.-)\n") do
+        _wrap_line_for_width(line, max_width, lines)
+    end
+
+    return table.concat(lines, "\n"), math.max(1, #lines)
+end
+
+local function _body_height_for_lines(line_count, min_height)
+    return math.max(min_height, (line_count * BODY_LINE_H) + BODY_LINE_PAD)
 end
 
 local function _format_scale(value)
@@ -332,6 +376,11 @@ function FirstRunQuickSetup:Constructor(options)
     self.selected_layout = nil
     self.updating_scale_text = false
     self.closing = false
+    self._body_raw_text = ""
+    self._body_h = BODY_H
+    self._body_min_h = BODY_H
+    self._window_h = WINDOW_H
+    self._layout_mode = nil
     self.create_profile_on_finish = options ~= nil and options.create_profile_on_finish == true
     self.profile_name = options ~= nil and options.profile_name or nil
     self.previous_profile_id = self.create_profile_on_finish == true and _G.current_profile_id or nil
@@ -560,8 +609,49 @@ function FirstRunQuickSetup:center()
     end
 end
 
+function FirstRunQuickSetup:_body_text_max_width()
+    local width = _scaled_int(WINDOW_W) - (FRAME_BORDER * 2) - (_scaled_int(WINDOW_MARGIN) * 2)
+    return math.max(1, width)
+end
+
+function FirstRunQuickSetup:_set_body_text(text, min_height)
+    self._body_raw_text = text
+    self._body_min_h = min_height
+
+    local wrapped_text, line_count = _wrap_text_for_width(text, self:_body_text_max_width())
+    self._body_h = _body_height_for_lines(line_count, min_height)
+    self.body:SetText(wrapped_text)
+end
+
+function FirstRunQuickSetup:_window_height_for_content()
+    local body_h = self._body_h
+    local content_bottom = BODY_TOP + body_h
+
+    if self._layout_mode == "config" then
+        content_bottom = content_bottom + BODY_CONTROL_GAP + CONFIG_DROPDOWN_H
+    elseif self._layout_mode == "layout" then
+        content_bottom = content_bottom + BODY_LABEL_GAP + LAYOUT_LABEL_H + BODY_LABEL_GAP + LAYOUT_BUTTON_H
+    elseif self._layout_mode == "scale" then
+        content_bottom = content_bottom + BODY_CONTROL_GAP + BUTTON_H
+    elseif self._layout_mode == "choice" then
+        content_bottom = content_bottom + BODY_CONTROL_GAP + LAYOUT_BUTTON_H
+    end
+
+    local inner_h = content_bottom + BOTTOM_BUTTON_GAP + BUTTON_H + WINDOW_MARGIN
+    return math.max(WINDOW_H, inner_h + (FRAME_BORDER * 2))
+end
+
+function FirstRunQuickSetup:_fit_window_to_content()
+    self._window_h = self:_window_height_for_content()
+    self:SetSize(_scaled_int(WINDOW_W), _scaled_int(self._window_h))
+    self:layout()
+    if self:IsVisible() == true then
+        self:center()
+    end
+end
+
 function FirstRunQuickSetup:apply_ui_scale()
-    self:SetSize(_scaled_int(WINDOW_W), _scaled_int(WINDOW_H))
+    self:SetSize(_scaled_int(WINDOW_W), _scaled_int(self._window_h or WINDOW_H))
 
     local title_font = _scaled_font(Style.FONT_H1_NAME, Style.FONT_H1_SIZE)
     local body_font = _scaled_font(Style.CONTENT_LARGE_FONT_NAME, Style.CONTENT_LARGE_FONT_SIZE)
@@ -590,8 +680,8 @@ function FirstRunQuickSetup:apply_ui_scale()
     self.choice_no:set_font(button_font)
     self.choice_yes:set_font(button_font)
 
-    self:layout()
-    self:center()
+    self:_set_body_text(self._body_raw_text, self._body_min_h)
+    self:_fit_window_to_content()
 end
 
 function FirstRunQuickSetup:cancel_setup()
@@ -622,10 +712,12 @@ function FirstRunQuickSetup:layout()
     local title_h = _scaled_int(TITLE_H)
     local title_rule_y = title_top + title_h + _scaled_int(TITLE_RULE_GAP)
     local body_top = _scaled_int(BODY_TOP)
-    local body_h = _scaled_int(BODY_H)
+    local body_h = _scaled_int(self._body_h or BODY_H)
     local button_w = _scaled_int(BUTTON_W)
     local button_h = _scaled_int(BUTTON_H)
     local button_gap = _scaled_int(BUTTON_GAP)
+    local control_gap = _scaled_int(BODY_CONTROL_GAP)
+    local label_gap = _scaled_int(BODY_LABEL_GAP)
 
     self.title:SetPosition(margin, title_top)
     self.title:SetSize(inner_w - (margin * 2), title_h)
@@ -636,34 +728,37 @@ function FirstRunQuickSetup:layout()
     self.body:SetPosition(margin, body_top)
     self.body:SetSize(inner_w - (margin * 2), body_h)
 
-    local scale_row_y = _scaled_int(SCALE_ROW_Y)
+    local body_bottom = body_top + body_h
+    local control_row_y = body_bottom + control_gap
     local scale_button_w = _scaled_int(SCALE_BUTTON_W)
     local scale_input_w = _scaled_int(SCALE_INPUT_W)
     local scale_input_h = _scaled_int(SCALE_INPUT_H)
     local scale_row_w = (scale_button_w * 2) + scale_input_w + (button_gap * 2)
     local scale_row_x = math.floor((inner_w - scale_row_w) / 2)
-    local scale_input_y = scale_row_y + math.floor((button_h - scale_input_h) / 2)
+    local scale_input_y = control_row_y + math.floor((button_h - scale_input_h) / 2)
 
-    self.scale_minus:SetPosition(scale_row_x, scale_row_y)
+    self.scale_minus:SetPosition(scale_row_x, control_row_y)
     self.scale_minus:SetSize(scale_button_w, button_h)
     self.scale_box:SetPosition(scale_row_x + scale_button_w + button_gap, scale_input_y)
     self.scale_box:SetSize(scale_input_w, scale_input_h)
-    self.scale_plus:SetPosition(scale_row_x + scale_button_w + button_gap + scale_input_w + button_gap, scale_row_y)
+    self.scale_plus:SetPosition(scale_row_x + scale_button_w + button_gap + scale_input_w + button_gap, control_row_y)
     self.scale_plus:SetSize(scale_button_w, button_h)
 
     local config_dropdown_w = _scaled_int(CONFIG_DROPDOWN_W)
     local config_dropdown_h = _scaled_int(CONFIG_DROPDOWN_H)
     local config_dropdown_x = math.floor((inner_w - config_dropdown_w) / 2)
-    local config_dropdown_y = scale_row_y + math.floor((button_h - config_dropdown_h) / 2)
+    local config_dropdown_y = control_row_y + math.floor((button_h - config_dropdown_h) / 2)
     self.config_dropdown:SetPosition(config_dropdown_x, config_dropdown_y)
     self.config_dropdown:SetSize(config_dropdown_w, config_dropdown_h)
 
-    self.layout_label:SetPosition(margin, _scaled_int(LAYOUT_LABEL_Y))
-    self.layout_label:SetSize(inner_w - (margin * 2), _scaled_int(16))
+    local layout_label_y = body_bottom + label_gap
+    local layout_label_h = _scaled_int(LAYOUT_LABEL_H)
+    self.layout_label:SetPosition(margin, layout_label_y)
+    self.layout_label:SetSize(inner_w - (margin * 2), layout_label_h)
 
     local layout_button_w = _scaled_int(LAYOUT_BUTTON_W)
     local layout_button_h = _scaled_int(LAYOUT_BUTTON_H)
-    local layout_row_y = _scaled_int(LAYOUT_ROW_Y)
+    local layout_row_y = layout_label_y + layout_label_h + label_gap
     local layout_row_w = (layout_button_w * 2) + button_gap
     local layout_row_x = math.floor((inner_w - layout_row_w) / 2)
 
@@ -671,9 +766,9 @@ function FirstRunQuickSetup:layout()
     self.layout_bottom:SetSize(layout_button_w, layout_button_h)
     self.layout_top:SetPosition(layout_row_x + layout_button_w + button_gap, layout_row_y)
     self.layout_top:SetSize(layout_button_w, layout_button_h)
-    self.choice_no:SetPosition(layout_row_x, layout_row_y)
+    self.choice_no:SetPosition(layout_row_x, control_row_y)
     self.choice_no:SetSize(layout_button_w, layout_button_h)
-    self.choice_yes:SetPosition(layout_row_x + layout_button_w + button_gap, layout_row_y)
+    self.choice_yes:SetPosition(layout_row_x + layout_button_w + button_gap, control_row_y)
     self.choice_yes:SetSize(layout_button_w, layout_button_h)
 
     local bottom_y = inner_h - margin - button_h
@@ -811,10 +906,12 @@ function FirstRunQuickSetup:update_step()
     self.settings_button:SetVisible(false)
 
     if self.has_existing_configurations == true and self.step == 1 then
-        self.body:SetText(TR["Do you want to use an existing configuration?"])
+        self._layout_mode = "config"
+        self:_set_body_text(TR["Do you want to use an existing configuration?"], BODY_H)
         self.config_dropdown:SetVisible(true)
         self.use_button:SetVisible(true)
         self.new_button:SetVisible(true)
+        self:_fit_window_to_content()
         return
     end
 
@@ -824,13 +921,15 @@ function FirstRunQuickSetup:update_step()
     end
 
     if setup_step == 1 then
-        self.body:SetText(table.concat({
+        self._layout_mode = nil
+        self:_set_body_text(table.concat({
             TR["Thank you for using LUI."],
             TR["We will guide you through a few short steps."],
-        }, "\n"))
+        }, "\n"), BODY_INTRO_H)
 
         self.cancel_button:SetVisible(true)
         self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
         return
     end
 
@@ -841,12 +940,14 @@ function FirstRunQuickSetup:update_step()
             self:select_layout("bottom")
         end
 
-        self.body:SetText(TR["Which layout do you prefer?"])
+        self._layout_mode = "layout"
+        self:_set_body_text(TR["Which layout do you prefer?"], BODY_H)
         self.layout_label:SetText(TR["Pick the closest layout."])
         self.layout_label:SetVisible(true)
         self.layout_bottom:SetVisible(true)
         self.layout_top:SetVisible(true)
         self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
         return
     end
 
@@ -855,36 +956,44 @@ function FirstRunQuickSetup:update_step()
     end
 
     if setup_step == 4 then
-        self.body:SetText(TR["Replace the default inventory bags?"])
+        self._layout_mode = "choice"
+        self:_set_body_text(TR["Replace the default inventory bags?"], BODY_H)
         self:update_binary_choice_buttons(_G.loaded_settings.inventory.replace == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
         self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
         return
     end
 
     if setup_step == 3 then
-        self.body:SetText(TR["Select your scaling."])
+        self._layout_mode = "scale"
+        self:_set_body_text(TR["Select your scaling."], BODY_H)
         self.scale_minus:SetVisible(true)
         self.scale_box:SetVisible(true)
         self.scale_plus:SetVisible(true)
         self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
         return
     end
 
     if setup_step == 5 then
-        self.body:SetText(TR["Enable the status bar?"])
+        self._layout_mode = "choice"
+        self:_set_body_text(TR["Enable the status bar?"], BODY_H)
         self:update_binary_choice_buttons(_G.loaded_settings.status_bar.enabled == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
         self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
         return
     end
 
-    self.body:SetText(TR["Do you want to modify anything else?"])
+    self._layout_mode = nil
+    self:_set_body_text(TR["Do you want to modify anything else?"], BODY_FINAL_H)
     self.done_button:SetVisible(true)
     self.move_manually_button:SetVisible(true)
     self.settings_button:SetVisible(true)
+    self:_fit_window_to_content()
 end
 
 function FirstRunQuickSetup:go_next()

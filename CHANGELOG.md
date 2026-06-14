@@ -8,6 +8,8 @@
 
 ### Fixed
 
+- Fixed first-run quick setup text wrapping and spacing so longer localized text is not clipped.
+
 ### Removed
 
 ## v1.0.2
