@@ -13,6 +13,8 @@
 ### Fixed
 
 - Fixed hard PluginData parse failures by replacing corrupted save files with clean encoded files.
+- Fixed typed PluginData decoding so malformed table values are dropped at load instead of reaching the save encoder.
+- Fixed Bestiary cache merging so level morale/power observations keep their table shape.
 - Fixed first-run quick setup text wrapping and spacing so longer localized text is not clipped.
 
 ### Removed

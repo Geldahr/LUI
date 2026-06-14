@@ -396,7 +396,7 @@ function Types.decode(value, schema)
         error("Unsupported plugin data schema kind: " .. tostring(schema.kind))
     end
     if type(value) ~= "table" then
-        return value
+        return nil
     end
 
     local decoded = {}

@@ -317,6 +317,31 @@ local function _merge_count_map(target, source)
     end
 end
 
+local function _merge_bestiary_level_map(target, source)
+    if type(source) ~= "table" then
+        return
+    end
+
+    for level, info in pairs(source) do
+        local target_info = target[level]
+        local morale = tonumber(info.m) or 0
+        local power = tonumber(info.p) or 0
+        if type(target_info) ~= "table" then
+            target[level] = {
+                m = morale,
+                p = power,
+            }
+        else
+            if morale > (tonumber(target_info.m) or 0) then
+                target_info.m = morale
+            end
+            if power > (tonumber(target_info.p) or 0) then
+                target_info.p = power
+            end
+        end
+    end
+end
+
 local function _merge_bestiary_cache(loaded)
     if type(loaded) ~= "table" then
         return
@@ -340,7 +365,7 @@ local function _merge_bestiary_cache(loaded)
             if type(current_entry.d) ~= "table" then
                 current_entry.d = {}
             end
-            _merge_count_map(current_entry.levels, loaded_entry.levels)
+            _merge_bestiary_level_map(current_entry.levels, loaded_entry.levels)
             _merge_count_map(current_entry.d, loaded_entry.d)
         end
     end
