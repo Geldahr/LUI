@@ -1,4 +1,5 @@
-DE = {
+LUI.src.Languages.de = {}
+LUI.src.Languages.de.DE = {
     ["Apply"] = "Übernehmen",
     ["Cancel"] = "Abbrechen",
     ["Save"] = "Speichern",
