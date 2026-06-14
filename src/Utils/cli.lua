@@ -26,11 +26,14 @@ end
 
 local function display_help()
     Turbine.Shell.WriteLine(TR["Available commands:"])
+    _write_help_command("/lui help", "  /lui help       - Print slash command help")
     _write_help_command("/lui config", "  /lui config     - Toggle configuration window")
     _write_help_command("/lui move", "  /lui move       - Toggle move mode")
     _write_help_command("/lui move cancel", "  /lui move cancel - Cancel move mode changes")
     _write_help_command("/lui inventory", "  /lui inventory  - Toggle inventory window")
+    _write_help_command("/lui inv", "  /lui inv        - Short alias for /lui inventory")
     _write_help_command("/lui assets", "  /lui assets      - Toggle assets window")
+    _write_help_command("/lui a", "  /lui a          - Short alias for /lui assets")
     _write_help_command("/lui craft", "  /lui craft      - Toggle crafting window")
     _write_help_command("/lui travel", "  /lui travel     - Toggle travel window")
     _write_help_command("/lui trav", "  /lui trav       - Short alias for /lui travel")
@@ -38,6 +41,7 @@ local function display_help()
     _write_help_command("/lui beast", "  /lui beast      - Alias for /lui bestiary")
     _write_help_command("/lui b", "  /lui b          - Short alias for /lui bestiary")
     _write_help_command("/lui card [monster name]", "  /lui card [monster name] - Open the bestiary card for a monster")
+    _write_help_command("/lui api sb --add", "  /lui api sb --add -k key -t title -i image -c /command - Register a status bar API button")
 end
 
 local function _write_error(message)

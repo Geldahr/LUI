@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added Help coverage for LUI features, hidden interactions, search syntax, status bar tokens, and command aliases.
+
 ### Changed
 
 - Changed default raid vitals HUD X position to `0px`.
