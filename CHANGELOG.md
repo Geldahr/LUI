@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- Fixed hard PluginData parse failures by replacing corrupted save files with clean encoded files.
 - Fixed first-run quick setup text wrapping and spacing so longer localized text is not clipped.
 
 ### Removed

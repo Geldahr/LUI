@@ -58,16 +58,44 @@ local function _save_plugin_data(scope, key, data)
     Turbine.PluginData.Save(scope, key, PluginDataTypes.encode(data, _plugin_data_schema(key)))
 end
 
+local function _write_plugin_data_load_error(key, err)
+    if Turbine.Shell ~= nil and type(Turbine.Shell.WriteLine) == "function" then
+        Turbine.Shell.WriteLine("<rgb=#3399FA>LUI</rgb>: Corrupted PluginData file for " .. tostring(key) .. ". Replacing it with a clean file. " .. tostring(err))
+    end
+end
+
+local function _wipe_corrupted_plugin_data(scope, key, err)
+    _write_plugin_data_load_error(key, err)
+    _save_plugin_data(scope, key, {})
+end
+
+local function _load_plugin_data_raw(scope, key, callback)
+    local ok, loaded = pcall(function()
+        if callback ~= nil then
+            return Turbine.PluginData.Load(scope, key, callback)
+        end
+
+        return Turbine.PluginData.Load(scope, key)
+    end)
+
+    if ok ~= true then
+        _wipe_corrupted_plugin_data(scope, key, loaded)
+        return nil
+    end
+
+    return loaded
+end
+
 local function _load_plugin_data(scope, key, callback)
     local schema = _plugin_data_schema(key)
     if callback ~= nil then
-        local loaded = Turbine.PluginData.Load(scope, key, function(data)
+        local loaded = _load_plugin_data_raw(scope, key, function(data)
             callback(PluginDataTypes.decode(data, schema))
         end)
         return PluginDataTypes.decode(loaded, schema)
     end
 
-    return PluginDataTypes.decode(Turbine.PluginData.Load(scope, key), schema)
+    return PluginDataTypes.decode(_load_plugin_data_raw(scope, key), schema)
 end
 
 local function _compute_next_profile_id(profiles)
