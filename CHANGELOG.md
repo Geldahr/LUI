@@ -4,9 +4,14 @@
 
 ### Added
 
+- Added typed PluginData encoding and schema mapping for persisted settings, profiles, assets cache, and bestiary cache.
+
 ### Changed
 
 ### Fixed
+
+- Fixed German/French-client PluginData parse failures caused by locale-formatted numeric values and numeric keys.
+- Fixed German/French translation loading by exporting language tables through their imported `LUI.src.Languages.*` namespaces.
 
 ### Removed
 
