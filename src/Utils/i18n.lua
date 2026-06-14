@@ -1,9 +1,12 @@
 import "LUI.src.Languages.de"
 import "LUI.src.Languages.fr"
 
-local function _detect_language_code()
-    local lang = Turbine.Engine.GetLanguage()
+local LANGUAGE_TABLES = {
+    de = LUI.src.Languages.de.DE,
+    fr = LUI.src.Languages.fr.FR,
+}
 
+local function _language_code_from_value(lang)
     if type(lang) == "number" then
         local language_enum = Turbine.Language
         if lang == language_enum.German then
@@ -41,12 +44,20 @@ local function _detect_language_code()
     return "en"
 end
 
+local function _detect_language_code()
+    return _language_code_from_value(Turbine.Engine.GetLanguage())
+end
+
+local function _translation_table_for_code(code)
+    if code == "en" then
+        return {}
+    end
+    return LANGUAGE_TABLES[code]
+end
+
 local function _load_translations()
     local code = _detect_language_code()
-    local l = {}
-    l.de = DE
-    l.fr = FR
-    local tr = l[code] or {}
+    local tr = _translation_table_for_code(code)
     setmetatable(tr, { __index = function(k, v) return v or k end })
     return tr
 end

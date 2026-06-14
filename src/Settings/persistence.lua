@@ -9,6 +9,14 @@ local SERVER_BESTIARY_CACHE_KEY = "LUI_BESTIARY_CACHE"
 
 local FALLBACK_PROFILE_NAME = "Configuration"
 local UNKNOWN_CHARACTER_NAME = "__unknown_character__"
+local PluginDataTypes = LUI_PLUGIN_DATA_TYPES
+
+local PLUGIN_DATA_SCHEMAS = {
+    [ACCOUNT_DATA_KEY] = PluginDataTypes.ACCOUNT,
+    [CHARACTER_DATA_KEY] = PluginDataTypes.CHARACTER,
+    [SERVER_ASSETS_CACHE_KEY] = PluginDataTypes.ASSETS_CACHE,
+    [SERVER_BESTIARY_CACHE_KEY] = PluginDataTypes.BESTIARY_CACHE,
+}
 
 local function _copy_table(value)
     if type(value) ~= "table" then
@@ -35,6 +43,31 @@ local function _trim(text)
     end
 
     return trimmed
+end
+
+local function _plugin_data_schema(key)
+    local schema = PLUGIN_DATA_SCHEMAS[key]
+    if schema == nil then
+        error("Missing plugin data type schema: " .. tostring(key))
+    end
+
+    return schema
+end
+
+local function _save_plugin_data(scope, key, data)
+    Turbine.PluginData.Save(scope, key, PluginDataTypes.encode(data, _plugin_data_schema(key)))
+end
+
+local function _load_plugin_data(scope, key, callback)
+    local schema = _plugin_data_schema(key)
+    if callback ~= nil then
+        local loaded = Turbine.PluginData.Load(scope, key, function(data)
+            callback(PluginDataTypes.decode(data, schema))
+        end)
+        return PluginDataTypes.decode(loaded, schema)
+    end
+
+    return PluginDataTypes.decode(Turbine.PluginData.Load(scope, key), schema)
 end
 
 local function _compute_next_profile_id(profiles)
@@ -117,8 +150,8 @@ local function _stamp_character_settings_version(character_settings)
 end
 
 local function _save_settings_files_raw()
-    Turbine.PluginData.Save(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, _G.account_settings)
-    Turbine.PluginData.Save(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY, _G.character_settings)
+    _save_plugin_data(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, _G.account_settings)
+    _save_plugin_data(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY, _G.character_settings)
 end
 
 local function _migrate_account_profiles(account_settings)
@@ -288,7 +321,7 @@ end
 function _G.ensure_assets_cache()
     if _G.assets_cache_loaded ~= true and _G.assets_cache_loading ~= true then
         _G.assets_cache_loading = true
-        local loaded = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, function(data)
+        local loaded = _load_plugin_data(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, function(data)
             if _G.LUI_IS_UNLOADING == true then
                 return
             end
@@ -332,7 +365,7 @@ end
 function _G.ensure_bestiary_cache()
     if _G.bestiary_cache_loaded ~= true and _G.bestiary_cache_loading ~= true then
         _G.bestiary_cache_loading = true
-        local loaded = Turbine.PluginData.Load(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, function(data)
+        local loaded = _load_plugin_data(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, function(data)
             if _G.LUI_IS_UNLOADING == true then
                 return
             end
@@ -587,7 +620,7 @@ function _G.save_assets_cache()
     if type(_G.assets_cache) ~= "table" then
         _G.assets_cache = {}
     end
-    Turbine.PluginData.Save(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, _G.assets_cache)
+    _save_plugin_data(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, _G.assets_cache)
     _G.assets_cache_dirty = false
 end
 
@@ -598,13 +631,13 @@ function _G.save_bestiary_cache()
     if type(_G.bestiary_cache) ~= "table" then
         _G.bestiary_cache = {}
     end
-    Turbine.PluginData.Save(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, _G.bestiary_cache)
+    _save_plugin_data(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, _G.bestiary_cache)
     _G.bestiary_cache_dirty = false
 end
 
 function _G.load_settings()
-    _G.account_settings = Turbine.PluginData.Load(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY)
-    _G.character_settings = Turbine.PluginData.Load(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY)
+    _G.account_settings = _load_plugin_data(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY)
+    _G.character_settings = _load_plugin_data(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY)
     _G.assets_cache = nil
     _G.assets_cache_loaded = false
     _G.assets_cache_loading = false
