@@ -4,10 +4,14 @@ import "Turbine.UI"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Inventory.filter"
 import "LUI.src.Inventory.slot"
+import "LUI.src.Inventory.operations"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Settings.enums"
 
+if Inventory == nil then
+    Inventory = {}
+end
 InventoryWindow = class(LuiWindow)
 
 local MARGIN_LEFT = 15
@@ -21,7 +25,13 @@ local BASE_HINT_GAP = 6
 local BASE_HINT_H = 34
 local BAR_GAP = 4
 local FILTER_GAP = 4
+local ACTION_GAP = 4
 local CLEAR_W = 52
+local BASE_ACTION_H = 21
+local BASE_SORT_W = 84
+local BASE_MERGE_UP_W = 70
+local BASE_MERGE_DOWN_W = 78
+local BASE_STATUS_GAP = 6
 local MIN_WINDOW_W = 193
 local MIN_WINDOW_H = 148
 local MIN_COLS = 6
@@ -130,10 +140,16 @@ function InventoryWindow:Constructor()
     self.money_gap = MONEY_GAP
     self.bar_gap = BAR_GAP
     self.filter_gap = FILTER_GAP
+    self.action_gap = ACTION_GAP
+    self.action_h = BASE_ACTION_H
+    self.sort_w = BASE_SORT_W
+    self.merge_up_w = BASE_MERGE_UP_W
+    self.merge_down_w = BASE_MERGE_DOWN_W
+    self.status_gap = BASE_STATUS_GAP
     self.clear_w = CLEAR_W
     self.hint_gap = BASE_HINT_GAP
     self.hint_h = BASE_HINT_H
-    self.header_h = FILTER_H + BASE_MONEY_H + MONEY_GAP
+    self.header_h = FILTER_H + BASE_MONEY_H + MONEY_GAP + ACTION_GAP + BASE_ACTION_H
 
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.backpack = self.player ~= nil and self.player:GetBackpack() or nil
@@ -189,6 +205,59 @@ function InventoryWindow:Constructor()
         self.filter_tb:Focus()
     end
 
+    self.action_bar = Turbine.UI.Control()
+    self.action_bar:SetParent(self.header)
+    self.action_bar:SetMouseVisible(true)
+
+    self.sort_dropdown = UI.Widgets.LuiDropdown()
+    self.sort_dropdown:SetParent(self.action_bar)
+    self.sort_dropdown:SetPopupHost(self)
+    self.sort_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.sort_dropdown:SetMappedOptions(
+        { TR["Sort"], TR["Category + A-Z"], TR["A-Z"], TR["Quantity"] },
+        {
+            Inventory.Operations.SORT_NONE,
+            Inventory.Operations.SORT_CATEGORY_AZ,
+            Inventory.Operations.SORT_AZ,
+            Inventory.Operations.SORT_QUANTITY,
+        }
+    )
+
+    self._resetting_sort_dropdown = false
+    self.sort_dropdown.ValueChanged = function(_, value)
+        if self._resetting_sort_dropdown == true then
+            return
+        end
+        if value == Inventory.Operations.SORT_NONE then
+            return
+        end
+        self:start_inventory_sort(value)
+        self._resetting_sort_dropdown = true
+        self.sort_dropdown:SetValue(Inventory.Operations.SORT_NONE)
+        self._resetting_sort_dropdown = false
+    end
+
+    self.merge_up_button = UI.Widgets.LuiButton()
+    self.merge_up_button:SetParent(self.action_bar)
+    self.merge_up_button:set_text(TR["Merge Up"])
+    self.merge_up_button.Click = function()
+        self:start_inventory_merge(Inventory.Operations.MERGE_UP)
+    end
+
+    self.merge_down_button = UI.Widgets.LuiButton()
+    self.merge_down_button:SetParent(self.action_bar)
+    self.merge_down_button:set_text(TR["Merge Down"])
+    self.merge_down_button.Click = function()
+        self:start_inventory_merge(Inventory.Operations.MERGE_DOWN)
+    end
+
+    self.operation_status_label = UI.Widgets.LuiLabel()
+    self.operation_status_label:SetParent(self.action_bar)
+    self.operation_status_label:SetMouseVisible(false)
+    self.operation_status_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.operation_status_label:SetForeColor(Turbine.UI.Color(0.72, 0.72, 0.72))
+    self.operation_status_label:SetText("")
+
     self.list = Turbine.UI.ListBox()
     self.list:SetParent(content)
     self.list:SetOrientation(Turbine.UI.Orientation.Vertical)
@@ -201,12 +270,13 @@ function InventoryWindow:Constructor()
     self.hint_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     self.hint_label:SetMultiline(true)
     self.hint_label:SetFont(_scaled_font("Verdana", BASE_HINT_FONT_SIZE))
-    self.hint_label:SetText(
+    self.default_hint_text =
         TR["Hint: to lock/unlock an item you can select it using Alt+Left click and then press Ctrl+T to toggle the lock."]
-    )
+    self.hint_label:SetText(self.default_hint_text)
 
     self.rows = {}
     self.slots = {}
+    self.inventory_operation = nil
 
     self.filter_tb.TextChanged = function()
         self:update_filter()
@@ -222,7 +292,7 @@ function InventoryWindow:Constructor()
 
     self.VisibleChanged = function()
         local visible = self:IsVisible() == true
-        self:SetWantsUpdates(visible)
+        self:SetWantsUpdates(visible or self.inventory_operation ~= nil)
         if visible then
             self.last_update_at = 0
             self._dirty = true
@@ -376,6 +446,45 @@ function InventoryWindow:layout()
     self.filter_tb:SetPosition(0, filter_y)
     self.filter_tb:SetSize(filter_w, self.filter_h)
 
+    local action_y = filter_y + self.filter_h + self.action_gap
+    local action_w = self.header:GetWidth()
+    self.action_bar:SetPosition(0, action_y)
+    self.action_bar:SetSize(action_w, self.action_h)
+
+    local sort_w = self.sort_w
+    local merge_up_w = self.merge_up_w
+    local merge_down_w = self.merge_down_w
+    local needed_w = sort_w + merge_up_w + merge_down_w + (2 * gap)
+    if action_w < needed_w then
+        local available = action_w - (2 * gap)
+        if available < 0 then
+            available = 0
+        end
+        sort_w = math.floor(available * 0.35)
+        merge_up_w = math.floor(available * 0.30)
+        merge_down_w = available - sort_w - merge_up_w
+    end
+
+    local action_x = 0
+    self.sort_dropdown:SetPosition(action_x, 0)
+    self.sort_dropdown:SetSize(sort_w, self.action_h)
+    action_x = action_x + sort_w + gap
+    self.merge_up_button:SetPosition(action_x, 0)
+    self.merge_up_button:SetSize(merge_up_w, self.action_h)
+    action_x = action_x + merge_up_w + gap
+    self.merge_down_button:SetPosition(action_x, 0)
+    self.merge_down_button:SetSize(merge_down_w, self.action_h)
+    action_x = action_x + merge_down_w + self.status_gap
+
+    local status_w = action_w - action_x
+    if status_w >= _scaled_int(44) then
+        self.operation_status_label:SetPosition(action_x, 0)
+        self.operation_status_label:SetSize(status_w, self.action_h)
+        self.operation_status_label:SetVisible(true)
+    else
+        self.operation_status_label:SetVisible(false)
+    end
+
     local list_y = self.margin_top + self.header_h + self.bar_gap
     local list_h = h - self.margin_bottom - self.hint_h - self.hint_gap - list_y
     if list_h < _scaled_int(30) then list_h = _scaled_int(30) end
@@ -509,12 +618,18 @@ function InventoryWindow:apply_settings()
     self.money_gap = _scaled_int(MONEY_GAP)
     self.bar_gap = _scaled_int(BAR_GAP)
     self.filter_gap = _scaled_int(FILTER_GAP)
+    self.action_gap = _scaled_int(ACTION_GAP)
+    self.action_h = _scaled_int(BASE_ACTION_H)
+    self.sort_w = _scaled_int(BASE_SORT_W)
+    self.merge_up_w = _scaled_int(BASE_MERGE_UP_W)
+    self.merge_down_w = _scaled_int(BASE_MERGE_DOWN_W)
+    self.status_gap = _scaled_int(BASE_STATUS_GAP)
     self.clear_w = _scaled_int(CLEAR_W)
     local scale = _G.settings.global.scale
     self.money_h = math.floor((BASE_MONEY_H * scale) + 0.5)
     self.hint_gap = math.floor((BASE_HINT_GAP * scale) + 0.5)
     self.hint_h = math.floor((BASE_HINT_H * scale) + 0.5)
-    self.header_h = self.filter_h + self.money_h + self.money_gap
+    self.header_h = self.filter_h + self.money_h + self.money_gap + self.action_gap + self.action_h
 
     local sb_font = _G.settings.status_bar.font
     local money_font_size = BASE_MONEY_H * _G.settings.global.scale
@@ -537,6 +652,13 @@ function InventoryWindow:apply_settings()
     local filter_font = _scaled_font("Verdana", BASE_FILTER_FONT_SIZE)
     self.filter_tb:SetFont(filter_font)
     self.clear_button:set_font(filter_font)
+    self.sort_dropdown:SetFont(filter_font)
+    self.sort_dropdown:set_scale(scale)
+    self.merge_up_button:set_font(filter_font)
+    self.merge_up_button:set_scale(scale)
+    self.merge_down_button:set_font(filter_font)
+    self.merge_down_button:set_scale(scale)
+    self.operation_status_label:SetFont(filter_font)
 
     local hint_font_size = math.floor((BASE_HINT_FONT_SIZE * scale) + 0.5)
     local hint_font = FONT_TO_LOTRO("Verdana", hint_font_size)
@@ -655,6 +777,11 @@ function InventoryWindow:build_grid()
 end
 
 function InventoryWindow:perform_drop(dest_index, drag_drop_info, args)
+    if self.inventory_operation ~= nil then
+        self:_set_inventory_operation_status(TR["Inventory action already running."])
+        return
+    end
+
     if self.backpack == nil or drag_drop_info == nil then
         return
     end
@@ -711,6 +838,26 @@ function InventoryWindow:perform_drop(dest_index, drag_drop_info, args)
     self._filter_dirty = true
     self._haystack_dirty = true
     self._display_dirty = true
+end
+
+function InventoryWindow:start_inventory_sort(mode)
+    if self.inventory_operation ~= nil then
+        self:_set_inventory_operation_status(TR["Inventory action already running."])
+        return
+    end
+
+    local operation = Inventory.Operations.create_sort(self.backpack, mode)
+    self:_begin_inventory_operation(operation, TR["Sorting inventory..."])
+end
+
+function InventoryWindow:start_inventory_merge(direction)
+    if self.inventory_operation ~= nil then
+        self:_set_inventory_operation_status(TR["Inventory action already running."])
+        return
+    end
+
+    local operation = Inventory.Operations.create_merge(self.backpack, direction)
+    self:_begin_inventory_operation(operation, TR["Merging inventory..."])
 end
 
 function InventoryWindow:update_slots()
@@ -823,6 +970,11 @@ end
 
 function InventoryWindow:Update()
     local now = Turbine.Engine.GetGameTime()
+
+    if self.inventory_operation ~= nil then
+        self:_update_inventory_operation(now)
+    end
+
     if (now - (self.last_update_at or 0)) < self.update_every then
         return
     end
@@ -863,3 +1015,48 @@ function InventoryWindow:_get_total_money()
     end
     return a:GetMoney()
 end
+
+function InventoryWindow:_begin_inventory_operation(operation, status_text)
+    self.inventory_operation = operation
+    self:_set_inventory_actions_enabled(false)
+    self:_set_inventory_operation_status(status_text)
+    self:SetWantsUpdates(true)
+end
+
+function InventoryWindow:_update_inventory_operation(now)
+    local result = self.inventory_operation:tick(now)
+    if result.done == true then
+        self:_finish_inventory_operation(TR[result.message_key])
+    end
+end
+
+function InventoryWindow:_finish_inventory_operation(status_text)
+    self.inventory_operation = nil
+    self:_set_inventory_actions_enabled(true)
+    self:_set_inventory_operation_status(status_text)
+    self._dirty = true
+    self._filter_dirty = true
+    self._haystack_dirty = true
+    self._display_dirty = true
+    if self:IsVisible() ~= true then
+        self:SetWantsUpdates(false)
+    end
+end
+
+function InventoryWindow:_set_inventory_actions_enabled(enabled)
+    self.sort_dropdown:SetEnabled(enabled == true)
+    self.merge_up_button:set_enabled(enabled == true)
+    self.merge_down_button:set_enabled(enabled == true)
+end
+
+function InventoryWindow:_set_inventory_operation_status(text)
+    local status = tostring(text or "")
+    self.operation_status_label:SetText(status)
+    if status == "" then
+        self.hint_label:SetText(self.default_hint_text)
+    else
+        self.hint_label:SetText(status)
+    end
+end
+
+Inventory.InventoryWindow = InventoryWindow
