@@ -16,8 +16,9 @@ Operations.SORT_QUANTITY = "quantity"
 Operations.MERGE_UP = "up"
 Operations.MERGE_DOWN = "down"
 
-local MOVE_DELAY = 0.12
+local SORT_RESPONSE_TIMEOUT = 2
 local MERGE_RESPONSE_TIMEOUT = 2
+local MAX_PENDING_SORT_DROPS = 2
 local MAX_PENDING_MERGE_DROPS = 2
 local MAX_MERGE_ROLLBACK_ATTEMPTS = 2
 local PENDING_REMOVE = "remove"
@@ -473,36 +474,6 @@ local function _sort_entries(entries, mode)
     return sorted
 end
 
-local function _find_matching_entry(entries, start_slot, target)
-    for slot = start_slot, #entries do
-        if _entries_match(entries[slot], target) == true then
-            return slot
-        end
-    end
-    return nil
-end
-
-local function _find_empty_slot(entries, start_slot)
-    for slot = start_slot, #entries do
-        if entries[slot].empty == true then
-            return slot
-        end
-    end
-    return nil
-end
-
-local function _find_sort_buffer(entries, start_slot, source_slot, unsafe_entry)
-    for slot = start_slot, #entries do
-        if slot ~= source_slot then
-            local entry = entries[slot]
-            if entry.empty == true or _can_merge(entry, unsafe_entry) ~= true then
-                return slot
-            end
-        end
-    end
-    return nil
-end
-
 local function _merge_attempt_key(target_slot, source_slot, merge_key)
     return tostring(target_slot) .. UNIT_SEPARATOR .. tostring(source_slot) .. UNIT_SEPARATOR .. tostring(merge_key)
 end
@@ -541,7 +512,6 @@ BaseOperation.__index = BaseOperation
 function BaseOperation:_begin(now)
     if self.started_at == nil then
         self.started_at = now
-        self.next_move_at = now
     end
 end
 
@@ -571,76 +541,6 @@ function BaseOperation:_timed_out(now)
     return (now - self.started_at) > self.max_seconds or self.moves > self.max_moves
 end
 
-function BaseOperation:_move(now, item, destination_slot)
-    if _drop_item(self.backpack, item, destination_slot) ~= true then
-        return self:_fail(MESSAGE_FAILED)
-    end
-
-    self.moves = self.moves + 1
-    self.next_move_at = now + self.delay
-    return self:_running()
-end
-
-local SortOperation = setmetatable({}, BaseOperation)
-SortOperation.__index = SortOperation
-
-function SortOperation:tick(now)
-    self:_begin(now)
-    if now < self.next_move_at then
-        return self:_running()
-    end
-    if self:_timed_out(now) == true then
-        return self:_fail(MESSAGE_TIMEOUT)
-    end
-
-    local live = _snapshot(self.backpack)
-    if live == nil or #live ~= #self.desired then
-        return self:_fail(MESSAGE_CHANGED)
-    end
-
-    while self.index <= #self.desired and _entries_match(live[self.index], self.desired[self.index]) == true do
-        self.index = self.index + 1
-    end
-
-    if self.index > #self.desired then
-        return self:_done(MESSAGE_SORT_COMPLETE)
-    end
-
-    local target = self.desired[self.index]
-    local current = live[self.index]
-
-    if target.empty == true then
-        local empty_slot = _find_empty_slot(live, self.index + 1)
-        if empty_slot == nil then
-            return self:_fail(MESSAGE_CHANGED)
-        end
-        return self:_move(now, current.item, empty_slot)
-    end
-
-    local source_slot = _find_matching_entry(live, self.index + 1, target)
-    if source_slot == nil then
-        return self:_fail(MESSAGE_CHANGED)
-    end
-
-    local source = live[source_slot]
-    if current.empty == true then
-        return self:_move(now, source.item, self.index)
-    end
-
-    if _can_merge(current, source) == true then
-        local buffer_slot = _find_sort_buffer(live, self.index + 1, source_slot, current)
-        if buffer_slot == nil then
-            return self:_fail(MESSAGE_NEEDS_BUFFER)
-        end
-        return self:_move(now, current.item, buffer_slot)
-    end
-
-    return self:_move(now, source.item, self.index)
-end
-
-local MergeOperation = setmetatable({}, BaseOperation)
-MergeOperation.__index = MergeOperation
-
 local function _pending_entry(entry)
     return {
         empty = entry.empty,
@@ -657,6 +557,262 @@ local function _entry_matches_pending(entry, expected)
 
     return entry.exact_key == expected.exact_key
 end
+
+local SortOperation = setmetatable({}, BaseOperation)
+SortOperation.__index = SortOperation
+
+function SortOperation:_locked_slots()
+    local locked_slots = {}
+    for i = 1, #self.pending do
+        local pending = self.pending[i]
+        locked_slots[pending.source_slot] = true
+        locked_slots[pending.destination_slot] = true
+    end
+
+    return locked_slots
+end
+
+function SortOperation:_apply_pending_to_plan(pending)
+    self.id_at_slot[pending.source_slot] = pending.destination_id
+    self.id_at_slot[pending.destination_slot] = pending.source_id
+    self.slot_for_id[pending.source_id] = pending.destination_slot
+    self.slot_for_id[pending.destination_id] = pending.source_slot
+end
+
+function SortOperation:_drop_for_sort(item, destination_slot)
+    if _drop_item(self.backpack, item, destination_slot) ~= true then
+        return self:_fail(MESSAGE_FAILED)
+    end
+
+    self.moves = self.moves + 1
+    return nil
+end
+
+function SortOperation:_sort_complete(live)
+    for slot = 1, #self.desired do
+        if _entries_match(live[slot], self.desired[slot]) ~= true then
+            return false
+        end
+    end
+
+    return true
+end
+
+function SortOperation:_pending_matches_wait_state(pending, live)
+    return _entry_matches_pending(live[pending.source_slot], pending.source_before) == true and
+        _entry_matches_pending(live[pending.destination_slot], pending.destination_before) == true
+end
+
+function SortOperation:_pending_matches_expected_state(pending, live)
+    return _entry_matches_pending(live[pending.source_slot], pending.source_after) == true and
+        _entry_matches_pending(live[pending.destination_slot], pending.destination_after) == true
+end
+
+function SortOperation:_resolve_pending(live, now)
+    for i = #self.pending, 1, -1 do
+        local pending = self.pending[i]
+        if self:_pending_matches_expected_state(pending, live) == true then
+            self:_apply_pending_to_plan(pending)
+            table.remove(self.pending, i)
+        elseif self:_pending_matches_wait_state(pending, live) == true then
+            if now - pending.started_at >= SORT_RESPONSE_TIMEOUT then
+                return self:_fail(MESSAGE_TIMEOUT)
+            end
+        elseif now - pending.started_at >= SORT_RESPONSE_TIMEOUT then
+            return self:_fail(MESSAGE_CHANGED)
+        end
+    end
+
+    return nil
+end
+
+function SortOperation:_attempt_drop(now, live, source_slot, destination_slot)
+    local source = live[source_slot]
+    local destination = live[destination_slot]
+    if destination.empty ~= true and _can_merge(source, destination) == true then
+        return self:_fail(MESSAGE_NEEDS_BUFFER)
+    end
+
+    local pending = {
+        source_slot = source_slot,
+        destination_slot = destination_slot,
+        source_id = self.id_at_slot[source_slot],
+        destination_id = self.id_at_slot[destination_slot],
+        source_before = _pending_entry(source),
+        destination_before = _pending_entry(destination),
+        source_after = _pending_entry(destination),
+        destination_after = _pending_entry(source),
+        started_at = now,
+    }
+
+    local result = self:_drop_for_sort(source.item, destination_slot)
+    if result ~= nil then
+        return result
+    end
+
+    self.pending[#self.pending + 1] = pending
+    return nil
+end
+
+function SortOperation:_find_empty_slot(live, locked_slots, ignored_slots)
+    for slot = 1, #live do
+        if locked_slots[slot] ~= true and ignored_slots[slot] ~= true and live[slot].empty == true then
+            return slot
+        end
+    end
+
+    return nil
+end
+
+function SortOperation:_schedule_empty_desired_slot(live, now, slot, locked_slots, allow_fail)
+    local current_id = self.id_at_slot[slot]
+    local desired_slot = self.desired_slot_for_id[current_id]
+    if desired_slot ~= nil and desired_slot ~= slot and locked_slots[desired_slot] ~= true then
+        local destination = live[desired_slot]
+        if destination.empty == true or _can_merge(live[slot], destination) ~= true then
+            local result = self:_attempt_drop(now, live, slot, desired_slot)
+            return result == nil, result
+        end
+    end
+
+    local ignored_slots = { [slot] = true }
+    local empty_slot = self:_find_empty_slot(live, locked_slots, ignored_slots)
+    if empty_slot ~= nil then
+        local result = self:_attempt_drop(now, live, slot, empty_slot)
+        return result == nil, result
+    end
+
+    if allow_fail == true then
+        return false, self:_fail(MESSAGE_CHANGED)
+    end
+    return false, nil
+end
+
+function SortOperation:_schedule_slot(live, now, slot, locked_slots, allow_fail)
+    local target = self.desired[slot]
+    local current = live[slot]
+
+    if target.empty == true then
+        if current.empty == true then
+            return false, nil
+        end
+
+        return self:_schedule_empty_desired_slot(live, now, slot, locked_slots, allow_fail)
+    end
+
+    local desired_id = self.desired_ids[slot]
+    local source_slot = self.slot_for_id[desired_id]
+    if source_slot == nil then
+        if allow_fail == true then
+            return false, self:_fail(MESSAGE_CHANGED)
+        end
+        return false, nil
+    end
+    if source_slot == slot then
+        if allow_fail == true then
+            return false, self:_fail(MESSAGE_CHANGED)
+        end
+        return false, nil
+    end
+    if locked_slots[source_slot] == true then
+        return false, nil
+    end
+
+    local source = live[source_slot]
+    if source.empty == true then
+        if allow_fail == true then
+            return false, self:_fail(MESSAGE_CHANGED)
+        end
+        return false, nil
+    end
+
+    if current.empty == true or _can_merge(source, current) ~= true then
+        local result = self:_attempt_drop(now, live, source_slot, slot)
+        return result == nil, result
+    end
+
+    local ignored_slots = { [slot] = true, [source_slot] = true }
+    local empty_slot = self:_find_empty_slot(live, locked_slots, ignored_slots)
+    if empty_slot == nil then
+        if allow_fail == true then
+            return false, self:_fail(MESSAGE_NEEDS_BUFFER)
+        end
+        return false, nil
+    end
+
+    local result = self:_attempt_drop(now, live, slot, empty_slot)
+    return result == nil, result
+end
+
+function SortOperation:_schedule_available_moves(live, now)
+    local locked_slots = self:_locked_slots()
+    local scheduled = 0
+    local saw_unresolved = false
+
+    for slot = 1, #self.desired do
+        if #self.pending >= self.max_pending_drops then
+            return scheduled, nil
+        end
+
+        if locked_slots[slot] ~= true and _entries_match(live[slot], self.desired[slot]) ~= true then
+            local allow_fail = saw_unresolved ~= true and #self.pending == 0 and scheduled == 0
+            saw_unresolved = true
+
+            local did_schedule, result = self:_schedule_slot(live, now, slot, locked_slots, allow_fail)
+            if result ~= nil then
+                return scheduled, result
+            end
+
+            if did_schedule == true then
+                local pending = self.pending[#self.pending]
+                locked_slots[pending.source_slot] = true
+                locked_slots[pending.destination_slot] = true
+                scheduled = scheduled + 1
+            end
+        end
+    end
+
+    return scheduled, nil
+end
+
+function SortOperation:tick(now)
+    self:_begin(now)
+    if self:_timed_out(now) == true then
+        return self:_fail(MESSAGE_TIMEOUT)
+    end
+
+    local live = _snapshot(self.backpack)
+    if live == nil or #live ~= #self.desired then
+        return self:_fail(MESSAGE_CHANGED)
+    end
+
+    local pending_result = self:_resolve_pending(live, now)
+    if pending_result ~= nil then
+        return pending_result
+    end
+
+    if self:_sort_complete(live) == true then
+        return self:_done(MESSAGE_SORT_COMPLETE)
+    end
+
+    if self:_timed_out(now) == true then
+        return self:_fail(MESSAGE_TIMEOUT)
+    end
+
+    local scheduled, schedule_result = self:_schedule_available_moves(live, now)
+    if schedule_result ~= nil then
+        return schedule_result
+    end
+
+    if #self.pending > 0 or scheduled > 0 then
+        return self:_running()
+    end
+
+    return self:_fail(MESSAGE_CHANGED)
+end
+
+local MergeOperation = setmetatable({}, BaseOperation)
+MergeOperation.__index = MergeOperation
 
 function MergeOperation:_locked_slots()
     local locked_slots = {}
@@ -913,17 +1069,35 @@ function Operations.create_sort(backpack, mode)
     end
     local desired = _sort_entries(live, mode)
     local size = #desired
+    local desired_ids = {}
+    local desired_slot_for_id = {}
+    local id_at_slot = {}
+    local slot_for_id = {}
+
+    for slot = 1, size do
+        local id = live[slot].original_slot
+        id_at_slot[slot] = id
+        slot_for_id[id] = slot
+
+        local desired_id = desired[slot].original_slot
+        desired_ids[slot] = desired_id
+        desired_slot_for_id[desired_id] = slot
+    end
 
     return setmetatable({
         kind = "sort",
         backpack = backpack,
         mode = mode,
         desired = desired,
-        index = 1,
-        delay = MOVE_DELAY,
+        desired_ids = desired_ids,
+        desired_slot_for_id = desired_slot_for_id,
+        id_at_slot = id_at_slot,
+        slot_for_id = slot_for_id,
         moves = 0,
-        max_moves = (size * 8) + 40,
-        max_seconds = math.max(45, size * 0.60),
+        pending = {},
+        max_pending_drops = MAX_PENDING_SORT_DROPS,
+        max_moves = (size * 4) + 40,
+        max_seconds = math.max(45, size * SORT_RESPONSE_TIMEOUT),
     }, SortOperation)
 end
 
