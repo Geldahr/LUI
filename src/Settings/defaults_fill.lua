@@ -89,6 +89,13 @@ local function _optional_table_child(source, key)
     return child
 end
 
+local function _preserve_user_arrays(loaded, source)
+    local source_launcher = _optional_table_child(source, "launcher")
+    if source_launcher ~= nil and type(source_launcher.buttons) == "table" then
+        _ensure_table(loaded, "launcher").buttons = _copy_table(source_launcher.buttons)
+    end
+end
+
 local function _apply_missing_values(target, defaults)
     if type(target) ~= "table" or type(defaults) ~= "table" then
         return
@@ -354,6 +361,7 @@ function _G.ensure_loaded_settings()
     local original = _G.loaded_settings
     local defaults = _defaults_source()
     _G.loaded_settings = _sanitize_with_defaults(_G.loaded_settings, defaults)
+    _preserve_user_arrays(_G.loaded_settings, original)
     _seed_group_vitals_settings(_G.loaded_settings, defaults, original)
     _strip_legacy_party_settings(_G.loaded_settings)
     _ensure_preview_label_defaults(_G.loaded_settings)

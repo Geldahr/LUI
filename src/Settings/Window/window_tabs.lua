@@ -7,6 +7,7 @@ import "LUI.src.Settings.Tabs.Inventory.inventory_page"
 import "LUI.src.Settings.Tabs.Crafting.crafting_page"
 import "LUI.src.Settings.Tabs.Travel.travel_page"
 import "LUI.src.Settings.Tabs.Assets.assets_page"
+import "LUI.src.Settings.Tabs.Launcher.launcher_page"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_page"
 import "LUI.src.Settings.Tabs.ProfileManager.profile_manager_page"
 import "LUI.src.Settings.Tabs.Help.help_page"
@@ -20,6 +21,7 @@ local InventoryPage = LUI.src.Settings.Tabs.Inventory.InventoryPage
 local CraftingPage = LUI.src.Settings.Tabs.Crafting.CraftingPage
 local TravelPage = LUI.src.Settings.Tabs.Travel.TravelPage
 local AssetsPage = LUI.src.Settings.Tabs.Assets.AssetsPage
+local LauncherPage = LUI.src.Settings.Tabs.Launcher.LauncherPage
 local StatusBarPage = LUI.src.Settings.Tabs.StatusBar.StatusBarPage
 local ProfileManagerPage = LUI.src.Settings.Tabs.ProfileManager.ProfileManagerPage
 local HelpPage = LUI.src.Settings.Tabs.Help.HelpPage
@@ -150,6 +152,10 @@ function ConfigWindow:build_tabs()
     local assets_page = AssetsPage(self)
     assets_page._tab_key = "assets"
     self.main_tab_bar:add_tab(TR["Assets"], assets_page)
+
+    local launcher_page = LauncherPage(self)
+    launcher_page._tab_key = "launcher"
+    self.main_tab_bar:add_tab(TR["LUI Menu"], launcher_page)
 
     local status_bar_page = StatusBarPage(self)
     status_bar_page._tab_key = "status_bar"

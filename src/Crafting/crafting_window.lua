@@ -1421,7 +1421,7 @@ function CraftingWindow:Constructor()
     LuiWindow.Constructor(self)
 
     self:set_title(TR["Crafting"])
-    self:set_icon(UI.AssetIds.anvil_gold)
+    self:set_icon(UI.AssetIds.anvil_silver_glow)
     self:set_resizable(true)
     self:hide()
     self:SetWantsUpdates(false)

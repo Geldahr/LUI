@@ -1,4 +1,5 @@
 import "LUI.src.UI.native_scaling"
+import "LUI.src.UI.shortcuts"
 import "LUI.src.UI.hidable"
 import "LUI.src.UI.move_ui"
 import "LUI.src.Vitals"
@@ -9,6 +10,7 @@ import "LUI.src.Crafting"
 import "LUI.src.Assets"
 import "LUI.src.Travel"
 import "LUI.src.StatusBar"
+import "LUI.src.Launcher"
 
 VitalsBase = Vitals.VitalsBase
 SelfVitals = Vitals.SelfVitals
@@ -38,3 +40,6 @@ UI.TravelWindow = TravelWindow
 
 StatusBarWindow = StatusBar.StatusBarWindow
 UI.StatusBarWindow = StatusBarWindow
+
+LauncherMenu = Launcher.LauncherMenu
+UI.LauncherMenu = LauncherMenu

@@ -24,6 +24,40 @@ function _G.rebuild_settings()
         return math.floor((n * scaling) + 0.5)
     end
 
+    local function clamped_scaled_int(value, min_value, max_value)
+        local n = value
+        if type(n) ~= "number" then
+            n = tonumber(n)
+        end
+        if n == nil then
+            error("Invalid numeric setting in rebuild_settings", 2)
+        end
+        if n < min_value then
+            n = min_value
+        elseif n > max_value then
+            n = max_value
+        end
+        return scaled_int(n)
+    end
+
+    local function normalize_launcher_direction(orientation, direction)
+        if orientation == "horizontal" then
+            if direction == "left" or direction == "right" then
+                return direction
+            end
+            return "right"
+        end
+
+        if orientation == "vertical" then
+            if direction == "up" or direction == "down" then
+                return direction
+            end
+            return "down"
+        end
+
+        error("Invalid launcher orientation in rebuild_settings: " .. tostring(orientation), 2)
+    end
+
     local function scaled_number(value)
         local n = value
         if type(n) ~= "number" then
@@ -145,6 +179,7 @@ function _G.rebuild_settings()
         travel = {},
         assets = { tile = {}, layouts = { icons = {}, details = {} } },
         bestiary = {},
+        launcher = {},
     }
 
     _G.settings.global.scale = scaling
@@ -369,6 +404,16 @@ function _G.rebuild_settings()
     local raw_travel = raw.travel
     _G.settings.travel.display_mode = raw_travel.display_mode
     _G.settings.travel.enabled = raw_travel.enabled
+
+    local raw_launcher = raw.launcher
+    local launcher = _G.settings.launcher
+    launcher.enabled = raw_launcher.enabled == true
+    launcher.icon_size = clamped_scaled_int(raw_launcher.icon_size, 16, 128)
+    launcher.spacing = scaled_int(raw_launcher.spacing)
+    launcher.orientation = raw_launcher.orientation
+    launcher.direction = normalize_launcher_direction(raw_launcher.orientation, raw_launcher.direction)
+    launcher.collapse_after_click = raw_launcher.collapse_after_click == true
+    launcher.buttons = raw_launcher.buttons
 
     local raw_tt = raw.target.vitals.targets_target
     local dst_tt = _G.settings.target.vitals.targets_target

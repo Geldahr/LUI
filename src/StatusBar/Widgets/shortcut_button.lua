@@ -1,6 +1,8 @@
 import "LUI.src.UI.Widgets"
+import "LUI.src.UI.shortcuts"
 
 local S = _G.STATUS_BAR_COMMON
+local Shortcuts = UI.Shortcuts
 local Style = UI.Widgets.Style
 local BUTTON_MARGIN = 1
 local BUTTON_BORDER = 1
@@ -14,7 +16,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self.shortcut_key = shortcut_key
     self.display_mode = display_mode
     self.font = font
-    self.icon_background = S.get_shortcut_icon(shortcut_key)
+    self.icon_background = Shortcuts.get_icon(shortcut_key)
     self._available = nil
     self._interaction_enabled = true
 
@@ -60,14 +62,14 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
         self.button:set_text("")
     else
         self.button:set_icon(nil, nil, nil, nil, 0)
-        self.button:set_text(S.get_shortcut_label(shortcut_key))
+        self.button:set_text(Shortcuts.get_label(shortcut_key))
     end
 
     self.button.Click = function()
         if self._interaction_enabled ~= true then
             return
         end
-        S.activate_shortcut(self.shortcut_key)
+        Shortcuts.activate(self.shortcut_key)
         self:_refresh_state()
     end
 
@@ -124,7 +126,7 @@ function ShortcutButtonWidget:_layout()
 end
 
 function ShortcutButtonWidget:_refresh_state()
-    local available = S.get_shortcut_state(self.shortcut_key)
+    local available = Shortcuts.get_state(self.shortcut_key)
     local is_available = available == true
     if is_available == self._available then
         if self.button ~= nil then

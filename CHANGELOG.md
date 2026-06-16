@@ -4,7 +4,13 @@
 
 ### Added
 
+- Added the optional LUI Menu HUD launcher with configurable shortcuts for opening LUI features.
+- Added LUI Menu settings for enablement, icon size, spacing, orientation, expansion direction, collapse-after-click behavior, and button order.
+- Added LUI Menu integration with HUD move mode, saved HUD position, runtime settings refresh, and plugin unload cleanup.
+
 ### Changed
+
+- Centralized LUI shortcut labels, icons, availability checks, and actions so the LUI Menu and status bar shortcut buttons use the same shortcut definitions.
 
 ### Fixed
 

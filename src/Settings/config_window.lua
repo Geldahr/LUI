@@ -617,6 +617,7 @@ function ConfigWindow:refresh_runtime_settings()
     apply_drops_settings()
     apply_crafting_settings()
     apply_travel_settings()
+    apply_launcher_settings()
     _G.apply_lotro_vitals_handoff()
 
     self:apply_ui_scale()

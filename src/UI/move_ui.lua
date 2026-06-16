@@ -251,6 +251,7 @@ local function _capture_move_settings_snapshot()
         target_effects = _snapshot_position(hud.target_effects),
         cooldowns = _snapshot_position(hud.cooldowns),
         drops = _snapshot_position(hud.drops),
+        launcher = _snapshot_position(hud.launcher),
     }
 end
 
@@ -279,6 +280,7 @@ local function _restore_saved_move_settings()
     _restore_position(hud.target_effects, MOVE_UI_POSITION_SNAPSHOT.target_effects)
     _restore_position(hud.cooldowns, MOVE_UI_POSITION_SNAPSHOT.cooldowns)
     _restore_position(hud.drops, MOVE_UI_POSITION_SNAPSHOT.drops)
+    _restore_position(hud.launcher, MOVE_UI_POSITION_SNAPSHOT.launcher)
 
     ensure_loaded_settings()
     fix_colors()
@@ -310,6 +312,9 @@ local function _restore_saved_move_settings()
     end
     if DROPS_WINDOW ~= nil then
         DROPS_WINDOW:apply_settings()
+    end
+    if LUI_LAUNCHER ~= nil then
+        LUI_LAUNCHER:apply_settings()
     end
     if PLAYER_VITAL ~= nil then
         PLAYER_VITAL:on_target_changed()
@@ -456,6 +461,9 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes, show_don
     end
     if DROPS_WINDOW ~= nil then
         DROPS_WINDOW:set_move_mode(enabled)
+    end
+    if LUI_LAUNCHER ~= nil then
+        LUI_LAUNCHER:set_move_mode(enabled)
     end
 
     if enabled and move_ui_show_done_button == true then
