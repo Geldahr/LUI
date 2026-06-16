@@ -10,8 +10,8 @@ local scaled_int = FeatureShell.scaled_int
 
 local ORIENTATION_LABELS = { TR["Vertical"], TR["Horizontal"] }
 local ORIENTATION_VALUES = { "vertical", "horizontal" }
-local DIRECTION_LABELS = { TR["Auto"], TR["Up"], TR["Down"], TR["Left"], TR["Right"] }
-local DIRECTION_VALUES = { "auto", "up", "down", "left", "right" }
+local DIRECTION_LABELS = { TR["Up"], TR["Down"], TR["Left"], TR["Right"] }
+local DIRECTION_VALUES = { "up", "down", "left", "right" }
 
 local BUTTONS = {
     { key = "config", label = TR["Config"] },
@@ -22,24 +22,20 @@ local BUTTONS = {
     { key = "bestiary", label = TR["Bestiary"] },
 }
 
-local function _direction_matches_orientation(orientation, direction)
-    if direction == "auto" then
-        return true
-    end
+local function _normalize_direction(orientation, direction)
     if orientation == "vertical" then
-        return direction == "up" or direction == "down"
+        if direction == "up" or direction == "down" then
+            return direction
+        end
+        return "down"
     end
     if orientation == "horizontal" then
-        return direction == "left" or direction == "right"
+        if direction == "left" or direction == "right" then
+            return direction
+        end
+        return "right"
     end
-    return false
-end
-
-local function _normalize_direction(orientation, direction)
-    if _direction_matches_orientation(orientation, direction) == true then
-        return direction
-    end
-    return "auto"
+    error("Invalid launcher orientation: " .. tostring(orientation))
 end
 
 local function _clamp_icon_size(value)

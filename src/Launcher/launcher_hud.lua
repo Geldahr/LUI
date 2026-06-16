@@ -11,7 +11,6 @@ local Style = UI.Widgets.Style
 local LOGO_BUTTON_ICON = "LUI/assets/logo_button.tga"
 local ORIENTATION_HORIZONTAL = "horizontal"
 local ORIENTATION_VERTICAL = "vertical"
-local DIRECTION_AUTO = "auto"
 local DIRECTION_UP = "up"
 local DIRECTION_DOWN = "down"
 local DIRECTION_LEFT = "left"
@@ -68,7 +67,6 @@ function LauncherMenu:Constructor()
 
     self.expanded = false
     self.shortcut_buttons = {}
-    self.shortcut_keys = {}
     self.last_update_at = 0
 
     _set_alpha_blend(self)
@@ -83,9 +81,6 @@ function LauncherMenu:Constructor()
     end
 
     self.on_move_end = function()
-        self:_layout_buttons()
-    end
-    self.on_move_mode_changed = function()
         self:_layout_buttons()
     end
 
@@ -111,7 +106,7 @@ function LauncherMenu:apply_settings()
     self:_resize_window(self:is_move_mode())
     self:apply_hud_position()
     self:_layout_buttons()
-    self:_refresh_button_states()
+    self:_refresh_shortcut_availability()
 end
 
 function LauncherMenu:set_move_mode(enabled)
@@ -143,7 +138,6 @@ function LauncherMenu:set_expanded(expanded)
 
     self.expanded = want
     self:_layout_buttons()
-    self:_refresh_button_states()
 end
 
 function LauncherMenu:Update()
@@ -152,7 +146,7 @@ function LauncherMenu:Update()
         return
     end
     self.last_update_at = now
-    self:_refresh_button_states()
+    self:_refresh_shortcut_availability()
 end
 
 function LauncherMenu:_new_button(icon)
@@ -165,10 +159,8 @@ function LauncherMenu:_new_button(icon)
     button:set_back_color(Style.CONTROL_BACKGROUND)
     button:set_hover_back_color(Style.CONTROL_BACKGROUND_HOVER)
     button:set_pressed_back_color(Style.CONTROL_BACKGROUND_PRESSED)
-    button:set_active_back_color(Style.CONTROL_BACKGROUND_ACTIVE)
     button:set_border_color(Style.CONTROL_BORDER)
     button:set_hover_border_color(Style.CONTROL_BORDER_HOVER)
-    button:set_active_border_color(Style.CONTROL_BORDER_ACTIVE)
     button:set_disabled_border_color(Style.CONTROL_BORDER_DISABLED)
     button:SetZOrder(10)
     button._launcher_icon = icon
@@ -181,7 +173,6 @@ function LauncherMenu:_clear_shortcut_buttons()
         self.shortcut_buttons[i]:SetParent(nil)
     end
     self.shortcut_buttons = {}
-    self.shortcut_keys = {}
 end
 
 function LauncherMenu:_rebuild_shortcut_buttons()
@@ -205,12 +196,10 @@ function LauncherMenu:_rebuild_shortcut_buttons()
             S.activate_shortcut(shortcut_key)
             if _launcher_settings().collapse_after_click == true then
                 self:set_expanded(false)
-            else
-                self:_refresh_button_states()
             end
+            self:_refresh_shortcut_availability()
         end
 
-        self.shortcut_keys[#self.shortcut_keys + 1] = shortcut_key
         self.shortcut_buttons[#self.shortcut_buttons + 1] = button
     end
 end
@@ -254,33 +243,22 @@ end
 
 function LauncherMenu:_resolve_direction()
     local s = _launcher_settings()
-    if s.direction ~= DIRECTION_AUTO then
-        if s.orientation == ORIENTATION_HORIZONTAL and
-            (s.direction == DIRECTION_LEFT or s.direction == DIRECTION_RIGHT) then
-            return s.direction
-        end
-        if s.orientation == ORIENTATION_VERTICAL and
-            (s.direction == DIRECTION_UP or s.direction == DIRECTION_DOWN) then
-            return s.direction
-        end
-        error("Invalid launcher direction for orientation: " .. tostring(s.direction))
-    end
-
-    local display_w, display_h = Turbine.UI.Display.GetSize()
-    local left, top = self:GetPosition()
-    local width, height = self:_menu_footprint()
 
     if s.orientation == ORIENTATION_HORIZONTAL then
-        if (left + math.floor(width / 2)) < math.floor(display_w / 2) then
-            return DIRECTION_RIGHT
+        if s.direction == DIRECTION_LEFT or s.direction == DIRECTION_RIGHT then
+            return s.direction
         end
-        return DIRECTION_LEFT
+        return DIRECTION_RIGHT
     end
 
-    if (top + math.floor(height / 2)) < math.floor(display_h / 2) then
+    if s.orientation == ORIENTATION_VERTICAL then
+        if s.direction == DIRECTION_UP or s.direction == DIRECTION_DOWN then
+            return s.direction
+        end
         return DIRECTION_DOWN
     end
-    return DIRECTION_UP
+
+    error("Invalid launcher orientation: " .. tostring(s.orientation))
 end
 
 function LauncherMenu:_apply_button_icon(button, size, icon_size)
@@ -294,21 +272,14 @@ function LauncherMenu:_layout_buttons()
     local spacing = s.spacing
     local icon_size = _button_icon_size(size)
     local direction = self:_resolve_direction()
-    local total_w, total_h = self:GetSize()
     local menu_w, menu_h = self:_menu_footprint()
-    local menu_x = 0
-    local menu_y = 0
 
     self:_apply_button_icon(self.logo_button, size, icon_size)
 
     if s.orientation == ORIENTATION_HORIZONTAL then
-        if direction == DIRECTION_LEFT then
-            menu_x = total_w - menu_w
-        end
-
         local logo_x = 0
         if direction == DIRECTION_LEFT then
-            logo_x = menu_x + menu_w - size
+            logo_x = menu_w - size
         elseif direction ~= DIRECTION_RIGHT then
             error("Invalid horizontal launcher direction: " .. tostring(direction))
         end
@@ -318,7 +289,7 @@ function LauncherMenu:_layout_buttons()
             local button = self.shortcut_buttons[i]
             self:_apply_button_icon(button, size, icon_size)
             local step = i * (size + spacing)
-            local x = direction == DIRECTION_LEFT and (logo_x - step) or (menu_x + step)
+            local x = direction == DIRECTION_LEFT and (logo_x - step) or step
             button:SetPosition(x, 0)
             button:SetVisible(self.expanded == true)
         end
@@ -331,8 +302,7 @@ function LauncherMenu:_layout_buttons()
 
     local logo_y = 0
     if direction == DIRECTION_UP then
-        menu_y = total_h - menu_h
-        logo_y = menu_y + menu_h - size
+        logo_y = menu_h - size
     elseif direction ~= DIRECTION_DOWN then
         error("Invalid vertical launcher direction: " .. tostring(direction))
     end
@@ -342,20 +312,17 @@ function LauncherMenu:_layout_buttons()
         local button = self.shortcut_buttons[i]
         self:_apply_button_icon(button, size, icon_size)
         local step = i * (size + spacing)
-        local y = direction == DIRECTION_UP and (logo_y - step) or (menu_y + step)
+        local y = direction == DIRECTION_UP and (logo_y - step) or step
         button:SetPosition(0, y)
         button:SetVisible(self.expanded == true)
     end
 end
 
-function LauncherMenu:_refresh_button_states()
-    self.logo_button:set_active(self.expanded == true)
-
+function LauncherMenu:_refresh_shortcut_availability()
     for i = 1, #self.shortcut_buttons do
         local button = self.shortcut_buttons[i]
-        local available, active = S.get_shortcut_state(button.shortcut_key)
+        local available = S.get_shortcut_state(button.shortcut_key)
         button:set_enabled(available == true)
-        button:set_active(active == true)
     end
 end
 

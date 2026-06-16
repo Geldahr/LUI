@@ -40,6 +40,24 @@ function _G.rebuild_settings()
         return scaled_int(n)
     end
 
+    local function normalize_launcher_direction(orientation, direction)
+        if orientation == "horizontal" then
+            if direction == "left" or direction == "right" then
+                return direction
+            end
+            return "right"
+        end
+
+        if orientation == "vertical" then
+            if direction == "up" or direction == "down" then
+                return direction
+            end
+            return "down"
+        end
+
+        error("Invalid launcher orientation in rebuild_settings: " .. tostring(orientation), 2)
+    end
+
     local function scaled_number(value)
         local n = value
         if type(n) ~= "number" then
@@ -393,7 +411,7 @@ function _G.rebuild_settings()
     launcher.icon_size = clamped_scaled_int(raw_launcher.icon_size, 16, 128)
     launcher.spacing = scaled_int(raw_launcher.spacing)
     launcher.orientation = raw_launcher.orientation
-    launcher.direction = raw_launcher.direction
+    launcher.direction = normalize_launcher_direction(raw_launcher.orientation, raw_launcher.direction)
     launcher.collapse_after_click = raw_launcher.collapse_after_click == true
     launcher.buttons = raw_launcher.buttons
 

@@ -427,6 +427,7 @@ end
 local settings_schema = _schema_from_default(_G.DEFAULT_LAYOUT_SCHEMA)
 settings_schema.fields.version = STRING
 settings_schema.fields.global.fields.style = _map_schema(STYLE_VALUE)
+settings_schema.fields.launcher.fields.buttons = _array_schema(STRING)
 settings_schema.fields.status_bar.fields.item_registry = _map_schema(NUMBER)
 settings_schema.fields.status_bar.fields.widgets.fields.wallet.fields.items = _array_schema(STRING)
 
