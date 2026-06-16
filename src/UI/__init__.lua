@@ -1,4 +1,5 @@
 import "LUI.src.UI.native_scaling"
+import "LUI.src.UI.shortcuts"
 import "LUI.src.UI.hidable"
 import "LUI.src.UI.move_ui"
 import "LUI.src.Vitals"

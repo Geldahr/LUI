@@ -1,11 +1,11 @@
 import "Turbine.UI"
 
-import "LUI.src.StatusBar.common"
+import "LUI.src.UI.shortcuts"
 import "LUI.src.UI.Widgets.hud"
 
 Launcher = Launcher or {}
 
-local S = _G.STATUS_BAR_COMMON
+local Shortcuts = UI.Shortcuts
 local Style = UI.Widgets.Style
 
 local LOGO_BUTTON_ICON = "LUI/assets/logo_button.tga"
@@ -20,15 +20,6 @@ local BUTTON_BORDER = 1
 local BUTTON_PADDING = 2
 local MOVE_MIN_W = 220
 local MOVE_MIN_H = 64
-
-local VALID_SHORTCUTS = {
-    config = true,
-    inventory = true,
-    assets = true,
-    craft = true,
-    travel = true,
-    bestiary = true,
-}
 
 local function _set_alpha_blend(control)
     control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
@@ -181,11 +172,11 @@ function LauncherMenu:_rebuild_shortcut_buttons()
     local configured = _launcher_settings().buttons
     for i = 1, #configured do
         local shortcut_key = configured[i]
-        if VALID_SHORTCUTS[shortcut_key] ~= true then
+        if Shortcuts.is_valid(shortcut_key) ~= true then
             error("Unknown launcher shortcut: " .. tostring(shortcut_key))
         end
 
-        local icon = S.get_shortcut_icon(shortcut_key)
+        local icon = Shortcuts.get_icon(shortcut_key)
         if icon == nil then
             error("Missing launcher shortcut icon: " .. tostring(shortcut_key))
         end
@@ -193,7 +184,7 @@ function LauncherMenu:_rebuild_shortcut_buttons()
         local button = self:_new_button(icon)
         button.shortcut_key = shortcut_key
         button.Click = function()
-            S.activate_shortcut(shortcut_key)
+            Shortcuts.activate(shortcut_key)
             if _launcher_settings().collapse_after_click == true then
                 self:set_expanded(false)
             end
@@ -321,7 +312,7 @@ end
 function LauncherMenu:_refresh_shortcut_availability()
     for i = 1, #self.shortcut_buttons do
         local button = self.shortcut_buttons[i]
-        local available = S.get_shortcut_state(button.shortcut_key)
+        local available = Shortcuts.get_state(button.shortcut_key)
         button:set_enabled(available == true)
     end
 end
