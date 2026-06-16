@@ -31,7 +31,6 @@ local BASE_ACTION_H = 21
 local BASE_SORT_W = 84
 local BASE_MERGE_UP_W = 70
 local BASE_MERGE_DOWN_W = 78
-local BASE_STATUS_GAP = 6
 local MIN_WINDOW_W = 193
 local MIN_WINDOW_H = 148
 local MIN_COLS = 6
@@ -145,7 +144,6 @@ function InventoryWindow:Constructor()
     self.sort_w = BASE_SORT_W
     self.merge_up_w = BASE_MERGE_UP_W
     self.merge_down_w = BASE_MERGE_DOWN_W
-    self.status_gap = BASE_STATUS_GAP
     self.clear_w = CLEAR_W
     self.hint_gap = BASE_HINT_GAP
     self.hint_h = BASE_HINT_H
@@ -251,13 +249,6 @@ function InventoryWindow:Constructor()
         self:start_inventory_merge(Inventory.Operations.MERGE_DOWN)
     end
 
-    self.operation_status_label = UI.Widgets.LuiLabel()
-    self.operation_status_label:SetParent(self.action_bar)
-    self.operation_status_label:SetMouseVisible(false)
-    self.operation_status_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.operation_status_label:SetForeColor(Turbine.UI.Color(0.72, 0.72, 0.72))
-    self.operation_status_label:SetText("")
-
     self.list = Turbine.UI.ListBox()
     self.list:SetParent(content)
     self.list:SetOrientation(Turbine.UI.Orientation.Vertical)
@@ -298,6 +289,7 @@ function InventoryWindow:Constructor()
             self._dirty = true
             self._filter_dirty = true
             self._display_dirty = true
+            self:_set_inventory_operation_status("")
             self:bring_to_front()
         end
     end
@@ -474,16 +466,6 @@ function InventoryWindow:layout()
     action_x = action_x + merge_up_w + gap
     self.merge_down_button:SetPosition(action_x, 0)
     self.merge_down_button:SetSize(merge_down_w, self.action_h)
-    action_x = action_x + merge_down_w + self.status_gap
-
-    local status_w = action_w - action_x
-    if status_w >= _scaled_int(44) then
-        self.operation_status_label:SetPosition(action_x, 0)
-        self.operation_status_label:SetSize(status_w, self.action_h)
-        self.operation_status_label:SetVisible(true)
-    else
-        self.operation_status_label:SetVisible(false)
-    end
 
     local list_y = self.margin_top + self.header_h + self.bar_gap
     local list_h = h - self.margin_bottom - self.hint_h - self.hint_gap - list_y
@@ -623,7 +605,6 @@ function InventoryWindow:apply_settings()
     self.sort_w = _scaled_int(BASE_SORT_W)
     self.merge_up_w = _scaled_int(BASE_MERGE_UP_W)
     self.merge_down_w = _scaled_int(BASE_MERGE_DOWN_W)
-    self.status_gap = _scaled_int(BASE_STATUS_GAP)
     self.clear_w = _scaled_int(CLEAR_W)
     local scale = _G.settings.global.scale
     self.money_h = math.floor((BASE_MONEY_H * scale) + 0.5)
@@ -658,7 +639,6 @@ function InventoryWindow:apply_settings()
     self.merge_up_button:set_scale(scale)
     self.merge_down_button:set_font(filter_font)
     self.merge_down_button:set_scale(scale)
-    self.operation_status_label:SetFont(filter_font)
 
     local hint_font_size = math.floor((BASE_HINT_FONT_SIZE * scale) + 0.5)
     local hint_font = FONT_TO_LOTRO("Verdana", hint_font_size)
@@ -1051,7 +1031,6 @@ end
 
 function InventoryWindow:_set_inventory_operation_status(text)
     local status = tostring(text or "")
-    self.operation_status_label:SetText(status)
     if status == "" then
         self.hint_label:SetText(self.default_hint_text)
     else

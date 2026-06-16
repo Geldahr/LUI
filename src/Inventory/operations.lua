@@ -17,6 +17,10 @@ Operations.MERGE_UP = "up"
 Operations.MERGE_DOWN = "down"
 
 local MOVE_DELAY = 0.12
+local MERGE_RESPONSE_TIMEOUT = 2
+local MAX_PENDING_MERGE_DROPS = 2
+local MAX_MERGE_ROLLBACK_ATTEMPTS = 2
+local PENDING_REMOVE = "remove"
 local UNIT_SEPARATOR = "\31"
 
 local MESSAGE_SORT_COMPLETE = "Inventory sort complete."
@@ -499,13 +503,21 @@ local function _find_sort_buffer(entries, start_slot, source_slot, unsafe_entry)
     return nil
 end
 
-local function _find_merge_source(entries, start_slot, last_slot, step, target)
+local function _merge_attempt_key(target_slot, source_slot, merge_key)
+    return tostring(target_slot) .. UNIT_SEPARATOR .. tostring(source_slot) .. UNIT_SEPARATOR .. tostring(merge_key)
+end
+
+local function _find_merge_source(entries, start_slot, last_slot, step, target, blocked_pairs, locked_slots)
+    local free_space = target.max_stack - target.quantity
     local slot = start_slot
     while (step > 0 and slot <= last_slot) or (step < 0 and slot >= last_slot) do
         local source = entries[slot]
-        if source.empty ~= true and source.max_stack > 1 and source.quantity > 0 and
-            source.merge_key == target.merge_key then
-            return slot
+        if locked_slots[slot] ~= true and source.empty ~= true and source.max_stack > 1 and source.quantity > 0 and
+            source.quantity <= free_space and source.merge_key == target.merge_key then
+            local key = _merge_attempt_key(target.slot, slot, target.merge_key)
+            if blocked_pairs[key] ~= true then
+                return slot
+            end
         end
         slot = slot + step
     end
@@ -629,11 +641,241 @@ end
 local MergeOperation = setmetatable({}, BaseOperation)
 MergeOperation.__index = MergeOperation
 
+local function _pending_entry(entry)
+    return {
+        empty = entry.empty,
+        merge_key = entry.merge_key,
+        exact_key = entry.exact_key,
+        quantity = entry.quantity,
+    }
+end
+
+local function _entry_matches_pending(entry, expected)
+    if entry.empty == true or expected.empty == true then
+        return entry.empty == true and expected.empty == true
+    end
+
+    return entry.exact_key == expected.exact_key
+end
+
+function MergeOperation:_locked_slots()
+    local locked_slots = {}
+    for i = 1, #self.pending do
+        local pending = self.pending[i]
+        locked_slots[pending.target_slot] = true
+        locked_slots[pending.source_slot] = true
+    end
+
+    return locked_slots
+end
+
+function MergeOperation:_block_pair(pending)
+    local key = _merge_attempt_key(pending.target_slot, pending.source_slot, pending.merge_key)
+    self.blocked_pairs[key] = true
+end
+
+function MergeOperation:_drop_for_merge(item, destination_slot)
+    if _drop_item(self.backpack, item, destination_slot) ~= true then
+        return self:_fail(MESSAGE_FAILED)
+    end
+
+    self.moves = self.moves + 1
+    return nil
+end
+
+function MergeOperation:_slots_match_wait_state(pending, live)
+    return _entry_matches_pending(live[pending.target_slot], pending.wait_target) == true and
+        _entry_matches_pending(live[pending.source_slot], pending.wait_source) == true
+end
+
+function MergeOperation:_slots_restored(pending, live)
+    return _entry_matches_pending(live[pending.target_slot], pending.target_before) == true and
+        _entry_matches_pending(live[pending.source_slot], pending.source_before) == true
+end
+
+function MergeOperation:_slots_swapped(pending, live)
+    return _entry_matches_pending(live[pending.target_slot], pending.source_before) == true and
+        _entry_matches_pending(live[pending.source_slot], pending.target_before) == true
+end
+
+function MergeOperation:_merge_succeeded(pending, live)
+    local target = live[pending.target_slot]
+    local source = live[pending.source_slot]
+    local target_before = pending.target_before
+    local source_before = pending.source_before
+
+    if target.empty == true or target.merge_key ~= pending.merge_key then
+        return false
+    end
+
+    if source.empty == true and target.quantity == target_before.quantity + source_before.quantity then
+        return true
+    end
+
+    return source.empty ~= true and source.merge_key == pending.merge_key and
+        target.quantity > target_before.quantity and source.quantity < source_before.quantity
+end
+
+function MergeOperation:_begin_rollback(pending, live, now)
+    self:_block_pair(pending)
+
+    local target = live[pending.target_slot]
+    pending.action = "rollback"
+    pending.rollback_attempts = pending.rollback_attempts + 1
+    pending.started_at = now
+    pending.wait_target = _pending_entry(target)
+    pending.wait_source = _pending_entry(live[pending.source_slot])
+
+    return self:_drop_for_merge(target.item, pending.source_slot)
+end
+
+function MergeOperation:_resolve_pending_merge(pending, live, now)
+    if self:_slots_match_wait_state(pending, live) == true then
+        if now - pending.started_at >= MERGE_RESPONSE_TIMEOUT then
+            self:_block_pair(pending)
+            return PENDING_REMOVE
+        end
+
+        return nil
+    end
+
+    if self:_slots_swapped(pending, live) == true then
+        local result = self:_begin_rollback(pending, live, now)
+        if result ~= nil then
+            return result
+        end
+
+        return nil
+    end
+
+    if self:_merge_succeeded(pending, live) == true then
+        return PENDING_REMOVE
+    end
+
+    if now - pending.started_at >= MERGE_RESPONSE_TIMEOUT then
+        return self:_fail(MESSAGE_CHANGED)
+    end
+
+    return nil
+end
+
+function MergeOperation:_resolve_pending_rollback(pending, live, now)
+    if self:_slots_restored(pending, live) == true then
+        return PENDING_REMOVE
+    end
+
+    if self:_slots_match_wait_state(pending, live) == true then
+        if now - pending.started_at < MERGE_RESPONSE_TIMEOUT then
+            return nil
+        end
+
+        if pending.rollback_attempts >= MAX_MERGE_ROLLBACK_ATTEMPTS then
+            return self:_fail(MESSAGE_TIMEOUT)
+        end
+
+        local result = self:_begin_rollback(pending, live, now)
+        if result ~= nil then
+            return result
+        end
+
+        return nil
+    end
+
+    if now - pending.started_at < MERGE_RESPONSE_TIMEOUT then
+        return nil
+    end
+
+    return self:_fail(MESSAGE_CHANGED)
+end
+
+function MergeOperation:_resolve_pending(live, now)
+    for i = #self.pending, 1, -1 do
+        local pending = self.pending[i]
+        local result
+
+        if pending.action == "merge" then
+            result = self:_resolve_pending_merge(pending, live, now)
+        elseif pending.action == "rollback" then
+            result = self:_resolve_pending_rollback(pending, live, now)
+        else
+            error("Unknown inventory merge pending action: " .. tostring(pending.action))
+        end
+
+        if result == PENDING_REMOVE then
+            table.remove(self.pending, i)
+        elseif result ~= nil then
+            return result
+        end
+    end
+
+    return nil
+end
+
+function MergeOperation:_attempt_merge(now, target, source)
+    local pending = {
+        action = "merge",
+        target_slot = target.slot,
+        source_slot = source.slot,
+        merge_key = target.merge_key,
+        target_before = _pending_entry(target),
+        source_before = _pending_entry(source),
+        wait_target = _pending_entry(target),
+        wait_source = _pending_entry(source),
+        rollback_attempts = 0,
+        started_at = now,
+    }
+
+    local result = self:_drop_for_merge(source.item, target.slot)
+    if result ~= nil then
+        return result
+    end
+
+    self.pending[#self.pending + 1] = pending
+    return nil
+end
+
+function MergeOperation:_schedule_available_merges(live, now)
+    local locked_slots = self:_locked_slots()
+    local scheduled = 0
+    local slot = self.first_slot
+
+    while #self.pending < self.max_pending_drops and
+        ((self.step > 0 and slot <= self.last_slot) or (self.step < 0 and slot >= self.last_slot)) do
+        if locked_slots[slot] ~= true then
+            local target = live[slot]
+            if target.empty ~= true and target.max_stack > 1 and target.quantity < target.max_stack then
+                local source_slot = _find_merge_source(
+                    live,
+                    slot + self.step,
+                    self.last_slot,
+                    self.step,
+                    target,
+                    self.blocked_pairs,
+                    locked_slots
+                )
+
+                if source_slot ~= nil then
+                    local source = live[source_slot]
+                    local result = self:_attempt_merge(now, target, source)
+                    if result ~= nil then
+                        return scheduled, result
+                    end
+
+                    locked_slots[slot] = true
+                    locked_slots[source_slot] = true
+                    scheduled = scheduled + 1
+                end
+            end
+        end
+
+        slot = slot + self.step
+    end
+
+    return scheduled, nil
+end
+
 function MergeOperation:tick(now)
     self:_begin(now)
-    if now < self.next_move_at then
-        return self:_running()
-    end
     if self:_timed_out(now) == true then
         return self:_fail(MESSAGE_TIMEOUT)
     end
@@ -643,18 +885,22 @@ function MergeOperation:tick(now)
         return self:_fail(MESSAGE_CHANGED)
     end
 
-    while (self.step > 0 and self.index <= self.last_slot) or (self.step < 0 and self.index >= self.last_slot) do
-        local target = live[self.index]
-        if target.empty == true or target.max_stack <= 1 or target.quantity >= target.max_stack then
-            self.index = self.index + self.step
-        else
-            local source_slot = _find_merge_source(live, self.index + self.step, self.last_slot, self.step, target)
-            if source_slot == nil then
-                self.index = self.index + self.step
-            else
-                return self:_move(now, live[source_slot].item, self.index)
-            end
-        end
+    local pending_result = self:_resolve_pending(live, now)
+    if pending_result ~= nil then
+        return pending_result
+    end
+
+    if self:_timed_out(now) == true then
+        return self:_fail(MESSAGE_TIMEOUT)
+    end
+
+    local scheduled, schedule_result = self:_schedule_available_merges(live, now)
+    if schedule_result ~= nil then
+        return schedule_result
+    end
+
+    if #self.pending > 0 or scheduled > 0 then
+        return self:_running()
     end
 
     return self:_done(MESSAGE_MERGE_COMPLETE)
@@ -700,12 +946,14 @@ function Operations.create_merge(backpack, direction)
         backpack = backpack,
         direction = direction,
         size = size,
-        index = first_slot,
+        first_slot = first_slot,
         last_slot = last_slot,
         step = step,
-        delay = MOVE_DELAY,
         moves = 0,
+        pending = {},
+        blocked_pairs = {},
+        max_pending_drops = MAX_PENDING_MERGE_DROPS,
         max_moves = (size * 8) + 40,
-        max_seconds = math.max(45, size * 0.60),
+        max_seconds = math.max(45, size * MERGE_RESPONSE_TIMEOUT),
     }, MergeOperation)
 end
