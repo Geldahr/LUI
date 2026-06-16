@@ -9,6 +9,7 @@ import "LUI.src.Crafting"
 import "LUI.src.Assets"
 import "LUI.src.Travel"
 import "LUI.src.StatusBar"
+import "LUI.src.Launcher"
 
 VitalsBase = Vitals.VitalsBase
 SelfVitals = Vitals.SelfVitals
@@ -38,3 +39,6 @@ UI.TravelWindow = TravelWindow
 
 StatusBarWindow = StatusBar.StatusBarWindow
 UI.StatusBarWindow = StatusBarWindow
+
+LauncherMenu = Launcher.LauncherMenu
+UI.LauncherMenu = LauncherMenu

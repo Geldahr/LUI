@@ -163,6 +163,14 @@ function _G.toggle_assets_shortcut()
     ASSETS_WINDOW:open()
 end
 
+function _G.toggle_inventory_shortcut()
+    if INVENTORY_WINDOW == nil then
+        return
+    end
+
+    INVENTORY_WINDOW:toggle()
+end
+
 function _G.toggle_bestiary_shortcut()
     local window = _ensure_bestiary_window()
     if window == nil then
@@ -378,6 +386,26 @@ function apply_travel_settings()
     end
 end
 
+function apply_launcher_settings()
+    local enabled = _G.settings.launcher.enabled == true
+
+    if enabled ~= true then
+        if LUI_LAUNCHER ~= nil then
+            LUI_LAUNCHER:destroy()
+        end
+        LUI_LAUNCHER = nil
+        _G.LUI_LAUNCHER = nil
+        return
+    end
+
+    if LUI_LAUNCHER == nil then
+        LUI_LAUNCHER = UI.LauncherMenu()
+        _G.LUI_LAUNCHER = LUI_LAUNCHER
+    else
+        LUI_LAUNCHER:apply_settings()
+    end
+end
+
 _G.LUI_IS_UNLOADING = false
 
 load_settings()
@@ -412,6 +440,8 @@ DROPS_WINDOW = nil
 BESTIARY_WINDOW = nil
 CRAFTING_WINDOW = nil
 TRAVEL_WINDOW = nil
+LUI_LAUNCHER = nil
+_G.LUI_LAUNCHER = nil
 BESTIARY_TRACKER = Bestiary.Collector()
 _G.BESTIARY_TRACKER = BESTIARY_TRACKER
 
@@ -427,6 +457,7 @@ BESTIARY_TRACKER:apply_settings()
 _G.apply_lotro_vitals_handoff()
 
 CONFIG_WINDOW = Settings.ConfigWindow()
+apply_launcher_settings()
 FIRST_RUN_QUICK_SETUP_WINDOW = nil
 if _G.loaded_settings_was_new == true then
     FIRST_RUN_QUICK_SETUP_WINDOW = Settings.FirstRunQuickSetup()
@@ -466,6 +497,12 @@ Plugins["LUI"].Unload = function()
     _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
 
     _G.STATUS_BAR = nil
+
+    if LUI_LAUNCHER ~= nil then
+        LUI_LAUNCHER:destroy()
+        LUI_LAUNCHER = nil
+        _G.LUI_LAUNCHER = nil
+    end
 
     if ASSETS_WINDOW ~= nil then
         ASSETS_WINDOW:SetVisible(false)

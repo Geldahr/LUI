@@ -1812,6 +1812,22 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 		["style"] = {
 		},
 	},
+	["launcher"] = {
+		["enabled"] = true,
+		["icon_size"] = 36.000000,
+		["spacing"] = 4.000000,
+		["orientation"] = "vertical",
+		["direction"] = "auto",
+		["collapse_after_click"] = true,
+		["buttons"] = {
+			[1] = "config",
+			[2] = "inventory",
+			[3] = "assets",
+			[4] = "craft",
+			[5] = "travel",
+			[6] = "bestiary",
+		},
+	},
 	["drops"] = {
 		["enabled"] = false,
 		["width"] = 180.000000,
@@ -2018,6 +2034,10 @@ _G.DEFAULT_LAYOUT_SCHEMA =
 			["status_bar"] = {
 				["left"] = 200.000000,
 				["top"] = 20.000000,
+			},
+			["launcher"] = {
+				["left"] = 20.000000,
+				["top"] = 260.000000,
 			},
 			["boss_vitals"] = {
 				["left"] = 740.000000,

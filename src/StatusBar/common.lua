@@ -38,6 +38,7 @@ S.COPPER_ICON = UI.AssetIds.copper_coin
 S.INVENTORY_SPACE_ICON = UI.AssetIds.backpack
 S.DURABILITY_ICON = UI.AssetIds.durability
 S.CONFIG_SHORTCUT_ICON = UI.AssetIds.feather
+S.INVENTORY_SHORTCUT_ICON = UI.AssetIds.backpack_alt
 S.CRAFT_SHORTCUT_ICON = UI.AssetIds.anvil_silver_glow
 S.TRAVEL_SHORTCUT_ICON = UI.AssetIds.compass
 S.ASSETS_SHORTCUT_ICON = UI.AssetIds.chest
@@ -1170,6 +1171,8 @@ end
 function S.get_shortcut_icon(shortcut_key)
     if shortcut_key == "config" then
         return S.CONFIG_SHORTCUT_ICON
+    elseif shortcut_key == "inventory" then
+        return S.INVENTORY_SHORTCUT_ICON
     elseif shortcut_key == "craft" then
         return S.CRAFT_SHORTCUT_ICON
     elseif shortcut_key == "travel" then
@@ -1196,6 +1199,8 @@ end
 function S.get_shortcut_label(shortcut_key)
     if shortcut_key == "config" then
         return TR["Config"]
+    elseif shortcut_key == "inventory" then
+        return TR["Inventory"]
     elseif shortcut_key == "craft" then
         return TR["Craft"]
     elseif shortcut_key == "travel" then
@@ -1211,16 +1216,18 @@ end
 function S.get_shortcut_state(shortcut_key)
     if shortcut_key == "config" then
         return CONFIG_WINDOW ~= nil, S.window_is_visible(CONFIG_WINDOW)
+    elseif shortcut_key == "inventory" then
+        return INVENTORY_WINDOW ~= nil, S.window_is_visible(INVENTORY_WINDOW)
     elseif shortcut_key == "craft" then
-        local enabled = Crafting == nil or Crafting.is_enabled == nil or Crafting.is_enabled() == true
-        local can_open = enabled == true and (_G.CRAFTING_WINDOW ~= nil or (Crafting ~= nil and Crafting.CraftingWindow ~= nil))
+        local enabled = Crafting.is_enabled() == true
+        local can_open = enabled == true and (_G.CRAFTING_WINDOW ~= nil or Crafting.CraftingWindow ~= nil)
         return can_open, S.window_is_visible(_G.CRAFTING_WINDOW)
     elseif shortcut_key == "travel" then
         return _G.settings.travel.enabled == true, S.window_is_visible(_G.TRAVEL_WINDOW)
     elseif shortcut_key == "assets" then
         return ASSETS_WINDOW ~= nil, S.window_is_visible(ASSETS_WINDOW)
     elseif shortcut_key == "bestiary" then
-        local can_open = _G.BESTIARY_WINDOW ~= nil or (Bestiary ~= nil and Bestiary.BestiaryWindow ~= nil)
+        local can_open = _G.BESTIARY_WINDOW ~= nil or Bestiary.BestiaryWindow ~= nil
         return can_open, S.window_is_visible(_G.BESTIARY_WINDOW)
     end
     return false, false
@@ -1228,23 +1235,17 @@ end
 
 function S.activate_shortcut(shortcut_key)
     if shortcut_key == "config" then
-        if _G.toggle_config_shortcut ~= nil then
-            _G.toggle_config_shortcut()
-        end
+        _G.toggle_config_shortcut()
+    elseif shortcut_key == "inventory" then
+        _G.toggle_inventory_shortcut()
     elseif shortcut_key == "craft" then
-        if _G.toggle_crafting_shortcut ~= nil then
-            _G.toggle_crafting_shortcut()
-        end
+        _G.toggle_crafting_shortcut()
     elseif shortcut_key == "travel" then
         _G.toggle_travel_shortcut()
     elseif shortcut_key == "assets" then
-        if _G.toggle_assets_shortcut ~= nil then
-            _G.toggle_assets_shortcut()
-        end
+        _G.toggle_assets_shortcut()
     elseif shortcut_key == "bestiary" then
-        if _G.toggle_bestiary_shortcut ~= nil then
-            _G.toggle_bestiary_shortcut()
-        end
+        _G.toggle_bestiary_shortcut()
     end
 end
 
