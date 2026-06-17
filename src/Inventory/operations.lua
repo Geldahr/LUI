@@ -479,12 +479,11 @@ local function _merge_attempt_key(target_slot, source_slot, merge_key)
 end
 
 local function _find_merge_source(entries, start_slot, last_slot, step, target, blocked_pairs, locked_slots)
-    local free_space = target.max_stack - target.quantity
     local slot = start_slot
     while (step > 0 and slot <= last_slot) or (step < 0 and slot >= last_slot) do
         local source = entries[slot]
         if locked_slots[slot] ~= true and source.empty ~= true and source.max_stack > 1 and source.quantity > 0 and
-            source.quantity <= free_space and source.merge_key == target.merge_key then
+            source.merge_key == target.merge_key then
             local key = _merge_attempt_key(target.slot, slot, target.merge_key)
             if blocked_pairs[key] ~= true then
                 return slot
