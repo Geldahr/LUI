@@ -25,12 +25,7 @@ local BASE_HINT_GAP = 6
 local BASE_HINT_H = 34
 local BAR_GAP = 4
 local FILTER_GAP = 4
-local ACTION_GAP = 4
 local CLEAR_W = 52
-local BASE_ACTION_H = 21
-local BASE_SORT_W = 84
-local BASE_MERGE_UP_W = 70
-local BASE_MERGE_DOWN_W = 78
 local MIN_WINDOW_W = 193
 local MIN_WINDOW_H = 148
 local MIN_COLS = 6
@@ -139,15 +134,10 @@ function InventoryWindow:Constructor()
     self.money_gap = MONEY_GAP
     self.bar_gap = BAR_GAP
     self.filter_gap = FILTER_GAP
-    self.action_gap = ACTION_GAP
-    self.action_h = BASE_ACTION_H
-    self.sort_w = BASE_SORT_W
-    self.merge_up_w = BASE_MERGE_UP_W
-    self.merge_down_w = BASE_MERGE_DOWN_W
     self.clear_w = CLEAR_W
     self.hint_gap = BASE_HINT_GAP
     self.hint_h = BASE_HINT_H
-    self.header_h = FILTER_H + BASE_MONEY_H + MONEY_GAP + ACTION_GAP + BASE_ACTION_H
+    self.header_h = FILTER_H + BASE_MONEY_H + MONEY_GAP
 
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.backpack = self.player ~= nil and self.player:GetBackpack() or nil
@@ -203,63 +193,40 @@ function InventoryWindow:Constructor()
         self.filter_tb:Focus()
     end
 
-    self.action_bar = Turbine.UI.Control()
-    self.action_bar:SetParent(self.header)
-    self.action_bar:SetMouseVisible(true)
+    local menu_bar = self:get_menu_bar()
+    self.sort_menu = menu_bar:add_menu(TR["Sort"])
+    self.sort_category_action = self.sort_menu:add_action({
+        text = TR["Category + A-Z"],
+        action = function()
+            self:start_inventory_sort(Inventory.Operations.SORT_CATEGORY_AZ)
+        end,
+    })
+    self.sort_az_action = self.sort_menu:add_action({
+        text = TR["A-Z"],
+        action = function()
+            self:start_inventory_sort(Inventory.Operations.SORT_AZ)
+        end,
+    })
+    self.sort_quantity_action = self.sort_menu:add_action({
+        text = TR["Quantity"],
+        action = function()
+            self:start_inventory_sort(Inventory.Operations.SORT_QUANTITY)
+        end,
+    })
 
-    self.sort_dropdown = UI.Widgets.LuiDropdown()
-    self.sort_dropdown:SetParent(self.action_bar)
-    self.sort_dropdown:SetPopupHost(self)
-    self.sort_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.sort_dropdown:SetMappedOptions(
-        { TR["Sort"], TR["Category + A-Z"], TR["A-Z"], TR["Quantity"] },
-        {
-            Inventory.Operations.SORT_NONE,
-            Inventory.Operations.SORT_CATEGORY_AZ,
-            Inventory.Operations.SORT_AZ,
-            Inventory.Operations.SORT_QUANTITY,
-        }
-    )
-
-    self._resetting_sort_dropdown = false
-    self.sort_dropdown.ValueChanged = function(_, value)
-        if self._resetting_sort_dropdown == true then
-            return
-        end
-        if value == Inventory.Operations.SORT_NONE then
-            return
-        end
-        if self.inventory_operation ~= nil then
-            self._resetting_sort_dropdown = true
-            self.sort_dropdown:SetValue(Inventory.Operations.SORT_NONE)
-            self._resetting_sort_dropdown = false
-            return
-        end
-        self:start_inventory_sort(value)
-        self._resetting_sort_dropdown = true
-        self.sort_dropdown:SetValue(Inventory.Operations.SORT_NONE)
-        self._resetting_sort_dropdown = false
-    end
-
-    self.merge_up_button = UI.Widgets.LuiButton()
-    self.merge_up_button:SetParent(self.action_bar)
-    self.merge_up_button:set_text(TR["Merge Up"])
-    self.merge_up_button.Click = function()
-        if self.inventory_operation ~= nil then
-            return
-        end
-        self:start_inventory_merge(Inventory.Operations.MERGE_UP)
-    end
-
-    self.merge_down_button = UI.Widgets.LuiButton()
-    self.merge_down_button:SetParent(self.action_bar)
-    self.merge_down_button:set_text(TR["Merge Down"])
-    self.merge_down_button.Click = function()
-        if self.inventory_operation ~= nil then
-            return
-        end
-        self:start_inventory_merge(Inventory.Operations.MERGE_DOWN)
-    end
+    self.move_menu = menu_bar:add_menu(TR["Move"])
+    self.move_up_action = self.move_menu:add_action({
+        text = TR["Up"],
+        action = function()
+            self:start_inventory_merge(Inventory.Operations.MERGE_UP)
+        end,
+    })
+    self.move_down_action = self.move_menu:add_action({
+        text = TR["Down"],
+        action = function()
+            self:start_inventory_merge(Inventory.Operations.MERGE_DOWN)
+        end,
+    })
 
     self.list = Turbine.UI.ListBox()
     self.list:SetParent(content)
@@ -455,35 +422,6 @@ function InventoryWindow:layout()
     self.filter_tb:SetPosition(0, filter_y)
     self.filter_tb:SetSize(filter_w, self.filter_h)
 
-    local action_y = filter_y + self.filter_h + self.action_gap
-    local action_w = self.header:GetWidth()
-    self.action_bar:SetPosition(0, action_y)
-    self.action_bar:SetSize(action_w, self.action_h)
-
-    local sort_w = self.sort_w
-    local merge_up_w = self.merge_up_w
-    local merge_down_w = self.merge_down_w
-    local needed_w = sort_w + merge_up_w + merge_down_w + (2 * gap)
-    if action_w < needed_w then
-        local available = action_w - (2 * gap)
-        if available < 0 then
-            available = 0
-        end
-        sort_w = math.floor(available * 0.35)
-        merge_up_w = math.floor(available * 0.30)
-        merge_down_w = available - sort_w - merge_up_w
-    end
-
-    local action_x = 0
-    self.sort_dropdown:SetPosition(action_x, 0)
-    self.sort_dropdown:SetSize(sort_w, self.action_h)
-    action_x = action_x + sort_w + gap
-    self.merge_up_button:SetPosition(action_x, 0)
-    self.merge_up_button:SetSize(merge_up_w, self.action_h)
-    action_x = action_x + merge_up_w + gap
-    self.merge_down_button:SetPosition(action_x, 0)
-    self.merge_down_button:SetSize(merge_down_w, self.action_h)
-
     local list_y = self.margin_top + self.header_h + self.bar_gap
     local list_h = h - self.margin_bottom - self.hint_h - self.hint_gap - list_y
     if list_h < _scaled_int(30) then list_h = _scaled_int(30) end
@@ -617,17 +555,12 @@ function InventoryWindow:apply_settings()
     self.money_gap = _scaled_int(MONEY_GAP)
     self.bar_gap = _scaled_int(BAR_GAP)
     self.filter_gap = _scaled_int(FILTER_GAP)
-    self.action_gap = _scaled_int(ACTION_GAP)
-    self.action_h = _scaled_int(BASE_ACTION_H)
-    self.sort_w = _scaled_int(BASE_SORT_W)
-    self.merge_up_w = _scaled_int(BASE_MERGE_UP_W)
-    self.merge_down_w = _scaled_int(BASE_MERGE_DOWN_W)
     self.clear_w = _scaled_int(CLEAR_W)
     local scale = _G.settings.global.scale
     self.money_h = math.floor((BASE_MONEY_H * scale) + 0.5)
     self.hint_gap = math.floor((BASE_HINT_GAP * scale) + 0.5)
     self.hint_h = math.floor((BASE_HINT_H * scale) + 0.5)
-    self.header_h = self.filter_h + self.money_h + self.money_gap + self.action_gap + self.action_h
+    self.header_h = self.filter_h + self.money_h + self.money_gap
 
     local sb_font = _G.settings.status_bar.font
     local money_font_size = BASE_MONEY_H * _G.settings.global.scale
@@ -650,12 +583,6 @@ function InventoryWindow:apply_settings()
     local filter_font = _scaled_font("Verdana", BASE_FILTER_FONT_SIZE)
     self.filter_tb:SetFont(filter_font)
     self.clear_button:set_font(filter_font)
-    self.sort_dropdown:SetFont(filter_font)
-    self.sort_dropdown:set_scale(scale)
-    self.merge_up_button:set_font(filter_font)
-    self.merge_up_button:set_scale(scale)
-    self.merge_down_button:set_font(filter_font)
-    self.merge_down_button:set_scale(scale)
 
     local hint_font_size = math.floor((BASE_HINT_FONT_SIZE * scale) + 0.5)
     local hint_font = FONT_TO_LOTRO("Verdana", hint_font_size)
@@ -1041,9 +968,18 @@ function InventoryWindow:_finish_inventory_operation(status_text)
 end
 
 function InventoryWindow:_set_inventory_actions_enabled(enabled)
-    self.sort_dropdown:SetEnabled(enabled == true)
-    self.merge_up_button:set_enabled(enabled == true)
-    self.merge_down_button:set_enabled(enabled == true)
+    local is_enabled = enabled == true
+    if is_enabled ~= true then
+        self.sort_menu:close()
+        self.move_menu:close()
+    end
+    self.sort_menu.button:set_enabled(is_enabled)
+    self.move_menu.button:set_enabled(is_enabled)
+    self.sort_category_action:set_enabled(is_enabled)
+    self.sort_az_action:set_enabled(is_enabled)
+    self.sort_quantity_action:set_enabled(is_enabled)
+    self.move_up_action:set_enabled(is_enabled)
+    self.move_down_action:set_enabled(is_enabled)
 end
 
 function InventoryWindow:_set_inventory_operation_status(text)
