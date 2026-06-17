@@ -15,7 +15,6 @@ end
 InventoryWindow = class(LuiWindow)
 
 local MARGIN_LEFT = 15
-local MARGIN_TOP = 11
 local MARGIN_RIGHT = 15
 local MARGIN_BOTTOM = 6
 local FILTER_H = 21
@@ -128,7 +127,6 @@ function InventoryWindow:Constructor()
     self.cols = 10
     self.rows_visible = 6
     self.margin_left = MARGIN_LEFT
-    self.margin_top = MARGIN_TOP
     self.margin_right = MARGIN_RIGHT
     self.margin_bottom = MARGIN_BOTTOM
     self.filter_h = FILTER_H
@@ -380,7 +378,7 @@ function InventoryWindow:layout()
     if w < min_w then w = min_w end
     if h < min_h then h = min_h end
 
-    self.header:SetPosition(self.margin_left, self.margin_top)
+    self.header:SetPosition(self.margin_left, 0)
     self.header:SetSize(w - self.margin_left - self.margin_right, self.header_h)
 
     local money_h = self.money_h
@@ -427,7 +425,7 @@ function InventoryWindow:layout()
     self.filter_tb:SetPosition(0, filter_y)
     self.filter_tb:SetSize(filter_w, self.filter_h)
 
-    local list_y = self.margin_top + self.header_h + self.bar_gap
+    local list_y = self.header_h + self.bar_gap
     local list_h = h - self.margin_bottom - self.hint_h - self.hint_gap - list_y
     if list_h < _scaled_int(30) then list_h = _scaled_int(30) end
 
@@ -453,7 +451,7 @@ function InventoryWindow:compute_window_size(cols, rows)
     local grid_h = rows * self.tile_size
 
     local content_w = self.margin_left + self.margin_right + grid_w
-    local content_h = self.margin_top + self.margin_bottom + self.header_h + self.bar_gap + self.hint_gap + self.hint_h + grid_h
+    local content_h = self.margin_bottom + self.header_h + self.bar_gap + self.hint_gap + self.hint_h + grid_h
     local window_w, window_h = self:GetSize()
     local central_w, central_h = self:central_widget():GetSize()
     return content_w + math.max(0, window_w - central_w),
@@ -587,7 +585,6 @@ function InventoryWindow:apply_settings()
     self.rows_visible = self:get_needed_rows(self.cols)
 
     self.margin_left = _scaled_int(MARGIN_LEFT)
-    self.margin_top = _scaled_int(MARGIN_TOP)
     self.margin_right = _scaled_int(MARGIN_RIGHT)
     self.margin_bottom = _scaled_int(MARGIN_BOTTOM)
     self.filter_h = _scaled_int(FILTER_H)
