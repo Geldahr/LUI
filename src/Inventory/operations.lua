@@ -597,6 +597,20 @@ function SortOperation:_sort_complete(live)
     return true
 end
 
+function SortOperation:_plan_matches_live(live, locked_slots)
+    for slot = 1, #live do
+        if locked_slots[slot] ~= true then
+            local entry_id = self.id_at_slot[slot]
+            local expected = self.entry_by_id[entry_id]
+            if expected == nil or _entry_matches_pending(live[slot], expected) ~= true then
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
 function SortOperation:_pending_matches_wait_state(pending, live)
     return _entry_matches_pending(live[pending.source_slot], pending.source_before) == true and
         _entry_matches_pending(live[pending.destination_slot], pending.destination_before) == true
@@ -762,8 +776,7 @@ function SortOperation:_schedule_slot(live, now, slot, locked_slots, allow_fail)
     return result == nil, result
 end
 
-function SortOperation:_schedule_available_moves(live, now)
-    local locked_slots = self:_locked_slots()
+function SortOperation:_schedule_available_moves(live, now, locked_slots)
     local scheduled = 0
     local saw_unresolved = false
 
@@ -813,11 +826,16 @@ function SortOperation:tick(now)
         return self:_done(MESSAGE_SORT_COMPLETE)
     end
 
+    local locked_slots = self:_locked_slots()
+    if self:_plan_matches_live(live, locked_slots) ~= true then
+        return self:_fail(MESSAGE_CHANGED)
+    end
+
     if self:_timed_out(now) == true then
         return self:_fail(MESSAGE_TIMEOUT)
     end
 
-    local scheduled, schedule_result = self:_schedule_available_moves(live, now)
+    local scheduled, schedule_result = self:_schedule_available_moves(live, now, locked_slots)
     if schedule_result ~= nil then
         return schedule_result
     end
@@ -1091,11 +1109,13 @@ function Operations.create_sort(backpack, mode)
     local desired_slot_for_id = {}
     local id_at_slot = {}
     local slot_for_id = {}
+    local entry_by_id = {}
 
     for slot = 1, size do
         local id = live[slot].original_slot
         id_at_slot[slot] = id
         slot_for_id[id] = slot
+        entry_by_id[id] = _pending_entry(live[slot])
 
         local desired_id = desired[slot].original_slot
         desired_ids[slot] = desired_id
@@ -1111,6 +1131,7 @@ function Operations.create_sort(backpack, mode)
         desired_slot_for_id = desired_slot_for_id,
         id_at_slot = id_at_slot,
         slot_for_id = slot_for_id,
+        entry_by_id = entry_by_id,
         moves = 0,
         pending = {},
         max_pending_drops = MAX_PENDING_SORT_DROPS,

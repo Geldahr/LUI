@@ -229,6 +229,12 @@ function InventoryWindow:Constructor()
         if value == Inventory.Operations.SORT_NONE then
             return
         end
+        if self.inventory_operation ~= nil then
+            self._resetting_sort_dropdown = true
+            self.sort_dropdown:SetValue(Inventory.Operations.SORT_NONE)
+            self._resetting_sort_dropdown = false
+            return
+        end
         self:start_inventory_sort(value)
         self._resetting_sort_dropdown = true
         self.sort_dropdown:SetValue(Inventory.Operations.SORT_NONE)
@@ -239,6 +245,9 @@ function InventoryWindow:Constructor()
     self.merge_up_button:SetParent(self.action_bar)
     self.merge_up_button:set_text(TR["Merge Up"])
     self.merge_up_button.Click = function()
+        if self.inventory_operation ~= nil then
+            return
+        end
         self:start_inventory_merge(Inventory.Operations.MERGE_UP)
     end
 
@@ -246,6 +255,9 @@ function InventoryWindow:Constructor()
     self.merge_down_button:SetParent(self.action_bar)
     self.merge_down_button:set_text(TR["Merge Down"])
     self.merge_down_button.Click = function()
+        if self.inventory_operation ~= nil then
+            return
+        end
         self:start_inventory_merge(Inventory.Operations.MERGE_DOWN)
     end
 
@@ -268,6 +280,7 @@ function InventoryWindow:Constructor()
     self.rows = {}
     self.slots = {}
     self.inventory_operation = nil
+    self.inventory_operation_status_text = ""
 
     self.filter_tb.TextChanged = function()
         self:update_filter()
@@ -289,7 +302,11 @@ function InventoryWindow:Constructor()
             self._dirty = true
             self._filter_dirty = true
             self._display_dirty = true
-            self:_set_inventory_operation_status("")
+            if self.inventory_operation ~= nil then
+                self:_set_inventory_operation_status(self.inventory_operation_status_text)
+            else
+                self:_set_inventory_operation_status("")
+            end
             self:bring_to_front()
         end
     end
@@ -1031,6 +1048,7 @@ end
 
 function InventoryWindow:_set_inventory_operation_status(text)
     local status = tostring(text or "")
+    self.inventory_operation_status_text = status
     if status == "" then
         self.hint_label:SetText(self.default_hint_text)
     else
