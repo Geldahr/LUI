@@ -30,6 +30,8 @@ local MIN_WINDOW_W = 193
 local MIN_WINDOW_H = 148
 local MIN_COLS = 6
 local MAX_COLS = 20
+local TITLE_FULL_MIN_W = 360
+local TITLE_COMPACT_MIN_W = 310
 local RESIZE_LEFT = 1
 local RESIZE_TOP = 4
 
@@ -142,6 +144,9 @@ function InventoryWindow:Constructor()
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.backpack = self.player ~= nil and self.player:GetBackpack() or nil
     self._last_bp_size = nil
+    self._inventory_used_slots = nil
+    self._inventory_max_slots = nil
+    self._inventory_title_text = TR["Inventory"]
 
     self.filter_groups = {}
     self._slot_bind_offset = nil
@@ -515,9 +520,43 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
     if changed == true then
         self:build_grid()
     end
+    self:_refresh_inventory_title()
     self._dirty = true
     self._filter_dirty = true
     self._display_dirty = true
+end
+
+function InventoryWindow:_inventory_title_for_current_width()
+    local base_title = TR["Inventory"]
+    if self._inventory_used_slots == nil or self._inventory_max_slots == nil then
+        return base_title
+    end
+
+    local slot_count = tostring(self._inventory_used_slots) .. "/" .. tostring(self._inventory_max_slots)
+    local width = self:GetWidth()
+    if width >= _scaled_int(TITLE_FULL_MIN_W) then
+        return base_title .. " (" .. slot_count .. ")"
+    end
+    if width >= _scaled_int(TITLE_COMPACT_MIN_W) then
+        return "(" .. slot_count .. ")"
+    end
+    return ""
+end
+
+function InventoryWindow:_refresh_inventory_title()
+    local title = self:_inventory_title_for_current_width()
+    if self._inventory_title_text == title then
+        return
+    end
+
+    self._inventory_title_text = title
+    self:set_title(title)
+end
+
+function InventoryWindow:_set_inventory_title(used_slots, max_slots)
+    self._inventory_used_slots = used_slots
+    self._inventory_max_slots = max_slots
+    self:_refresh_inventory_title()
 end
 
 function InventoryWindow:update_money()
@@ -786,10 +825,12 @@ end
 
 function InventoryWindow:update_slots()
     if self.backpack == nil or self.backpack.GetSize == nil then
+        self:_set_inventory_title(nil, nil)
         return
     end
 
     local size = self.backpack:GetSize() or 0
+    local used_slots = 0
     local groups = self.filter_groups
     local need_filter = groups ~= nil and #groups > 0
     local force_filter = self._filter_dirty == true
@@ -798,32 +839,36 @@ function InventoryWindow:update_slots()
     local any_change = false
 
     for i = 1, size do
+        local item = self:get_item(i)
+        local qty = 1
+        if item ~= nil and item.GetQuantity ~= nil then
+            qty = item:GetQuantity() or 1
+        end
+        if qty < 1 then
+            item = nil
+            qty = 0
+            -- local is_empty = false
+            -- if item == nil or item.GetName == nil then
+            --     is_empty = true
+            -- else
+            --     local ok_name, name = pcall(function() return item:GetName() end)
+            --     if ok_name ~= true or name == nil or name == "" then
+            --         is_empty = true
+            --     end
+            -- end
+            -- if is_empty then
+            --     item = nil
+            --     qty = 0
+            -- else
+            --     qty = 1
+            -- end
+        end
+        if item ~= nil then
+            used_slots = used_slots + 1
+        end
+
         local slot = self.slots[i]
         if slot ~= nil then
-            local item = self:get_item(i)
-            local qty = 1
-            if item ~= nil and item.GetQuantity ~= nil then
-                qty = item:GetQuantity() or 1
-            end
-            if qty < 1 then
-                item = nil
-                qty = 0
-                -- local is_empty = false
-                -- if item == nil or item.GetName == nil then
-                --     is_empty = true
-                -- else
-                --     local ok_name, name = pcall(function() return item:GetName() end)
-                --     if ok_name ~= true or name == nil or name == "" then
-                --         is_empty = true
-                --     end
-                -- end
-                -- if is_empty then
-                --     item = nil
-                --     qty = 0
-                -- else
-                --     qty = 1
-                -- end
-            end
             local item_changed = item ~= slot.item
             if item_changed then
                 slot.item = item
@@ -890,6 +935,7 @@ function InventoryWindow:update_slots()
     self._filter_dirty = false
     self._haystack_dirty = false
     self._display_dirty = false
+    self:_set_inventory_title(used_slots, size)
 end
 
 function InventoryWindow:Update()
