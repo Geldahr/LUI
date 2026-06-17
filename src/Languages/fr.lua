@@ -266,6 +266,7 @@ LUI.src.Languages.fr.FR = {
     ["Item height"] = "Hauteur d'élément",
     ["Item width"] = "Largeur d'élément",
     ["Merging inventory..."] = "Fusion de l'inventaire...",
+    ["Merge"] = "Fusionner",
     ["Quantity"] = "Quantite",
     ["Sort"] = "Trier",
     ["Sort needs an empty or different item slot to avoid merging stacks."] = "Le tri a besoin d'un emplacement vide ou d'un objet different pour eviter de fusionner les piles.",

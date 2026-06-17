@@ -266,6 +266,7 @@ LUI.src.Languages.de.DE = {
     ["Item height"] = "Elementhöhe",
     ["Item width"] = "Elementbreite",
     ["Merging inventory..."] = "Inventar wird zusammengeführt...",
+    ["Merge"] = "Zusammenführen",
     ["Quantity"] = "Menge",
     ["Sort"] = "Sortieren",
     ["Sort needs an empty or different item slot to avoid merging stacks."] = "Zum Sortieren wird ein leerer Platz oder ein anderer Gegenstand benötigt, damit Stapel nicht zusammengeführt werden.",

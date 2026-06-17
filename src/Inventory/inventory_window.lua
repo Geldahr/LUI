@@ -219,14 +219,14 @@ function InventoryWindow:Constructor()
         end,
     })
 
-    self.move_menu = menu_bar:add_menu(TR["Move"])
-    self.move_up_action = self.move_menu:add_action({
+    self.merge_menu = menu_bar:add_menu(TR["Merge"])
+    self.merge_up_action = self.merge_menu:add_action({
         text = TR["Up"],
         action = function()
             self:start_inventory_merge(Inventory.Operations.MERGE_UP)
         end,
     })
-    self.move_down_action = self.move_menu:add_action({
+    self.merge_down_action = self.merge_menu:add_action({
         text = TR["Down"],
         action = function()
             self:start_inventory_merge(Inventory.Operations.MERGE_DOWN)
@@ -1017,15 +1017,15 @@ function InventoryWindow:_set_inventory_actions_enabled(enabled)
     local is_enabled = enabled == true
     if is_enabled ~= true then
         self.sort_menu:close()
-        self.move_menu:close()
+        self.merge_menu:close()
     end
     self.sort_menu.button:set_enabled(is_enabled)
-    self.move_menu.button:set_enabled(is_enabled)
+    self.merge_menu.button:set_enabled(is_enabled)
     self.sort_category_action:set_enabled(is_enabled)
     self.sort_az_action:set_enabled(is_enabled)
     self.sort_quantity_action:set_enabled(is_enabled)
-    self.move_up_action:set_enabled(is_enabled)
-    self.move_down_action:set_enabled(is_enabled)
+    self.merge_up_action:set_enabled(is_enabled)
+    self.merge_down_action:set_enabled(is_enabled)
 end
 
 function InventoryWindow:_set_inventory_operation_status(text)
