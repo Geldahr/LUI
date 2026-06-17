@@ -663,6 +663,25 @@ function SortOperation:_find_empty_slot(live, locked_slots, ignored_slots)
     return nil
 end
 
+function SortOperation:_find_buffer_slot(live, locked_slots, ignored_slots, displaced, incoming)
+    local empty_slot = self:_find_empty_slot(live, locked_slots, ignored_slots)
+    if empty_slot ~= nil then
+        return empty_slot
+    end
+
+    for slot = 1, #live do
+        if locked_slots[slot] ~= true and ignored_slots[slot] ~= true then
+            local candidate = live[slot]
+            if candidate.empty ~= true and _can_merge(displaced, candidate) ~= true and
+                _can_merge(incoming, candidate) ~= true then
+                return slot
+            end
+        end
+    end
+
+    return nil
+end
+
 function SortOperation:_schedule_empty_desired_slot(live, now, slot, locked_slots, allow_fail)
     local current_id = self.id_at_slot[slot]
     local desired_slot = self.desired_slot_for_id[current_id]
@@ -731,15 +750,15 @@ function SortOperation:_schedule_slot(live, now, slot, locked_slots, allow_fail)
     end
 
     local ignored_slots = { [slot] = true, [source_slot] = true }
-    local empty_slot = self:_find_empty_slot(live, locked_slots, ignored_slots)
-    if empty_slot == nil then
+    local buffer_slot = self:_find_buffer_slot(live, locked_slots, ignored_slots, current, source)
+    if buffer_slot == nil then
         if allow_fail == true then
             return false, self:_fail(MESSAGE_NEEDS_BUFFER)
         end
         return false, nil
     end
 
-    local result = self:_attempt_drop(now, live, slot, empty_slot)
+    local result = self:_attempt_drop(now, live, slot, buffer_slot)
     return result == nil, result
 end
 
