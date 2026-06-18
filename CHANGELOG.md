@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v1.1.0
+
+### Added
+
 - Added the `_G.LUI` namespace as the public integration root for LUI APIs and plugin-owned runtime tables.
 - Added the optional LUI Menu HUD launcher with configurable shortcuts for opening LUI features.
 - Added LUI Menu settings for enablement, icon size, spacing, orientation, expansion direction, collapse-after-click behavior, and button order.
@@ -18,8 +28,6 @@
 - Changed Inventory cleanup controls to use `Sort` and `Merge` window menus instead of an in-window action row/dropdown.
 - Updated the Inventory window icon to match the LUI Menu backpack icon.
 - Updated window menus so moving the mouse from an open menu to another menu opens the hovered menu.
-
-### Fixed
 
 ### Removed
 
