@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added the `_G.LUI` namespace as the public integration root for LUI APIs and plugin-owned runtime tables.
 - Added the optional LUI Menu HUD launcher with configurable shortcuts for opening LUI features.
 - Added LUI Menu settings for enablement, icon size, spacing, orientation, expansion direction, collapse-after-click behavior, and button order.
 - Added LUI Menu integration with HUD move mode, saved HUD position, runtime settings refresh, and plugin unload cleanup.
@@ -12,6 +13,7 @@
 
 ### Changed
 
+- Changed the public LUI API access from `_G.LUI_API` to `_G.LUI.API` / `_G.LUI.api`.
 - Centralized LUI shortcut labels, icons, availability checks, and actions so the LUI Menu and status bar shortcut buttons use the same shortcut definitions.
 - Changed Inventory cleanup controls to use `Sort` and `Merge` window menus instead of an in-window action row/dropdown.
 - Updated the Inventory window icon to match the LUI Menu backpack icon.
@@ -20,6 +22,8 @@
 ### Fixed
 
 ### Removed
+
+- Removed legacy standalone globals created by LUI; integrations should use the `_G.LUI` namespace instead.
 
 ## v1.0.3
 
