@@ -316,6 +316,13 @@ function LuiMenu:Constructor()
     self.button.Click = function()
         self:toggle()
     end
+    local prior_button_mouse_enter = self.button.MouseEnter
+    self.button.MouseEnter = function(sender, args)
+        if type(prior_button_mouse_enter) == "function" then
+            prior_button_mouse_enter(sender, args)
+        end
+        self:_open_from_active_root_hover()
+    end
 
     self.popup = Turbine.UI.Window()
     UI.NativeScaling.apply_window(self.popup)
@@ -423,6 +430,9 @@ function LuiMenu:is_open()
 end
 
 function LuiMenu:open()
+    if self.button._enabled ~= true then
+        return
+    end
     if #self._items == 0 then
         return
     end
@@ -503,6 +513,34 @@ function LuiMenu:_close_root()
     self:_root_menu():close()
 end
 
+function LuiMenu:_open_from_active_root_hover()
+    if self._parent_menu ~= nil then
+        return
+    end
+
+    local active_root = LuiMenu._active_root
+    if active_root ~= nil and active_root ~= self and active_root:GetParent() == self:GetParent() then
+        self:open()
+    end
+end
+
+function LuiMenu:_open_sibling_at_screen_point(screen_x, screen_y)
+    local menu_bar = self:GetParent()
+    for i = 1, #menu_bar._menus do
+        local menu = menu_bar._menus[i]
+        local menu_x, menu_y = menu:PointToScreen(0, 0)
+        local menu_w, menu_h = menu:GetSize()
+        if menu ~= self and menu:IsVisible() == true and menu_w > 0 and menu_h > 0 and
+            screen_x >= menu_x and screen_x <= (menu_x + menu_w) and
+            screen_y >= menu_y and screen_y <= (menu_y + menu_h) then
+            menu:open()
+            return true
+        end
+    end
+
+    return false
+end
+
 function LuiMenu:_open_host_overlay()
     if self._parent_menu ~= nil or self._popup_overlay ~= nil then
         return
@@ -520,7 +558,20 @@ function LuiMenu:_open_host_overlay()
     overlay:SetMouseVisible(true)
     overlay:SetZOrder(9999)
     overlay:SetVisible(true)
-    overlay.MouseDown = function()
+    overlay.MouseMove = function(_, args)
+        if args == nil or type(args.X) ~= "number" or type(args.Y) ~= "number" then
+            return
+        end
+        local screen_x, screen_y = overlay:PointToScreen(args.X, args.Y)
+        self:_open_sibling_at_screen_point(screen_x, screen_y)
+    end
+    overlay.MouseDown = function(_, args)
+        if args ~= nil and type(args.X) == "number" and type(args.Y) == "number" then
+            local screen_x, screen_y = overlay:PointToScreen(args.X, args.Y)
+            if self:_open_sibling_at_screen_point(screen_x, screen_y) == true then
+                return
+            end
+        end
         self:close()
     end
 

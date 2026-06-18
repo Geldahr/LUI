@@ -7,10 +7,15 @@
 - Added the optional LUI Menu HUD launcher with configurable shortcuts for opening LUI features.
 - Added LUI Menu settings for enablement, icon size, spacing, orientation, expansion direction, collapse-after-click behavior, and button order.
 - Added LUI Menu integration with HUD move mode, saved HUD position, runtime settings refresh, and plugin unload cleanup.
+- Added inventory cleanup commands in the Inventory window menu: `Sort` commands for `Category + A-Z`, `A-Z`, and `Quantity`, plus `Merge` commands for merging stacks up or down, including support for full bags, occupied buffer slots, partial stack merges, and interrupted live inventory changes.
+- Added a responsive Inventory title slot count that shows used/max slots when the window has enough title space.
 
 ### Changed
 
 - Centralized LUI shortcut labels, icons, availability checks, and actions so the LUI Menu and status bar shortcut buttons use the same shortcut definitions.
+- Changed Inventory cleanup controls to use `Sort` and `Merge` window menus instead of an in-window action row/dropdown.
+- Updated the Inventory window icon to match the LUI Menu backpack icon.
+- Updated window menus so moving the mouse from an open menu to another menu opens the hovered menu.
 
 ### Fixed
 

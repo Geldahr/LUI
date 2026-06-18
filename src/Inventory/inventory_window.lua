@@ -4,14 +4,17 @@ import "Turbine.UI"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Inventory.filter"
 import "LUI.src.Inventory.slot"
+import "LUI.src.Inventory.operations"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Settings.enums"
 
+if Inventory == nil then
+    Inventory = {}
+end
 InventoryWindow = class(LuiWindow)
 
 local MARGIN_LEFT = 15
-local MARGIN_TOP = 11
 local MARGIN_RIGHT = 15
 local MARGIN_BOTTOM = 6
 local FILTER_H = 21
@@ -26,6 +29,8 @@ local MIN_WINDOW_W = 193
 local MIN_WINDOW_H = 148
 local MIN_COLS = 6
 local MAX_COLS = 20
+local TITLE_FULL_MIN_W = 360
+local TITLE_COMPACT_MIN_W = 310
 local RESIZE_LEFT = 1
 local RESIZE_TOP = 4
 
@@ -104,7 +109,7 @@ function InventoryWindow:Constructor()
     LuiWindow.Constructor(self)
 
     self:set_title(TR["Inventory"])
-    self:set_icon(UI.AssetIds.backpack)
+    self:set_icon(UI.AssetIds.backpack_alt)
     self:set_resizable(LuiWindow.RESIZE_HORIZONTAL)
     self:hide()
     self:SetWantsUpdates(false)
@@ -122,7 +127,6 @@ function InventoryWindow:Constructor()
     self.cols = 10
     self.rows_visible = 6
     self.margin_left = MARGIN_LEFT
-    self.margin_top = MARGIN_TOP
     self.margin_right = MARGIN_RIGHT
     self.margin_bottom = MARGIN_BOTTOM
     self.filter_h = FILTER_H
@@ -138,6 +142,9 @@ function InventoryWindow:Constructor()
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.backpack = self.player ~= nil and self.player:GetBackpack() or nil
     self._last_bp_size = nil
+    self._inventory_used_slots = nil
+    self._inventory_max_slots = nil
+    self._inventory_title_text = TR["Inventory"]
 
     self.filter_groups = {}
     self._slot_bind_offset = nil
@@ -189,6 +196,41 @@ function InventoryWindow:Constructor()
         self.filter_tb:Focus()
     end
 
+    local menu_bar = self:get_menu_bar()
+    self.sort_menu = menu_bar:add_menu(TR["Sort"])
+    self.sort_category_action = self.sort_menu:add_action({
+        text = TR["Category + A-Z"],
+        action = function()
+            self:start_inventory_sort(Inventory.Operations.SORT_CATEGORY_AZ)
+        end,
+    })
+    self.sort_az_action = self.sort_menu:add_action({
+        text = TR["A-Z"],
+        action = function()
+            self:start_inventory_sort(Inventory.Operations.SORT_AZ)
+        end,
+    })
+    self.sort_quantity_action = self.sort_menu:add_action({
+        text = TR["Quantity"],
+        action = function()
+            self:start_inventory_sort(Inventory.Operations.SORT_QUANTITY)
+        end,
+    })
+
+    self.merge_menu = menu_bar:add_menu(TR["Merge"])
+    self.merge_up_action = self.merge_menu:add_action({
+        text = TR["Up"],
+        action = function()
+            self:start_inventory_merge(Inventory.Operations.MERGE_UP)
+        end,
+    })
+    self.merge_down_action = self.merge_menu:add_action({
+        text = TR["Down"],
+        action = function()
+            self:start_inventory_merge(Inventory.Operations.MERGE_DOWN)
+        end,
+    })
+
     self.list = Turbine.UI.ListBox()
     self.list:SetParent(content)
     self.list:SetOrientation(Turbine.UI.Orientation.Vertical)
@@ -201,12 +243,14 @@ function InventoryWindow:Constructor()
     self.hint_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
     self.hint_label:SetMultiline(true)
     self.hint_label:SetFont(_scaled_font("Verdana", BASE_HINT_FONT_SIZE))
-    self.hint_label:SetText(
+    self.default_hint_text =
         TR["Hint: to lock/unlock an item you can select it using Alt+Left click and then press Ctrl+T to toggle the lock."]
-    )
+    self.hint_label:SetText(self.default_hint_text)
 
     self.rows = {}
     self.slots = {}
+    self.inventory_operation = nil
+    self.inventory_operation_status_text = ""
 
     self.filter_tb.TextChanged = function()
         self:update_filter()
@@ -222,12 +266,17 @@ function InventoryWindow:Constructor()
 
     self.VisibleChanged = function()
         local visible = self:IsVisible() == true
-        self:SetWantsUpdates(visible)
+        self:SetWantsUpdates(visible or self.inventory_operation ~= nil)
         if visible then
             self.last_update_at = 0
             self._dirty = true
             self._filter_dirty = true
             self._display_dirty = true
+            if self.inventory_operation ~= nil then
+                self:_set_inventory_operation_status(self.inventory_operation_status_text)
+            else
+                self:_set_inventory_operation_status("")
+            end
             self:bring_to_front()
         end
     end
@@ -329,7 +378,7 @@ function InventoryWindow:layout()
     if w < min_w then w = min_w end
     if h < min_h then h = min_h end
 
-    self.header:SetPosition(self.margin_left, self.margin_top)
+    self.header:SetPosition(self.margin_left, 0)
     self.header:SetSize(w - self.margin_left - self.margin_right, self.header_h)
 
     local money_h = self.money_h
@@ -376,7 +425,7 @@ function InventoryWindow:layout()
     self.filter_tb:SetPosition(0, filter_y)
     self.filter_tb:SetSize(filter_w, self.filter_h)
 
-    local list_y = self.margin_top + self.header_h + self.bar_gap
+    local list_y = self.header_h + self.bar_gap
     local list_h = h - self.margin_bottom - self.hint_h - self.hint_gap - list_y
     if list_h < _scaled_int(30) then list_h = _scaled_int(30) end
 
@@ -402,7 +451,7 @@ function InventoryWindow:compute_window_size(cols, rows)
     local grid_h = rows * self.tile_size
 
     local content_w = self.margin_left + self.margin_right + grid_w
-    local content_h = self.margin_top + self.margin_bottom + self.header_h + self.bar_gap + self.hint_gap + self.hint_h + grid_h
+    local content_h = self.margin_bottom + self.header_h + self.bar_gap + self.hint_gap + self.hint_h + grid_h
     local window_w, window_h = self:GetSize()
     local central_w, central_h = self:central_widget():GetSize()
     return content_w + math.max(0, window_w - central_w),
@@ -469,9 +518,43 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
     if changed == true then
         self:build_grid()
     end
+    self:_refresh_inventory_title()
     self._dirty = true
     self._filter_dirty = true
     self._display_dirty = true
+end
+
+function InventoryWindow:_inventory_title_for_current_width()
+    local base_title = TR["Inventory"]
+    if self._inventory_used_slots == nil or self._inventory_max_slots == nil then
+        return base_title
+    end
+
+    local slot_count = tostring(self._inventory_used_slots) .. "/" .. tostring(self._inventory_max_slots)
+    local width = self:GetWidth()
+    if width >= _scaled_int(TITLE_FULL_MIN_W) then
+        return base_title .. " (" .. slot_count .. ")"
+    end
+    if width >= _scaled_int(TITLE_COMPACT_MIN_W) then
+        return "(" .. slot_count .. ")"
+    end
+    return ""
+end
+
+function InventoryWindow:_refresh_inventory_title()
+    local title = self:_inventory_title_for_current_width()
+    if self._inventory_title_text == title then
+        return
+    end
+
+    self._inventory_title_text = title
+    self:set_title(title)
+end
+
+function InventoryWindow:_set_inventory_title(used_slots, max_slots)
+    self._inventory_used_slots = used_slots
+    self._inventory_max_slots = max_slots
+    self:_refresh_inventory_title()
 end
 
 function InventoryWindow:update_money()
@@ -502,7 +585,6 @@ function InventoryWindow:apply_settings()
     self.rows_visible = self:get_needed_rows(self.cols)
 
     self.margin_left = _scaled_int(MARGIN_LEFT)
-    self.margin_top = _scaled_int(MARGIN_TOP)
     self.margin_right = _scaled_int(MARGIN_RIGHT)
     self.margin_bottom = _scaled_int(MARGIN_BOTTOM)
     self.filter_h = _scaled_int(FILTER_H)
@@ -655,6 +737,11 @@ function InventoryWindow:build_grid()
 end
 
 function InventoryWindow:perform_drop(dest_index, drag_drop_info, args)
+    if self.inventory_operation ~= nil then
+        self:_set_inventory_operation_status(TR["Inventory action already running."])
+        return
+    end
+
     if self.backpack == nil or drag_drop_info == nil then
         return
     end
@@ -713,12 +800,34 @@ function InventoryWindow:perform_drop(dest_index, drag_drop_info, args)
     self._display_dirty = true
 end
 
+function InventoryWindow:start_inventory_sort(mode)
+    if self.inventory_operation ~= nil then
+        self:_set_inventory_operation_status(TR["Inventory action already running."])
+        return
+    end
+
+    local operation = Inventory.Operations.create_sort(self.backpack, mode)
+    self:_begin_inventory_operation(operation, TR["Sorting inventory..."])
+end
+
+function InventoryWindow:start_inventory_merge(direction)
+    if self.inventory_operation ~= nil then
+        self:_set_inventory_operation_status(TR["Inventory action already running."])
+        return
+    end
+
+    local operation = Inventory.Operations.create_merge(self.backpack, direction)
+    self:_begin_inventory_operation(operation, TR["Merging inventory..."])
+end
+
 function InventoryWindow:update_slots()
     if self.backpack == nil or self.backpack.GetSize == nil then
+        self:_set_inventory_title(nil, nil)
         return
     end
 
     local size = self.backpack:GetSize() or 0
+    local used_slots = 0
     local groups = self.filter_groups
     local need_filter = groups ~= nil and #groups > 0
     local force_filter = self._filter_dirty == true
@@ -727,32 +836,36 @@ function InventoryWindow:update_slots()
     local any_change = false
 
     for i = 1, size do
+        local item = self:get_item(i)
+        local qty = 1
+        if item ~= nil and item.GetQuantity ~= nil then
+            qty = item:GetQuantity() or 1
+        end
+        if qty < 1 then
+            item = nil
+            qty = 0
+            -- local is_empty = false
+            -- if item == nil or item.GetName == nil then
+            --     is_empty = true
+            -- else
+            --     local ok_name, name = pcall(function() return item:GetName() end)
+            --     if ok_name ~= true or name == nil or name == "" then
+            --         is_empty = true
+            --     end
+            -- end
+            -- if is_empty then
+            --     item = nil
+            --     qty = 0
+            -- else
+            --     qty = 1
+            -- end
+        end
+        if item ~= nil then
+            used_slots = used_slots + 1
+        end
+
         local slot = self.slots[i]
         if slot ~= nil then
-            local item = self:get_item(i)
-            local qty = 1
-            if item ~= nil and item.GetQuantity ~= nil then
-                qty = item:GetQuantity() or 1
-            end
-            if qty < 1 then
-                item = nil
-                qty = 0
-                -- local is_empty = false
-                -- if item == nil or item.GetName == nil then
-                --     is_empty = true
-                -- else
-                --     local ok_name, name = pcall(function() return item:GetName() end)
-                --     if ok_name ~= true or name == nil or name == "" then
-                --         is_empty = true
-                --     end
-                -- end
-                -- if is_empty then
-                --     item = nil
-                --     qty = 0
-                -- else
-                --     qty = 1
-                -- end
-            end
             local item_changed = item ~= slot.item
             if item_changed then
                 slot.item = item
@@ -819,10 +932,16 @@ function InventoryWindow:update_slots()
     self._filter_dirty = false
     self._haystack_dirty = false
     self._display_dirty = false
+    self:_set_inventory_title(used_slots, size)
 end
 
 function InventoryWindow:Update()
     local now = Turbine.Engine.GetGameTime()
+
+    if self.inventory_operation ~= nil then
+        self:_update_inventory_operation(now)
+    end
+
     if (now - (self.last_update_at or 0)) < self.update_every then
         return
     end
@@ -863,3 +982,57 @@ function InventoryWindow:_get_total_money()
     end
     return a:GetMoney()
 end
+
+function InventoryWindow:_begin_inventory_operation(operation, status_text)
+    self.inventory_operation = operation
+    self:_set_inventory_actions_enabled(false)
+    self:_set_inventory_operation_status(status_text)
+    self:SetWantsUpdates(true)
+end
+
+function InventoryWindow:_update_inventory_operation(now)
+    local result = self.inventory_operation:tick(now)
+    if result.done == true then
+        self:_finish_inventory_operation(TR[result.message_key])
+    end
+end
+
+function InventoryWindow:_finish_inventory_operation(status_text)
+    self.inventory_operation = nil
+    self:_set_inventory_actions_enabled(true)
+    self:_set_inventory_operation_status(status_text)
+    self._dirty = true
+    self._filter_dirty = true
+    self._haystack_dirty = true
+    self._display_dirty = true
+    if self:IsVisible() ~= true then
+        self:SetWantsUpdates(false)
+    end
+end
+
+function InventoryWindow:_set_inventory_actions_enabled(enabled)
+    local is_enabled = enabled == true
+    if is_enabled ~= true then
+        self.sort_menu:close()
+        self.merge_menu:close()
+    end
+    self.sort_menu.button:set_enabled(is_enabled)
+    self.merge_menu.button:set_enabled(is_enabled)
+    self.sort_category_action:set_enabled(is_enabled)
+    self.sort_az_action:set_enabled(is_enabled)
+    self.sort_quantity_action:set_enabled(is_enabled)
+    self.merge_up_action:set_enabled(is_enabled)
+    self.merge_down_action:set_enabled(is_enabled)
+end
+
+function InventoryWindow:_set_inventory_operation_status(text)
+    local status = tostring(text or "")
+    self.inventory_operation_status_text = status
+    if status == "" then
+        self.hint_label:SetText(self.default_hint_text)
+    else
+        self.hint_label:SetText(status)
+    end
+end
+
+Inventory.InventoryWindow = InventoryWindow
