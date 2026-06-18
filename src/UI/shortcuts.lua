@@ -1,9 +1,48 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Windows = _G.LUI.Runtime.Windows
+local Crafting = _G.LUI.Features.Crafting
+local Bestiary = _G.LUI.Features.Bestiary
 import "Turbine.UI"
 
 import "LUI.src.UI.assets"
-
-UI = UI or {}
-UI.Shortcuts = UI.Shortcuts or {}
 
 local Shortcuts = UI.Shortcuts
 
@@ -67,36 +106,36 @@ end
 
 function Shortcuts.get_state(shortcut_key)
     if shortcut_key == "config" then
-        return CONFIG_WINDOW ~= nil, _window_is_visible(CONFIG_WINDOW)
+        return Windows.config ~= nil, _window_is_visible(Windows.config)
     elseif shortcut_key == "inventory" then
-        return INVENTORY_WINDOW ~= nil, _window_is_visible(INVENTORY_WINDOW)
+        return Windows.inventory ~= nil, _window_is_visible(Windows.inventory)
     elseif shortcut_key == "craft" then
         local enabled = Crafting.is_enabled() == true
-        local can_open = enabled == true and (_G.CRAFTING_WINDOW ~= nil or Crafting.CraftingWindow ~= nil)
-        return can_open, _window_is_visible(_G.CRAFTING_WINDOW)
+        local can_open = enabled == true and (Windows.crafting ~= nil or Crafting.CraftingWindow ~= nil)
+        return can_open, _window_is_visible(Windows.crafting)
     elseif shortcut_key == "travel" then
-        return _G.settings.travel.enabled == true, _window_is_visible(_G.TRAVEL_WINDOW)
+        return State.settings.travel.enabled == true, _window_is_visible(Windows.travel)
     elseif shortcut_key == "assets" then
-        return ASSETS_WINDOW ~= nil, _window_is_visible(ASSETS_WINDOW)
+        return Windows.assets ~= nil, _window_is_visible(Windows.assets)
     elseif shortcut_key == "bestiary" then
-        local can_open = _G.BESTIARY_WINDOW ~= nil or Bestiary.BestiaryWindow ~= nil
-        return can_open, _window_is_visible(_G.BESTIARY_WINDOW)
+        local can_open = Windows.bestiary ~= nil or Bestiary.BestiaryWindow ~= nil
+        return can_open, _window_is_visible(Windows.bestiary)
     end
     return false, false
 end
 
 function Shortcuts.activate(shortcut_key)
     if shortcut_key == "config" then
-        _G.toggle_config_shortcut()
+        Shortcuts.toggle_config()
     elseif shortcut_key == "inventory" then
-        _G.toggle_inventory_shortcut()
+        Shortcuts.toggle_inventory()
     elseif shortcut_key == "craft" then
-        _G.toggle_crafting_shortcut()
+        Shortcuts.toggle_crafting()
     elseif shortcut_key == "travel" then
-        _G.toggle_travel_shortcut()
+        Shortcuts.toggle_travel()
     elseif shortcut_key == "assets" then
-        _G.toggle_assets_shortcut()
+        Shortcuts.toggle_assets()
     elseif shortcut_key == "bestiary" then
-        _G.toggle_bestiary_shortcut()
+        Shortcuts.toggle_bestiary()
     end
 end

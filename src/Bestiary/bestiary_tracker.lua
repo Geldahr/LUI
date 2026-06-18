@@ -1,10 +1,55 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
+local Persistence = _G.LUI.Settings.Persistence
+local State = _G.LUI.Settings.State
+local Locale = _G.LUI.Locale
+local Bestiary = _G.LUI.Features.Bestiary
+local Windows = _G.LUI.Runtime.Windows
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 
 import "LUI.src.Utils.callbacks"
 import "LUI.src.Utils.coords"
 import "LUI.src.Utils.search_query"
 
-Bestiary = Bestiary or {}
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
 Bestiary.Collector = class()
 Bestiary.current_location = Bestiary.current_location or nil
 
@@ -14,21 +59,7 @@ local DATA_ACCESS = Bestiary.DataAccess
 local LOOT_POST_KILL_WINDOW_SECONDS = 0.10
 
 local function _is_english_client()
-    if is_lui_english_language ~= nil then
-        return is_lui_english_language() == true
-    end
-
-    local lang = Turbine.Engine.GetLanguage()
-    local language_enum = Turbine.Language
-    if type(lang) == "number" then
-        return lang == language_enum.English or lang == language_enum.EnglishGB
-    end
-    if type(lang) == "string" then
-        local code = lang:lower():gsub("_", "-")
-        return code == "en" or code:find("^en%-") == 1
-    end
-
-    return true
+    return Locale.is_english_language() == true
 end
 
 local function _trim(text)
@@ -45,7 +76,7 @@ local function _trim(text)
 end
 
 local function _is_bestiary_open()
-    local window = _G.BESTIARY_WINDOW
+    local window = Windows.bestiary
     return window ~= nil and window:IsVisible() == true
 end
 
@@ -95,9 +126,9 @@ function Bestiary.set_current_location(location)
     local query = _build_location_filter_query(current_location)
 
     Bestiary.current_location = current_location
-    _G.bestiary_area_filter_query = query
+    BestiaryCache.area_filter_query = query
 
-    local window = _G.BESTIARY_WINDOW
+    local window = Windows.bestiary
     if window ~= nil then
         window:on_location_resolved()
     end
@@ -127,8 +158,8 @@ local function _ensure_bestiary_cache()
 end
 
 local function _touch_generation()
-    _G.bestiary_cache_generation = (_G.bestiary_cache_generation or 0) + 1
-    _G.bestiary_cache_dirty = true
+    BestiaryCache.generation = (BestiaryCache.generation or 0) + 1
+    BestiaryCache.dirty = true
 end
 
 local function _ensure_entry(name)
@@ -219,7 +250,7 @@ function Bestiary.Collector:Constructor()
 end
 
 function Bestiary.Collector:is_enabled()
-    local settings = _G.settings
+    local settings = State.settings
     if type(settings) ~= "table" or type(settings.global) ~= "table" then
         return false
     end
@@ -244,7 +275,7 @@ end
 
 function Bestiary.Collector:save()
     self:_flush_pending_kills(true)
-    save_bestiary_cache()
+    Persistence.save_bestiary_cache()
 end
 
 function Bestiary.Collector:flush_expired()

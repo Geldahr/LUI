@@ -1,3 +1,5 @@
+local UI = _G.LUI.UI
+local Utils = _G.LUI.Utils
 import "Turbine.UI"
 
 local function _clamp_0_255(value)
@@ -6,7 +8,7 @@ local function _clamp_0_255(value)
     return value
 end
 
-function _G.lui_clamp_ratio(value)
+local function lui_clamp_ratio(value)
     if value < 0 then
         return 0
     end
@@ -15,8 +17,9 @@ function _G.lui_clamp_ratio(value)
     end
     return value
 end
+Utils.lui_clamp_ratio = lui_clamp_ratio
 
-function _G.lui_dim_color(color, dimming)
+local function lui_dim_color(color, dimming)
     local factor = 1 - lui_clamp_ratio(dimming)
     return Turbine.UI.Color(
         color.A,
@@ -25,12 +28,14 @@ function _G.lui_dim_color(color, dimming)
         color.B * factor
     )
 end
+Utils.lui_dim_color = lui_dim_color
 
-function _G.lui_lerp_number(start_value, end_value, ratio)
+local function lui_lerp_number(start_value, end_value, ratio)
     return start_value + ((end_value - start_value) * lui_clamp_ratio(ratio))
 end
+Utils.lui_lerp_number = lui_lerp_number
 
-function _G.lui_lerp_color(start_color, end_color, ratio)
+local function lui_lerp_color(start_color, end_color, ratio)
     local t = lui_clamp_ratio(ratio)
     return Turbine.UI.Color(
         lui_lerp_number(start_color.A, end_color.A, t),
@@ -39,29 +44,33 @@ function _G.lui_lerp_color(start_color, end_color, ratio)
         lui_lerp_number(start_color.B, end_color.B, t)
     )
 end
+Utils.lui_lerp_color = lui_lerp_color
 
-function _G.lui_apply_opacity_to_color(color, opacity)
+local function lui_apply_opacity_to_color(color, opacity)
     local alpha = lui_clamp_ratio(color.A * lui_clamp_ratio(opacity))
     return Turbine.UI.Color(alpha, color.R, color.G, color.B)
 end
+Utils.lui_apply_opacity_to_color = lui_apply_opacity_to_color
 
-function _G.lui_gradient_morale_color(percent, full_color, mid_color, low_color)
+local function lui_gradient_morale_color(percent, full_color, mid_color, low_color)
     local t = lui_clamp_ratio(percent)
     if t <= 0.5 then
         return lui_lerp_color(low_color, mid_color, t * 2)
     end
     return lui_lerp_color(mid_color, full_color, (t - 0.5) * 2)
 end
+Utils.lui_gradient_morale_color = lui_gradient_morale_color
 
-function _G.lui_color_to_hex(color)
+local function lui_color_to_hex(color)
     local r = _clamp_0_255(math.floor((color.R * 255) + 0.5))
     local g = _clamp_0_255(math.floor((color.G * 255) + 0.5))
     local b = _clamp_0_255(math.floor((color.B * 255) + 0.5))
 
     return string.format("#%02X%02X%02X", r, g, b)
 end
+Utils.lui_color_to_hex = lui_color_to_hex
 
-function _G.lui_hex_to_color(text)
+local function lui_hex_to_color(text)
     if type(text) ~= "string" then
         return nil
     end
@@ -89,3 +98,4 @@ function _G.lui_hex_to_color(text)
 
     return Turbine.UI.Color(r / 255, g / 255, b / 255)
 end
+Utils.lui_hex_to_color = lui_hex_to_color

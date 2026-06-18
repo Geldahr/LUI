@@ -1,3 +1,5 @@
+local Inventory = _G.LUI.Features.Inventory
+
 local function _push_term(cur_group, term)
     if term ~= nil and term ~= "" then
         cur_group[#cur_group + 1] = term
@@ -12,7 +14,7 @@ end
 
 -- Returns: groups = { {term1, term2}, {termA}, ... }
 -- All terms are returned as raw strings (caller can lowercase).
-function parse_query(q)
+function Inventory.parse_query(q)
     if type(q) ~= "string" then
         return {}
     end
@@ -57,7 +59,7 @@ function parse_query(q)
     return groups
 end
 
-function normalize_groups(groups)
+function Inventory.normalize_groups(groups)
     if groups == nil or #groups == 0 then
         return {}
     end
@@ -84,7 +86,7 @@ function normalize_groups(groups)
     return out
 end
 
-function matches_groups(groups, haystack_lower)
+function Inventory.matches_groups(groups, haystack_lower)
     if groups == nil or #groups == 0 then
         return true
     end

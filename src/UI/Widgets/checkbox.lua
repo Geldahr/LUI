@@ -1,21 +1,26 @@
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 
+local Widgets = _G.LUI.UI.Widgets
+local LuiLabel = Widgets.LuiLabel
+local Style = Widgets.Style
 local BASE_CHECKBOX_W = 120
 local BASE_CHECKBOX_H = 16
 local BASE_ICON_SIZE = 16
 local BASE_TEXT_GAP = 6
 local BASE_FILL_MARGIN = 2
-local Style = UI.Widgets.Style
 
 local function _round(value)
     return math.floor(value + 0.5)
 end
 
 ---@class LuiCheckBox : Turbine.UI.Control
-LuiCheckBox = class(Turbine.UI.Control)
+local LuiCheckBox = class(Turbine.UI.Control)
+Widgets.LuiCheckBox = LuiCheckBox
 
 function LuiCheckBox:Constructor()
     Turbine.UI.Control.Constructor(self)

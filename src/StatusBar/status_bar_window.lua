@@ -1,9 +1,57 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Settings = _G.LUI.Settings
+local Persistence = _G.LUI.Settings.Persistence
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local StatusBar = _G.LUI.Features.StatusBar
+local Windows = _G.LUI.Runtime.Windows
+local Apply = _G.LUI.Runtime.Apply
+local class = _G.LUI.Core.class
 import "LUI.src.StatusBar.common"
 import "LUI.src.StatusBar.widget_base"
 import "LUI.src.StatusBar.Widgets"
+import "LUI.src.StatusBar.edit_bar_window"
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = StatusBar.Common
+local StatusBarEditWindow = StatusBar.StatusBarEditWindow
 local Style = UI.Widgets.Style
 
 local SHORTCUT_WIDGETS = {
@@ -20,7 +68,7 @@ local EDIT_DRAG_GHOST_FONT_SIZE_OFFSET = 1
 
 local function _edit_drag_ghost_font()
     local size = Style.CONTENT_SMALL_FONT_SIZE + EDIT_DRAG_GHOST_FONT_SIZE_OFFSET
-    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, size * _G.settings.global.scale)
+    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, size * State.settings.global.scale)
     if font == nil then
         error("Missing edit drag ghost font: " .. tostring(Style.CONTENT_SMALL_FONT_NAME) .. " " .. tostring(size))
     end
@@ -61,22 +109,22 @@ end
 
 local function _sync_status_bar_after_raw_edit(edit_window_state_override)
     local edit_window_state = edit_window_state_override
-    if edit_window_state == nil and _G.STATUS_BAR ~= nil then
-        edit_window_state = _G.STATUS_BAR:capture_edit_window_state()
+    if edit_window_state == nil and Windows.status_bar ~= nil then
+        edit_window_state = Windows.status_bar:capture_edit_window_state()
     end
 
-    _G.rebuild_settings()
-    if _G.STATUS_BAR ~= nil then
-        _G.STATUS_BAR:apply_settings()
+    Settings.rebuild()
+    if Windows.status_bar ~= nil then
+        Windows.status_bar:apply_settings()
     else
-        apply_status_bar_settings()
+        Apply.status_bar_settings()
     end
-    if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil then
-        _G.STATUS_BAR:restore_edit_window_state(edit_window_state)
+    if edit_window_state ~= nil and edit_window_state.visible == true and Windows.status_bar ~= nil then
+        Windows.status_bar:restore_edit_window_state(edit_window_state)
     end
-    if _G.CONFIG_WINDOW ~= nil and _G.CONFIG_WINDOW.IsVisible ~= nil and _G.CONFIG_WINDOW:IsVisible() == true then
-        local controls = _G.CONFIG_WINDOW.controls or nil
-        local raw_sb = _G.loaded_settings ~= nil and _G.loaded_settings.status_bar or nil
+    if Windows.config ~= nil and Windows.config.IsVisible ~= nil and Windows.config:IsVisible() == true then
+        local controls = Windows.config.controls or nil
+        local raw_sb = State.loaded_settings ~= nil and State.loaded_settings.status_bar or nil
         if controls ~= nil and raw_sb ~= nil then
             local function sync_layout_box(key, value)
                 local control = controls[key]
@@ -89,9 +137,7 @@ local function _sync_status_bar_after_raw_edit(edit_window_state_override)
             sync_layout_box("sb_layout_right", raw_sb.layout.right)
         end
     end
-    if _G.save_settings ~= nil then
-        _G.save_settings()
-    end
+    Persistence.save_settings()
 end
 
 local function _extract_layout_tokens(text)
@@ -179,7 +225,7 @@ local function _remove_visible_layout_token_at_index(text, remove_index)
 end
 
 local function _get_raw_status_bar_settings()
-    local raw = _G.loaded_settings
+    local raw = State.loaded_settings
     return raw.status_bar
 end
 
@@ -391,10 +437,7 @@ end
 
 local function _widget_ctor(name)
     local widgets = _widgets_pkg()
-    if widgets ~= nil and widgets[name] ~= nil then
-        return widgets[name]
-    end
-    return _G[name]
+    return widgets[name]
 end
 
 local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, widget_entry)
@@ -482,13 +525,14 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
     return ctor(widget_key, widget_w, bar_h, font, widget_cfg.content_alignment or alignment, icon_path)
 end
 
-StatusBarWindow = class(LuiBaseWindow)
+local StatusBarWindow = class(UI.Widgets.LuiBaseWindow)
+StatusBar.StatusBarWindow = StatusBarWindow
 
 function StatusBarWindow:_ensure_edit_window()
-    local edit_window = self._edit_window or _G.STATUS_BAR_EDIT_WINDOW
+    local edit_window = self._edit_window or Windows.status_bar_edit
     if edit_window == nil or edit_window._destroying == true or edit_window.done_button == nil then
         edit_window = StatusBarEditWindow(self)
-        _G.STATUS_BAR_EDIT_WINDOW = edit_window
+        Windows.status_bar_edit = edit_window
     elseif edit_window.set_owner ~= nil then
         edit_window:set_owner(self)
     else
@@ -500,7 +544,7 @@ function StatusBarWindow:_ensure_edit_window()
 end
 
 function StatusBarWindow:Constructor()
-    LuiBaseWindow.Constructor(self, {
+    UI.Widgets.LuiBaseWindow.Constructor(self, {
         hideable = true,
     })
 
@@ -632,7 +676,7 @@ function StatusBarWindow:Constructor()
 end
 
 function StatusBarWindow:apply_settings()
-    local sb = _G.settings.status_bar
+    local sb = State.settings.status_bar
 
     local bg = sb.bg
     self:SetBackColor(Turbine.UI.Color(bg.opacity, bg.color.R, bg.color.G, bg.color.B))
@@ -670,7 +714,7 @@ function StatusBarWindow:Update()
 
     if now >= (self._display_check_due_at or 0) then
         self._display_check_due_at = now + 0.5
-        self:_sync_display_width(_G.settings.status_bar)
+        self:_sync_display_width(State.settings.status_bar)
     end
 
     if now - self.last_update_at < self.update_every then
@@ -1486,7 +1530,7 @@ function StatusBarWindow:_get_drop_target_from_mouse_x(mouse_x)
 end
 
 function StatusBarWindow:_get_drag_preview_refresh_interval()
-    local fps = _G.settings ~= nil and _G.settings.global ~= nil and _G.settings.global.refresh_rate or nil
+    local fps = State.settings ~= nil and State.settings.global ~= nil and State.settings.global.refresh_rate or nil
     if type(fps) ~= "number" then
         fps = tonumber(fps)
     end
@@ -1512,13 +1556,13 @@ function StatusBarWindow:_hide_drag_preview()
 end
 
 function StatusBarWindow:_can_preview_drag_item()
-    local raw = _G.loaded_settings
+    local raw = State.loaded_settings
     local raw_sb = raw ~= nil and raw.status_bar or nil
     return raw_sb ~= nil
 end
 
 function StatusBarWindow:_relayout_after_drag_preview_change()
-    local sb = _G.settings ~= nil and _G.settings.status_bar or nil
+    local sb = State.settings ~= nil and State.settings.status_bar or nil
     if sb ~= nil then
         self:_layout_widgets(sb)
     end
@@ -1648,7 +1692,7 @@ function StatusBarWindow:_get_mouse_position_in_bar()
 end
 
 function StatusBarWindow:_get_widget_preview_width(widget_key)
-    local widgets = _G.settings ~= nil and _G.settings.status_bar ~= nil and _G.settings.status_bar.widgets or nil
+    local widgets = State.settings ~= nil and State.settings.status_bar ~= nil and State.settings.status_bar.widgets or nil
     local widget_cfg = widgets ~= nil and widgets[widget_key] or nil
     local width = widget_cfg ~= nil and widget_cfg.width or nil
     if type(width) ~= "number" then
@@ -1676,7 +1720,7 @@ function StatusBarWindow:_get_drag_preview_width()
 end
 
 function StatusBarWindow:_get_drag_preview_x(zone_key, insert_index, preview_width)
-    local sb = _G.settings.status_bar
+    local sb = State.settings.status_bar
     local gap = sb.gap
     local pad = sb.padding
     local bar_w = self:GetWidth()

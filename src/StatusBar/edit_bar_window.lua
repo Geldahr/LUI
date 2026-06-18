@@ -1,9 +1,51 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local StatusBar = _G.LUI.Features.StatusBar
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
 
 local WINDOW_W = 300
@@ -24,11 +66,11 @@ local LIST_SCROLL_W = 10
 local LIST_SCROLL_GAP = 4
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _scaled_font(name, size)
-    return FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+    return FONT_TO_LOTRO(name, size * State.settings.global.scale)
 end
 
 local function _clamp(value, min_value, max_value)
@@ -190,21 +232,11 @@ function EditBarPaletteEntry:_update_visual_state()
     end
 end
 
-local StatusBarEditWindow = class(LuiBaseWindow)
-_G.StatusBarEditWindow = StatusBarEditWindow
-
-local status_bar_pkg = nil
-if StatusBar ~= nil then
-    status_bar_pkg = StatusBar
-elseif LUI ~= nil and LUI.src ~= nil and LUI.src.StatusBar ~= nil then
-    status_bar_pkg = LUI.src.StatusBar
-end
-if status_bar_pkg ~= nil then
-    status_bar_pkg.StatusBarEditWindow = StatusBarEditWindow
-end
+local StatusBarEditWindow = class(UI.Widgets.LuiBaseWindow)
+StatusBar.StatusBarEditWindow = StatusBarEditWindow
 
 function StatusBarEditWindow:Constructor(owner)
-    LuiBaseWindow.Constructor(self, { hideable = true })
+    UI.Widgets.LuiBaseWindow.Constructor(self, { hideable = true })
 
     self.owner = owner
     self.entries = {}

@@ -1,8 +1,12 @@
-local S = _G.STATUS_BAR_COMMON
-local WidgetBase = _G.StatusBarWidgetBase
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
+local S = _G.LUI.Features.StatusBar.Common
+local WidgetBase = _G.LUI.Features.StatusBar.WidgetBase
 
 local TimeLocalWidget = class(WidgetBase)
-_G.TimeLocalWidget = TimeLocalWidget
+StatusBarWidgets.TimeLocalWidget = TimeLocalWidget
 
 function TimeLocalWidget:Constructor(widget_w, bar_h, font, content_alignment, time_format)
     WidgetBase.Constructor(self, "time_local", widget_w, bar_h, font,

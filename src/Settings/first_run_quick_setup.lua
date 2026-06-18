@@ -1,3 +1,53 @@
+local Windows = _G.LUI.Runtime.Windows
+local Apply = _G.LUI.Runtime.Apply
+local MoveMode = _G.LUI.UI.MoveMode
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local DefaultLayouts = _G.LUI.Settings.Defaults.DefaultLayouts
+local Defaults = _G.LUI.Settings.Defaults
+local Persistence = _G.LUI.Settings.Persistence
+local Colors = _G.LUI.Settings.Colors
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Hidable = _G.LUI.UI.Hidable
+local Settings = _G.LUI.Settings
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -35,7 +85,7 @@ local LAYOUT_BUTTON_H = 22
 local LAYOUT_LABEL_H = 18
 
 local function _scaled_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 local function _scaled_int(value)
@@ -175,196 +225,197 @@ local function _get_preview_window_specs()
     return {
         {
             get_window = function()
-                return PLAYER_VITAL
+                return Windows.player_vital
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("self_vitals")
+                return Defaults.get_ui_hud_state("self_vitals")
             end,
         },
         {
             get_window = function()
-                return TARGET_VITAL
+                return Windows.target_vital
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("target_vitals")
+                return Defaults.get_ui_hud_state("target_vitals")
             end,
         },
         {
             get_window = function()
-                return TARGET_VITAL ~= nil and TARGET_VITAL.targets_target_window or nil
+                return Windows.target_vital ~= nil and Windows.target_vital.targets_target_window or nil
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("target_target_vitals")
+                return Defaults.get_ui_hud_state("target_target_vitals")
             end,
         },
         {
             get_window = function()
-                return BOSS_VITAL
+                return Windows.boss_vital
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("boss_vitals")
+                return Defaults.get_ui_hud_state("boss_vitals")
             end,
         },
         {
             get_window = function()
-                return FELLOWSHIP_VITALS
+                return Windows.fellowship_vitals
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("fellowship_vitals")
+                return Defaults.get_ui_hud_state("fellowship_vitals")
             end,
         },
         {
             get_window = function()
-                return RAID_VITALS
+                return Windows.raid_vitals
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("raid_vitals")
+                return Defaults.get_ui_hud_state("raid_vitals")
             end,
         },
         {
             get_window = function()
-                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[1] or nil
+                return Windows.raid_vitals ~= nil and Windows.raid_vitals.group_windows[1] or nil
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("raid_group_a_vitals")
+                return Defaults.get_ui_hud_state("raid_group_a_vitals")
             end,
         },
         {
             get_window = function()
-                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[2] or nil
+                return Windows.raid_vitals ~= nil and Windows.raid_vitals.group_windows[2] or nil
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("raid_group_b_vitals")
+                return Defaults.get_ui_hud_state("raid_group_b_vitals")
             end,
         },
         {
             get_window = function()
-                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[3] or nil
+                return Windows.raid_vitals ~= nil and Windows.raid_vitals.group_windows[3] or nil
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("raid_group_c_vitals")
+                return Defaults.get_ui_hud_state("raid_group_c_vitals")
             end,
         },
         {
             get_window = function()
-                return RAID_VITALS ~= nil and RAID_VITALS.group_windows[4] or nil
+                return Windows.raid_vitals ~= nil and Windows.raid_vitals.group_windows[4] or nil
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("raid_group_d_vitals")
+                return Defaults.get_ui_hud_state("raid_group_d_vitals")
             end,
         },
         {
             get_window = function()
-                return EXPIRING_SELF_EFFECTS_WINDOW
+                return Windows.expiring_self_effects
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("self_effects")
+                return Defaults.get_ui_hud_state("self_effects")
             end,
         },
         {
             get_window = function()
-                return EXPIRING_TARGET_EFFECTS_WINDOW
+                return Windows.expiring_target_effects
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("target_effects")
+                return Defaults.get_ui_hud_state("target_effects")
             end,
         },
         {
             get_window = function()
-                return COOLDOWNS_WINDOW
+                return Windows.cooldowns
             end,
             get_raw_window = function()
-                return _G.get_ui_hud_state("cooldowns")
+                return Defaults.get_ui_hud_state("cooldowns")
             end,
         },
         {
             get_window = function()
-                return INVENTORY_WINDOW
+                return Windows.inventory
             end,
             get_raw_window = function()
-                return _G.get_ui_window_state("inventory")
+                return Defaults.get_ui_window_state("inventory")
             end,
         },
     }
 end
 
 local function _apply_runtime_settings()
-    ensure_loaded_settings()
-    fix_colors()
-    rebuild_settings()
-    apply_inventory_settings()
-    apply_status_bar_settings()
-    apply_cooldowns_settings()
+    Defaults.ensure_loaded_settings()
+    Colors.fix_colors()
+    Settings.rebuild()
+    Apply.inventory_settings()
+    Apply.status_bar_settings()
+    Apply.cooldowns_settings()
 
-    if CONFIG_WINDOW ~= nil then
-        CONFIG_WINDOW:apply_ui_scale()
-        CONFIG_WINDOW:layout()
-    end
-
-    if PLAYER_VITAL ~= nil then
-        PLAYER_VITAL:resize()
-    end
-    if TARGET_VITAL ~= nil then
-        TARGET_VITAL:resize()
-    end
-    if BOSS_VITAL ~= nil then
-        BOSS_VITAL:resize()
-    end
-    if FELLOWSHIP_VITALS ~= nil then
-        FELLOWSHIP_VITALS:apply_settings()
-    end
-    if RAID_VITALS ~= nil then
-        RAID_VITALS:apply_settings()
-    end
-    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
-        EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()
-    end
-    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil then
-        EXPIRING_TARGET_EFFECTS_WINDOW:apply_settings()
-    end
-    if COOLDOWNS_WINDOW ~= nil then
-        COOLDOWNS_WINDOW:apply_settings()
-    end
-    if PLAYER_VITAL ~= nil then
-        PLAYER_VITAL:on_target_changed()
+    if Windows.config ~= nil then
+        Windows.config:apply_ui_scale()
+        Windows.config:layout()
     end
 
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.is_move_mode ~= nil and PLAYER_VITAL:is_move_mode() == true then
-        if PLAYER_VITAL.set_move_mode ~= nil then
-            PLAYER_VITAL:set_move_mode(true)
+    if Windows.player_vital ~= nil then
+        Windows.player_vital:resize()
+    end
+    if Windows.target_vital ~= nil then
+        Windows.target_vital:resize()
+    end
+    if Windows.boss_vital ~= nil then
+        Windows.boss_vital:resize()
+    end
+    if Windows.fellowship_vitals ~= nil then
+        Windows.fellowship_vitals:apply_settings()
+    end
+    if Windows.raid_vitals ~= nil then
+        Windows.raid_vitals:apply_settings()
+    end
+    if Windows.expiring_self_effects ~= nil then
+        Windows.expiring_self_effects:apply_settings()
+    end
+    if Windows.expiring_target_effects ~= nil then
+        Windows.expiring_target_effects:apply_settings()
+    end
+    if Windows.cooldowns ~= nil then
+        Windows.cooldowns:apply_settings()
+    end
+    if Windows.player_vital ~= nil then
+        Windows.player_vital:on_target_changed()
+    end
+
+    if Windows.player_vital ~= nil and Windows.player_vital.is_move_mode ~= nil and Windows.player_vital:is_move_mode() == true then
+        if Windows.player_vital.set_move_mode ~= nil then
+            Windows.player_vital:set_move_mode(true)
         end
-        if TARGET_VITAL ~= nil and TARGET_VITAL.set_move_mode ~= nil then
-            TARGET_VITAL:set_move_mode(true)
+        if Windows.target_vital ~= nil and Windows.target_vital.set_move_mode ~= nil then
+            Windows.target_vital:set_move_mode(true)
         end
-        if BOSS_VITAL ~= nil and BOSS_VITAL.set_move_mode ~= nil then
-            BOSS_VITAL:set_move_mode(true)
+        if Windows.boss_vital ~= nil and Windows.boss_vital.set_move_mode ~= nil then
+            Windows.boss_vital:set_move_mode(true)
         end
-        if FELLOWSHIP_VITALS ~= nil and FELLOWSHIP_VITALS.set_move_mode ~= nil then
-            FELLOWSHIP_VITALS:set_move_mode(true)
+        if Windows.fellowship_vitals ~= nil and Windows.fellowship_vitals.set_move_mode ~= nil then
+            Windows.fellowship_vitals:set_move_mode(true)
         end
-        if RAID_VITALS ~= nil and RAID_VITALS.set_move_mode ~= nil then
-            RAID_VITALS:set_move_mode(true)
+        if Windows.raid_vitals ~= nil and Windows.raid_vitals.set_move_mode ~= nil then
+            Windows.raid_vitals:set_move_mode(true)
         end
-        if EXPIRING_SELF_EFFECTS_WINDOW ~= nil and EXPIRING_SELF_EFFECTS_WINDOW.set_move_mode ~= nil then
-            EXPIRING_SELF_EFFECTS_WINDOW:set_move_mode(true)
+        if Windows.expiring_self_effects ~= nil and Windows.expiring_self_effects.set_move_mode ~= nil then
+            Windows.expiring_self_effects:set_move_mode(true)
         end
-        if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil and EXPIRING_TARGET_EFFECTS_WINDOW.set_move_mode ~= nil then
-            EXPIRING_TARGET_EFFECTS_WINDOW:set_move_mode(true)
+        if Windows.expiring_target_effects ~= nil and Windows.expiring_target_effects.set_move_mode ~= nil then
+            Windows.expiring_target_effects:set_move_mode(true)
         end
-        if COOLDOWNS_WINDOW ~= nil and COOLDOWNS_WINDOW.set_move_mode ~= nil then
-            COOLDOWNS_WINDOW:set_move_mode(true)
+        if Windows.cooldowns ~= nil and Windows.cooldowns.set_move_mode ~= nil then
+            Windows.cooldowns:set_move_mode(true)
         end
     end
 end
 
-FirstRunQuickSetup = class(LuiBaseWindow)
+local FirstRunQuickSetup = class(UI.Widgets.LuiBaseWindow)
+Settings.FirstRunQuickSetup = FirstRunQuickSetup
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function FirstRunQuickSetup:Constructor(options)
-    LuiBaseWindow.Constructor(self, { hideable = false })
+    UI.Widgets.LuiBaseWindow.Constructor(self, { hideable = false })
 
     self:SetVisible(false)
     self:SetZOrder(1500)
@@ -372,7 +423,7 @@ function FirstRunQuickSetup:Constructor(options)
     self:SetMouseVisible(true)
 
     self.step = 1
-    self.selected_scale = _G.DefaultLayouts.get_resolution_scale()
+    self.selected_scale = DefaultLayouts.get_resolution_scale()
     self.selected_layout = nil
     self.updating_scale_text = false
     self.closing = false
@@ -383,10 +434,10 @@ function FirstRunQuickSetup:Constructor(options)
     self._layout_mode = nil
     self.create_profile_on_finish = options ~= nil and options.create_profile_on_finish == true
     self.profile_name = options ~= nil and options.profile_name or nil
-    self.previous_profile_id = self.create_profile_on_finish == true and _G.current_profile_id or nil
+    self.previous_profile_id = self.create_profile_on_finish == true and State.current_profile_id or nil
     self.created_profile_id = nil
-    self.initial_settings = _G.DefaultLayouts.copy_table(_G.loaded_settings)
-    self.existing_config_labels, self.existing_config_values = get_configuration_options()
+    self.initial_settings = DefaultLayouts.copy_table(State.loaded_settings)
+    self.existing_config_labels, self.existing_config_values = Persistence.get_configuration_options()
     self.has_existing_configurations =
         not (options ~= nil and options.skip_existing_configurations == true) and #self.existing_config_values > 0
 
@@ -664,7 +715,7 @@ function FirstRunQuickSetup:apply_ui_scale()
     self.layout_label:SetFont(hint_font)
     self.scale_box:SetFont(body_font)
     self.config_dropdown:SetFont(body_font)
-    self.config_dropdown:set_scale(_G.settings.global.scale)
+    self.config_dropdown:set_scale(State.settings.global.scale)
 
     self.scale_minus:set_font(button_font)
     self.scale_plus:set_font(button_font)
@@ -689,11 +740,11 @@ function FirstRunQuickSetup:cancel_setup()
 
     self:_cleanup_preview(true)
     self:restore_initial_settings()
-    save_settings()
+    Persistence.save_settings()
 
     self.preview_overlay:SetVisible(false)
     self:SetVisible(false)
-    FIRST_RUN_QUICK_SETUP_WINDOW = nil
+    Windows.first_run_quick_setup = nil
 end
 
 ---------------------------------------------------------------------
@@ -867,18 +918,18 @@ end
 function FirstRunQuickSetup:apply_preview_layout(layout_key, scale)
     local preserved_config_geometry = self:get_preserved_config_geometry()
     local base_scale = 1.35
-    if _G.DefaultLayouts ~= nil and _G.DefaultLayouts.get_base_scale ~= nil then
-        base_scale = _G.DefaultLayouts.get_base_scale()
+    if DefaultLayouts ~= nil and DefaultLayouts.get_base_scale ~= nil then
+        base_scale = DefaultLayouts.get_base_scale()
     end
 
     local snapshots = nil
     if scale ~= base_scale then
-        _G.loaded_settings = _G.DefaultLayouts.build(layout_key, base_scale, preserved_config_geometry)
+        State.loaded_settings = DefaultLayouts.build(layout_key, base_scale, preserved_config_geometry)
         _apply_runtime_settings()
         snapshots = self:capture_preview_window_snapshots()
     end
 
-    _G.loaded_settings = _G.DefaultLayouts.build(layout_key, scale, preserved_config_geometry)
+    State.loaded_settings = DefaultLayouts.build(layout_key, scale, preserved_config_geometry)
     _apply_runtime_settings()
 
     if snapshots ~= nil then
@@ -958,7 +1009,7 @@ function FirstRunQuickSetup:update_step()
     if setup_step == 4 then
         self._layout_mode = "choice"
         self:_set_body_text(TR["Replace the default inventory bags?"], BODY_H)
-        self:update_binary_choice_buttons(_G.loaded_settings.inventory.replace == true)
+        self:update_binary_choice_buttons(State.loaded_settings.inventory.replace == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
         self.next_button:SetVisible(true)
@@ -980,7 +1031,7 @@ function FirstRunQuickSetup:update_step()
     if setup_step == 5 then
         self._layout_mode = "choice"
         self:_set_body_text(TR["Enable the status bar?"], BODY_H)
-        self:update_binary_choice_buttons(_G.loaded_settings.status_bar.enabled == true)
+        self:update_binary_choice_buttons(State.loaded_settings.status_bar.enabled == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
         self.next_button:SetVisible(true)
@@ -1011,17 +1062,17 @@ function FirstRunQuickSetup:use_selected_configuration()
         return
     end
 
-    if assign_character_profile == nil or assign_character_profile(profile_id) ~= true then
+    if Persistence.assign_character_profile(profile_id) ~= true then
         return
     end
 
-    _G.loaded_settings_was_new = false
+    State.loaded_settings_was_new = false
     _apply_runtime_settings()
     self.closing = true
-    save_settings()
+    Persistence.save_settings()
     self.preview_overlay:SetVisible(false)
     self:SetVisible(false)
-    FIRST_RUN_QUICK_SETUP_WINDOW = nil
+    Windows.first_run_quick_setup = nil
 end
 
 function FirstRunQuickSetup:set_scale_text(value)
@@ -1058,18 +1109,16 @@ function FirstRunQuickSetup:set_selected_scale(scale)
     self:set_scale_text(scale)
     local layout_key = self.selected_layout or "bottom"
     self:apply_preview_layout(layout_key, scale)
-    if refresh_move_mode_snapshot ~= nil then
-        refresh_move_mode_snapshot()
-    end
+    MoveMode.refresh_snapshot()
     self:apply_ui_scale()
 end
 
 function FirstRunQuickSetup:get_preserved_config_geometry()
-    if _G.loaded_settings == nil then
+    if State.loaded_settings == nil then
         return nil
     end
 
-    return _G.DefaultLayouts.copy_table(_G.get_ui_window_state("config"))
+    return DefaultLayouts.copy_table(Defaults.get_ui_window_state("config"))
 end
 
 function FirstRunQuickSetup:select_layout(layout_key)
@@ -1079,9 +1128,7 @@ function FirstRunQuickSetup:select_layout(layout_key)
     self.layout_bottom:set_active(layout_key == "bottom")
     self.layout_top:set_active(layout_key == "top")
 
-    if refresh_move_mode_snapshot ~= nil then
-        refresh_move_mode_snapshot()
-    end
+    MoveMode.refresh_snapshot()
 
     self:apply_ui_scale()
 end
@@ -1099,9 +1146,9 @@ function FirstRunQuickSetup:select_binary_choice(enabled)
     end
 
     if setup_step == 4 then
-        _G.loaded_settings.inventory.replace = value
+        State.loaded_settings.inventory.replace = value
     elseif setup_step == 5 then
-        _G.loaded_settings.status_bar.enabled = value
+        State.loaded_settings.status_bar.enabled = value
     else
         return
     end
@@ -1109,21 +1156,19 @@ function FirstRunQuickSetup:select_binary_choice(enabled)
     self:update_binary_choice_buttons(value)
     _apply_runtime_settings()
 
-    if refresh_move_mode_snapshot ~= nil then
-        refresh_move_mode_snapshot()
-    end
+    MoveMode.refresh_snapshot()
 
     self:apply_ui_scale()
 end
 
 function FirstRunQuickSetup:restore_initial_settings()
     if self.previous_profile_id ~= nil then
-        assign_character_profile(self.previous_profile_id)
+        Persistence.assign_character_profile(self.previous_profile_id)
     end
 
-    _G.loaded_settings = _G.DefaultLayouts.copy_table(self.initial_settings)
+    State.loaded_settings = DefaultLayouts.copy_table(self.initial_settings)
     _apply_runtime_settings()
-    self.selected_scale = _G.loaded_settings.global.scale
+    self.selected_scale = State.loaded_settings.global.scale
     self.selected_layout = nil
     self.layout_bottom:set_active(false)
     self.layout_top:set_active(false)
@@ -1142,11 +1187,11 @@ function FirstRunQuickSetup:ensure_finish_profile()
 
     local profile_name = self.profile_name
     if type(profile_name) ~= "string" or string.len(profile_name) == 0 then
-        profile_name = _G.current_character_name
+        profile_name = State.current_character_name
     end
 
-    local profile_id = create_configuration(profile_name, _G.loaded_settings)
-    if assign_character_profile(profile_id) ~= true then
+    local profile_id = Persistence.create_configuration(profile_name, State.loaded_settings)
+    if Persistence.assign_character_profile(profile_id) ~= true then
         return false
     end
 
@@ -1155,32 +1200,32 @@ function FirstRunQuickSetup:ensure_finish_profile()
 end
 
 function FirstRunQuickSetup:commit_preview_settings()
-    _G.loaded_settings.global.scale = self.selected_scale
-    ensure_loaded_settings()
+    State.loaded_settings.global.scale = self.selected_scale
+    Defaults.ensure_loaded_settings()
 
-    _persist_window_position(PLAYER_VITAL, _G.get_ui_hud_state("self_vitals"))
-    _persist_window_position(TARGET_VITAL, _G.get_ui_hud_state("target_vitals"))
-    _persist_window_position(BOSS_VITAL, _G.get_ui_hud_state("boss_vitals"))
-    _persist_window_position(FELLOWSHIP_VITALS, _G.get_ui_hud_state("fellowship_vitals"))
-    _persist_window_position(RAID_VITALS, _G.get_ui_hud_state("raid_vitals"))
-    if RAID_VITALS ~= nil then
-        _persist_window_position(RAID_VITALS.group_windows[1], _G.get_ui_hud_state("raid_group_a_vitals"))
-        _persist_window_position(RAID_VITALS.group_windows[2], _G.get_ui_hud_state("raid_group_b_vitals"))
-        _persist_window_position(RAID_VITALS.group_windows[3], _G.get_ui_hud_state("raid_group_c_vitals"))
-        _persist_window_position(RAID_VITALS.group_windows[4], _G.get_ui_hud_state("raid_group_d_vitals"))
+    _persist_window_position(Windows.player_vital, Defaults.get_ui_hud_state("self_vitals"))
+    _persist_window_position(Windows.target_vital, Defaults.get_ui_hud_state("target_vitals"))
+    _persist_window_position(Windows.boss_vital, Defaults.get_ui_hud_state("boss_vitals"))
+    _persist_window_position(Windows.fellowship_vitals, Defaults.get_ui_hud_state("fellowship_vitals"))
+    _persist_window_position(Windows.raid_vitals, Defaults.get_ui_hud_state("raid_vitals"))
+    if Windows.raid_vitals ~= nil then
+        _persist_window_position(Windows.raid_vitals.group_windows[1], Defaults.get_ui_hud_state("raid_group_a_vitals"))
+        _persist_window_position(Windows.raid_vitals.group_windows[2], Defaults.get_ui_hud_state("raid_group_b_vitals"))
+        _persist_window_position(Windows.raid_vitals.group_windows[3], Defaults.get_ui_hud_state("raid_group_c_vitals"))
+        _persist_window_position(Windows.raid_vitals.group_windows[4], Defaults.get_ui_hud_state("raid_group_d_vitals"))
     end
-    _persist_window_position(EXPIRING_SELF_EFFECTS_WINDOW, _G.get_ui_hud_state("self_effects"))
-    _persist_window_position(EXPIRING_TARGET_EFFECTS_WINDOW, _G.get_ui_hud_state("target_effects"))
-    _persist_window_position(COOLDOWNS_WINDOW, _G.get_ui_hud_state("cooldowns"))
+    _persist_window_position(Windows.expiring_self_effects, Defaults.get_ui_hud_state("self_effects"))
+    _persist_window_position(Windows.expiring_target_effects, Defaults.get_ui_hud_state("target_effects"))
+    _persist_window_position(Windows.cooldowns, Defaults.get_ui_hud_state("cooldowns"))
 
-    if TARGET_VITAL ~= nil and TARGET_VITAL.targets_target_window ~= nil then
-        _persist_window_position(TARGET_VITAL.targets_target_window, _G.get_ui_hud_state("target_target_vitals"))
+    if Windows.target_vital ~= nil and Windows.target_vital.targets_target_window ~= nil then
+        _persist_window_position(Windows.target_vital.targets_target_window, Defaults.get_ui_hud_state("target_target_vitals"))
     end
 
-    if CONFIG_WINDOW ~= nil and CONFIG_WINDOW.GetPosition ~= nil and CONFIG_WINDOW.GetSize ~= nil then
-        local left, top = CONFIG_WINDOW:GetPosition()
-        local width, height = CONFIG_WINDOW:GetSize()
-        local window = _G.get_ui_window_state("config")
+    if Windows.config ~= nil and Windows.config.GetPosition ~= nil and Windows.config.GetSize ~= nil then
+        local left, top = Windows.config:GetPosition()
+        local width, height = Windows.config:GetSize()
+        local window = Defaults.get_ui_window_state("config")
         window.left = left
         window.top = top
         window.width = width
@@ -1189,25 +1234,23 @@ function FirstRunQuickSetup:commit_preview_settings()
 end
 
 function FirstRunQuickSetup:ensure_preview_mode()
-    if PLAYER_VITAL == nil or PLAYER_VITAL.is_move_mode == nil then
+    if Windows.player_vital == nil or Windows.player_vital.is_move_mode == nil then
         return
     end
 
-    if is_lui_hud_visible ~= nil and is_lui_hud_visible() ~= true and set_lui_hud_visible ~= nil then
-        set_lui_hud_visible(true)
+    if Hidable.is_lui_hud_visible() ~= true then
+        Hidable.set_lui_hud_visible(true)
     end
 
-    if PLAYER_VITAL:is_move_mode() ~= true and set_move_ui_mode ~= nil then
-        set_move_ui_mode(true)
+    if Windows.player_vital:is_move_mode() ~= true then
+        MoveMode.set_mode(true)
     end
 
-    if PLAYER_VITAL:is_move_mode() ~= true then
+    if Windows.player_vital:is_move_mode() ~= true then
         return
     end
 
-    if set_move_ui_preview_lock ~= nil then
-        set_move_ui_preview_lock(true)
-    end
+    MoveMode.set_preview_lock(true)
 
     self.preview_overlay:SetVisible(true)
     self:bring_to_front()
@@ -1215,17 +1258,15 @@ function FirstRunQuickSetup:ensure_preview_mode()
 end
 
 function FirstRunQuickSetup:_cleanup_preview(cancel_changes)
-    if set_move_ui_preview_lock ~= nil then
-        set_move_ui_preview_lock(false)
-    end
+    MoveMode.set_preview_lock(false)
 
     self.preview_overlay:SetVisible(false)
 
-    if PLAYER_VITAL ~= nil and PLAYER_VITAL.is_move_mode ~= nil and PLAYER_VITAL:is_move_mode() == true then
-        if cancel_changes == true and cancel_move_mode ~= nil then
-            cancel_move_mode()
-        elseif cancel_changes ~= true and set_move_ui_mode ~= nil then
-            set_move_ui_mode(false)
+    if Windows.player_vital ~= nil and Windows.player_vital.is_move_mode ~= nil and Windows.player_vital:is_move_mode() == true then
+        if cancel_changes == true then
+            MoveMode.cancel()
+        elseif cancel_changes ~= true then
+            MoveMode.set_mode(false)
         end
     end
 end
@@ -1237,9 +1278,9 @@ function FirstRunQuickSetup:finish_done()
     end
     self.closing = true
     self:_cleanup_preview(false)
-    save_settings()
+    Persistence.save_settings()
     self:SetVisible(false)
-    FIRST_RUN_QUICK_SETUP_WINDOW = nil
+    Windows.first_run_quick_setup = nil
 end
 
 function FirstRunQuickSetup:finish_move_manually()
@@ -1249,18 +1290,14 @@ function FirstRunQuickSetup:finish_move_manually()
     end
     self.closing = true
 
-    if set_move_ui_preview_lock ~= nil then
-        set_move_ui_preview_lock(false)
-    end
+    MoveMode.set_preview_lock(false)
     self.preview_overlay:SetVisible(false)
 
-    if refresh_move_mode_snapshot ~= nil then
-        refresh_move_mode_snapshot()
-    end
-    save_settings()
+    MoveMode.refresh_snapshot()
+    Persistence.save_settings()
 
     self:SetVisible(false)
-    FIRST_RUN_QUICK_SETUP_WINDOW = nil
+    Windows.first_run_quick_setup = nil
 end
 
 function FirstRunQuickSetup:finish_settings()
@@ -1270,11 +1307,11 @@ function FirstRunQuickSetup:finish_settings()
     end
     self.closing = true
     self:_cleanup_preview(false)
-    save_settings()
+    Persistence.save_settings()
     self:SetVisible(false)
-    FIRST_RUN_QUICK_SETUP_WINDOW = nil
+    Windows.first_run_quick_setup = nil
 
-    if CONFIG_WINDOW ~= nil then
-        CONFIG_WINDOW:open("global")
+    if Windows.config ~= nil then
+        Windows.config:open("global")
     end
 end

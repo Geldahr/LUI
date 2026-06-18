@@ -1,6 +1,9 @@
-GroupLayout = GroupLayout or {}
-
 import "LUI.src.Utils.raid_layout"
+
+local Vitals = _G.LUI.Features.Vitals
+local RaidLayout = _G.LUI.Utils.RaidLayout
+local GroupLayout = Vitals.GroupLayout or {}
+Vitals.GroupLayout = GroupLayout
 
 local function _normalize_rows(rows)
     if rows == nil or rows < 1 then

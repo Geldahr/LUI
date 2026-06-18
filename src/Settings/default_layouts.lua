@@ -3,8 +3,11 @@ import "LUI.src.Settings.migrations"
 import "LUI.src.Settings.default_bottom"
 import "LUI.src.Settings.default_schema"
 
-_G.DefaultLayouts = _G.DefaultLayouts or {}
-local DefaultLayouts = _G.DefaultLayouts
+local Settings = _G.LUI.Settings
+local Defaults = Settings.Defaults
+local DefaultLayouts = Defaults.DefaultLayouts or {}
+Defaults.DefaultLayouts = DefaultLayouts
+local Migrations = Settings.Migrations
 
 local BASE_DISPLAY_W = 2560
 local BASE_DISPLAY_H = 1440
@@ -45,7 +48,7 @@ local function _merge_table(base, override)
 end
 
 local function _build_layout_source(layout_key)
-    local base = _G.DEFAULT_LAYOUT_SCHEMA
+    local base = Defaults.Schema
     if type(base) ~= "table" then
         error("Failed to load default schema")
     end
@@ -55,7 +58,7 @@ local function _build_layout_source(layout_key)
         return layout
     end
     if layout_key == "bottom" then
-        local override = _G.DEFAULT_LAYOUT_BOTTOM
+        local override = Defaults.Bottom
         if type(override) ~= "table" then
             error("Failed to load default bottom overrides")
         end
@@ -154,7 +157,7 @@ function DefaultLayouts.build(layout_key, target_scale, preserved_config_geometr
     local layout = _build_layout_source(layout_key)
     local display_w, display_h = Turbine.UI.Display.GetSize()
     _adjust_window_positions(layout, display_w, display_h)
-    layout.version = _G.get_settings_version()
+    layout.version = Migrations.get_settings_version()
 
     if type(layout.global) ~= "table" then
         layout.global = {}

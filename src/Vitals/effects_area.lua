@@ -1,3 +1,9 @@
+local Vitals = _G.LUI.Features.Vitals
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -85,7 +91,8 @@ end
 
 ---@class EffectsArea : Turbine.UI.Control
 ---@field on_height_changed function
-EffectsArea = class(Turbine.UI.Control)
+local EffectsArea = class(Turbine.UI.Control)
+Vitals.EffectsArea = EffectsArea
 
 function EffectsArea:Constructor(frame_width, effects_settings, effects_height)
     Turbine.UI.Control.Constructor(self)
@@ -618,7 +625,7 @@ end
 function EffectsArea:_create_effect_icon(effect)
     local icon_size = self:_active_icon_size()
     local lotro_font, f = self:_active_timer_font()
-    return EffectIcon(effect, icon_size, lotro_font, _timer_style(f), f.color, f.outline_color)
+    return Vitals.EffectIcon(effect, icon_size, lotro_font, _timer_style(f), f.color, f.outline_color)
 end
 
 function EffectsArea:_rebuild_icons()

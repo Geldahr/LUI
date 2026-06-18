@@ -1,15 +1,21 @@
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 
+local Widgets = _G.LUI.UI.Widgets
+local LuiLabel = Widgets.LuiLabel
+local Style = Widgets.Style
 local DEFAULT_INSET_X = 4
 local PLACEHOLDER_CURSOR_GAP = 2
-local Style = UI.Widgets.Style
 
 ---@class LuiLineEdit : Turbine.UI.Control
-LuiLineEdit = class(Turbine.UI.Control)
+local LuiLineEdit = class(Turbine.UI.Control)
+Widgets.LuiLineEdit = LuiLineEdit
+Widgets.LineEdit = LuiLineEdit
 
 function LuiLineEdit:Constructor()
     Turbine.UI.Control.Constructor(self)

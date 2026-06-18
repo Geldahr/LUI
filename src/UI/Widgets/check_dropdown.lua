@@ -1,3 +1,43 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local UI = _G.LUI.UI
+local Widgets = UI.Widgets
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -6,6 +46,10 @@ import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.checkbox"
 import "LUI.src.UI.Widgets.style"
 
+local Widgets = _G.LUI.UI.Widgets
+local LuiButton = Widgets.LuiButton
+local LuiCheckBox = Widgets.LuiCheckBox
+local Style = Widgets.Style
 local BASE_ITEM_H = 18
 local BASE_ARROW_W = 13
 local BASE_DROPDOWN_W = 119
@@ -19,7 +63,6 @@ local BASE_VISIBLE_PAD = 2
 local BASE_VISIBLE_ITEM_GAP = 2
 local BASE_RIGHT_EXTRA_PAD = 2
 local BASE_CHECKBOX_ICON_SIZE = 16
-local Style = UI.Widgets.Style
 
 local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
@@ -37,7 +80,8 @@ local function _copy_array(source)
 end
 
 ---@class LuiCheckDropdown : Turbine.UI.Control
-LuiCheckDropdown = class(Turbine.UI.Control)
+local LuiCheckDropdown = class(Turbine.UI.Control)
+Widgets.LuiCheckDropdown = LuiCheckDropdown
 
 function LuiCheckDropdown:Constructor()
     Turbine.UI.Control.Constructor(self)
@@ -271,8 +315,8 @@ function LuiCheckDropdown:Open()
         return
     end
 
-    if LuiDropdown ~= nil and LuiDropdown._active ~= nil then
-        LuiDropdown._active:Close()
+    if Widgets.LuiDropdown._active ~= nil then
+        Widgets.LuiDropdown._active:Close()
     end
     if LuiCheckDropdown._active ~= nil and LuiCheckDropdown._active ~= self then
         LuiCheckDropdown._active:Close()

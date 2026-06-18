@@ -1,3 +1,47 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local Drops = _G.LUI.Features.Drops
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local scaled_int = UI.NativeScaling.scaled_int
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -23,15 +67,15 @@ local function _sanitize_image_id(value)
 end
 
 local function _scaled_font(name, size)
-    local font = FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+    local font = FONT_TO_LOTRO(name, size * State.settings.global.scale)
     if font == nil then
-        error("Missing scaled font: " .. tostring(name) .. " " .. tostring(size * _G.settings.global.scale))
+        error("Missing scaled font: " .. tostring(name) .. " " .. tostring(size * State.settings.global.scale))
     end
     return font
 end
 
 local function _drops_font_size()
-    return Style.CONTROL_FONT_SIZE * _G.settings.global.scale
+    return Style.CONTROL_FONT_SIZE * State.settings.global.scale
 end
 
 local function _drops_qty_width()
@@ -62,10 +106,11 @@ local function _set_stretch_mode_fit(control)
     end
 end
 
-DropEntry = class(LuiBaseWindow)
+local DropEntry = class(UI.Widgets.LuiBaseWindow)
+Drops.DropEntry = DropEntry
 
 function DropEntry:Constructor()
-    LuiBaseWindow.Constructor(self, { hideable = true })
+    UI.Widgets.LuiBaseWindow.Constructor(self, { hideable = true })
 
     self.record = nil
     self._item_bound = nil
@@ -94,7 +139,7 @@ function DropEntry:Constructor()
     self.icon_host:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.icon_host:SetMouseVisible(false)
 
-    self.icon_background = Image()
+    self.icon_background = UI.Widgets.Image()
     self.icon_background:SetParent(self.icon_host)
     self.icon_background:SetMouseVisible(false)
     self.icon_background:SetZOrder(1)
@@ -103,7 +148,7 @@ function DropEntry:Constructor()
     end
     _set_stretch_mode_fit(self.icon_background)
 
-    self.icon_foreground = Image()
+    self.icon_foreground = UI.Widgets.Image()
     self.icon_foreground:SetParent(self.icon_host)
     self.icon_foreground:SetMouseVisible(false)
     self.icon_foreground:SetZOrder(2)
@@ -137,11 +182,11 @@ function DropEntry:Constructor()
 end
 
 function DropEntry:apply_settings()
-    local s = _G.settings.drops
-    self._padding = lui_scaled_int(BASE_ROW_PADDING)
+    local s = State.settings.drops
+    self._padding = scaled_int(BASE_ROW_PADDING)
     self._row_height = s.icon_size + (2 * self._padding)
     self._icon_side = s.icon_size
-    self._gap = lui_scaled_int(BASE_GAP)
+    self._gap = scaled_int(BASE_GAP)
     self._qty_width = _drops_qty_width()
     self._width = s.width
     local min_width = _drops_min_width(self._icon_side, self._padding, self._gap)

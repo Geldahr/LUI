@@ -1,9 +1,55 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local Runtime = _G.LUI.Runtime
+local Windows = Runtime.Windows
+local Commands = Runtime.Commands
+local UI = _G.LUI.UI
+local Shortcuts = UI.Shortcuts
+local MoveMode = UI.MoveMode
+local StatusBarCommon = _G.LUI.Features.StatusBar.Common
+local StatusBarApiCommandParser = _G.LUI.Features.StatusBar.APICommandParser
 import "LUI.src.StatusBar.api_command_parser"
 
-command = Turbine.ShellCommand()
-local StatusBarApiCommandParser = _G.STATUS_BAR_API_COMMAND_PARSER
+local command = Turbine.ShellCommand()
+Commands.shell = command
 
 local HELP_COMMAND_COLOR = "#33C7FF"
+local STATUS_BAR_API_USAGE = "/lui api sb --add -k key -t title -i image -c /command"
 
 local function _write_help_command(prefix, translated_line_key)
     local line = TR[translated_line_key]
@@ -54,11 +100,7 @@ local function _handle_status_bar_api_command(list, index)
         return nil, err
     end
 
-    if _G.STATUS_BAR_COMMON == nil or _G.STATUS_BAR_COMMON.register_status_bar_api_item == nil then
-        return nil, "Status bar API is not available yet."
-    end
-
-    return _G.STATUS_BAR_COMMON.register_status_bar_api_item(spec)
+    return StatusBarCommon.register_status_bar_api_item(spec)
 end
 
 function command:Execute(_, str)
@@ -80,26 +122,24 @@ function command:Execute(_, str)
     elseif cmd == "move" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == "cancel" then
-            cancel_move_mode()
+            MoveMode.cancel()
         else
-            toggle_move_mode()
+            MoveMode.toggle()
         end
     elseif cmd == "config" then
-        _G.toggle_config_shortcut()
+        Shortcuts.toggle_config()
     elseif cmd == "inventory" or cmd == "inv" then
-        if INVENTORY_WINDOW ~= nil then
-            INVENTORY_WINDOW:toggle()
-        end
+        Shortcuts.toggle_inventory()
     elseif cmd == "assets" or cmd == "a" then
-        _G.toggle_assets_shortcut()
+        Shortcuts.toggle_assets()
     elseif cmd == "craft" then
-        _G.toggle_crafting_shortcut()
+        Shortcuts.toggle_crafting()
     elseif cmd == "travel" or cmd == "trav" then
-        _G.toggle_travel_shortcut()
+        Shortcuts.toggle_travel()
     elseif cmd == "bestiary" or cmd == "beast" or cmd == "b" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == nil then
-            _G.toggle_bestiary_shortcut()
+            Shortcuts.toggle_bestiary()
         else
             display_help()
         end
@@ -110,7 +150,7 @@ function command:Execute(_, str)
             return
         end
 
-        if BESTIARY_CARD:show_for_name(monster_name, nil) ~= true then
+        if Windows.bestiary_card:show_for_name(monster_name, nil) ~= true then
             Turbine.Shell.WriteLine(TR["Monster not found in bestiary: "] .. monster_name)
         end
     elseif cmd == "api.sb" or (cmd == "api" and list[2] ~= nil and string.lower(list[2]) == "sb") then

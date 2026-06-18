@@ -1,5 +1,7 @@
 import "LUI.src.Utils.coords_data"
 
+local Utils = _G.LUI.Utils
+
 local REGION_NAMES = {
     [1] = "Eriador",
     [2] = "Rhovanion",
@@ -19,9 +21,9 @@ local REGION_ORIGINS = {
     [14] = { origin_x = 29360, origin_y = 24880 },
 }
 
-_G.Coords = _G.Coords or {}
-local Coords = _G.Coords
-Coords.DATA = _G.CoordsData
+Utils.Coords = Utils.Coords or {}
+local Coords = Utils.Coords
+Coords.DATA = Utils.CoordsData
 
 local function _parse_decimal(value)
     if type(value) ~= "string" then

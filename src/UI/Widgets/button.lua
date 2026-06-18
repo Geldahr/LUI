@@ -1,14 +1,20 @@
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 
+local Widgets = _G.LUI.UI.Widgets
+local Image = Widgets.Image
+local LuiLabel = Widgets.LuiLabel
+local Style = Widgets.Style
 local BASE_BUTTON_W = 89
 local BASE_BUTTON_H = 21
 local ICON_POSITION_LEFT = "left"
 local ICON_POSITION_RIGHT = "right"
-local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -74,7 +80,8 @@ local function _nearest_matching_parity(value, match_value, max_value)
 end
 
 ---@class LuiButton : Turbine.UI.Control
-LuiButton = class(Turbine.UI.Control)
+local LuiButton = class(Turbine.UI.Control)
+Widgets.LuiButton = LuiButton
 
 LuiButton.icon_position = {
     LEFT = ICON_POSITION_LEFT,

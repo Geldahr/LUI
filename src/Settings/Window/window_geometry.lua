@@ -1,5 +1,9 @@
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
+local Defaults = _G.LUI.Settings.Defaults
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local CONFIG_DEFAULT_WIDTH = 1000
@@ -8,11 +12,11 @@ local CONFIG_MIN_WIDTH = 900
 local CONFIG_MIN_HEIGHT = 800
 
 function ConfigWindow:get_geometry_state()
-    if _G.loaded_settings == nil then
+    if State.loaded_settings == nil then
         return nil
     end
 
-    return _G.get_ui_window_state("config")
+    return Defaults.get_ui_window_state("config")
 end
 
 function ConfigWindow:update_saved_geometry()

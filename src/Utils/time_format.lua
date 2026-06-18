@@ -1,3 +1,5 @@
+local Utils = _G.LUI.Utils
+
 local function _format_m_ss(total_seconds)
     local total = math.floor(total_seconds)
     local minutes = math.floor(total / 60)
@@ -5,7 +7,7 @@ local function _format_m_ss(total_seconds)
     return string.format("%d:%02d", minutes, seconds)
 end
 
-function _G.lui_format_timeout(seconds)
+local function lui_format_timeout(seconds)
     if seconds <= 0 then
         return "0.0s"
     end
@@ -17,8 +19,9 @@ function _G.lui_format_timeout(seconds)
     end
     return string.format("%ds", math.floor(seconds))
 end
+Utils.lui_format_timeout = lui_format_timeout
 
-function _G.lui_format_timeout_seconds(seconds)
+local function lui_format_timeout_seconds(seconds)
     if seconds <= 0 then
         return "0s"
     end
@@ -29,3 +32,4 @@ function _G.lui_format_timeout_seconds(seconds)
     end
     return tostring(total) .. "s"
 end
+Utils.lui_format_timeout_seconds = lui_format_timeout_seconds

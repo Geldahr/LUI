@@ -1,4 +1,5 @@
-_G.DEFAULT_LAYOUT_BOTTOM =
+local Defaults = _G.LUI.Settings.Defaults
+_G.LUI.Settings.Defaults.Bottom =
 {
     ["self"] = {
         ["vitals"] = {

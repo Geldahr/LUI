@@ -1,4 +1,6 @@
-Bestiary = Bestiary or {}
+local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
+local Bestiary = _G.LUI.Features.Bestiary
+local Persistence = _G.LUI.Settings.Persistence
 Bestiary.DataAccess = Bestiary.DataAccess or {}
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
@@ -580,7 +582,7 @@ end
 
 function Bestiary.DataAccess.get_cache_index()
     local source = Bestiary.DataAccess.ensure_cache()
-    local generation = _G.bestiary_cache_generation or 0
+    local generation = BestiaryCache.generation or 0
     if CACHE_INDEX == nil or CACHE_INDEX.source ~= source or CACHE_GENERATION ~= generation then
         CACHE_INDEX = _build_source_index(source)
         CACHE_GENERATION = generation
@@ -673,15 +675,7 @@ function Bestiary.DataAccess.is_alias_entry(entry)
 end
 
 function Bestiary.DataAccess.ensure_cache()
-    local cache = nil
-    if ensure_bestiary_cache ~= nil then
-        cache = ensure_bestiary_cache()
-    else
-        if type(_G.bestiary_cache) ~= "table" then
-            _G.bestiary_cache = {}
-        end
-        cache = _G.bestiary_cache
-    end
+    local cache = Persistence.ensure_bestiary_cache()
 
     local changed = false
     cache, changed = _normalize_cache_table(cache)

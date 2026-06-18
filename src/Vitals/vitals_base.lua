@@ -1,3 +1,50 @@
+import "LUI.src.Utils.callbacks"
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local Vitals = _G.LUI.Features.Vitals
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local Defaults = _G.LUI.Settings.Defaults
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -83,8 +130,9 @@ local HUD_KEY_BY_VITAL = {
     raid = "raid_vitals",
 }
 
----@class VitalsBase : LuiHUD
-VitalsBase = class(LuiHUD)
+---@class VitalsBase : UI.Widgets.LuiHUD
+local VitalsBase = class(UI.Widgets.LuiHUD)
+Vitals.VitalsBase = VitalsBase
 
 ---------------------------------------------------------------------
 -- Constructor
@@ -96,7 +144,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     end
 
     local hud_key = opts.hud_key or HUD_KEY_BY_VITAL[vital_key]
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = hud_key,
         title = title,
         hideable = opts.managed_position ~= true,
@@ -310,8 +358,8 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     -- Effect windows
     ---------------------------------------------------------------------
     if self.show_effects then
-        local DebuffAreaClass = DebuffArea
-        local BuffAreaClass = BuffArea
+        local DebuffAreaClass = Vitals.DebuffArea
+        local BuffAreaClass = Vitals.BuffArea
 
         if DebuffAreaClass ~= nil and BuffAreaClass ~= nil then
             self.debuffs = DebuffAreaClass(frame_width, v.effects, frame.effects_height)
@@ -361,25 +409,25 @@ end
 function VitalsBase:get_vitals_settings()
     local k = self.vital_key
     if k == "self" or k == "target" then
-        return _G.settings[k].vitals
+        return State.settings[k].vitals
     end
-    return _G.settings[k]
+    return State.settings[k]
 end
 
 function VitalsBase:get_loaded_vitals_settings()
     local k = self.vital_key
     if k == "self" or k == "target" then
-        return _G.loaded_settings[k].vitals
+        return State.loaded_settings[k].vitals
     end
-    return _G.loaded_settings[k]
+    return State.loaded_settings[k]
 end
 
 function VitalsBase:get_hud_settings()
-    return _G.settings.ui.hud[self.hud_key]
+    return State.settings.ui.hud[self.hud_key]
 end
 
 function VitalsBase:get_loaded_hud_settings()
-    return _G.get_ui_hud_state(self.hud_key)
+    return Defaults.get_ui_hud_state(self.hud_key)
 end
 
 function VitalsBase:morale_color(percent)
@@ -672,7 +720,7 @@ function VitalsBase:apply_text_alignment()
 end
 
 function VitalsBase:is_move_mode()
-    return self.show_move_ui == true and LuiHUD.is_move_mode(self)
+    return self.show_move_ui == true and UI.Widgets.LuiHUD.is_move_mode(self)
 end
 
 function VitalsBase:set_move_mode(enabled)
@@ -680,7 +728,7 @@ function VitalsBase:set_move_mode(enabled)
         return
     end
     local changed = (enabled == true) ~= self:is_move_mode()
-    LuiHUD.set_move_mode(self, enabled)
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     if changed and self.show_effects == true then
         self:_set_effect_areas_visible(enabled ~= true)
     end
@@ -690,7 +738,7 @@ function VitalsBase:persist_position(x, y)
     if self.managed_position then
         return
     end
-    LuiHUD.persist_position(self, x, y)
+    UI.Widgets.LuiHUD.persist_position(self, x, y)
 end
 
 function VitalsBase:on_target_changed()

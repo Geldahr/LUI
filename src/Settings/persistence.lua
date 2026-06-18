@@ -9,7 +9,18 @@ local SERVER_BESTIARY_CACHE_KEY = "LUI_BESTIARY_CACHE"
 
 local FALLBACK_PROFILE_NAME = "Configuration"
 local UNKNOWN_CHARACTER_NAME = "__unknown_character__"
-local PluginDataTypes = LUI_PLUGIN_DATA_TYPES
+local LUI = _G.LUI
+local Settings = LUI.Settings
+local State = Settings.State
+local Persistence = Settings.Persistence
+local Migrations = Settings.Migrations
+local Defaults = Settings.Defaults
+local PluginDataTypes = Settings.PluginDataTypes
+local Windows = LUI.Runtime.Windows
+local Stores = LUI.Runtime.Stores
+local Flags = LUI.Runtime.Flags
+local AssetCache = LUI.Runtime.Caches.Assets
+local BestiaryCache = LUI.Runtime.Caches.Bestiary
 
 local PLUGIN_DATA_SCHEMAS = {
     [ACCOUNT_DATA_KEY] = PluginDataTypes.ACCOUNT,
@@ -147,7 +158,7 @@ local function _stamp_profile_settings_version(settings)
         return
     end
 
-    settings.version = _G.get_settings_version()
+    settings.version = Migrations.get_settings_version()
 end
 
 local function _stamp_account_settings_version(account_settings)
@@ -155,7 +166,7 @@ local function _stamp_account_settings_version(account_settings)
         return
     end
 
-    account_settings.version = _G.get_settings_version()
+    account_settings.version = Migrations.get_settings_version()
 
     local profiles = account_settings.profiles
     if type(profiles) ~= "table" then
@@ -174,12 +185,12 @@ local function _stamp_character_settings_version(character_settings)
         return
     end
 
-    character_settings.version = _G.get_settings_version()
+    character_settings.version = Migrations.get_settings_version()
 end
 
 local function _save_settings_files_raw()
-    _save_plugin_data(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, _G.account_settings)
-    _save_plugin_data(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY, _G.character_settings)
+    _save_plugin_data(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, State.account_settings)
+    _save_plugin_data(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY, State.character_settings)
 end
 
 local function _migrate_account_profiles(account_settings)
@@ -194,7 +205,7 @@ local function _migrate_account_profiles(account_settings)
             profiles[profile_id] = nil
             changed = true
         else
-            local migrated_settings, settings_changed = _G.migrate_profile_settings(profile.settings)
+            local migrated_settings, settings_changed = Migrations.migrate_profile_settings(profile.settings)
             if type(migrated_settings) ~= "table" then
                 profiles[profile_id] = nil
                 changed = true
@@ -211,34 +222,34 @@ local function _migrate_account_profiles(account_settings)
 end
 
 local function _sync_current_profile_settings()
-    _G.ensure_account_settings()
+    Persistence.ensure_account_settings()
 
-    if _G.current_profile_id == nil then
-        local profile_id = _G.create_configuration(_G.current_character_name, _G.loaded_settings)
-        _G.assign_character_profile(profile_id)
+    if State.current_profile_id == nil then
+        local profile_id = Persistence.create_configuration(State.current_character_name, State.loaded_settings)
+        Persistence.assign_character_profile(profile_id)
         return
     end
 
-    local profile = _G.account_settings.profiles[_G.current_profile_id]
+    local profile = State.account_settings.profiles[State.current_profile_id]
     if type(profile) ~= "table" then
-        local profile_id = _G.create_configuration(_G.current_character_name, _G.loaded_settings)
-        _G.assign_character_profile(profile_id)
+        local profile_id = Persistence.create_configuration(State.current_character_name, State.loaded_settings)
+        Persistence.assign_character_profile(profile_id)
         return
     end
 
     if type(profile.name) ~= "string" or string.len(profile.name) == 0 then
-        profile.name = _G.current_character_name
+        profile.name = State.current_character_name
     end
 
-    profile.settings = _G.loaded_settings
+    profile.settings = State.loaded_settings
 end
 
-function _G.ensure_account_settings()
-    if type(_G.account_settings) ~= "table" then
-        _G.account_settings = {}
+function Persistence.ensure_account_settings()
+    if type(State.account_settings) ~= "table" then
+        State.account_settings = {}
     end
 
-    local s = _G.account_settings
+    local s = State.account_settings
     if type(s.profiles) ~= "table" then
         s.profiles = {}
     end
@@ -255,12 +266,12 @@ function _G.ensure_account_settings()
     s.next_profile_id = next_profile_id
 end
 
-function _G.ensure_character_settings()
-    if type(_G.character_settings) ~= "table" then
-        _G.character_settings = {}
+function Persistence.ensure_character_settings()
+    if type(State.character_settings) ~= "table" then
+        State.character_settings = {}
     end
 
-    local s = _G.character_settings
+    local s = State.character_settings
     if type(s.crafting) ~= "table" then
         s.crafting = {}
     end
@@ -271,12 +282,12 @@ local function _merge_assets_cache(loaded)
         return
     end
 
-    if type(_G.assets_cache) ~= "table" or next(_G.assets_cache) == nil then
-        _G.assets_cache = loaded
+    if type(AssetCache.data) ~= "table" or next(AssetCache.data) == nil then
+        AssetCache.data = loaded
         return
     end
 
-    local current = _G.assets_cache
+    local current = AssetCache.data
     if type(current.characters) ~= "table" then
         current.characters = {}
     end
@@ -347,12 +358,12 @@ local function _merge_bestiary_cache(loaded)
         return
     end
 
-    if type(_G.bestiary_cache) ~= "table" or next(_G.bestiary_cache) == nil then
-        _G.bestiary_cache = loaded
+    if type(BestiaryCache.data) ~= "table" or next(BestiaryCache.data) == nil then
+        BestiaryCache.data = loaded
         return
     end
 
-    local current = _G.bestiary_cache
+    local current = BestiaryCache.data
     for name, loaded_entry in pairs(loaded) do
         if type(current[name]) ~= "table" then
             current[name] = loaded_entry
@@ -371,38 +382,38 @@ local function _merge_bestiary_cache(loaded)
     end
 end
 
-function _G.ensure_assets_cache()
-    if _G.assets_cache_loaded ~= true and _G.assets_cache_loading ~= true then
-        _G.assets_cache_loading = true
+function Persistence.ensure_assets_cache()
+    if AssetCache.loaded ~= true and AssetCache.loading ~= true then
+        AssetCache.loading = true
         local loaded = _load_plugin_data(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, function(data)
-            if _G.LUI_IS_UNLOADING == true then
+            if Flags.is_unloading == true then
                 return
             end
             _merge_assets_cache(data)
-            _G.assets_cache_loaded = true
-            _G.assets_cache_loading = false
-            if _G.assets_cache_dirty ~= true then
-                _G.assets_cache_dirty = false
+            AssetCache.loaded = true
+            AssetCache.loading = false
+            if AssetCache.dirty ~= true then
+                AssetCache.dirty = false
             end
-            if _G.ASSETS_STORE ~= nil then
-                _G.ASSETS_STORE.generation = (tonumber(_G.ASSETS_STORE.generation) or 0) + 1
+            if Stores.assets ~= nil then
+                Stores.assets.generation = (tonumber(Stores.assets.generation) or 0) + 1
             end
         end)
         if loaded ~= nil then
             _merge_assets_cache(loaded)
-            _G.assets_cache_loaded = true
-            _G.assets_cache_loading = false
-            if _G.assets_cache_dirty ~= true then
-                _G.assets_cache_dirty = false
+            AssetCache.loaded = true
+            AssetCache.loading = false
+            if AssetCache.dirty ~= true then
+                AssetCache.dirty = false
             end
         end
     end
 
-    if type(_G.assets_cache) ~= "table" then
-        _G.assets_cache = {}
+    if type(AssetCache.data) ~= "table" then
+        AssetCache.data = {}
     end
 
-    local cache = _G.assets_cache
+    local cache = AssetCache.data
     if type(cache.characters) ~= "table" then
         cache.characters = {}
     end
@@ -415,45 +426,45 @@ function _G.ensure_assets_cache()
     return cache
 end
 
-function _G.ensure_bestiary_cache()
-    if _G.bestiary_cache_loaded ~= true and _G.bestiary_cache_loading ~= true then
-        _G.bestiary_cache_loading = true
+function Persistence.ensure_bestiary_cache()
+    if BestiaryCache.loaded ~= true and BestiaryCache.loading ~= true then
+        BestiaryCache.loading = true
         local loaded = _load_plugin_data(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, function(data)
-            if _G.LUI_IS_UNLOADING == true then
+            if Flags.is_unloading == true then
                 return
             end
             _merge_bestiary_cache(data)
-            _G.bestiary_cache_loaded = true
-            _G.bestiary_cache_loading = false
-            if _G.bestiary_cache_dirty ~= true then
-                _G.bestiary_cache_dirty = false
+            BestiaryCache.loaded = true
+            BestiaryCache.loading = false
+            if BestiaryCache.dirty ~= true then
+                BestiaryCache.dirty = false
             end
-            _G.bestiary_cache_generation = (_G.bestiary_cache_generation or 0) + 1
+            BestiaryCache.generation = (BestiaryCache.generation or 0) + 1
         end)
         if loaded ~= nil then
             _merge_bestiary_cache(loaded)
-            _G.bestiary_cache_loaded = true
-            _G.bestiary_cache_loading = false
-            if _G.bestiary_cache_dirty ~= true then
-                _G.bestiary_cache_dirty = false
+            BestiaryCache.loaded = true
+            BestiaryCache.loading = false
+            if BestiaryCache.dirty ~= true then
+                BestiaryCache.dirty = false
             end
         end
     end
 
-    if type(_G.bestiary_cache) ~= "table" then
-        _G.bestiary_cache = {}
+    if type(BestiaryCache.data) ~= "table" then
+        BestiaryCache.data = {}
     end
-    if type(_G.bestiary_cache_generation) ~= "number" then
-        _G.bestiary_cache_generation = 1
+    if type(BestiaryCache.generation) ~= "number" then
+        BestiaryCache.generation = 1
     end
 
-    return _G.bestiary_cache
+    return BestiaryCache.data
 end
 
-function _G.create_configuration(name, settings)
-    _G.ensure_account_settings()
+function Persistence.create_configuration(name, settings)
+    Persistence.ensure_account_settings()
 
-    local s = _G.account_settings
+    local s = State.account_settings
     _stamp_account_settings_version(s)
     local profile_id = tostring(s.next_profile_id)
     s.next_profile_id = s.next_profile_id + 1
@@ -467,29 +478,29 @@ function _G.create_configuration(name, settings)
     return profile_id
 end
 
-function _G.assign_character_profile(profile_id)
-    _G.ensure_account_settings()
-    _G.ensure_character_settings()
+function Persistence.assign_character_profile(profile_id)
+    Persistence.ensure_account_settings()
+    Persistence.ensure_character_settings()
 
-    local profile = _G.account_settings.profiles[profile_id]
+    local profile = State.account_settings.profiles[profile_id]
     if type(profile) ~= "table" or type(profile.settings) ~= "table" then
         return false
     end
 
-    local character_name = _G.current_character_name or _get_current_character_name()
-    _G.character_settings.profile_id = profile_id
+    local character_name = State.current_character_name or _get_current_character_name()
+    State.character_settings.profile_id = profile_id
 
-    _G.current_character_name = character_name
-    _G.current_profile_id = profile_id
-    _G.loaded_settings = profile.settings
+    State.current_character_name = character_name
+    State.current_profile_id = profile_id
+    State.loaded_settings = profile.settings
     return true
 end
 
-function _G.get_configuration_options()
-    _G.ensure_account_settings()
+function Persistence.get_configuration_options()
+    Persistence.ensure_account_settings()
 
     local entries = {}
-    for profile_id, profile in pairs(_G.account_settings.profiles) do
+    for profile_id, profile in pairs(State.account_settings.profiles) do
         if type(profile) == "table" and type(profile.settings) == "table" then
             entries[#entries + 1] = {
                 label = _profile_label(profile_id, profile),
@@ -517,13 +528,13 @@ function _G.get_configuration_options()
     return labels, values
 end
 
-function _G.get_configuration(profile_id)
-    _G.ensure_account_settings()
-    return _G.account_settings.profiles[profile_id]
+function Persistence.get_configuration(profile_id)
+    Persistence.ensure_account_settings()
+    return State.account_settings.profiles[profile_id]
 end
 
-function _G.get_configuration_name(profile_id)
-    local profile = _G.get_configuration(profile_id)
+function Persistence.get_configuration_name(profile_id)
+    local profile = Persistence.get_configuration(profile_id)
     if type(profile) ~= "table" then
         return nil
     end
@@ -531,11 +542,11 @@ function _G.get_configuration_name(profile_id)
     return _profile_label(profile_id, profile)
 end
 
-function _G.get_configuration_count()
-    _G.ensure_account_settings()
+function Persistence.get_configuration_count()
+    Persistence.ensure_account_settings()
 
     local count = 0
-    for _, profile in pairs(_G.account_settings.profiles) do
+    for _, profile in pairs(State.account_settings.profiles) do
         if type(profile) == "table" and type(profile.settings) == "table" then
             count = count + 1
         end
@@ -544,15 +555,15 @@ function _G.get_configuration_count()
     return count
 end
 
-function _G.get_first_configuration_id()
-    local _, values = _G.get_configuration_options()
+function Persistence.get_first_configuration_id()
+    local _, values = Persistence.get_configuration_options()
     return values[1]
 end
 
-function _G.rename_configuration(profile_id, name)
-    _G.ensure_account_settings()
+function Persistence.rename_configuration(profile_id, name)
+    Persistence.ensure_account_settings()
 
-    local profile = _G.account_settings.profiles[profile_id]
+    local profile = State.account_settings.profiles[profile_id]
     local trimmed_name = _trim(name)
     if type(profile) ~= "table" or trimmed_name == nil then
         return false
@@ -562,228 +573,228 @@ function _G.rename_configuration(profile_id, name)
     return true
 end
 
-function _G.duplicate_configuration(profile_id)
-    _G.ensure_account_settings()
+function Persistence.duplicate_configuration(profile_id)
+    Persistence.ensure_account_settings()
 
-    local profile = _G.account_settings.profiles[profile_id]
+    local profile = State.account_settings.profiles[profile_id]
     if type(profile) ~= "table" or type(profile.settings) ~= "table" then
         return nil
     end
 
     local duplicate_name = _profile_label(profile_id, profile) .. " (copy)"
     local duplicate_settings = _copy_table(profile.settings)
-    return _G.create_configuration(duplicate_name, duplicate_settings)
+    return Persistence.create_configuration(duplicate_name, duplicate_settings)
 end
 
-function _G.delete_configuration(profile_id)
-    _G.ensure_account_settings()
-    _G.ensure_character_settings()
+function Persistence.delete_configuration(profile_id)
+    Persistence.ensure_account_settings()
+    Persistence.ensure_character_settings()
 
-    if _G.get_configuration_count() <= 1 then
+    if Persistence.get_configuration_count() <= 1 then
         return false
     end
 
-    local profile = _G.account_settings.profiles[profile_id]
+    local profile = State.account_settings.profiles[profile_id]
     if type(profile) ~= "table" then
         return false
     end
 
-    _G.account_settings.profiles[profile_id] = nil
+    State.account_settings.profiles[profile_id] = nil
 
-    if _G.character_settings.profile_id == profile_id then
-        _G.character_settings.profile_id = nil
+    if State.character_settings.profile_id == profile_id then
+        State.character_settings.profile_id = nil
     end
 
-    if _G.current_profile_id == profile_id then
-        _G.current_profile_id = nil
+    if State.current_profile_id == profile_id then
+        State.current_profile_id = nil
     end
 
     return true
 end
 
-function _G.save_settings()
-    if FIRST_RUN_QUICK_SETUP_WINDOW ~= nil and FIRST_RUN_QUICK_SETUP_WINDOW.closing ~= true then
+function Persistence.save_settings()
+    if Windows.first_run_quick_setup ~= nil and Windows.first_run_quick_setup.closing ~= true then
         return
     end
 
-    _G.ensure_account_settings()
-    _G.ensure_character_settings()
+    Persistence.ensure_account_settings()
+    Persistence.ensure_character_settings()
 
-    if _G.capture_runtime_geometry ~= nil then
-        _G.capture_runtime_geometry()
+    if Persistence.capture_runtime_geometry ~= nil then
+        Persistence.capture_runtime_geometry()
     end
 
     _sync_current_profile_settings()
-    _stamp_account_settings_version(_G.account_settings)
-    _stamp_character_settings_version(_G.character_settings)
+    _stamp_account_settings_version(State.account_settings)
+    _stamp_character_settings_version(State.character_settings)
 
     _save_settings_files_raw()
 end
 
-function _G.capture_runtime_geometry()
-    if CONFIG_WINDOW ~= nil and CONFIG_WINDOW.update_saved_geometry ~= nil then
-        CONFIG_WINDOW:update_saved_geometry()
+function Persistence.capture_runtime_geometry()
+    if Windows.config ~= nil and Windows.config.update_saved_geometry ~= nil then
+        Windows.config:update_saved_geometry()
     end
 
-    if INVENTORY_WINDOW ~= nil then
-        if INVENTORY_WINDOW.capture_geometry ~= nil then
-            INVENTORY_WINDOW:capture_geometry()
-        elseif INVENTORY_WINDOW.persist_geometry ~= nil then
-            INVENTORY_WINDOW:persist_geometry()
+    if Windows.inventory ~= nil then
+        if Windows.inventory.capture_geometry ~= nil then
+            Windows.inventory:capture_geometry()
+        elseif Windows.inventory.persist_geometry ~= nil then
+            Windows.inventory:persist_geometry()
         end
     end
 
-    if ASSETS_WINDOW ~= nil then
-        if ASSETS_WINDOW.capture_geometry ~= nil then
-            ASSETS_WINDOW:capture_geometry()
-        elseif ASSETS_WINDOW.persist_geometry ~= nil then
-            ASSETS_WINDOW:persist_geometry()
+    if Windows.assets ~= nil then
+        if Windows.assets.capture_geometry ~= nil then
+            Windows.assets:capture_geometry()
+        elseif Windows.assets.persist_geometry ~= nil then
+            Windows.assets:persist_geometry()
         end
     end
 
-    if BESTIARY_WINDOW ~= nil then
-        if BESTIARY_WINDOW.capture_geometry ~= nil then
-            BESTIARY_WINDOW:capture_geometry()
-        elseif BESTIARY_WINDOW.persist_geometry ~= nil then
-            BESTIARY_WINDOW:persist_geometry()
+    if Windows.bestiary ~= nil then
+        if Windows.bestiary.capture_geometry ~= nil then
+            Windows.bestiary:capture_geometry()
+        elseif Windows.bestiary.persist_geometry ~= nil then
+            Windows.bestiary:persist_geometry()
         end
     end
 
-    if _G.LUI_IS_UNLOADING ~= true and CRAFTING_WINDOW ~= nil then
-        if CRAFTING_WINDOW.capture_geometry ~= nil then
-            CRAFTING_WINDOW:capture_geometry()
-        elseif CRAFTING_WINDOW.persist_geometry ~= nil then
-            CRAFTING_WINDOW:persist_geometry()
+    if Flags.is_unloading ~= true and Windows.crafting ~= nil then
+        if Windows.crafting.capture_geometry ~= nil then
+            Windows.crafting:capture_geometry()
+        elseif Windows.crafting.persist_geometry ~= nil then
+            Windows.crafting:persist_geometry()
         end
     end
 
-    if _G.LUI_IS_UNLOADING ~= true and TRAVEL_WINDOW ~= nil then
-        if TRAVEL_WINDOW.capture_geometry ~= nil then
-            TRAVEL_WINDOW:capture_geometry()
-        elseif TRAVEL_WINDOW.persist_geometry ~= nil then
-            TRAVEL_WINDOW:persist_geometry()
+    if Flags.is_unloading ~= true and Windows.travel ~= nil then
+        if Windows.travel.capture_geometry ~= nil then
+            Windows.travel:capture_geometry()
+        elseif Windows.travel.persist_geometry ~= nil then
+            Windows.travel:persist_geometry()
         end
     end
 end
 
-function _G.save_assets_cache()
-    if _G.assets_cache_dirty ~= true then
+function Persistence.save_assets_cache()
+    if AssetCache.dirty ~= true then
         return
     end
-    if type(_G.assets_cache) ~= "table" then
-        _G.assets_cache = {}
+    if type(AssetCache.data) ~= "table" then
+        AssetCache.data = {}
     end
-    _save_plugin_data(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, _G.assets_cache)
-    _G.assets_cache_dirty = false
+    _save_plugin_data(SERVER_DATA_SCOPE, SERVER_ASSETS_CACHE_KEY, AssetCache.data)
+    AssetCache.dirty = false
 end
 
-function _G.save_bestiary_cache()
-    if _G.bestiary_cache_dirty ~= true then
+function Persistence.save_bestiary_cache()
+    if BestiaryCache.dirty ~= true then
         return
     end
-    if type(_G.bestiary_cache) ~= "table" then
-        _G.bestiary_cache = {}
+    if type(BestiaryCache.data) ~= "table" then
+        BestiaryCache.data = {}
     end
-    _save_plugin_data(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, _G.bestiary_cache)
-    _G.bestiary_cache_dirty = false
+    _save_plugin_data(SERVER_DATA_SCOPE, SERVER_BESTIARY_CACHE_KEY, BestiaryCache.data)
+    BestiaryCache.dirty = false
 end
 
-function _G.load_settings()
-    _G.account_settings = _load_plugin_data(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY)
-    _G.character_settings = _load_plugin_data(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY)
-    _G.assets_cache = nil
-    _G.assets_cache_loaded = false
-    _G.assets_cache_loading = false
-    _G.assets_cache_dirty = false
-    _G.bestiary_cache = nil
-    _G.bestiary_cache_loaded = false
-    _G.bestiary_cache_loading = false
-    _G.bestiary_cache_dirty = false
+function Persistence.load_settings()
+    State.account_settings = _load_plugin_data(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY)
+    State.character_settings = _load_plugin_data(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY)
+    AssetCache.data = nil
+    AssetCache.loaded = false
+    AssetCache.loading = false
+    AssetCache.dirty = false
+    BestiaryCache.data = nil
+    BestiaryCache.loaded = false
+    BestiaryCache.loading = false
+    BestiaryCache.dirty = false
 
     local migrated_any = false
 
-    if type(_G.account_settings) == "table" then
-        local migrated_account_settings, account_changed = _G.migrate_account_settings(_G.account_settings)
+    if type(State.account_settings) == "table" then
+        local migrated_account_settings, account_changed = Migrations.migrate_account_settings(State.account_settings)
         if type(migrated_account_settings) == "table" then
-            _G.account_settings = migrated_account_settings
+            State.account_settings = migrated_account_settings
             if account_changed == true then
                 migrated_any = true
             end
-            if _migrate_account_profiles(_G.account_settings) == true then
+            if _migrate_account_profiles(State.account_settings) == true then
                 migrated_any = true
             end
         else
-            _G.account_settings = nil
+            State.account_settings = nil
             migrated_any = true
         end
     else
-        _G.account_settings = nil
+        State.account_settings = nil
     end
 
-    if type(_G.character_settings) == "table" then
-        local migrated_character_settings, character_changed = _G.migrate_character_settings(_G.character_settings)
+    if type(State.character_settings) == "table" then
+        local migrated_character_settings, character_changed = Migrations.migrate_character_settings(State.character_settings)
         if type(migrated_character_settings) == "table" then
-            _G.character_settings = migrated_character_settings
+            State.character_settings = migrated_character_settings
             if character_changed == true then
                 migrated_any = true
             end
         else
-            _G.character_settings = nil
+            State.character_settings = nil
             migrated_any = true
         end
     else
-        _G.character_settings = nil
+        State.character_settings = nil
     end
 
-    _G.ensure_account_settings()
-    _G.ensure_character_settings()
+    Persistence.ensure_account_settings()
+    Persistence.ensure_character_settings()
 
-    _G.current_character_name = _get_current_character_name()
-    _G.current_profile_id = nil
+    State.current_character_name = _get_current_character_name()
+    State.current_profile_id = nil
 
-    local profile_id = _G.character_settings.profile_id
+    local profile_id = State.character_settings.profile_id
 
     local profile = nil
     if profile_id ~= nil then
-        profile = _G.account_settings.profiles[profile_id]
+        profile = State.account_settings.profiles[profile_id]
         if type(profile) ~= "table" or type(profile.settings) ~= "table" then
-            _G.character_settings.profile_id = nil
+            State.character_settings.profile_id = nil
             profile_id = nil
             migrated_any = true
         end
     end
 
     if profile_id == nil then
-        profile_id = _G.get_first_configuration_id()
+        profile_id = Persistence.get_first_configuration_id()
         if profile_id ~= nil then
-            profile = _G.account_settings.profiles[profile_id]
-            _G.character_settings.profile_id = profile_id
+            profile = State.account_settings.profiles[profile_id]
+            State.character_settings.profile_id = profile_id
             migrated_any = true
         end
     end
 
     if migrated_any == true and type(profile) == "table" and type(profile.settings) == "table" then
-        _stamp_account_settings_version(_G.account_settings)
-        _stamp_character_settings_version(_G.character_settings)
+        _stamp_account_settings_version(State.account_settings)
+        _stamp_character_settings_version(State.character_settings)
         _save_settings_files_raw()
     end
 
-    _G.loaded_settings_was_new = true
+    State.loaded_settings_was_new = true
     if type(profile) == "table" and type(profile.settings) == "table" then
-        _G.current_profile_id = profile_id
-        _G.loaded_settings = profile.settings
-        _G.loaded_settings_was_new = false
+        State.current_profile_id = profile_id
+        State.loaded_settings = profile.settings
+        State.loaded_settings_was_new = false
     else
-        _G.loaded_settings = {}
+        State.loaded_settings = {}
     end
 
-    local defaults_filled = _G.ensure_loaded_settings()
+    local defaults_filled = Defaults.ensure_loaded_settings()
     if defaults_filled == true and type(profile) == "table" and type(profile.settings) == "table" then
-        profile.settings = _G.loaded_settings
-        _stamp_account_settings_version(_G.account_settings)
-        _stamp_character_settings_version(_G.character_settings)
+        profile.settings = State.loaded_settings
+        _stamp_account_settings_version(State.account_settings)
+        _stamp_character_settings_version(State.character_settings)
         _save_settings_files_raw()
     end
-    _G.fix_colors()
-    _G.rebuild_settings()
+    Settings.Colors.fix_colors()
+    Settings.rebuild()
 end

@@ -1,4 +1,8 @@
-Crafting = Crafting or {}
+local Persistence = _G.LUI.Settings.Persistence
+local Flags = _G.LUI.Runtime.Flags
+local Stores = _G.LUI.Runtime.Stores
+local State = _G.LUI.Settings.State
+local Crafting = _G.LUI.Features.Crafting
 
 import "LUI.src.Crafting.crafting_store"
 import "LUI.src.Crafting.crafting_window"
@@ -8,7 +12,7 @@ local _tracked_plan_cache = nil
 local _tracked_plan_autoload_after = nil
 
 local function _is_enabled()
-    return type(_G.settings) == "table" and type(_G.settings.crafting) == "table" and _G.settings.crafting.enabled == true
+    return type(State.settings) == "table" and type(State.settings.crafting) == "table" and State.settings.crafting.enabled == true
 end
 
 local function _copy_tracked_plan_entries(entries)
@@ -60,8 +64,8 @@ local function _copy_favorite_entries(entries)
 end
 
 local function _current_character_settings()
-    _G.ensure_character_settings()
-    return _G.character_settings
+    Persistence.ensure_character_settings()
+    return State.character_settings
 end
 
 local function _character_crafting_settings()
@@ -125,12 +129,12 @@ function Crafting.is_enabled()
 end
 
 function Crafting.get_shared_store()
-    if _G.LUI_IS_UNLOADING == true or _is_enabled() ~= true then
+    if Flags.is_unloading == true or _is_enabled() ~= true then
         return nil
     end
     if _shared_store == nil then
-        _shared_store = CraftingStore()
-        _G.CRAFTING_STORE = _shared_store
+        _shared_store = Crafting.CraftingStore()
+        Stores.crafting = _shared_store
     end
     return _shared_store
 end
@@ -140,7 +144,7 @@ function Crafting.destroy_shared_store()
         _shared_store:destroy()
     end
     _shared_store = nil
-    _G.CRAFTING_STORE = nil
+    Stores.crafting = nil
     _tracked_plan_autoload_after = nil
     Crafting.invalidate_tracked_plan_cache()
 end
@@ -158,7 +162,7 @@ function Crafting.set_tracked_plan_entries(entries, save_now)
     _tracked_plan_autoload_after = nil
 
     if save_now == true then
-        _G.save_settings()
+        Persistence.save_settings()
     end
 end
 
@@ -173,7 +177,7 @@ function Crafting.set_favorite_recipe_entries(entries, save_now)
     favorites.entries = _copy_favorite_entries(entries)
 
     if save_now == true then
-        _G.save_settings()
+        Persistence.save_settings()
     end
 end
 
@@ -187,7 +191,7 @@ function Crafting.resolve_tracked_plan_entries(store)
         }
     end
 
-    local crafting_store = store or _G.CRAFTING_STORE
+    local crafting_store = store or Stores.crafting
     if crafting_store == nil then
         return {
             entries = {},
@@ -244,8 +248,8 @@ function Crafting.get_tracked_plan_resource_state(store)
         }
     end
 
-    local crafting_store = store or _G.CRAFTING_STORE
-    if store == nil and crafting_store == nil and _G.LUI_IS_UNLOADING ~= true then
+    local crafting_store = store or Stores.crafting
+    if store == nil and crafting_store == nil and Flags.is_unloading ~= true then
         local now = Turbine.Engine.GetGameTime()
         if _tracked_plan_autoload_after == nil then
             _tracked_plan_autoload_after = now + 1.50
@@ -264,7 +268,7 @@ function Crafting.get_tracked_plan_resource_state(store)
             saved_entry_count = #entries,
             unresolved_count = #entries,
             total_entry_count = #entries,
-            loading = _G.LUI_IS_UNLOADING ~= true,
+            loading = Flags.is_unloading ~= true,
             loading_loaded = 0,
             loading_total = 0,
             loading_complete = false,
@@ -297,6 +301,3 @@ function Crafting.get_tracked_plan_resource_state(store)
     }
     return resource_state
 end
-
-Crafting.CraftingStore = CraftingStore
-Crafting.CraftingWindow = CraftingWindow

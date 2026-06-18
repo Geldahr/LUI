@@ -1,6 +1,7 @@
-Bestiary = Bestiary or {}
-_G.DB = _G.DB or {}
-_G.DB.en = _G.DB.en or {}
+local Bestiary = _G.LUI.Features.Bestiary
+local DB = _G.LUI.Data.Bestiary.DB or {}
+_G.LUI.Data.Bestiary.DB = DB
+DB.en = DB.en or {}
 
 local function _detect_language_code()
     local lang = Turbine.Engine.GetLanguage()
@@ -41,13 +42,13 @@ local function _detect_language_code()
 end
 
 local function _resolve_locale_table(requested_locale, key)
-    local localized_bucket = type(_G.DB[requested_locale]) == "table" and _G.DB[requested_locale] or nil
+    local localized_bucket = type(DB[requested_locale]) == "table" and DB[requested_locale] or nil
     local localized_value = localized_bucket ~= nil and localized_bucket[key] or nil
     if type(localized_value) == "table" then
         return localized_value, requested_locale
     end
 
-    local english_value = type(_G.DB.en) == "table" and _G.DB.en[key] or nil
+    local english_value = type(DB.en) == "table" and DB.en[key] or nil
     if type(english_value) == "table" then
         return english_value, "en"
     end
@@ -103,7 +104,7 @@ local function _build_drop_table(bestiary)
 end
 
 local function _ensure_drop_table(locale_code)
-    local bucket = type(_G.DB[locale_code]) == "table" and _G.DB[locale_code] or nil
+    local bucket = type(DB[locale_code]) == "table" and DB[locale_code] or nil
     if bucket == nil or type(bucket.drop_table) == "table" or type(bucket.bestiary) ~= "table" then
         return
     end

@@ -2,6 +2,35 @@ import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
+import "LUI.src.namespace"
+
+local LUI = _G.LUI
+local UI = LUI.UI
+local Settings = LUI.Settings
+local State = Settings.State
+local Defaults = Settings.Defaults
+local DefaultLayouts = Defaults.DefaultLayouts
+local Persistence = Settings.Persistence
+local Runtime = LUI.Runtime
+local Windows = Runtime.Windows
+local Stores = Runtime.Stores
+local Flags = Runtime.Flags
+local Apply = Runtime.Apply
+local AssetCache = Runtime.Caches.Assets
+local BestiaryCache = Runtime.Caches.Bestiary
+local Shortcuts = UI.Shortcuts
+local Style = UI.Style
+local UserStyle = UI.UserStyle
+local Features = LUI.Features
+local Assets = Features.Assets
+local Bestiary = Features.Bestiary
+local Cooldowns = Features.Cooldowns
+local Crafting = Features.Crafting
+local Drops = Features.Drops
+local ExpiringEffects = Features.ExpiringEffects
+local Travel = Features.Travel
+local StatusBar = Features.StatusBar
+
 import "LUI.src.Utils"
 import "LUI.src.Utils.coords"
 import "LUI.src.Settings"
@@ -23,7 +52,7 @@ local function _lui_window_work_area()
     display_h = tonumber(display_h) or 0
 
     local reserved_top = 0
-    local status_bar = _G.STATUS_BAR
+    local status_bar = Windows.status_bar
     if status_bar ~= nil and status_bar:IsVisible() == true then
         reserved_top = math.max(0, tonumber(status_bar:GetHeight()) or 0)
     end
@@ -32,20 +61,18 @@ local function _lui_window_work_area()
     return 0, reserved_top, display_w, math.max(0, display_h - reserved_top)
 end
 
-function _G.apply_saved_global_style()
+function Apply.saved_global_style()
     local user_style = {}
-    for key, value in pairs(_G.loaded_settings.global.style) do
+    for key, value in pairs(State.loaded_settings.global.style) do
         user_style[key] = value
     end
-    _G.USER_STYLE = user_style
-    _G.STYLE.WINDOW_WORK_AREA = _lui_window_work_area
+    UI.UserStyle = user_style
+    UI.Style.WINDOW_WORK_AREA = _lui_window_work_area
 end
 
-_G.STYLE = _G.STYLE or {}
-_G.STYLE.WINDOW_WORK_AREA = _lui_window_work_area
-_G.USER_STYLE = _G.USER_STYLE or {}
+UI.Style.WINDOW_WORK_AREA = _lui_window_work_area
 
-_G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
+StatusBar.APIChat.install_chat_callback()
 
 local function set_backpacks_enabled(enabled)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Backpack1, enabled == true)
@@ -70,22 +97,22 @@ local function _current_group_member_count()
     return group:GetMemberCount() or 0
 end
 
-function _G.apply_lotro_vitals_handoff()
+function Apply.lotro_vitals_handoff()
     local group_member_count = _current_group_member_count()
     local disable_group_ui = false
     if group_member_count >= 7 then
-        disable_group_ui = _G.settings.raid.enabled == true
+        disable_group_ui = State.settings.raid.enabled == true
     elseif group_member_count > 0 then
-        disable_group_ui = _G.settings.fellowship.enabled == true
+        disable_group_ui = State.settings.fellowship.enabled == true
     end
 
     Turbine.UI.Lotro.LotroUI.SetEnabled(
         Turbine.UI.Lotro.LotroUIElement.Vitals,
-        _G.settings.self.vitals.enabled ~= true
+        State.settings.self.vitals.enabled ~= true
     )
     Turbine.UI.Lotro.LotroUI.SetEnabled(
         Turbine.UI.Lotro.LotroUIElement.Target,
-        _G.settings.target.vitals.enabled ~= true
+        State.settings.target.vitals.enabled ~= true
     )
     Turbine.UI.Lotro.LotroUI.SetEnabled(
         Turbine.UI.Lotro.LotroUIElement.Party,
@@ -94,84 +121,84 @@ function _G.apply_lotro_vitals_handoff()
 end
 
 local function _ensure_bestiary_window()
-    local window = _G.BESTIARY_WINDOW
+    local window = Windows.bestiary
     if window == nil then
         window = Bestiary.BestiaryWindow()
-        _G.BESTIARY_WINDOW = window
+        Windows.bestiary = window
     end
     return window
 end
 
 local function _ensure_crafting_window()
-    local window = _G.CRAFTING_WINDOW
+    local window = Windows.crafting
     if Crafting.is_enabled() ~= true then
         return nil
     end
     if window == nil then
         window = Crafting.CraftingWindow()
-        _G.CRAFTING_WINDOW = window
+        Windows.crafting = window
     end
     return window
 end
 
 local function _release_persistent_state()
-    _G.account_settings = nil
-    _G.character_settings = nil
-    _G.loaded_settings = nil
-    _G.settings = nil
+    State.account_settings = nil
+    State.character_settings = nil
+    State.loaded_settings = nil
+    State.settings = nil
 
-    _G.assets_cache = nil
-    _G.assets_cache_loaded = nil
-    _G.assets_cache_loading = nil
-    _G.assets_cache_dirty = nil
-    _G.TRAVEL_STORE = nil
+    AssetCache.data = nil
+    AssetCache.loaded = nil
+    AssetCache.loading = nil
+    AssetCache.dirty = nil
+    Stores.travel = nil
 
-    _G.bestiary_cache = nil
-    _G.bestiary_cache_loaded = nil
-    _G.bestiary_cache_loading = nil
-    _G.bestiary_cache_dirty = nil
-    _G.bestiary_cache_generation = nil
+    BestiaryCache.data = nil
+    BestiaryCache.loaded = nil
+    BestiaryCache.loading = nil
+    BestiaryCache.dirty = nil
+    BestiaryCache.generation = nil
 
-    _G.current_profile_id = nil
-    _G.current_character_name = nil
-    _G.loaded_settings_was_new = nil
+    State.current_profile_id = nil
+    State.current_character_name = nil
+    State.loaded_settings_was_new = nil
 end
 
-function _G.toggle_config_shortcut()
-    if CONFIG_WINDOW == nil then
+function Shortcuts.toggle_config()
+    if Windows.config == nil then
         return
     end
 
-    if CONFIG_WINDOW:IsVisible() == true then
-        CONFIG_WINDOW:cancel()
+    if Windows.config:IsVisible() == true then
+        Windows.config:cancel()
         return
     end
 
-    CONFIG_WINDOW:open()
+    Windows.config:open()
 end
 
-function _G.toggle_assets_shortcut()
-    if ASSETS_WINDOW == nil then
+function Shortcuts.toggle_assets()
+    if Windows.assets == nil then
         return
     end
 
-    if ASSETS_WINDOW:IsVisible() == true then
-        ASSETS_WINDOW:SetVisible(false)
+    if Windows.assets:IsVisible() == true then
+        Windows.assets:SetVisible(false)
         return
     end
 
-    ASSETS_WINDOW:open()
+    Windows.assets:open()
 end
 
-function _G.toggle_inventory_shortcut()
-    if INVENTORY_WINDOW == nil then
+function Shortcuts.toggle_inventory()
+    if Windows.inventory == nil then
         return
     end
 
-    INVENTORY_WINDOW:toggle()
+    Windows.inventory:toggle()
 end
 
-function _G.toggle_bestiary_shortcut()
+function Shortcuts.toggle_bestiary()
     local window = _ensure_bestiary_window()
     if window == nil then
         return
@@ -185,21 +212,21 @@ function _G.toggle_bestiary_shortcut()
     window:open()
 end
 
-function _G.open_bestiary_item_search(item_name)
+function Shortcuts.open_bestiary_item_search(item_name)
     local window = _ensure_bestiary_window()
     window:open_item_search(item_name)
 
     return true
 end
 
-function _G.open_bestiary_query_search(query)
+function Shortcuts.open_bestiary_query_search(query)
     local window = _ensure_bestiary_window()
     window:open_query_search(query)
 
     return true
 end
 
-function _G.toggle_crafting_shortcut()
+function Shortcuts.toggle_crafting()
     local window = _ensure_crafting_window()
     if window == nil then
         return
@@ -215,15 +242,15 @@ function _G.toggle_crafting_shortcut()
     window:open()
 end
 
-function _G.toggle_travel_shortcut()
+function Shortcuts.toggle_travel()
     if Travel.is_enabled() ~= true then
         return
     end
 
-    local window = _G.TRAVEL_WINDOW
+    local window = Windows.travel
     if window == nil then
         window = Travel.TravelWindow()
-        _G.TRAVEL_WINDOW = window
+        Windows.travel = window
     end
     if window == nil then
         return
@@ -238,7 +265,7 @@ function _G.toggle_travel_shortcut()
     window:open()
 end
 
-function _G.open_crafting_plan_shortcut()
+function Shortcuts.open_crafting_plan()
     local window = _ensure_crafting_window()
     if window == nil then
         return
@@ -248,21 +275,21 @@ function _G.open_crafting_plan_shortcut()
     window:open_plan()
 end
 
-function apply_inventory_settings()
-    local enabled = _G.settings.inventory.enabled == true
-    local replace = enabled and _G.settings.inventory.replace == true
+function Apply.inventory_settings()
+    local enabled = State.settings.inventory.enabled == true
+    local replace = enabled and State.settings.inventory.replace == true
 
     if enabled then
-        if INVENTORY_WINDOW == nil then
-            INVENTORY_WINDOW = UI.InventoryWindow()
+        if Windows.inventory == nil then
+            Windows.inventory = UI.InventoryWindow()
         else
-            INVENTORY_WINDOW:apply_settings()
+            Windows.inventory:apply_settings()
         end
     else
-        if INVENTORY_WINDOW ~= nil then
-            INVENTORY_WINDOW:SetVisible(false)
+        if Windows.inventory ~= nil then
+            Windows.inventory:SetVisible(false)
         end
-        INVENTORY_WINDOW = nil
+        Windows.inventory = nil
     end
 
     if replace then
@@ -272,86 +299,83 @@ function apply_inventory_settings()
     end
 end
 
-function apply_assets_settings()
-    local enabled = _G.settings.assets.enabled == true
+function Apply.assets_settings()
+    local enabled = State.settings.assets.enabled == true
 
     if enabled then
-        if ASSETS_STORE == nil then
-            ASSETS_STORE = Assets.AssetsStore()
+        if Stores.assets == nil then
+            Stores.assets = Assets.AssetsStore()
         else
-            ASSETS_STORE:refresh_bindings()
+            Stores.assets:refresh_bindings()
         end
 
-        if ASSETS_WINDOW == nil then
-            ASSETS_WINDOW = UI.AssetsWindow()
+        if Windows.assets == nil then
+            Windows.assets = UI.AssetsWindow()
         else
-            ASSETS_WINDOW:apply_settings()
+            Windows.assets:apply_settings()
         end
     else
-        if ASSETS_WINDOW ~= nil then
-            ASSETS_WINDOW:SetVisible(false)
+        if Windows.assets ~= nil then
+            Windows.assets:SetVisible(false)
         end
-        ASSETS_WINDOW = nil
+        Windows.assets = nil
 
-        if ASSETS_STORE ~= nil then
-            ASSETS_STORE:destroy()
+        if Stores.assets ~= nil then
+            Stores.assets:destroy()
         end
-        ASSETS_STORE = nil
+        Stores.assets = nil
     end
 end
 
-function apply_status_bar_settings()
-    local sb = _G.settings.status_bar
-    if STATUS_BAR ~= nil then
-        STATUS_BAR:destroy()
-        STATUS_BAR = nil
-        _G.STATUS_BAR = nil
+function Apply.status_bar_settings()
+    local sb = State.settings.status_bar
+    if Windows.status_bar ~= nil then
+        Windows.status_bar:destroy()
+        Windows.status_bar = nil
     end
 
     if sb.enabled == true then
-        STATUS_BAR = UI.StatusBarWindow()
-        _G.STATUS_BAR = STATUS_BAR
-        _G.LUI_STATUS_BAR_API_FLUSH_PENDING_ITEMS()
+        Windows.status_bar = UI.StatusBarWindow()
+        StatusBar.APIChat.flush_pending_items()
     end
 end
 
-function apply_cooldowns_settings()
-    local cd = _G.settings.self.cooldowns
+function Apply.cooldowns_settings()
+    local cd = State.settings.self.cooldowns
     if cd.enabled == true then
-        if COOLDOWNS_WINDOW == nil then
-            COOLDOWNS_WINDOW = Cooldowns.CooldownsWindow()
+        if Windows.cooldowns == nil then
+            Windows.cooldowns = Cooldowns.CooldownsWindow()
         end
     else
-        if COOLDOWNS_WINDOW ~= nil then
-            COOLDOWNS_WINDOW:destroy()
+        if Windows.cooldowns ~= nil then
+            Windows.cooldowns:destroy()
         end
-        COOLDOWNS_WINDOW = nil
+        Windows.cooldowns = nil
     end
 end
 
-function apply_drops_settings()
-    local drops = _G.settings.drops
+function Apply.drops_settings()
+    local drops = State.settings.drops
     if drops.enabled == true then
-        if DROPS_WINDOW == nil then
-            DROPS_WINDOW = Drops.DropsWindow()
+        if Windows.drops == nil then
+            Windows.drops = Drops.DropsWindow()
         end
     else
-        if DROPS_WINDOW ~= nil then
-            DROPS_WINDOW:destroy()
+        if Windows.drops ~= nil then
+            Windows.drops:destroy()
         end
-        DROPS_WINDOW = nil
+        Windows.drops = nil
     end
 end
 
-function apply_crafting_settings()
-    local enabled = _G.settings.crafting.enabled == true
+function Apply.crafting_settings()
+    local enabled = State.settings.crafting.enabled == true
 
     if enabled ~= true then
-        if CRAFTING_WINDOW ~= nil then
-            CRAFTING_WINDOW:SetVisible(false)
-            CRAFTING_WINDOW.store = nil
-            CRAFTING_WINDOW = nil
-            _G.CRAFTING_WINDOW = nil
+        if Windows.crafting ~= nil then
+            Windows.crafting:SetVisible(false)
+            Windows.crafting.store = nil
+            Windows.crafting = nil
         end
         Crafting.destroy_shared_store()
         return
@@ -362,106 +386,99 @@ function apply_crafting_settings()
         store:refresh(false, 1)
     end
 
-    if CRAFTING_WINDOW ~= nil then
-        CRAFTING_WINDOW:apply_settings()
+    if Windows.crafting ~= nil then
+        Windows.crafting:apply_settings()
     end
 end
 
-function apply_travel_settings()
-    local enabled = _G.settings.travel.enabled == true
+function Apply.travel_settings()
+    local enabled = State.settings.travel.enabled == true
 
     if enabled ~= true then
-        if TRAVEL_WINDOW ~= nil then
-            TRAVEL_WINDOW:SetVisible(false)
-            TRAVEL_WINDOW.store = nil
-            TRAVEL_WINDOW = nil
-            _G.TRAVEL_WINDOW = nil
+        if Windows.travel ~= nil then
+            Windows.travel:SetVisible(false)
+            Windows.travel.store = nil
+            Windows.travel = nil
         end
         Travel.destroy_shared_store()
         return
     end
 
-    if TRAVEL_WINDOW ~= nil then
-        TRAVEL_WINDOW:apply_settings()
+    if Windows.travel ~= nil then
+        Windows.travel:apply_settings()
     end
 end
 
-function apply_launcher_settings()
-    local enabled = _G.settings.launcher.enabled == true
+function Apply.launcher_settings()
+    local enabled = State.settings.launcher.enabled == true
 
     if enabled ~= true then
-        if LUI_LAUNCHER ~= nil then
-            LUI_LAUNCHER:destroy()
+        if Windows.launcher ~= nil then
+            Windows.launcher:destroy()
         end
-        LUI_LAUNCHER = nil
-        _G.LUI_LAUNCHER = nil
+        Windows.launcher = nil
         return
     end
 
-    if LUI_LAUNCHER == nil then
-        LUI_LAUNCHER = UI.LauncherMenu()
-        _G.LUI_LAUNCHER = LUI_LAUNCHER
+    if Windows.launcher == nil then
+        Windows.launcher = UI.LauncherMenu()
     else
-        LUI_LAUNCHER:apply_settings()
+        Windows.launcher:apply_settings()
     end
 end
 
-_G.LUI_IS_UNLOADING = false
+Flags.is_unloading = false
 
-load_settings()
-if _G.loaded_settings_was_new == true then
-    _G.loaded_settings = _G.DefaultLayouts.build("bottom", _G.DefaultLayouts.get_resolution_scale())
-    _G.ensure_loaded_settings()
-    _G.fix_colors()
-    _G.rebuild_settings()
+Persistence.load_settings()
+if State.loaded_settings_was_new == true then
+    State.loaded_settings = DefaultLayouts.build("bottom", DefaultLayouts.get_resolution_scale())
+    Defaults.ensure_loaded_settings()
+    Settings.Colors.fix_colors()
+    Settings.rebuild()
 end
-_G.apply_saved_global_style()
-_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = _G.settings.crafting.display_mode
+Apply.saved_global_style()
+Flags.crafting_display_mode_active = State.settings.crafting.display_mode
 
-BESTIARY_CARD = Bestiary.BestiaryCard()
-_G.BESTIARY_CARD = BESTIARY_CARD
+Windows.bestiary_card = Bestiary.BestiaryCard()
 
 -- Initialize target vitals first: self vitals depend on them for current target state.
-TARGET_VITAL = UI.TargetVitals(nil)
-BOSS_VITAL = UI.BossVitals(nil)
-PLAYER_VITAL = UI.SelfVitals(Turbine.Gameplay.LocalPlayer.GetInstance())
-PLAYER_VITAL:set_target_vitals(TARGET_VITAL, BOSS_VITAL)
-FELLOWSHIP_VITALS = UI.FellowshipVitals()
-RAID_VITALS = UI.RaidVitals()
-EXPIRING_SELF_EFFECTS_WINDOW = ExpiringEffects.SelfExpiringEffectsWindow()
-EXPIRING_TARGET_EFFECTS_WINDOW = ExpiringEffects.TargetExpiringEffectsWindow()
-INVENTORY_WINDOW = nil
-ASSETS_STORE = nil
-ASSETS_WINDOW = nil
-STATUS_BAR = nil
-_G.STATUS_BAR = nil
-COOLDOWNS_WINDOW = nil
-DROPS_WINDOW = nil
-BESTIARY_WINDOW = nil
-CRAFTING_WINDOW = nil
-TRAVEL_WINDOW = nil
-LUI_LAUNCHER = nil
-_G.LUI_LAUNCHER = nil
-BESTIARY_TRACKER = Bestiary.Collector()
-_G.BESTIARY_TRACKER = BESTIARY_TRACKER
+Windows.target_vital = UI.TargetVitals(nil)
+Windows.boss_vital = UI.BossVitals(nil)
+Windows.player_vital = UI.SelfVitals(Turbine.Gameplay.LocalPlayer.GetInstance())
+Windows.player_vital:set_target_vitals(Windows.target_vital, Windows.boss_vital)
+Windows.fellowship_vitals = UI.FellowshipVitals()
+Windows.raid_vitals = UI.RaidVitals()
+Windows.expiring_self_effects = ExpiringEffects.SelfExpiringEffectsWindow()
+Windows.expiring_target_effects = ExpiringEffects.TargetExpiringEffectsWindow()
+Windows.inventory = nil
+Stores.assets = nil
+Windows.assets = nil
+Windows.status_bar = nil
+Windows.cooldowns = nil
+Windows.drops = nil
+Windows.bestiary = nil
+Windows.crafting = nil
+Windows.travel = nil
+Windows.launcher = nil
+Windows.bestiary_tracker = Bestiary.Collector()
 
-apply_inventory_settings()
-apply_assets_settings()
-apply_status_bar_settings()
-apply_cooldowns_settings()
-apply_drops_settings()
-apply_crafting_settings()
-apply_travel_settings()
-BESTIARY_TRACKER:apply_settings()
+Apply.inventory_settings()
+Apply.assets_settings()
+Apply.status_bar_settings()
+Apply.cooldowns_settings()
+Apply.drops_settings()
+Apply.crafting_settings()
+Apply.travel_settings()
+Windows.bestiary_tracker:apply_settings()
 
-_G.apply_lotro_vitals_handoff()
+Apply.lotro_vitals_handoff()
 
-CONFIG_WINDOW = Settings.ConfigWindow()
-apply_launcher_settings()
-FIRST_RUN_QUICK_SETUP_WINDOW = nil
-if _G.loaded_settings_was_new == true then
-    FIRST_RUN_QUICK_SETUP_WINDOW = Settings.FirstRunQuickSetup()
-    FIRST_RUN_QUICK_SETUP_WINDOW:open()
+Windows.config = Settings.ConfigWindow()
+Apply.launcher_settings()
+Windows.first_run_quick_setup = nil
+if State.loaded_settings_was_new == true then
+    Windows.first_run_quick_setup = Settings.FirstRunQuickSetup()
+    Windows.first_run_quick_setup:open()
 end
 
 Turbine.Shell.WriteLine(string.format(
@@ -470,76 +487,71 @@ Turbine.Shell.WriteLine(string.format(
 ))
 
 Plugins["LUI"].Unload = function()
-    _G.LUI_IS_UNLOADING = true
+    Flags.is_unloading = true
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Vitals, true)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Target, true)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Party, true)
 
-    if CRAFTING_WINDOW ~= nil then
-        CRAFTING_WINDOW:SetVisible(false)
-        CRAFTING_WINDOW.store = nil
-        CRAFTING_WINDOW = nil
-        _G.CRAFTING_WINDOW = nil
+    if Windows.crafting ~= nil then
+        Windows.crafting:SetVisible(false)
+        Windows.crafting.store = nil
+        Windows.crafting = nil
     end
     Crafting.destroy_shared_store()
 
-    if TRAVEL_WINDOW ~= nil then
-        TRAVEL_WINDOW:SetVisible(false)
-        TRAVEL_WINDOW.store = nil
-        TRAVEL_WINDOW = nil
-        _G.TRAVEL_WINDOW = nil
+    if Windows.travel ~= nil then
+        Windows.travel:SetVisible(false)
+        Windows.travel.store = nil
+        Windows.travel = nil
     end
     Travel.destroy_shared_store()
 
-    _G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE = nil
-    save_settings()
+    Flags.crafting_display_mode_active = nil
+    Persistence.save_settings()
 
-    _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
+    StatusBar.APIChat.uninstall_chat_callback()
 
-    _G.STATUS_BAR = nil
+    Windows.status_bar = nil
 
-    if LUI_LAUNCHER ~= nil then
-        LUI_LAUNCHER:destroy()
-        LUI_LAUNCHER = nil
-        _G.LUI_LAUNCHER = nil
+    if Windows.launcher ~= nil then
+        Windows.launcher:destroy()
+        Windows.launcher = nil
     end
 
-    if ASSETS_WINDOW ~= nil then
-        ASSETS_WINDOW:SetVisible(false)
-        ASSETS_WINDOW._crafting_store = nil
-        ASSETS_WINDOW._last_crafting_store_version = nil
-        ASSETS_WINDOW = nil
+    if Windows.assets ~= nil then
+        Windows.assets:SetVisible(false)
+        Windows.assets._crafting_store = nil
+        Windows.assets._last_crafting_store_version = nil
+        Windows.assets = nil
     end
 
-    if BESTIARY_WINDOW ~= nil then
-        BESTIARY_WINDOW:SetWantsUpdates(false)
-        BESTIARY_WINDOW:SetVisible(false)
-        BESTIARY_WINDOW = nil
+    if Windows.bestiary ~= nil then
+        Windows.bestiary:SetWantsUpdates(false)
+        Windows.bestiary:SetVisible(false)
+        Windows.bestiary = nil
     end
 
-    if BESTIARY_CARD ~= nil then
-        BESTIARY_CARD:SetVisible(false)
-        BESTIARY_CARD = nil
-        _G.BESTIARY_CARD = nil
+    if Windows.bestiary_card ~= nil then
+        Windows.bestiary_card:SetVisible(false)
+        Windows.bestiary_card = nil
     end
 
-    if BESTIARY_TRACKER ~= nil then
-        BESTIARY_TRACKER:save()
-        BESTIARY_TRACKER:destroy()
-        BESTIARY_TRACKER = nil
-        _G.BESTIARY_TRACKER = nil
+    if Windows.bestiary_tracker ~= nil then
+        Windows.bestiary_tracker:save()
+        Windows.bestiary_tracker:destroy()
+        Windows.bestiary_tracker = nil
     end
 
-    if DROPS_WINDOW ~= nil then
-        DROPS_WINDOW:destroy()
-        DROPS_WINDOW = nil
+    if Windows.drops ~= nil then
+        Windows.drops:destroy()
+        Windows.drops = nil
     end
 
-    if ASSETS_STORE ~= nil then
-        ASSETS_STORE:destroy()
-        ASSETS_STORE = nil
+    if Stores.assets ~= nil then
+        Stores.assets:destroy()
+        Stores.assets = nil
     end
 
-    save_assets_cache()
+    Persistence.save_assets_cache()
     _release_persistent_state()
 end

@@ -1,4 +1,6 @@
-function _G.class(parent)
+local Core = _G.LUI.Core
+
+function Core.class(parent)
     local cls = {}
     cls.__index = cls
     cls.super = parent

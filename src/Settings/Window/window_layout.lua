@@ -1,10 +1,12 @@
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
+local State = _G.LUI.Settings.State
 local CONFIRM_DIALOG_W = 296
 local CONFIRM_DIALOG_H = 126
 local CONFIRM_DIALOG_PADDING = 12
 local CONFIRM_DIALOG_BUTTON_GAP = 7
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 function ConfigWindow:layout()

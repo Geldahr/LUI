@@ -1,4 +1,5 @@
-_G.DEFAULT_LAYOUT_SCHEMA =
+local Defaults = _G.LUI.Settings.Defaults
+_G.LUI.Settings.Defaults.Schema =
 {
 	["self"] = {
 		["vitals"] = {

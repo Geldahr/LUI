@@ -1,3 +1,43 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local State = _G.LUI.Settings.State
+local Controls = _G.LUI.Settings.Controls
+local UI = _G.LUI.UI
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -14,7 +54,7 @@ local MIN_LIST_W = 90
 local BOX_PAD = 1
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _copy_list(items)
@@ -210,7 +250,7 @@ local function _rebuild_lists(entry)
     for i = 1, #entry.available_items do
         local key = entry.available_items[i]
         local button = UI.Widgets.LuiButton()
-        button:set_scale(_G.settings.global.scale)
+        button:set_scale(State.settings.global.scale)
         button:set_font(entry.window.input_font)
         button:set_border_thickness(0)
         button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -227,7 +267,7 @@ local function _rebuild_lists(entry)
     for i = 1, #entry.selected_items do
         local key = entry.selected_items[i]
         local button = UI.Widgets.LuiButton()
-        button:set_scale(_G.settings.global.scale)
+        button:set_scale(State.settings.global.scale)
         button:set_font(entry.window.input_font)
         button:set_border_thickness(0)
         button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -317,7 +357,7 @@ local function _move_selected(entry, direction)
     _rebuild_lists(entry)
 end
 
-function CreateLauncherButtonSelector(page, key, definitions)
+function Controls.CreateLauncherButtonSelector(page, key, definitions)
     local entry = page:add_custom(key, SELECTOR_HEIGHT)
     entry.window = page.window
     entry.definitions = definitions
@@ -416,22 +456,22 @@ function CreateLauncherButtonSelector(page, key, definitions)
     entry.apply_ui_scale = function()
         entry.available_label:SetFont(page.window.field_label_font)
         entry.selected_label:SetFont(page.window.field_label_font)
-        entry.add_button:set_scale(_G.settings.global.scale)
+        entry.add_button:set_scale(State.settings.global.scale)
         entry.add_button:set_font(page.window.settings_font)
-        entry.remove_button:set_scale(_G.settings.global.scale)
+        entry.remove_button:set_scale(State.settings.global.scale)
         entry.remove_button:set_font(page.window.settings_font)
-        entry.up_button:set_scale(_G.settings.global.scale)
+        entry.up_button:set_scale(State.settings.global.scale)
         entry.up_button:set_font(page.window.settings_font)
-        entry.down_button:set_scale(_G.settings.global.scale)
+        entry.down_button:set_scale(State.settings.global.scale)
         entry.down_button:set_font(page.window.settings_font)
 
         for i = 1, #entry.available_buttons do
-            entry.available_buttons[i]:set_scale(_G.settings.global.scale)
+            entry.available_buttons[i]:set_scale(State.settings.global.scale)
             entry.available_buttons[i]:set_font(page.window.input_font)
         end
 
         for i = 1, #entry.selected_buttons do
-            entry.selected_buttons[i]:set_scale(_G.settings.global.scale)
+            entry.selected_buttons[i]:set_scale(State.settings.global.scale)
             entry.selected_buttons[i]:set_font(page.window.input_font)
         end
 

@@ -1,3 +1,8 @@
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Defaults = _G.LUI.Settings.Defaults
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets.base_window"
@@ -5,15 +10,24 @@ import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.style"
 
+local LUI = _G.LUI
+local State = LUI.Settings.State
+local UI = LUI.UI
+local Widgets = UI.Widgets
+local MoveMode = UI.MoveMode
+local LuiBaseWindow = Widgets.LuiBaseWindow
+local LuiLabel = Widgets.LuiLabel
+local LuiLineEdit = Widgets.LuiLineEdit
+local Style = Widgets.Style
+
 local DEFAULT_TITLE = "HUD"
-local Style = UI.Widgets.Style
 
 local function _scale()
-    if _G.settings == nil or _G.settings.global == nil then
+    if State.settings == nil or State.settings.global == nil then
         return 1
     end
 
-    local scale = tonumber(_G.settings.global.scale)
+    local scale = tonumber(State.settings.global.scale)
     if scale == nil or scale <= 0 then
         return 1
     end
@@ -86,7 +100,8 @@ local function _nudge_delta(action)
 end
 
 ---@class LuiHUD : LuiBaseWindow
-LuiHUD = class(LuiBaseWindow)
+local LuiHUD = class(LuiBaseWindow)
+Widgets.LuiHUD = LuiHUD
 
 function LuiHUD:Constructor(opts)
     if type(opts) ~= "table" then
@@ -200,17 +215,17 @@ function LuiHUD:set_hud_mouse_visible(visible)
 end
 
 function LuiHUD:get_loaded_hud_settings()
-    if self._hud_key == nil or _G.get_ui_hud_state == nil then
+    if self._hud_key == nil then
         return nil
     end
-    return _G.get_ui_hud_state(self._hud_key)
+    return LUI.Settings.Defaults.get_ui_hud_state(self._hud_key)
 end
 
 function LuiHUD:get_hud_settings()
-    if self._hud_key == nil or _G.settings == nil or _G.settings.ui == nil or type(_G.settings.ui.hud) ~= "table" then
+    if self._hud_key == nil or State.settings == nil or State.settings.ui == nil or type(State.settings.ui.hud) ~= "table" then
         return nil
     end
-    return _G.settings.ui.hud[self._hud_key]
+    return State.settings.ui.hud[self._hud_key]
 end
 
 function LuiHUD:apply_hud_position()
@@ -268,17 +283,11 @@ function LuiHUD:set_move_mode(enabled)
 
         if self._move_grid_shown ~= true then
             self._move_grid_shown = true
-            local move_ui = _G.LUI_MOVE_UI
-            if move_ui ~= nil and move_ui.show_grid ~= nil then
-                move_ui.show_grid()
-            end
+            MoveMode.show_grid()
         end
     elseif self._move_grid_shown == true then
         self._move_grid_shown = false
-        local move_ui = _G.LUI_MOVE_UI
-        if move_ui ~= nil and move_ui.hide_grid ~= nil then
-            move_ui.hide_grid()
-        end
+        MoveMode.hide_grid()
     end
 
     if self.on_move_mode_changed ~= nil then

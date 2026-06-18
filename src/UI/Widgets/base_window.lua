@@ -1,10 +1,18 @@
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.hidable"
 import "LUI.src.UI.native_scaling"
 
+local LUI = _G.LUI
+local Widgets = LUI.UI.Widgets
+local NativeScaling = LUI.UI.NativeScaling
+local Hidable = LUI.UI.Hidable
+
 ---@class LuiBaseWindow : Turbine.UI.Window
-LuiBaseWindow = class(Turbine.UI.Window)
+local LuiBaseWindow = class(Turbine.UI.Window)
+Widgets.LuiBaseWindow = LuiBaseWindow
 
 function LuiBaseWindow:Constructor(opts)
     Turbine.UI.Window.Constructor(self)
@@ -26,7 +34,7 @@ end
 
 function LuiBaseWindow:apply_native_scaling(target_window)
     local target = target_window or self
-    local native_scaling = UI.NativeScaling or _G.LUI_NATIVE_SCALING
+    local native_scaling = NativeScaling
 
     local use_native = native_scaling.is_enabled() == true and
         native_scaling.has_global_scaling_api(target) == true
@@ -48,11 +56,7 @@ function LuiBaseWindow:set_hideable(enabled)
         self:global_hide(true)
     end
 
-    local registry = _G.LUI_HIDABLE
-    if registry == nil then
-        self._hideable = false
-        return
-    end
+    local registry = Hidable
 
     if self._hideable == true then
         registry.unregister(self)

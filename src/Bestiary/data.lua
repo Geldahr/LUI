@@ -1,6 +1,7 @@
-_G.DB = _G.DB or {}
-_G.DB.en = _G.DB.en or {}
-_G.DB.en.bestiary = {
+local DB = _G.LUI.Data.Bestiary.DB or {}
+_G.LUI.Data.Bestiary.DB = DB
+DB.en = DB.en or {}
+DB.en.bestiary = {
     ["Abedec"] = { bn = "Abedec", v = "Havens of Belfalas", g = "Man (Mob)", s = "Brigand", sp = "Brigand", r = "Western Gondor", a = "Havens of Belfalas", t = "Elite", l = { 100, 100 }, m = { 34650, 34650 }, p = { 1950, 1950 }, ce = { f = "Feeble", fm = "False", sm = "False", rt = "False" }, rs = { cr = "Superior", so = "Superior", ta = "Superior", ph = "Superior" }, mi = { co = "Remarkable", ad = "Remarkable", fi = "Remarkable", be = "Remarkable", li = "Remarkable", we = "Remarkable", sh = "Remarkable", fr = "Remarkable", lt = "Remarkable" }, qi = { "[100] The Last Captain" }, di = { "Corsair-slayer of West Gondor", "Corsair-slayer of West Gondor (Advanced)" }, w = { "Tattered Rohirric Parchment" } },
     ["Aberration"] = { bn = "Aberration", v = "The Perfect Picnic (Instance)", g = "Giant-kind", s = "Fire-giants", sp = "Giant", i = "The Perfect Picnic (Instance)", t = "Varies", l = { 10, 160 }, ce = { f = "Feeble", fm = "True", sm = "True", rt = "True" }, rs = { cr = "Fair", so = "Fair", ta = "Good", ph = "Good" }, mi = { co = "Superior", ad = "Superior", fi = "Superior", be = "Superior", li = "Superior", we = "Superior", sh = "Superior", fr = "Superior", lt = "Superior" }, ab = { "Aura: Blistering Heat", "Major Dislocation", "Stunned" }, di = { "The Perfect Picnic" } },
     ["Abominable Snow-beast"] = { bn = "Abominable Snow-beast", v = "Frostbluff", g = "Beast", s = "Snowbeasts", sp = "Snowbeast", r = "Frostbluff", t = "Signature", m = { 408, 408 }, p = { 170, 170 }, qi = { "[…] The Abominable Snow-beasts" } },

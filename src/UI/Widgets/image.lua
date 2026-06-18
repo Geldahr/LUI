@@ -1,10 +1,14 @@
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "LUI.src.UI.Widgets.style"
 
-local Style = UI.Widgets.Style
+local Widgets = _G.LUI.UI.Widgets
+local Style = Widgets.Style
 
 ---@class Image : Turbine.UI.Control
-Image = class(Turbine.UI.Control)
+local Image = class(Turbine.UI.Control)
+Widgets.Image = Image
 
 local function _round_size(value)
     if value == nil then

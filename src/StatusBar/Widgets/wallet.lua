@@ -1,10 +1,14 @@
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
 
 local WalletWidget = class(Turbine.UI.Control)
-_G.WalletWidget = WalletWidget
+StatusBarWidgets.WalletWidget = WalletWidget
 
 local ITEM_GAP = 6
 local MIN_FIELD_W = 20
@@ -67,7 +71,7 @@ function WalletWidget:Constructor(widget_w, bar_h, font, content_alignment, item
     self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self:SetSize(widget_w, bar_h)
 
-    self.placeholder = LuiLabel()
+    self.placeholder = UI.Widgets.LuiLabel()
     self.placeholder:SetParent(self)
     _apply_font(self.placeholder, font, self._content_alignment)
 
@@ -78,14 +82,14 @@ function WalletWidget:Constructor(widget_w, bar_h, font, content_alignment, item
             icon = nil,
             icon_background = nil,
             icon_from_wallet = false,
-            label = LuiLabel(),
+            label = UI.Widgets.LuiLabel(),
         }
 
         item.label:SetParent(self)
         _apply_font(item.label, font, self._content_alignment)
 
         if self._icon_requested == true then
-            item.icon = Image(item.icon_background)
+            item.icon = UI.Widgets.Image(item.icon_background)
             item.icon:SetParent(self)
             if item.icon_background ~= nil then
                 _apply_wallet_icon_background(item, item.icon_background, false)
@@ -236,7 +240,7 @@ function WalletWidget:_layout()
             local item = self._item_controls[i]
             local icon_w = 0
             if item.icon ~= nil and item.icon_background ~= nil then
-                icon_w, _ = item.icon:set_height(icon_h)
+                icon_w = item.icon:set_height(icon_h)
                 if icon_w > 0 then
                     icon_total = icon_total + icon_w
                     icon_gap_total = icon_gap_total + S.ICON_GAP

@@ -1,5 +1,5 @@
-UI = UI or {}
-UI.Widgets = UI.Widgets or {}
+local UI = _G.LUI.UI
+local Widgets = _G.LUI.UI.Widgets
 
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
@@ -18,40 +18,4 @@ import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.window"
 import "LUI.src.UI.Widgets.hud"
 
-_G.LuiLabel = LuiLabel
-_G.Image = Image
-_G.LuiCheckBox = LuiCheckBox
-_G.LuiButton = LuiButton
-_G.LuiColorField = LuiColorField
-_G.LuiDropdown = LuiDropdown
-_G.LuiCheckDropdown = LuiCheckDropdown
-_G.LuiAction = LuiAction
-_G.LuiMenu = LuiMenu
-_G.LuiMenuBar = LuiMenuBar
-_G.LuiTabBar = LuiTabBar
-_G.LuiSpinBox = LuiSpinBox
-_G.LuiLineEdit = LuiLineEdit
-_G.LineEdit = LuiLineEdit
-_G.LuiTooltip = LuiTooltip
-_G.LuiBaseWindow = LuiBaseWindow
-_G.LuiWindow = LuiWindow
-_G.LuiHUD = LuiHUD
-
-UI.Widgets.LuiLabel = LuiLabel
-UI.Widgets.Image = Image
-UI.Widgets.LuiCheckBox = LuiCheckBox
-UI.Widgets.LuiButton = LuiButton
-UI.Widgets.LuiColorField = LuiColorField
-UI.Widgets.LuiDropdown = LuiDropdown
-UI.Widgets.LuiCheckDropdown = LuiCheckDropdown
-UI.Widgets.LuiAction = LuiAction
-UI.Widgets.LuiMenu = LuiMenu
-UI.Widgets.LuiMenuBar = LuiMenuBar
-UI.Widgets.LuiTabBar = LuiTabBar
-UI.Widgets.LuiSpinBox = LuiSpinBox
-UI.Widgets.LuiLineEdit = LuiLineEdit
-UI.Widgets.LineEdit = LuiLineEdit
-UI.Widgets.LuiTooltip = LuiTooltip
-UI.Widgets.LuiBaseWindow = LuiBaseWindow
-UI.Widgets.LuiWindow = LuiWindow
-UI.Widgets.LuiHUD = LuiHUD
+Widgets.LineEdit = Widgets.LuiLineEdit

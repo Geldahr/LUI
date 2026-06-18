@@ -1,3 +1,4 @@
+local LUI = _G.LUI
 LUI.src.Languages.de = {}
 LUI.src.Languages.de.DE = {
     ["Apply"] = "Übernehmen",

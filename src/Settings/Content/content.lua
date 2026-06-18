@@ -1,3 +1,8 @@
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Content = _G.LUI.Settings.Content
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -7,7 +12,7 @@ local BASE_SCROLL_W = 10
 local Style = UI.Widgets.Style
 
 local function _scaled_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 local function _scaled_int(value)
@@ -23,10 +28,8 @@ local function _scaled_font(name, size)
     return font
 end
 
-ConfigContent = class(Turbine.UI.Control)
-_G.ConfigContent = ConfigContent
-_G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
-_G.LUI_SETTINGS_SHARED.config_content = ConfigContent
+local ConfigContent = class(Turbine.UI.Control)
+Content.ConfigContent = ConfigContent
 
 function ConfigContent:Constructor(window, columns, refresh_preview_fn)
     Turbine.UI.Control.Constructor(self)
@@ -239,7 +242,7 @@ function ConfigContent:add_button(key, text, click_fn, help_text, span)
 
     entry.button = UI.Widgets.LuiButton()
     entry.button:SetParent(self.form)
-    entry.button:set_scale(_G.settings.global.scale)
+    entry.button:set_scale(State.settings.global.scale)
     entry.button:set_font(self.window.input_font)
     entry.button:set_text(text)
     entry.button:SetZOrder(2)
@@ -334,7 +337,7 @@ function ConfigContent:add_color_picker(key, label_text, save_fn, load_fn, help_
     entry.label:SetZOrder(1)
 
     entry.tb = UI.Widgets.LuiColorField()
-    entry.tb:set_scale(_G.settings.global.scale)
+    entry.tb:set_scale(State.settings.global.scale)
     entry.tb:SetPickerHost(self.window)
     entry.tb:SetParent(self.form)
     entry.tb:SetFont(self.window.input_font)
@@ -412,7 +415,7 @@ function ConfigContent:add_dropdown(key, label_text, option_labels, option_value
 
     entry.button = UI.Widgets.LuiDropdown()
     entry.button:SetParent(self.form)
-    entry.button:set_scale(_G.settings.global.scale)
+    entry.button:set_scale(State.settings.global.scale)
     entry.button:SetFont(self.window.input_font)
     entry.button:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     entry.button:SetPopupHost(self.window)
@@ -521,7 +524,7 @@ function ConfigContent:update_all_swatches()
 end
 
 function ConfigContent:apply_ui_scale()
-    local scale = _G.settings.global.scale
+    local scale = State.settings.global.scale
 
     for i = 1, #self.fields do
         local field = self.fields[i]

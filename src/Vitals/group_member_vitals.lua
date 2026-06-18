@@ -1,3 +1,48 @@
+import "LUI.src.Utils.callbacks"
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local get_class_icon = _G.LUI.Utils.get_class_icon
+local get_party_leader_icon = _G.LUI.Utils.get_party_leader_icon
+local Vitals = _G.LUI.Features.Vitals
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -53,7 +98,8 @@ local function _apply_select_border(border, x, y, width, height, thickness, colo
 end
 
 ---@class GroupMemberVitals : VitalsBase
-GroupMemberVitals = class(VitalsBase)
+local GroupMemberVitals = class(Vitals.VitalsBase)
+Vitals.GroupMemberVitals = GroupMemberVitals
 
 function GroupMemberVitals:Constructor(settings_root, entity)
     self.settings_root = settings_root
@@ -63,7 +109,7 @@ function GroupMemberVitals:Constructor(settings_root, entity)
     self.em = nil
     self.em_added_event = nil
 
-    VitalsBase.Constructor(self, settings_root, entity, "Group Member", {
+    Vitals.VitalsBase.Constructor(self, settings_root, entity, "Group Member", {
         hud_key = settings_root .. "_vitals",
         show_effects = false,
         move_ui = false,
@@ -84,7 +130,7 @@ function GroupMemberVitals:set_entity(entity)
         self.target_highlighted = false
     end
 
-    VitalsBase.set_entity(self, entity)
+    Vitals.VitalsBase.set_entity(self, entity)
     self:_attach_link_dead_event()
     self:_update_class_icon()
     self:_update_leader_icon()
@@ -118,7 +164,7 @@ function GroupMemberVitals:set_target_name(target_name)
 end
 
 function GroupMemberVitals:self_morale_changed()
-    VitalsBase.self_morale_changed(self)
+    Vitals.VitalsBase.self_morale_changed(self)
     self:_update_member_state()
 end
 
@@ -231,7 +277,7 @@ function GroupMemberVitals:_setup_silent_effect_manager()
         return
     end
 
-    self.em = TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    self.em = Vitals.TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
     self.em_added_event = self.em:register_added_event(function()
     end)
     self:SetWantsUpdates(true)
@@ -267,7 +313,7 @@ function GroupMemberVitals:_update_class_icon()
         return
     end
 
-    local icon = _G.get_class_icon(self.entity:GetClass(), size)
+    local icon = get_class_icon(self.entity:GetClass(), size)
     if icon == nil then
         self.class_icon:SetVisible(false)
         return
@@ -289,7 +335,7 @@ function GroupMemberVitals:_update_leader_icon()
         return
     end
 
-    local icon = _G.get_party_leader_icon()
+    local icon = get_party_leader_icon()
     if icon == nil then
         self.leader_icon:SetVisible(false)
         return
@@ -342,12 +388,12 @@ function GroupMemberVitals:_build_extra_controls()
     self.state_label:SetZOrder(1)
     self.state_label:SetVisible(false)
 
-    self.class_icon = Image()
+    self.class_icon = UI.Widgets.Image()
     self.class_icon:SetParent(self)
     self.class_icon:SetZOrder(10)
     self.class_icon:SetVisible(false)
 
-    self.leader_icon = Image()
+    self.leader_icon = UI.Widgets.Image()
     self.leader_icon:SetParent(self)
     self.leader_icon:SetZOrder(11)
     self.leader_icon:SetVisible(false)

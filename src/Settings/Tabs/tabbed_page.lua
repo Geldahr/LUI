@@ -1,11 +1,13 @@
+local State = _G.LUI.Settings.State
+local Tabs = _G.LUI.Settings.Tabs
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets"
 
-SettingsTabbedPage = class(Turbine.UI.Control)
-_G.SettingsTabbedPage = SettingsTabbedPage
-_G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
-_G.LUI_SETTINGS_SHARED.tabbed_page = SettingsTabbedPage
+local SettingsTabbedPage = class(Turbine.UI.Control)
+Tabs.SettingsTabbedPage = SettingsTabbedPage
 
 function SettingsTabbedPage:Constructor(window)
     Turbine.UI.Control.Constructor(self)
@@ -139,7 +141,7 @@ function SettingsTabbedPage:on_selected(preferred_key)
 end
 
 function SettingsTabbedPage:apply_ui_scale()
-    local scale = _G.settings.global.scale
+    local scale = State.settings.global.scale
     self.sub_tab_bar:set_scale(scale)
     self.sub_tab_bar:set_font(self.window.tab_font)
 

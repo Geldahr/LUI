@@ -1,16 +1,9 @@
-local lui_root = _G.LUI
-if type(lui_root) ~= "table" then
-    lui_root = {}
-    _G.LUI = lui_root
-end
+import "LUI.src.namespace"
 
-local api = lui_root.api
-if type(api) ~= "table" then
-    api = {}
-    lui_root.api = api
-end
+local LUI = _G.LUI
+local api = LUI.API
 
-_G.LUI_API = api
+LUI.api = api
 
 api.StatusBar = api.StatusBar or {}
 local MAX_STATUS_BAR_API_TITLE_LEN = 20

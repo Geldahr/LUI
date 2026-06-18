@@ -1,4 +1,7 @@
-RaidLayout = RaidLayout or {}
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local Utils = _G.LUI.Utils
+local RaidLayout = Utils.RaidLayout or {}
+Utils.RaidLayout = RaidLayout
 
 local RAID_GROUP_SIZE = 6
 local RAID_GROUP_COUNT = 4

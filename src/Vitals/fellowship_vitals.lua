@@ -1,3 +1,51 @@
+local GroupLayout = _G.LUI.Features.Vitals.GroupLayout
+local GroupSnapshot = _G.LUI.Features.Vitals.GroupSnapshot
+local GroupOrdering = _G.LUI.Features.Vitals.GroupOrdering
+local RaidLayout = _G.LUI.Utils.RaidLayout
+import "LUI.src.Utils.callbacks"
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local Vitals = _G.LUI.Features.Vitals
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -9,18 +57,19 @@ import "LUI.src.Vitals.group_layout"
 import "LUI.src.Vitals.group_member_vitals"
 
 local function _fellowship_vitals_enabled()
-    return _G.loaded_settings.fellowship.enabled == true
+    return State.loaded_settings.fellowship.enabled == true
 end
 
 local function _fellowship_active(snapshot)
     return snapshot.member_count > 0 and snapshot.member_count <= 6
 end
 
----@class FellowshipVitals : LuiHUD
-FellowshipVitals = class(LuiHUD)
+---@class FellowshipVitals : UI.Widgets.LuiHUD
+local FellowshipVitals = class(UI.Widgets.LuiHUD)
+Vitals.FellowshipVitals = FellowshipVitals
 
 function FellowshipVitals:Constructor()
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = "fellowship_vitals",
         title = TR["Fellowship Vitals"],
     })
@@ -40,7 +89,7 @@ function FellowshipVitals:Constructor()
     self:SetMouseVisible(false)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
 
-    local vitals_settings = _G.settings.fellowship
+    local vitals_settings = State.settings.fellowship
     local initial_height = GroupLayout.member_height(vitals_settings)
     self:SetSize(vitals_settings.frame.width, initial_height)
     self:layout_move_chrome()
@@ -66,12 +115,12 @@ function FellowshipVitals:set_move_mode(enabled)
         self:SetVisible(true)
     end
 
-    LuiHUD.set_move_mode(self, enabled)
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     self:update_members()
 end
 
 function FellowshipVitals:get_placeholder_count()
-    if _G.loaded_settings.fellowship.show_self_in_fellowship == true then
+    if State.loaded_settings.fellowship.show_self_in_fellowship == true then
         return 6
     end
 
@@ -118,12 +167,12 @@ function FellowshipVitals:refresh_group()
     end
 
     self:update_members(snapshot)
-    _G.apply_lotro_vitals_handoff()
+    _G.LUI.Runtime.Apply.lotro_vitals_handoff()
 end
 
 function FellowshipVitals:ensure_member_windows(count)
     for i = #self.members + 1, count do
-        local member_window = GroupMemberVitals("fellowship", nil)
+        local member_window = Vitals.GroupMemberVitals("fellowship", nil)
         member_window:SetParent(self)
         member_window:SetZOrder(10)
         member_window.entity_control:SetMouseVisible(not self:is_move_mode())
@@ -133,7 +182,7 @@ function FellowshipVitals:ensure_member_windows(count)
 end
 
 function FellowshipVitals:layout_members(count)
-    local vitals_settings = _G.settings.fellowship
+    local vitals_settings = State.settings.fellowship
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
@@ -172,7 +221,7 @@ function FellowshipVitals:apply_settings()
     end
 
     self:update_members()
-    _G.apply_lotro_vitals_handoff()
+    _G.LUI.Runtime.Apply.lotro_vitals_handoff()
 end
 
 function FellowshipVitals:current_target_name()
@@ -201,7 +250,7 @@ function FellowshipVitals:update_members(snapshot)
     local ordered_members = {}
     if active == true then
         ordered_members = GroupOrdering.fellowship_members(current_snapshot,
-            _G.loaded_settings.fellowship.show_self_in_fellowship == true)
+            State.loaded_settings.fellowship.show_self_in_fellowship == true)
     end
 
     local move_mode = self:is_move_mode()

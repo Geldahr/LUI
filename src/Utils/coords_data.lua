@@ -1,4 +1,6 @@
-_G.CoordsData = {
+local Utils = _G.LUI.Utils
+
+Utils.CoordsData = {
     [1] = {
         name = "Eriador",
         zones = {

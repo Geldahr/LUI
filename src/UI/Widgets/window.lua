@@ -1,3 +1,5 @@
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.assets"
@@ -9,7 +11,15 @@ import "LUI.src.UI.Widgets.style"
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.Utils.font"
 
-local Style = UI.Widgets.Style
+local UI = _G.LUI.UI
+local Widgets = UI.Widgets
+local AssetIds = UI.Assets
+local LuiBaseWindow = Widgets.LuiBaseWindow
+local LuiButton = Widgets.LuiButton
+local Image = Widgets.Image
+local LuiLabel = Widgets.LuiLabel
+local LuiMenuBar = Widgets.LuiMenuBar
+local Style = Widgets.Style
 
 local BASE_DEFAULT_W = 420
 local BASE_DEFAULT_H = 280
@@ -32,10 +42,12 @@ local RESIZE_MODE_BOTH = RESIZE_MODE_HORIZONTAL + RESIZE_MODE_VERTICAL
 local TILE_NONE = "none"
 local TILE_MAXIMIZED = "maximized"
 
-RESIZE_NONE = RESIZE_MODE_NONE
-RESIZE_HORIZONTAL = RESIZE_MODE_HORIZONTAL
-RESIZE_VERTICAL = RESIZE_MODE_VERTICAL
-RESIZE_BOTH = RESIZE_MODE_BOTH
+local WindowConstants = Widgets.WindowConstants or {}
+Widgets.WindowConstants = WindowConstants
+WindowConstants.RESIZE_NONE = RESIZE_MODE_NONE
+WindowConstants.RESIZE_HORIZONTAL = RESIZE_MODE_HORIZONTAL
+WindowConstants.RESIZE_VERTICAL = RESIZE_MODE_VERTICAL
+WindowConstants.RESIZE_BOTH = RESIZE_MODE_BOTH
 
 local RESIZE_LEFT = 1
 local RESIZE_RIGHT = 2
@@ -131,7 +143,8 @@ local function _make_resize_handle(host)
 end
 
 ---@class LuiWindow : LuiBaseWindow
-LuiWindow = class(LuiBaseWindow)
+local LuiWindow = class(LuiBaseWindow)
+Widgets.LuiWindow = LuiWindow
 LuiWindow.RESIZE_NONE = RESIZE_MODE_NONE
 LuiWindow.RESIZE_HORIZONTAL = RESIZE_MODE_HORIZONTAL
 LuiWindow.RESIZE_VERTICAL = RESIZE_MODE_VERTICAL
@@ -668,10 +681,10 @@ function LuiWindow:_apply_style()
     self:_style_title_button(self._close_button)
     self:_sync_maximize_button_icon()
     self._close_button:set_icon(
-        UI.AssetIds.x,
-        UI.AssetIds.x_hover,
-        UI.AssetIds.x_hover,
-        UI.AssetIds.x,
+        AssetIds.x,
+        AssetIds.x_hover,
+        AssetIds.x_hover,
+        AssetIds.x,
         BASE_TITLE_ACTION_ICON,
         BASE_TITLE_ACTION_ICON,
         LuiButton.icon_position.RIGHT
@@ -742,11 +755,11 @@ function LuiWindow:_sync_maximize_button_icon()
         return
     end
 
-    local normal = UI.AssetIds.window_maximize
-    local hover = UI.AssetIds.window_maximize_hover
+    local normal = AssetIds.window_maximize
+    local hover = AssetIds.window_maximize_hover
     if self:is_maximized() == true then
-        normal = UI.AssetIds.window_restore
-        hover = UI.AssetIds.window_restore_hover
+        normal = AssetIds.window_restore
+        hover = AssetIds.window_restore_hover
     end
 
     self._maximize_button:set_icon(
@@ -1175,10 +1188,10 @@ function LuiWindow:_sync_resize_handle_icons()
     end
 
     local handle = _scaled_int(self._scale, BASE_RESIZE_HANDLE)
-    self._resize_handles.horizontal:set_icon(UI.AssetIds.resize_horizontal, handle, handle)
-    self._resize_handles.vertical:set_icon(UI.AssetIds.resize_vertical, handle, handle)
-    self._resize_handles.diagonal_tl_br:set_icon(UI.AssetIds.resize_diagonal_tl_br, handle, handle)
-    self._resize_handles.diagonal_tr_bl:set_icon(UI.AssetIds.resize_diagonal_tr_bl, handle, handle)
+    self._resize_handles.horizontal:set_icon(AssetIds.resize_horizontal, handle, handle)
+    self._resize_handles.vertical:set_icon(AssetIds.resize_vertical, handle, handle)
+    self._resize_handles.diagonal_tl_br:set_icon(AssetIds.resize_diagonal_tl_br, handle, handle)
+    self._resize_handles.diagonal_tr_bl:set_icon(AssetIds.resize_diagonal_tr_bl, handle, handle)
     for _, resize_handle in pairs(self._resize_handles) do
         resize_handle:SetPosition(0, 0)
         resize_handle:SetVisible(resize_handle == self._active_resize_handle)

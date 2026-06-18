@@ -1,10 +1,14 @@
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
 
 local MoneyWidget = class(Turbine.UI.Control)
-_G.MoneyWidget = MoneyWidget
+StatusBarWidgets.MoneyWidget = MoneyWidget
 
 function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
     Turbine.UI.Control.Constructor(self)
@@ -20,19 +24,19 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
     self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self:SetSize(widget_w, bar_h)
 
-    self.g_icon = Image(S.GOLD_ICON)
+    self.g_icon = UI.Widgets.Image(S.GOLD_ICON)
     self.g_icon:SetParent(self)
     self.g_icon:SetVisible(false)
 
-    self.s_icon = Image(S.SILVER_ICON)
+    self.s_icon = UI.Widgets.Image(S.SILVER_ICON)
     self.s_icon:SetParent(self)
     self.s_icon:SetVisible(false)
 
-    self.c_icon = Image(S.COPPER_ICON)
+    self.c_icon = UI.Widgets.Image(S.COPPER_ICON)
     self.c_icon:SetParent(self)
     self.c_icon:SetVisible(false)
 
-    self.g_label = LuiLabel()
+    self.g_label = UI.Widgets.LuiLabel()
     self.g_label:SetParent(self)
     self.g_label:SetMouseVisible(false)
     self.g_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -52,7 +56,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
         end
     end
 
-    self.s_label = LuiLabel()
+    self.s_label = UI.Widgets.LuiLabel()
     self.s_label:SetParent(self)
     self.s_label:SetMouseVisible(false)
     self.s_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -72,7 +76,7 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
         end
     end
 
-    self.c_label = LuiLabel()
+    self.c_label = UI.Widgets.LuiLabel()
     self.c_label:SetParent(self)
     self.c_label:SetMouseVisible(false)
     self.c_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)

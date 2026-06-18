@@ -1,3 +1,12 @@
+local UI = _G.LUI.UI
+local Features = _G.LUI.Features
+local Vitals = Features.Vitals
+local Inventory = Features.Inventory
+local Crafting = Features.Crafting
+local Assets = Features.Assets
+local Travel = Features.Travel
+local StatusBar = Features.StatusBar
+local Launcher = Features.Launcher
 import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.shortcuts"
 import "LUI.src.UI.hidable"
@@ -12,34 +21,15 @@ import "LUI.src.Travel"
 import "LUI.src.StatusBar"
 import "LUI.src.Launcher"
 
-VitalsBase = Vitals.VitalsBase
-SelfVitals = Vitals.SelfVitals
-TargetVitals = Vitals.TargetVitals
-BossVitals = Vitals.BossVitals
-FellowshipVitals = Vitals.FellowshipVitals
-RaidVitals = Vitals.RaidVitals
-
-UI.VitalsBase = VitalsBase
-UI.SelfVitals = SelfVitals
-UI.TargetVitals = TargetVitals
-UI.BossVitals = BossVitals
-UI.FellowshipVitals = FellowshipVitals
-UI.RaidVitals = RaidVitals
-
-InventoryWindow = Inventory.InventoryWindow
-UI.InventoryWindow = InventoryWindow
-
-CraftingWindow = Crafting.CraftingWindow
-UI.CraftingWindow = CraftingWindow
-
-AssetsWindow = Assets.AssetsWindow
-UI.AssetsWindow = AssetsWindow
-
-TravelWindow = Travel.TravelWindow
-UI.TravelWindow = TravelWindow
-
-StatusBarWindow = StatusBar.StatusBarWindow
-UI.StatusBarWindow = StatusBarWindow
-
-LauncherMenu = Launcher.LauncherMenu
-UI.LauncherMenu = LauncherMenu
+UI.VitalsBase = Vitals.VitalsBase
+UI.SelfVitals = Vitals.SelfVitals
+UI.TargetVitals = Vitals.TargetVitals
+UI.BossVitals = Vitals.BossVitals
+UI.FellowshipVitals = Vitals.FellowshipVitals
+UI.RaidVitals = Vitals.RaidVitals
+UI.InventoryWindow = Inventory.InventoryWindow
+UI.CraftingWindow = Crafting.CraftingWindow
+UI.AssetsWindow = Assets.AssetsWindow
+UI.TravelWindow = Travel.TravelWindow
+UI.StatusBarWindow = StatusBar.StatusBarWindow
+UI.LauncherMenu = Launcher.LauncherMenu

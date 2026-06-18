@@ -1,8 +1,52 @@
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local UI = _G.LUI.UI
+local Crafting = _G.LUI.Features.Crafting
+local Stores = _G.LUI.Runtime.Stores
+local Shortcuts = _G.LUI.UI.Shortcuts
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
 
 local CHIP_GAP = 0
@@ -86,7 +130,7 @@ function CraftPlanItemSlot:Constructor(forward_target)
     self._item_info = nil
     self._interaction_enabled = true
 
-    self.background = Image()
+    self.background = UI.Widgets.Image()
     self.background:SetParent(self)
     self.background:SetMouseVisible(false)
     self.background:SetZOrder(1)
@@ -95,7 +139,7 @@ function CraftPlanItemSlot:Constructor(forward_target)
     end
     _set_stretch_mode_fit(self.background)
 
-    self.foreground = Image()
+    self.foreground = UI.Widgets.Image()
     self.foreground:SetParent(self)
     self.foreground:SetMouseVisible(false)
     self.foreground:SetZOrder(2)
@@ -233,7 +277,7 @@ function CraftPlanChip:Constructor(owner, font)
     self.slot = CraftPlanItemSlot(self)
     self.slot:SetParent(self)
 
-    self.label = LuiLabel()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     _apply_font(self.label, font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleLeft)
     self.label:SetMouseVisible(true)
@@ -453,11 +497,11 @@ function CraftPlanPopupRow:Constructor(font)
     self.slot:SetParent(self)
     self.slot:set_interaction_enabled(true)
 
-    self.name = LuiLabel()
+    self.name = UI.Widgets.LuiLabel()
     self.name:SetParent(self)
     _apply_font(self.name, font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleLeft)
 
-    self.amount = LuiLabel()
+    self.amount = UI.Widgets.LuiLabel()
     self.amount:SetParent(self)
     _apply_font(self.amount, font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleRight)
 end
@@ -501,7 +545,7 @@ function CraftPlanPopupRow:destroy()
 end
 
 local CraftPlanWidget = class(Turbine.UI.Control)
-_G.CraftPlanWidget = CraftPlanWidget
+StatusBarWidgets.CraftPlanWidget = CraftPlanWidget
 
 function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
     Turbine.UI.Control.Constructor(self)
@@ -546,21 +590,19 @@ function CraftPlanWidget:Constructor(widget_w, bar_h, font, max_visible)
     self.popup_inner:SetParent(self.popup:GetContentHost())
     self.popup_inner:SetMouseVisible(false)
 
-    self.popup_header = LuiLabel()
+    self.popup_header = UI.Widgets.LuiLabel()
     self.popup_header:SetParent(self.popup_inner)
     _apply_font(self.popup_header, self.font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleLeft)
     self.popup_header:SetVisible(false)
 
-    self.popup_note = LuiLabel()
+    self.popup_note = UI.Widgets.LuiLabel()
     self.popup_note:SetParent(self.popup_inner)
     _apply_font(self.popup_note, self.font, Style.ALTERNATE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleLeft)
     self.popup_note:SetVisible(false)
 
     self.MouseClick = function(_, args)
         if args ~= nil and args.Button == Turbine.UI.MouseButton.Left and self._interaction_enabled == true then
-            if _G.open_crafting_plan_shortcut ~= nil then
-                _G.open_crafting_plan_shortcut()
-            end
+            Shortcuts.open_crafting_plan()
         end
     end
 
@@ -593,9 +635,7 @@ function CraftPlanWidget:set_interaction_enabled(enabled)
 end
 
 function CraftPlanWidget:update(_)
-    local store = _G.CRAFTING_STORE
-    local state = Crafting ~= nil and Crafting.get_tracked_plan_resource_state ~= nil and
-        Crafting.get_tracked_plan_resource_state(store) or nil
+    local state = Crafting.get_tracked_plan_resource_state(Stores.crafting)
     local signature = _resource_state_signature(state)
     if signature ~= self._state_signature then
         self._state_signature = signature

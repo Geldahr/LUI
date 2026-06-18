@@ -1,7 +1,11 @@
+local UI = _G.LUI.UI
+local Travel = _G.LUI.Features.Travel
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI.Lotro"
 
-TravelStore = class()
+local TravelStore = class()
+Travel.TravelStore = TravelStore
 
 local LANG_KEYS = { "EN", "DE", "FR", "RU" }
 

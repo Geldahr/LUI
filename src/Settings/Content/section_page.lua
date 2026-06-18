@@ -1,12 +1,13 @@
+local Content = _G.LUI.Settings.Content
+local Tabs = _G.LUI.Settings.Tabs
+local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.feature_shell"
 
-local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local FeatureShell = Tabs.SettingsFeatureShell
 local SettingsFeatureSectionPage = FeatureShell.section_page_class
 
-ConfigSectionPage = class(SettingsFeatureSectionPage)
-_G.ConfigSectionPage = ConfigSectionPage
-_G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
-_G.LUI_SETTINGS_SHARED.config_section_page = ConfigSectionPage
+local ConfigSectionPage = class(SettingsFeatureSectionPage)
+Content.ConfigSectionPage = ConfigSectionPage
 
 function ConfigSectionPage:Constructor(window, preview_key, preview_height, preview_refresh_fn, use_button_tabs)
     SettingsFeatureSectionPage.Constructor(self, window, preview_key, preview_height, preview_refresh_fn,

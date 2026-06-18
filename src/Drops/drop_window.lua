@@ -1,3 +1,46 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
+local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
+local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
+local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local Drops = _G.LUI.Features.Drops
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local scaled_int = UI.NativeScaling.scaled_int
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -6,6 +49,8 @@ import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
 
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
 local CHAT_DISPLAY_DELAY = 0.25
 local ITEM_MATCH_WINDOW = 1.00
 local EXIT_FADE_DURATION = 0.50
@@ -181,29 +226,29 @@ local function _find_backpack_item_by_name(backpack, normalized_name)
 end
 
 local function _row_padding()
-    return lui_scaled_int(BASE_ROW_PADDING)
+    return scaled_int(BASE_ROW_PADDING)
 end
 
 local function _row_height()
-    return _G.settings.drops.icon_size + (2 * _row_padding())
+    return State.settings.drops.icon_size + (2 * _row_padding())
 end
 
 local function _row_spacing()
-    return lui_scaled_int(BASE_SPACING)
+    return scaled_int(BASE_SPACING)
 end
 
 local function _move_duration()
-    local duration_ms = tonumber(_G.settings.drops.move_duration)
+    local duration_ms = tonumber(State.settings.drops.move_duration)
     if duration_ms == nil or duration_ms <= 0 then
         return 0
     end
     return duration_ms / 1000
 end
 
-local DropBackgroundWindow = class(LuiBaseWindow)
+local DropBackgroundWindow = class(UI.Widgets.LuiBaseWindow)
 
 function DropBackgroundWindow:Constructor()
-    LuiBaseWindow.Constructor(self, { hideable = true })
+    UI.Widgets.LuiBaseWindow.Constructor(self, { hideable = true })
 
     self:SetVisible(false)
     self:SetMouseVisible(false)
@@ -212,7 +257,7 @@ function DropBackgroundWindow:Constructor()
 end
 
 function DropBackgroundWindow:apply_settings()
-    local s = _G.settings.drops
+    local s = State.settings.drops
     self:SetBackColor(_with_alpha(s.hud.background_color, s.hud.background_opacity))
 end
 
@@ -222,10 +267,11 @@ function DropBackgroundWindow:destroy()
     self:SetParent(nil)
 end
 
-DropsWindow = class(LuiHUD)
+local DropsWindow = class(UI.Widgets.LuiHUD)
+Drops.DropsWindow = DropsWindow
 
 function DropsWindow:Constructor()
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = "drops",
         title = TR["Drops"],
         mouse_visible = false,
@@ -235,7 +281,7 @@ function DropsWindow:Constructor()
     self.backpack = nil
     self.player_name = nil
     self.last_update_at = 0
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
 
     self._callbacks = {}
     self._pending_chat_drops = {}
@@ -290,7 +336,7 @@ end
 
 function DropsWindow:set_move_mode(enabled)
     local changed = (enabled == true) ~= self:is_move_mode()
-    LuiHUD.set_move_mode(self, enabled)
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     if changed and enabled == true then
         self:_hide_entries()
     elseif changed then
@@ -304,9 +350,9 @@ end
 
 function DropsWindow:apply_settings()
     self:apply_native_scaling()
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
 
-    local s = _G.settings.drops
+    local s = State.settings.drops
     local width = s.width
     if width < MIN_WIDTH then
         width = MIN_WIDTH
@@ -624,7 +670,7 @@ function DropsWindow:_expire_pending_item_events(now)
 end
 
 function DropsWindow:_promote_pending_chat_drops(now)
-    local duration = tonumber(_G.settings.drops.visible_duration) or 4
+    local duration = tonumber(State.settings.drops.visible_duration) or 4
     if duration <= 0 then
         duration = 4
     end
@@ -659,7 +705,7 @@ function DropsWindow:_promote_pending_chat_drops(now)
 end
 
 function DropsWindow:_rows_capacity()
-    local rows = tonumber(_G.settings.drops.rows)
+    local rows = tonumber(State.settings.drops.rows)
     if rows == nil then
         return 1
     end
@@ -676,7 +722,7 @@ function DropsWindow:_acquire_entry()
         self._entry_pool[#self._entry_pool] = nil
         return entry
     end
-    return DropEntry()
+    return Drops.DropEntry()
 end
 
 function DropsWindow:_recycle_entry(record)
@@ -716,7 +762,7 @@ end
 function DropsWindow:_layout_base_y(count)
     local _, height = self:GetSize()
     local base_y = 0
-    if _G.settings.drops.align == LUI_ENUMS.vertical_align.BOTTOM then
+    if State.settings.drops.align == LUI_ENUMS.vertical_align.BOTTOM then
         base_y = height - self:_layout_block_height(count)
         if base_y < 0 then
             base_y = 0
@@ -727,7 +773,7 @@ end
 
 function DropsWindow:_ordered_layout_records()
     local ordered = {}
-    local flow = _G.settings.drops.flow
+    local flow = State.settings.drops.flow
 
     if flow == LUI_ENUMS.list_flow.TOP_TO_BOTTOM then
         for i = #self._active_drops, 1, -1 do
@@ -779,7 +825,7 @@ function DropsWindow:_remove_oldest_visible_for_overflow(now)
     end
 
     local record = self._active_drops[index]
-    if _G.settings.drops.animations_enabled == true then
+    if State.settings.drops.animations_enabled == true then
         record.removing = true
         if record.fade_end_at == nil or now > record.fade_end_at then
             record.fade_end_at = now + EXIT_FADE_DURATION
@@ -795,7 +841,7 @@ function DropsWindow:_remove_oldest_visible_for_overflow(now)
 end
 
 function DropsWindow:_expire_active_drops(now)
-    local animations_enabled = _G.settings.drops.animations_enabled == true
+    local animations_enabled = State.settings.drops.animations_enabled == true
     local removed = false
 
     for i = #self._active_drops, 1, -1 do

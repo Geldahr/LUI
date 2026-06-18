@@ -1,13 +1,14 @@
+local Content = _G.LUI.Settings.Content
+local Tabs = _G.LUI.Settings.Tabs
+local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.feature_shell"
 
-local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
+local FeatureShell = Tabs.SettingsFeatureShell
 local SettingsFeatureNestedPage = FeatureShell.nested_page_class
 local module_for_page = FeatureShell.module_for_page
 
-ConfigNestedTabs = class(SettingsFeatureNestedPage)
-_G.ConfigNestedTabs = ConfigNestedTabs
-_G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
-_G.LUI_SETTINGS_SHARED.config_nested_tabs = ConfigNestedTabs
+local ConfigNestedTabs = class(SettingsFeatureNestedPage)
+Content.ConfigNestedTabs = ConfigNestedTabs
 
 function ConfigNestedTabs:Constructor(window, tab_position, scale_factor, font_size)
     SettingsFeatureNestedPage.Constructor(self, window, tab_position, scale_factor, font_size)

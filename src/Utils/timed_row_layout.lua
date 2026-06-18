@@ -1,5 +1,10 @@
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local Utils = _G.LUI.Utils
 import "LUI.src.Settings.enums"
 import "LUI.src.Utils.time_format"
+
+local lui_format_timeout = Utils.lui_format_timeout
+local lui_format_timeout_seconds = Utils.lui_format_timeout_seconds
 
 local MIN_SIDE_PADDING = 2
 local TEXT_SIDE_PADDING_RATIO = 0.12
@@ -184,6 +189,8 @@ local function _wider_text(current, candidate, normalized_font_name)
     return current
 end
 
+local lui_timed_row_format_time
+
 local function _max_time_width_sample(limit, normalized_font_name, time_format)
     local widest = lui_timed_row_format_time(limit, time_format)
 
@@ -226,7 +233,7 @@ local function _time_width_cache_key(font_name, font_size, threshold, time_forma
     }, "|")
 end
 
-function _G.lui_timed_row_resolved_font_size(font_name, font_size)
+local function lui_timed_row_resolved_font_size(font_name, font_size)
     local normalized = _normalize_font_name(font_name)
     local available = AVAILABLE_FONT_SIZES[normalized]
     if available == nil then
@@ -235,7 +242,7 @@ function _G.lui_timed_row_resolved_font_size(font_name, font_size)
     return _choose_font_size(_normalize_font_size(font_size), available)
 end
 
-function _G.lui_timed_row_estimate_text_width(text, font_name, font_size)
+local function lui_timed_row_estimate_text_width(text, font_name, font_size)
     local normalized = _normalize_font_name(font_name)
     local resolved_size = lui_timed_row_resolved_font_size(normalized, font_size)
     local family_factor = FONT_WIDTH_FACTORS[normalized] or 1.0
@@ -246,19 +253,19 @@ function _G.lui_timed_row_estimate_text_width(text, font_name, font_size)
     return math.max(1, math.floor(width + 0.5))
 end
 
-function _G.lui_timed_row_format_time(seconds, time_format)
+lui_timed_row_format_time = function(seconds, time_format)
     if time_format == LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS then
         return lui_format_timeout_seconds(seconds)
     end
     return lui_format_timeout(seconds)
 end
 
-function _G.lui_timed_row_text_gap(font_size)
+local function lui_timed_row_text_gap(font_size)
     local size = _normalize_font_size(font_size)
     return math.max(4, math.floor((size * TEXT_GAP_RATIO) + 0.5))
 end
 
-function _G.lui_timed_row_time_label_width(font_name, font_size, threshold, time_format)
+local function lui_timed_row_time_label_width(font_name, font_size, threshold, time_format)
     local limit = _normalized_threshold(threshold)
     local normalized_font_name = _normalize_font_name(font_name)
     local cache_key = _time_width_cache_key(normalized_font_name, font_size, limit, time_format)
@@ -274,7 +281,7 @@ function _G.lui_timed_row_time_label_width(font_name, font_size, threshold, time
     return widest
 end
 
-function _G.lui_timed_row_min_name_width(font_name, font_size)
+local function lui_timed_row_min_name_width(font_name, font_size)
     local size = _normalize_font_size(font_size)
     local ellipsis_width = lui_timed_row_estimate_text_width("...", font_name, size)
     local short_name_width = math.floor((lui_timed_row_resolved_font_size(font_name, size) * 2.5) + 0.5)
@@ -284,7 +291,7 @@ function _G.lui_timed_row_min_name_width(font_name, font_size)
     return ellipsis_width
 end
 
-function _G.lui_timed_row_min_timed_bar_width(border_width, text_margin, font_name, font_size, threshold, time_format)
+local function lui_timed_row_min_timed_bar_width(border_width, text_margin, font_name, font_size, threshold, time_format)
     local border = tonumber(border_width)
     if border == nil or border < 0 then
         border = 0
@@ -307,7 +314,7 @@ function _G.lui_timed_row_min_timed_bar_width(border_width, text_margin, font_na
     return border + (2 * pad) + time_width + gap + name_width
 end
 
-function _G.lui_timed_row_min_item_width(item_h, border_width, text_margin, font_name, font_size, threshold, time_format)
+local function lui_timed_row_min_item_width(item_h, border_width, text_margin, font_name, font_size, threshold, time_format)
     local height = tonumber(item_h)
     if height == nil or height < 1 then
         height = 1
@@ -349,16 +356,25 @@ function _G.lui_timed_row_min_item_width(item_h, border_width, text_margin, font
     return (2 * border) + inner_h + separator_width + timed_bar_width
 end
 
-_G.lui_timed_row_time_format = {
+Utils.lui_timed_row_resolved_font_size = lui_timed_row_resolved_font_size
+Utils.lui_timed_row_estimate_text_width = lui_timed_row_estimate_text_width
+Utils.lui_timed_row_format_time = lui_timed_row_format_time
+Utils.lui_timed_row_text_gap = lui_timed_row_text_gap
+Utils.lui_timed_row_time_label_width = lui_timed_row_time_label_width
+Utils.lui_timed_row_min_name_width = lui_timed_row_min_name_width
+Utils.lui_timed_row_min_timed_bar_width = lui_timed_row_min_timed_bar_width
+Utils.lui_timed_row_min_item_width = lui_timed_row_min_item_width
+
+Utils.lui_timed_row_time_format = {
     AUTO = LUI_ENUMS.cooldown_time_format.AUTO,
     WHOLE_SECONDS = LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS,
 }
 
-_G.lui_cooldown_resolved_font_size = _G.lui_timed_row_resolved_font_size
-_G.lui_cooldown_estimate_text_width = _G.lui_timed_row_estimate_text_width
-_G.lui_format_cooldown_time = _G.lui_timed_row_format_time
-_G.lui_cooldown_text_gap = _G.lui_timed_row_text_gap
-_G.lui_cooldown_time_label_width = _G.lui_timed_row_time_label_width
-_G.lui_cooldown_min_name_width = _G.lui_timed_row_min_name_width
-_G.lui_cooldown_min_timed_bar_width = _G.lui_timed_row_min_timed_bar_width
-_G.lui_cooldown_min_item_width = _G.lui_timed_row_min_item_width
+Utils.lui_cooldown_resolved_font_size = lui_timed_row_resolved_font_size
+Utils.lui_cooldown_estimate_text_width = lui_timed_row_estimate_text_width
+Utils.lui_format_cooldown_time = lui_timed_row_format_time
+Utils.lui_cooldown_text_gap = lui_timed_row_text_gap
+Utils.lui_cooldown_time_label_width = lui_timed_row_time_label_width
+Utils.lui_cooldown_min_name_width = lui_timed_row_min_name_width
+Utils.lui_cooldown_min_timed_bar_width = lui_timed_row_min_timed_bar_width
+Utils.lui_cooldown_min_item_width = lui_timed_row_min_item_width
