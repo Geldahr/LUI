@@ -1,3 +1,4 @@
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
 import "Turbine.UI"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.token_format"
@@ -5,10 +6,16 @@ import "LUI.src.Settings.enums"
 import "LUI.src.StatusBar.common"
 import "LUI.src.UI.native_scaling"
 
-local S = _G.STATUS_BAR_COMMON
+local LUI = _G.LUI
+local UI = LUI.UI
+local Settings = LUI.Settings
+local State = Settings.State
+local ToLotro = Settings.ToLotro
+local S = LUI.Features.StatusBar.Common
+local FONT_TO_LOTRO = LUI.Utils.FONT_TO_LOTRO
 
-function _G.rebuild_settings()
-    local raw = _G.loaded_settings
+function Settings.rebuild()
+    local raw = State.loaded_settings
     local configured_scaling = UI.NativeScaling.get_configured_scale(raw)
     local scaling = UI.NativeScaling.get_effective_scale(raw)
     local refresh_rate = raw.global.refresh_rate
@@ -82,7 +89,7 @@ function _G.rebuild_settings()
         return out
     end
 
-    _G.settings = {
+    State.settings = {
         global = {
             number_abbrev = {},
             bestiary_capture = false,
@@ -182,15 +189,15 @@ function _G.rebuild_settings()
         launcher = {},
     }
 
-    _G.settings.global.scale = scaling
-    _G.settings.global.configured_scale = configured_scaling
-    _G.settings.global.refresh_rate = refresh_rate
-    _G.settings.global.native_scaling = raw.global.native_scaling == true
-    _G.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
-    _G.settings.global.bestiary_capture = raw.global.bestiary_capture == true
-    _G.settings.global.style = raw.global.style
-    _G.settings.ui.windows = raw.ui.windows
-    _G.settings.ui.hud = raw.ui.hud
+    State.settings.global.scale = scaling
+    State.settings.global.configured_scale = configured_scaling
+    State.settings.global.refresh_rate = refresh_rate
+    State.settings.global.native_scaling = raw.global.native_scaling == true
+    State.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
+    State.settings.global.bestiary_capture = raw.global.bestiary_capture == true
+    State.settings.global.style = raw.global.style
+    State.settings.ui.windows = raw.ui.windows
+    State.settings.ui.hud = raw.ui.hud
 
     local function build_color(value)
         if value == nil then
@@ -364,22 +371,22 @@ function _G.rebuild_settings()
         dst.layout.spacing_y = scaled_int(raw_layout.spacing_y)
     end
 
-    build_vital(_G.settings.self.vitals, raw.self.vitals)
-    build_vital(_G.settings.target.vitals, raw.target.vitals)
-    build_vital(_G.settings.target.boss_vitals, raw.target.boss_vitals)
-    build_group_vital(_G.settings.fellowship, raw.fellowship)
-    build_group_vital(_G.settings.raid, raw.raid)
-    _G.settings.fellowship.show_self_in_fellowship = raw.fellowship.show_self_in_fellowship == true
-    _G.settings.raid.group_border_width = scaled_border(raw.raid.group_border_width)
-    _G.settings.raid.split_by_group = raw.raid.split_by_group == true
-    _G.settings.raid.group_colors.a = build_color(raw.raid.group_colors.a)
-    _G.settings.raid.group_colors.b = build_color(raw.raid.group_colors.b)
-    _G.settings.raid.group_colors.c = build_color(raw.raid.group_colors.c)
-    _G.settings.raid.group_colors.d = build_color(raw.raid.group_colors.d)
+    build_vital(State.settings.self.vitals, raw.self.vitals)
+    build_vital(State.settings.target.vitals, raw.target.vitals)
+    build_vital(State.settings.target.boss_vitals, raw.target.boss_vitals)
+    build_group_vital(State.settings.fellowship, raw.fellowship)
+    build_group_vital(State.settings.raid, raw.raid)
+    State.settings.fellowship.show_self_in_fellowship = raw.fellowship.show_self_in_fellowship == true
+    State.settings.raid.group_border_width = scaled_border(raw.raid.group_border_width)
+    State.settings.raid.split_by_group = raw.raid.split_by_group == true
+    State.settings.raid.group_colors.a = build_color(raw.raid.group_colors.a)
+    State.settings.raid.group_colors.b = build_color(raw.raid.group_colors.b)
+    State.settings.raid.group_colors.c = build_color(raw.raid.group_colors.c)
+    State.settings.raid.group_colors.d = build_color(raw.raid.group_colors.d)
 
     local raw_inv = raw.inventory
     if raw_inv ~= nil then
-        local inv = _G.settings.inventory
+        local inv = State.settings.inventory
         inv.enabled = raw_inv.enabled
         inv.replace = raw_inv.replace
         inv.cols = raw_inv.cols
@@ -388,7 +395,7 @@ function _G.rebuild_settings()
 
     local raw_assets = raw.assets
     if raw_assets ~= nil then
-        local assets = _G.settings.assets
+        local assets = State.settings.assets
         assets.layouts = raw_assets.layouts
         assets.enabled = raw_assets.enabled
         assets.view_mode = raw_assets.view_mode
@@ -398,15 +405,15 @@ function _G.rebuild_settings()
     end
 
     local raw_crafting = raw.crafting
-    _G.settings.crafting.display_mode = raw_crafting.display_mode
-    _G.settings.crafting.enabled = raw_crafting.enabled
+    State.settings.crafting.display_mode = raw_crafting.display_mode
+    State.settings.crafting.enabled = raw_crafting.enabled
 
     local raw_travel = raw.travel
-    _G.settings.travel.display_mode = raw_travel.display_mode
-    _G.settings.travel.enabled = raw_travel.enabled
+    State.settings.travel.display_mode = raw_travel.display_mode
+    State.settings.travel.enabled = raw_travel.enabled
 
     local raw_launcher = raw.launcher
-    local launcher = _G.settings.launcher
+    local launcher = State.settings.launcher
     launcher.enabled = raw_launcher.enabled == true
     launcher.icon_size = clamped_scaled_int(raw_launcher.icon_size, 16, 128)
     launcher.spacing = scaled_int(raw_launcher.spacing)
@@ -416,7 +423,7 @@ function _G.rebuild_settings()
     launcher.buttons = raw_launcher.buttons
 
     local raw_tt = raw.target.vitals.targets_target
-    local dst_tt = _G.settings.target.vitals.targets_target
+    local dst_tt = State.settings.target.vitals.targets_target
     dst_tt.enabled = raw_tt.enabled == true
     dst_tt.width = scaled_int(raw_tt.width)
     dst_tt.height = scaled_int(raw_tt.height)
@@ -433,14 +440,14 @@ function _G.rebuild_settings()
     }
 
     local raw_bv = raw.target.boss_vitals
-    local dst_bv = _G.settings.target.boss_vitals
+    local dst_bv = State.settings.target.boss_vitals
     dst_bv.enabled = raw_bv.enabled
     dst_bv.power.width = scaled_int(raw_bv.power.width)
     dst_bv.power.hide = raw_bv.power.hide
     dst_bv.power.side = raw_bv.power.side
 
     local raw_self_ee = raw.self.expiring_effects
-    local self_ee = _G.settings.self.expiring_effects
+    local self_ee = State.settings.self.expiring_effects
     self_ee.enabled = raw_self_ee.enabled
     self_ee.show_buffs = raw_self_ee.show_buffs
     self_ee.show_curable_debuffs = raw_self_ee.show_curable_debuffs
@@ -470,7 +477,7 @@ function _G.rebuild_settings()
     self_ee.font.outline_color = build_color(raw_self_ee.font.outline_color)
 
     local raw_expiring_target_effects = raw.target.expiring_effects
-    local target_ee = _G.settings.target.expiring_effects
+    local target_ee = State.settings.target.expiring_effects
     target_ee.enabled = raw_expiring_target_effects.enabled
     target_ee.show_buffs = raw_expiring_target_effects.show_buffs
     target_ee.show_curable_debuffs = raw_expiring_target_effects.show_curable_debuffs
@@ -500,13 +507,13 @@ function _G.rebuild_settings()
     target_ee.font.outline_color = build_color(raw_expiring_target_effects.font.outline_color)
 
     local raw_abbrev = raw.global.number_abbrev
-    _G.settings.global.number_abbrev.enabled = raw_abbrev.enabled
-    _G.settings.global.number_abbrev.digits = raw_abbrev.digits
-    _G.settings.global.number_abbrev.width = raw_abbrev.width
-    _G.settings.global.number_abbrev.method = raw_abbrev.method
+    State.settings.global.number_abbrev.enabled = raw_abbrev.enabled
+    State.settings.global.number_abbrev.digits = raw_abbrev.digits
+    State.settings.global.number_abbrev.width = raw_abbrev.width
+    State.settings.global.number_abbrev.method = raw_abbrev.method
 
     local raw_sb = raw.status_bar
-    local sb = _G.settings.status_bar
+    local sb = State.settings.status_bar
     sb.enabled = raw_sb.enabled
     sb.height = scaled_int(raw_sb.height)
     sb.padding = scaled_int(raw_sb.padding)
@@ -544,7 +551,7 @@ function _G.rebuild_settings()
     sb.widgets.time_local = {
         enabled = in_zones("time_local"),
         width = scaled_int(raw_sb.widgets.time_local.width),
-        content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.time_local.text_alignment],
+        content_alignment = ToLotro.text_alignment[raw_sb.widgets.time_local.text_alignment],
         time_format = raw_sb.widgets.time_local.time_format,
     }
     sb.widgets.inventory_space = {
@@ -552,7 +559,7 @@ function _G.rebuild_settings()
         width = scaled_int(raw_sb.widgets.inventory_space.width),
         icon = raw_sb.widgets.inventory_space.icon,
         color = raw_sb.widgets.inventory_space.color,
-        content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.inventory_space.text_alignment],
+        content_alignment = ToLotro.text_alignment[raw_sb.widgets.inventory_space.text_alignment],
     }
     sb.widgets.equipment_wear = {
         enabled = in_zones("equipment_wear"),
@@ -560,18 +567,18 @@ function _G.rebuild_settings()
         icon = raw_sb.widgets.equipment_wear.icon,
         coloring = raw_sb.widgets.equipment_wear.coloring == true,
         color = raw_sb.widgets.equipment_wear.color,
-        content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.equipment_wear.text_alignment],
+        content_alignment = ToLotro.text_alignment[raw_sb.widgets.equipment_wear.text_alignment],
     }
     sb.widgets.money = {
         enabled = in_zones("money"),
         width = scaled_int(raw_sb.widgets.money.width),
-        content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.money.text_alignment],
+        content_alignment = ToLotro.text_alignment[raw_sb.widgets.money.text_alignment],
     }
     sb.widgets.wallet = {
         enabled = in_zones("wallet"),
         width = scaled_int(raw_sb.widgets.wallet.width),
-        items = _G.STATUS_BAR_COMMON.parse_wallet_item_list(raw_sb.widgets.wallet.items),
-        content_alignment = LUI_TO_LOTRO.text_alignment[raw_sb.widgets.wallet.text_alignment],
+        items = S.parse_wallet_item_list(raw_sb.widgets.wallet.items),
+        content_alignment = ToLotro.text_alignment[raw_sb.widgets.wallet.text_alignment],
     }
     sb.widgets.item = {
         width = scaled_int(raw_sb.widgets.item.width),
@@ -608,7 +615,7 @@ function _G.rebuild_settings()
     sb.widgets.travel = build_shortcut_widget("travel")
 
     local raw_cd = raw.self.cooldowns
-    local cd = _G.settings.self.cooldowns
+    local cd = State.settings.self.cooldowns
     cd.enabled = raw_cd.enabled
     cd.threshold = raw_cd.threshold
     cd.min_base_cooldown = raw_cd.min_base_cooldown
@@ -641,7 +648,7 @@ function _G.rebuild_settings()
     cd.font.outline_color = raw_cd.font.outline_color
 
     local raw_drops = raw.drops
-    local drops = _G.settings.drops
+    local drops = State.settings.drops
     drops.enabled = raw_drops.enabled
     drops.visible_duration = raw_drops.visible_duration
     drops.rows = raw_drops.rows
@@ -657,5 +664,3 @@ function _G.rebuild_settings()
     drops.item.background_opacity = raw_drops.item.background_opacity
     drops.item.background_color = raw_drops.item.background_color
 end
-
-rebuild_settings = _G.rebuild_settings

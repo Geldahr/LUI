@@ -1,3 +1,12 @@
+import "LUI.src.Utils.callbacks"
+local TR = _G.LUI.Locale.TR
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local get_class_icon = _G.LUI.Utils.get_class_icon
+local get_party_leader_icon = _G.LUI.Utils.get_party_leader_icon
+local Vitals = _G.LUI.Features.Vitals
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -53,7 +62,8 @@ local function _apply_select_border(border, x, y, width, height, thickness, colo
 end
 
 ---@class GroupMemberVitals : VitalsBase
-GroupMemberVitals = class(VitalsBase)
+local GroupMemberVitals = class(Vitals.VitalsBase)
+Vitals.GroupMemberVitals = GroupMemberVitals
 
 function GroupMemberVitals:Constructor(settings_root, entity)
     self.settings_root = settings_root
@@ -63,7 +73,7 @@ function GroupMemberVitals:Constructor(settings_root, entity)
     self.em = nil
     self.em_added_event = nil
 
-    VitalsBase.Constructor(self, settings_root, entity, "Group Member", {
+    Vitals.VitalsBase.Constructor(self, settings_root, entity, "Group Member", {
         hud_key = settings_root .. "_vitals",
         show_effects = false,
         move_ui = false,
@@ -84,7 +94,7 @@ function GroupMemberVitals:set_entity(entity)
         self.target_highlighted = false
     end
 
-    VitalsBase.set_entity(self, entity)
+    Vitals.VitalsBase.set_entity(self, entity)
     self:_attach_link_dead_event()
     self:_update_class_icon()
     self:_update_leader_icon()
@@ -118,7 +128,7 @@ function GroupMemberVitals:set_target_name(target_name)
 end
 
 function GroupMemberVitals:self_morale_changed()
-    VitalsBase.self_morale_changed(self)
+    Vitals.VitalsBase.self_morale_changed(self)
     self:_update_member_state()
 end
 
@@ -231,7 +241,7 @@ function GroupMemberVitals:_setup_silent_effect_manager()
         return
     end
 
-    self.em = TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    self.em = Vitals.TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
     self.em_added_event = self.em:register_added_event(function()
     end)
     self:SetWantsUpdates(true)
@@ -267,7 +277,7 @@ function GroupMemberVitals:_update_class_icon()
         return
     end
 
-    local icon = _G.get_class_icon(self.entity:GetClass(), size)
+    local icon = get_class_icon(self.entity:GetClass(), size)
     if icon == nil then
         self.class_icon:SetVisible(false)
         return
@@ -289,7 +299,7 @@ function GroupMemberVitals:_update_leader_icon()
         return
     end
 
-    local icon = _G.get_party_leader_icon()
+    local icon = get_party_leader_icon()
     if icon == nil then
         self.leader_icon:SetVisible(false)
         return
@@ -342,12 +352,12 @@ function GroupMemberVitals:_build_extra_controls()
     self.state_label:SetZOrder(1)
     self.state_label:SetVisible(false)
 
-    self.class_icon = Image()
+    self.class_icon = UI.Widgets.Image()
     self.class_icon:SetParent(self)
     self.class_icon:SetZOrder(10)
     self.class_icon:SetVisible(false)
 
-    self.leader_icon = Image()
+    self.leader_icon = UI.Widgets.Image()
     self.leader_icon:SetParent(self)
     self.leader_icon:SetZOrder(11)
     self.leader_icon:SetVisible(false)

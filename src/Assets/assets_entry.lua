@@ -1,3 +1,11 @@
+local TR = _G.LUI.Locale.TR
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Assets = _G.LUI.Features.Assets
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -6,7 +14,8 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
 
-AssetsEntry = class(Turbine.UI.Control)
+local AssetsEntry = class(Turbine.UI.Control)
+Assets.AssetsEntry = AssetsEntry
 
 local Style = UI.Widgets.Style
 local BORDER = 2
@@ -43,11 +52,11 @@ local SOURCE_META_COLORS = {
 }
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _scaled_font(name, size)
-    return FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+    return FONT_TO_LOTRO(name, size * State.settings.global.scale)
 end
 
 local function _quality_name_color(quality)
@@ -219,7 +228,7 @@ function AssetsEntry:Constructor(on_hover)
     self.icon_slot:SetMouseVisible(true)
     self.icon_slot:SetZOrder(1)
 
-    self.icon_back = Image()
+    self.icon_back = UI.Widgets.Image()
     self.icon_back:SetParent(self.icon_slot)
     self.icon_back:SetMouseVisible(false)
     self.icon_back:SetZOrder(1)
@@ -231,7 +240,7 @@ function AssetsEntry:Constructor(on_hover)
     self.icon_item_info_control:SetVisible(false)
     self.icon_item_info_control:SetZOrder(0)
 
-    self.icon_fore = Image()
+    self.icon_fore = UI.Widgets.Image()
     self.icon_fore:SetParent(self.icon_back)
     self.icon_fore:SetMouseVisible(false)
     self.icon_fore:SetZOrder(1)

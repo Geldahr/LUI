@@ -1,14 +1,18 @@
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "LUI.src.UI.Widgets"
 import "LUI.src.UI.shortcuts"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Shortcuts = UI.Shortcuts
 local Style = UI.Widgets.Style
 local BUTTON_MARGIN = 1
 local BUTTON_BORDER = 1
 
 local ShortcutButtonWidget = class(Turbine.UI.Control)
-_G.ShortcutButtonWidget = ShortcutButtonWidget
+StatusBarWidgets.ShortcutButtonWidget = ShortcutButtonWidget
 
 function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, bar_h, font)
     Turbine.UI.Control.Constructor(self)
@@ -23,7 +27,7 @@ function ShortcutButtonWidget:Constructor(shortcut_key, display_mode, widget_w, 
     self:SetSize(widget_w, bar_h)
     self:SetMouseVisible(false)
 
-    self.button = LuiButton()
+    self.button = UI.Widgets.LuiButton()
     self.button:SetParent(self)
     self._interaction_target = self.button
     self.button:set_border_thickness(BUTTON_BORDER)

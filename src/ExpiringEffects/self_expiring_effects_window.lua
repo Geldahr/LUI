@@ -1,3 +1,7 @@
+local TR = _G.LUI.Locale.TR
+local ExpiringEffects = _G.LUI.Features.ExpiringEffects
+local State = _G.LUI.Settings.State
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -5,14 +9,15 @@ import "Turbine.UI.Lotro"
 import "LUI.src.ExpiringEffects.expiring_effects_window"
 import "LUI.src.ExpiringEffects.self_expiring_effect_entry"
 
-SelfExpiringEffectsWindow = class(ExpiringEffectsWindow)
+local SelfExpiringEffectsWindow = class(ExpiringEffects.ExpiringEffectsWindow)
+ExpiringEffects.SelfExpiringEffectsWindow = SelfExpiringEffectsWindow
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function SelfExpiringEffectsWindow:Constructor()
-    ExpiringEffectsWindow.Constructor(self, { title = TR["Expiring Effects (Self)"] })
+    ExpiringEffects.ExpiringEffectsWindow.Constructor(self, { title = TR["Expiring Effects (Self)"] })
 end
 
 ---------------------------------------------------------------------
@@ -24,7 +29,7 @@ end
 ---------------------------------------------------------------------
 
 function SelfExpiringEffectsWindow:get_settings()
-    return _G.settings.self.expiring_effects
+    return State.settings.self.expiring_effects
 end
 
 function SelfExpiringEffectsWindow:get_hud_key()
@@ -32,7 +37,7 @@ function SelfExpiringEffectsWindow:get_hud_key()
 end
 
 function SelfExpiringEffectsWindow:get_entry_class()
-    return SelfExpiringEffectEntry
+    return ExpiringEffects.SelfExpiringEffectEntry
 end
 
 function SelfExpiringEffectsWindow:get_effect_objects()

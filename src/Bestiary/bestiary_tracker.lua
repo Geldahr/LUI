@@ -1,10 +1,20 @@
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local Coords = _G.LUI.Utils.Coords
+local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
+local Persistence = _G.LUI.Settings.Persistence
+local State = _G.LUI.Settings.State
+local Locale = _G.LUI.Locale
+local Bestiary = _G.LUI.Features.Bestiary
+local Windows = _G.LUI.Runtime.Windows
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 
 import "LUI.src.Utils.callbacks"
 import "LUI.src.Utils.coords"
 import "LUI.src.Utils.search_query"
 
-Bestiary = Bestiary or {}
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
 Bestiary.Collector = class()
 Bestiary.current_location = Bestiary.current_location or nil
 
@@ -14,21 +24,7 @@ local DATA_ACCESS = Bestiary.DataAccess
 local LOOT_POST_KILL_WINDOW_SECONDS = 0.10
 
 local function _is_english_client()
-    if is_lui_english_language ~= nil then
-        return is_lui_english_language() == true
-    end
-
-    local lang = Turbine.Engine.GetLanguage()
-    local language_enum = Turbine.Language
-    if type(lang) == "number" then
-        return lang == language_enum.English or lang == language_enum.EnglishGB
-    end
-    if type(lang) == "string" then
-        local code = lang:lower():gsub("_", "-")
-        return code == "en" or code:find("^en%-") == 1
-    end
-
-    return true
+    return Locale.is_english_language() == true
 end
 
 local function _trim(text)
@@ -45,7 +41,7 @@ local function _trim(text)
 end
 
 local function _is_bestiary_open()
-    local window = _G.BESTIARY_WINDOW
+    local window = Windows.bestiary
     return window ~= nil and window:IsVisible() == true
 end
 
@@ -95,9 +91,9 @@ function Bestiary.set_current_location(location)
     local query = _build_location_filter_query(current_location)
 
     Bestiary.current_location = current_location
-    _G.bestiary_area_filter_query = query
+    BestiaryCache.area_filter_query = query
 
-    local window = _G.BESTIARY_WINDOW
+    local window = Windows.bestiary
     if window ~= nil then
         window:on_location_resolved()
     end
@@ -127,8 +123,8 @@ local function _ensure_bestiary_cache()
 end
 
 local function _touch_generation()
-    _G.bestiary_cache_generation = (_G.bestiary_cache_generation or 0) + 1
-    _G.bestiary_cache_dirty = true
+    BestiaryCache.generation = (BestiaryCache.generation or 0) + 1
+    BestiaryCache.dirty = true
 end
 
 local function _ensure_entry(name)
@@ -219,7 +215,7 @@ function Bestiary.Collector:Constructor()
 end
 
 function Bestiary.Collector:is_enabled()
-    local settings = _G.settings
+    local settings = State.settings
     if type(settings) ~= "table" or type(settings.global) ~= "table" then
         return false
     end
@@ -244,7 +240,7 @@ end
 
 function Bestiary.Collector:save()
     self:_flush_pending_kills(true)
-    save_bestiary_cache()
+    Persistence.save_bestiary_cache()
 end
 
 function Bestiary.Collector:flush_expired()

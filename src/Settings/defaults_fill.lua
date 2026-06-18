@@ -1,5 +1,13 @@
+local RaidLayout = _G.LUI.Utils.RaidLayout
 import "LUI.src.Settings.default_layouts"
 import "LUI.src.Utils.raid_layout"
+
+local LUI = _G.LUI
+local State = LUI.Settings.State
+local Defaults = LUI.Settings.Defaults
+local DefaultLayouts = Defaults.DefaultLayouts
+local LUI_ENUMS = LUI.Settings.Enums
+local Locale = LUI.Locale
 
 local RAID_GROUP_KEYS = { "a", "b", "c", "d" }
 
@@ -299,8 +307,8 @@ local function _ensure_window_tiles(windows)
 end
 
 local function _defaults_source()
-    local loaded = _G.loaded_settings
-    local target_scale = _G.DefaultLayouts.get_resolution_scale()
+    local loaded = State.loaded_settings
+    local target_scale = DefaultLayouts.get_resolution_scale()
     if type(loaded) == "table" then
         local global = loaded.global
         if type(global) == "table" then
@@ -311,7 +319,7 @@ local function _defaults_source()
         end
     end
 
-    local defaults = _G.DefaultLayouts.build("top", target_scale)
+    local defaults = DefaultLayouts.build("top", target_scale)
 
     if type(defaults.fellowship) ~= "table" then
         error("Missing default fellowship settings")
@@ -327,54 +335,54 @@ local function _defaults_source()
     return defaults
 end
 
-function _G.get_ui_window_state(key)
+function Defaults.get_ui_window_state(key)
     if type(key) ~= "string" then
         return nil
     end
-    if type(_G.loaded_settings) ~= "table" then
+    if type(State.loaded_settings) ~= "table" then
         return nil
     end
 
-    local ui = _ensure_table(_G.loaded_settings, "ui")
+    local ui = _ensure_table(State.loaded_settings, "ui")
     local windows = _ensure_table(ui, "windows")
     return _ensure_table(windows, key)
 end
 
-function _G.get_ui_hud_state(key)
+function Defaults.get_ui_hud_state(key)
     if type(key) ~= "string" then
         return nil
     end
-    if type(_G.loaded_settings) ~= "table" then
+    if type(State.loaded_settings) ~= "table" then
         return nil
     end
 
-    local ui = _ensure_table(_G.loaded_settings, "ui")
+    local ui = _ensure_table(State.loaded_settings, "ui")
     local hud = _ensure_table(ui, "hud")
     return _ensure_table(hud, key)
 end
 
-function _G.ensure_loaded_settings()
-    if type(_G.loaded_settings) ~= "table" then
-        _G.loaded_settings = {}
+function Defaults.ensure_loaded_settings()
+    if type(State.loaded_settings) ~= "table" then
+        State.loaded_settings = {}
     end
 
-    local original = _G.loaded_settings
+    local original = State.loaded_settings
     local defaults = _defaults_source()
-    _G.loaded_settings = _sanitize_with_defaults(_G.loaded_settings, defaults)
-    _preserve_user_arrays(_G.loaded_settings, original)
-    _seed_group_vitals_settings(_G.loaded_settings, defaults, original)
-    _strip_legacy_party_settings(_G.loaded_settings)
-    _ensure_preview_label_defaults(_G.loaded_settings)
-    _ensure_raid_layout_defaults(_G.loaded_settings, defaults)
+    State.loaded_settings = _sanitize_with_defaults(State.loaded_settings, defaults)
+    _preserve_user_arrays(State.loaded_settings, original)
+    _seed_group_vitals_settings(State.loaded_settings, defaults, original)
+    _strip_legacy_party_settings(State.loaded_settings)
+    _ensure_preview_label_defaults(State.loaded_settings)
+    _ensure_raid_layout_defaults(State.loaded_settings, defaults)
 
-    local ui = _ensure_table(_G.loaded_settings, "ui")
+    local ui = _ensure_table(State.loaded_settings, "ui")
     local windows = _ensure_table(ui, "windows")
     _ensure_window_tiles(windows)
 
-    if is_lui_english_language ~= nil and is_lui_english_language() ~= true then
-        local global = _ensure_table(_G.loaded_settings, "global")
+    if Locale.is_english_language() ~= true then
+        local global = _ensure_table(State.loaded_settings, "global")
         global.bestiary_capture = false
     end
 
-    return _deep_equal(original, _G.loaded_settings) ~= true
+    return _deep_equal(original, State.loaded_settings) ~= true
 end

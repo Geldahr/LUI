@@ -1,4 +1,5 @@
 local MAX_MIGRATION_STEPS = 50
+local Migrations = _G.LUI.Settings.Migrations
 
 local function _current_settings_version()
     return tostring(Plugins["LUI"]:GetVersion())
@@ -29,16 +30,16 @@ local function _make_migration_registry(existing)
     })
 end
 
-_G.SETTINGS_MIGRATIONS = _G.SETTINGS_MIGRATIONS or {}
-_G.SETTINGS_MIGRATIONS.account = _make_migration_registry(_G.SETTINGS_MIGRATIONS.account)
-_G.SETTINGS_MIGRATIONS.profile = _make_migration_registry(_G.SETTINGS_MIGRATIONS.profile)
-_G.SETTINGS_MIGRATIONS.character = _make_migration_registry(_G.SETTINGS_MIGRATIONS.character)
+Migrations.Registry = Migrations.Registry or {}
+Migrations.Registry.account = _make_migration_registry(Migrations.Registry.account)
+Migrations.Registry.profile = _make_migration_registry(Migrations.Registry.profile)
+Migrations.Registry.character = _make_migration_registry(Migrations.Registry.character)
 
-function _G.get_settings_version()
+function Migrations.get_settings_version()
     return _current_settings_version()
 end
 
-function _G.register_settings_migration(version, step)
+function Migrations.register_settings_migration(version, step)
     if type(version) ~= "string" then
         error("Settings migration version must be a string")
     end
@@ -46,7 +47,7 @@ function _G.register_settings_migration(version, step)
         error("Settings migration step must be a table")
     end
 
-    local registries = _G.SETTINGS_MIGRATIONS
+    local registries = Migrations.Registry
     local registered = false
     if type(step.account) == "function" then
         if type(rawget(registries.account, version)) == "function" then
@@ -110,14 +111,14 @@ local function _run_migrations(config, registry)
     return config, changed
 end
 
-function _G.migrate_account_settings(config)
-    return _run_migrations(config, _G.SETTINGS_MIGRATIONS.account)
+function Migrations.migrate_account_settings(config)
+    return _run_migrations(config, Migrations.Registry.account)
 end
 
-function _G.migrate_profile_settings(config)
-    return _run_migrations(config, _G.SETTINGS_MIGRATIONS.profile)
+function Migrations.migrate_profile_settings(config)
+    return _run_migrations(config, Migrations.Registry.profile)
 end
 
-function _G.migrate_character_settings(config)
-    return _run_migrations(config, _G.SETTINGS_MIGRATIONS.character)
+function Migrations.migrate_character_settings(config)
+    return _run_migrations(config, Migrations.Registry.character)
 end

@@ -1,11 +1,15 @@
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local State = _G.LUI.Settings.State
+local Tabs = _G.LUI.Settings.Tabs
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.Settings.Tabs.tabbed_page"
 
 local Style = UI.Widgets.Style
-local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
-    _G.SettingsTabbedPage or SettingsTabbedPage
+local SettingsTabbedPage = Tabs.SettingsTabbedPage
 
 local SECTION_TAB_SCALE = 0.88
 local NESTED_TAB_SCALE = 0.78
@@ -17,13 +21,13 @@ local PREVIEW_GAP = 10
 local SECTION_FRAME_PADDING = 8
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _scaled_font(name, size)
-    local font = FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+    local font = FONT_TO_LOTRO(name, size * State.settings.global.scale)
     if font == nil then
-        error("Missing scaled font: " .. tostring(name) .. " " .. tostring(size * _G.settings.global.scale))
+        error("Missing scaled font: " .. tostring(name) .. " " .. tostring(size * State.settings.global.scale))
     end
     return font
 end
@@ -51,7 +55,7 @@ local function _module_for_page(key, page)
     }
 end
 
-SettingsFeatureNestedPage = class(SettingsTabbedPage)
+local SettingsFeatureNestedPage = class(SettingsTabbedPage)
 
 function SettingsFeatureNestedPage:Constructor(window, tab_position, scale_factor, font_size)
     SettingsTabbedPage.Constructor(self, window)
@@ -75,7 +79,7 @@ function SettingsFeatureNestedPage:apply_ui_scale()
     self.sub_tab_bar:set_button_side_margin(0)
     self.sub_tab_bar:set_button_content_gap(_scaled_int(SECTION_FRAME_PADDING))
     self.sub_tab_bar:set_content_padding(0)
-    self.sub_tab_bar:set_scale(_G.settings.global.scale * self._compact_tab_scale_factor)
+    self.sub_tab_bar:set_scale(State.settings.global.scale * self._compact_tab_scale_factor)
     self.sub_tab_bar:set_font(_scaled_tab_font(self._compact_tab_font_size))
     _apply_button_tab_bar_theme(self.sub_tab_bar)
 
@@ -109,7 +113,7 @@ function SettingsFeatureNestedPage:layout()
     self.sub_tab_bar:refresh_layout()
 end
 
-SettingsFeatureSectionPage = class(Turbine.UI.Control)
+local SettingsFeatureSectionPage = class(Turbine.UI.Control)
 
 function SettingsFeatureSectionPage:Constructor(window, preview_key, preview_height, preview_refresh_fn, use_button_tabs)
     Turbine.UI.Control.Constructor(self)
@@ -280,14 +284,14 @@ function SettingsFeatureSectionPage:apply_ui_scale()
         self.section_tab_bar:set_show_content_border(false)
         self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.button)
         self.section_tab_bar:set_content_padding(0)
-        self.section_tab_bar:set_scale(_G.settings.global.scale * SECTION_TAB_SCALE)
+        self.section_tab_bar:set_scale(State.settings.global.scale * SECTION_TAB_SCALE)
         self.section_tab_bar:set_font(_scaled_tab_font(SECTION_TAB_FONT_SIZE))
         _apply_button_tab_bar_theme(self.section_tab_bar)
     else
         self.section_tab_bar:set_show_content_border(true)
         self.section_tab_bar:set_selection_style(UI.Widgets.LuiTabBar.selection_style.connected)
         self.section_tab_bar:set_content_padding(_scaled_int(8))
-        self.section_tab_bar:set_scale(_G.settings.global.scale)
+        self.section_tab_bar:set_scale(State.settings.global.scale)
         self.section_tab_bar:set_font(self.window.tab_font)
     end
 
@@ -391,7 +395,7 @@ function SettingsFeatureSectionPage:layout()
     end
 end
 
-SettingsFeatureShell = {
+local SettingsFeatureShell = {
     scaled_int = _scaled_int,
     module_for_page = _module_for_page,
     nested_page_class = SettingsFeatureNestedPage,
@@ -400,8 +404,6 @@ SettingsFeatureShell = {
     nested_tab_font_size = NESTED_TAB_FONT_SIZE,
 }
 
-_G.SettingsFeatureShell = SettingsFeatureShell
-_G.SettingsFeatureNestedPage = SettingsFeatureNestedPage
-_G.SettingsFeatureSectionPage = SettingsFeatureSectionPage
-_G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
-_G.LUI_SETTINGS_SHARED.feature_shell = SettingsFeatureShell
+Tabs.SettingsFeatureShell = SettingsFeatureShell
+Tabs.SettingsFeatureNestedPage = SettingsFeatureNestedPage
+Tabs.SettingsFeatureSectionPage = SettingsFeatureSectionPage

@@ -1,4 +1,6 @@
-function _G.add_callback(object, event, callback)
+local Utils = _G.LUI.Utils
+
+function Utils.add_callback(object, event, callback)
     if object == nil or event == nil or type(callback) ~= "function" then
         return nil
     end
@@ -16,7 +18,7 @@ function _G.add_callback(object, event, callback)
     return callback
 end
 
-function _G.remove_callback(object, event, callback)
+function Utils.remove_callback(object, event, callback)
     if object[event] ~= nil and type(object[event]) == "table" then
         local size = #object[event]
         for i = 1, size do

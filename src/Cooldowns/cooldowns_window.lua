@@ -1,3 +1,10 @@
+local TR = _G.LUI.Locale.TR
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local Cooldowns = _G.LUI.Features.Cooldowns
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -7,6 +14,8 @@ import "LUI.src.Cooldowns.time_display"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
 
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
 ---@class RecoveringSkill
 ---@field key string
 ---@field name string
@@ -18,7 +27,8 @@ import "LUI.src.Utils.callbacks"
 ---@field enter_at number
 ---@field icon Turbine.UI.Graphic
 ---@field cb_reset function
-RecoveringSkill = class()
+local RecoveringSkill = class()
+Cooldowns.RecoveringSkill = RecoveringSkill
 
 function RecoveringSkill:Constructor(skill, name_key, name, white_listed)
     self.key = name_key
@@ -33,7 +43,8 @@ function RecoveringSkill:Constructor(skill, name_key, name, white_listed)
     self.cb_reset = nil
 end
 
-CooldownsWindow = class(LuiHUD)
+local CooldownsWindow = class(UI.Widgets.LuiHUD)
+Cooldowns.CooldownsWindow = CooldownsWindow
 
 local SKILL_DISCOVER_EVERY = 30.0
 
@@ -155,14 +166,14 @@ end
 ---------------------------------------------------------------------
 
 function CooldownsWindow:Constructor()
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = "cooldowns",
         title = TR["Cooldowns"],
     })
 
     self.slots = {}
     self.last_update_at = 0
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
 
     self._skill_discover_due_at = 0
     self._skills = {}
@@ -196,12 +207,12 @@ end
 ---------------------------------------------------------------------
 
 function CooldownsWindow:get_settings()
-    return _G.settings.self.cooldowns
+    return State.settings.self.cooldowns
 end
 
 function CooldownsWindow:set_move_mode(enabled)
     local changed = (enabled == true) ~= self:is_move_mode()
-    LuiHUD.set_move_mode(self, enabled)
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     if changed and enabled == true then
         self:_hide_slots()
     elseif changed then
@@ -221,7 +232,7 @@ function CooldownsWindow:apply_settings()
 
     local s = self:get_settings()
 
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
 
     self:apply_hud_position()
 
@@ -254,7 +265,7 @@ function CooldownsWindow:apply_settings()
     local capacity = cols * rows
     for i = 1, capacity do
         if self.slots[i] == nil then
-            local entry = CooldownEntry()
+            local entry = Cooldowns.CooldownEntry()
             entry:SetParent(self)
             entry:SetVisible(false)
             entry:SetZOrder(10)
@@ -657,7 +668,7 @@ function CooldownsWindow:_discover_skills(force)
 
                         if passes_min_base then
                             out_len = out_len + 1
-                            local rec = RecoveringSkill(
+                            local rec = Cooldowns.RecoveringSkill(
                                 skill,
                                 name_key,
                                 name,

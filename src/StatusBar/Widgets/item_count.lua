@@ -1,10 +1,14 @@
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
 
 local ItemCountWidget = class(Turbine.UI.Control)
-_G.ItemCountWidget = ItemCountWidget
+StatusBarWidgets.ItemCountWidget = ItemCountWidget
 
 local ITEM_ICON_GAP = 8
 local ITEM_ICON_MARGIN = 2
@@ -49,19 +53,19 @@ function ItemCountWidget:Constructor(item_name, widget_w, bar_h, font, icon_imag
     self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self:SetSize(widget_w, bar_h)
 
-    self.icon_back = Image()
+    self.icon_back = UI.Widgets.Image()
     self.icon_back:SetParent(self)
     self.icon_back:SetPosition(0, ITEM_ICON_MARGIN)
     self.icon_back:SetZOrder(1)
     self.icon_back:SetVisible(false)
 
-    self.icon_fore = Image()
+    self.icon_fore = UI.Widgets.Image()
     self.icon_fore:SetParent(self)
     self.icon_fore:SetPosition(0, ITEM_ICON_MARGIN)
     self.icon_fore:SetZOrder(2)
     self.icon_fore:SetVisible(false)
 
-    self.label = LuiLabel()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     _apply_font(self.label, font)
 

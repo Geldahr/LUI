@@ -5,7 +5,7 @@
 -- wduda / Hyoss, and to the authors of the original Travel Window plugin,
 -- which upstream credits to Dhor and later contributors.
 
-Travel = Travel or {}
+local Travel = _G.LUI.Features.Travel
 Travel.SkillData = {
     { id = "0x70028BBF", EN = { name = "Crude Map to Grimwood" }, DE = { name = "Kartenskizze zum Grimmwald" }, FR = { name = "Carte grossière pour aller au Bois Funeste" }, RU = { name = "Грубая карта пути в Мрачный лес" } },
     { id = "0x70028BB3", EN = { name = "Crude Map to Isendeep" }, DE = { name = "Kartenskizze zur Isenbinge" }, FR = { name = "Carte grossière pour aller au Gouffre d'Isen" }, RU = { name = "Грубая карта пути в Изендип" } },

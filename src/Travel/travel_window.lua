@@ -1,9 +1,17 @@
+local TR = _G.LUI.Locale.TR
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Defaults = _G.LUI.Settings.Defaults
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Travel = _G.LUI.Features.Travel
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 
-TravelWindow = class(LuiWindow)
+local TravelWindow = class(UI.Widgets.LuiWindow)
+Travel.TravelWindow = TravelWindow
 
 local Style = UI.Widgets.Style
 local BASE_MARGIN = 6
@@ -21,11 +29,11 @@ local REFRESH_INTERVAL = 2
 local RESIZE_LEFT = 1
 
 local function _ui_scale()
-    return _G.lui_get_ui_scale() or 1
+    return UI.NativeScaling.get_ui_scale()
 end
 
 local function _scaled_int(value)
-    return _G.lui_scaled_int(value)
+    return UI.NativeScaling.scaled_ui_int(value)
 end
 
 local function _scaled_font(size)
@@ -186,11 +194,11 @@ local function _create_grid_row(owner, entries, start_index, cols, row_w)
 end
 
 function TravelWindow:Constructor()
-    LuiWindow.Constructor(self, {
+    UI.Widgets.LuiWindow.Constructor(self, {
         hideable = true,
     })
     self:enable_maximize(false)
-    self:set_resizable(LuiWindow.RESIZE_BOTH)
+    self:set_resizable(UI.Widgets.LuiWindow.RESIZE_BOTH)
     self:hide()
     self:SetWantsUpdates(false)
 
@@ -240,7 +248,7 @@ function TravelWindow:Constructor()
         if self._suppress_size_changed == true then
             return
         end
-        LuiWindow._layout(self)
+        UI.Widgets.LuiWindow._layout(self)
         self:_layout_content()
         if self._geometry_loaded == true then
             self:capture_geometry()
@@ -274,7 +282,7 @@ function TravelWindow:open()
 end
 
 function TravelWindow:capture_geometry()
-    local window = _G.get_ui_window_state("travel")
+    local window = Defaults.get_ui_window_state("travel")
     local geometry = self:get_geometry()
     window.left = geometry.left
     window.top = geometry.top
@@ -288,12 +296,12 @@ function TravelWindow:persist_geometry()
 end
 
 function TravelWindow:_load_geometry()
-    local window = _G.get_ui_window_state("travel")
+    local window = Defaults.get_ui_window_state("travel")
     self:set_geometry(window)
 end
 
 function TravelWindow:_display_mode()
-    local mode = _G.settings.travel.display_mode
+    local mode = State.settings.travel.display_mode
     if mode == DISPLAY_MODE_GRID then
         return DISPLAY_MODE_GRID
     end
@@ -368,10 +376,10 @@ end
 
 function TravelWindow:_apply_resize_mode()
     if self:_display_mode() == DISPLAY_MODE_GRID then
-        self:set_resizable(LuiWindow.RESIZE_HORIZONTAL)
+        self:set_resizable(UI.Widgets.LuiWindow.RESIZE_HORIZONTAL)
         return
     end
-    self:set_resizable(LuiWindow.RESIZE_BOTH)
+    self:set_resizable(UI.Widgets.LuiWindow.RESIZE_BOTH)
 end
 
 function TravelWindow:_fit_grid_height(window_w)
@@ -407,7 +415,7 @@ function TravelWindow:_fit_grid_height(window_w)
     self:SetSize(width, desired_h)
     self._suppress_size_changed = false
 
-    LuiWindow._layout(self)
+    UI.Widgets.LuiWindow._layout(self)
     self:_layout_content(true)
 end
 
@@ -506,7 +514,7 @@ function TravelWindow:refresh(force)
 end
 
 function TravelWindow:apply_settings()
-    LuiWindow.apply_settings(self, _ui_scale())
+    UI.Widgets.LuiWindow.apply_settings(self, _ui_scale())
 
     self._gap = _scaled_int(BASE_GAP)
     self._scroll_w = BASE_SCROLL_W
@@ -533,7 +541,7 @@ end
 
 function TravelWindow:_apply_resize_bounds(x, y, width, height, region, args)
     if self:_display_mode() ~= DISPLAY_MODE_GRID then
-        LuiWindow._apply_resize_bounds(self, x, y, width, height, region, args)
+        UI.Widgets.LuiWindow._apply_resize_bounds(self, x, y, width, height, region, args)
         return
     end
 
@@ -559,7 +567,7 @@ function TravelWindow:_apply_resize_bounds(x, y, width, height, region, args)
     self:SetSize(width, desired_h)
     self._suppress_size_changed = false
 
-    LuiWindow._layout(self)
+    UI.Widgets.LuiWindow._layout(self)
     self:_layout_content(true)
     self:capture_geometry()
 end

@@ -1,7 +1,12 @@
 import "Turbine.UI"
 
-function _G.fix_colors()
-    local s = _G.loaded_settings
+local Settings = _G.LUI.Settings
+local State = Settings.State
+local Colors = Settings.Colors or {}
+Settings.Colors = Colors
+
+function Colors.fix_colors()
+    local s = State.loaded_settings
 
     local function to_color(value)
         if type(value) == "table" and value["R"] ~= nil then

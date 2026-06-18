@@ -1,3 +1,7 @@
+local TR = _G.LUI.Locale.TR
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -6,8 +10,14 @@ import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.style"
 import "LUI.src.Utils.color"
 
+local Widgets = _G.LUI.UI.Widgets
+local LuiButton = Widgets.LuiButton
+local LuiLineEdit = Widgets.LuiLineEdit
+local Style = Widgets.Style
+
 ---@class LuiColorField : Turbine.UI.Control
-LuiColorField = class(Turbine.UI.Control)
+local LuiColorField = class(Turbine.UI.Control)
+Widgets.LuiColorField = LuiColorField
 
 local HS_TEXTURE_100 = "LUI/assets/ui/color_hs_100.tga"
 local HS_TEXTURE_150 = "LUI/assets/ui/color_hs_150.tga"
@@ -36,7 +46,6 @@ local BASE_PICKER_CURSOR = 7
 local PICKER_DRAG_NONE = 0
 local PICKER_DRAG_HS = 1
 local PICKER_DRAG_VALUE = 2
-local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
     return value * scale

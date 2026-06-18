@@ -1,3 +1,17 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local Defaults = _G.LUI.Settings.Defaults
+local Flags = _G.LUI.Runtime.Flags
+local Stores = _G.LUI.Runtime.Stores
+local Windows = _G.LUI.Runtime.Windows
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Assets = _G.LUI.Features.Assets
+local Crafting = _G.LUI.Features.Crafting
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets"
@@ -6,7 +20,8 @@ import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Utils.search_query"
 import "LUI.src.Assets.assets_entry"
 
-AssetsWindow = class(LuiWindow)
+local AssetsWindow = class(UI.Widgets.LuiWindow)
+Assets.AssetsWindow = AssetsWindow
 local Style = UI.Widgets.Style
 
 local BASE_MARGIN_LEFT = 15
@@ -89,11 +104,11 @@ local SOURCE_HINT_COLORS = {
 }
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _scaled_font(name, size)
-    return FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+    return FONT_TO_LOTRO(name, size * State.settings.global.scale)
 end
 
 local function _scaled_control_font(size)
@@ -492,7 +507,7 @@ end
 ---------------------------------------------------------------------
 
 function AssetsWindow:Constructor()
-    LuiWindow.Constructor(self)
+    UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Assets"])
     self:set_icon(UI.AssetIds.chest)
@@ -500,7 +515,7 @@ function AssetsWindow:Constructor()
     self:hide()
     self:SetWantsUpdates(false)
 
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
     self.last_update_at = 0
 
     self._suppress_size_changed = false
@@ -582,7 +597,7 @@ function AssetsWindow:Constructor()
         self:set_page(self.page_index + 1)
     end
 
-    self.view_icons_button = Image()
+    self.view_icons_button = UI.Widgets.Image()
     self.view_icons_button:SetParent(self.nav_bar)
     self.view_icons_button:SetMouseVisible(true)
     self.view_icons_button.MouseClick = function(_, args)
@@ -592,7 +607,7 @@ function AssetsWindow:Constructor()
         self:set_view_mode(LUI_ENUMS.assets_view_mode.ICONS, true)
     end
 
-    self.view_details_button = Image()
+    self.view_details_button = UI.Widgets.Image()
     self.view_details_button:SetParent(self.nav_bar)
     self.view_details_button:SetMouseVisible(true)
     self.view_details_button.MouseClick = function(_, args)
@@ -734,10 +749,10 @@ function AssetsWindow:Constructor()
             return
         end
 
-        local window = _G.CRAFTING_WINDOW
+        local window = Windows.crafting
         if window == nil then
             window = Crafting.CraftingWindow()
-            _G.CRAFTING_WINDOW = window
+            Windows.crafting = window
         end
         if window ~= nil then
             window:open_from_asset_materials(nil)
@@ -803,7 +818,7 @@ function AssetsWindow:Constructor()
     self.hint_label:SetVisible(false)
 
     self.stack_hint = UI.Widgets.LuiTooltip()
-    self.stack_hint:set_scale(_G.settings.global.scale)
+    self.stack_hint:set_scale(State.settings.global.scale)
     self.stack_hint:SetZOrder(2200)
 
     self.stack_hint_inner = Turbine.UI.Control()
@@ -812,7 +827,7 @@ function AssetsWindow:Constructor()
     self.stack_hint_rows = {}
 
     self.SizeChanged = function()
-        LuiWindow._layout(self)
+        UI.Widgets.LuiWindow._layout(self)
         if self._suppress_size_changed == true then
             return
         end
@@ -826,8 +841,8 @@ function AssetsWindow:Constructor()
             self.last_update_at = 0
             self._last_generation = nil
             self:bring_to_front()
-            if ASSETS_STORE ~= nil then
-                ASSETS_STORE:refresh_now(nil, true)
+            if Stores.assets ~= nil then
+                Stores.assets:refresh_now(nil, true)
             end
             self:refresh_from_store(true)
         else
@@ -866,8 +881,8 @@ function AssetsWindow:toggle()
 end
 
 function AssetsWindow:capture_geometry()
-    local raw = _G.loaded_settings.assets
-    local window_state = _G.get_ui_window_state("assets")
+    local raw = State.loaded_settings.assets
+    local window_state = Defaults.get_ui_window_state("assets")
     if self:is_tiled() ~= true then
         self:_save_current_layout()
     end
@@ -898,21 +913,21 @@ function AssetsWindow:set_view_mode(mode, persist)
     end
     self.view_mode = mode
     self.tile_size = self:_get_mode_tile_size(mode)
-    _G.settings.assets.view_mode = mode
-    _G.loaded_settings.assets.view_mode = mode
+    State.settings.assets.view_mode = mode
+    State.loaded_settings.assets.view_mode = mode
 
     self.page_index = 1
     self:_apply_layout_for_mode(mode)
     if self:is_tiled() == true then
         local geometry = self:get_geometry()
-        local window_state = _G.get_ui_window_state("assets")
+        local window_state = Defaults.get_ui_window_state("assets")
         window_state.left = geometry.left
         window_state.top = geometry.top
         window_state.width = geometry.width
         window_state.height = geometry.height
         window_state.tile = geometry.tile
     end
-    self:set_geometry(_G.get_ui_window_state("assets"))
+    self:set_geometry(Defaults.get_ui_window_state("assets"))
     self:_update_view_buttons()
     self:layout()
     self:refresh_from_store(true)
@@ -971,8 +986,8 @@ function AssetsWindow:set_stack_items(enabled)
     end
 
     self.stack_items = enabled
-    _G.settings.assets.stack_items = enabled
-    _G.loaded_settings.assets.stack_items = enabled
+    State.settings.assets.stack_items = enabled
+    State.loaded_settings.assets.stack_items = enabled
     self:_hide_stack_hint()
     self:_apply_record_view(true)
 end
@@ -1003,11 +1018,11 @@ function AssetsWindow:set_grouping_mode(mode)
 end
 
 function AssetsWindow:apply_settings()
-    LuiWindow.apply_settings(self, _G.settings.global.scale)
+    UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
 
-    local s = _G.settings.assets
+    local s = State.settings.assets
 
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
     self.tile_sizes.icons = s.tile.icons
     self.tile_sizes.details = s.tile.details
     self.view_mode = s.view_mode
@@ -1019,7 +1034,7 @@ function AssetsWindow:apply_settings()
     self.next_button:set_font(button_font)
     self.clear_button:set_font(button_font)
     self.filter_tb:SetFont(button_font)
-    self.stack_items_cb:set_scale(_G.settings.global.scale)
+    self.stack_items_cb:set_scale(State.settings.global.scale)
     self.stack_items_cb:SetFont(button_font)
     self.stack_items_label:SetFont(button_font)
     self.owner_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
@@ -1028,10 +1043,10 @@ function AssetsWindow:apply_settings()
     self.storage_dropdown:SetFont(button_font)
     self.sort_dropdown:SetFont(button_font)
     self.group_dropdown:SetFont(button_font)
-    self.owner_dropdown:set_scale(_G.settings.global.scale)
-    self.storage_dropdown:set_scale(_G.settings.global.scale)
-    self.sort_dropdown:set_scale(_G.settings.global.scale)
-    self.group_dropdown:set_scale(_G.settings.global.scale)
+    self.owner_dropdown:set_scale(State.settings.global.scale)
+    self.storage_dropdown:set_scale(State.settings.global.scale)
+    self.sort_dropdown:set_scale(State.settings.global.scale)
+    self.group_dropdown:set_scale(State.settings.global.scale)
     self._suppress_stack_changed = true
     self.stack_items_cb:SetChecked(self.stack_items == true)
     self._suppress_stack_changed = false
@@ -1048,15 +1063,15 @@ function AssetsWindow:apply_settings()
     self.hint_label:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
     self.empty_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE))
     if self.stack_hint ~= nil then
-        self.stack_hint:set_scale(_G.settings.global.scale)
+        self.stack_hint:set_scale(State.settings.global.scale)
     end
     local min_w, min_h = self:_get_min_window_size(self.view_mode, self.tile_size)
     self:set_minimum_size(min_w, min_h)
 
     self:_apply_layout_for_mode(self.view_mode)
-    local window_state = _G.get_ui_window_state("assets")
+    local window_state = Defaults.get_ui_window_state("assets")
     local window_tile = window_state.tile
-    if window_tile ~= LuiWindow.TILE_NONE then
+    if window_tile ~= UI.Widgets.LuiWindow.TILE_NONE then
         local geometry = self:get_geometry()
         window_state.left = geometry.left
         window_state.top = geometry.top
@@ -1094,7 +1109,7 @@ function AssetsWindow:Update()
     self.last_update_at = now
 
     self:refresh_from_store(false)
-    local store = _G.CRAFTING_STORE
+    local store = Stores.crafting
     if store ~= self._crafting_store then
         self._crafting_store = store
         self:_refresh_recipes_button()
@@ -1124,7 +1139,7 @@ function AssetsWindow:_enforce_min_size()
 end
 
 function AssetsWindow:_get_layout_store(mode)
-    local raw = _G.loaded_settings.assets
+    local raw = State.loaded_settings.assets
     local key = _mode_key(mode)
     return raw.layouts[key]
 end
@@ -1334,7 +1349,7 @@ end
 
 function AssetsWindow:_ensure_entries(count)
     while #self.entries < count do
-        local entry = AssetsEntry(function(record, control, icon_hover)
+        local entry = Assets.AssetsEntry(function(record, control, icon_hover)
             self:_set_hint(record, control, icon_hover)
         end)
         entry:SetParent(self.content)
@@ -1690,12 +1705,12 @@ function AssetsWindow:_apply_record_view(reset_page)
 end
 
 function AssetsWindow:_get_crafting_store()
-    if _G.LUI_IS_UNLOADING == true or Crafting.is_enabled() ~= true then
+    if Flags.is_unloading == true or Crafting.is_enabled() ~= true then
         self._crafting_store = nil
         return nil
     end
 
-    self._crafting_store = _G.CRAFTING_STORE
+    self._crafting_store = Stores.crafting
     return self._crafting_store
 end
 
@@ -1718,6 +1733,7 @@ function AssetsWindow:_refresh_recipes_button()
         self._last_crafting_store_version = nil
     end
 
+    local crafting_enabled = Crafting.is_enabled() == true
     local button_text
     if loading == true then
         if count > 0 then
@@ -2048,13 +2064,13 @@ function AssetsWindow:layout()
 end
 
 function AssetsWindow:refresh_from_store(force)
-    local generation = ASSETS_STORE.generation or 0
+    local generation = Stores.assets.generation or 0
     if force ~= true and generation == self._last_generation then
         return
     end
 
     self._last_generation = generation
-    self.all_records = ASSETS_STORE:get_entries()
+    self.all_records = Stores.assets:get_entries()
 
     for i = 1, #self.all_records do
         local record = self.all_records[i]

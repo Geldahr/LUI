@@ -2,6 +2,7 @@
 -- This file is intentionally not imported. It exists only as a template.
 
 local VERSION = "0.6.0"
+local Migrations = _G.LUI.Settings.Migrations
 
 local function migrate_account(account_settings)
     account_settings.some_removed_root_field = nil
@@ -25,7 +26,7 @@ local function migrate_character(character_settings)
     return character_settings
 end
 
-_G.register_settings_migration(VERSION, {
+Migrations.register_settings_migration(VERSION, {
     account = migrate_account,
     profile = migrate_profile,
     character = migrate_character,

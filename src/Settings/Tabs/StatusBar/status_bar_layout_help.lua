@@ -1,8 +1,10 @@
+local TR = _G.LUI.Locale.TR
 import "LUI.src.StatusBar.common"
 
-local S = _G.STATUS_BAR_COMMON
+local StatusBarPage = _G.LUI.Settings.Pages.StatusBar
+local S = _G.LUI.Features.StatusBar.Common
 
-function BuildStatusBarLayoutHelp()
+function StatusBarPage.build_layout_help()
     local lines = {
         TR["Tokens:"],
         TR["  %time% - local time (HH:MM)"],

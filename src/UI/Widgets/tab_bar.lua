@@ -1,9 +1,18 @@
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
+
+local UI = _G.LUI.UI
+local Widgets = UI.Widgets
+local AssetIds = UI.Assets
+local LuiButton = Widgets.LuiButton
+local LuiLabel = Widgets.LuiLabel
+local Style = Widgets.Style
 
 local POSITION_TOP = "top"
 local POSITION_BOTTOM = "bottom"
@@ -27,7 +36,6 @@ local BASE_MIN_TAB_WIDTH = 56
 local BASE_APPROX_CHAR_WIDTH = 7
 local BASE_SCROLL_BUTTON_SIZE = 18
 local BASE_SCROLL_BUTTON_GAP = 2
-local Style = UI.Widgets.Style
 
 local function _round(value)
     return math.floor((tonumber(value) or 0) + 0.5)
@@ -318,7 +326,8 @@ function LuiTabButton:_layout()
 end
 
 ---@class LuiTabBar : Turbine.UI.Control
-LuiTabBar = class(Turbine.UI.Control)
+local LuiTabBar = class(Turbine.UI.Control)
+Widgets.LuiTabBar = LuiTabBar
 
 LuiTabBar.position = {
     top = POSITION_TOP,
@@ -478,10 +487,10 @@ function LuiTabBar:Constructor()
     self._scroll_left_button:set_padding(2)
     Style.apply_transparent_button(self._scroll_left_button)
     self._scroll_left_button:set_icon(
-        UI.AssetIds.arrow_l_yellow_normal,
-        UI.AssetIds.arrow_l_yellow_inverted,
-        UI.AssetIds.arrow_l_yellow_dark,
-        UI.AssetIds.arrow_l_transparent,
+        AssetIds.arrow_l_yellow_normal,
+        AssetIds.arrow_l_yellow_inverted,
+        AssetIds.arrow_l_yellow_dark,
+        AssetIds.arrow_l_transparent,
         BASE_SCROLL_BUTTON_SIZE,
         nil,
         LuiButton.icon_position.LEFT
@@ -498,10 +507,10 @@ function LuiTabBar:Constructor()
     self._scroll_right_button:set_padding(2)
     Style.apply_transparent_button(self._scroll_right_button)
     self._scroll_right_button:set_icon(
-        UI.AssetIds.arrow_r_yellow_normal,
-        UI.AssetIds.arrow_r_yellow_inverted,
-        UI.AssetIds.arrow_r_yellow_dark,
-        UI.AssetIds.arrow_r_transparent,
+        AssetIds.arrow_r_yellow_normal,
+        AssetIds.arrow_r_yellow_inverted,
+        AssetIds.arrow_r_yellow_dark,
+        AssetIds.arrow_r_transparent,
         BASE_SCROLL_BUTTON_SIZE,
         nil,
         LuiButton.icon_position.RIGHT

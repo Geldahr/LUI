@@ -1,6 +1,9 @@
 import "LUI.src.Languages.de"
 import "LUI.src.Languages.fr"
 
+local LUI = _G.LUI
+local Locale = _G.LUI.Locale
+
 local LANGUAGE_TABLES = {
     de = LUI.src.Languages.de.DE,
     fr = LUI.src.Languages.fr.FR,
@@ -62,8 +65,8 @@ local function _load_translations()
     return tr
 end
 
-_G.TR = _load_translations()
+Locale.TR = _load_translations()
 
-function _G.is_lui_english_language()
+function Locale.is_english_language()
     return _detect_language_code() == "en"
 end

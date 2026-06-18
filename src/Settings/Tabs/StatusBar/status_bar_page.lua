@@ -1,3 +1,13 @@
+local TR = _G.LUI.Locale.TR
+local Pages = _G.LUI.Settings.Pages
+local StatusBarPageNamespace = Pages.StatusBar
+local Windows = _G.LUI.Runtime.Windows
+local ConfigNestedTabs = _G.LUI.Settings.Content.ConfigNestedTabs
+local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.nested_tabs"
@@ -5,15 +15,9 @@ import "LUI.src.Settings.Content.tabs"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_wallet_selector"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_layout_help"
 
-local CreateStatusBarWalletSelector = LUI.src.Settings.Tabs.StatusBar.CreateStatusBarWalletSelector or
-    CreateStatusBarWalletSelector
-local BuildStatusBarLayoutHelp = LUI.src.Settings.Tabs.StatusBar.BuildStatusBarLayoutHelp or
-    BuildStatusBarLayoutHelp
-local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
-local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
-local ConfigNestedTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_nested_tabs) or
-    ConfigNestedTabs
+local CreateStatusBarWalletSelector = StatusBarPageNamespace.create_wallet_selector
+local BuildStatusBarLayoutHelp = StatusBarPageNamespace.build_layout_help
+local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
 
 local function _is_outline(control)
@@ -340,7 +344,8 @@ local function _new_widgets_section(window, settings_getter)
     return page
 end
 
-StatusBarPage = class(ConfigTabs)
+local StatusBarPage = class(ConfigTabs)
+Pages.StatusBarPage = StatusBarPage
 
 function StatusBarPage:Constructor(window)
     ConfigTabs.Constructor(self, window)
@@ -465,8 +470,8 @@ function StatusBarPage:load()
     ConfigTabs.load(self)
 end
 
-_G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP = function()
-    local window = _G.CONFIG_WINDOW
+function StatusBarPageNamespace.refresh_layout_help()
+    local window = Windows.config
     if window == nil then
         return
     end

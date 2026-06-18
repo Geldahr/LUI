@@ -1,10 +1,14 @@
+local TR = _G.LUI.Locale.TR
+local State = _G.LUI.Settings.State
+local StatusBarPage = _G.LUI.Settings.Pages.StatusBar
+local UI = _G.LUI.UI
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 import "LUI.src.StatusBar.common"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
 
 local WALLET_SELECTOR_HEIGHT = 209
@@ -16,7 +20,7 @@ local WALLET_SELECTOR_MIN_LIST_W = 90
 local WALLET_SELECTOR_BOX_PAD = 1
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _copy_list(items)
@@ -267,7 +271,7 @@ local function _wallet_selector_rebuild_lists(entry)
     for i = 1, #entry.available_entries do
         local spec = entry.available_entries[i]
         local button = UI.Widgets.LuiButton()
-        button:set_scale(_G.settings.global.scale)
+        button:set_scale(State.settings.global.scale)
         button:set_font(entry.window.input_font)
         button:set_border_thickness(0)
         button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -284,7 +288,7 @@ local function _wallet_selector_rebuild_lists(entry)
     for i = 1, #entry.selected_entries do
         local resolved = entry.selected_entries[i]
         local button = UI.Widgets.LuiButton()
-        button:set_scale(_G.settings.global.scale)
+        button:set_scale(State.settings.global.scale)
         button:set_font(entry.window.input_font)
         button:set_border_thickness(0)
         button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -379,7 +383,7 @@ local function _wallet_selector_move(entry, direction)
     _wallet_selector_rebuild_lists(entry)
 end
 
-function CreateStatusBarWalletSelector(page, key)
+function StatusBarPage.create_wallet_selector(page, key)
     local entry = page:add_custom(key, WALLET_SELECTOR_HEIGHT)
     entry.window = page.window
     entry.selected_items = {}
@@ -500,19 +504,19 @@ function CreateStatusBarWalletSelector(page, key)
         entry.available_label:SetFont(page.window.field_label_font)
         entry.selected_label:SetFont(page.window.field_label_font)
         entry.available_filter:SetFont(page.window.input_font)
-        entry.add_button:set_scale(_G.settings.global.scale)
+        entry.add_button:set_scale(State.settings.global.scale)
         entry.add_button:set_font(page.window.settings_font)
-        entry.remove_button:set_scale(_G.settings.global.scale)
+        entry.remove_button:set_scale(State.settings.global.scale)
         entry.remove_button:set_font(page.window.settings_font)
-        entry.up_button:set_scale(_G.settings.global.scale)
+        entry.up_button:set_scale(State.settings.global.scale)
         entry.up_button:set_font(page.window.settings_font)
-        entry.down_button:set_scale(_G.settings.global.scale)
+        entry.down_button:set_scale(State.settings.global.scale)
         entry.down_button:set_font(page.window.settings_font)
 
         for i = 1, #entry.available_buttons do
             local button = entry.available_buttons[i]
             if button ~= nil then
-                button:set_scale(_G.settings.global.scale)
+                button:set_scale(State.settings.global.scale)
                 button:set_font(page.window.input_font)
             end
         end
@@ -520,7 +524,7 @@ function CreateStatusBarWalletSelector(page, key)
         for i = 1, #entry.selected_buttons do
             local button = entry.selected_buttons[i]
             if button ~= nil then
-                button:set_scale(_G.settings.global.scale)
+                button:set_scale(State.settings.global.scale)
                 button:set_font(page.window.input_font)
             end
         end

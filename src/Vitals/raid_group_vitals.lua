@@ -1,3 +1,10 @@
+local GroupLayout = _G.LUI.Features.Vitals.GroupLayout
+local RaidLayout = _G.LUI.Utils.RaidLayout
+local TR = _G.LUI.Locale.TR
+local Vitals = _G.LUI.Features.Vitals
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets.hud"
@@ -6,7 +13,7 @@ import "LUI.src.Vitals.group_layout"
 import "LUI.src.Vitals.group_member_vitals"
 
 local function _raid_group_windows_enabled()
-    return _G.loaded_settings.raid.enabled == true and _G.loaded_settings.raid.split_by_group == true
+    return State.loaded_settings.raid.enabled == true and State.loaded_settings.raid.split_by_group == true
 end
 
 local function _set_border_visible(border, visible)
@@ -38,8 +45,9 @@ local function _apply_border(border, width, height, thickness, color)
     _set_border_visible(border, true)
 end
 
----@class RaidGroupVitalsWindow : LuiHUD
-RaidGroupVitalsWindow = class(LuiHUD)
+---@class RaidGroupVitalsWindow : UI.Widgets.LuiHUD
+local RaidGroupVitalsWindow = class(UI.Widgets.LuiHUD)
+Vitals.RaidGroupVitalsWindow = RaidGroupVitalsWindow
 
 function RaidGroupVitalsWindow:Constructor(group_key, group_index)
     self.group_key = group_key
@@ -51,7 +59,7 @@ function RaidGroupVitalsWindow:Constructor(group_key, group_index)
     self.current_active = false
     self.group_border = nil
 
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = "raid_group_" .. group_key .. "_vitals",
         title = TR["Raid Group "] .. string.upper(group_key),
     })
@@ -80,7 +88,7 @@ function RaidGroupVitalsWindow:Constructor(group_key, group_index)
     self.group_border.right:SetZOrder(30)
     _set_border_visible(self.group_border, false)
 
-    local vitals_settings = _G.settings.raid
+    local vitals_settings = State.settings.raid
     local initial_height = GroupLayout.member_height(vitals_settings)
     self:SetSize(vitals_settings.frame.width, initial_height)
     self:layout_move_chrome()
@@ -92,7 +100,7 @@ function RaidGroupVitalsWindow:set_move_mode(enabled)
         self:SetVisible(true)
     end
 
-    LuiHUD.set_move_mode(self, enabled)
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     self:update_members(self.current_members, self.current_leader_name, self.current_active)
 end
 
@@ -102,7 +110,7 @@ end
 
 function RaidGroupVitalsWindow:ensure_member_windows(count)
     for i = #self.members + 1, count do
-        local member_window = GroupMemberVitals("raid", nil)
+        local member_window = Vitals.GroupMemberVitals("raid", nil)
         member_window:SetParent(self)
         member_window:SetZOrder(10)
         member_window.entity_control:SetMouseVisible(not self:is_move_mode())
@@ -112,11 +120,11 @@ function RaidGroupVitalsWindow:ensure_member_windows(count)
 end
 
 function RaidGroupVitalsWindow:get_border_color()
-    return _G.settings.raid.group_colors[self.group_key]
+    return State.settings.raid.group_colors[self.group_key]
 end
 
 function RaidGroupVitalsWindow:layout_members(count)
-    local vitals_settings = _G.settings.raid
+    local vitals_settings = State.settings.raid
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
@@ -146,7 +154,7 @@ function RaidGroupVitalsWindow:update_group_border(count)
         return
     end
 
-    local border_width = _G.settings.raid.group_border_width
+    local border_width = State.settings.raid.group_border_width
     local width, height = self:GetSize()
     _apply_border(self.group_border, width, height, border_width, self:get_border_color())
 end

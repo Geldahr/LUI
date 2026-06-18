@@ -1,4 +1,7 @@
-Travel = Travel or {}
+local Flags = _G.LUI.Runtime.Flags
+local Stores = _G.LUI.Runtime.Stores
+local State = _G.LUI.Settings.State
+local Travel = _G.LUI.Features.Travel
 
 import "LUI.src.Travel.travel_data"
 import "LUI.src.Travel.travel_store"
@@ -7,7 +10,7 @@ import "LUI.src.Travel.travel_window"
 local _shared_store = nil
 
 local function _is_enabled()
-    return _G.settings.travel.enabled == true
+    return State.settings.travel.enabled == true
 end
 
 function Travel.is_enabled()
@@ -15,7 +18,7 @@ function Travel.is_enabled()
 end
 
 function Travel.get_shared_store()
-    if _G.LUI_IS_UNLOADING == true then
+    if Flags.is_unloading == true then
         return nil
     end
     if _is_enabled() ~= true then
@@ -23,8 +26,8 @@ function Travel.get_shared_store()
     end
 
     if _shared_store == nil then
-        _shared_store = TravelStore()
-        _G.TRAVEL_STORE = _shared_store
+        _shared_store = Travel.TravelStore()
+        Stores.travel = _shared_store
     end
 
     return _shared_store
@@ -35,8 +38,5 @@ function Travel.destroy_shared_store()
         _shared_store:destroy()
     end
     _shared_store = nil
-    _G.TRAVEL_STORE = nil
+    Stores.travel = nil
 end
-
-Travel.TravelStore = TravelStore
-Travel.TravelWindow = TravelWindow

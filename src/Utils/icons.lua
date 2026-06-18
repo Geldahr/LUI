@@ -1,3 +1,4 @@
+local Utils = _G.LUI.Utils
 import "Turbine.Gameplay"
 import "Turbine.UI"
 
@@ -15,9 +16,9 @@ local MINSTREL_ICON = Turbine.UI.Graphic(0x410000EA) -- 50x50
 local RUNE_KEEPER_ICON = Turbine.UI.Graphic(0x410E81CB) -- 48x48
 local WARDEN_ICON = Turbine.UI.Graphic(0x410E0DCA) -- 48x48
 
-_G.PARTY_LEADER_ICON = LEADER_ICON
+Utils.PARTY_LEADER_ICON = LEADER_ICON
 
-_G.CLASS_ICON_NAMES = {
+Utils.CLASS_ICON_NAMES = {
     [Turbine.Gameplay.Class.Beorning]     = BEORNING_ICON,
     [Turbine.Gameplay.Class.Brawler]      = BRAWLER_ICON,
     [Turbine.Gameplay.Class.Burglar]      = BURGLAR_ICON,
@@ -32,7 +33,7 @@ _G.CLASS_ICON_NAMES = {
     [Turbine.Gameplay.Class.Warden]       = WARDEN_ICON,
 }
 
-_G.CLASS_ICON_CLASSES = {
+Utils.CLASS_ICON_CLASSES = {
     Turbine.Gameplay.Class.Hunter,
     Turbine.Gameplay.Class.Warden,
     Turbine.Gameplay.Class.Burglar,
@@ -47,8 +48,8 @@ _G.CLASS_ICON_CLASSES = {
     Turbine.Gameplay.Class.Mariner,
 }
 
-_G.get_class_icon = function(class, size)
-    local icon = _G.CLASS_ICON_NAMES[class]
+function Utils.get_class_icon(class, size)
+    local icon = Utils.CLASS_ICON_NAMES[class]
     if icon == nil then
         return nil
     end
@@ -56,6 +57,6 @@ _G.get_class_icon = function(class, size)
     return icon
 end
 
-_G.get_party_leader_icon = function()
-    return _G.PARTY_LEADER_ICON
+function Utils.get_party_leader_icon()
+    return Utils.PARTY_LEADER_ICON
 end

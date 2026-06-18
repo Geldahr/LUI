@@ -1,11 +1,8 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
-if type(_G.LUI_ENUMS) ~= "table" then
-    _G.LUI_ENUMS = {}
-end
-
-local e = _G.LUI_ENUMS
+local Settings = _G.LUI.Settings
+local e = Settings.Enums
 
 e.abbrev_digits = {
     DIGITS_3 = 3,
@@ -143,11 +140,7 @@ e.side_is_left = {
     [e.side.RIGHT] = false,
 }
 
-if type(_G.LUI_TO_LOTRO) ~= "table" then
-    _G.LUI_TO_LOTRO = {}
-end
-
-local to_lotro = _G.LUI_TO_LOTRO
+local to_lotro = Settings.ToLotro
 
 to_lotro.text_alignment = {
     [e.text_alignment.LEFT] = Turbine.UI.ContentAlignment.MiddleLeft,

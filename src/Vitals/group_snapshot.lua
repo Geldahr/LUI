@@ -1,6 +1,8 @@
 import "Turbine.Gameplay"
 
-GroupSnapshot = GroupSnapshot or {}
+local Vitals = _G.LUI.Features.Vitals
+local GroupSnapshot = Vitals.GroupSnapshot or {}
+Vitals.GroupSnapshot = GroupSnapshot
 
 local function _leader_name(leader)
     if leader == nil or leader.GetName == nil then

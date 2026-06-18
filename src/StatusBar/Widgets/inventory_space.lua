@@ -1,6 +1,8 @@
-local WidgetBase = _G.StatusBarWidgetBase
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local class = _G.LUI.Core.class
+local WidgetBase = _G.LUI.Features.StatusBar.WidgetBase
 local InventorySpaceWidget = class(WidgetBase)
-_G.InventorySpaceWidget = InventorySpaceWidget
+StatusBarWidgets.InventorySpaceWidget = InventorySpaceWidget
 
 function InventorySpaceWidget:Constructor(widget_w, bar_h, font, icon_path, warn_color, content_alignment)
     WidgetBase.Constructor(self, "inventory_space", widget_w, bar_h, font,

@@ -1,7 +1,17 @@
+local TR = _G.LUI.Locale.TR
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local UI = _G.LUI.UI
 import "LUI.src.Cooldowns.time_display"
 import "LUI.src.Utils.color"
 
-local Common = SettingsPreviewCommon
+local Common = _G.LUI.Settings.Preview.Common
 local _require_font = Common.require_font
 local _require_control_color = Common.require_control_color
 local _require_control_enum = Common.require_control_enum

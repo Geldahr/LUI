@@ -1,10 +1,20 @@
+local TR = _G.LUI.Locale.TR
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets"
 
-local Style = UI.Widgets.Style
-GLOBAL_MOVE_ENABLED = false
+local LUI = _G.LUI
+local UI = LUI.UI
+local Widgets = UI.Widgets
+local MoveMode = UI.MoveMode
+local NativeScaling = UI.NativeScaling
+local State = LUI.Settings.State
+local Windows = LUI.Runtime.Windows
+local Style = Widgets.Style
+local move_enabled = false
 local MOVE_UI_PREVIEW_LOCKED = false
 
 local GRID = {
@@ -17,11 +27,11 @@ local GRID = {
 }
 
 ---@type CloseWindow
-MOVE_UI_DONE_WINDOW = nil
+local MOVE_UI_DONE_WINDOW = nil
 
 
 local function _scaled_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 local function _scaled_int(value)
@@ -37,13 +47,14 @@ local function _scaled_font(name, size)
 end
 
 local function _disable_native_scaling(window)
-    local native_scaling = UI.NativeScaling or _G.LUI_NATIVE_SCALING
-    native_scaling.disable(window)
+    NativeScaling.disable(window)
 end
 
----@class CloseWindow: LuiBaseWindow
----@field button LuiButton
-CloseWindow = class(LuiBaseWindow)
+---@class CloseWindow: UI.Widgets.LuiBaseWindow
+---@field button UI.Widgets.LuiButton
+local LuiBaseWindow = Widgets.LuiBaseWindow
+local CloseWindow = class(LuiBaseWindow)
+MoveMode.CloseWindow = CloseWindow
 function CloseWindow:Constructor()
     LuiBaseWindow.Constructor(self, { hideable = false })
 
@@ -61,7 +72,7 @@ function CloseWindow:Constructor()
     self.button:set_text(TR["Done moving UI"])
 
     self.button.Click = function()
-        set_move_ui_mode(false)
+        MoveMode.set_mode(false)
     end
 
     self:apply_style()
@@ -88,7 +99,7 @@ local function _ensure_move_ui_done_window()
 
     MOVE_UI_DONE_WINDOW = CloseWindow()
 
-    center_move_ui_done_window()
+    MoveMode.center_done_window()
 end
 
 local function _clear_lines()
@@ -206,7 +217,7 @@ local function _grid_show()
     GRID.active_count = (GRID.active_count or 0) + 1
     _ensure_grid()
     if GRID.window ~= nil then
-        GRID.window:SetVisible(GLOBAL_MOVE_ENABLED == true and GRID.hud_visible ~= false and
+        GRID.window:SetVisible(move_enabled == true and GRID.hud_visible ~= false and
             MOVE_UI_PREVIEW_LOCKED ~= true)
     end
 end
@@ -221,9 +232,6 @@ local function _grid_hide()
     end
 end
 
-_G.LUI_MOVE_UI = _G.LUI_MOVE_UI or {}
-local LUI_MOVE_UI = _G.LUI_MOVE_UI
-
 local MOVE_UI_POSITION_SNAPSHOT = nil
 local move_ui_show_done_button = true
 
@@ -235,7 +243,7 @@ local function _snapshot_position(window)
 end
 
 local function _capture_move_settings_snapshot()
-    local hud = _G.loaded_settings.ui.hud
+    local hud = State.loaded_settings.ui.hud
     MOVE_UI_POSITION_SNAPSHOT = {
         self_vitals = _snapshot_position(hud.self_vitals),
         target_vitals = _snapshot_position(hud.target_vitals),
@@ -265,7 +273,7 @@ local function _restore_saved_move_settings()
         return
     end
 
-    local hud = _G.loaded_settings.ui.hud
+    local hud = State.loaded_settings.ui.hud
     _restore_position(hud.self_vitals, MOVE_UI_POSITION_SNAPSHOT.self_vitals)
     _restore_position(hud.target_vitals, MOVE_UI_POSITION_SNAPSHOT.target_vitals)
     _restore_position(hud.target_target_vitals, MOVE_UI_POSITION_SNAPSHOT.target_target_vitals)
@@ -282,42 +290,42 @@ local function _restore_saved_move_settings()
     _restore_position(hud.drops, MOVE_UI_POSITION_SNAPSHOT.drops)
     _restore_position(hud.launcher, MOVE_UI_POSITION_SNAPSHOT.launcher)
 
-    ensure_loaded_settings()
-    fix_colors()
-    rebuild_settings()
+    LUI.Settings.Defaults.ensure_loaded_settings()
+    LUI.Settings.Colors.fix_colors()
+    LUI.Settings.rebuild()
 
-    if PLAYER_VITAL ~= nil then
-        PLAYER_VITAL:resize()
+    if Windows.player_vital ~= nil then
+        Windows.player_vital:resize()
     end
-    if TARGET_VITAL ~= nil then
-        TARGET_VITAL:resize()
+    if Windows.target_vital ~= nil then
+        Windows.target_vital:resize()
     end
-    if BOSS_VITAL ~= nil then
-        BOSS_VITAL:resize()
+    if Windows.boss_vital ~= nil then
+        Windows.boss_vital:resize()
     end
-    if FELLOWSHIP_VITALS ~= nil then
-        FELLOWSHIP_VITALS:apply_settings()
+    if Windows.fellowship_vitals ~= nil then
+        Windows.fellowship_vitals:apply_settings()
     end
-    if RAID_VITALS ~= nil then
-        RAID_VITALS:apply_settings()
+    if Windows.raid_vitals ~= nil then
+        Windows.raid_vitals:apply_settings()
     end
-    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
-        EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()
+    if Windows.expiring_self_effects ~= nil then
+        Windows.expiring_self_effects:apply_settings()
     end
-    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil then
-        EXPIRING_TARGET_EFFECTS_WINDOW:apply_settings()
+    if Windows.expiring_target_effects ~= nil then
+        Windows.expiring_target_effects:apply_settings()
     end
-    if COOLDOWNS_WINDOW ~= nil then
-        COOLDOWNS_WINDOW:apply_settings()
+    if Windows.cooldowns ~= nil then
+        Windows.cooldowns:apply_settings()
     end
-    if DROPS_WINDOW ~= nil then
-        DROPS_WINDOW:apply_settings()
+    if Windows.drops ~= nil then
+        Windows.drops:apply_settings()
     end
-    if LUI_LAUNCHER ~= nil then
-        LUI_LAUNCHER:apply_settings()
+    if Windows.launcher ~= nil then
+        Windows.launcher:apply_settings()
     end
-    if PLAYER_VITAL ~= nil then
-        PLAYER_VITAL:on_target_changed()
+    if Windows.player_vital ~= nil then
+        Windows.player_vital:on_target_changed()
     end
 
     MOVE_UI_POSITION_SNAPSHOT = nil
@@ -327,7 +335,7 @@ local move_ui_return_to_config = false
 
 local function _refresh_move_ui_chrome()
     if GRID.window ~= nil then
-        local show_grid = GLOBAL_MOVE_ENABLED == true and
+        local show_grid = move_enabled == true and
             GRID.hud_visible ~= false and
             MOVE_UI_PREVIEW_LOCKED ~= true and
             (GRID.active_count or 0) > 0
@@ -335,35 +343,35 @@ local function _refresh_move_ui_chrome()
     end
 
     if MOVE_UI_DONE_WINDOW ~= nil then
-        local show_done = GLOBAL_MOVE_ENABLED == true and
+        local show_done = move_enabled == true and
             GRID.hud_visible ~= false and
             MOVE_UI_PREVIEW_LOCKED ~= true and
             move_ui_show_done_button == true
         MOVE_UI_DONE_WINDOW:SetVisible(show_done)
         if show_done then
             _apply_done_window_style()
-            center_move_ui_done_window()
+            MoveMode.center_done_window()
             MOVE_UI_DONE_WINDOW:SetZOrder(999)
         end
     end
 end
 
-function LUI_MOVE_UI.show_grid()
+function MoveMode.show_grid()
     _grid_show()
     _refresh_move_ui_chrome()
 end
 
-function LUI_MOVE_UI.hide_grid()
+function MoveMode.hide_grid()
     _grid_hide()
     _refresh_move_ui_chrome()
 end
 
-function LUI_MOVE_UI.set_hud_visible(visible)
+function MoveMode.set_hud_visible(visible)
     GRID.hud_visible = visible == true
     _refresh_move_ui_chrome()
 end
 
-function center_move_ui_done_window()
+function MoveMode.center_done_window()
     if MOVE_UI_DONE_WINDOW == nil then
         return
     end
@@ -373,97 +381,97 @@ function center_move_ui_done_window()
     MOVE_UI_DONE_WINDOW:SetPosition(math.floor((display_width - w) / 2), math.floor((display_height - h) / 2))
 end
 
-function _G.toggle_move_mode(show_done_button)
-    if FIRST_RUN_QUICK_SETUP_WINDOW ~= nil and
-        FIRST_RUN_QUICK_SETUP_WINDOW:IsVisible() == true and
-        FIRST_RUN_QUICK_SETUP_WINDOW.closing ~= true then
+function MoveMode.toggle(show_done_button)
+    if Windows.first_run_quick_setup ~= nil and
+        Windows.first_run_quick_setup:IsVisible() == true and
+        Windows.first_run_quick_setup.closing ~= true then
         return
     end
 
-    if PLAYER_VITAL == nil then
+    if Windows.player_vital == nil then
         return
     end
-    set_move_ui_mode(not PLAYER_VITAL:is_move_mode(), nil, nil, show_done_button)
+    MoveMode.set_mode(not Windows.player_vital:is_move_mode(), nil, nil, show_done_button)
 end
 
-function _G.cancel_move_mode()
-    if FIRST_RUN_QUICK_SETUP_WINDOW ~= nil and
-        FIRST_RUN_QUICK_SETUP_WINDOW:IsVisible() == true and
-        FIRST_RUN_QUICK_SETUP_WINDOW.closing ~= true then
-        FIRST_RUN_QUICK_SETUP_WINDOW:cancel_setup()
+function MoveMode.cancel()
+    if Windows.first_run_quick_setup ~= nil and
+        Windows.first_run_quick_setup:IsVisible() == true and
+        Windows.first_run_quick_setup.closing ~= true then
+        Windows.first_run_quick_setup:cancel_setup()
         return
     end
 
-    if PLAYER_VITAL == nil or PLAYER_VITAL:is_move_mode() ~= true then
+    if Windows.player_vital == nil or Windows.player_vital:is_move_mode() ~= true then
         return
     end
 
-    set_move_ui_mode(false, nil, true)
+    MoveMode.set_mode(false, nil, true)
 end
 
-function _G.refresh_move_mode_snapshot()
-    if PLAYER_VITAL == nil or PLAYER_VITAL:is_move_mode() ~= true then
+function MoveMode.refresh_snapshot()
+    if Windows.player_vital == nil or Windows.player_vital:is_move_mode() ~= true then
         return
     end
 
     _capture_move_settings_snapshot()
 end
 
-function _G.set_move_ui_preview_lock(locked)
+function MoveMode.set_preview_lock(locked)
     MOVE_UI_PREVIEW_LOCKED = locked == true
     _refresh_move_ui_chrome()
 end
 
-function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes, show_done_button)
-    if PLAYER_VITAL == nil or TARGET_VITAL == nil then
+function MoveMode.set_mode(enabled, return_to_config, cancel_changes, show_done_button)
+    if Windows.player_vital == nil or Windows.target_vital == nil then
         return
     end
 
-    if enabled == true and is_lui_hud_visible() ~= true then
+    if enabled == true and UI.Hidable.is_lui_hud_visible() ~= true then
         return
     end
 
     local save_changes = cancel_changes ~= true
 
-    if enabled and CONFIG_WINDOW ~= nil and CONFIG_WINDOW:IsVisible() then
+    if enabled and Windows.config ~= nil and Windows.config:IsVisible() then
         move_ui_return_to_config = true
-        CONFIG_WINDOW:SetVisible(false)
+        Windows.config:SetVisible(false)
     elseif return_to_config == true then
         move_ui_return_to_config = true
     end
 
-    GLOBAL_MOVE_ENABLED = enabled == true
+    move_enabled = enabled == true
     move_ui_show_done_button = enabled == true and show_done_button ~= false
 
     if enabled then
         _capture_move_settings_snapshot()
     end
 
-    PLAYER_VITAL:set_move_mode(enabled)
-    TARGET_VITAL:set_move_mode(enabled)
-    if BOSS_VITAL ~= nil then
-        BOSS_VITAL:set_move_mode(enabled)
+    Windows.player_vital:set_move_mode(enabled)
+    Windows.target_vital:set_move_mode(enabled)
+    if Windows.boss_vital ~= nil then
+        Windows.boss_vital:set_move_mode(enabled)
     end
-    if FELLOWSHIP_VITALS ~= nil then
-        FELLOWSHIP_VITALS:set_move_mode(enabled)
+    if Windows.fellowship_vitals ~= nil then
+        Windows.fellowship_vitals:set_move_mode(enabled)
     end
-    if RAID_VITALS ~= nil then
-        RAID_VITALS:set_move_mode(enabled)
+    if Windows.raid_vitals ~= nil then
+        Windows.raid_vitals:set_move_mode(enabled)
     end
-    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
-        EXPIRING_SELF_EFFECTS_WINDOW:set_move_mode(enabled)
+    if Windows.expiring_self_effects ~= nil then
+        Windows.expiring_self_effects:set_move_mode(enabled)
     end
-    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil then
-        EXPIRING_TARGET_EFFECTS_WINDOW:set_move_mode(enabled)
+    if Windows.expiring_target_effects ~= nil then
+        Windows.expiring_target_effects:set_move_mode(enabled)
     end
-    if COOLDOWNS_WINDOW ~= nil then
-        COOLDOWNS_WINDOW:set_move_mode(enabled)
+    if Windows.cooldowns ~= nil then
+        Windows.cooldowns:set_move_mode(enabled)
     end
-    if DROPS_WINDOW ~= nil then
-        DROPS_WINDOW:set_move_mode(enabled)
+    if Windows.drops ~= nil then
+        Windows.drops:set_move_mode(enabled)
     end
-    if LUI_LAUNCHER ~= nil then
-        LUI_LAUNCHER:set_move_mode(enabled)
+    if Windows.launcher ~= nil then
+        Windows.launcher:set_move_mode(enabled)
     end
 
     if enabled and move_ui_show_done_button == true then
@@ -484,9 +492,9 @@ function _G.set_move_ui_mode(enabled, return_to_config, cancel_changes, show_don
         _refresh_move_ui_chrome()
     end
 
-    if (not enabled) and move_ui_return_to_config and CONFIG_WINDOW ~= nil then
+    if (not enabled) and move_ui_return_to_config and Windows.config ~= nil then
         move_ui_return_to_config = false
-        CONFIG_WINDOW:SetVisible(true)
-        CONFIG_WINDOW:bring_to_front()
+        Windows.config:SetVisible(true)
+        Windows.config:bring_to_front()
     end
 end

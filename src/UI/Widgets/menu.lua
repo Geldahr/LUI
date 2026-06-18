@@ -1,3 +1,6 @@
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -9,7 +12,14 @@ import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 import "LUI.src.Utils.font"
 
-local Style = UI.Widgets.Style
+local Widgets = _G.LUI.UI.Widgets
+local LuiButton = Widgets.LuiButton
+local LuiCheckBox = Widgets.LuiCheckBox
+local Image = Widgets.Image
+local LuiLabel = Widgets.LuiLabel
+local LuiDropdown = Widgets.LuiDropdown
+local LuiCheckDropdown = Widgets.LuiCheckDropdown
+local Style = Widgets.Style
 
 local BASE_TOP_MENU_H = 22
 local BASE_TOP_MENU_MIN_W = 42
@@ -41,16 +51,17 @@ local function _scaled_font(scale)
 end
 
 local function _close_other_popups()
-    if LuiDropdown ~= nil and LuiDropdown._active ~= nil then
+    if LuiDropdown._active ~= nil then
         LuiDropdown._active:Close()
     end
-    if LuiCheckDropdown ~= nil and LuiCheckDropdown._active ~= nil then
+    if LuiCheckDropdown._active ~= nil then
         LuiCheckDropdown._active:Close()
     end
 end
 
 ---@class LuiAction : Turbine.UI.Control
-LuiAction = class(Turbine.UI.Control)
+local LuiAction = class(Turbine.UI.Control)
+Widgets.LuiAction = LuiAction
 
 function LuiAction:Constructor()
     Turbine.UI.Control.Constructor(self)
@@ -290,7 +301,8 @@ function LuiAction:_update_visual_state()
 end
 
 ---@class LuiMenu : Turbine.UI.Control
-LuiMenu = class(Turbine.UI.Control)
+local LuiMenu = class(Turbine.UI.Control)
+Widgets.LuiMenu = LuiMenu
 
 function LuiMenu:Constructor()
     Turbine.UI.Control.Constructor(self)
@@ -660,7 +672,8 @@ function LuiMenu:_position_popup()
 end
 
 ---@class LuiMenuBar : Turbine.UI.Control
-LuiMenuBar = class(Turbine.UI.Control)
+local LuiMenuBar = class(Turbine.UI.Control)
+Widgets.LuiMenuBar = LuiMenuBar
 
 function LuiMenuBar:Constructor()
     Turbine.UI.Control.Constructor(self)

@@ -1,7 +1,11 @@
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
+local Widgets = _G.LUI.UI.Widgets
+
 ---@class LuiLabel : Turbine.UI.Label
-LuiLabel = class(Turbine.UI.Label)
+local LuiLabel = class(Turbine.UI.Label)
+Widgets.LuiLabel = LuiLabel
 
 function LuiLabel:Constructor()
     Turbine.UI.Label.Constructor(self)

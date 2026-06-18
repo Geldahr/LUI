@@ -1,9 +1,19 @@
+local TR = _G.LUI.Locale.TR
+local Runtime = _G.LUI.Runtime
+local Windows = Runtime.Windows
+local Commands = Runtime.Commands
+local UI = _G.LUI.UI
+local Shortcuts = UI.Shortcuts
+local MoveMode = UI.MoveMode
+local StatusBarCommon = _G.LUI.Features.StatusBar.Common
+local StatusBarApiCommandParser = _G.LUI.Features.StatusBar.APICommandParser
 import "LUI.src.StatusBar.api_command_parser"
 
-command = Turbine.ShellCommand()
-local StatusBarApiCommandParser = _G.STATUS_BAR_API_COMMAND_PARSER
+local command = Turbine.ShellCommand()
+Commands.shell = command
 
 local HELP_COMMAND_COLOR = "#33C7FF"
+local STATUS_BAR_API_USAGE = "/lui api sb --add -k key -t title -i image -c /command"
 
 local function _write_help_command(prefix, translated_line_key)
     local line = TR[translated_line_key]
@@ -54,11 +64,7 @@ local function _handle_status_bar_api_command(list, index)
         return nil, err
     end
 
-    if _G.STATUS_BAR_COMMON == nil or _G.STATUS_BAR_COMMON.register_status_bar_api_item == nil then
-        return nil, "Status bar API is not available yet."
-    end
-
-    return _G.STATUS_BAR_COMMON.register_status_bar_api_item(spec)
+    return StatusBarCommon.register_status_bar_api_item(spec)
 end
 
 function command:Execute(_, str)
@@ -80,26 +86,24 @@ function command:Execute(_, str)
     elseif cmd == "move" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == "cancel" then
-            cancel_move_mode()
+            MoveMode.cancel()
         else
-            toggle_move_mode()
+            MoveMode.toggle()
         end
     elseif cmd == "config" then
-        _G.toggle_config_shortcut()
+        Shortcuts.toggle_config()
     elseif cmd == "inventory" or cmd == "inv" then
-        if INVENTORY_WINDOW ~= nil then
-            INVENTORY_WINDOW:toggle()
-        end
+        Shortcuts.toggle_inventory()
     elseif cmd == "assets" or cmd == "a" then
-        _G.toggle_assets_shortcut()
+        Shortcuts.toggle_assets()
     elseif cmd == "craft" then
-        _G.toggle_crafting_shortcut()
+        Shortcuts.toggle_crafting()
     elseif cmd == "travel" or cmd == "trav" then
-        _G.toggle_travel_shortcut()
+        Shortcuts.toggle_travel()
     elseif cmd == "bestiary" or cmd == "beast" or cmd == "b" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == nil then
-            _G.toggle_bestiary_shortcut()
+            Shortcuts.toggle_bestiary()
         else
             display_help()
         end
@@ -110,7 +114,7 @@ function command:Execute(_, str)
             return
         end
 
-        if BESTIARY_CARD:show_for_name(monster_name, nil) ~= true then
+        if Windows.bestiary_card:show_for_name(monster_name, nil) ~= true then
             Turbine.Shell.WriteLine(TR["Monster not found in bestiary: "] .. monster_name)
         end
     elseif cmd == "api.sb" or (cmd == "api" and list[2] ~= nil and string.lower(list[2]) == "sb") then

@@ -1,3 +1,15 @@
+local GroupLayout = _G.LUI.Features.Vitals.GroupLayout
+local GroupSnapshot = _G.LUI.Features.Vitals.GroupSnapshot
+local GroupOrdering = _G.LUI.Features.Vitals.GroupOrdering
+local RaidLayout = _G.LUI.Utils.RaidLayout
+import "LUI.src.Utils.callbacks"
+local TR = _G.LUI.Locale.TR
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local Vitals = _G.LUI.Features.Vitals
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -11,11 +23,11 @@ import "LUI.src.Vitals.group_member_vitals"
 import "LUI.src.Vitals.raid_group_vitals"
 
 local function _raid_vitals_enabled()
-    return _G.loaded_settings.raid.enabled == true
+    return State.loaded_settings.raid.enabled == true
 end
 
 local function _raid_split_enabled()
-    return _G.loaded_settings.raid.split_by_group == true
+    return State.loaded_settings.raid.split_by_group == true
 end
 
 local function _raid_active(snapshot)
@@ -51,11 +63,12 @@ local function _apply_border(border, x, y, width, height, thickness, color)
     _set_border_visible(border, true)
 end
 
----@class RaidVitals : LuiHUD
-RaidVitals = class(LuiHUD)
+---@class RaidVitals : UI.Widgets.LuiHUD
+local RaidVitals = class(UI.Widgets.LuiHUD)
+Vitals.RaidVitals = RaidVitals
 
 function RaidVitals:Constructor()
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = "raid_vitals",
         title = TR["Raid Vitals"],
     })
@@ -65,10 +78,10 @@ function RaidVitals:Constructor()
     self.members = {}
     self.group_borders = {}
     self.group_windows = {
-        RaidGroupVitalsWindow("a", 1),
-        RaidGroupVitalsWindow("b", 2),
-        RaidGroupVitalsWindow("c", 3),
-        RaidGroupVitalsWindow("d", 4),
+        Vitals.RaidGroupVitalsWindow("a", 1),
+        Vitals.RaidGroupVitalsWindow("b", 2),
+        Vitals.RaidGroupVitalsWindow("c", 3),
+        Vitals.RaidGroupVitalsWindow("d", 4),
     }
     self.events = {
         party_changed = nil,
@@ -105,7 +118,7 @@ function RaidVitals:Constructor()
         self.group_borders[i] = border
     end
 
-    local vitals_settings = _G.settings.raid
+    local vitals_settings = State.settings.raid
     local initial_height = GroupLayout.member_height(vitals_settings)
     self:SetSize(vitals_settings.frame.width, initial_height)
     self:layout_move_chrome()
@@ -131,7 +144,7 @@ function RaidVitals:set_move_mode(enabled)
         self:SetVisible(true)
     end
 
-    LuiHUD.set_move_mode(self, enabled)
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     for i = 1, #self.group_windows do
         self.group_windows[i]:set_move_mode(enabled)
     end
@@ -182,12 +195,12 @@ function RaidVitals:refresh_group()
     end
 
     self:update_members(snapshot)
-    _G.apply_lotro_vitals_handoff()
+    _G.LUI.Runtime.Apply.lotro_vitals_handoff()
 end
 
 function RaidVitals:ensure_member_windows(count)
     for i = #self.members + 1, count do
-        local member_window = GroupMemberVitals("raid", nil)
+        local member_window = Vitals.GroupMemberVitals("raid", nil)
         member_window:SetParent(self)
         member_window:SetZOrder(10)
         member_window.entity_control:SetMouseVisible(not self:is_move_mode())
@@ -197,7 +210,7 @@ function RaidVitals:ensure_member_windows(count)
 end
 
 function RaidVitals:layout_members(count)
-    local vitals_settings = _G.settings.raid
+    local vitals_settings = State.settings.raid
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
@@ -240,7 +253,7 @@ function RaidVitals:update_group_borders(total_count)
         return
     end
 
-    local vitals_settings = _G.settings.raid
+    local vitals_settings = State.settings.raid
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
@@ -301,7 +314,7 @@ function RaidVitals:apply_settings()
     end
 
     self:update_members()
-    _G.apply_lotro_vitals_handoff()
+    _G.LUI.Runtime.Apply.lotro_vitals_handoff()
 end
 
 function RaidVitals:group_border_color(member_index)

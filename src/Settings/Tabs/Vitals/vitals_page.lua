@@ -1,3 +1,13 @@
+local TR = _G.LUI.Locale.TR
+local Pages = _G.LUI.Settings.Pages
+local ConfigSectionPage = _G.LUI.Settings.Content.ConfigSectionPage
+local ConfigNestedTabs = _G.LUI.Settings.Content.ConfigNestedTabs
+local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets"
@@ -7,19 +17,13 @@ import "LUI.src.Settings.Content.section_page"
 import "LUI.src.Settings.Content.tabs"
 import "LUI.src.Settings.Tabs.Vitals.group_vitals_page"
 import "LUI.src.Settings.Tabs.Vitals.standard_vitals_pages"
-local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
-local ConfigNestedTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_nested_tabs) or
-    ConfigNestedTabs
-local ConfigSectionPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_section_page) or
-    ConfigSectionPage
-local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
-local GroupVitalsPageBuilder = SettingsGroupVitalsPageBuilder
-local StandardVitalsPageBuilder = SettingsStandardVitalsPageBuilder
+local GroupVitalsPageBuilder = Pages.GroupVitalsPageBuilder
+local StandardVitalsPageBuilder = Pages.StandardVitalsPageBuilder
 local NESTED_TAB_SCALE = 0.78
 local NESTED_TAB_FONT_SIZE = 11
 local SECTION_FRAME_PADDING = 8
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 local function _set_color(dest, color)
     dest.R, dest.G, dest.B = color.R, color.G, color.B
@@ -911,7 +915,8 @@ local function _new_effects_section(window, refresh_preview_fn, prefix, get)
     return page
 end
 
-VitalsPage = class(ConfigTabs)
+local VitalsPage = class(ConfigTabs)
+Pages.VitalsPage = VitalsPage
 
 function VitalsPage:Constructor(window)
     ConfigTabs.Constructor(self, window)

@@ -1,4 +1,5 @@
 local language_enum = Turbine.Language
+local Utils = _G.LUI.Utils
 
 local english = {
     -- Normalized exact-name fixes from bosses.txt:
@@ -312,13 +313,13 @@ local english = {
 local french = {}
 local german = {}
 
-BOSS_NAMES_BY_LANGUAGE = {
+Utils.BOSS_NAMES_BY_LANGUAGE = {
     [language_enum.English] = english,
     [language_enum.EnglishGB] = english,
     [language_enum.French] = french,
     [language_enum.German] = german,
 }
 
-BOSS_NAMES = BOSS_NAMES_BY_LANGUAGE[Turbine.Engine.GetLanguage()] or english
+Utils.BOSS_NAMES = Utils.BOSS_NAMES_BY_LANGUAGE[Turbine.Engine.GetLanguage()] or english
 
-return BOSS_NAMES
+return Utils.BOSS_NAMES

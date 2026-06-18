@@ -1,3 +1,14 @@
+local GroupLayout = _G.LUI.Features.Vitals.GroupLayout
+local GroupSnapshot = _G.LUI.Features.Vitals.GroupSnapshot
+local GroupOrdering = _G.LUI.Features.Vitals.GroupOrdering
+import "LUI.src.Utils.callbacks"
+local TR = _G.LUI.Locale.TR
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local Vitals = _G.LUI.Features.Vitals
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -9,18 +20,19 @@ import "LUI.src.Vitals.group_layout"
 import "LUI.src.Vitals.group_member_vitals"
 
 local function _fellowship_vitals_enabled()
-    return _G.loaded_settings.fellowship.enabled == true
+    return State.loaded_settings.fellowship.enabled == true
 end
 
 local function _fellowship_active(snapshot)
     return snapshot.member_count > 0 and snapshot.member_count <= 6
 end
 
----@class FellowshipVitals : LuiHUD
-FellowshipVitals = class(LuiHUD)
+---@class FellowshipVitals : UI.Widgets.LuiHUD
+local FellowshipVitals = class(UI.Widgets.LuiHUD)
+Vitals.FellowshipVitals = FellowshipVitals
 
 function FellowshipVitals:Constructor()
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = "fellowship_vitals",
         title = TR["Fellowship Vitals"],
     })
@@ -40,7 +52,7 @@ function FellowshipVitals:Constructor()
     self:SetMouseVisible(false)
     self:SetBackColor(Turbine.UI.Color(0, 0, 0, 0))
 
-    local vitals_settings = _G.settings.fellowship
+    local vitals_settings = State.settings.fellowship
     local initial_height = GroupLayout.member_height(vitals_settings)
     self:SetSize(vitals_settings.frame.width, initial_height)
     self:layout_move_chrome()
@@ -66,12 +78,12 @@ function FellowshipVitals:set_move_mode(enabled)
         self:SetVisible(true)
     end
 
-    LuiHUD.set_move_mode(self, enabled)
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     self:update_members()
 end
 
 function FellowshipVitals:get_placeholder_count()
-    if _G.loaded_settings.fellowship.show_self_in_fellowship == true then
+    if State.loaded_settings.fellowship.show_self_in_fellowship == true then
         return 6
     end
 
@@ -118,12 +130,12 @@ function FellowshipVitals:refresh_group()
     end
 
     self:update_members(snapshot)
-    _G.apply_lotro_vitals_handoff()
+    _G.LUI.Runtime.Apply.lotro_vitals_handoff()
 end
 
 function FellowshipVitals:ensure_member_windows(count)
     for i = #self.members + 1, count do
-        local member_window = GroupMemberVitals("fellowship", nil)
+        local member_window = Vitals.GroupMemberVitals("fellowship", nil)
         member_window:SetParent(self)
         member_window:SetZOrder(10)
         member_window.entity_control:SetMouseVisible(not self:is_move_mode())
@@ -133,7 +145,7 @@ function FellowshipVitals:ensure_member_windows(count)
 end
 
 function FellowshipVitals:layout_members(count)
-    local vitals_settings = _G.settings.fellowship
+    local vitals_settings = State.settings.fellowship
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
@@ -172,7 +184,7 @@ function FellowshipVitals:apply_settings()
     end
 
     self:update_members()
-    _G.apply_lotro_vitals_handoff()
+    _G.LUI.Runtime.Apply.lotro_vitals_handoff()
 end
 
 function FellowshipVitals:current_target_name()
@@ -201,7 +213,7 @@ function FellowshipVitals:update_members(snapshot)
     local ordered_members = {}
     if active == true then
         ordered_members = GroupOrdering.fellowship_members(current_snapshot,
-            _G.loaded_settings.fellowship.show_self_in_fellowship == true)
+            State.loaded_settings.fellowship.show_self_in_fellowship == true)
     end
 
     local move_mode = self:is_move_mode()

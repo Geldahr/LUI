@@ -1,6 +1,11 @@
+local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
+local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local UI = _G.LUI.UI
 import "LUI.src.Utils.timed_row_layout"
 
-local Common = SettingsPreviewCommon
+local Common = _G.LUI.Settings.Preview.Common
 local _apply_preview_border = Common.apply_preview_border
 local _require_font = Common.require_font
 local _require_control_color = Common.require_control_color
@@ -152,7 +157,7 @@ function ConfigWindow:update_drops_preview()
 
     _sync_preview_holder_height(self, self.controls.drops_preview, capacity_h + (2 * PREVIEW_MARGIN))
 
-    local holder_w, holder_h = p.container:GetSize()
+    local holder_w = p.container:GetWidth()
     if holder_w < width then
         width = holder_w
     end

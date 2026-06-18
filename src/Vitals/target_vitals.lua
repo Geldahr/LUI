@@ -1,3 +1,18 @@
+import "LUI.src.Utils.callbacks"
+local TR = _G.LUI.Locale.TR
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local Vitals = _G.LUI.Features.Vitals
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local State = _G.LUI.Settings.State
+local Bestiary = _G.LUI.Features.Bestiary
+local Windows = _G.LUI.Runtime.Windows
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "Turbine.Gameplay"
@@ -29,15 +44,16 @@ end
 local _gradient_morale_color = lui_gradient_morale_color
 
 local function _target_vitals_enabled()
-    return _G.loaded_settings.target.vitals.enabled == true
+    return State.loaded_settings.target.vitals.enabled == true
 end
 
 local function _targets_target_enabled()
-    return _G.loaded_settings.target.vitals.targets_target.enabled == true
+    return State.loaded_settings.target.vitals.targets_target.enabled == true
 end
 
 ---@class TargetVitals : VitalsBase
-TargetVitals = class(VitalsBase)
+local TargetVitals = class(Vitals.VitalsBase)
+Vitals.TargetVitals = TargetVitals
 
 ---------------------------------------------------------------------
 -- Constructor
@@ -50,7 +66,7 @@ function TargetVitals:Constructor(entity)
     self.em_added_event = nil
     self.em_removed_event = nil
 
-    VitalsBase.Constructor(self, "target", entity, TR["Target Vitals"])
+    Vitals.VitalsBase.Constructor(self, "target", entity, TR["Target Vitals"])
 
     self.entity_control:SetMouseVisible(true)
     self.entity_control.MouseDoubleClick = function(_, args)
@@ -71,7 +87,7 @@ function TargetVitals:set_entity(entity)
         self:_detach_effect_manager()
     end
 
-    VitalsBase.set_entity(self, entity)
+    Vitals.VitalsBase.set_entity(self, entity)
 
     if entity == nil and self.em ~= nil then
         self:_detach_effect_manager()
@@ -103,7 +119,7 @@ function TargetVitals:Update()
         end
     end
 
-    VitalsBase.Update(self)
+    Vitals.VitalsBase.Update(self)
 end
 
 function TargetVitals:get_lower_bars_height()
@@ -229,12 +245,12 @@ function TargetVitals:_render_targets_target_labels()
 end
 
 function TargetVitals:apply_text_alignment()
-    VitalsBase.apply_text_alignment(self)
+    Vitals.VitalsBase.apply_text_alignment(self)
     self:_apply_targets_target_label_layout()
 end
 
 function TargetVitals:apply_fonts()
-    VitalsBase.apply_fonts(self)
+    Vitals.VitalsBase.apply_fonts(self)
     self:_apply_targets_target_label_fonts()
     self:_apply_targets_target_label_layout()
 end
@@ -244,7 +260,7 @@ function TargetVitals:on_target_changed()
 end
 
 function TargetVitals:set_move_mode(enabled)
-    VitalsBase.set_move_mode(self, enabled)
+    Vitals.VitalsBase.set_move_mode(self, enabled)
     if _target_vitals_enabled() ~= true then
         self:SetVisible(false)
     elseif enabled == true then
@@ -470,7 +486,7 @@ function TargetVitals:_setup_effect_tracking()
         return
     end
 
-    self.em = TargetEffectManager.acquire(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    self.em = Vitals.TargetEffectManager.acquire(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
     self.em_added_event = self.em:register_added_event(function(effect)
         self:_upsert_effect(effect)
     end)
@@ -509,7 +525,7 @@ function TargetVitals:_build_extra_controls()
     local inner_w = v.targets_target.width - (2 * bw)
     if inner_w < 1 then inner_w = 1 end
 
-    self.targets_target_window = TargetsTargetVitalsWindow(self)
+    self.targets_target_window = Vitals.TargetsTargetVitalsWindow(self)
     self.targets_target_inner_w = inner_w
     self.targets_target_widgets = {
         frame = self.targets_target_window,
@@ -539,7 +555,7 @@ function TargetVitals:_on_entity_control_double_click(args)
         return
     end
 
-    BESTIARY_CARD:toggle_for_target(self.entity, self)
+    Windows.bestiary_card:toggle_for_target(self.entity, self)
 end
 
 function TargetVitals:_resize_extra_controls()

@@ -1,3 +1,14 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Defaults = _G.LUI.Settings.Defaults
+local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
+local Flags = _G.LUI.Runtime.Flags
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Bestiary = _G.LUI.Features.Bestiary
+local Windows = _G.LUI.Runtime.Windows
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -5,8 +16,6 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.Inventory.filter"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.search_query"
-
-Bestiary = Bestiary or {}
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
 local DATA_ACCESS = Bestiary.DataAccess
@@ -37,9 +46,6 @@ local BASE_GENUS_LABEL_W = 40
 local BASE_TAXONOMY_VALUE_MAX_W = 200
 local BASE_MIN_W = 600
 local BASE_MIN_H = 240
-local BASE_NAME_FONT_SIZE = 12
-local BASE_TEXT_FONT_SIZE = 10
-local BASE_TAXONOMY_FONT_SIZE = 10
 local BASE_ROW_PAD_X = 8
 local BASE_ROW_PAD_Y = 4
 local BASE_ROW_GAP_Y = 2
@@ -52,11 +58,8 @@ local BASE_CHIP_GAP_Y = 4
 local BASE_CHIP_BORDER = 1
 local BASE_CHIP_MIN_W = 52
 local BASE_CHIP_CHAR_W = 5.8
-local BASE_NAME_CHAR_W = 6.9
 local BASE_TAXONOMY_CHAR_W = 5.8
 local BASE_TAXONOMY_PAD_X = 5
-local BASE_TAXONOMY_ARROW_W = 14
-local BASE_TAXONOMY_START_RATIO = 0.40
 local BASE_RESIZE_REFRESH_DELAY = 0.10
 local BASE_RESIZE_REFLOW_MIN_INTERVAL = 0.50
 local BASE_COLUMN_W = 600
@@ -86,11 +89,11 @@ local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.95, 0.83, 0.49)
 local COLOR_DROP_MATCH_CHIP_BORDER = Turbine.UI.Color(1, 0.18, 0.66, 0.82)
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _scaled_font(name, size)
-    return FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+    return FONT_TO_LOTRO(name, size * State.settings.global.scale)
 end
 
 local function _lower_text(text)
@@ -654,7 +657,7 @@ local function _compare_records(sort_mode, left, right)
 end
 
 local function _estimate_chip_width(text)
-    local char_w = BASE_CHIP_CHAR_W * _G.settings.global.scale
+    local char_w = BASE_CHIP_CHAR_W * State.settings.global.scale
     local pad_x = _scaled_int(BASE_CHIP_PAD_X)
     local border_w = _scaled_int(BASE_CHIP_BORDER)
     local text_w = math.floor((string.len(text or "") * char_w) + 0.5)
@@ -667,7 +670,7 @@ local function _estimate_chip_width(text)
 end
 
 local function _estimate_text_width(text, base_char_w)
-    return math.floor((string.len(text or "") * base_char_w * _G.settings.global.scale) + 0.5)
+    return math.floor((string.len(text or "") * base_char_w * State.settings.global.scale) + 0.5)
 end
 
 local function _build_chip_layout(texts, max_width)
@@ -1104,10 +1107,10 @@ function BestiaryRow:bind(record, width)
     self:SetVisible(true)
 end
 
-local BestiaryWindow = class(LuiWindow)
+local BestiaryWindow = class(UI.Widgets.LuiWindow)
 
 function BestiaryWindow:Constructor()
-    LuiWindow.Constructor(self)
+    UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Bestiary"])
     self:set_icon(UI.AssetIds.book_orange_cover)
@@ -1294,7 +1297,7 @@ function BestiaryWindow:Constructor()
         if self._suppress_area_text_changed ~= true then
             self.current_area = nil
             self.last_applied_area_query = nil
-            _G.bestiary_area_filter_query = nil
+            BestiaryCache.area_filter_query = nil
         end
         self:update_filter()
     end
@@ -1305,7 +1308,7 @@ function BestiaryWindow:Constructor()
     self.clear_button.Click = function()
         self.current_area = nil
         self.last_applied_area_query = nil
-        _G.bestiary_area_filter_query = nil
+        BestiaryCache.area_filter_query = nil
         self._suppress_level_text_changed = true
         self.level_min_box:SetText("")
         self.level_max_box:SetText("")
@@ -1351,7 +1354,7 @@ function BestiaryWindow:Constructor()
     self.area_slot_cover:SetBackColor(Style.TEXT_OUTLINE)
     self.area_slot_cover:SetZOrder(2)
 
-    self.area_slot_icon = Image()
+    self.area_slot_icon = UI.Widgets.Image()
     self.area_slot_icon:SetParent(self.filter_bar)
     self.area_slot_icon:SetMouseVisible(false)
     self.area_slot_icon:SetZOrder(3)
@@ -1415,7 +1418,7 @@ function BestiaryWindow:Constructor()
     self.empty_label:SetZOrder(3)
 
     self.SizeChanged = function()
-        LuiWindow._layout(self)
+        UI.Widgets.LuiWindow._layout(self)
         self:handle_user_resize()
     end
 
@@ -1423,7 +1426,7 @@ function BestiaryWindow:Constructor()
         local visible = self:IsVisible() == true
         self:SetWantsUpdates(visible)
         if visible == true then
-            local tracker = _G.BESTIARY_TRACKER
+            local tracker = Windows.bestiary_tracker
             tracker:flush_pending()
             self.last_update_at = 0
             self._last_generation = nil
@@ -1466,7 +1469,7 @@ function BestiaryWindow:toggle()
 end
 
 function BestiaryWindow:capture_geometry()
-    local window = _G.get_ui_window_state("bestiary")
+    local window = Defaults.get_ui_window_state("bestiary")
     if type(window) ~= "table" then
         return
     end
@@ -1501,15 +1504,15 @@ function BestiaryWindow:ensure_area_shortcut()
 end
 
 function BestiaryWindow:apply_settings()
-    LuiWindow.apply_settings(self, _G.settings.global.scale)
-    self.update_every = 1.0 / math.max(1, _to_number(_G.settings.global.refresh_rate, 30))
+    UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
+    self.update_every = 1.0 / math.max(1, _to_number(State.settings.global.refresh_rate, 30))
     local min_w, min_h = self:_minimum_window_size()
     self:set_minimum_size(min_w, min_h)
 
     local button_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
     self.order_label:SetFont(button_font)
     self.sort_dropdown:SetFont(button_font)
-    self.sort_dropdown:set_scale(_G.settings.global.scale)
+    self.sort_dropdown:set_scale(State.settings.global.scale)
     self.sort_dropdown:SetValue(self.sort_mode)
     self.prev_button:set_font(button_font)
     self.page_label:SetFont(button_font)
@@ -1524,10 +1527,10 @@ function BestiaryWindow:apply_settings()
     self:ensure_area_shortcut()
     self.genus_label:SetFont(button_font)
     self.genus_dropdown:SetFont(button_font)
-    self.genus_dropdown:set_scale(_G.settings.global.scale)
+    self.genus_dropdown:set_scale(State.settings.global.scale)
     self.subcategory_label:SetFont(button_font)
     self.subcategory_dropdown:SetFont(button_font)
-    self.subcategory_dropdown:set_scale(_G.settings.global.scale)
+    self.subcategory_dropdown:set_scale(State.settings.global.scale)
     self.empty_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
     self.empty_label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     self.empty_label:SetOutlineColor(Style.TEXT_OUTLINE)
@@ -1536,7 +1539,7 @@ function BestiaryWindow:apply_settings()
         self.entries[i]:apply_settings()
     end
 
-    local window = _G.get_ui_window_state("bestiary")
+    local window = Defaults.get_ui_window_state("bestiary")
     if type(window) == "table" then
         local left = _to_number(window.left, self:GetLeft())
         local top = _to_number(window.top, self:GetTop())
@@ -1555,7 +1558,7 @@ function BestiaryWindow:apply_settings()
 end
 
 function BestiaryWindow:Update()
-    if _G.LUI_IS_UNLOADING == true then
+    if Flags.is_unloading == true then
         self:SetWantsUpdates(false)
         return
     end
@@ -1574,10 +1577,10 @@ function BestiaryWindow:Update()
     self:sync_area_filter_query()
     self:apply_current_area_filter(false)
 
-    local tracker = _G.BESTIARY_TRACKER
+    local tracker = Windows.bestiary_tracker
     tracker:flush_expired()
 
-    local generation = _G.bestiary_cache_generation or 0
+    local generation = BestiaryCache.generation or 0
     if self._last_generation ~= generation then
         self:refresh_from_store(true)
     elseif self._resize_dirty == true
@@ -1656,7 +1659,7 @@ function BestiaryWindow:_apply_location_query_value(value)
 end
 
 function BestiaryWindow:sync_area_filter_query()
-    local query = _G.bestiary_area_filter_query
+    local query = BestiaryCache.area_filter_query
     if type(query) ~= "string" or query == "" then
         self.current_area = nil
         return
@@ -1701,7 +1704,7 @@ function BestiaryWindow:set_area_filter_query(query)
         return
     end
 
-    _G.bestiary_area_filter_query = query
+    BestiaryCache.area_filter_query = query
     self.current_area = query
     self:apply_current_area_filter(true)
 end
@@ -1714,7 +1717,7 @@ function BestiaryWindow:open_query_search(query)
 
     self.current_area = nil
     self.last_applied_area_query = nil
-    _G.bestiary_area_filter_query = nil
+    BestiaryCache.area_filter_query = nil
 
     self._suppress_level_text_changed = true
     self.level_min_box:SetText("")
@@ -1890,7 +1893,7 @@ function BestiaryWindow:open_card_for_record(record, anchor)
         name = record.name
     end
 
-    return BESTIARY_CARD:show_for_name(name, anchor)
+    return Windows.bestiary_card:show_for_name(name, anchor)
 end
 
 function BestiaryWindow:_ensure_rows(count)
@@ -2049,7 +2052,7 @@ function BestiaryWindow:layout()
 end
 
 function BestiaryWindow:refresh_from_store(force)
-    local generation = _G.bestiary_cache_generation or 0
+    local generation = BestiaryCache.generation or 0
     if force ~= true and self._last_generation == generation then
         return
     end

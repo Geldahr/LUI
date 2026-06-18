@@ -1,5 +1,4 @@
-_G.STATUS_BAR_API_COMMAND_PARSER = _G.STATUS_BAR_API_COMMAND_PARSER or {}
-local Parser = _G.STATUS_BAR_API_COMMAND_PARSER
+local Parser = _G.LUI.Features.StatusBar.APICommandParser
 
 function Parser.strip_chat_timestamp(message)
     local text = tostring(message or "")

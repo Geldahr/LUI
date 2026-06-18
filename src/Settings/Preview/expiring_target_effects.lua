@@ -1,7 +1,17 @@
+local lui_timed_row_time_format = _G.LUI.Utils.lui_timed_row_time_format
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local UI = _G.LUI.UI
 import "LUI.src.Utils.timed_row_layout"
 import "LUI.src.Utils.color"
 
-local Common = SettingsPreviewCommon
+local Common = _G.LUI.Settings.Preview.Common
 local _require_font = Common.require_font
 local _require_control_color = Common.require_control_color
 local _require_control_enum = Common.require_control_enum

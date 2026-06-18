@@ -1,3 +1,4 @@
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
 import "LUI.src.Settings.Preview.group_vitals"
 
 local _fellowship_preview_spec = {
@@ -19,10 +20,10 @@ local _fellowship_preview_spec = {
 }
 
 function ConfigWindow:init_fellowship_vitals_preview()
-    SettingsGroupVitalsPreview.init(self, _fellowship_preview_spec)
+    _G.LUI.Settings.Preview.GroupVitals.init(self, _fellowship_preview_spec)
     self:update_fellowship_vitals_preview()
 end
 
 function ConfigWindow:update_fellowship_vitals_preview()
-    SettingsGroupVitalsPreview.update(self, _fellowship_preview_spec)
+    _G.LUI.Settings.Preview.GroupVitals.update(self, _fellowship_preview_spec)
 end

@@ -1,17 +1,18 @@
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
-UI = UI or {}
-UI.Widgets = UI.Widgets or {}
+local LUI = _G.LUI
+local UI = LUI.UI
+local Widgets = UI.Widgets
 
 --[[
 Widget style sheet:
-Define _G.STYLE before creating LUI widgets to provide the developer/plugin
-style layer. Saved user style overrides live in _G.USER_STYLE. If both are nil,
+Define LUI.UI.Style before creating LUI widgets to provide the developer/plugin
+style layer. Saved user style overrides live in LUI.UI.UserStyle. If both are nil,
 widgets use the complete DEFAULTS table below.
 
 Example:
-_G.STYLE = {
+LUI.UI.Style = {
     CONTROL_BACKGROUND = Turbine.UI.Color(1, 0.15, 0.15, 0.15),
     CONTROL_FOREGROUND = Turbine.UI.Color(1, 1, 1, 1),
     CONTROL_BORDER = Turbine.UI.Color(1, 0.35, 0.40, 0.50),
@@ -23,7 +24,7 @@ _G.STYLE = {
 
 Widgets read values as UI.Widgets.Style.CONTROL_BORDER or Style["CONTROL_BORDER"].
 Keys are exact uppercase names. Resolution order is:
-DEFAULTS < _G.STYLE < _G.USER_STYLE.
+DEFAULTS < LUI.UI.Style < LUI.UI.UserStyle.
 
 If a layer omits a state-specific value such as CONTROL_BORDER_HOVER, lookup
 tries that layer's fallback chain before moving to the next lower layer.
@@ -172,15 +173,15 @@ end
 
 local Style = setmetatable({}, {
     __index = function(_, key)
-        if _G["USER_STYLE"] then
-            local value = _style_override(_G.USER_STYLE, key)
+        if UI.UserStyle ~= nil then
+            local value = _style_override(UI.UserStyle, key)
             if value ~= nil then
                 return value
             end
         end
 
-        if _G["STYLE"] then
-            local value = _style_override(_G.STYLE, key)
+        if UI.Style ~= nil then
+            local value = _style_override(UI.Style, key)
             if value ~= nil then
                 return value
             end
@@ -247,4 +248,4 @@ function Style.apply_dropdown_arrow(button, width, position)
     )
 end
 
-UI.Widgets.Style = Style
+Widgets.Style = Style

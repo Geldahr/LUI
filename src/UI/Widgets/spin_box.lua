@@ -1,3 +1,5 @@
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -5,6 +7,10 @@ import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.style"
 
+local Widgets = _G.LUI.UI.Widgets
+local LuiButton = Widgets.LuiButton
+local LuiLineEdit = Widgets.LuiLineEdit
+local Style = Widgets.Style
 local BASE_WIDGET_W = 72
 local BASE_WIDGET_H = 21
 local BASE_BUTTON_W = 18
@@ -15,7 +21,6 @@ local BASE_BUTTONS_INSET_Y = 0
 
 local RENDER_PLUS_MINUS = "plus_minus"
 local RENDER_ARROWS = "arrows"
-local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -49,12 +54,6 @@ local function _round(value)
     return math.floor((tonumber(value) or 0) + 0.5)
 end
 
-local function _trim(text)
-    local value = tostring(text or "")
-    value = value:gsub("^%s+", "")
-    value = value:gsub("%s+$", "")
-    return value
-end
 
 local function _trim_submit_suffix(text)
     if type(text) ~= "string" then
@@ -89,7 +88,8 @@ local function _decimal_places(value)
 end
 
 ---@class LuiSpinBox : Turbine.UI.Control
-LuiSpinBox = class(Turbine.UI.Control)
+local LuiSpinBox = class(Turbine.UI.Control)
+Widgets.LuiSpinBox = LuiSpinBox
 
 LuiSpinBox.render = {
     PLUS_MINUS = RENDER_PLUS_MINUS,

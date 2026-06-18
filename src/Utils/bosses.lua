@@ -1,5 +1,8 @@
 import "LUI.src.Utils.boss_names"
 
+local Utils = _G.LUI.Utils
+local BOSS_NAMES = Utils.BOSS_NAMES
+
 local BOSS_FALLBACK_BASE_MORALE_RATIO = 3
 local BOSS_FALLBACK_LEVEL_DELTA_SCALE = 0.02
 
@@ -38,12 +41,12 @@ local function _should_try_boss_name_fallback(target, self_entity)
     return target_max_morale >= (self_max_morale * required_ratio)
 end
 
-function _G.is_boss_name(target_name)
+function Utils.is_boss_name(target_name)
     return BOSS_NAMES[target_name] == true
 end
 
-function _G.does_boss_name_match(target_name, target, self_entity)
-    if is_boss_name(target_name) then
+function Utils.does_boss_name_match(target_name, target, self_entity)
+    if Utils.is_boss_name(target_name) then
         return true
     end
 
@@ -64,10 +67,10 @@ function _G.does_boss_name_match(target_name, target, self_entity)
     return false
 end
 
-function _G.is_boss_target(target, self_entity)
+function Utils.is_boss_target(target, self_entity)
     if target == nil or target.GetName == nil then
         return false
     end
 
-    return does_boss_name_match(target:GetName(), target, self_entity)
+    return Utils.does_boss_name_match(target:GetName(), target, self_entity)
 end

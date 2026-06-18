@@ -1,10 +1,16 @@
-SettingsPreviewCommon = SettingsPreviewCommon or {}
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local State = _G.LUI.Settings.State
+local Preview = _G.LUI.Settings.Preview
 
-local Common = SettingsPreviewCommon
+local Common = Preview.Common or {}
+Preview.Common = Common
 Common.PREVIEW_WRATH_MAX = 100
 
 function Common.scaled_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 function Common.scaled_int(value)

@@ -1,16 +1,19 @@
+local TR = _G.LUI.Locale.TR
+local Pages = _G.LUI.Settings.Pages
+local ConfigSectionPage = _G.LUI.Settings.Content.ConfigSectionPage
+local ConfigNestedTabs = _G.LUI.Settings.Content.ConfigNestedTabs
+local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.nested_tabs"
 import "LUI.src.Settings.Content.tabs"
 import "LUI.src.Settings.Content.section_page"
 
-local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
-local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
-local ConfigSectionPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_section_page) or
-    ConfigSectionPage
-local ConfigNestedTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_nested_tabs) or
-    ConfigNestedTabs
+local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
 
 local function _is_outline(control)
@@ -312,7 +315,8 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
     return page
 end
 
-ExpiringEffectsPage = class(ConfigTabs)
+local ExpiringEffectsPage = class(ConfigTabs)
+Pages.ExpiringEffectsPage = ExpiringEffectsPage
 
 function ExpiringEffectsPage:Constructor(window)
     ConfigTabs.Constructor(self, window)

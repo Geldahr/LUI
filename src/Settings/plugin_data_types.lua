@@ -1,8 +1,8 @@
 import "LUI.src.Settings.default_layouts"
 
-LUI_PLUGIN_DATA_TYPES = {}
-
-local Types = LUI_PLUGIN_DATA_TYPES
+local Settings = _G.LUI.Settings
+local Defaults = Settings.Defaults
+local Types = Settings.PluginDataTypes
 
 local KIND_TABLE = "table"
 local KIND_STRING = "string"
@@ -424,7 +424,7 @@ local function _recipe_identity_schema(include_count)
     return _table_schema(fields)
 end
 
-local settings_schema = _schema_from_default(_G.DEFAULT_LAYOUT_SCHEMA)
+local settings_schema = _schema_from_default(Defaults.Schema)
 settings_schema.fields.version = STRING
 settings_schema.fields.global.fields.style = _map_schema(STYLE_VALUE)
 settings_schema.fields.launcher.fields.buttons = _array_schema(STRING)

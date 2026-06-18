@@ -1,6 +1,9 @@
-SettingsGroupVitalsPageBuilder = SettingsGroupVitalsPageBuilder or {}
+local TR = _G.LUI.Locale.TR
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local Pages = _G.LUI.Settings.Pages
 
-local Builder = SettingsGroupVitalsPageBuilder
+local Builder = Pages.GroupVitalsPageBuilder or {}
+Pages.GroupVitalsPageBuilder = Builder
 local RAID_LAYOUT_LABELS = {
     "2",
     "3",

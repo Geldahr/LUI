@@ -1,9 +1,15 @@
-local S = _G.STATUS_BAR_COMMON
-local WidgetBase = _G.StatusBarWidgetBase
+import "LUI.src.Utils.callbacks"
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
+local class = _G.LUI.Core.class
+local S = _G.LUI.Features.StatusBar.Common
+local WidgetBase = _G.LUI.Features.StatusBar.WidgetBase
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
 local _gradient_morale_color = lui_gradient_morale_color
 
 local EquipmentWearWidget = class(WidgetBase)
-_G.EquipmentWearWidget = EquipmentWearWidget
+StatusBarWidgets.EquipmentWearWidget = EquipmentWearWidget
 
 function EquipmentWearWidget:Constructor(widget_w, bar_h, font, icon_path, wear_color, coloring, content_alignment)
     WidgetBase.Constructor(self, "equipment_wear", widget_w, bar_h, font,

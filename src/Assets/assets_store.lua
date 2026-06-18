@@ -1,9 +1,20 @@
+local TR = _G.LUI.Locale.TR
+local Persistence = _G.LUI.Settings.Persistence
+local AssetCache = _G.LUI.Runtime.Caches.Assets
+local Stores = _G.LUI.Runtime.Stores
+local Flags = _G.LUI.Runtime.Flags
+local State = _G.LUI.Settings.State
+local Assets = _G.LUI.Features.Assets
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 
 import "LUI.src.Utils.callbacks"
 
-AssetsStore = class(Turbine.UI.Control)
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local AssetsStore = class(Turbine.UI.Control)
+Assets.AssetsStore = AssetsStore
 
 local UPDATE_EVERY = 0.50
 local SOURCE_BACKPACK = "backpack"
@@ -60,8 +71,8 @@ local function _inc_count(map, key)
 end
 
 local function _get_current_character_name()
-    if type(_G.current_character_name) == "string" and string.len(_G.current_character_name) > 0 then
-        return _G.current_character_name
+    if type(State.current_character_name) == "string" and string.len(State.current_character_name) > 0 then
+        return State.current_character_name
     end
 
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
@@ -76,15 +87,15 @@ local function _get_current_character_name()
 end
 
 local function _ensure_assets_cache()
-    if _G.ensure_assets_cache ~= nil then
-        return _G.ensure_assets_cache()
+    if Persistence.ensure_assets_cache ~= nil then
+        return Persistence.ensure_assets_cache()
     end
 
-    if type(_G.assets_cache) ~= "table" then
-        _G.assets_cache = {}
+    if type(AssetCache.data) ~= "table" then
+        AssetCache.data = {}
     end
 
-    local cache = _G.assets_cache
+    local cache = AssetCache.data
     if type(cache.characters) ~= "table" then
         cache.characters = {}
     end
@@ -493,7 +504,7 @@ function AssetsStore:destroy()
     local changed = self:_flush_dirty_snapshots()
     if changed == true then
         self.generation = self.generation + 1
-        _G.assets_cache_dirty = true
+        AssetCache.dirty = true
     end
 
     self:_detach_callbacks()
@@ -520,7 +531,7 @@ function AssetsStore:refresh_now(source_key, force_bindings)
     local changed = self:_flush_dirty_snapshots()
     if changed == true then
         self.generation = self.generation + 1
-        _G.assets_cache_dirty = true
+        AssetCache.dirty = true
     end
 
     return changed
@@ -647,11 +658,11 @@ function AssetsStore:Update()
 
     if changed == true then
         self.generation = self.generation + 1
-        _G.assets_cache_dirty = true
+        AssetCache.dirty = true
     end
 
-    if _G.LUI_IS_UNLOADING ~= true then
-        local crafting_store = _G.CRAFTING_STORE
+    if Flags.is_unloading ~= true then
+        local crafting_store = Stores.crafting
         if crafting_store ~= nil and crafting_store.refresh ~= nil then
             crafting_store:refresh(false, 1)
         end

@@ -1,6 +1,8 @@
 import "Turbine.Gameplay"
 
-GroupOrdering = GroupOrdering or {}
+local Vitals = _G.LUI.Features.Vitals
+local GroupOrdering = Vitals.GroupOrdering or {}
+Vitals.GroupOrdering = GroupOrdering
 
 local function _local_player_name()
     local local_player = Turbine.Gameplay.LocalPlayer.GetInstance()

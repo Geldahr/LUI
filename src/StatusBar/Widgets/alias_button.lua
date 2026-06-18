@@ -1,14 +1,18 @@
+local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
 local BUTTON_MARGIN = 1
 local BUTTON_BORDER = 1
 
 local AliasButtonWidget = class(Turbine.UI.Control)
-_G.AliasButtonWidget = AliasButtonWidget
+StatusBarWidgets.AliasButtonWidget = AliasButtonWidget
 
 local function _apply_font(label, font)
     if label == nil or font == nil then
@@ -89,12 +93,12 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self.background:SetBackColor(Style.CONTROL_BACKGROUND)
     self.background:SetZOrder(1)
 
-    self.icon = Image(self.icon_background)
+    self.icon = UI.Widgets.Image(self.icon_background)
     self.icon:SetParent(self)
     self.icon:SetZOrder(2)
-    self.icon:set_alignment(Image.CENTER + Image.MIDDLE)
+    self.icon:set_alignment(UI.Widgets.Image.CENTER + UI.Widgets.Image.MIDDLE)
 
-    self.label = LuiLabel()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     self.label:SetMouseVisible(false)
     self.label:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)

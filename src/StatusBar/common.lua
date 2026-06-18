@@ -1,3 +1,7 @@
+local TR = _G.LUI.Locale.TR
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -8,15 +12,22 @@ import "LUI.src.UI.shortcuts"
 import "LUI.src.UI.Widgets.image"
 import "LUI.src.Settings.enums"
 
-_G.STATUS_BAR_COMMON = _G.STATUS_BAR_COMMON or {}
-local S = _G.STATUS_BAR_COMMON
+local LUI = _G.LUI
+local UI = LUI.UI
+local Settings = LUI.Settings
+local LUI_ENUMS = Settings.Enums
+local StatusBar = LUI.Features.StatusBar
+local Windows = LUI.Runtime.Windows
+local Apply = LUI.Runtime.Apply
+local S = StatusBar.Common or {}
+StatusBar.Common = S
 local Shortcuts = UI.Shortcuts
-_G.LUI_STATUS_BAR_API_ITEMS = _G.LUI_STATUS_BAR_API_ITEMS or {
+StatusBar.APIItems = StatusBar.APIItems or {
     by_key = {},
     by_token = {},
     order = {},
 }
-local STATUS_BAR_API_ITEMS = _G.LUI_STATUS_BAR_API_ITEMS
+local STATUS_BAR_API_ITEMS = StatusBar.APIItems
 STATUS_BAR_API_ITEMS.by_key = STATUS_BAR_API_ITEMS.by_key or {}
 STATUS_BAR_API_ITEMS.by_token = STATUS_BAR_API_ITEMS.by_token or {}
 STATUS_BAR_API_ITEMS.order = STATUS_BAR_API_ITEMS.order or {}
@@ -119,20 +130,20 @@ end
 
 local function _refresh_status_bar_after_api_change()
     local edit_window_state = nil
-    if _G.STATUS_BAR ~= nil then
-        edit_window_state = _G.STATUS_BAR:capture_edit_window_state()
+    if Windows.status_bar ~= nil then
+        edit_window_state = Windows.status_bar:capture_edit_window_state()
     end
 
-    _G.rebuild_settings()
-    if _G.STATUS_BAR ~= nil then
-        _G.STATUS_BAR:apply_settings()
+    Settings.rebuild()
+    if Windows.status_bar ~= nil then
+        Windows.status_bar:apply_settings()
     else
-        _G.apply_status_bar_settings()
+        Apply.status_bar_settings()
     end
-    if edit_window_state ~= nil and edit_window_state.visible == true and _G.STATUS_BAR ~= nil then
-        _G.STATUS_BAR:restore_edit_window_state(edit_window_state)
+    if edit_window_state ~= nil and edit_window_state.visible == true and Windows.status_bar ~= nil then
+        Windows.status_bar:restore_edit_window_state(edit_window_state)
     end
-    _G.LUI_STATUS_BAR_REFRESH_LAYOUT_HELP()
+    Settings.Pages.StatusBar.refresh_layout_help()
 end
 
 local WALLET_ITEM_NAMES = {

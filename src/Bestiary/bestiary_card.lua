@@ -1,9 +1,14 @@
+local TR = _G.LUI.Locale.TR
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Bestiary = _G.LUI.Features.Bestiary
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 
-Bestiary = Bestiary or {}
 local Style = UI.Widgets.Style
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
@@ -11,15 +16,11 @@ local DATA_ACCESS = Bestiary.DataAccess
 
 local BASE_WIDTH = 550
 local BASE_HEIGHT = 570
-local BASE_BORDER = 2
-local BASE_PADDING = 12
 local BASE_SECTION_GAP = 6
-local BASE_HEADER_H = 68
 local BASE_PANEL_HEADER_H = 20
 local BASE_PANEL_BODY_PAD_X = 8
 local BASE_PANEL_BODY_PAD_TOP = 4
 local BASE_PANEL_BODY_PAD_BOTTOM = 10
-local BASE_CLOSE_W = 72
 local BASE_STAT_BOX_H = 52
 local BASE_PROFILE_H = 78
 local BASE_TWO_COL_H = 88
@@ -28,11 +29,8 @@ local BASE_NOTES_MIN_H = 76
 local BASE_DROP_MIN_H = 42
 local BASE_DROP_MAX_H = 150
 local BASE_TITLE_SIZE = 20
-local BASE_SUBTITLE_SIZE = 12
 local BASE_SECTION_TITLE_SIZE = 12
 local BASE_TEXT_SIZE = 11
-local BASE_HINT_SIZE = 10
-local BASE_ADVANCED_H = 22
 local BASE_OFFSET = 12
 local BASE_CHIP_H = 18
 local BASE_CHIP_PAD_X = 6
@@ -45,13 +43,8 @@ local BASE_TEXT_LINE_H = 14
 local BASE_SCROLL_W = 10
 local BASE_SCROLL_GAP = 3
 local BASE_VARIANT_TAB_H = 22
-local BASE_VARIANT_TAB_GAP_X = 4
-local BASE_VARIANT_TAB_GAP_Y = 4
 local BASE_VARIANT_TAB_PAD_X = 10
-local BASE_VARIANT_TAB_MIN_W = 84
 
-local COLOR_VALUE_CYAN = Turbine.UI.Color(1, 0.30, 0.92, 1.00)
-local COLOR_VALUE_GREEN = Turbine.UI.Color(1, 0.34, 0.82, 0.30)
 local COLOR_VALUE_GREY = Turbine.UI.Color(1, 0.56, 0.59, 0.61)
 local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
@@ -72,7 +65,7 @@ local COMBAT_SCALE_COLORS = {
 }
 
 local function _scaled_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 local function _scaled_int(value)
@@ -592,52 +585,8 @@ local function _collect_variant_group(selected_record)
     }
 end
 
-local function _append_value(lines, label, value)
-    if type(lines) ~= "table" then
-        return
-    end
-    if type(value) ~= "string" or value == "" then
-        value = "-"
-    end
-    lines[#lines + 1] = label .. ": " .. value
-end
 
-local function _append_section(lines, heading, values)
-    if type(lines) ~= "table" or type(values) ~= "table" or #values == 0 then
-        return
-    end
 
-    lines[#lines + 1] = ""
-    lines[#lines + 1] = heading .. ":"
-    for i = 1, #values do
-        lines[#lines + 1] = "- " .. values[i]
-    end
-end
-
-local function _append_named_section(lines, heading, values, field_order)
-    if type(lines) ~= "table" or type(values) ~= "table" or type(field_order) ~= "table" then
-        return
-    end
-
-    local has_any = false
-    for i = 1, #field_order do
-        local info = field_order[i]
-        if type(values[info.key]) == "string" and values[info.key] ~= "" then
-            has_any = true
-            break
-        end
-    end
-    if has_any ~= true then
-        return
-    end
-
-    lines[#lines + 1] = ""
-    lines[#lines + 1] = heading .. ":"
-    for i = 1, #field_order do
-        local info = field_order[i]
-        _append_value(lines, info.label, values[info.key])
-    end
-end
 
 local function _display_text(value)
     if type(value) ~= "string" or value == "" then
@@ -784,7 +733,7 @@ local function _build_drop_texts(record)
 end
 
 local function _estimate_text_width(text, base_char_w)
-    return math.floor((string.len(text or "") * base_char_w * _G.settings.global.scale) + 0.5)
+    return math.floor((string.len(text or "") * base_char_w * State.settings.global.scale) + 0.5)
 end
 
 local function _estimate_font_text_width(text, font_size)
@@ -1068,24 +1017,6 @@ local function _style_row_set(rows, value_color)
     end
 end
 
-local function _layout_row_set(rows, x, y, w, h, label_ratio)
-    if type(rows) ~= "table" or #rows == 0 then
-        return
-    end
-
-    local gap = _scaled_int(6)
-    local row_h = math.max(_scaled_int(14), math.floor(h / #rows))
-    local label_w = math.max(1, math.floor(w * label_ratio))
-    local value_w = math.max(1, w - label_w - gap)
-
-    for i = 1, #rows do
-        local ry = y + ((i - 1) * row_h)
-        rows[i].label:SetPosition(x, ry)
-        rows[i].label:SetSize(label_w, row_h)
-        rows[i].value:SetPosition(x + label_w + gap, ry)
-        rows[i].value:SetSize(value_w, row_h)
-    end
-end
 
 local function _layout_parallel_row_sets(left_rows, right_rows, x_left, x_right, y, w_left, w_right, h,
     left_label_ratio, right_label_ratio)
@@ -1268,11 +1199,11 @@ function BestiaryVariantTab:set_selected(selected)
     self:_apply_style()
 end
 
-BestiaryCard = class(LuiWindow)
+local BestiaryCard = class(UI.Widgets.LuiWindow)
 Bestiary.BestiaryCard = BestiaryCard
 
 local function _card_window_settings(create)
-    local root = _G.loaded_settings
+    local root = State.loaded_settings
     if type(root) ~= "table" then
         return nil
     end
@@ -1295,7 +1226,7 @@ local function _card_window_settings(create)
 end
 
 function BestiaryCard:Constructor()
-    LuiWindow.Constructor(self)
+    UI.Widgets.LuiWindow.Constructor(self)
 
     self.current_key = nil
     self.current_record = nil
@@ -1420,7 +1351,7 @@ function BestiaryCard:_create_variant_bar()
     bar:SetParent(self:central_widget())
     bar:SetMouseVisible(true)
     bar:SetVisible(false)
-    bar:set_scale(_G.settings.global.scale)
+    bar:set_scale(State.settings.global.scale)
     bar:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     bar:set_tab_position(UI.Widgets.LuiTabBar.position.top)
     bar:set_content_padding(0)
@@ -1761,7 +1692,7 @@ function BestiaryCard:_fit_window_height()
     local target_h = math.max(min_window_h, math.min(max_window_h, desired_window_h))
 
     self:SetSize(target_w, target_h)
-    LuiWindow._layout(self)
+    UI.Widgets.LuiWindow._layout(self)
     self:_clamp_to_display()
 end
 
@@ -1983,7 +1914,7 @@ function BestiaryCard:_apply_record(record)
 end
 
 function BestiaryCard:apply_settings()
-    LuiWindow.apply_settings(self, _G.settings.global.scale)
+    UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
     self:set_resizable(false)
 
     local window_w, window_h = self:GetSize()
@@ -2022,7 +1953,7 @@ function BestiaryCard:apply_settings()
     _bind_scroll_label_area(self.deeds_area, self.current_record ~= nil and self.current_record.deed_involvement or nil)
 
     if self.variant_bar ~= nil then
-        self.variant_bar:set_scale(_G.settings.global.scale)
+        self.variant_bar:set_scale(State.settings.global.scale)
         self.variant_bar:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
         _style_variant_tab_bar(self.variant_bar)
     end
@@ -2061,7 +1992,7 @@ function BestiaryCard:_position_near_anchor(anchor)
 
     if anchor ~= nil and anchor.GetPosition ~= nil and anchor.GetSize ~= nil then
         local ax, ay = anchor:GetPosition()
-        local aw, _ = anchor:GetSize()
+        local aw = anchor:GetSize()
         left = ax + aw + _scaled_int(BASE_OFFSET)
         top = ay
     end

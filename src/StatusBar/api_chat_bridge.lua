@@ -1,6 +1,12 @@
 import "LUI.src.StatusBar.api_command_parser"
 
-local Parser = _G.STATUS_BAR_API_COMMAND_PARSER
+local LUI = _G.LUI
+local StatusBar = LUI.Features.StatusBar
+local Parser = StatusBar.APICommandParser
+local APIChat = StatusBar.APIChat
+local Windows = LUI.Runtime.Windows
+local add_callback = LUI.Utils.add_callback
+local remove_callback = LUI.Utils.remove_callback
 local PENDING_STATUS_BAR_API_ITEMS = {}
 local status_bar_api_chat_callback = nil
 
@@ -11,15 +17,11 @@ local function _log_status_bar_api_chat(message)
 end
 
 local function _register_status_bar_api_item(spec)
-    if _G.STATUS_BAR_COMMON == nil or _G.STATUS_BAR_COMMON.register_status_bar_api_item == nil then
-        return nil, "Status bar API is not available yet."
-    end
-
-    return _G.STATUS_BAR_COMMON.register_status_bar_api_item(spec)
+    return StatusBar.Common.register_status_bar_api_item(spec)
 end
 
 local function flush_pending_items()
-    if _G.STATUS_BAR == nil or _G.STATUS_BAR_COMMON == nil or _G.STATUS_BAR_COMMON.register_status_bar_api_item == nil then
+    if Windows.status_bar == nil then
         return
     end
     if #PENDING_STATUS_BAR_API_ITEMS == 0 then
@@ -36,7 +38,7 @@ local function flush_pending_items()
 end
 
 local function push_item(spec)
-    if _G.STATUS_BAR ~= nil and _G.STATUS_BAR_COMMON ~= nil and _G.STATUS_BAR_COMMON.register_status_bar_api_item ~= nil then
+    if Windows.status_bar ~= nil then
         local _, err = _register_status_bar_api_item(spec)
         if err ~= nil then
             _log_status_bar_api_chat("Status bar push failed: " .. tostring(err))
@@ -74,11 +76,11 @@ local function handle_chat_message(args)
     push_item(spec)
 end
 
-function _G.LUI_STATUS_BAR_API_FLUSH_PENDING_ITEMS()
+function APIChat.flush_pending_items()
     flush_pending_items()
 end
 
-function _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
+function APIChat.install_chat_callback()
     if status_bar_api_chat_callback ~= nil then
         return
     end
@@ -88,7 +90,7 @@ function _G.LUI_STATUS_BAR_API_INSTALL_CHAT_CALLBACK()
     end)
 end
 
-function _G.LUI_STATUS_BAR_API_UNINSTALL_CHAT_CALLBACK()
+function APIChat.uninstall_chat_callback()
     if status_bar_api_chat_callback == nil then
         return
     end

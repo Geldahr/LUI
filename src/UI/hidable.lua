@@ -1,17 +1,20 @@
 import "LUI.src.UI.popup_state"
 
-GLOBAL_HUD_VISIBLE = GLOBAL_HUD_VISIBLE ~= false
-LUI_LAST_HUD_TOGGLE_AT = LUI_LAST_HUD_TOGGLE_AT or 0
+local UI = _G.LUI.UI
+local PopupState = UI.PopupState
+local MoveMode = UI.MoveMode
 
-_G.LUI_HIDABLE = _G.LUI_HIDABLE or {}
-
-local Hidable = _G.LUI_HIDABLE
+local Hidable = UI.Hidable
 local HidableMethods = {}
+local global_hud_visible = Hidable.global_visible ~= false
+local last_hud_toggle_at = Hidable.last_toggle_at or 0
 
 Hidable.register = nil
 Hidable.unregister = nil
 Hidable.set_visible = nil
 Hidable.is_visible = nil
+Hidable.global_visible = nil
+Hidable.last_toggle_at = nil
 
 setmetatable(Hidable, {
     __mode = "k",
@@ -36,7 +39,7 @@ function HidableMethods.register(win)
     end
 
     Hidable[win] = true
-    if GLOBAL_HUD_VISIBLE ~= true then
+    if global_hud_visible ~= true then
         _apply_global_visibility(win, false)
     end
 end
@@ -54,40 +57,38 @@ function HidableMethods.set_visible(visible)
         return
     end
 
-    GLOBAL_HUD_VISIBLE = visible == true
+    global_hud_visible = visible == true
 
-    if GLOBAL_HUD_VISIBLE ~= true then
-        _G.LUI_POPUP_STATE.close_all()
+    if global_hud_visible ~= true then
+        PopupState.close_all()
     end
 
-    if LUI_MOVE_UI ~= nil then
-        LUI_MOVE_UI.set_hud_visible(GLOBAL_HUD_VISIBLE)
-    end
+    MoveMode.set_hud_visible(global_hud_visible)
 
     for win, registered in pairs(Hidable) do
         if _is_registered_window(win, registered) == true then
-            _apply_global_visibility(win, GLOBAL_HUD_VISIBLE)
+            _apply_global_visibility(win, global_hud_visible)
         end
     end
 end
 
 function HidableMethods.is_visible()
-    return GLOBAL_HUD_VISIBLE == true
+    return global_hud_visible == true
 end
 
-function _G.is_lui_hud_visible()
+function Hidable.is_lui_hud_visible()
     return Hidable.is_visible()
 end
 
-function _G.set_lui_hud_visible(visible)
+function Hidable.set_lui_hud_visible(visible)
     Hidable.set_visible(visible)
 end
 
-function _G.toggle_lui_hud_visible()
+function Hidable.toggle_lui_hud_visible()
     local now = Turbine.Engine.GetGameTime()
-    if (now - (LUI_LAST_HUD_TOGGLE_AT or 0)) < 0.2 then
+    if (now - last_hud_toggle_at) < 0.2 then
         return
     end
-    LUI_LAST_HUD_TOGGLE_AT = now
-    set_lui_hud_visible(not (GLOBAL_HUD_VISIBLE == true))
+    last_hud_toggle_at = now
+    Hidable.set_lui_hud_visible(not (global_hud_visible == true))
 end

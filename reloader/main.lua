@@ -1,6 +1,12 @@
 import "Turbine";
 import "Turbine.UI";
+import "LUI.src.namespace"
 import "LUI.src.Utils.class"
+import "LUI.api"
+
+local LUI = _G.LUI
+local Reloader = LUI.Reloader
+local class = LUI.Core.class
 
 local function _log(message)
     if Turbine ~= nil and Turbine.Shell ~= nil and Turbine.Shell.WriteLine ~= nil then
@@ -22,9 +28,10 @@ local function _register_button()
     end
 end
 
-_G.reload_command = Turbine.ShellCommand()
+Reloader.reload_command = Turbine.ShellCommand()
 
-ReloaderWindow=class(Turbine.UI.Window);
+local ReloaderWindow = class(Turbine.UI.Window);
+Reloader.Window = ReloaderWindow
 function ReloaderWindow:Constructor()
 	Turbine.UI.Window.Constructor(self);
     self:SetVisible(false)
@@ -41,15 +48,13 @@ function ReloaderWindow:Constructor()
         end
     end
 end
-_G.reloader_async = ReloaderWindow();
+Reloader.async = ReloaderWindow();
 
-function reload_command:Execute(_, arguments)
-    _G.reloader_async:SetVisible(true)
-    _G.reloader_async:SetWantsUpdates(true)
+function Reloader.reload_command:Execute(_, arguments)
+    Reloader.async:SetVisible(true)
+    Reloader.async:SetWantsUpdates(true)
 end
 
-Turbine.Shell.AddCommand("LUIReloader", reload_command)
-
-import "LUI.api"
+Turbine.Shell.AddCommand("LUIReloader", Reloader.reload_command)
 
 _register_button()

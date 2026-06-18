@@ -1,6 +1,8 @@
-SettingsStandardVitalsPageBuilder = SettingsStandardVitalsPageBuilder or {}
+local TR = _G.LUI.Locale.TR
+local Pages = _G.LUI.Settings.Pages
 
-local Builder = SettingsStandardVitalsPageBuilder
+local Builder = Pages.StandardVitalsPageBuilder or {}
+Pages.StandardVitalsPageBuilder = Builder
 
 function Builder.new_standard_unit_page(window, root, options, deps)
     local get = function()

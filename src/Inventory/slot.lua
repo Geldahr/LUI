@@ -1,7 +1,10 @@
+local Inventory = _G.LUI.Features.Inventory
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
-InventorySlot = class(Turbine.UI.Control)
+local InventorySlot = class(Turbine.UI.Control)
+Inventory.InventorySlot = InventorySlot
 
 local GRID_COLOR = Turbine.UI.Color(1, 0.40, 0.40, 0.40)
 local TILE_BACK = Turbine.UI.Color(1, 0, 0, 0)

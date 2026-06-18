@@ -1,3 +1,9 @@
+local TR = _G.LUI.Locale.TR
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local Vitals = _G.LUI.Features.Vitals
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -5,14 +11,15 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.color"
 
-TargetsTargetVitalsWindow = class(LuiHUD)
+local TargetsTargetVitalsWindow = class(UI.Widgets.LuiHUD)
+Vitals.TargetsTargetVitalsWindow = TargetsTargetVitalsWindow
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function TargetsTargetVitalsWindow:Constructor(owner)
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = "target_target_vitals",
         title = TR["Target's Target"],
     })
@@ -71,10 +78,10 @@ end
 ---------------------------------------------------------------------
 
 function TargetsTargetVitalsWindow:set_move_mode(enabled)
-    LuiHUD.set_move_mode(self, enabled)
-    if _G.loaded_settings.target.vitals.targets_target.enabled == true and enabled == true then
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
+    if State.loaded_settings.target.vitals.targets_target.enabled == true and enabled == true then
         self:SetVisible(true)
-    elseif _G.loaded_settings.target.vitals.targets_target.enabled ~= true then
+    elseif State.loaded_settings.target.vitals.targets_target.enabled ~= true then
         self:SetVisible(false)
     end
 end
@@ -82,7 +89,7 @@ end
 function TargetsTargetVitalsWindow:apply_settings()
     self:apply_native_scaling()
 
-    local v = _G.settings.target.vitals
+    local v = State.settings.target.vitals
     local tt = v.targets_target
 
     local border = tt.border_width

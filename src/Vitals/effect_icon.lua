@@ -1,22 +1,28 @@
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local Vitals = _G.LUI.Features.Vitals
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.time_format"
 
-EffectIcon = class(LuiBaseWindow)
+local EffectIcon = class(UI.Widgets.LuiBaseWindow)
+Vitals.EffectIcon = EffectIcon
 
 ---------------------------------------------------------------------
 -- Constructor
 ---------------------------------------------------------------------
 
 function EffectIcon:Constructor(effect, size, font, font_style, font_color, outline_color)
-    LuiBaseWindow.Constructor(self, { hideable = false })
+    UI.Widgets.LuiBaseWindow.Constructor(self, { hideable = false })
 
     self.effect = nil
     self.ending = 0
 
     self.last_update_at = 0
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
 
     self:SetSize(size, size)
 

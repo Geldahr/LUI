@@ -1,3 +1,8 @@
+import "LUI.src.Utils.callbacks"
+local Vitals = _G.LUI.Features.Vitals
+local add_callback = _G.LUI.Utils.add_callback
+local remove_callback = _G.LUI.Utils.remove_callback
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 
 ---@class TargetEffectManagerEffectEntry
@@ -14,7 +19,8 @@ import "Turbine.Gameplay"
 ---@field source_target Turbine.Gameplay.Actor|nil
 ---@field background_source_target Turbine.Gameplay.Actor|nil
 ---@field effects table<number, TargetEffectManagerEffectEntry>
-TargetEffectManager = class(Turbine.Object)
+local TargetEffectManager = class(Turbine.Object)
+Vitals.TargetEffectManager = TargetEffectManager
 
 local _manager_cache = setmetatable({}, { __mode = "v" })
 

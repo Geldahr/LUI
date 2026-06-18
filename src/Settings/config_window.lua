@@ -1,3 +1,18 @@
+local Windows = _G.LUI.Runtime.Windows
+local Apply = _G.LUI.Runtime.Apply
+local MoveMode = _G.LUI.UI.MoveMode
+local TR = _G.LUI.Locale.TR
+local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
+local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local Persistence = _G.LUI.Settings.Persistence
+local Colors = _G.LUI.Settings.Colors
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Hidable = _G.LUI.UI.Hidable
+local Settings = _G.LUI.Settings
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.Gameplay"
 
@@ -15,7 +30,7 @@ local CONFIG_TAB_FONT_SIZE_OFFSET = 3
 local CONFIG_MIN_WIDTH = 900
 local CONFIG_MIN_HEIGHT = 800
 local function _scaled_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 local function _scaled_int(value)
@@ -33,7 +48,8 @@ end
 local _color_to_hex = lui_color_to_hex
 local _hex_to_color = lui_hex_to_color
 
-ConfigWindow = class(LuiWindow)
+local ConfigWindow = class(UI.Widgets.LuiWindow)
+Settings.ConfigWindow = ConfigWindow
 
 import "LUI.src.Settings.Window.window_geometry"
 import "LUI.src.Settings.Window.window_tabs"
@@ -46,7 +62,7 @@ import "LUI.src.Settings.Window.window_profiles"
 ---------------------------------------------------------------------
 
 function ConfigWindow:Constructor()
-    LuiWindow.Constructor(self)
+    UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["LUI Configuration"])
     self:set_resizable(true)
@@ -80,7 +96,7 @@ function ConfigWindow:Constructor()
     end
 
     self.tooltip = UI.Widgets.LuiTooltip()
-    self.tooltip:set_scale(_G.settings.global.scale)
+    self.tooltip:set_scale(State.settings.global.scale)
     self.tooltip:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 
     self.confirm_overlay = Turbine.UI.Control()
@@ -159,18 +175,16 @@ function ConfigWindow:Constructor()
     self.move_ui_button:set_font(self.settings_font)
     self.move_ui_button:set_text(TR["Move UI"])
     self.move_ui_button.Click = function()
-        if is_lui_hud_visible ~= nil and is_lui_hud_visible() ~= true and set_lui_hud_visible ~= nil then
-            set_lui_hud_visible(true)
+        if Hidable.is_lui_hud_visible() ~= true then
+            Hidable.set_lui_hud_visible(true)
         end
-        if set_move_ui_mode ~= nil then
-            set_move_ui_mode(true, true)
-        end
+        MoveMode.set_mode(true, true)
     end
 
     self:apply_ui_scale()
 
     self.SizeChanged = function()
-        LuiWindow._layout(self)
+        UI.Widgets.LuiWindow._layout(self)
         self:layout()
         self:_refresh_active_preview()
     end
@@ -237,7 +251,7 @@ function ConfigWindow:_update_ui_scale_metrics()
 end
 
 function ConfigWindow:apply_ui_scale()
-    LuiWindow.apply_settings(self, _G.settings.global.scale)
+    UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
     self:_update_ui_scale_metrics()
     local display_width, display_height = Turbine.UI.Display.GetSize()
     local minimum_width = _scaled_int(CONFIG_MIN_WIDTH)
@@ -249,7 +263,7 @@ function ConfigWindow:apply_ui_scale()
         minimum_height = display_height
     end
     self:set_minimum_size(minimum_width, minimum_height)
-    local scale = _G.settings.global.scale
+    local scale = State.settings.global.scale
 
     if self.tooltip ~= nil then
         self.tooltip:set_scale(scale)
@@ -586,13 +600,13 @@ function ConfigWindow:update_all_swatches()
 end
 
 function ConfigWindow:load_from_settings()
-    if _G.loaded_settings == nil then
+    if State.loaded_settings == nil then
         return
     end
 
     self.loading = true
 
-    local s = _G.loaded_settings
+    local s = State.loaded_settings
 
     if self.main_tab_bar ~= nil then
         self.main_tab_bar:each_widget(function(_, page)
@@ -608,80 +622,80 @@ function ConfigWindow:load_from_settings()
 end
 
 function ConfigWindow:refresh_runtime_settings()
-    fix_colors()
-    rebuild_settings()
-    apply_inventory_settings()
-    apply_assets_settings()
-    apply_status_bar_settings()
-    apply_cooldowns_settings()
-    apply_drops_settings()
-    apply_crafting_settings()
-    apply_travel_settings()
-    apply_launcher_settings()
-    _G.apply_lotro_vitals_handoff()
+    Colors.fix_colors()
+    Settings.rebuild()
+    Apply.inventory_settings()
+    Apply.assets_settings()
+    Apply.status_bar_settings()
+    Apply.cooldowns_settings()
+    Apply.drops_settings()
+    Apply.crafting_settings()
+    Apply.travel_settings()
+    Apply.launcher_settings()
+    Apply.lotro_vitals_handoff()
 
     self:apply_ui_scale()
     self:layout()
 
-    if PLAYER_VITAL ~= nil then
-        PLAYER_VITAL:resize()
-        PLAYER_VITAL:apply_enabled_state()
+    if Windows.player_vital ~= nil then
+        Windows.player_vital:resize()
+        Windows.player_vital:apply_enabled_state()
     end
-    if TARGET_VITAL ~= nil then
-        TARGET_VITAL:resize()
+    if Windows.target_vital ~= nil then
+        Windows.target_vital:resize()
     end
-    if BOSS_VITAL ~= nil then
-        BOSS_VITAL:resize()
+    if Windows.boss_vital ~= nil then
+        Windows.boss_vital:resize()
     end
-    if FELLOWSHIP_VITALS ~= nil then
-        FELLOWSHIP_VITALS:apply_settings()
+    if Windows.fellowship_vitals ~= nil then
+        Windows.fellowship_vitals:apply_settings()
     end
-    if RAID_VITALS ~= nil then
-        RAID_VITALS:apply_settings()
+    if Windows.raid_vitals ~= nil then
+        Windows.raid_vitals:apply_settings()
     end
-    if EXPIRING_SELF_EFFECTS_WINDOW ~= nil then
-        EXPIRING_SELF_EFFECTS_WINDOW:apply_settings()
+    if Windows.expiring_self_effects ~= nil then
+        Windows.expiring_self_effects:apply_settings()
     end
-    if EXPIRING_TARGET_EFFECTS_WINDOW ~= nil then
-        EXPIRING_TARGET_EFFECTS_WINDOW:apply_settings()
+    if Windows.expiring_target_effects ~= nil then
+        Windows.expiring_target_effects:apply_settings()
     end
-    if INVENTORY_WINDOW ~= nil then
-        INVENTORY_WINDOW:apply_settings()
+    if Windows.inventory ~= nil then
+        Windows.inventory:apply_settings()
     end
-    if ASSETS_WINDOW ~= nil then
-        ASSETS_WINDOW:apply_settings()
+    if Windows.assets ~= nil then
+        Windows.assets:apply_settings()
     end
-    if COOLDOWNS_WINDOW ~= nil then
-        COOLDOWNS_WINDOW:apply_settings()
+    if Windows.cooldowns ~= nil then
+        Windows.cooldowns:apply_settings()
     end
-    if DROPS_WINDOW ~= nil then
-        DROPS_WINDOW:apply_settings()
+    if Windows.drops ~= nil then
+        Windows.drops:apply_settings()
     end
-    if BESTIARY_WINDOW ~= nil then
-        BESTIARY_WINDOW:apply_settings()
+    if Windows.bestiary ~= nil then
+        Windows.bestiary:apply_settings()
     end
-    if BESTIARY_CARD ~= nil then
-        BESTIARY_CARD:apply_settings()
+    if Windows.bestiary_card ~= nil then
+        Windows.bestiary_card:apply_settings()
     end
-    if CRAFTING_WINDOW ~= nil then
-        CRAFTING_WINDOW:apply_settings()
+    if Windows.crafting ~= nil then
+        Windows.crafting:apply_settings()
     end
-    if BESTIARY_TRACKER ~= nil then
-        BESTIARY_TRACKER:apply_settings()
+    if Windows.bestiary_tracker ~= nil then
+        Windows.bestiary_tracker:apply_settings()
     end
-    if PLAYER_VITAL ~= nil then
-        PLAYER_VITAL:on_target_changed()
+    if Windows.player_vital ~= nil then
+        Windows.player_vital:on_target_changed()
     end
 
     self:_refresh_active_preview()
 end
 
 function ConfigWindow:apply_changes(close_after)
-    if _G.loaded_settings == nil then
+    if State.loaded_settings == nil then
         return
     end
 
-    local s = _G.loaded_settings
+    local s = State.loaded_settings
 
     if self.main_tab_bar ~= nil then
         self.main_tab_bar:each_widget(function(_, page)
@@ -690,14 +704,14 @@ function ConfigWindow:apply_changes(close_after)
         end)
     end
 
-    if _G.capture_runtime_geometry ~= nil then
-        _G.capture_runtime_geometry()
+    if Persistence.capture_runtime_geometry ~= nil then
+        Persistence.capture_runtime_geometry()
     end
 
     self:refresh_runtime_settings()
 
     self:update_saved_geometry()
-    save_settings()
+    Persistence.save_settings()
 
     if close_after then
         self:hide()

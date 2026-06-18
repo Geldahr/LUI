@@ -1,18 +1,22 @@
-_G.LUI_POPUP_STATE = _G.LUI_POPUP_STATE or {}
-
-local PopupState = _G.LUI_POPUP_STATE
+local UI = _G.LUI.UI
+local Widgets = UI.Widgets
+local PopupState = UI.PopupState
 
 function PopupState.close_dropdowns()
-    if LuiDropdown ~= nil and LuiDropdown._active ~= nil then
+    local LuiDropdown = Widgets.LuiDropdown
+    local LuiCheckDropdown = Widgets.LuiCheckDropdown
+
+    if LuiDropdown._active ~= nil then
         LuiDropdown._active:Close()
     end
-    if LuiCheckDropdown ~= nil and LuiCheckDropdown._active ~= nil then
+    if LuiCheckDropdown._active ~= nil then
         LuiCheckDropdown._active:Close()
     end
 end
 
 function PopupState.close_menus()
-    if LuiMenu ~= nil and LuiMenu._active_root ~= nil then
+    local LuiMenu = Widgets.LuiMenu
+    if LuiMenu._active_root ~= nil then
         LuiMenu._active_root:close()
     end
 end

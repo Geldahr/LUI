@@ -1,3 +1,16 @@
+local lui_timed_row_time_format = _G.LUI.Utils.lui_timed_row_time_format
+local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
+local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
+local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local ExpiringEffects = _G.LUI.Features.ExpiringEffects
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
@@ -5,7 +18,8 @@ import "LUI.src.Settings.enums"
 import "LUI.src.Utils.timed_row_layout"
 import "LUI.src.Utils.color"
 
-SelfExpiringEffectEntry = class(Turbine.UI.Control)
+local SelfExpiringEffectEntry = class(Turbine.UI.Control)
+ExpiringEffects.SelfExpiringEffectEntry = SelfExpiringEffectEntry
 
 local LABEL_PAD = 3
 local EFFECT_TIME_FORMAT = lui_timed_row_time_format.AUTO
@@ -113,7 +127,7 @@ end
 ---------------------------------------------------------------------
 
 function SelfExpiringEffectEntry:apply_settings()
-    local s = _G.settings.self.expiring_effects
+    local s = State.settings.self.expiring_effects
     local border = s.border_width
     local border_color = s.color.border
     local back = lui_apply_opacity_to_color(s.color.background, s.background_opacity)
@@ -245,7 +259,7 @@ function SelfExpiringEffectEntry:update_remaining(remaining_seconds, initial_sec
         return
     end
 
-    local s = _G.settings.self.expiring_effects
+    local s = State.settings.self.expiring_effects
     local inner_width = self.bar_inner_w
 
     local base = initial_seconds
@@ -281,14 +295,14 @@ end
 ---------------------------------------------------------------------
 
 function SelfExpiringEffectEntry:_apply_bar_colors()
-    local s = _G.settings.self.expiring_effects
+    local s = State.settings.self.expiring_effects
     local bar_color = self:_resolve_bar_color()
     self.bar_background:SetBackColor(self:_resolve_bar_background_color(bar_color))
     self.bar_fill:SetBackColor(lui_apply_opacity_to_color(bar_color, s.bar_opacity))
 end
 
 function SelfExpiringEffectEntry:_resolve_bar_background_color(bar_color)
-    local s = _G.settings.self.expiring_effects
+    local s = State.settings.self.expiring_effects
     local color
 
     if s.bar_background_matches_fill == true then
@@ -301,7 +315,7 @@ function SelfExpiringEffectEntry:_resolve_bar_background_color(bar_color)
 end
 
 function SelfExpiringEffectEntry:_resolve_bar_color()
-    local s = _G.settings.self.expiring_effects
+    local s = State.settings.self.expiring_effects
 
     if self.effect == nil then
         return s.color.bar_buff

@@ -1,10 +1,13 @@
+local TR = _G.LUI.Locale.TR
+local Pages = _G.LUI.Settings.Pages
+local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
+local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.tabs"
 
-local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
-local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
+local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
 
 local DISPLAY_MODE_LABELS = {
@@ -17,7 +20,8 @@ local DISPLAY_MODE_VALUES = {
     "grid",
 }
 
-TravelPage = class(ConfigTabs)
+local TravelPage = class(ConfigTabs)
+Pages.TravelPage = TravelPage
 
 function TravelPage:Constructor(window)
     ConfigTabs.Constructor(self, window)

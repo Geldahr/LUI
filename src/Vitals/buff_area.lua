@@ -1,12 +1,16 @@
+local Vitals = _G.LUI.Features.Vitals
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local class = _G.LUI.Core.class
 import "Turbine.UI.Lotro"
 
 import "LUI.src.Vitals.effects_area"
 
 ---@class BuffArea : EffectsArea
-BuffArea = class(EffectsArea)
+local BuffArea = class(Vitals.EffectsArea)
+Vitals.BuffArea = BuffArea
 
 function BuffArea:Constructor(frame_width, effects_settings, effects_height)
-    EffectsArea.Constructor(self, frame_width, effects_settings, effects_height)
+    Vitals.EffectsArea.Constructor(self, frame_width, effects_settings, effects_height)
 end
 
 function BuffArea:_settings_group()

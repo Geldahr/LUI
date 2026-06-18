@@ -1,6 +1,17 @@
+local TR = _G.LUI.Locale.TR
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local UI = _G.LUI.UI
 import "LUI.src.Utils.color"
 
-local Common = SettingsPreviewCommon
+local Common = _G.LUI.Settings.Preview.Common
 local _dim_color = Common.dim_color
 local _require_font = Common.require_font
 local _require_control_color = Common.require_control_color

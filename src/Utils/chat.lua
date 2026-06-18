@@ -1,4 +1,6 @@
-function _G.lui_chat_type_names(chat_type)
+local Utils = _G.LUI.Utils
+
+function Utils.lui_chat_type_names(chat_type)
     if type(Turbine.ChatType) ~= "table" then
         return tostring(chat_type)
     end

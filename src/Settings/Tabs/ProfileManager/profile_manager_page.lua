@@ -1,9 +1,16 @@
+local TR = _G.LUI.Locale.TR
+local Pages = _G.LUI.Settings.Pages
+local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Persistence = _G.LUI.Settings.Persistence
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.Settings.Content.content"
 import "LUI.src.UI.Widgets"
 
-local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
 local Style = UI.Widgets.Style
 
 local PROFILE_INFO_FONT_SIZE_OFFSET = 3
@@ -13,7 +20,7 @@ local BLOCK_GAP = 24
 local PROFILE_COLUMNS = 4
 
 local function _scaled_profile_info_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 local function _scaled_profile_info_font()
@@ -74,7 +81,7 @@ local function _refresh_profile_manager(page, selected_profile_id)
 
     page.window.profile_manager_refreshing = true
 
-    local labels, values = get_configuration_options()
+    local labels, values = Persistence.get_configuration_options()
     profile_dropdown.option_labels = labels
     profile_dropdown.option_values = values
     profile_dropdown.button:SetMappedOptions(labels, values)
@@ -84,10 +91,10 @@ local function _refresh_profile_manager(page, selected_profile_id)
         wanted_profile_id = profile_dropdown:get_value()
     end
     if wanted_profile_id == nil then
-        wanted_profile_id = _G.current_profile_id
+        wanted_profile_id = State.current_profile_id
     end
     if wanted_profile_id == nil then
-        wanted_profile_id = get_first_configuration_id()
+        wanted_profile_id = Persistence.get_first_configuration_id()
     end
 
     page.profile_manager_profile_value = wanted_profile_id
@@ -95,18 +102,19 @@ local function _refresh_profile_manager(page, selected_profile_id)
     local active_profile_id = profile_dropdown:get_value()
     page.profile_manager_profile_value = active_profile_id
     page.window.profile_manager_selected_profile_id = active_profile_id
-    page.profile_manager_name_value = get_configuration_name(active_profile_id) or ""
+    page.profile_manager_name_value = Persistence.get_configuration_name(active_profile_id) or ""
     ConfigContent.load(page)
 
-    local can_delete = active_profile_id ~= nil and get_configuration_count() > 1
-    page.profile_manager_use_button:set_enabled(active_profile_id ~= nil and active_profile_id ~= _G.current_profile_id)
+    local can_delete = active_profile_id ~= nil and Persistence.get_configuration_count() > 1
+    page.profile_manager_use_button:set_enabled(active_profile_id ~= nil and active_profile_id ~= State.current_profile_id)
     page.profile_manager_rename_button:set_enabled(active_profile_id ~= nil)
     page.profile_manager_delete_button:set_enabled(can_delete)
 
     page.window.profile_manager_refreshing = false
 end
 
-ProfileManagerPage = class(ConfigContent)
+local ProfileManagerPage = class(ConfigContent)
+Pages.ProfileManagerPage = ProfileManagerPage
 
 function ProfileManagerPage:Constructor(window)
     ConfigContent.Constructor(self, window, PROFILE_COLUMNS)
@@ -234,6 +242,6 @@ function ProfileManagerPage:Constructor(window)
 end
 
 function ProfileManagerPage:load()
-    local selected_profile_id = self.window.profile_manager_selected_profile_id or _G.current_profile_id
+    local selected_profile_id = self.window.profile_manager_selected_profile_id or State.current_profile_id
     _refresh_profile_manager(self, selected_profile_id)
 end

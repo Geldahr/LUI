@@ -1,5 +1,11 @@
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local Utils = _G.LUI.Utils
 import "Turbine.UI"
 import "LUI.src.Utils.timed_row_layout"
+
+local lui_timed_row_resolved_font_size = Utils.lui_timed_row_resolved_font_size
+local lui_timed_row_estimate_text_width = Utils.lui_timed_row_estimate_text_width
 
 local function _text_alignment(value)
     return LUI_TO_LOTRO.text_alignment[value]
@@ -86,8 +92,8 @@ local function _anchor_y(anchor, area_height, rect_height)
     return 0
 end
 
-function _G.lui_vitals_layout_label(label, width, height, anchor, width_mode, text_alignment, x_offset, y_offset,
-                                    font_name, font_size, text)
+function Utils.lui_vitals_layout_label(label, width, height, anchor, width_mode, text_alignment, x_offset, y_offset,
+                                       font_name, font_size, text)
     local rendered_text = tostring(text or "")
     local rect_width = width
     if width_mode == LUI_ENUMS.vitals_label_width_mode.AUTO then

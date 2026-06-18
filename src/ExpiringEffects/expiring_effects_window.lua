@@ -1,3 +1,10 @@
+local lui_timed_row_time_format = _G.LUI.Utils.lui_timed_row_time_format
+local TR = _G.LUI.Locale.TR
+local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local ExpiringEffects = _G.LUI.Features.ExpiringEffects
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -30,7 +37,8 @@ local function _is_valid_start(start, now)
     return true
 end
 
-ExpiringEffectsWindow = class(LuiHUD)
+local ExpiringEffectsWindow = class(UI.Widgets.LuiHUD)
+ExpiringEffects.ExpiringEffectsWindow = ExpiringEffectsWindow
 
 local function _curability_state(effect)
     if effect == nil or effect.IsCurable == nil then
@@ -65,14 +73,14 @@ function ExpiringEffectsWindow:Constructor(opts)
     end
 
     self._opts = opts
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = self:get_hud_key(),
         title = self:get_move_title(),
     })
 
     self.slots = {}
     self.last_update_at = 0
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
     self._effect_start = {}
     self._effect_seen_at = {}
 
@@ -127,7 +135,7 @@ end
 
 function ExpiringEffectsWindow:set_move_mode(enabled)
     local changed = (enabled == true) ~= self:is_move_mode()
-    LuiHUD.set_move_mode(self, enabled)
+    UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     if changed and enabled == true then
         self:_hide_slots()
     elseif changed then

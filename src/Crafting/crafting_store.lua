@@ -1,9 +1,15 @@
+local TR = _G.LUI.Locale.TR
+local Persistence = _G.LUI.Settings.Persistence
+local AssetCache = _G.LUI.Runtime.Caches.Assets
+local Stores = _G.LUI.Runtime.Stores
+local State = _G.LUI.Settings.State
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 
-Crafting = Crafting or {}
+local Crafting = _G.LUI.Features.Crafting
 
-CraftingStore = class(Turbine.UI.Control)
+local CraftingStore = class(Turbine.UI.Control)
 Crafting.CraftingStore = CraftingStore
 
 local SOURCE_BACKPACK = "backpack"
@@ -312,16 +318,10 @@ local function _saved_plan_entry_matches_recipe(saved_entry, recipe)
     return true
 end
 
-local function _append_token(parts, value)
-    local text = _safe_string(value, "")
-    if text ~= "" then
-        parts[#parts + 1] = text
-    end
-end
 
 local function _current_character_name()
-    if type(_G.current_character_name) == "string" and _G.current_character_name ~= "" then
-        return _G.current_character_name
+    if type(State.current_character_name) == "string" and State.current_character_name ~= "" then
+        return State.current_character_name
     end
 
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
@@ -366,41 +366,11 @@ local function _item_info_quality(item_info)
     return item_info:GetQuality()
 end
 
-local function _item_info_category(item_info)
-    if item_info == nil then
-        return nil
-    end
-    return tonumber(item_info:GetCategory())
-end
 
-local function _item_info_description(item_info)
-    if item_info == nil then
-        return ""
-    end
-    return _trim(item_info:GetDescription())
-end
 
-local function _item_info_max_quantity(item_info)
-    if item_info == nil then
-        return nil
-    end
-    return tonumber(item_info:GetMaxQuantity())
-end
 
-local function _item_info_max_stack_size(item_info)
-    if item_info == nil then
-        return nil
-    end
-    return tonumber(item_info:GetMaxStackSize())
-end
 
-local function _item_info_is_magic(item_info)
-    return item_info ~= nil and item_info:IsMagic() == true and 1 or 0
-end
 
-local function _item_info_is_unique(item_info)
-    return item_info ~= nil and item_info:IsUnique() == true and 1 or 0
-end
 
 local function _positive_integer(value)
     local number = tonumber(value)
@@ -552,7 +522,7 @@ end
 
 local function _collect_asset_entries_from_cache()
     local entries = {}
-    local cache = _G.ensure_assets_cache ~= nil and _G.ensure_assets_cache() or _G.assets_cache
+    local cache = Persistence.ensure_assets_cache ~= nil and Persistence.ensure_assets_cache() or AssetCache.data
     if type(cache) ~= "table" then
         return entries
     end
@@ -857,7 +827,7 @@ end
 
 function CraftingStore:refresh(force, recipe_batch_size)
     local current_character = _current_character_name()
-    local assets_token = ASSETS_STORE ~= nil and (tonumber(ASSETS_STORE.generation) or 0) or 0
+    local assets_token = Stores.assets ~= nil and (tonumber(Stores.assets.generation) or 0) or 0
     local live_inventory_counts = self:_capture_live_backpack_counts(current_character)
     local live_inventory_token = _count_map_signature(live_inventory_counts)
     local changed = false
@@ -1299,8 +1269,8 @@ function CraftingStore:_build_source_ownership(current_character, live_inventory
     }
 
     local entries
-    if ASSETS_STORE ~= nil and ASSETS_STORE.get_entries ~= nil then
-        entries = ASSETS_STORE:get_entries()
+    if Stores.assets ~= nil and Stores.assets.get_entries ~= nil then
+        entries = Stores.assets:get_entries()
     else
         entries = _collect_asset_entries_from_cache()
     end

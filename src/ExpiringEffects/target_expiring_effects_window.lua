@@ -1,3 +1,7 @@
+local TR = _G.LUI.Locale.TR
+local ExpiringEffects = _G.LUI.Features.ExpiringEffects
+local State = _G.LUI.Settings.State
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -5,14 +9,15 @@ import "Turbine.UI.Lotro"
 import "LUI.src.ExpiringEffects.expiring_effects_window"
 import "LUI.src.ExpiringEffects.target_expiring_effect_entry"
 
-TargetExpiringEffectsWindow = class(ExpiringEffectsWindow)
+local TargetExpiringEffectsWindow = class(ExpiringEffects.ExpiringEffectsWindow)
+ExpiringEffects.TargetExpiringEffectsWindow = TargetExpiringEffectsWindow
 
 local function _target_is_local_player()
-    if TARGET_VITAL == nil or TARGET_VITAL.entity == nil then
+    if _G.LUI.Runtime.Windows.target_vital == nil or _G.LUI.Runtime.Windows.target_vital.entity == nil then
         return false
     end
 
-    local entity = TARGET_VITAL.entity
+    local entity = _G.LUI.Runtime.Windows.target_vital.entity
     local lp = Turbine.Gameplay.LocalPlayer.GetInstance()
     if lp == nil or entity.GetName == nil or lp.GetName == nil then
         return false
@@ -26,7 +31,7 @@ end
 ---------------------------------------------------------------------
 
 function TargetExpiringEffectsWindow:Constructor()
-    ExpiringEffectsWindow.Constructor(self, { title = TR["Expiring Effects (Target)"] })
+    ExpiringEffects.ExpiringEffectsWindow.Constructor(self, { title = TR["Expiring Effects (Target)"] })
 end
 
 ---------------------------------------------------------------------
@@ -38,7 +43,7 @@ end
 ---------------------------------------------------------------------
 
 function TargetExpiringEffectsWindow:get_settings()
-    return _G.settings.target.expiring_effects
+    return State.settings.target.expiring_effects
 end
 
 function TargetExpiringEffectsWindow:get_hud_key()
@@ -46,11 +51,11 @@ function TargetExpiringEffectsWindow:get_hud_key()
 end
 
 function TargetExpiringEffectsWindow:get_entry_class()
-    return TargetExpiringEffectEntry
+    return ExpiringEffects.TargetExpiringEffectEntry
 end
 
 function TargetExpiringEffectsWindow:get_effect_objects()
-    if TARGET_VITAL == nil then
+    if _G.LUI.Runtime.Windows.target_vital == nil then
         return {}
     end
 
@@ -69,7 +74,7 @@ function TargetExpiringEffectsWindow:get_effect_objects()
             end
         end
     else
-        local em = TARGET_VITAL.em
+        local em = _G.LUI.Runtime.Windows.target_vital.em
         if em == nil then
             return {}
         end

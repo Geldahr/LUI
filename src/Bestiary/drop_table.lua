@@ -1,7 +1,8 @@
-_G.DB = _G.DB or {}
-_G.DB.en = _G.DB.en or {}
+local DB = _G.LUI.Data.Bestiary.DB or {}
+_G.LUI.Data.Bestiary.DB = DB
+DB.en = DB.en or {}
 -- Generated from localized bestiary source item names. Keys must match Crafting item normalization.
-_G.DB.en.drop_table = {
+DB.en.drop_table = {
     ["<name>"] = true,
     ["a dram of sand-sifter blood"] = true,
     ["a dram of scorpion blood"] = true,

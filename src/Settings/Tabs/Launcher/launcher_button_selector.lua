@@ -1,3 +1,7 @@
+local TR = _G.LUI.Locale.TR
+local State = _G.LUI.Settings.State
+local Controls = _G.LUI.Settings.Controls
+local UI = _G.LUI.UI
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -14,7 +18,7 @@ local MIN_LIST_W = 90
 local BOX_PAD = 1
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _copy_list(items)
@@ -210,7 +214,7 @@ local function _rebuild_lists(entry)
     for i = 1, #entry.available_items do
         local key = entry.available_items[i]
         local button = UI.Widgets.LuiButton()
-        button:set_scale(_G.settings.global.scale)
+        button:set_scale(State.settings.global.scale)
         button:set_font(entry.window.input_font)
         button:set_border_thickness(0)
         button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -227,7 +231,7 @@ local function _rebuild_lists(entry)
     for i = 1, #entry.selected_items do
         local key = entry.selected_items[i]
         local button = UI.Widgets.LuiButton()
-        button:set_scale(_G.settings.global.scale)
+        button:set_scale(State.settings.global.scale)
         button:set_font(entry.window.input_font)
         button:set_border_thickness(0)
         button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
@@ -317,7 +321,7 @@ local function _move_selected(entry, direction)
     _rebuild_lists(entry)
 end
 
-function CreateLauncherButtonSelector(page, key, definitions)
+function Controls.CreateLauncherButtonSelector(page, key, definitions)
     local entry = page:add_custom(key, SELECTOR_HEIGHT)
     entry.window = page.window
     entry.definitions = definitions
@@ -416,22 +420,22 @@ function CreateLauncherButtonSelector(page, key, definitions)
     entry.apply_ui_scale = function()
         entry.available_label:SetFont(page.window.field_label_font)
         entry.selected_label:SetFont(page.window.field_label_font)
-        entry.add_button:set_scale(_G.settings.global.scale)
+        entry.add_button:set_scale(State.settings.global.scale)
         entry.add_button:set_font(page.window.settings_font)
-        entry.remove_button:set_scale(_G.settings.global.scale)
+        entry.remove_button:set_scale(State.settings.global.scale)
         entry.remove_button:set_font(page.window.settings_font)
-        entry.up_button:set_scale(_G.settings.global.scale)
+        entry.up_button:set_scale(State.settings.global.scale)
         entry.up_button:set_font(page.window.settings_font)
-        entry.down_button:set_scale(_G.settings.global.scale)
+        entry.down_button:set_scale(State.settings.global.scale)
         entry.down_button:set_font(page.window.settings_font)
 
         for i = 1, #entry.available_buttons do
-            entry.available_buttons[i]:set_scale(_G.settings.global.scale)
+            entry.available_buttons[i]:set_scale(State.settings.global.scale)
             entry.available_buttons[i]:set_font(page.window.input_font)
         end
 
         for i = 1, #entry.selected_buttons do
-            entry.selected_buttons[i]:set_scale(_G.settings.global.scale)
+            entry.selected_buttons[i]:set_scale(State.settings.global.scale)
             entry.selected_buttons[i]:set_font(page.window.input_font)
         end
 

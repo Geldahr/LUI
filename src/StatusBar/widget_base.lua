@@ -1,16 +1,14 @@
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local UI = _G.LUI.UI
+local StatusBar = _G.LUI.Features.StatusBar
+local class = _G.LUI.Core.class
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = StatusBar.Common
 local ICON_MARGIN = 2
 
 local StatusBarWidgetBase = class(Turbine.UI.Control)
-_G.StatusBarWidgetBase = StatusBarWidgetBase
-
-if StatusBar ~= nil then
-    StatusBar.WidgetBase = StatusBarWidgetBase
-elseif LUI ~= nil and LUI.src ~= nil and LUI.src.StatusBar ~= nil then
-    LUI.src.StatusBar.WidgetBase = StatusBarWidgetBase
-end
+StatusBar.WidgetBase = StatusBarWidgetBase
 
 ---------------------------------------------------------------------
 -- Constructor
@@ -26,11 +24,11 @@ function StatusBarWidgetBase:Constructor(widget_key, widget_w, bar_h, font, cont
     self:SetMouseVisible(false)
     self:SetSize(widget_w, bar_h)
 
-    self.icon = Image()
+    self.icon = UI.Widgets.Image()
     self.icon:SetParent(self)
     self.icon:SetVisible(false)
 
-    self.label = LuiLabel()
+    self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
     self.label:SetMouseVisible(false)
     self.label:SetText("")

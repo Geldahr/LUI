@@ -2,6 +2,10 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.Settings.enums"
 
+local LUI = _G.LUI
+local Utils = LUI.Utils
+local LUI_ENUMS = LUI.Settings.Enums
+
 local function _normalize_font_name(name)
     if type(name) == "number" then
         name = LUI_ENUMS.font_name_to_string[name]
@@ -47,7 +51,7 @@ local function _lotro_font(base_name, size)
     return Turbine.UI.Lotro.Font[base_name .. tostring(size)];
 end
 
-_G.FONT_TO_LOTRO = function(name, size)
+Utils.FONT_TO_LOTRO = function(name, size)
     local normalized_name = _normalize_font_name(name);
 
     if normalized_name == "arial" then

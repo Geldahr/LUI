@@ -1,11 +1,15 @@
+local TR = _G.LUI.Locale.TR
+local Pages = _G.LUI.Settings.Pages
+local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
+local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.tabs"
 import "LUI.src.Settings.Tabs.Launcher.launcher_button_selector"
 
-local FeatureShell = SettingsFeatureShell
-local ConfigContent = ConfigContent
-local ConfigTabs = ConfigTabs
+local CreateLauncherButtonSelector = _G.LUI.Settings.Controls.CreateLauncherButtonSelector
+local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
 
 local ORIENTATION_LABELS = { TR["Vertical"], TR["Horizontal"] }
@@ -52,7 +56,8 @@ local function _clamp_icon_size(value)
     return size
 end
 
-LauncherPage = class(ConfigTabs)
+local LauncherPage = class(ConfigTabs)
+Pages.LauncherPage = LauncherPage
 
 function LauncherPage:Constructor(window)
     ConfigTabs.Constructor(self, window)

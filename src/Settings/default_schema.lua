@@ -1,4 +1,4 @@
-_G.DEFAULT_LAYOUT_SCHEMA =
+_G.LUI.Settings.Defaults.Schema =
 {
 	["self"] = {
 		["vitals"] = {

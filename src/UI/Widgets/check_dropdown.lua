@@ -1,3 +1,6 @@
+local TR = _G.LUI.Locale.TR
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -6,6 +9,10 @@ import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.checkbox"
 import "LUI.src.UI.Widgets.style"
 
+local Widgets = _G.LUI.UI.Widgets
+local LuiButton = Widgets.LuiButton
+local LuiCheckBox = Widgets.LuiCheckBox
+local Style = Widgets.Style
 local BASE_ITEM_H = 18
 local BASE_ARROW_W = 13
 local BASE_DROPDOWN_W = 119
@@ -19,7 +26,6 @@ local BASE_VISIBLE_PAD = 2
 local BASE_VISIBLE_ITEM_GAP = 2
 local BASE_RIGHT_EXTRA_PAD = 2
 local BASE_CHECKBOX_ICON_SIZE = 16
-local Style = UI.Widgets.Style
 
 local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
@@ -37,7 +43,8 @@ local function _copy_array(source)
 end
 
 ---@class LuiCheckDropdown : Turbine.UI.Control
-LuiCheckDropdown = class(Turbine.UI.Control)
+local LuiCheckDropdown = class(Turbine.UI.Control)
+Widgets.LuiCheckDropdown = LuiCheckDropdown
 
 function LuiCheckDropdown:Constructor()
     Turbine.UI.Control.Constructor(self)
@@ -271,8 +278,8 @@ function LuiCheckDropdown:Open()
         return
     end
 
-    if LuiDropdown ~= nil and LuiDropdown._active ~= nil then
-        LuiDropdown._active:Close()
+    if Widgets.LuiDropdown._active ~= nil then
+        Widgets.LuiDropdown._active:Close()
     end
     if LuiCheckDropdown._active ~= nil and LuiCheckDropdown._active ~= self then
         LuiCheckDropdown._active:Close()

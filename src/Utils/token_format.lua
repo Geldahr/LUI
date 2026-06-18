@@ -1,3 +1,5 @@
+local Utils = _G.LUI.Utils
+
 local function _is_word_byte(b)
     -- 0-9 A-Z a-z _
     return b == 95
@@ -10,7 +12,7 @@ end
 -- Public functions
 ---------------------------------------------------------------------
 
-function _G.lui_tokenize_format(fmt)
+local function lui_tokenize_format(fmt)
     if type(fmt) ~= "string" then
         fmt = tostring(fmt or "")
     end
@@ -83,8 +85,9 @@ function _G.lui_tokenize_format(fmt)
     end
     return parts
 end
+Utils.lui_tokenize_format = lui_tokenize_format
 
-function _G.lui_format_tokenized(parts, ctx)
+local function lui_format_tokenized(parts, ctx)
     if type(parts) ~= "table" then
         return tostring(parts or "")
     end
@@ -109,3 +112,4 @@ function _G.lui_format_tokenized(parts, ctx)
 
     return table.concat(out)
 end
+Utils.lui_format_tokenized = lui_format_tokenized

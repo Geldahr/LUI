@@ -1,14 +1,20 @@
+local TR = _G.LUI.Locale.TR
+local is_boss_target = _G.LUI.Utils.is_boss_target
+local Vitals = _G.LUI.Features.Vitals
+local State = _G.LUI.Settings.State
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 
 import "LUI.src.Vitals.vitals_base"
 
 local function _self_vitals_enabled()
-    return _G.loaded_settings.self.vitals.enabled == true
+    return State.loaded_settings.self.vitals.enabled == true
 end
 
 ---@class SelfVitals : VitalsBase
-SelfVitals = class(VitalsBase)
+local SelfVitals = class(Vitals.VitalsBase)
+Vitals.SelfVitals = SelfVitals
 
 ---------------------------------------------------------------------
 -- Constructor
@@ -17,7 +23,7 @@ SelfVitals = class(VitalsBase)
 function SelfVitals:Constructor(entity)
     self.target_vitals = nil
     self.boss_vitals = nil
-    VitalsBase.Constructor(self, "self", entity, TR["Self Vitals"])
+    Vitals.VitalsBase.Constructor(self, "self", entity, TR["Self Vitals"])
     self:apply_enabled_state()
 end
 
@@ -45,8 +51,8 @@ function SelfVitals:on_target_changed()
         return
     end
 
-    local target_vitals_enabled = _G.loaded_settings.target.vitals.enabled == true
-    local boss_vitals_enabled = target_vitals_enabled == true and _G.loaded_settings.target.boss_vitals.enabled == true
+    local target_vitals_enabled = State.loaded_settings.target.vitals.enabled == true
+    local boss_vitals_enabled = target_vitals_enabled == true and State.loaded_settings.target.boss_vitals.enabled == true
 
     if self.entity == nil or self.entity.GetTarget == nil then
         if self.target_vitals ~= nil then

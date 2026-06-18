@@ -1,3 +1,15 @@
+local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
+local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
+local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
+local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_dim_color = _G.LUI.Utils.lui_dim_color
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local Cooldowns = _G.LUI.Features.Cooldowns
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -6,7 +18,8 @@ import "LUI.src.Settings.enums"
 import "LUI.src.Cooldowns.time_display"
 import "LUI.src.Utils.color"
 
-CooldownEntry = class(Turbine.UI.Control)
+local CooldownEntry = class(Turbine.UI.Control)
+Cooldowns.CooldownEntry = CooldownEntry
 
 local function _truncate_name(name, max_chars)
     if type(name) ~= "string" then
@@ -112,7 +125,7 @@ function CooldownEntry:Constructor()
     self.icon_background:SetParent(self)
     self.icon_background:SetMouseVisible(false)
 
-    self.icon = Image()
+    self.icon = UI.Widgets.Image()
     self.icon:SetParent(self.icon_background)
     self.icon:SetVisible(false)
 end
@@ -126,7 +139,7 @@ end
 ---------------------------------------------------------------------
 
 function CooldownEntry:apply_settings()
-    local s = _G.settings.self.cooldowns
+    local s = State.settings.self.cooldowns
     local bw = s.border_width
 
     local w = s.item_w
@@ -304,7 +317,7 @@ function CooldownEntry:set_skill(skill)
 end
 
 function CooldownEntry:update_remaining(remaining_seconds, base_seconds)
-    local s = _G.settings.self.cooldowns
+    local s = State.settings.self.cooldowns
 
     if self.skill == nil then
         self.name_label:SetText("")

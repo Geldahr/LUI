@@ -1,10 +1,15 @@
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 
-local Style = UI.Widgets.Style
+local Widgets = _G.LUI.UI.Widgets
+local LuiBaseWindow = Widgets.LuiBaseWindow
+local LuiLabel = Widgets.LuiLabel
+local Style = Widgets.Style
 local BASE_PADDING_X = 6
 local BASE_PADDING_Y = 4
 local BASE_MAX_WIDTH = 311
@@ -32,7 +37,8 @@ local function _line_count(text)
 end
 
 ---@class LuiTooltip : LuiBaseWindow
-LuiTooltip = class(LuiBaseWindow)
+local LuiTooltip = class(LuiBaseWindow)
+Widgets.LuiTooltip = LuiTooltip
 
 function LuiTooltip:Constructor()
     LuiBaseWindow.Constructor(self, { hideable = false })

@@ -1,9 +1,12 @@
+local TR = _G.LUI.Locale.TR
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Windows = _G.LUI.Runtime.Windows
+local Crafting = _G.LUI.Features.Crafting
+local Bestiary = _G.LUI.Features.Bestiary
 import "Turbine.UI"
 
 import "LUI.src.UI.assets"
-
-UI = UI or {}
-UI.Shortcuts = UI.Shortcuts or {}
 
 local Shortcuts = UI.Shortcuts
 
@@ -67,36 +70,36 @@ end
 
 function Shortcuts.get_state(shortcut_key)
     if shortcut_key == "config" then
-        return CONFIG_WINDOW ~= nil, _window_is_visible(CONFIG_WINDOW)
+        return Windows.config ~= nil, _window_is_visible(Windows.config)
     elseif shortcut_key == "inventory" then
-        return INVENTORY_WINDOW ~= nil, _window_is_visible(INVENTORY_WINDOW)
+        return Windows.inventory ~= nil, _window_is_visible(Windows.inventory)
     elseif shortcut_key == "craft" then
         local enabled = Crafting.is_enabled() == true
-        local can_open = enabled == true and (_G.CRAFTING_WINDOW ~= nil or Crafting.CraftingWindow ~= nil)
-        return can_open, _window_is_visible(_G.CRAFTING_WINDOW)
+        local can_open = enabled == true and (Windows.crafting ~= nil or Crafting.CraftingWindow ~= nil)
+        return can_open, _window_is_visible(Windows.crafting)
     elseif shortcut_key == "travel" then
-        return _G.settings.travel.enabled == true, _window_is_visible(_G.TRAVEL_WINDOW)
+        return State.settings.travel.enabled == true, _window_is_visible(Windows.travel)
     elseif shortcut_key == "assets" then
-        return ASSETS_WINDOW ~= nil, _window_is_visible(ASSETS_WINDOW)
+        return Windows.assets ~= nil, _window_is_visible(Windows.assets)
     elseif shortcut_key == "bestiary" then
-        local can_open = _G.BESTIARY_WINDOW ~= nil or Bestiary.BestiaryWindow ~= nil
-        return can_open, _window_is_visible(_G.BESTIARY_WINDOW)
+        local can_open = Windows.bestiary ~= nil or Bestiary.BestiaryWindow ~= nil
+        return can_open, _window_is_visible(Windows.bestiary)
     end
     return false, false
 end
 
 function Shortcuts.activate(shortcut_key)
     if shortcut_key == "config" then
-        _G.toggle_config_shortcut()
+        Shortcuts.toggle_config()
     elseif shortcut_key == "inventory" then
-        _G.toggle_inventory_shortcut()
+        Shortcuts.toggle_inventory()
     elseif shortcut_key == "craft" then
-        _G.toggle_crafting_shortcut()
+        Shortcuts.toggle_crafting()
     elseif shortcut_key == "travel" then
-        _G.toggle_travel_shortcut()
+        Shortcuts.toggle_travel()
     elseif shortcut_key == "assets" then
-        _G.toggle_assets_shortcut()
+        Shortcuts.toggle_assets()
     elseif shortcut_key == "bestiary" then
-        _G.toggle_bestiary_shortcut()
+        Shortcuts.toggle_bestiary()
     end
 end

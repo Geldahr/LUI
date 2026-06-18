@@ -1,7 +1,9 @@
+local Content = _G.LUI.Settings.Content
+local Tabs = _G.LUI.Settings.Tabs
+local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.tabbed_page"
 
-local SettingsTabbedPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.tabbed_page) or
-    _G.SettingsTabbedPage or SettingsTabbedPage
+local SettingsTabbedPage = Tabs.SettingsTabbedPage
 
 local function _module_for_page(key, page)
     return {
@@ -12,10 +14,8 @@ local function _module_for_page(key, page)
     }
 end
 
-ConfigTabs = class(SettingsTabbedPage)
-_G.ConfigTabs = ConfigTabs
-_G.LUI_SETTINGS_SHARED = _G.LUI_SETTINGS_SHARED or {}
-_G.LUI_SETTINGS_SHARED.config_tabs = ConfigTabs
+local ConfigTabs = class(SettingsTabbedPage)
+Content.ConfigTabs = ConfigTabs
 
 function ConfigTabs:Constructor(window)
     SettingsTabbedPage.Constructor(self, window)

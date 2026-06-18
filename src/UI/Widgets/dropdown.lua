@@ -1,3 +1,6 @@
+local TR = _G.LUI.Locale.TR
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -5,6 +8,9 @@ import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.style"
 
+local Widgets = _G.LUI.UI.Widgets
+local LuiButton = Widgets.LuiButton
+local Style = Widgets.Style
 local BASE_ITEM_H = 18
 local BASE_ARROW_W = 13
 local BASE_DROPDOWN_W = 119
@@ -14,7 +20,6 @@ local BASE_EDGE_PAD = 4
 local BASE_FLIP_GAP = 4
 local BASE_SCROLL_W = 10
 local BASE_POPUP_PAD_X = 2
-local Style = UI.Widgets.Style
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -25,7 +30,8 @@ local function _scaled_int(scale, value)
 end
 
 ---@class LuiDropdown : Turbine.UI.Control
-LuiDropdown = class(Turbine.UI.Control)
+local LuiDropdown = class(Turbine.UI.Control)
+Widgets.LuiDropdown = LuiDropdown
 
 ---------------------------------------------------------------------
 -- Constructor
@@ -280,8 +286,8 @@ function LuiDropdown:Open()
         return
     end
 
-    if LuiCheckDropdown ~= nil and LuiCheckDropdown._active ~= nil then
-        LuiCheckDropdown._active:Close()
+    if Widgets.LuiCheckDropdown._active ~= nil then
+        Widgets.LuiCheckDropdown._active:Close()
     end
     if LuiDropdown._active ~= nil and LuiDropdown._active ~= self then
         LuiDropdown._active:Close()

@@ -1,9 +1,12 @@
+local TR = _G.LUI.Locale.TR
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Launcher = _G.LUI.Features.Launcher
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.shortcuts"
 import "LUI.src.UI.Widgets.hud"
-
-Launcher = Launcher or {}
 
 local Shortcuts = UI.Shortcuts
 local Style = UI.Widgets.Style
@@ -25,7 +28,7 @@ local function _set_alpha_blend(control)
 end
 
 local function _launcher_settings()
-    return _G.settings.launcher
+    return State.settings.launcher
 end
 
 local function _button_footprint(count, icon_size, spacing)
@@ -40,11 +43,12 @@ local function _button_icon_size(icon_size)
     return inner
 end
 
----@class LauncherMenu : LuiHUD
-LauncherMenu = class(LuiHUD)
+---@class LauncherMenu : UI.Widgets.LuiHUD
+local LauncherMenu = class(UI.Widgets.LuiHUD)
+Launcher.LauncherMenu = LauncherMenu
 
 function LauncherMenu:Constructor()
-    LuiHUD.Constructor(self, {
+    UI.Widgets.LuiHUD.Constructor(self, {
         hud_key = "launcher",
         title = TR["LUI Menu"],
         mouse_visible = true,
@@ -101,7 +105,7 @@ function LauncherMenu:set_move_mode(enabled)
     end
 
     self:_resize_window()
-    LuiHUD.set_move_mode(self, want)
+    UI.Widgets.LuiHUD.set_move_mode(self, want)
 
     self:_layout_buttons()
 end
@@ -236,7 +240,7 @@ end
 
 function LauncherMenu:_apply_button_icon(button, size, icon_size)
     button:SetSize(size, size)
-    button:set_icon(button._launcher_icon, nil, nil, nil, icon_size, icon_size, LuiButton.icon_position.RIGHT)
+    button:set_icon(button._launcher_icon, nil, nil, nil, icon_size, icon_size, UI.Widgets.LuiButton.icon_position.RIGHT)
 end
 
 function LauncherMenu:_layout_buttons()
@@ -298,5 +302,3 @@ function LauncherMenu:_refresh_shortcut_availability()
         button:set_enabled(available == true)
     end
 end
-
-Launcher.LauncherMenu = LauncherMenu

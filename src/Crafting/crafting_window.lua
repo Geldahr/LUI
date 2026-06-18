@@ -1,3 +1,15 @@
+local TR = _G.LUI.Locale.TR
+local SearchQuery = _G.LUI.Utils.SearchQuery
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Defaults = _G.LUI.Settings.Defaults
+local Flags = _G.LUI.Runtime.Flags
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Crafting = _G.LUI.Features.Crafting
+local Bestiary = _G.LUI.Features.Bestiary
+local Shortcuts = UI.Shortcuts
+local class = _G.LUI.Core.class
+local CraftingWindow
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -5,7 +17,6 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.search_query"
 
-Crafting = Crafting or {}
 local Style = UI.Widgets.Style
 
 local FILTER_ALL = "__all"
@@ -113,7 +124,6 @@ local BASE_SMALL_BUTTON_W = 22
 local BASE_STATUS_W = 120
 local BASE_PLAN_STATUS_W = 48
 local BASE_TREE_INDENT_W = 16
-local BASE_LEVEL_LABEL_W = 40
 local BASE_LEVEL_BOX_W = 44
 local BASE_LEVEL_DASH_W = 14
 local BASE_LOADING_PANEL_H = 34
@@ -160,11 +170,11 @@ local FAVORITE_STAR_HOVER_24 = "LUI/assets/ui/star_hover_24.tga"
 local FAVORITE_STAR_HOVER_48 = "LUI/assets/ui/star_hover_48.tga"
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _scaled_font(name, size)
-    local font = FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+    local font = FONT_TO_LOTRO(name, size * State.settings.global.scale)
     if font == nil then
         error("Missing scaled font: " .. tostring(name) .. " " .. tostring(size))
     end
@@ -172,7 +182,7 @@ local function _scaled_font(name, size)
 end
 
 local function _favorite_icon_size()
-    local global = _G.settings ~= nil and _G.settings.global or nil
+    local global = State.settings ~= nil and State.settings.global or nil
     local scale = global ~= nil and tonumber(global.configured_scale or global.scale) or 1
     return scale > FAVORITE_SCALE_BREAKPOINT and FAVORITE_ICON_LARGE or FAVORITE_ICON_SMALL
 end
@@ -630,12 +640,12 @@ function CraftingItemIcon:Constructor(on_click, on_hover_change)
 
     self:SetMouseVisible(true)
 
-    self.background = Image()
+    self.background = UI.Widgets.Image()
     self.background:SetParent(self)
     self.background:SetMouseVisible(false)
     _set_stretch_mode_zero(self.background)
 
-    self.foreground = Image()
+    self.foreground = UI.Widgets.Image()
     self.foreground:SetParent(self)
     self.foreground:SetMouseVisible(false)
     _set_stretch_mode_zero(self.foreground)
@@ -1414,11 +1424,11 @@ function CraftingPlanRow:prepare_for_list_clear()
     self:SetVisible(false)
 end
 
-CraftingWindow = class(LuiWindow)
+CraftingWindow = class(UI.Widgets.LuiWindow)
 Crafting.CraftingWindow = CraftingWindow
 
 function CraftingWindow:Constructor()
-    LuiWindow.Constructor(self)
+    UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Crafting"])
     self:set_icon(UI.AssetIds.anvil_silver_glow)
@@ -1463,7 +1473,7 @@ function CraftingWindow:Constructor()
     self.query_favorite_filter_valid = false
     self.favorite_entries = {}
     self.favorite_keys = {}
-    self.display_mode = _normalize_display_mode(_G.LUI_CRAFTING_DISPLAY_MODE_ACTIVE)
+    self.display_mode = _normalize_display_mode(Flags.crafting_display_mode_active)
     self.level_min_filter = nil
     self.level_max_filter = nil
     self.query_level_min_filter = nil
@@ -1905,7 +1915,7 @@ function CraftingWindow:Constructor()
     _apply_bestiary_icon(self.missing_bestiary_button)
     self.missing_bestiary_button:SetVisible(false)
     self.missing_bestiary_button.Click = function()
-        _G.open_bestiary_query_search(self._missing_bestiary_query)
+        Shortcuts.open_bestiary_query_search(self._missing_bestiary_query)
     end
 
     self.missing_header_bar = Turbine.UI.Control()
@@ -1965,7 +1975,7 @@ function CraftingWindow:Constructor()
     self.loading_fill:SetBackColor(STATUS_AUTO)
 
     self.source_breakdown_hint = UI.Widgets.LuiTooltip()
-    self.source_breakdown_hint:set_scale(_G.settings.global.scale)
+    self.source_breakdown_hint:set_scale(State.settings.global.scale)
     self.source_breakdown_hint:SetZOrder(2300)
 
     self.source_breakdown_hint_inner = Turbine.UI.Control()
@@ -1974,7 +1984,7 @@ function CraftingWindow:Constructor()
     self.source_breakdown_hint_rows = {}
 
     self.SizeChanged = function()
-        LuiWindow._layout(self)
+        UI.Widgets.LuiWindow._layout(self)
         if self._suppress_size_changed == true then
             return
         end
@@ -2057,7 +2067,7 @@ function CraftingWindow:_bind_bestiary_action(row, item_key, item_name)
     end
 
     row:set_bestiary_action(function()
-        _G.open_bestiary_item_search(search_name)
+        Shortcuts.open_bestiary_item_search(search_name)
     end)
 end
 
@@ -2808,7 +2818,7 @@ function CraftingWindow:destroy()
 end
 
 function CraftingWindow:capture_geometry()
-    local window = _G.get_ui_window_state("crafting")
+    local window = Defaults.get_ui_window_state("crafting")
     if type(window) ~= "table" then
         return
     end
@@ -2833,8 +2843,8 @@ function CraftingWindow:_minimum_window_size()
 end
 
 function CraftingWindow:apply_settings()
-    LuiWindow.apply_settings(self, _G.settings.global.scale)
-    self.update_every = math.max(0.20, 1.0 / math.max(1, tonumber(_G.settings.global.refresh_rate) or 30))
+    UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
+    self.update_every = math.max(0.20, 1.0 / math.max(1, tonumber(State.settings.global.refresh_rate) or 30))
     self:set_minimum_size(self:_minimum_window_size())
     self:_enforce_min_size()
 
@@ -2843,16 +2853,16 @@ function CraftingWindow:apply_settings()
     self.favorite_filter_button:set_scale(1)
     self.scope_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.scope_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
-    self.scope_dropdown:set_scale(_G.settings.global.scale)
+    self.scope_dropdown:set_scale(State.settings.global.scale)
     self.profession_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.profession_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
-    self.profession_dropdown:set_scale(_G.settings.global.scale)
+    self.profession_dropdown:set_scale(State.settings.global.scale)
     self.rank_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.rank_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
-    self.rank_dropdown:set_scale(_G.settings.global.scale)
+    self.rank_dropdown:set_scale(State.settings.global.scale)
     self.availability_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.availability_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
-    self.availability_dropdown:set_scale(_G.settings.global.scale)
+    self.availability_dropdown:set_scale(State.settings.global.scale)
     self.level_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.level_min_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.level_dash_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
@@ -2861,13 +2871,13 @@ function CraftingWindow:apply_settings()
 
     self.recipe_empty:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.right_tab_bar:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
-    self.right_tab_bar:set_scale(_G.settings.global.scale)
+    self.right_tab_bar:set_scale(State.settings.global.scale)
     self.detail_title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 2))
     self.detail_meta:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.detail_status:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
-    self.critical_result_row:set_scale(_G.settings.global.scale)
+    self.critical_result_row:set_scale(State.settings.global.scale)
     self.plan_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.plan_spin_box:set_scale(_G.settings.global.scale)
+    self.plan_spin_box:set_scale(State.settings.global.scale)
     self.plan_spin_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.ingredients_title:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.detail_empty:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
@@ -2885,7 +2895,7 @@ function CraftingWindow:apply_settings()
     self.plan_empty:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.loading_text:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     if self.source_breakdown_hint ~= nil then
-        self.source_breakdown_hint:set_scale(_G.settings.global.scale)
+        self.source_breakdown_hint:set_scale(State.settings.global.scale)
     end
 
     self:_set_scope_dropdown_options()
@@ -2899,7 +2909,7 @@ function CraftingWindow:apply_settings()
 end
 
 function CraftingWindow:_load_geometry()
-    local window = _G.get_ui_window_state("crafting")
+    local window = Defaults.get_ui_window_state("crafting")
     if type(window) ~= "table" then
         return
     end
@@ -3176,7 +3186,7 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
             self:toggle_recipe_favorite(selected_recipe)
         end
     )
-    row:set_scale(_G.settings.global.scale)
+    row:set_scale(State.settings.global.scale)
     row:set_width(row_w)
     row:set_data(recipe, status, result_item, required_level, self:_is_recipe_favorite(recipe))
     row:set_selected(recipe.id == self.selected_recipe_id)
@@ -3415,7 +3425,7 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
     local source_breakdown = self:_source_breakdown_for_item(node.key, node.required)
     local source_hint_text, source_hint_color = self:_source_breakdown_hint_text(source_breakdown)
     local row = CraftingIngredientRow()
-    row:set_scale(_G.settings.global.scale)
+    row:set_scale(State.settings.global.scale)
     row:set_width(row_w)
     row:set_data(
         item ~= nil and item.item_info or nil,
@@ -3493,7 +3503,7 @@ function CraftingWindow:_refresh_critical_result_detail(recipe)
     local critical_item = self:_recipe_critical_result_item(recipe)
     if critical_item ~= nil then
         self._critical_result_visible = true
-        self.critical_result_row:set_scale(_G.settings.global.scale)
+        self.critical_result_row:set_scale(State.settings.global.scale)
         self.critical_result_row:set_width(row_w)
         self.critical_result_row:set_data(
             critical_item.item_info,
@@ -3652,7 +3662,7 @@ function CraftingWindow:refresh_plan()
                 self:set_plan_count(recipe.id, 0)
             end
         )
-        queue_row:set_scale(_G.settings.global.scale)
+        queue_row:set_scale(State.settings.global.scale)
         queue_row:set_width(queue_w)
         queue_row:set_data(
             entry.recipe,
@@ -3671,7 +3681,7 @@ function CraftingWindow:refresh_plan()
             local saved_entry = unresolved_entry ~= nil and unresolved_entry.saved_entry or nil
             local count = unresolved_entry ~= nil and (tonumber(unresolved_entry.count) or 0) or 0
             local queue_row = CraftingPlanRow(nil, nil)
-            queue_row:set_scale(_G.settings.global.scale)
+            queue_row:set_scale(State.settings.global.scale)
             queue_row:set_width(queue_w)
             queue_row:set_read_only(true)
             queue_row:set_placeholder_data(_display_name_from_saved_entry(saved_entry), count, loading_tracked)
@@ -3689,7 +3699,7 @@ function CraftingWindow:refresh_plan()
                 self:set_plan_count(recipe.id, 0)
             end
         )
-        plan_row:set_scale(_G.settings.global.scale)
+        plan_row:set_scale(State.settings.global.scale)
         plan_row:set_width(row_w)
         plan_row:set_read_only(true)
         plan_row:set_data(
@@ -3727,7 +3737,7 @@ function CraftingWindow:refresh_plan()
             local saved_entry = unresolved_entry ~= nil and unresolved_entry.saved_entry or nil
             local count = unresolved_entry ~= nil and (tonumber(unresolved_entry.count) or 0) or 0
             local plan_row = CraftingPlanRow(nil, nil)
-            plan_row:set_scale(_G.settings.global.scale)
+            plan_row:set_scale(State.settings.global.scale)
             plan_row:set_width(row_w)
             plan_row:set_read_only(true)
             plan_row:set_placeholder_data(_display_name_from_saved_entry(saved_entry), count, loading_tracked)
@@ -3742,7 +3752,7 @@ function CraftingWindow:refresh_plan()
         local source_breakdown = entry.source_breakdown or self:_source_breakdown_for_item(entry.key, entry.required)
         local source_hint_text, source_hint_color = self:_source_breakdown_hint_text(source_breakdown)
         local row = CraftingIngredientRow()
-        row:set_scale(_G.settings.global.scale)
+        row:set_scale(State.settings.global.scale)
         row:set_width(missing_w)
         row:set_data(
             entry.item_info,

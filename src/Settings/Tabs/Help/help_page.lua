@@ -1,3 +1,11 @@
+local TR = _G.LUI.Locale.TR
+local Pages = _G.LUI.Settings.Pages
+local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.Settings.Tabs.feature_shell"
@@ -5,9 +13,7 @@ import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.tabs"
 import "LUI.src.UI.Widgets"
 
-local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
-local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
+local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
 local Style = UI.Widgets.Style
 
@@ -24,7 +30,7 @@ local GITHUB_LINK_HEIGHT = 22
 local GITHUB_LABEL_HEIGHT = 30
 
 local function _scaled_help_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 local function _scaled_help_int(value)
@@ -246,7 +252,8 @@ local function _new_interactions_section(window)
     return page
 end
 
-HelpPage = class(ConfigTabs)
+local HelpPage = class(ConfigTabs)
+Pages.HelpPage = HelpPage
 
 function HelpPage:Constructor(window)
     ConfigTabs.Constructor(self, window)

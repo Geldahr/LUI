@@ -1,3 +1,4 @@
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
 import "LUI.src.Settings.Preview.common"
 import "LUI.src.Settings.Preview.self_expiring_effects"
 import "LUI.src.Settings.Preview.cooldowns"

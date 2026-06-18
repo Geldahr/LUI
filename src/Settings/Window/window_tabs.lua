@@ -1,3 +1,6 @@
+local TR = _G.LUI.Locale.TR
+local ConfigWindow = _G.LUI.Settings.ConfigWindow
+local Pages = _G.LUI.Settings.Pages
 import "LUI.src.Settings.Tabs.Global.global_page"
 import "LUI.src.Settings.Tabs.Vitals.vitals_page"
 import "LUI.src.Settings.Tabs.ExpiringEffects.expiring_effects_page"
@@ -12,19 +15,19 @@ import "LUI.src.Settings.Tabs.StatusBar.status_bar_page"
 import "LUI.src.Settings.Tabs.ProfileManager.profile_manager_page"
 import "LUI.src.Settings.Tabs.Help.help_page"
 
-local GlobalPage = LUI.src.Settings.Tabs.Global.GlobalPage
-local VitalsPage = LUI.src.Settings.Tabs.Vitals.VitalsPage
-local ExpiringEffectsPage = LUI.src.Settings.Tabs.ExpiringEffects.ExpiringEffectsPage
-local CooldownsFeaturePage = LUI.src.Settings.Tabs.Cooldowns.CooldownsFeaturePage
-local DropsPage = LUI.src.Settings.Tabs.Drops.DropsPage
-local InventoryPage = LUI.src.Settings.Tabs.Inventory.InventoryPage
-local CraftingPage = LUI.src.Settings.Tabs.Crafting.CraftingPage
-local TravelPage = LUI.src.Settings.Tabs.Travel.TravelPage
-local AssetsPage = LUI.src.Settings.Tabs.Assets.AssetsPage
-local LauncherPage = LUI.src.Settings.Tabs.Launcher.LauncherPage
-local StatusBarPage = LUI.src.Settings.Tabs.StatusBar.StatusBarPage
-local ProfileManagerPage = LUI.src.Settings.Tabs.ProfileManager.ProfileManagerPage
-local HelpPage = LUI.src.Settings.Tabs.Help.HelpPage
+local GlobalPage = Pages.GlobalPage
+local VitalsPage = Pages.VitalsPage
+local ExpiringEffectsPage = Pages.ExpiringEffectsPage
+local CooldownsFeaturePage = Pages.CooldownsFeaturePage
+local DropsPage = Pages.DropsPage
+local InventoryPage = Pages.InventoryPage
+local CraftingPage = Pages.CraftingPage
+local TravelPage = Pages.TravelPage
+local AssetsPage = Pages.AssetsPage
+local LauncherPage = Pages.LauncherPage
+local StatusBarPage = Pages.StatusBarPage
+local ProfileManagerPage = Pages.ProfileManagerPage
+local HelpPage = Pages.HelpPage
 
 local function _normalize_main_tab_request(main_key, preferred_sub_key)
     if type(main_key) ~= "string" then

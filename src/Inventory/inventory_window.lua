@@ -1,3 +1,12 @@
+local TR = _G.LUI.Locale.TR
+local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local Defaults = _G.LUI.Settings.Defaults
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local Inventory = _G.LUI.Features.Inventory
+local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
 
@@ -9,10 +18,11 @@ import "LUI.src.Utils.font"
 import "LUI.src.Utils.number_abbrev"
 import "LUI.src.Settings.enums"
 
-if Inventory == nil then
-    Inventory = {}
-end
-InventoryWindow = class(LuiWindow)
+local parse_query = Inventory.parse_query
+local normalize_groups = Inventory.normalize_groups
+local matches_groups = Inventory.matches_groups
+local InventoryWindow = class(UI.Widgets.LuiWindow)
+Inventory.InventoryWindow = InventoryWindow
 
 local MARGIN_LEFT = 15
 local MARGIN_RIGHT = 15
@@ -38,7 +48,7 @@ local BASE_HINT_FONT_SIZE = 12
 local BASE_FILTER_FONT_SIZE = 10
 
 local function _scaled_size(value)
-    return value * _G.settings.global.scale
+    return value * State.settings.global.scale
 end
 
 local function _scaled_int(value)
@@ -106,16 +116,16 @@ end
 ---------------------------------------------------------------------
 
 function InventoryWindow:Constructor()
-    LuiWindow.Constructor(self)
+    UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Inventory"])
     self:set_icon(UI.AssetIds.backpack_alt)
-    self:set_resizable(LuiWindow.RESIZE_HORIZONTAL)
+    self:set_resizable(UI.Widgets.LuiWindow.RESIZE_HORIZONTAL)
     self:hide()
     self:SetWantsUpdates(false)
 
     self.last_update_at = 0
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    self.update_every = 1.0 / State.settings.global.refresh_rate
     self._dirty = true
     self._filter_dirty = true
     self._haystack_dirty = false
@@ -156,13 +166,13 @@ function InventoryWindow:Constructor()
     self.header = Turbine.UI.Control()
     self.header:SetParent(content)
 
-    self.g_icon = Image(GOLD_ICON)
+    self.g_icon = UI.Widgets.Image(GOLD_ICON)
     self.g_icon:SetParent(self.header)
 
-    self.s_icon = Image(SILVER_ICON)
+    self.s_icon = UI.Widgets.Image(SILVER_ICON)
     self.s_icon:SetParent(self.header)
 
-    self.c_icon = Image(COPPER_ICON)
+    self.c_icon = UI.Widgets.Image(COPPER_ICON)
     self.c_icon:SetParent(self.header)
 
     local function make_money_label()
@@ -257,7 +267,7 @@ function InventoryWindow:Constructor()
     end
 
     self.SizeChanged = function()
-        LuiWindow._layout(self)
+        UI.Widgets.LuiWindow._layout(self)
         if self._suppress_size_changed then
             return
         end
@@ -300,8 +310,8 @@ function InventoryWindow:bring_to_front()
 end
 
 function InventoryWindow:capture_geometry()
-    local raw = _G.loaded_settings.inventory
-    local window_state = _G.get_ui_window_state("inventory")
+    local raw = State.loaded_settings.inventory
+    local window_state = Defaults.get_ui_window_state("inventory")
     local geometry = self:get_geometry()
     window_state.left = geometry.left
     window_state.top = geometry.top
@@ -480,7 +490,7 @@ end
 function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, window_h)
     local cols = self:get_columns_for_window_width(window_w)
     local rows = self:get_needed_rows(cols)
-    local raw = _G.loaded_settings.inventory
+    local raw = State.loaded_settings.inventory
     local changed = cols ~= self.cols or rows ~= self.rows_visible
 
     self.cols = cols
@@ -576,10 +586,10 @@ function InventoryWindow:update_money()
 end
 
 function InventoryWindow:apply_settings()
-    LuiWindow.apply_settings(self, _G.settings.global.scale)
+    UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
 
-    local s = _G.settings.inventory
-    self.update_every = 1.0 / _G.settings.global.refresh_rate
+    local s = State.settings.inventory
+    self.update_every = 1.0 / State.settings.global.refresh_rate
     self.tile_size = s.tile_size
     self.cols = s.cols
     self.rows_visible = self:get_needed_rows(self.cols)
@@ -592,14 +602,14 @@ function InventoryWindow:apply_settings()
     self.bar_gap = _scaled_int(BAR_GAP)
     self.filter_gap = _scaled_int(FILTER_GAP)
     self.clear_w = _scaled_int(CLEAR_W)
-    local scale = _G.settings.global.scale
+    local scale = State.settings.global.scale
     self.money_h = math.floor((BASE_MONEY_H * scale) + 0.5)
     self.hint_gap = math.floor((BASE_HINT_GAP * scale) + 0.5)
     self.hint_h = math.floor((BASE_HINT_H * scale) + 0.5)
     self.header_h = self.filter_h + self.money_h + self.money_gap
 
-    local sb_font = _G.settings.status_bar.font
-    local money_font_size = BASE_MONEY_H * _G.settings.global.scale
+    local sb_font = State.settings.status_bar.font
+    local money_font_size = BASE_MONEY_H * State.settings.global.scale
     local money_font = FONT_TO_LOTRO(sb_font.name, money_font_size)
     local font_style = LUI_TO_LOTRO.font_style[sb_font.style] or Turbine.UI.FontStyle.None
 
@@ -624,8 +634,7 @@ function InventoryWindow:apply_settings()
     local hint_font = FONT_TO_LOTRO("Verdana", hint_font_size)
     self.hint_label:SetFont(hint_font)
 
-    local raw = _G.loaded_settings.inventory
-    local window_state = _G.get_ui_window_state("inventory")
+    local window_state = Defaults.get_ui_window_state("inventory")
     self:SetPosition(window_state.left, window_state.top)
 
     local w = tonumber(window_state.width)
@@ -646,7 +655,7 @@ function InventoryWindow:apply_settings()
     self:SetSize(w, h)
     self._suppress_size_changed = false
     local window_tile = window_state.tile
-    if window_tile ~= LuiWindow.TILE_NONE then
+    if window_tile ~= UI.Widgets.LuiWindow.TILE_NONE then
         window_state.width = w
         window_state.height = h
         window_state.tile = window_tile
@@ -711,7 +720,7 @@ function InventoryWindow:build_grid()
     for i = 1, size do
         local slot = self.slots[i]
         if slot == nil then
-            slot = InventorySlot(i, function(dest_index, drag_drop_info, args)
+            slot = Inventory.InventorySlot(i, function(dest_index, drag_drop_info, args)
                 self:perform_drop(dest_index, drag_drop_info, args)
             end)
             self.slots[i] = slot
@@ -961,7 +970,7 @@ function InventoryWindow:open()
 end
 
 function InventoryWindow:toggle()
-    LuiWindow.toggle(self)
+    UI.Widgets.LuiWindow.toggle(self)
     if self:IsVisible() then
         self._dirty = true
     end
@@ -1034,5 +1043,3 @@ function InventoryWindow:_set_inventory_operation_status(text)
         self.hint_label:SetText(status)
     end
 end
-
-Inventory.InventoryWindow = InventoryWindow

@@ -1,16 +1,19 @@
+local TR = _G.LUI.Locale.TR
+local is_lui_english_language = _G.LUI.Locale.is_english_language
+local Pages = _G.LUI.Settings.Pages
+local ConfigSectionPage = _G.LUI.Settings.Content.ConfigSectionPage
+local ConfigNestedTabs = _G.LUI.Settings.Content.ConfigNestedTabs
+local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
+local UI = _G.LUI.UI
+local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.nested_tabs"
 import "LUI.src.Settings.Content.section_page"
 import "LUI.src.Settings.Content.tabs"
 
-local FeatureShell = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.feature_shell) or SettingsFeatureShell
-local ConfigContent = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_content) or ConfigContent
-local ConfigNestedTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_nested_tabs) or
-    ConfigNestedTabs
-local ConfigSectionPage = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_section_page) or
-    ConfigSectionPage
-local ConfigTabs = (_G.LUI_SETTINGS_SHARED ~= nil and _G.LUI_SETTINGS_SHARED.config_tabs) or ConfigTabs
+local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
 local Style = UI.Widgets.Style
 
@@ -57,11 +60,9 @@ local function _style_override_value(style, key)
 end
 
 local function _dev_style_value(key)
-    if _G.STYLE ~= nil then
-        local value = _style_override_value(_G.STYLE, key)
-        if value ~= nil then
-            return value
-        end
+    local value = _style_override_value(UI.Style, key)
+    if value ~= nil then
+        return value
     end
 
     return Style.DEFAULTS[key]
@@ -139,8 +140,8 @@ local function _style_control_key(key)
 end
 
 local function _add_style_color(page, settings_getter, key, label)
-    local entry = nil
-    entry = page:add_color_picker(_style_control_key(key), label,
+    local entry = page:add_color_picker(_style_control_key(key), label)
+    page:bind(entry,
         function(value)
             if entry._loaded_direct ~= true and value == entry._loaded_value then
                 return
@@ -168,8 +169,8 @@ local function _add_style_color(page, settings_getter, key, label)
 end
 
 local function _add_style_opacity(page, settings_getter, key, label)
-    local entry = nil
-    entry = page:add_line_edit(_style_control_key(key) .. "_opacity", label,
+    local entry = page:add_line_edit(_style_control_key(key) .. "_opacity", label)
+    page:bind(entry,
         function(value)
             if entry._loaded_direct ~= true and value == entry._loaded_value then
                 return
@@ -199,8 +200,8 @@ local function _add_style_opacity(page, settings_getter, key, label)
 end
 
 local function _add_style_number(page, settings_getter, key, label)
-    local entry = nil
-    entry = page:add_line_edit(_style_control_key(key), label,
+    local entry = page:add_line_edit(_style_control_key(key), label)
+    page:bind(entry,
         function(value)
             if entry._loaded_direct ~= true and value == entry._loaded_value then
                 return
@@ -228,8 +229,8 @@ local function _add_style_number(page, settings_getter, key, label)
 end
 
 local function _add_style_font_name(page, settings_getter, key, label)
-    local entry = nil
-    entry = page:add_dropdown(_style_control_key(key), label, STYLE_FONT_NAME_LABELS, STYLE_FONT_NAME_VALUES,
+    local entry = page:add_dropdown(_style_control_key(key), label, STYLE_FONT_NAME_LABELS, STYLE_FONT_NAME_VALUES)
+    page:bind(entry,
         function(value)
             if entry._loaded_direct ~= true and value == entry._loaded_value then
                 return
@@ -461,7 +462,8 @@ local function _new_ui_page(window, settings_getter)
     return page
 end
 
-GlobalPage = class(ConfigTabs)
+local GlobalPage = class(ConfigTabs)
+Pages.GlobalPage = GlobalPage
 
 function GlobalPage:Constructor(window)
     ConfigTabs.Constructor(self, window)

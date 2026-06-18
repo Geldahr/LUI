@@ -1,11 +1,7 @@
 import "Turbine.Gameplay"
 
-if Inventory == nil then
-    Inventory = {}
-end
-if Inventory.Operations == nil then
-    Inventory.Operations = {}
-end
+local Inventory = _G.LUI.Features.Inventory
+Inventory.Operations = Inventory.Operations or {}
 
 local Operations = Inventory.Operations
 

@@ -1,3 +1,6 @@
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local State = _G.LUI.Settings.State
+local Utils = _G.LUI.Utils
 import "LUI.src.Settings.enums"
 
 local THOUSAND = 1000
@@ -45,7 +48,7 @@ local function _current_settings()
     if _preview_settings ~= nil then
         return _preview_settings
     end
-    return _G.settings.global.number_abbrev
+    return State.settings.global.number_abbrev
 end
 
 local function _format_scaled(value, width)
@@ -94,18 +97,18 @@ local function _abbrev_gold(value)
     return _abbrev_number(value)
 end
 
-function _G.lui_abbrev_number(value)
+function Utils.lui_abbrev_number(value)
     return _abbrev_number(value)
 end
 
-function _G.lui_set_number_abbrev_preview_settings(settings)
+function Utils.lui_set_number_abbrev_preview_settings(settings)
     _preview_settings = settings
 end
 
-function _G.lui_clear_number_abbrev_preview_settings()
+function Utils.lui_clear_number_abbrev_preview_settings()
     _preview_settings = nil
 end
 
-function _G.lui_abbrev_gold(value)
+function Utils.lui_abbrev_gold(value)
     return _abbrev_gold(value)
 end

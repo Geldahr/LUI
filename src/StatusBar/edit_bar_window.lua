@@ -1,9 +1,15 @@
+local TR = _G.LUI.Locale.TR
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local State = _G.LUI.Settings.State
+local UI = _G.LUI.UI
+local StatusBar = _G.LUI.Features.StatusBar
+local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets"
 
-local S = _G.STATUS_BAR_COMMON
+local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
 
 local WINDOW_W = 300
@@ -24,11 +30,11 @@ local LIST_SCROLL_W = 10
 local LIST_SCROLL_GAP = 4
 
 local function _scaled_int(value)
-    return math.floor((value * _G.settings.global.scale) + 0.5)
+    return math.floor((value * State.settings.global.scale) + 0.5)
 end
 
 local function _scaled_font(name, size)
-    return FONT_TO_LOTRO(name, size * _G.settings.global.scale)
+    return FONT_TO_LOTRO(name, size * State.settings.global.scale)
 end
 
 local function _clamp(value, min_value, max_value)
@@ -190,21 +196,11 @@ function EditBarPaletteEntry:_update_visual_state()
     end
 end
 
-local StatusBarEditWindow = class(LuiBaseWindow)
-_G.StatusBarEditWindow = StatusBarEditWindow
-
-local status_bar_pkg = nil
-if StatusBar ~= nil then
-    status_bar_pkg = StatusBar
-elseif LUI ~= nil and LUI.src ~= nil and LUI.src.StatusBar ~= nil then
-    status_bar_pkg = LUI.src.StatusBar
-end
-if status_bar_pkg ~= nil then
-    status_bar_pkg.StatusBarEditWindow = StatusBarEditWindow
-end
+local StatusBarEditWindow = class(UI.Widgets.LuiBaseWindow)
+StatusBar.StatusBarEditWindow = StatusBarEditWindow
 
 function StatusBarEditWindow:Constructor(owner)
-    LuiBaseWindow.Constructor(self, { hideable = true })
+    UI.Widgets.LuiBaseWindow.Constructor(self, { hideable = true })
 
     self.owner = owner
     self.entries = {}

@@ -1,11 +1,27 @@
+local RaidLayout = _G.LUI.Utils.RaidLayout
+local TR = _G.LUI.Locale.TR
+local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
+local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
+local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
+local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
+local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
+local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
+local CLASS_ICON_CLASSES = _G.LUI.Utils.CLASS_ICON_CLASSES
+local get_class_icon = _G.LUI.Utils.get_class_icon
+local get_party_leader_icon = _G.LUI.Utils.get_party_leader_icon
+local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local LUI_ENUMS = _G.LUI.Settings.Enums
+local SettingsPreview = _G.LUI.Settings.Preview
+local UI = _G.LUI.UI
 import "LUI.src.UI.Widgets"
 import "LUI.src.Utils.color"
 import "LUI.src.Utils.raid_layout"
 import "LUI.src.Utils.vitals_labels"
-SettingsGroupVitalsPreview = SettingsGroupVitalsPreview or {}
 
-local Preview = SettingsGroupVitalsPreview
-local Common = SettingsPreviewCommon
+local Preview = SettingsPreview.GroupVitals or {}
+SettingsPreview.GroupVitals = Preview
+local Common = SettingsPreview.Common
 local _require_font = Common.require_font
 local _require_control_color = Common.require_control_color
 local _require_control_enum = Common.require_control_enum
@@ -75,19 +91,7 @@ local function _preview_apply_grid_positions(member_windows, member_count, rows,
     end
 end
 
-local function _append_raid_group_cells(layout_cells, start_column, start_row, columns_per_group)
-    for i = 1, RAID_GROUP_SIZE do
-        local index = i - 1
-        layout_cells[#layout_cells + 1] = {
-            column = start_column + (index % columns_per_group),
-            row = start_row + math.floor(index / columns_per_group),
-        }
-    end
-end
 
-local function _preview_raid_layout_cells(layout_mode)
-    return RaidLayout.layout_cells(layout_mode)
-end
 
 local function _preview_compute_size_from_cells(cells, member_count, spacing_x, spacing_y, member_width, member_height)
     local normalized_count = member_count
@@ -139,10 +143,6 @@ local function _preview_apply_positions_from_cells(member_windows, cells, member
     end
 end
 
-local function _preview_compute_raid_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
-    return _preview_compute_size_from_cells(_preview_raid_layout_cells(layout_mode), member_count, spacing_x, spacing_y,
-        member_width, member_height)
-end
 
 local function _preview_compute_raid_group_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
     return _preview_compute_size_from_cells(RaidLayout.group_shape_cells(layout_mode), member_count, spacing_x, spacing_y,
@@ -197,11 +197,6 @@ local function _preview_compute_raid_outer_size(member_count, layout_mode, spaci
     return max_right, max_bottom
 end
 
-local function _preview_apply_raid_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y, member_width,
-                                             member_height)
-    _preview_apply_positions_from_cells(member_windows, _preview_raid_layout_cells(layout_mode), member_count, spacing_x,
-        spacing_y, member_width, member_height)
-end
 
 local function _preview_apply_raid_group_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y,
                                                    member_width, member_height)
@@ -450,12 +445,12 @@ function Preview.init(window, spec)
         member.root:SetParent(state.root)
         member.root:SetMouseVisible(false)
 
-        member.class_icon = Image()
+        member.class_icon = UI.Widgets.Image()
         member.class_icon:SetParent(member.root)
         member.class_icon:SetZOrder(9)
         member.class_icon:SetVisible(false)
 
-        member.leader_icon = Image()
+        member.leader_icon = UI.Widgets.Image()
         member.leader_icon:SetParent(member.root)
         member.leader_icon:SetZOrder(10)
         member.leader_icon:SetVisible(false)
@@ -583,7 +578,6 @@ function Preview.update(window, spec)
     local info_bg = _require_control_color(window.controls, prefix .. "_info_background_color")
     local info_opacity = _require_control_number(window.controls, prefix .. "_info_opacity")
     local bubble_color = _require_control_color(window.controls, prefix .. "_morale_bubble_color")
-    local neutral_color = _require_control_color(window.controls, prefix .. "_morale_color_neutral")
     local high_color = _require_control_color(window.controls, prefix .. "_morale_color_high")
     local med_color = _require_control_color(window.controls, prefix .. "_morale_color_medium")
     local low_color = _require_control_color(window.controls, prefix .. "_morale_color_low")
@@ -655,7 +649,7 @@ function Preview.update(window, spec)
     _apply_preview_border(state, outer_w, outer_h, off_x, off_y)
     state.root:SetVisible(split_by_group ~= true)
 
-    local icon_classes = _G.CLASS_ICON_CLASSES
+    local icon_classes = CLASS_ICON_CLASSES
     local root_windows = {}
     for i = 1, #state.members do
         root_windows[i] = state.members[i].root
@@ -690,7 +684,7 @@ function Preview.update(window, spec)
 
             if icon_enabled == true and icon_size > 0 then
                 member.class_icon:SetVisible(true)
-                local icon = _G.get_class_icon(icon_classes[((i - 1) % #icon_classes) + 1], icon_size)
+                local icon = get_class_icon(icon_classes[((i - 1) % #icon_classes) + 1], icon_size)
                 if icon ~= nil then
                     member.class_icon:SetPosition(icon_x, icon_y)
                     member.class_icon:set_icon(icon, icon_size, icon_size)
@@ -703,7 +697,7 @@ function Preview.update(window, spec)
 
             if leader_enabled == true and leader_size > 0 and i == spec.leader_slot then
                 member.leader_icon:SetVisible(true)
-                local icon = _G.get_party_leader_icon()
+                local icon = get_party_leader_icon()
                 if icon ~= nil then
                     member.leader_icon:SetPosition(leader_x, leader_y)
                     member.leader_icon:set_icon(icon, leader_size, leader_size)
