@@ -38,11 +38,14 @@ local CLEAR_W = 52
 local MIN_WINDOW_W = 193
 local MIN_WINDOW_H = 148
 local MIN_COLS = 6
+local MIN_ROWS = 1
 local MAX_COLS = 20
 local TITLE_FULL_MIN_W = 360
 local TITLE_COMPACT_MIN_W = 310
 local RESIZE_LEFT = 1
+local RESIZE_RIGHT = 2
 local RESIZE_TOP = 4
+local RESIZE_BOTTOM = 8
 
 local BASE_HINT_FONT_SIZE = 12
 local BASE_FILTER_FONT_SIZE = 10
@@ -120,7 +123,7 @@ function InventoryWindow:Constructor()
 
     self:set_title(TR["Inventory"])
     self:set_icon(UI.AssetIds.backpack_alt)
-    self:set_resizable(UI.Widgets.LuiWindow.RESIZE_HORIZONTAL)
+    self:set_resizable(UI.Widgets.LuiWindow.RESIZE_BOTH)
     self:hide()
     self:SetWantsUpdates(false)
 
@@ -348,6 +351,17 @@ function InventoryWindow:get_needed_rows(cols)
     return math.floor((size + c - 1) / c)
 end
 
+function InventoryWindow:get_backpack_size()
+    local size = 0
+    if self.backpack ~= nil and self.backpack.GetSize ~= nil then
+        size = self.backpack:GetSize() or 0
+    end
+    if size < 1 then
+        size = 1
+    end
+    return size
+end
+
 function InventoryWindow:hook_backpack_events()
     if self.backpack == nil then
         return
@@ -469,11 +483,9 @@ function InventoryWindow:compute_window_size(cols, rows)
 end
 
 function InventoryWindow:minimum_window_size()
-    local content_w = self.margin_left + self.margin_right + (MIN_COLS * self.tile_size)
-    local window_w, window_h = self:GetSize()
-    local central_w, central_h = self:central_widget():GetSize()
-    return math.max(_scaled_int(MIN_WINDOW_W), content_w) + math.max(0, window_w - central_w),
-        _scaled_int(MIN_WINDOW_H) + math.max(0, window_h - central_h)
+    local min_w, min_h = self:compute_window_size(MIN_COLS, MIN_ROWS)
+    return math.max(_scaled_int(MIN_WINDOW_W), min_w),
+        math.max(_scaled_int(MIN_WINDOW_H), min_h)
 end
 
 function InventoryWindow:get_columns_for_window_width(window_w)
@@ -487,9 +499,114 @@ function InventoryWindow:get_columns_for_window_width(window_w)
     return cols
 end
 
-function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, window_h)
+function InventoryWindow:get_visible_rows_for_window_height(window_h, min_rows)
+    local current_window_h = self:GetHeight()
+    local _, current_central_h = self:central_widget():GetSize()
+    local content_h = math.max(0, tonumber(window_h) - (current_window_h - current_central_h))
+    local grid_h = content_h - self.margin_bottom - self.header_h - self.bar_gap - self.hint_gap - self.hint_h
+    local rows = math.floor(grid_h / self.tile_size)
+    if rows < min_rows then rows = min_rows end
+    return rows
+end
+
+function InventoryWindow:get_columns_for_visible_rows(rows)
+    local r = rows
+    if type(r) ~= "number" then
+        r = tonumber(r)
+    end
+    if r == nil or r < 1 then
+        r = 1
+    end
+    r = math.floor(r + 0.5)
+
+    local size = self:get_backpack_size()
+    local cols = math.floor((size + r - 1) / r)
+    if cols < MIN_COLS then cols = MIN_COLS end
+    if cols > MAX_COLS then cols = MAX_COLS end
+    return cols
+end
+
+function InventoryWindow:window_size_has_inventory_capacity(window_w, window_h)
     local cols = self:get_columns_for_window_width(window_w)
-    local rows = self:get_needed_rows(cols)
+    local rows = self:get_visible_rows_for_window_height(window_h, MIN_ROWS)
+    return rows >= self:get_needed_rows(cols)
+end
+
+function InventoryWindow:clamp_window_size_to_inventory_capacity(window_w, window_h, allow_width, allow_height, max_w, max_h)
+    if self:window_size_has_inventory_capacity(window_w, window_h) == true then
+        return window_w, window_h
+    end
+
+    if allow_width == true then
+        local rows = self:get_visible_rows_for_window_height(window_h, MIN_ROWS)
+        local needed_cols = self:get_columns_for_visible_rows(rows)
+        local min_w = self:compute_window_size(needed_cols, rows)
+        if min_w > max_w then
+            min_w = max_w
+        end
+        if window_w < min_w then
+            window_w = min_w
+        end
+
+        if self:window_size_has_inventory_capacity(window_w, window_h) == true then
+            return window_w, window_h
+        end
+    end
+
+    if allow_height == true then
+        local cols = self:get_columns_for_window_width(window_w)
+        local needed_rows = self:get_needed_rows(cols)
+        local _, min_h = self:compute_window_size(cols, needed_rows)
+        if min_h > max_h then
+            min_h = max_h
+        end
+        if window_h < min_h then
+            window_h = min_h
+        end
+    end
+    return window_w, window_h
+end
+
+function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, window_h)
+    local desired_w = window_w
+    local desired_h = window_h
+    local min_w, min_h = self:minimum_window_size()
+    if desired_w < min_w then desired_w = min_w end
+    if desired_h < min_h then desired_h = min_h end
+
+    local mask = self._resize_mask or 0
+    local resizing_w = _has_resize_dir(mask, RESIZE_LEFT) or _has_resize_dir(mask, RESIZE_RIGHT)
+    local resizing_h = _has_resize_dir(mask, RESIZE_TOP) or _has_resize_dir(mask, RESIZE_BOTTOM)
+    local shrinking_w = resizing_w and window_w < self._resize_start_window_w
+    local shrinking_h = resizing_h and window_h < self._resize_start_window_h
+    local max_w = desired_w
+    local max_h = desired_h
+    if shrinking_w == true then
+        max_w = self._resize_start_window_w
+    end
+    if shrinking_h == true then
+        max_h = self._resize_start_window_h
+    end
+    desired_w, desired_h = self:clamp_window_size_to_inventory_capacity(
+        desired_w,
+        desired_h,
+        resizing_w,
+        resizing_h,
+        max_w,
+        max_h
+    )
+
+    if _has_resize_dir(mask, RESIZE_LEFT) then
+        window_x = window_x + window_w - desired_w
+    end
+    if _has_resize_dir(mask, RESIZE_TOP) then
+        window_y = window_y + window_h - desired_h
+    end
+
+    window_x, window_y, desired_w, desired_h = self:_clamp_resize_to_screen(window_x, window_y, desired_w, desired_h)
+
+    local cols = self:get_columns_for_window_width(desired_w)
+    local rows = self:get_visible_rows_for_window_height(desired_h, MIN_ROWS)
     local raw = State.loaded_settings.inventory
     local changed = cols ~= self.cols or rows ~= self.rows_visible
 
@@ -499,24 +616,10 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
         raw.cols = cols
     end
 
-    local desired_w = window_w
-    local _, desired_h = self:compute_window_size(cols, rows)
-    local min_w, min_h = self:minimum_window_size()
-    if desired_w < min_w then desired_w = min_w end
-    if desired_h < min_h then desired_h = min_h end
     if self:is_tiled() == true then
+        desired_w = window_w
         desired_h = window_h
     end
-
-    local mask = self._resize_mask or 0
-    if _has_resize_dir(mask, RESIZE_LEFT) then
-        window_x = window_x + window_w - desired_w
-    end
-    if _has_resize_dir(mask, RESIZE_TOP) then
-        window_y = window_y + window_h - desired_h
-    end
-
-    window_x, window_y, desired_w, desired_h = self:_clamp_resize_to_screen(window_x, window_y, desired_w, desired_h)
 
     local old_suppress = self._suppress_size_changed
     self._suppress_size_changed = true
@@ -638,29 +741,45 @@ function InventoryWindow:apply_settings()
     self:SetPosition(window_state.left, window_state.top)
 
     local w = tonumber(window_state.width)
+    local stored_h = tonumber(window_state.height)
     if w ~= nil then
         self.cols = self:get_columns_for_window_width(w)
+    end
+
+    if stored_h ~= nil then
+        self.rows_visible = self:get_visible_rows_for_window_height(stored_h, MIN_ROWS)
+    else
         self.rows_visible = self:get_needed_rows(self.cols)
     end
 
-    local computed_w, h = self:compute_window_size(self.cols, self.rows_visible)
+    local computed_w, computed_h = self:compute_window_size(self.cols, self.rows_visible)
+    local h = stored_h
     if w == nil then
         w = computed_w
+    end
+    if h == nil then
+        h = computed_h
     end
     local min_w, min_h = self:minimum_window_size()
     self:set_minimum_size(min_w, min_h)
     if w < min_w then w = min_w end
     if h < min_h then h = min_h end
+    local restore_cols = self:get_columns_for_window_width(w)
+    local _, restore_h = self:compute_window_size(restore_cols, self:get_needed_rows(restore_cols))
+    w, h = self:clamp_window_size_to_inventory_capacity(w, h, false, true, w, restore_h)
+    self.cols = self:get_columns_for_window_width(w)
+    self.rows_visible = self:get_visible_rows_for_window_height(h, MIN_ROWS)
     self._suppress_size_changed = true
     self:SetSize(w, h)
     self._suppress_size_changed = false
     local window_tile = window_state.tile
-    if window_tile ~= UI.Widgets.LuiWindow.TILE_NONE then
-        window_state.width = w
-        window_state.height = h
-        window_state.tile = window_tile
-    end
-    self:set_geometry(window_state)
+    self:set_geometry({
+        left = window_state.left,
+        top = window_state.top,
+        width = w,
+        height = h,
+        tile = window_tile,
+    })
 
     self:layout()
     self:build_grid()
