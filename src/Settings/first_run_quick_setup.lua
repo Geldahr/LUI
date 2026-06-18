@@ -294,6 +294,14 @@ local function _get_preview_window_specs()
         },
         {
             get_window = function()
+                return Windows.launcher
+            end,
+            get_raw_window = function()
+                return Defaults.get_ui_hud_state("launcher")
+            end,
+        },
+        {
+            get_window = function()
                 return Windows.inventory
             end,
             get_raw_window = function()
@@ -310,6 +318,7 @@ local function _apply_runtime_settings()
     Apply.inventory_settings()
     Apply.status_bar_settings()
     Apply.cooldowns_settings()
+    Apply.launcher_settings()
 
     if Windows.config ~= nil then
         Windows.config:apply_ui_scale()
@@ -369,6 +378,9 @@ local function _apply_runtime_settings()
         if Windows.cooldowns ~= nil and Windows.cooldowns.set_move_mode ~= nil then
             Windows.cooldowns:set_move_mode(true)
         end
+        if Windows.launcher ~= nil then
+            Windows.launcher:set_move_mode(true)
+        end
     end
 end
 
@@ -390,6 +402,7 @@ function FirstRunQuickSetup:Constructor(options)
     self.step = 1
     self.selected_scale = DefaultLayouts.get_resolution_scale()
     self.selected_layout = nil
+    self.selected_launcher_enabled = false
     self.updating_scale_text = false
     self.closing = false
     self._body_raw_text = ""
@@ -405,6 +418,8 @@ function FirstRunQuickSetup:Constructor(options)
     self.existing_config_labels, self.existing_config_values = Persistence.get_configuration_options()
     self.has_existing_configurations =
         not (options ~= nil and options.skip_existing_configurations == true) and #self.existing_config_values > 0
+    State.loaded_settings.launcher.enabled = self.selected_launcher_enabled
+    _apply_runtime_settings()
 
     self.preview_overlay = Turbine.UI.Window()
     self:apply_native_scaling(self.preview_overlay)
@@ -890,11 +905,13 @@ function FirstRunQuickSetup:apply_preview_layout(layout_key, scale)
     local snapshots = nil
     if scale ~= base_scale then
         State.loaded_settings = DefaultLayouts.build(layout_key, base_scale, preserved_config_geometry)
+        State.loaded_settings.launcher.enabled = self.selected_launcher_enabled
         _apply_runtime_settings()
         snapshots = self:capture_preview_window_snapshots()
     end
 
     State.loaded_settings = DefaultLayouts.build(layout_key, scale, preserved_config_geometry)
+    State.loaded_settings.launcher.enabled = self.selected_launcher_enabled
     _apply_runtime_settings()
 
     if snapshots ~= nil then
@@ -1004,6 +1021,17 @@ function FirstRunQuickSetup:update_step()
         return
     end
 
+    if setup_step == 6 then
+        self._layout_mode = "choice"
+        self:_set_body_text(TR["Enable the LUI Menu?"], BODY_H)
+        self:update_binary_choice_buttons(self.selected_launcher_enabled == true)
+        self.choice_no:SetVisible(true)
+        self.choice_yes:SetVisible(true)
+        self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
+        return
+    end
+
     self._layout_mode = nil
     self:_set_body_text(TR["Do you want to modify anything else?"], BODY_FINAL_H)
     self.done_button:SetVisible(true)
@@ -1013,7 +1041,7 @@ function FirstRunQuickSetup:update_step()
 end
 
 function FirstRunQuickSetup:go_next()
-    local max_step = self.has_existing_configurations == true and 7 or 6
+    local max_step = self.has_existing_configurations == true and 8 or 7
     if self.step >= max_step then
         return
     end
@@ -1114,6 +1142,9 @@ function FirstRunQuickSetup:select_binary_choice(enabled)
         State.loaded_settings.inventory.replace = value
     elseif setup_step == 5 then
         State.loaded_settings.status_bar.enabled = value
+    elseif setup_step == 6 then
+        self.selected_launcher_enabled = value
+        State.loaded_settings.launcher.enabled = value
     else
         return
     end
@@ -1135,6 +1166,7 @@ function FirstRunQuickSetup:restore_initial_settings()
     _apply_runtime_settings()
     self.selected_scale = State.loaded_settings.global.scale
     self.selected_layout = nil
+    self.selected_launcher_enabled = false
     self.layout_bottom:set_active(false)
     self.layout_top:set_active(false)
     self:set_scale_text(self.selected_scale)
@@ -1182,6 +1214,7 @@ function FirstRunQuickSetup:commit_preview_settings()
     _persist_window_position(Windows.expiring_self_effects, Defaults.get_ui_hud_state("self_effects"))
     _persist_window_position(Windows.expiring_target_effects, Defaults.get_ui_hud_state("target_effects"))
     _persist_window_position(Windows.cooldowns, Defaults.get_ui_hud_state("cooldowns"))
+    _persist_window_position(Windows.launcher, Defaults.get_ui_hud_state("launcher"))
 
     if Windows.target_vital ~= nil and Windows.target_vital.targets_target_window ~= nil then
         _persist_window_position(Windows.target_vital.targets_target_window, Defaults.get_ui_hud_state("target_target_vitals"))
