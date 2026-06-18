@@ -230,6 +230,7 @@ LUI.src.Languages.fr.FR = {
     ["Enable boss vitals"] = "Activer les vitals du boss",
     ["Enable bestiary capture (English client only)"] = "Activer la capture du bestiaire (client anglais uniquement)",
     ["Enable expiring effects window"] = "Activer la fenêtre des effets expirants",
+    ["Enable the LUI Menu?"] = "Activer le menu LUI ?",
     ["Enable the status bar?"] = "Activer la barre d'état ?",
     ["Enabled"] = "Activé",
     ["Example skill"] = "Compétence d'exemple",

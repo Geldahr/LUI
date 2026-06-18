@@ -1813,8 +1813,8 @@ _G.LUI.Settings.Defaults.Schema =
 		},
 	},
 	["launcher"] = {
-		["enabled"] = true,
-		["icon_size"] = 36.000000,
+		["enabled"] = false,
+		["icon_size"] = 32.000000,
 		["spacing"] = 4.000000,
 		["orientation"] = "vertical",
 		["direction"] = "down",
