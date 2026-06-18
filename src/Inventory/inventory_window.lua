@@ -587,11 +587,25 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
     if shrinking_h == true then
         max_h = self._resize_start_window_h
     end
+    local allow_width_clamp = resizing_w
+    local allow_height_clamp = resizing_h
+    if self:window_size_has_inventory_capacity(desired_w, desired_h) ~= true then
+        if shrinking_h == true and resizing_w ~= true then
+            desired_w = self._resize_start_window_w
+            max_w = desired_w
+            allow_width_clamp = false
+        end
+        if shrinking_w == true and resizing_h ~= true then
+            desired_h = self._resize_start_window_h
+            max_h = desired_h
+            allow_height_clamp = false
+        end
+    end
     desired_w, desired_h = self:clamp_window_size_to_inventory_capacity(
         desired_w,
         desired_h,
-        resizing_w,
-        resizing_h,
+        allow_width_clamp,
+        allow_height_clamp,
         max_w,
         max_h
     )
