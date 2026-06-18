@@ -140,8 +140,8 @@ local function _style_control_key(key)
 end
 
 local function _add_style_color(page, settings_getter, key, label)
-    local entry = nil
-    entry = page:add_color_picker(_style_control_key(key), label,
+    local entry = page:add_color_picker(_style_control_key(key), label)
+    page:bind(entry,
         function(value)
             if entry._loaded_direct ~= true and value == entry._loaded_value then
                 return
@@ -169,8 +169,8 @@ local function _add_style_color(page, settings_getter, key, label)
 end
 
 local function _add_style_opacity(page, settings_getter, key, label)
-    local entry = nil
-    entry = page:add_line_edit(_style_control_key(key) .. "_opacity", label,
+    local entry = page:add_line_edit(_style_control_key(key) .. "_opacity", label)
+    page:bind(entry,
         function(value)
             if entry._loaded_direct ~= true and value == entry._loaded_value then
                 return
@@ -200,8 +200,8 @@ local function _add_style_opacity(page, settings_getter, key, label)
 end
 
 local function _add_style_number(page, settings_getter, key, label)
-    local entry = nil
-    entry = page:add_line_edit(_style_control_key(key), label,
+    local entry = page:add_line_edit(_style_control_key(key), label)
+    page:bind(entry,
         function(value)
             if entry._loaded_direct ~= true and value == entry._loaded_value then
                 return
@@ -229,8 +229,8 @@ local function _add_style_number(page, settings_getter, key, label)
 end
 
 local function _add_style_font_name(page, settings_getter, key, label)
-    local entry = nil
-    entry = page:add_dropdown(_style_control_key(key), label, STYLE_FONT_NAME_LABELS, STYLE_FONT_NAME_VALUES,
+    local entry = page:add_dropdown(_style_control_key(key), label, STYLE_FONT_NAME_LABELS, STYLE_FONT_NAME_VALUES)
+    page:bind(entry,
         function(value)
             if entry._loaded_direct ~= true and value == entry._loaded_value then
                 return
