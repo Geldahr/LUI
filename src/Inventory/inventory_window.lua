@@ -567,6 +567,50 @@ function InventoryWindow:clamp_window_size_to_inventory_capacity(window_w, windo
     return window_w, window_h
 end
 
+function InventoryWindow:clamp_resize_vector_to_inventory_capacity(window_w, window_h)
+    if self:window_size_has_inventory_capacity(window_w, window_h) == true then
+        return window_w, window_h
+    end
+
+    local current_w, current_h = self:GetSize()
+    if self:window_size_has_inventory_capacity(current_w, current_h) ~= true then
+        return current_w, current_h
+    end
+
+    local valid_t = 0
+    local invalid_t = 1
+    for _ = 1, 12 do
+        local t = (valid_t + invalid_t) / 2
+        local test_w = math.floor(current_w + ((window_w - current_w) * t) + 0.5)
+        local test_h = math.floor(current_h + ((window_h - current_h) * t) + 0.5)
+        if self:window_size_has_inventory_capacity(test_w, test_h) == true then
+            valid_t = t
+        else
+            invalid_t = t
+        end
+    end
+
+    local clamped_w = math.floor(current_w + ((window_w - current_w) * valid_t) + 0.5)
+    local clamped_h = math.floor(current_h + ((window_h - current_h) * valid_t) + 0.5)
+    while self:window_size_has_inventory_capacity(clamped_w, clamped_h) ~= true do
+        if clamped_w < current_w then
+            clamped_w = clamped_w + 1
+        elseif clamped_w > current_w then
+            clamped_w = clamped_w - 1
+        end
+        if clamped_h < current_h then
+            clamped_h = clamped_h + 1
+        elseif clamped_h > current_h then
+            clamped_h = clamped_h - 1
+        end
+        if clamped_w == current_w and clamped_h == current_h then
+            break
+        end
+    end
+
+    return clamped_w, clamped_h
+end
+
 function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, window_h)
     local desired_w = window_w
     local desired_h = window_h
@@ -575,40 +619,9 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
     if desired_h < min_h then desired_h = min_h end
 
     local mask = self._resize_mask or 0
-    local resizing_w = _has_resize_dir(mask, RESIZE_LEFT) or _has_resize_dir(mask, RESIZE_RIGHT)
-    local resizing_h = _has_resize_dir(mask, RESIZE_TOP) or _has_resize_dir(mask, RESIZE_BOTTOM)
-    local shrinking_w = resizing_w and window_w < self._resize_start_window_w
-    local shrinking_h = resizing_h and window_h < self._resize_start_window_h
-    local max_w = desired_w
-    local max_h = desired_h
-    if shrinking_w == true then
-        max_w = self._resize_start_window_w
+    if self._resizing == true then
+        desired_w, desired_h = self:clamp_resize_vector_to_inventory_capacity(desired_w, desired_h)
     end
-    if shrinking_h == true then
-        max_h = self._resize_start_window_h
-    end
-    local allow_width_clamp = resizing_w
-    local allow_height_clamp = resizing_h
-    if self:window_size_has_inventory_capacity(desired_w, desired_h) ~= true then
-        if shrinking_h == true and resizing_w ~= true then
-            desired_w = self._resize_start_window_w
-            max_w = desired_w
-            allow_width_clamp = false
-        end
-        if shrinking_w == true and resizing_h ~= true then
-            desired_h = self._resize_start_window_h
-            max_h = desired_h
-            allow_height_clamp = false
-        end
-    end
-    desired_w, desired_h = self:clamp_window_size_to_inventory_capacity(
-        desired_w,
-        desired_h,
-        allow_width_clamp,
-        allow_height_clamp,
-        max_w,
-        max_h
-    )
 
     if _has_resize_dir(mask, RESIZE_LEFT) then
         window_x = window_x + window_w - desired_w
