@@ -60,11 +60,9 @@ local function _style_override_value(style, key)
 end
 
 local function _dev_style_value(key)
-    if _G.STYLE ~= nil then
-        local value = _style_override_value(_G.STYLE, key)
-        if value ~= nil then
-            return value
-        end
+    local value = _style_override_value(UI.Style, key)
+    if value ~= nil then
+        return value
     end
 
     return Style.DEFAULTS[key]
