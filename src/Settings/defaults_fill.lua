@@ -1,6 +1,4 @@
 local RaidLayout = _G.LUI.Utils.RaidLayout
-local Defaults = _G.LUI.Settings.Defaults
-local State = _G.LUI.Settings.State
 import "LUI.src.Settings.default_layouts"
 import "LUI.src.Utils.raid_layout"
 

@@ -1,4 +1,3 @@
-local UI = _G.LUI.UI
 local Widgets = _G.LUI.UI.Widgets
 
 import "LUI.src.UI.Widgets.label"

@@ -1,5 +1,3 @@
-local State = _G.LUI.Settings.State
-local UI = _G.LUI.UI
 import "Turbine.UI"
 
 local LUI = _G.LUI

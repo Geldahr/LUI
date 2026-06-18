@@ -1,6 +1,5 @@
 local Vitals = _G.LUI.Features.Vitals
 local LUI_ENUMS = _G.LUI.Settings.Enums
-local UI = _G.LUI.UI
 local class = _G.LUI.Core.class
 import "Turbine.UI.Lotro"
 

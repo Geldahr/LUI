@@ -1,40 +1,4 @@
 local TR = _G.LUI.Locale.TR
-local SearchQuery = _G.LUI.Utils.SearchQuery
-local Coords = _G.LUI.Utils.Coords
-local is_boss_target = _G.LUI.Utils.is_boss_target
-local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
-local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
-local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
-local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
-local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
-local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
-local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
-local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
-local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
-local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
-local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
-local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
-local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
-local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
-local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
-local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
-local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
-local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
-local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
-local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
-local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
-local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
-local lui_dim_color = _G.LUI.Utils.lui_dim_color
-local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
-local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
-local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
-local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
-local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
-local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
-local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
-local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
-local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
-local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
 local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
@@ -52,15 +16,11 @@ local DATA_ACCESS = Bestiary.DataAccess
 
 local BASE_WIDTH = 550
 local BASE_HEIGHT = 570
-local BASE_BORDER = 2
-local BASE_PADDING = 12
 local BASE_SECTION_GAP = 6
-local BASE_HEADER_H = 68
 local BASE_PANEL_HEADER_H = 20
 local BASE_PANEL_BODY_PAD_X = 8
 local BASE_PANEL_BODY_PAD_TOP = 4
 local BASE_PANEL_BODY_PAD_BOTTOM = 10
-local BASE_CLOSE_W = 72
 local BASE_STAT_BOX_H = 52
 local BASE_PROFILE_H = 78
 local BASE_TWO_COL_H = 88
@@ -69,11 +29,8 @@ local BASE_NOTES_MIN_H = 76
 local BASE_DROP_MIN_H = 42
 local BASE_DROP_MAX_H = 150
 local BASE_TITLE_SIZE = 20
-local BASE_SUBTITLE_SIZE = 12
 local BASE_SECTION_TITLE_SIZE = 12
 local BASE_TEXT_SIZE = 11
-local BASE_HINT_SIZE = 10
-local BASE_ADVANCED_H = 22
 local BASE_OFFSET = 12
 local BASE_CHIP_H = 18
 local BASE_CHIP_PAD_X = 6
@@ -86,13 +43,8 @@ local BASE_TEXT_LINE_H = 14
 local BASE_SCROLL_W = 10
 local BASE_SCROLL_GAP = 3
 local BASE_VARIANT_TAB_H = 22
-local BASE_VARIANT_TAB_GAP_X = 4
-local BASE_VARIANT_TAB_GAP_Y = 4
 local BASE_VARIANT_TAB_PAD_X = 10
-local BASE_VARIANT_TAB_MIN_W = 84
 
-local COLOR_VALUE_CYAN = Turbine.UI.Color(1, 0.30, 0.92, 1.00)
-local COLOR_VALUE_GREEN = Turbine.UI.Color(1, 0.34, 0.82, 0.30)
 local COLOR_VALUE_GREY = Turbine.UI.Color(1, 0.56, 0.59, 0.61)
 local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
@@ -633,52 +585,8 @@ local function _collect_variant_group(selected_record)
     }
 end
 
-local function _append_value(lines, label, value)
-    if type(lines) ~= "table" then
-        return
-    end
-    if type(value) ~= "string" or value == "" then
-        value = "-"
-    end
-    lines[#lines + 1] = label .. ": " .. value
-end
 
-local function _append_section(lines, heading, values)
-    if type(lines) ~= "table" or type(values) ~= "table" or #values == 0 then
-        return
-    end
 
-    lines[#lines + 1] = ""
-    lines[#lines + 1] = heading .. ":"
-    for i = 1, #values do
-        lines[#lines + 1] = "- " .. values[i]
-    end
-end
-
-local function _append_named_section(lines, heading, values, field_order)
-    if type(lines) ~= "table" or type(values) ~= "table" or type(field_order) ~= "table" then
-        return
-    end
-
-    local has_any = false
-    for i = 1, #field_order do
-        local info = field_order[i]
-        if type(values[info.key]) == "string" and values[info.key] ~= "" then
-            has_any = true
-            break
-        end
-    end
-    if has_any ~= true then
-        return
-    end
-
-    lines[#lines + 1] = ""
-    lines[#lines + 1] = heading .. ":"
-    for i = 1, #field_order do
-        local info = field_order[i]
-        _append_value(lines, info.label, values[info.key])
-    end
-end
 
 local function _display_text(value)
     if type(value) ~= "string" or value == "" then
@@ -1109,24 +1017,6 @@ local function _style_row_set(rows, value_color)
     end
 end
 
-local function _layout_row_set(rows, x, y, w, h, label_ratio)
-    if type(rows) ~= "table" or #rows == 0 then
-        return
-    end
-
-    local gap = _scaled_int(6)
-    local row_h = math.max(_scaled_int(14), math.floor(h / #rows))
-    local label_w = math.max(1, math.floor(w * label_ratio))
-    local value_w = math.max(1, w - label_w - gap)
-
-    for i = 1, #rows do
-        local ry = y + ((i - 1) * row_h)
-        rows[i].label:SetPosition(x, ry)
-        rows[i].label:SetSize(label_w, row_h)
-        rows[i].value:SetPosition(x + label_w + gap, ry)
-        rows[i].value:SetSize(value_w, row_h)
-    end
-end
 
 local function _layout_parallel_row_sets(left_rows, right_rows, x_left, x_right, y, w_left, w_right, h,
     left_label_ratio, right_label_ratio)

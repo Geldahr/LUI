@@ -1,5 +1,4 @@
 local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
-local UI = _G.LUI.UI
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -55,12 +54,6 @@ local function _round(value)
     return math.floor((tonumber(value) or 0) + 0.5)
 end
 
-local function _trim(text)
-    local value = tostring(text or "")
-    value = value:gsub("^%s+", "")
-    value = value:gsub("%s+$", "")
-    return value
-end
 
 local function _trim_submit_suffix(text)
     if type(text) ~= "string" then

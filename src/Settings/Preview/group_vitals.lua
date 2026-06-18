@@ -1,41 +1,12 @@
 local RaidLayout = _G.LUI.Utils.RaidLayout
 local TR = _G.LUI.Locale.TR
-local SearchQuery = _G.LUI.Utils.SearchQuery
-local Coords = _G.LUI.Utils.Coords
-local is_boss_target = _G.LUI.Utils.is_boss_target
 local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
 local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
-local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
-local lui_format_timeout_seconds = _G.LUI.Utils.lui_format_timeout_seconds
 local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
-local lui_timed_row_resolved_font_size = _G.LUI.Utils.lui_timed_row_resolved_font_size
-local lui_timed_row_estimate_text_width = _G.LUI.Utils.lui_timed_row_estimate_text_width
-local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
-local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
-local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
-local lui_timed_row_min_name_width = _G.LUI.Utils.lui_timed_row_min_name_width
-local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
-local lui_timed_row_min_item_width = _G.LUI.Utils.lui_timed_row_min_item_width
-local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
-local lui_cooldown_resolved_font_size = _G.LUI.Utils.lui_cooldown_resolved_font_size
-local lui_cooldown_estimate_text_width = _G.LUI.Utils.lui_cooldown_estimate_text_width
-local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
-local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
-local lui_cooldown_min_name_width = _G.LUI.Utils.lui_cooldown_min_name_width
-local lui_cooldown_min_timed_bar_width = _G.LUI.Utils.lui_cooldown_min_timed_bar_width
-local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
-local lui_clamp_ratio = _G.LUI.Utils.lui_clamp_ratio
-local lui_dim_color = _G.LUI.Utils.lui_dim_color
-local lui_lerp_number = _G.LUI.Utils.lui_lerp_number
-local lui_lerp_color = _G.LUI.Utils.lui_lerp_color
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
-local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
-local lui_color_to_hex = _G.LUI.Utils.lui_color_to_hex
-local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color
 local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
 local lui_set_number_abbrev_preview_settings = _G.LUI.Utils.lui_set_number_abbrev_preview_settings
 local lui_clear_number_abbrev_preview_settings = _G.LUI.Utils.lui_clear_number_abbrev_preview_settings
-local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
 local CLASS_ICON_CLASSES = _G.LUI.Utils.CLASS_ICON_CLASSES
 local get_class_icon = _G.LUI.Utils.get_class_icon
 local get_party_leader_icon = _G.LUI.Utils.get_party_leader_icon
@@ -120,19 +91,7 @@ local function _preview_apply_grid_positions(member_windows, member_count, rows,
     end
 end
 
-local function _append_raid_group_cells(layout_cells, start_column, start_row, columns_per_group)
-    for i = 1, RAID_GROUP_SIZE do
-        local index = i - 1
-        layout_cells[#layout_cells + 1] = {
-            column = start_column + (index % columns_per_group),
-            row = start_row + math.floor(index / columns_per_group),
-        }
-    end
-end
 
-local function _preview_raid_layout_cells(layout_mode)
-    return RaidLayout.layout_cells(layout_mode)
-end
 
 local function _preview_compute_size_from_cells(cells, member_count, spacing_x, spacing_y, member_width, member_height)
     local normalized_count = member_count
@@ -184,10 +143,6 @@ local function _preview_apply_positions_from_cells(member_windows, cells, member
     end
 end
 
-local function _preview_compute_raid_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
-    return _preview_compute_size_from_cells(_preview_raid_layout_cells(layout_mode), member_count, spacing_x, spacing_y,
-        member_width, member_height)
-end
 
 local function _preview_compute_raid_group_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
     return _preview_compute_size_from_cells(RaidLayout.group_shape_cells(layout_mode), member_count, spacing_x, spacing_y,
@@ -242,11 +197,6 @@ local function _preview_compute_raid_outer_size(member_count, layout_mode, spaci
     return max_right, max_bottom
 end
 
-local function _preview_apply_raid_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y, member_width,
-                                             member_height)
-    _preview_apply_positions_from_cells(member_windows, _preview_raid_layout_cells(layout_mode), member_count, spacing_x,
-        spacing_y, member_width, member_height)
-end
 
 local function _preview_apply_raid_group_positions(member_windows, member_count, layout_mode, spacing_x, spacing_y,
                                                    member_width, member_height)
@@ -628,7 +578,6 @@ function Preview.update(window, spec)
     local info_bg = _require_control_color(window.controls, prefix .. "_info_background_color")
     local info_opacity = _require_control_number(window.controls, prefix .. "_info_opacity")
     local bubble_color = _require_control_color(window.controls, prefix .. "_morale_bubble_color")
-    local neutral_color = _require_control_color(window.controls, prefix .. "_morale_color_neutral")
     local high_color = _require_control_color(window.controls, prefix .. "_morale_color_high")
     local med_color = _require_control_color(window.controls, prefix .. "_morale_color_medium")
     local low_color = _require_control_color(window.controls, prefix .. "_morale_color_low")

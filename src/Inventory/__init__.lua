@@ -1,4 +1,3 @@
-local Inventory = _G.LUI.Features.Inventory
 
 import "LUI.src.Inventory.filter"
 import "LUI.src.Inventory.slot"

@@ -1,4 +1,3 @@
-local Defaults = _G.LUI.Settings.Defaults
 _G.LUI.Settings.Defaults.Bottom =
 {
     ["self"] = {

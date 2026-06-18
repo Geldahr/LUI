@@ -1,6 +1,5 @@
 local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
 local LUI_ENUMS = _G.LUI.Settings.Enums
-local UI = _G.LUI.UI
 local class = _G.LUI.Core.class
 local S = _G.LUI.Features.StatusBar.Common
 local WidgetBase = _G.LUI.Features.StatusBar.WidgetBase

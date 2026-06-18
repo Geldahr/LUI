@@ -1,5 +1,4 @@
 local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
-local UI = _G.LUI.UI
 local class = _G.LUI.Core.class
 local WidgetBase = _G.LUI.Features.StatusBar.WidgetBase
 local InventorySpaceWidget = class(WidgetBase)

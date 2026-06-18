@@ -1,7 +1,6 @@
 local ConfigWindow = _G.LUI.Settings.ConfigWindow
 local Defaults = _G.LUI.Settings.Defaults
 local State = _G.LUI.Settings.State
-local UI = _G.LUI.UI
 local function _scaled_int(value)
     return math.floor((value * State.settings.global.scale) + 0.5)
 end

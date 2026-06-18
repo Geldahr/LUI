@@ -1,4 +1,3 @@
-local UI = _G.LUI.UI
 local Utils = _G.LUI.Utils
 import "Turbine.Gameplay"
 import "Turbine.UI"

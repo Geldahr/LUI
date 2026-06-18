@@ -1,4 +1,3 @@
-local UI = _G.LUI.UI
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 

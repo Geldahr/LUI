@@ -1,4 +1,3 @@
-local UI = _G.LUI.UI
 local Travel = _G.LUI.Features.Travel
 local class = _G.LUI.Core.class
 import "Turbine.Gameplay"

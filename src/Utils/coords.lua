@@ -106,9 +106,6 @@ local function rect_contains_point(coords, ns, ew)
     )
 end
 
-local function rect_area(coords)
-    return math.abs((coords.top - coords.bottom) * (coords.right - coords.left))
-end
 
 local function find_deepest(node, ns, ew)
     local children = node.sub_zones
