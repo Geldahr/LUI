@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added the Integrations framework with generated `Settings > Integrations` pages, LUI-window hosted content, optional LUI Menu/status bar actions, and account-level `LUI_INTEGRATIONS` persistence.
+
 ### Changed
 
 ### Fixed
