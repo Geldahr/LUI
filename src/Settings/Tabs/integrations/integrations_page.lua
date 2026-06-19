@@ -20,9 +20,16 @@ local FieldType = integrations.FieldType
 local Style = UI.Widgets.Style
 local scaled_int = FeatureShell.scaled_int
 local AVAILABLE_LINK_ENTRY_HEIGHT = 58
+local AVAILABLE_STATUS_ENTRY_HEIGHT = 24
 local AVAILABLE_TITLE_HEIGHT = 22
 local AVAILABLE_LINE_EDIT_HEIGHT = 24
+local AVAILABLE_STATUS_W = 132
+local AVAILABLE_STATUS_H = 18
 local AVAILABLE_GAP = 4
+local COLOR_STATUS_INSTALLED_BG = Turbine.UI.Color(1, 0.08, 0.24, 0.14)
+local COLOR_STATUS_INSTALLED_TEXT = Turbine.UI.Color(1, 0.54, 0.95, 0.68)
+local COLOR_STATUS_NOT_INSTALLED_BG = Turbine.UI.Color(1, 0.30, 0.16, 0.08)
+local COLOR_STATUS_NOT_INSTALLED_TEXT = Turbine.UI.Color(1, 1.00, 0.70, 0.38)
 
 local function _normalize_key(value, context)
     if type(value) ~= "string" or value == "" then
@@ -323,47 +330,80 @@ end
 
 local AvailablePage = class(ConfigContent)
 
-local function _layout_available_link_entry(entry)
+local function _layout_available_entry(entry)
     local width = entry.control:GetWidth()
     local title_h = scaled_int(AVAILABLE_TITLE_HEIGHT)
     local gap = scaled_int(AVAILABLE_GAP)
+    local status_w = scaled_int(AVAILABLE_STATUS_W)
+    local status_h = scaled_int(AVAILABLE_STATUS_H)
     local link_h = scaled_int(AVAILABLE_LINE_EDIT_HEIGHT)
+    local title_w = width - status_w - gap
+    if title_w < 0 then
+        title_w = 0
+    end
 
     entry.title_label:SetPosition(0, 0)
-    entry.title_label:SetSize(width, title_h)
-    entry.link_tb:SetPosition(0, title_h + gap)
-    entry.link_tb:SetSize(width, link_h)
+    entry.title_label:SetSize(title_w, title_h)
+    entry.status_panel:SetPosition(width - status_w, math.max(0, math.floor((title_h - status_h) / 2)))
+    entry.status_panel:SetSize(status_w, status_h)
+    entry.status_label:SetPosition(0, 0)
+    entry.status_label:SetSize(status_w, status_h)
+
+    if entry.link_tb ~= nil then
+        entry.link_tb:SetPosition(0, title_h + gap)
+        entry.link_tb:SetSize(width, link_h)
+    end
 end
 
-local function _add_available_link_entry(page, integration)
-    local row = page:add_custom("available_" .. integration.key, AVAILABLE_LINK_ENTRY_HEIGHT)
+local function _add_available_entry(page, integration, status, installed)
+    local has_url = type(integration.url) == "string" and integration.url ~= ""
+    local row_height = has_url == true and AVAILABLE_LINK_ENTRY_HEIGHT or AVAILABLE_STATUS_ENTRY_HEIGHT
+    local row = page:add_custom("available_" .. integration.key, row_height)
     row.title_label = UI.Widgets.LuiLabel()
     row.title_label:SetParent(row.control)
     row.title_label:SetFont(page.window.title_font)
     row.title_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     row.title_label:SetForeColor(Style.FOREGROUND)
-    row.title_label:SetText(integration.title .. ": " .. TR["Not installed"])
+    row.title_label:SetText(integrations.display_title(integration))
     row.title_label:SetMouseVisible(false)
 
-    row.link_tb = UI.Widgets.LuiLineEdit()
-    row.link_tb:SetParent(row.control)
-    row.link_tb:SetFont(page.window.input_font)
-    row.link_tb:SetForeColor(Style.CONTROL_FOREGROUND)
-    row.link_tb:SetBackColor(Style.CONTROL_BACKGROUND_READONLY)
-    row.link_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    row.link_tb:SetMultiline(false)
-    row.link_tb:SetReadOnly(true)
-    row.link_tb:SetSelectable(true)
-    row.link_tb:SetText(integration.url)
-    row.link_tb:SetZOrder(2)
+    row.status_panel = Turbine.UI.Control()
+    row.status_panel:SetParent(row.control)
+    row.status_panel:SetBackColor(installed == true and COLOR_STATUS_INSTALLED_BG or COLOR_STATUS_NOT_INSTALLED_BG)
+    row.status_panel:SetMouseVisible(false)
+
+    row.status_label = UI.Widgets.LuiLabel()
+    row.status_label:SetParent(row.status_panel)
+    row.status_label:SetFont(page.window.input_font)
+    row.status_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    row.status_label:SetForeColor(installed == true and COLOR_STATUS_INSTALLED_TEXT or COLOR_STATUS_NOT_INSTALLED_TEXT)
+    row.status_label:SetText(status)
+    row.status_label:SetMouseVisible(false)
+
+    if has_url == true then
+        row.link_tb = UI.Widgets.LuiLineEdit()
+        row.link_tb:SetParent(row.control)
+        row.link_tb:SetFont(page.window.input_font)
+        row.link_tb:SetForeColor(Style.CONTROL_FOREGROUND)
+        row.link_tb:SetBackColor(Style.CONTROL_BACKGROUND_READONLY)
+        row.link_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        row.link_tb:SetMultiline(false)
+        row.link_tb:SetReadOnly(true)
+        row.link_tb:SetSelectable(true)
+        row.link_tb:SetText(integration.url)
+        row.link_tb:SetZOrder(2)
+    end
 
     row.control.SizeChanged = function()
-        _layout_available_link_entry(row)
+        _layout_available_entry(row)
     end
     row.apply_ui_scale = function()
         row.title_label:SetFont(page.window.title_font)
-        row.link_tb:SetFont(page.window.input_font)
-        _layout_available_link_entry(row)
+        row.status_label:SetFont(page.window.input_font)
+        if row.link_tb ~= nil then
+            row.link_tb:SetFont(page.window.input_font)
+        end
+        _layout_available_entry(row)
     end
     row:apply_ui_scale()
     return row
@@ -383,23 +423,13 @@ function AvailablePage:Constructor(window)
     for i = 1, #registered do
         local entry = registered[i]
         self:add_hr()
-        self:add_title(entry.title .. ": " .. TR["Installed"])
-        self:add_info(TR["Configure this integration in its own tab."], 34)
+        _add_available_entry(self, entry, TR["Installed"], true)
     end
 
     for i = 1, #potential do
         local entry = potential[i]
         self:add_hr()
-        if type(entry.url) == "string" and entry.url ~= "" then
-            _add_available_link_entry(self, entry)
-        else
-            self:add_title(entry.title .. ": " .. TR["Not installed"])
-            local text = entry.description
-            if type(text) ~= "string" or text == "" then
-                text = TR["Plugin not installed."]
-            end
-            self:add_info(text, 34)
-        end
+        _add_available_entry(self, entry, TR["Not installed"], false)
     end
     self:add_hr()
 end

@@ -4,6 +4,10 @@ local function _noop()
 end
 
 local function _plugin_manager_list(method_name)
+    if Turbine == nil or Turbine.PluginManager == nil then
+        return nil
+    end
+
     local manager = Turbine.PluginManager
     local method = manager[method_name]
     if method == nil then
@@ -24,6 +28,20 @@ local function _plugin_manager_list(method_name)
         return result
     end
 
+    return nil
+end
+
+local function _available_plugin(plugin_name)
+    local available = _plugin_manager_list("GetAvailablePlugins")
+    if available == nil then
+        return nil
+    end
+
+    for _, plugin in pairs(available) do
+        if plugin.Name == plugin_name then
+            return plugin
+        end
+    end
     return nil
 end
 
@@ -295,17 +313,7 @@ function integrations.exists(plugin_name)
         return false
     end
 
-    local available = _plugin_manager_list("GetAvailablePlugins")
-    if available == nil then
-        return false
-    end
-
-    for _, plugin in pairs(available) do
-        if plugin.Name == plugin_name then
-            return true
-        end
-    end
-    return false
+    return _available_plugin(plugin_name) ~= nil
 end
 
 function integrations.is_plugin_available(plugin_name)

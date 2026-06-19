@@ -66,6 +66,138 @@ local function _raw_settings()
     return settings
 end
 
+local function _plugin_get_version(plugin)
+    if plugin == nil then
+        return nil
+    end
+
+    local version = nil
+    if plugin.GetVersion ~= nil then
+        local ok, result = pcall(function()
+            return plugin:GetVersion()
+        end)
+        if ok == true then
+            version = result
+        end
+    end
+
+    if version == nil then
+        version = plugin.Version
+    end
+    if version == nil then
+        version = plugin.version
+    end
+    if version == nil then
+        return nil
+    end
+
+    local text = tostring(version)
+    if text == "" then
+        return nil
+    end
+    return text
+end
+
+local function _plugin_manager_list(method_name)
+    if Turbine == nil or Turbine.PluginManager == nil then
+        return nil
+    end
+
+    local manager = Turbine.PluginManager
+    local method = manager[method_name]
+    if method == nil then
+        return nil
+    end
+
+    local ok, result = pcall(function()
+        return method()
+    end)
+    if ok == true and type(result) == "table" then
+        return result
+    end
+
+    ok, result = pcall(function()
+        return method(manager)
+    end)
+    if ok == true and type(result) == "table" then
+        return result
+    end
+
+    return nil
+end
+
+function integrations.get_plugin_version(plugin_name)
+    if type(plugin_name) ~= "string" or plugin_name == "" then
+        error("Plugin version lookup requires a plugin name")
+    end
+
+    if Plugins ~= nil then
+        local version = _plugin_get_version(Plugins[plugin_name])
+        if version ~= nil then
+            return version
+        end
+    end
+
+    local available = _plugin_manager_list("GetAvailablePlugins")
+    if available == nil then
+        return nil
+    end
+
+    for _, plugin in pairs(available) do
+        if plugin.Name == plugin_name then
+            return _plugin_get_version(plugin)
+        end
+    end
+    return nil
+end
+
+local function _version_text(version)
+    if version == nil then
+        return nil
+    end
+
+    local text = tostring(version)
+    if text == "" then
+        return nil
+    end
+
+    return text
+end
+
+local function _plugin_version(plugin_name)
+    if type(plugin_name) ~= "string" or plugin_name == "" then
+        return nil
+    end
+
+    if integrations.get_plugin_version == nil then
+        return nil
+    end
+
+    return integrations.get_plugin_version(plugin_name)
+end
+
+local function _spec_version(spec)
+    local version = _version_text(spec.version)
+    if version ~= nil then
+        return version
+    end
+
+    return _plugin_version(spec.plugin_name)
+end
+
+function integrations.display_title(entry)
+    local version = _version_text(entry.version)
+    if version == nil then
+        version = _plugin_version(entry.plugin_name)
+        entry.version = version
+    end
+    if version ~= nil then
+        return entry.title .. " v" .. version
+    end
+
+    return entry.title
+end
+
 local function _register_action(entry, action_spec)
     if type(action_spec) ~= "table" then
         error("Integration action must be a table: " .. entry.key)
@@ -196,6 +328,10 @@ function integrations.register(spec)
     entry.key = key
     entry.title = spec.title
     entry.icon = spec.icon
+    entry.plugin_name = spec.plugin_name
+    entry.version = _spec_version(spec)
+    entry.url = spec.url
+    entry.description = spec.description
     if entry.load ~= spec.load then
         entry.load = spec.load
         entry.runtime = nil
@@ -273,6 +409,7 @@ function integrations.register_potential(spec)
     entry.title = spec.title
     entry.icon = spec.icon
     entry.plugin_name = spec.plugin_name
+    entry.version = _spec_version(spec)
     entry.description = spec.description
     entry.url = spec.url
     return entry
