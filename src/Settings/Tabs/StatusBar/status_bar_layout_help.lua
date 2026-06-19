@@ -21,6 +21,11 @@ function StatusBarPage.build_layout_help()
         TR["  %assets% - toggle assets window"],
     }
 
+    local shortcut_lines = S.get_status_bar_shortcut_hint_lines()
+    for i = 1, #shortcut_lines do
+        lines[#lines + 1] = shortcut_lines[i]
+    end
+
     local external_lines = S.get_status_bar_api_hint_lines()
     for i = 1, #external_lines do
         lines[#lines + 1] = external_lines[i]

@@ -2,11 +2,13 @@ local TR = _G.LUI.Locale.TR
 local Pages = _G.LUI.Settings.Pages
 local ConfigContent = _G.LUI.Settings.Content.ConfigContent
 local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
+local Shortcuts = _G.LUI.UI.Shortcuts
 local class = _G.LUI.Core.class
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.tabs"
 import "LUI.src.Settings.Tabs.Launcher.launcher_button_selector"
+import "LUI.src.UI.shortcuts"
 
 local CreateLauncherButtonSelector = _G.LUI.Settings.Controls.CreateLauncherButtonSelector
 local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
@@ -16,15 +18,6 @@ local ORIENTATION_LABELS = { TR["Vertical"], TR["Horizontal"] }
 local ORIENTATION_VALUES = { "vertical", "horizontal" }
 local DIRECTION_LABELS = { TR["Up"], TR["Down"], TR["Left"], TR["Right"] }
 local DIRECTION_VALUES = { "up", "down", "left", "right" }
-
-local BUTTONS = {
-    { key = "config", label = TR["Config"] },
-    { key = "inventory", label = TR["Inventory"] },
-    { key = "assets", label = TR["Assets"] },
-    { key = "craft", label = TR["Crafting"] },
-    { key = "travel", label = TR["Travel"] },
-    { key = "bestiary", label = TR["Bestiary"] },
-}
 
 local function _normalize_direction(orientation, direction)
     if orientation == "vertical" then
@@ -125,7 +118,7 @@ function LauncherPage:Constructor(window)
 
     local buttons = ConfigContent(window, 4)
     local launcher_page = self
-    CreateLauncherButtonSelector(buttons, "launcher_buttons", BUTTONS)
+    CreateLauncherButtonSelector(buttons, "launcher_buttons", Shortcuts.get_launcher_definitions())
     local buttons_entry = buttons.controls.launcher_buttons
     local buttons_load = buttons.load
     local buttons_save = buttons.save

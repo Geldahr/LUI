@@ -27,10 +27,17 @@ StatusBar.APIItems = StatusBar.APIItems or {
     by_token = {},
     order = {},
 }
+StatusBar.ShortcutWidgets = StatusBar.ShortcutWidgets or {
+    by_key = {},
+    order = {},
+}
 local STATUS_BAR_API_ITEMS = StatusBar.APIItems
 STATUS_BAR_API_ITEMS.by_key = STATUS_BAR_API_ITEMS.by_key or {}
 STATUS_BAR_API_ITEMS.by_token = STATUS_BAR_API_ITEMS.by_token or {}
 STATUS_BAR_API_ITEMS.order = STATUS_BAR_API_ITEMS.order or {}
+local STATUS_BAR_SHORTCUT_WIDGETS = StatusBar.ShortcutWidgets
+STATUS_BAR_SHORTCUT_WIDGETS.by_key = STATUS_BAR_SHORTCUT_WIDGETS.by_key or {}
+STATUS_BAR_SHORTCUT_WIDGETS.order = STATUS_BAR_SHORTCUT_WIDGETS.order or {}
 local MAX_STATUS_BAR_API_TITLE_LEN = 20
 local MAX_STATUS_BAR_API_DESCRIPTION_LEN = 40
 
@@ -647,6 +654,78 @@ local function _make_status_bar_api_layout_token(value)
     return "%" .. key .. "%"
 end
 
+function S.register_status_bar_shortcut_widget(spec)
+    if type(spec) ~= "table" then
+        error("Status bar shortcut widget registration expects a table")
+    end
+    if type(spec.shortcut_key) ~= "string" or spec.shortcut_key == "" then
+        error("Status bar shortcut widget registration is missing shortcut_key")
+    end
+    if Shortcuts.is_valid(spec.shortcut_key) ~= true then
+        error("Status bar shortcut widget registration uses an unknown shortcut: " .. tostring(spec.shortcut_key))
+    end
+
+    local token_key = _normalize_status_bar_api_key(spec.token_key)
+    if token_key == nil then
+        error("Status bar shortcut widget registration is missing token_key: " .. spec.shortcut_key)
+    end
+
+    local title = _normalize_status_bar_api_title(spec.title)
+    if title == nil then
+        error("Status bar shortcut widget registration is missing title: " .. spec.shortcut_key)
+    end
+
+    local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[spec.shortcut_key]
+    if entry == nil then
+        entry = {}
+        STATUS_BAR_SHORTCUT_WIDGETS.by_key[spec.shortcut_key] = entry
+        STATUS_BAR_SHORTCUT_WIDGETS.order[#STATUS_BAR_SHORTCUT_WIDGETS.order + 1] = spec.shortcut_key
+    end
+
+    entry.kind = "shortcut"
+    entry.shortcut_key = spec.shortcut_key
+    entry.token_key = token_key
+    entry.title = title
+    entry.token = _make_status_bar_api_layout_token(token_key)
+
+    if entry.token == nil then
+        error("Failed to build status bar shortcut token: " .. spec.shortcut_key)
+    end
+
+    S.STATUS_BAR_LAYOUT_TOKENS[token_key] = spec.shortcut_key
+    S.STATUS_BAR_WIDGET_LAYOUT_TOKENS[spec.shortcut_key] = entry.token
+
+    return entry
+end
+
+function S.get_status_bar_shortcut_widget_entries()
+    local out = {}
+    for i = 1, #STATUS_BAR_SHORTCUT_WIDGETS.order do
+        local key = STATUS_BAR_SHORTCUT_WIDGETS.order[i]
+        local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[key]
+        if entry ~= nil then
+            out[#out + 1] = entry
+        end
+    end
+    return out
+end
+
+function S.get_status_bar_shortcut_hint_lines()
+    if #STATUS_BAR_SHORTCUT_WIDGETS.order == 0 then
+        return {}
+    end
+
+    local lines = {}
+    for i = 1, #STATUS_BAR_SHORTCUT_WIDGETS.order do
+        local key = STATUS_BAR_SHORTCUT_WIDGETS.order[i]
+        local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[key]
+        if entry ~= nil then
+            lines[#lines + 1] = "  " .. tostring(entry.token or "") .. " - " .. tostring(entry.title or "")
+        end
+    end
+    return lines
+end
+
 function S.normalize_status_bar_api_command(value)
     local command = _trim(value)
     if command == "" then
@@ -882,6 +961,18 @@ function S.get_status_bar_edit_palette_entries()
             token = S.make_status_bar_layout_token(widget_key),
         }
     end
+    for i = 1, #STATUS_BAR_SHORTCUT_WIDGETS.order do
+        local key = STATUS_BAR_SHORTCUT_WIDGETS.order[i]
+        local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[key]
+        if entry ~= nil then
+            entries[#entries + 1] = {
+                kind = "widget",
+                widget_key = entry.shortcut_key,
+                title = entry.title,
+                token = entry.token,
+            }
+        end
+    end
     for i = 1, #STATUS_BAR_API_ITEMS.order do
         local key = STATUS_BAR_API_ITEMS.order[i]
         local entry = STATUS_BAR_API_ITEMS.by_key[key]
@@ -921,6 +1012,11 @@ function S.get_status_bar_widget_display_name(widget_key)
         return Shortcuts.get_label("assets")
     elseif widget_key == "bestiary" then
         return Shortcuts.get_label("bestiary")
+    end
+
+    local shortcut_entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[widget_key]
+    if shortcut_entry ~= nil then
+        return shortcut_entry.title
     end
 
     return tostring(widget_key or "")

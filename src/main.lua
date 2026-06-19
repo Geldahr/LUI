@@ -7,6 +7,7 @@ import "LUI.src.namespace"
 local LUI = _G.LUI
 local UI = LUI.UI
 local Settings = LUI.Settings
+local integrations = LUI.integrations
 local State = Settings.State
 local Defaults = Settings.Defaults
 local DefaultLayouts = Defaults.DefaultLayouts
@@ -43,6 +44,7 @@ import "LUI.src.Bestiary"
 import "LUI.src.Crafting"
 import "LUI.src.Travel"
 import "LUI.src.StatusBar.api_chat_bridge"
+import "LUI.integrations"
 
 local function _lui_window_work_area()
     local display_w, display_h = Turbine.UI.Display.GetSize()
@@ -434,6 +436,10 @@ if State.loaded_settings_was_new == true then
     Settings.Colors.fix_colors()
     Settings.rebuild()
 end
+integrations.ensure_loaded_settings(State.loaded_settings)
+integrations.sync_placements(State.loaded_settings)
+Settings.rebuild()
+integrations.apply_settings()
 Apply.saved_global_style()
 Flags.crafting_display_mode_active = State.settings.crafting.display_mode
 
@@ -516,6 +522,8 @@ Plugins["LUI"].Unload = function()
         Windows.launcher:destroy()
         Windows.launcher = nil
     end
+
+    integrations.unload()
 
     if Windows.assets ~= nil then
         Windows.assets:SetVisible(false)

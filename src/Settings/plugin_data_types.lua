@@ -10,12 +10,14 @@ local KIND_NUMBER = "number"
 local KIND_BOOL = "bool"
 local KIND_COLOR = "color"
 local KIND_STYLE_VALUE = "style_value"
+local KIND_SETTING_VALUE = "setting_value"
 
 local STRING = { kind = KIND_STRING }
 local NUMBER = { kind = KIND_NUMBER }
 local BOOL = { kind = KIND_BOOL }
 local COLOR = { kind = KIND_COLOR }
 local STYLE_VALUE = { kind = KIND_STYLE_VALUE }
+local SETTING_VALUE = { kind = KIND_SETTING_VALUE }
 
 local function _table_schema(fields, options)
     local schema = {
@@ -274,6 +276,41 @@ local function _decode_style_value(value)
     return value
 end
 
+local function _encode_setting_value(value)
+    local value_type = type(value)
+    if value_type == "number" then
+        return _encode_number(value)
+    end
+    if value_type == "boolean" then
+        return _encode_bool(value)
+    end
+    if value_type == "string" then
+        return value
+    end
+    if value_type == "table" or value_type == "userdata" then
+        return _encode_color(value)
+    end
+
+    error("Unsupported settings plugin data value type: " .. value_type)
+end
+
+local function _decode_setting_value(value)
+    if type(value) ~= "string" then
+        return value
+    end
+    if string.match(value, "^number:<.+>$") ~= nil then
+        return _decode_number(value)
+    end
+    if value == "bool:<1>" or value == "bool:<0>" then
+        return _decode_bool(value)
+    end
+    if string.match(value, "^color:<.+>$") ~= nil then
+        return _decode_color(value)
+    end
+
+    return value
+end
+
 local function _resolve_encode_schema(schema, key)
     if schema.fields[key] ~= nil then
         return schema.fields[key]
@@ -353,6 +390,9 @@ function Types.encode(value, schema)
     if schema.kind == KIND_STYLE_VALUE then
         return _encode_style_value(value)
     end
+    if schema.kind == KIND_SETTING_VALUE then
+        return _encode_setting_value(value)
+    end
     if schema.kind ~= KIND_TABLE then
         error("Unsupported plugin data schema kind: " .. tostring(schema.kind))
     end
@@ -391,6 +431,9 @@ function Types.decode(value, schema)
     end
     if schema.kind == KIND_STYLE_VALUE then
         return _decode_style_value(value)
+    end
+    if schema.kind == KIND_SETTING_VALUE then
+        return _decode_setting_value(value)
     end
     if schema.kind ~= KIND_TABLE then
         error("Unsupported plugin data schema kind: " .. tostring(schema.kind))
@@ -433,6 +476,11 @@ settings_schema.fields.global.fields.style = _map_schema(STYLE_VALUE)
 settings_schema.fields.launcher.fields.buttons = _array_schema(STRING)
 settings_schema.fields.status_bar.fields.item_registry = _map_schema(NUMBER)
 settings_schema.fields.status_bar.fields.widgets.fields.wallet.fields.items = _array_schema(STRING)
+settings_schema.fields.integrations = _map_schema(_table_schema({
+    enabled = BOOL,
+    placement = STRING,
+    settings = _map_schema(SETTING_VALUE),
+}))
 
 local crafting_settings_schema = _table_schema({
     tracked_plan = _table_schema({

@@ -2103,6 +2103,8 @@ _G.LUI.Settings.Defaults.Schema =
 			[6] = "bestiary",
 		},
 	},
+	["integrations"] = {
+	},
 	["drops"] = {
 		["enabled"] = false,
 		["width"] = 180.000000,

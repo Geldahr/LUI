@@ -12,6 +12,7 @@ import "LUI.src.Settings.Tabs.Travel.travel_page"
 import "LUI.src.Settings.Tabs.Assets.assets_page"
 import "LUI.src.Settings.Tabs.Launcher.launcher_page"
 import "LUI.src.Settings.Tabs.StatusBar.status_bar_page"
+import "LUI.src.Settings.Tabs.integrations.integrations_page"
 import "LUI.src.Settings.Tabs.ProfileManager.profile_manager_page"
 import "LUI.src.Settings.Tabs.Help.help_page"
 
@@ -26,6 +27,7 @@ local TravelPage = Pages.TravelPage
 local AssetsPage = Pages.AssetsPage
 local LauncherPage = Pages.LauncherPage
 local StatusBarPage = Pages.StatusBarPage
+local IntegrationsPage = Pages.IntegrationsPage
 local ProfileManagerPage = Pages.ProfileManagerPage
 local HelpPage = Pages.HelpPage
 
@@ -166,6 +168,10 @@ function ConfigWindow:build_tabs()
     local status_bar_page = StatusBarPage(self)
     status_bar_page._tab_key = "status_bar"
     self.main_tab_bar:add_tab(TR["Status Bar"], status_bar_page)
+
+    local integrations_page = IntegrationsPage(self)
+    integrations_page._tab_key = "integrations"
+    self.main_tab_bar:add_tab(TR["Integrations"], integrations_page)
 
     local profile_manager_page = ProfileManagerPage(self)
     profile_manager_page._tab_key = "profile_manager"

@@ -406,6 +406,9 @@ end
 
 local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, widget_entry)
     local shortcut_spec = SHORTCUT_WIDGETS[widget_key]
+    if shortcut_spec == nil and Shortcuts.is_valid(widget_key) == true then
+        shortcut_spec = { shortcut_key = widget_key, display_mode = "icon" }
+    end
     if shortcut_spec ~= nil then
         local ctor = _widget_ctor("ShortcutButtonWidget")
         if ctor == nil then

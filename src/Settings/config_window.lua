@@ -12,6 +12,7 @@ local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Hidable = _G.LUI.UI.Hidable
 local Settings = _G.LUI.Settings
+local integrations = _G.LUI.integrations
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.Gameplay"
@@ -622,6 +623,8 @@ function ConfigWindow:load_from_settings()
 end
 
 function ConfigWindow:refresh_runtime_settings()
+    integrations.ensure_loaded_settings(State.loaded_settings)
+    integrations.sync_placements(State.loaded_settings)
     Colors.fix_colors()
     Settings.rebuild()
     Apply.inventory_settings()
@@ -632,6 +635,7 @@ function ConfigWindow:refresh_runtime_settings()
     Apply.crafting_settings()
     Apply.travel_settings()
     Apply.launcher_settings()
+    integrations.apply_settings()
     Apply.lotro_vitals_handoff()
 
     self:apply_ui_scale()

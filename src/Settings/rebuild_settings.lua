@@ -13,6 +13,7 @@ local State = Settings.State
 local ToLotro = Settings.ToLotro
 local LUI_ENUMS = Settings.Enums
 local S = LUI.Features.StatusBar.Common
+local Shortcuts = UI.Shortcuts
 local FONT_TO_LOTRO = LUI.Utils.FONT_TO_LOTRO
 
 function Settings.rebuild()
@@ -205,6 +206,7 @@ function Settings.rebuild()
         assets = { tile = {}, layouts = { icons = {}, details = {} } },
         bestiary = {},
         launcher = {},
+        integrations = {},
     }
 
     State.settings.global.scale = scaling
@@ -505,6 +507,7 @@ function Settings.rebuild()
     launcher.direction = normalize_launcher_direction(raw_launcher.orientation, raw_launcher.direction)
     launcher.collapse_after_click = raw_launcher.collapse_after_click == true
     launcher.buttons = raw_launcher.buttons
+    State.settings.integrations = raw.integrations
 
     local raw_tt = raw.target.vitals.targets_target
     local dst_tt = State.settings.target.vitals.targets_target
@@ -697,6 +700,12 @@ function Settings.rebuild()
     sb.widgets.bestiary = build_shortcut_widget("bestiary")
     sb.widgets.craft = build_shortcut_widget("craft")
     sb.widgets.travel = build_shortcut_widget("travel")
+
+    local dynamic_status_bar_keys = Shortcuts.get_dynamic_status_bar_keys()
+    for i = 1, #dynamic_status_bar_keys do
+        local widget_key = dynamic_status_bar_keys[i]
+        sb.widgets[widget_key] = build_shortcut_widget(widget_key)
+    end
 
     local raw_cd = raw.self.cooldowns
     local cd = State.settings.self.cooldowns
