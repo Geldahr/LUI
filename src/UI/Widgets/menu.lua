@@ -32,6 +32,8 @@ local BASE_ARROW_W = 16
 local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_ICON_SIZE = 16
+local BASE_SCROLL_W = 10
+local DEFAULT_MAX_VISIBLE = 10
 
 local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
@@ -315,6 +317,9 @@ function LuiMenu:Constructor()
     self._parent_action = nil
     self._open_child = nil
     self._popup_overlay = nil
+    self._scroll_enabled = false
+    self._max_visible = DEFAULT_MAX_VISIBLE
+    self._scroll_options = nil
 
     self.button = LuiButton()
     self.button:SetParent(self)
@@ -354,6 +359,19 @@ function LuiMenu:Constructor()
     self.popup_inner:SetMouseVisible(true)
     self.popup_inner:SetBackColor(Style.BACKGROUND)
 
+    self.popup_list = Turbine.UI.ListBox()
+    self.popup_list:SetParent(self.popup_inner)
+    self.popup_list:SetOrientation(Turbine.UI.Orientation.Vertical)
+    self.popup_list:SetBackColor(Style.BACKGROUND)
+    self.popup_list:SetVisible(false)
+
+    self.popup_scroll = Turbine.UI.Lotro.ScrollBar()
+    self.popup_scroll:SetParent(self.popup_inner)
+    self.popup_scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
+    self.popup_scroll:SetWidth(BASE_SCROLL_W)
+    self.popup_scroll:SetVisible(false)
+    self.popup_list:SetVerticalScrollBar(self.popup_scroll)
+
     self.SizeChanged = function()
         self.button:SetSize(self:GetSize())
     end
@@ -364,6 +382,24 @@ end
 function LuiMenu:set_title(title)
     self._title = tostring(title or "")
     self.button:set_text(self._title)
+end
+
+function LuiMenu:set_scroll_options(options)
+    if options ~= nil and options.scroll == true then
+        self._scroll_enabled = true
+        self._max_visible = math.max(1, math.floor((tonumber(options.max_visible) or DEFAULT_MAX_VISIBLE) + 0.5))
+        self._scroll_options = {
+            scroll = true,
+            max_visible = self._max_visible,
+        }
+    else
+        self._scroll_enabled = false
+        self._max_visible = DEFAULT_MAX_VISIBLE
+        self._scroll_options = nil
+    end
+
+    self:_sync_action_parents()
+    self:_layout_popup()
 end
 
 function LuiMenu:set_scale(scale)
@@ -393,13 +429,29 @@ function LuiMenu:set_font(font)
     end
 end
 
+function LuiMenu:_sync_action_parents()
+    self.popup_list:ClearItems()
+    for i = 1, #self._items do
+        local action = self._items[i]
+        if self._scroll_enabled == true then
+            self.popup_list:AddItem(action)
+        else
+            action:SetParent(self.popup_inner)
+        end
+    end
+end
+
 function LuiMenu:add_action(spec)
     if type(spec) ~= "table" then
         spec = { text = spec }
     end
 
     local action = LuiAction()
-    action:SetParent(self.popup_inner)
+    if self._scroll_enabled == true then
+        self.popup_list:AddItem(action)
+    else
+        action:SetParent(self.popup_inner)
+    end
     action:_set_owner_menu(self)
     action:set_scale(self._scale)
     action:set_font(self._font)
@@ -417,10 +469,11 @@ function LuiMenu:add_action(spec)
     return action
 end
 
-function LuiMenu:add_menu(title)
+function LuiMenu:add_menu(title, options)
     local submenu = LuiMenu()
     submenu:set_title(title)
     submenu._parent_menu = self
+    submenu:set_scroll_options(options or self._scroll_options)
     submenu:set_scale(self._scale)
     submenu:set_font(self._font)
 
@@ -428,6 +481,22 @@ function LuiMenu:add_menu(title)
     action:_set_submenu(submenu)
     submenu._parent_action = action
     return submenu
+end
+
+function LuiMenu:clear_items()
+    self:close()
+    self.popup_list:ClearItems()
+    for i = 1, #self._items do
+        local action = self._items[i]
+        if action._submenu ~= nil then
+            action._submenu:clear_items()
+        end
+        if self._scroll_enabled ~= true then
+            action:SetParent(nil)
+        end
+    end
+    self._items = {}
+    self:_layout_popup()
 end
 
 function LuiMenu:preferred_width()
@@ -626,17 +695,35 @@ function LuiMenu:_layout_popup()
     local width = self:_popup_width()
     local item_h = _scaled_int(self._scale, BASE_ITEM_H)
     local inner_w = math.max(0, width - (2 * border))
-    local inner_h = item_h * #self._items
+    local item_count = #self._items
+    local visible_count = item_count
+    if self._scroll_enabled == true then
+        visible_count = math.min(item_count, self._max_visible)
+    end
+    local inner_h = item_h * visible_count
+    local use_scroll = self._scroll_enabled == true and item_count > visible_count
+    local scroll_w = use_scroll == true and BASE_SCROLL_W or 0
+    local item_w = math.max(0, inner_w - scroll_w)
 
     self.popup:SetSize(width, inner_h + (2 * border))
     self.popup_inner:SetPosition(border, border)
     self.popup_inner:SetSize(inner_w, inner_h)
     self.popup_inner:SetBackColor(Style.BACKGROUND)
+    self.popup_list:SetVisible(self._scroll_enabled == true)
+    self.popup_list:SetPosition(0, 0)
+    self.popup_list:SetSize(item_w, inner_h)
+    self.popup_scroll:SetPosition(item_w, 0)
+    self.popup_scroll:SetSize(BASE_SCROLL_W, inner_h)
+    self.popup_scroll:SetVisible(use_scroll)
 
-    for i = 1, #self._items do
+    for i = 1, item_count do
         local action = self._items[i]
-        action:SetPosition(0, (i - 1) * item_h)
-        action:SetSize(inner_w, item_h)
+        if self._scroll_enabled == true then
+            action:SetSize(item_w, item_h)
+        else
+            action:SetPosition(0, (i - 1) * item_h)
+            action:SetSize(inner_w, item_h)
+        end
     end
 end
 
@@ -711,10 +798,11 @@ function LuiMenuBar:set_font(font)
     end
 end
 
-function LuiMenuBar:add_menu(title)
+function LuiMenuBar:add_menu(title, options)
     local menu = LuiMenu()
     menu:SetParent(self)
     menu:set_title(title)
+    menu:set_scroll_options(options)
     menu:set_scale(self._scale)
     menu:set_font(self._font)
 
