@@ -567,43 +567,40 @@ function InventoryWindow:clamp_window_size_to_inventory_capacity(window_w, windo
     return window_w, window_h
 end
 
-function InventoryWindow:clamp_resize_vector_to_inventory_capacity(window_w, window_h)
+function InventoryWindow:clamp_resize_to_inventory_capacity(window_w, window_h)
     if self:window_size_has_inventory_capacity(window_w, window_h) == true then
         return window_w, window_h
     end
 
     local current_w, current_h = self:GetSize()
-    if self:window_size_has_inventory_capacity(current_w, current_h) ~= true then
-        return current_w, current_h
-    end
+    local clamped_w = window_w
+    local clamped_h = window_h
 
-    local valid_t = 0
-    local invalid_t = 1
-    for _ = 1, 12 do
-        local t = (valid_t + invalid_t) / 2
-        local test_w = math.floor(current_w + ((window_w - current_w) * t) + 0.5)
-        local test_h = math.floor(current_h + ((window_h - current_h) * t) + 0.5)
-        if self:window_size_has_inventory_capacity(test_w, test_h) == true then
-            valid_t = t
-        else
-            invalid_t = t
-        end
-    end
+    for _ = 1, self:get_backpack_size() + MAX_COLS do
+        local old_w = clamped_w
+        local old_h = clamped_h
 
-    local clamped_w = math.floor(current_w + ((window_w - current_w) * valid_t) + 0.5)
-    local clamped_h = math.floor(current_h + ((window_h - current_h) * valid_t) + 0.5)
-    while self:window_size_has_inventory_capacity(clamped_w, clamped_h) ~= true do
-        if clamped_w < current_w then
-            clamped_w = clamped_w + 1
-        elseif clamped_w > current_w then
-            clamped_w = clamped_w - 1
+        if window_w < current_w then
+            local rows = self:get_visible_rows_for_window_height(clamped_h, MIN_ROWS)
+            local needed_cols = self:get_columns_for_visible_rows(rows)
+            local min_w = self:compute_window_size(needed_cols, rows)
+            if min_w > current_w then
+                min_w = current_w
+            end
+            clamped_w = math.max(window_w, min_w)
         end
-        if clamped_h < current_h then
-            clamped_h = clamped_h + 1
-        elseif clamped_h > current_h then
-            clamped_h = clamped_h - 1
+
+        if window_h < current_h then
+            local cols = self:get_columns_for_window_width(clamped_w)
+            local needed_rows = self:get_needed_rows(cols)
+            local _, min_h = self:compute_window_size(cols, needed_rows)
+            if min_h > current_h then
+                min_h = current_h
+            end
+            clamped_h = math.max(window_h, min_h)
         end
-        if clamped_w == current_w and clamped_h == current_h then
+
+        if clamped_w == old_w and clamped_h == old_h then
             break
         end
     end
@@ -620,7 +617,7 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
 
     local mask = self._resize_mask or 0
     if self._resizing == true then
-        desired_w, desired_h = self:clamp_resize_vector_to_inventory_capacity(desired_w, desired_h)
+        desired_w, desired_h = self:clamp_resize_to_inventory_capacity(desired_w, desired_h)
     end
 
     if _has_resize_dir(mask, RESIZE_LEFT) then
