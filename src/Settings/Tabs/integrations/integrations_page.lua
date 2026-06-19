@@ -17,7 +17,12 @@ import "LUI.src.Settings.Content.nested_tabs"
 
 local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local FieldType = integrations.FieldType
+local Style = UI.Widgets.Style
 local scaled_int = FeatureShell.scaled_int
+local AVAILABLE_LINK_ENTRY_HEIGHT = 58
+local AVAILABLE_TITLE_HEIGHT = 22
+local AVAILABLE_LINE_EDIT_HEIGHT = 24
+local AVAILABLE_GAP = 4
 
 local function _normalize_key(value, context)
     if type(value) ~= "string" or value == "" then
@@ -316,26 +321,87 @@ function IntegrationDetailPage:_build_template_tabs()
     end
 end
 
-local PotentialPage = class(ConfigContent)
+local AvailablePage = class(ConfigContent)
 
-function PotentialPage:Constructor(window)
+local function _layout_available_link_entry(entry)
+    local width = entry.control:GetWidth()
+    local title_h = scaled_int(AVAILABLE_TITLE_HEIGHT)
+    local gap = scaled_int(AVAILABLE_GAP)
+    local link_h = scaled_int(AVAILABLE_LINE_EDIT_HEIGHT)
+
+    entry.title_label:SetPosition(0, 0)
+    entry.title_label:SetSize(width, title_h)
+    entry.link_tb:SetPosition(0, title_h + gap)
+    entry.link_tb:SetSize(width, link_h)
+end
+
+local function _add_available_link_entry(page, integration)
+    local row = page:add_custom("available_" .. integration.key, AVAILABLE_LINK_ENTRY_HEIGHT)
+    row.title_label = UI.Widgets.LuiLabel()
+    row.title_label:SetParent(row.control)
+    row.title_label:SetFont(page.window.title_font)
+    row.title_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    row.title_label:SetForeColor(Style.FOREGROUND)
+    row.title_label:SetText(integration.title .. ": " .. TR["Not installed"])
+    row.title_label:SetMouseVisible(false)
+
+    row.link_tb = UI.Widgets.LuiLineEdit()
+    row.link_tb:SetParent(row.control)
+    row.link_tb:SetFont(page.window.input_font)
+    row.link_tb:SetForeColor(Style.CONTROL_FOREGROUND)
+    row.link_tb:SetBackColor(Style.CONTROL_BACKGROUND_READONLY)
+    row.link_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    row.link_tb:SetMultiline(false)
+    row.link_tb:SetReadOnly(true)
+    row.link_tb:SetSelectable(true)
+    row.link_tb:SetText(integration.url)
+    row.link_tb:SetZOrder(2)
+
+    row.control.SizeChanged = function()
+        _layout_available_link_entry(row)
+    end
+    row.apply_ui_scale = function()
+        row.title_label:SetFont(page.window.title_font)
+        row.link_tb:SetFont(page.window.input_font)
+        _layout_available_link_entry(row)
+    end
+    row:apply_ui_scale()
+    return row
+end
+
+function AvailablePage:Constructor(window)
     ConfigContent.Constructor(self, window, 4)
 
+    local registered = integrations.get_registered()
     local potential = integrations.get_potential()
-    if #potential == 0 then
+
+    if #registered == 0 and #potential == 0 then
         self:add_info(TR["No integrations detected."], 34)
         return
     end
 
+    for i = 1, #registered do
+        local entry = registered[i]
+        self:add_hr()
+        self:add_title(entry.title .. ": " .. TR["Installed"])
+        self:add_info(TR["Configure this integration in its own tab."], 34)
+    end
+
     for i = 1, #potential do
         local entry = potential[i]
-        self:add_title(entry.title)
-        local text = entry.description
-        if type(text) ~= "string" or text == "" then
-            text = TR["Plugin not installed."]
+        self:add_hr()
+        if type(entry.url) == "string" and entry.url ~= "" then
+            _add_available_link_entry(self, entry)
+        else
+            self:add_title(entry.title .. ": " .. TR["Not installed"])
+            local text = entry.description
+            if type(text) ~= "string" or text == "" then
+                text = TR["Plugin not installed."]
+            end
+            self:add_info(text, 34)
         end
-        self:add_info(text, 34)
     end
+    self:add_hr()
 end
 
 local IntegrationsPage = class(ConfigTabs)
@@ -346,15 +412,12 @@ function IntegrationsPage:Constructor(window)
     self.show_main_content_border = false
     self.sub_tab_bar:set_content_padding(scaled_int(8))
 
+    self:add_tab(TR["Available"], "available", AvailablePage(window))
+
     local registered = integrations.get_registered()
     for i = 1, #registered do
         local entry = registered[i]
         self:add_tab(entry.title, entry.key, IntegrationDetailPage(window, entry))
-    end
-
-    local potential = integrations.get_potential()
-    if #registered == 0 or #potential > 0 then
-        self:add_tab(TR["Available"], "available", PotentialPage(window))
     end
 end
 

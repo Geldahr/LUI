@@ -136,6 +136,9 @@ end
 local function _new_window(entry)
     local window = UI.Widgets.LuiWindow()
     window.show = function(self)
+        if integrations.is_enabled(entry.key) ~= true then
+            return
+        end
         integrations.resolve_content_window(entry)
         UI.Widgets.LuiWindow.show(self)
     end
@@ -143,6 +146,21 @@ local function _new_window(entry)
         return integrations.resolve_content_window(entry)
     end
     return window
+end
+
+local function _load_entry(entry)
+    if entry._loaded == true then
+        return entry.runtime
+    end
+    if entry.load == nil then
+        entry._loaded = true
+        return nil
+    end
+
+    local runtime = entry.load(entry, entry.window)
+    entry.runtime = runtime
+    entry._loaded = true
+    return runtime
 end
 
 function integrations.register(spec)
@@ -164,6 +182,9 @@ function integrations.register(spec)
     if spec.icon == nil then
         error("Integration is missing icon: " .. key)
     end
+    if spec.load ~= nil and type(spec.load) ~= "function" then
+        error("Integration load must be a function: " .. key)
+    end
 
     local entry = Registry.by_key[key]
     if entry == nil then
@@ -175,6 +196,12 @@ function integrations.register(spec)
     entry.key = key
     entry.title = spec.title
     entry.icon = spec.icon
+    if entry.load ~= spec.load then
+        entry.load = spec.load
+        entry.runtime = nil
+        entry._loaded = spec.load == nil
+        entry._content_loaded = false
+    end
     local content_window = spec.content_window or spec.window
     if entry.content_window ~= content_window then
         entry.content_window = content_window
@@ -247,6 +274,7 @@ function integrations.register_potential(spec)
     entry.icon = spec.icon
     entry.plugin_name = spec.plugin_name
     entry.description = spec.description
+    entry.url = spec.url
     return entry
 end
 
@@ -280,15 +308,35 @@ function integrations.is_enabled(key)
     return integration_settings.enabled == true
 end
 
+function integrations.load(target)
+    if type(target) == "string" then
+        local entry = Registry.by_key[target]
+        if entry == nil then
+            error("Unknown integration: " .. tostring(target))
+        end
+        return _load_entry(entry)
+    end
+
+    if type(target) ~= "table" then
+        error("integrations.load expects an integration key or entry")
+    end
+    return _load_entry(target)
+end
+
 function integrations.is_action_active(key, action_key)
     local entry = Registry.by_key[key]
     if entry == nil then
         error("Unknown integration: " .. tostring(key))
     end
+    if integrations.is_enabled(key) ~= true then
+        return false
+    end
+
     local action = entry.actions_by_key[action_key]
     if action == nil then
         error("Unknown integration action: " .. tostring(key) .. "/" .. tostring(action_key))
     end
+    integrations.load(entry)
 
     if type(action.is_active) == "function" then
         return action.is_active(entry, action) == true
@@ -334,7 +382,12 @@ end
 
 function integrations.resolve_content_window(entry)
     local window = entry.window
+    if integrations.is_enabled(entry.key) ~= true then
+        return window
+    end
+
     _apply_window_runtime(entry)
+    integrations.load(entry)
     if entry._content_loaded == true then
         if entry.size == SIZE_CONTENT then
             window:size_to_content()
@@ -359,6 +412,10 @@ function integrations.resolve_content_window(entry)
 end
 
 function integrations.toggle_content_window(entry)
+    if integrations.is_enabled(entry.key) ~= true then
+        return
+    end
+
     local window = integrations.resolve_content_window(entry)
     if window:IsVisible() == true then
         window:hide()
@@ -378,6 +435,7 @@ function integrations.activate(key, action_key)
     if action == nil then
         error("Unknown integration action: " .. tostring(key) .. "/" .. tostring(action_key))
     end
+    integrations.load(entry)
 
     if type(action.activate) == "function" then
         action.activate(entry, action)
@@ -467,15 +525,19 @@ function integrations.apply_settings()
 
         _apply_window_runtime(entry)
 
-        if entry.set_settings ~= nil then
+        local was_enabled = entry._applied_enabled == true
+        if state.enabled == true or was_enabled == true or entry._content_loaded == true then
+            integrations.load(entry)
+        end
+        if entry.set_settings ~= nil and (state.enabled == true or was_enabled == true or entry._content_loaded == true) then
             entry.set_settings(nested_settings, state, entry)
         end
 
-        if entry._applied_enabled ~= true and state.enabled == true then
+        if was_enabled ~= true and state.enabled == true then
             if type(entry.window.on_enable) == "function" then
                 entry.window.on_enable(nested_settings, state, entry)
             end
-        elseif entry._applied_enabled == true and state.enabled ~= true then
+        elseif was_enabled == true and state.enabled ~= true then
             if type(entry.window.on_disable) == "function" then
                 entry.window.on_disable(nested_settings, state, entry)
             end

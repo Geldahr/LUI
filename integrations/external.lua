@@ -166,6 +166,7 @@ local function _register_potential(spec)
         icon = spec.icon,
         plugin_name = spec.plugin_name,
         description = spec.description or ("Install " .. spec.plugin_name .. " to enable this integration."),
+        url = spec.url,
     })
 end
 
@@ -286,7 +287,6 @@ function integrations.prepare_external(spec)
         return false
     end
 
-    _unload_plugins(spec)
     return true
 end
 

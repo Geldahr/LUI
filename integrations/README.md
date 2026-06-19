@@ -44,21 +44,60 @@ local window = integrations.init({
     title = "Example Plugin",
     icon = "Author/ExamplePlugin/icon.tga",
     size = "content",
-    content_window = function(entry, lui_window)
-        local root = Turbine.UI.Control()
-        root:SetSize(860, 600)
+    load = function(entry, window)
+        local plugin = ExamplePlugin
 
-        local label = Turbine.UI.Label()
-        label:SetParent(root)
-        label:SetSize(300, 24)
-        label:SetText("Example integration content")
+        entry.content_window = function(_, lui_window)
+            local root = Turbine.UI.Control()
+            root:SetSize(860, 600)
 
-        return root
-    end,
-    set_settings = function(settings, state, entry)
-        ExamplePlugin.settings.show_panel = settings.General.Display.show_panel
-        ExamplePlugin.settings.mode = settings.General.Display.mode
-        ExamplePlugin.settings.accent = settings.General.Display.accent
+            local label = Turbine.UI.Label()
+            label:SetParent(root)
+            label:SetSize(300, 24)
+            label:SetText("Example integration content")
+
+            return root
+        end
+
+        entry.set_settings = function(settings, state)
+            plugin.settings.show_panel = settings.General.Display.show_panel
+            plugin.settings.mode = settings.General.Display.mode
+            plugin.settings.accent = settings.General.Display.accent
+        end
+
+        window.on_enable = function(settings, state, loaded_entry)
+            integrations.resolve_content_window(loaded_entry)
+        end
+
+        window.on_disable = function()
+            window:hide()
+        end
+
+        window.on_unload = function()
+            plugin.shutdown()
+        end
+
+        window.on_activate = function()
+            window:toggle()
+        end
+
+        window.on_show = function()
+            plugin.refresh()
+        end
+
+        window.on_hide = function()
+            plugin.pause()
+        end
+
+        local menu = window:get_menu_bar():add_menu("Example")
+        menu:add_action({
+            text = "Refresh",
+            action = function()
+                plugin.refresh()
+            end,
+        })
+
+        return plugin
     end,
     settings = {
         order = { "General" },
@@ -95,41 +134,6 @@ local window = integrations.init({
 window:set_resizable(window.RESIZE_BOTH)
 window:set_minimum_size(520, 360)
 window:set_padding(6)
-
-window.on_enable = function(settings, state, entry)
-    integrations.resolve_content_window(entry)
-end
-
-window.on_disable = function(settings, state, entry)
-    local real_window = _G.LUI.Runtime.Windows.integrations[entry.key]
-    if real_window ~= nil then
-        real_window:hide()
-    end
-end
-
-window.on_unload = function(settings, state, entry)
-    ExamplePlugin.shutdown()
-end
-
-window.on_activate = function()
-    window:toggle()
-end
-
-window.on_show = function()
-    ExamplePlugin.refresh()
-end
-
-window.on_hide = function()
-    ExamplePlugin.pause()
-end
-
-local menu = window:get_menu_bar():add_menu("Example")
-menu:add_action({
-    text = "Refresh",
-    action = function()
-        ExamplePlugin.refresh()
-    end,
-})
 ```
 
 ## Settings Template
@@ -273,12 +277,13 @@ If the integration wraps an external plugin, do not change the external plugin s
 ```lua
 local integrations = _G.LUI.integrations
 
-local runtime, external = integrations.load_external({
+local EXTERNAL = {
     key = "example_plugin",
     title = "Example Plugin",
     icon = "Author/ExamplePlugin/icon.tga",
     plugin_name = "ExamplePlugin",
     description = "Install ExamplePlugin to enable this integration.",
+    url = "https://example.com/ExamplePlugin",
     namespace = "ExamplePlugin",
     imports = {
         "Author.ExamplePlugin.Data",
@@ -304,14 +309,31 @@ local runtime, external = integrations.load_external({
             return root
         end
     end,
-})
+}
 
-if runtime == nil then
+if integrations.prepare_external(EXTERNAL) ~= true then
     return
 end
+
+local window = integrations.init({
+    key = "example_plugin",
+    title = "Example Plugin",
+    icon = "Author/ExamplePlugin/icon.tga",
+    load = function(entry, window)
+        local runtime = integrations.load_external(EXTERNAL)
+        entry.content_window = function(_, lui_window)
+            return runtime.BuildContent(lui_window)
+        end
+        return runtime
+    end,
+})
 ```
 
-`load_external` checks `integrations.exists(plugin_name)` before importing anything, unloads native plugin script states when they appear loaded, protected-imports the requested files, validates required runtime functions, wires `unload_method` when provided, runs `setup` when provided, and registers a potential integration instead of registering a live integration when the external plugin cannot be imported.
+`prepare_external` checks `integrations.exists(plugin_name)` before registering the live integration. If the external plugin is missing, it registers a potential integration for the Available page and returns `false`. It does not import or unload the external plugin.
+
+`load_external` checks `integrations.exists(plugin_name)` before importing anything, unloads native plugin script states when they appear loaded, protected-imports the requested files, validates required runtime functions, wires `unload_method` when provided, runs `setup` when provided, and registers a potential integration when the external plugin cannot be imported.
+
+LUI does not call `load`, `set_settings`, resolve content, or show the integration window for a disabled integration unless that integration was already active in the current session and is being disabled. Keep external imports behind `load`.
 
 Use `integrations.exists(plugin_name)` directly only when an integration needs custom behavior before calling the generic loader.
 
