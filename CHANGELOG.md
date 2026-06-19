@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added vertical and corner resizing to the Inventory window, with capacity-aware minimum sizing so the window keeps enough rows/columns for all backpack slots while still resizing smoothly by pixels.
+
 ### Changed
 
 ### Fixed
