@@ -3,6 +3,7 @@ local SERVER_DATA_SCOPE = Turbine.DataScope.Server
 local CHARACTER_DATA_SCOPE = Turbine.DataScope.Character
 
 local ACCOUNT_DATA_KEY = "LUI_PROFILES"
+local INTEGRATIONS_DATA_KEY = "LUI_INTEGRATIONS"
 local CHARACTER_DATA_KEY = "LUI_CHARACTER"
 local SERVER_ASSETS_CACHE_KEY = "LUI_ASSETS_CACHE"
 local SERVER_BESTIARY_CACHE_KEY = "LUI_BESTIARY_CACHE"
@@ -10,6 +11,7 @@ local SERVER_BESTIARY_CACHE_KEY = "LUI_BESTIARY_CACHE"
 local FALLBACK_PROFILE_NAME = "Configuration"
 local UNKNOWN_CHARACTER_NAME = "__unknown_character__"
 local LUI = _G.LUI
+local Integrations = LUI.integrations
 local Settings = LUI.Settings
 local State = Settings.State
 local Persistence = Settings.Persistence
@@ -24,6 +26,7 @@ local BestiaryCache = LUI.Runtime.Caches.Bestiary
 
 local PLUGIN_DATA_SCHEMAS = {
     [ACCOUNT_DATA_KEY] = PluginDataTypes.ACCOUNT,
+    [INTEGRATIONS_DATA_KEY] = PluginDataTypes.INTEGRATIONS,
     [CHARACTER_DATA_KEY] = PluginDataTypes.CHARACTER,
     [SERVER_ASSETS_CACHE_KEY] = PluginDataTypes.ASSETS_CACHE,
     [SERVER_BESTIARY_CACHE_KEY] = PluginDataTypes.BESTIARY_CACHE,
@@ -188,8 +191,44 @@ local function _stamp_character_settings_version(character_settings)
     character_settings.version = Migrations.get_settings_version()
 end
 
+local function _ensure_integration_settings()
+    if type(State.integration_settings) ~= "table" then
+        State.integration_settings = {}
+    end
+end
+
+local function _attach_integration_settings(settings)
+    if type(settings) ~= "table" then
+        error("Settings root must be a table")
+    end
+
+    _ensure_integration_settings()
+    settings.integrations = State.integration_settings
+end
+
+local function _settings_for_profile_save(settings)
+    local copy = _copy_table(settings)
+    copy.integrations = {}
+    return copy
+end
+
+local function _strip_profile_integrations(account_settings)
+    if type(account_settings) ~= "table" or type(account_settings.profiles) ~= "table" then
+        return
+    end
+
+    for _, profile in pairs(account_settings.profiles) do
+        if type(profile) == "table" and type(profile.settings) == "table" then
+            profile.settings = _settings_for_profile_save(profile.settings)
+        end
+    end
+end
+
 local function _save_settings_files_raw()
+    _ensure_integration_settings()
+    _strip_profile_integrations(State.account_settings)
     _save_plugin_data(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY, State.account_settings)
+    _save_plugin_data(ACCOUNT_DATA_SCOPE, INTEGRATIONS_DATA_KEY, State.integration_settings)
     _save_plugin_data(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY, State.character_settings)
 end
 
@@ -241,7 +280,12 @@ local function _sync_current_profile_settings()
         profile.name = State.current_character_name
     end
 
-    profile.settings = State.loaded_settings
+    _stamp_profile_settings_version(State.loaded_settings)
+    profile.settings = _settings_for_profile_save(State.loaded_settings)
+end
+
+function Persistence.attach_integration_settings(settings)
+    _attach_integration_settings(settings)
 end
 
 function Persistence.ensure_account_settings()
@@ -468,11 +512,12 @@ function Persistence.create_configuration(name, settings)
     _stamp_account_settings_version(s)
     local profile_id = tostring(s.next_profile_id)
     s.next_profile_id = s.next_profile_id + 1
-    _stamp_profile_settings_version(settings)
+    local profile_settings = _settings_for_profile_save(settings)
+    _stamp_profile_settings_version(profile_settings)
 
     s.profiles[profile_id] = {
         name = name,
-        settings = settings,
+        settings = profile_settings,
     }
 
     return profile_id
@@ -493,6 +538,7 @@ function Persistence.assign_character_profile(profile_id)
     State.current_character_name = character_name
     State.current_profile_id = profile_id
     State.loaded_settings = profile.settings
+    _attach_integration_settings(State.loaded_settings)
     return true
 end
 
@@ -632,6 +678,8 @@ function Persistence.save_settings()
 end
 
 function Persistence.capture_runtime_geometry()
+    Integrations.capture_window_geometry(State.loaded_settings)
+
     if Windows.config ~= nil and Windows.config.update_saved_geometry ~= nil then
         Windows.config:update_saved_geometry()
     end
@@ -701,6 +749,7 @@ end
 
 function Persistence.load_settings()
     State.account_settings = _load_plugin_data(ACCOUNT_DATA_SCOPE, ACCOUNT_DATA_KEY)
+    State.integration_settings = _load_plugin_data(ACCOUNT_DATA_SCOPE, INTEGRATIONS_DATA_KEY)
     State.character_settings = _load_plugin_data(CHARACTER_DATA_SCOPE, CHARACTER_DATA_KEY)
     AssetCache.data = nil
     AssetCache.loaded = false
@@ -787,10 +836,12 @@ function Persistence.load_settings()
     else
         State.loaded_settings = {}
     end
+    _attach_integration_settings(State.loaded_settings)
 
     local defaults_filled = Defaults.ensure_loaded_settings()
+    _attach_integration_settings(State.loaded_settings)
     if defaults_filled == true and type(profile) == "table" and type(profile.settings) == "table" then
-        profile.settings = State.loaded_settings
+        profile.settings = _settings_for_profile_save(State.loaded_settings)
         _stamp_account_settings_version(State.account_settings)
         _stamp_character_settings_version(State.character_settings)
         _save_settings_files_raw()

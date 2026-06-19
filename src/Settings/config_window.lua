@@ -624,7 +624,6 @@ end
 
 function ConfigWindow:refresh_runtime_settings()
     integrations.ensure_loaded_settings(State.loaded_settings)
-    integrations.sync_placements(State.loaded_settings)
     Colors.fix_colors()
     Settings.rebuild()
     Apply.inventory_settings()

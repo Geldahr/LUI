@@ -437,7 +437,6 @@ if State.loaded_settings_was_new == true then
     Settings.rebuild()
 end
 integrations.ensure_loaded_settings(State.loaded_settings)
-integrations.sync_placements(State.loaded_settings)
 Settings.rebuild()
 integrations.apply_settings()
 Apply.saved_global_style()

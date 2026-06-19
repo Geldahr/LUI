@@ -84,7 +84,7 @@ end
 
 local function _field_value(page_owner, field_key, field)
     local integration_settings = page_owner:integration_settings()
-    local value = integration_settings.settings[field_key]
+    local value = integration_settings.plugin_settings[field_key]
     if value == nil then
         error("Missing persisted integration setting: " .. page_owner.integration.key .. "/" .. field_key)
     end
@@ -93,7 +93,7 @@ end
 
 local function _save_field_value(page_owner, field_key, value)
     local integration_settings = page_owner:integration_settings()
-    integration_settings.settings[field_key] = value
+    integration_settings.plugin_settings[field_key] = value
 end
 
 local function _add_generated_field(page, page_owner, first_key, second_key, field_index, field)

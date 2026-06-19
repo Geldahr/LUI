@@ -476,11 +476,18 @@ settings_schema.fields.global.fields.style = _map_schema(STYLE_VALUE)
 settings_schema.fields.launcher.fields.buttons = _array_schema(STRING)
 settings_schema.fields.status_bar.fields.item_registry = _map_schema(NUMBER)
 settings_schema.fields.status_bar.fields.widgets.fields.wallet.fields.items = _array_schema(STRING)
-settings_schema.fields.integrations = _map_schema(_table_schema({
+local integration_settings_schema = _table_schema({
     enabled = BOOL,
-    placement = STRING,
-    settings = _map_schema(SETTING_VALUE),
-}))
+    plugin_settings = _map_schema(SETTING_VALUE),
+    window_geometry = _table_schema({
+        left = NUMBER,
+        top = NUMBER,
+        width = NUMBER,
+        height = NUMBER,
+        tile = STRING,
+    }),
+})
+settings_schema.fields.integrations = _map_schema(integration_settings_schema)
 
 local crafting_settings_schema = _table_schema({
     tracked_plan = _table_schema({
@@ -546,5 +553,6 @@ local bestiary_entry_schema = _table_schema({
 
 Types.ACCOUNT = account_schema
 Types.CHARACTER = character_schema
+Types.INTEGRATIONS = _map_schema(integration_settings_schema)
 Types.ASSETS_CACHE = assets_cache_schema
 Types.BESTIARY_CACHE = _map_schema(bestiary_entry_schema)
