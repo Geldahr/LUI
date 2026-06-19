@@ -714,6 +714,19 @@ function LuiWindow:_apply_style()
     end
 end
 
+function LuiWindow:SetVisible(visible)
+    local was_visible = self:IsVisible() == true
+    LuiBaseWindow.SetVisible(self, visible)
+    local is_visible = self:IsVisible() == true
+    if is_visible ~= was_visible then
+        if is_visible == true and type(self.on_show) == "function" then
+            self.on_show(self)
+        elseif is_visible ~= true and type(self.on_hide) == "function" then
+            self.on_hide(self)
+        end
+    end
+end
+
 function LuiWindow:show()
     self:SetVisible(true)
     if self:is_maximized() == true then

@@ -5,7 +5,7 @@ Integrations let LUI host another plugin or plugin-like feature inside LUI inste
 An integration lives under `integrations/<Name>/__init__.lua` and is imported from `integrations/__init__.lua`.
 
 ```lua
-import "LUI.integrations.api"
+import "LUI.integrations"
 import "LUI.integrations.ExamplePlugin"
 ```
 
@@ -39,7 +39,7 @@ Use `LUI.integrations.init` or `LUI.integrations.register` from the integration 
 local integrations = _G.LUI.integrations
 local FieldType = integrations.FieldType
 
-integrations.init({
+local window = integrations.init({
     key = "example_plugin",
     title = "Example Plugin",
     icon = "Author/ExamplePlugin/icon.tga",
@@ -56,29 +56,10 @@ integrations.init({
 
         return root
     end,
-    actions = {
-        {
-            key = "open",
-            title = "Example Plugin",
-            icon = "Author/ExamplePlugin/icon.tga",
-        },
-    },
     set_settings = function(settings, state, entry)
         ExamplePlugin.settings.show_panel = settings.General.Display.show_panel
         ExamplePlugin.settings.mode = settings.General.Display.mode
         ExamplePlugin.settings.accent = settings.General.Display.accent
-    end,
-    on_enable = function(settings, state, entry)
-        integrations.resolve_content_window(entry)
-    end,
-    on_disable = function(settings, state, entry)
-        local window = _G.LUI.Runtime.Windows.integrations[entry.key]
-        if window ~= nil then
-            window:hide()
-        end
-    end,
-    on_unload = function(settings, state, entry)
-        ExamplePlugin.shutdown()
     end,
     settings = {
         order = { "General" },
@@ -110,6 +91,44 @@ integrations.init({
             },
         },
     },
+})
+
+window:set_resizable(window.RESIZE_BOTH)
+window:set_minimum_size(520, 360)
+
+window.on_enable = function(settings, state, entry)
+    integrations.resolve_content_window(entry)
+end
+
+window.on_disable = function(settings, state, entry)
+    local real_window = _G.LUI.Runtime.Windows.integrations[entry.key]
+    if real_window ~= nil then
+        real_window:hide()
+    end
+end
+
+window.on_unload = function(settings, state, entry)
+    ExamplePlugin.shutdown()
+end
+
+window.on_activate = function()
+    window:toggle()
+end
+
+window.on_show = function()
+    ExamplePlugin.refresh()
+end
+
+window.on_hide = function()
+    ExamplePlugin.pause()
+end
+
+local menu = window:get_menu_bar():add_menu("Example")
+menu:add_action({
+    text = "Refresh",
+    action = function()
+        ExamplePlugin.refresh()
+    end,
 })
 ```
 
@@ -179,20 +198,67 @@ settings.General.Display.Text.Color.rgb_value
 
 Each action becomes an LUI shortcut. Users can place that shortcut in the LUI Menu or status bar through the existing LUI button configuration. The action is visible only when the integration is enabled.
 
-If `actions` is omitted, LUI registers one default `open` action using the integration title and icon.
+If `actions` is omitted, LUI registers one default `open` action using the integration title and icon. Set `window.on_activate` to customize what that default action does.
+
+```lua
+local window = integrations.init({
+    key = "example_plugin",
+    title = "Example Plugin",
+    icon = "Author/ExamplePlugin/icon.tga",
+    content_window = build_content,
+    actions = {
+        {
+            key = "refresh",
+            title = "Refresh Example Plugin",
+            icon = "Author/ExamplePlugin/refresh.tga",
+            activate = function(entry, action)
+                ExamplePlugin.refresh()
+            end,
+        },
+    },
+})
+
+window.on_activate = function()
+    window:toggle()
+end
+```
+
+`integrations.init` returns the integration `LuiWindow`, so integration code can configure the window immediately. The window exists immediately; integration content is built the first time the window is resolved or shown.
+
+```lua
+local bar = window:get_menu_bar()
+local file = bar:add_menu("File")
+local close_action = file:add_action({
+    text = "Close",
+    action = function()
+        window:hide()
+    end,
+})
+close_action:set_enabled(true)
+
+window:set_margin(0, 0, 0, 0)
+window:enable_maximize(false)
+window.on_show = function()
+    ExamplePlugin.refresh()
+end
+window.on_hide = function()
+    ExamplePlugin.pause()
+end
+```
+
+Additional actions can still provide their own state:
 
 ```lua
 actions = {
     {
-        key = "open",
-        title = "Example Plugin",
-        icon = "Author/ExamplePlugin/icon.tga",
+        key = "refresh",
+        title = "Refresh Example Plugin",
+        icon = "Author/ExamplePlugin/refresh.tga",
         activate = function(entry, action)
-            integrations.toggle_content_window(entry)
+            ExamplePlugin.refresh()
         end,
         is_active = function(entry, action)
-            local window = _G.LUI.Runtime.Windows.integrations[entry.key]
-            return window ~= nil and window:IsVisible() == true
+            return ExamplePlugin.is_refreshing == true
         end,
     },
 }
@@ -205,7 +271,13 @@ If the integration wraps an external plugin, do not change the external plugin s
 ```lua
 local integrations = _G.LUI.integrations
 
-local runtime = integrations.import_external("ExamplePlugin", {
+local runtime, external = integrations.load_external({
+    key = "example_plugin",
+    title = "Example Plugin",
+    icon = "Author/ExamplePlugin/icon.tga",
+    plugin_name = "ExamplePlugin",
+    description = "Install ExamplePlugin to enable this integration.",
+    namespace = "ExamplePlugin",
     imports = {
         "Author.ExamplePlugin.Data",
         "Author.ExamplePlugin.Main",
@@ -215,25 +287,31 @@ local runtime = integrations.import_external("ExamplePlugin", {
         BuildLauncherButton = true,
         RegisterCallbacks = true,
     },
+    unload_plugins = {
+        "ExamplePluginHelper",
+    },
+    required_runtime = {
+        "LoadSettings",
+    },
+    unload_method = "UnloadIntegration",
+    setup = function(plugin)
+        plugin.BuildContent = function(parent)
+            local root = Turbine.UI.Control()
+            root:SetParent(parent)
+            root:SetSize(500, 300)
+            return root
+        end
+    end,
 })
-```
 
-For external-plugin availability:
-
-```lua
-if integrations.is_plugin_available("ExamplePlugin") ~= true then
-    integrations.register_potential({
-        key = "example_plugin",
-        title = "Example Plugin",
-        icon = "Author/ExamplePlugin/icon.tga",
-        plugin_name = "ExamplePlugin",
-        description = "Install ExamplePlugin to enable this integration.",
-    })
+if runtime == nil then
     return
 end
-
-integrations.disable_plugin("ExamplePlugin")
 ```
+
+`load_external` checks `integrations.exists(plugin_name)` before importing anything, unloads native plugin script states when they appear loaded, protected-imports the requested files, validates required runtime functions, wires `unload_method` when provided, runs `setup` when provided, and registers a potential integration instead of registering a live integration when the external plugin cannot be imported.
+
+Use `integrations.exists(plugin_name)` directly only when an integration needs custom behavior before calling the generic loader.
 
 User-editable plugin settings belong in the LUI settings template and are applied through `set_settings`. Internal plugin state that is not exposed to the user may remain owned by the plugin.
 
