@@ -14,7 +14,7 @@ local TravelWindow = class(UI.Widgets.LuiWindow)
 Travel.TravelWindow = TravelWindow
 
 local Style = UI.Widgets.Style
-local BASE_MARGIN = 6
+local BASE_PADDING = 6
 local BASE_GAP = 6
 local BASE_EMPTY_FONT = 12
 local BASE_LIST_ICON = 36
@@ -204,7 +204,7 @@ function TravelWindow:Constructor()
 
     self:set_title(TR["Travel"])
     self:set_icon(UI.AssetIds.compass)
-    self:set_margin(_scaled_int(BASE_MARGIN))
+    self:set_padding(_scaled_int(BASE_PADDING))
 
     self.content = Turbine.UI.Control()
     self.content:SetMouseVisible(false)
@@ -524,7 +524,7 @@ function TravelWindow:apply_settings()
     self._grid_row_h = self._grid_icon_size + self._gap
     self._list_row_h = math.max(_scaled_int(BASE_LIST_ROW_H), _scaled_int(BASE_EMPTY_FONT + 10))
 
-    self:set_margin(_scaled_int(BASE_MARGIN))
+    self:set_padding(_scaled_int(BASE_PADDING))
     _apply_body_label_style(self.empty_label, BASE_EMPTY_FONT)
 
     if self._geometry_loaded ~= true then

@@ -20,6 +20,8 @@ local _normalize_key = Schema.normalize_key
 
 local DEFAULT_WINDOW_WIDTH = 900
 local DEFAULT_WINDOW_HEIGHT = 650
+local SIZE_WINDOW = "window"
+local SIZE_CONTENT = "content"
 
 local function _action_key(entry_key, action_key)
     return "integration:" .. entry_key .. ":" .. action_key
@@ -43,6 +45,17 @@ local function _spec_dimension(spec, primary_key, alias_key, default_value, inte
         error("Invalid integration window " .. primary_key .. ": " .. tostring(integration_key))
     end
     return numeric
+end
+
+local function _spec_size_mode(spec, integration_key)
+    local value = spec.size
+    if value == nil then
+        return SIZE_WINDOW
+    end
+    if value == SIZE_WINDOW or value == SIZE_CONTENT then
+        return value
+    end
+    error("Invalid integration size mode: " .. tostring(integration_key))
 end
 
 local function _raw_settings()
@@ -116,7 +129,7 @@ local function _configure_window(entry)
     local window = entry.window
     window:set_title(entry.title)
     window:set_icon(entry.icon)
-    window:set_margin(0, 0, 0, 0)
+    window:set_padding(0, 0, 0, 0)
     window:SetSize(entry.window_width, entry.window_height)
 end
 
@@ -169,6 +182,7 @@ function integrations.register(spec)
     end
     entry.window_width = _spec_dimension(spec, "window_width", "width", DEFAULT_WINDOW_WIDTH, key)
     entry.window_height = _spec_dimension(spec, "window_height", "height", DEFAULT_WINDOW_HEIGHT, key)
+    entry.size = _spec_size_mode(spec, key)
     entry.settings_template = spec.settings or spec.template or {}
     if spec.set_settings ~= nil and type(spec.set_settings) ~= "function" then
         error("Integration set_settings must be a function: " .. key)
@@ -322,6 +336,9 @@ function integrations.resolve_content_window(entry)
     local window = entry.window
     _apply_window_runtime(entry)
     if entry._content_loaded == true then
+        if entry.size == SIZE_CONTENT then
+            window:size_to_content()
+        end
         return window
     end
 
@@ -333,6 +350,9 @@ function integrations.resolve_content_window(entry)
         error("Integration has no content window: " .. entry.key)
     end
 
+    if entry.size == SIZE_CONTENT then
+        window:size_to_content(content)
+    end
     window:set_central_widget(content)
     entry._content_loaded = true
     return window

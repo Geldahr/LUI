@@ -43,8 +43,7 @@ local window = integrations.init({
     key = "example_plugin",
     title = "Example Plugin",
     icon = "Author/ExamplePlugin/icon.tga",
-    window_width = 900,
-    window_height = 650,
+    size = "content",
     content_window = function(entry, lui_window)
         local root = Turbine.UI.Control()
         root:SetSize(860, 600)
@@ -95,6 +94,7 @@ local window = integrations.init({
 
 window:set_resizable(window.RESIZE_BOTH)
 window:set_minimum_size(520, 360)
+window:set_padding(6)
 
 window.on_enable = function(settings, state, entry)
     integrations.resolve_content_window(entry)
@@ -225,6 +225,8 @@ end
 
 `integrations.init` returns the integration `LuiWindow`, so integration code can configure the window immediately. The window exists immediately; integration content is built the first time the window is resolved or shown.
 
+Use `size = "content"` when the returned root control has a fixed or preferred size. LUI reads `content:GetSize()` before attaching the content to the window, then sizes the outer window around that content plus padding, title bar, divider, and border.
+
 ```lua
 local bar = window:get_menu_bar()
 local file = bar:add_menu("File")
@@ -236,7 +238,7 @@ local close_action = file:add_action({
 })
 close_action:set_enabled(true)
 
-window:set_margin(0, 0, 0, 0)
+window:set_padding(0, 0, 0, 0)
 window:enable_maximize(false)
 window.on_show = function()
     ExamplePlugin.refresh()

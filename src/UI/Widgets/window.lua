@@ -28,7 +28,7 @@ local BASE_MIN_W = 160
 local BASE_MIN_H = 90
 local BASE_TITLE_BAR_H = 20
 local BASE_GAP = 4
-local BASE_MARGIN = 8
+local BASE_PADDING = 8
 local BASE_ICON = 20
 local BASE_TITLE_ACTION_ICON = 10
 local BASE_RESIZE_EDGE = 4
@@ -166,10 +166,12 @@ function LuiWindow:Constructor(opts)
     self._icon_asset = nil
     self._icon_size = BASE_ICON
     self._central_widget = nil
-    self._margin_left = BASE_MARGIN
-    self._margin_top = BASE_MARGIN
-    self._margin_right = BASE_MARGIN
-    self._margin_bottom = BASE_MARGIN
+    self._central_widget_width = nil
+    self._central_widget_height = nil
+    self._padding_left = BASE_PADDING
+    self._padding_top = BASE_PADDING
+    self._padding_right = BASE_PADDING
+    self._padding_bottom = BASE_PADDING
     self._title_bar_divider_visible = true
     self._close_handler = nil
     self._draggable = true
@@ -365,45 +367,71 @@ function LuiWindow:set_central_widget(widget)
     self:_layout()
 end
 
-function LuiWindow:set_central_widget_size(width, height)
-    local content_w = tonumber(width)
-    local content_h = tonumber(height)
+function LuiWindow:_apply_central_widget_size()
+    local content_w = self._central_widget_width
+    local content_h = self._central_widget_height
     local border = self:_border()
     local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
     local divider_h = self:_divider_h()
-    local margin_l = _scaled_int(self._scale, self._margin_left)
-    local margin_t = _scaled_int(self._scale, self._margin_top)
-    local margin_r = _scaled_int(self._scale, self._margin_right)
-    local margin_b = _scaled_int(self._scale, self._margin_bottom)
+    local padding_l = _scaled_int(self._scale, self._padding_left)
+    local padding_t = _scaled_int(self._scale, self._padding_top)
+    local padding_r = _scaled_int(self._scale, self._padding_right)
+    local padding_b = _scaled_int(self._scale, self._padding_bottom)
 
     self:SetSize(
-        content_w + margin_l + margin_r + (border * 2),
-        content_h + margin_t + margin_b + title_h + divider_h + (border * 2)
+        content_w + padding_l + padding_r + (border * 2),
+        content_h + padding_t + padding_b + title_h + divider_h + (border * 2)
     )
+end
+
+function LuiWindow:set_central_widget_size(width, height)
+    self._central_widget_width = tonumber(width)
+    self._central_widget_height = tonumber(height)
+    self:_apply_central_widget_size()
+end
+
+function LuiWindow:size_to_content(content)
+    local widget = content or self._central_widget
+    if widget == nil then
+        error("Cannot size LUI window to content without a central widget")
+    end
+
+    local width, height = widget:GetSize()
+    width = tonumber(width)
+    height = tonumber(height)
+    if width == nil or height == nil or width <= 0 or height <= 0 then
+        error("Cannot size LUI window to invalid content size")
+    end
+
+    self:set_central_widget_size(width, height)
 end
 
 function LuiWindow:central_widget()
     return self._central_widget
 end
 
-function LuiWindow:set_margin(left, top, right, bottom)
-    local margin_left = tonumber(left)
-    if margin_left == nil then
-        margin_left = BASE_MARGIN
+function LuiWindow:set_padding(left, top, right, bottom)
+    local padding_left = tonumber(left)
+    if padding_left == nil then
+        padding_left = BASE_PADDING
     end
 
-    local margin_top = tonumber(top)
-    local margin_right = tonumber(right)
-    local margin_bottom = tonumber(bottom)
+    local padding_top = tonumber(top)
+    local padding_right = tonumber(right)
+    local padding_bottom = tonumber(bottom)
 
-    if margin_top == nil then margin_top = margin_left end
-    if margin_right == nil then margin_right = margin_left end
-    if margin_bottom == nil then margin_bottom = margin_top end
+    if padding_top == nil then padding_top = padding_left end
+    if padding_right == nil then padding_right = padding_left end
+    if padding_bottom == nil then padding_bottom = padding_top end
 
-    self._margin_left = math.max(0, margin_left)
-    self._margin_top = math.max(0, margin_top)
-    self._margin_right = math.max(0, margin_right)
-    self._margin_bottom = math.max(0, margin_bottom)
+    self._padding_left = math.max(0, padding_left)
+    self._padding_top = math.max(0, padding_top)
+    self._padding_right = math.max(0, padding_right)
+    self._padding_bottom = math.max(0, padding_bottom)
+    if self._central_widget_width ~= nil and self._central_widget_height ~= nil then
+        self:_apply_central_widget_size()
+        return
+    end
     self:_layout()
 end
 
@@ -1353,13 +1381,13 @@ function LuiWindow:_layout()
     local content_h = math.max(0, inner_h - content_y)
     local central = self._central_widget
     if central ~= nil then
-        local margin_l = _scaled_int(self._scale, self._margin_left)
-        local margin_t = _scaled_int(self._scale, self._margin_top)
-        local margin_r = _scaled_int(self._scale, self._margin_right)
-        local margin_b = _scaled_int(self._scale, self._margin_bottom)
-        local central_w = math.max(0, inner_w - margin_l - margin_r)
-        local central_h = math.max(0, content_h - margin_t - margin_b)
-        central:SetPosition(margin_l, content_y + margin_t)
+        local padding_l = _scaled_int(self._scale, self._padding_left)
+        local padding_t = _scaled_int(self._scale, self._padding_top)
+        local padding_r = _scaled_int(self._scale, self._padding_right)
+        local padding_b = _scaled_int(self._scale, self._padding_bottom)
+        local central_w = math.max(0, inner_w - padding_l - padding_r)
+        local central_h = math.max(0, content_h - padding_t - padding_b)
+        central:SetPosition(padding_l, content_y + padding_t)
         central:SetSize(central_w, central_h)
     end
 

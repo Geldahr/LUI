@@ -3,6 +3,46 @@ local integrations = _G.LUI.integrations
 local function _noop()
 end
 
+local function _plugin_manager_list(method_name)
+    local manager = Turbine.PluginManager
+    local method = manager[method_name]
+    if method == nil then
+        return nil
+    end
+
+    local ok, result = pcall(function()
+        return method()
+    end)
+    if ok == true and type(result) == "table" then
+        return result
+    end
+
+    ok, result = pcall(function()
+        return method(manager)
+    end)
+    if ok == true and type(result) == "table" then
+        return result
+    end
+
+    return nil
+end
+
+local function _plugin_manager_unload(plugin_name)
+    local method = Turbine.PluginManager.UnloadScriptState
+    if method == nil then
+        return false
+    end
+
+    local dot_ok = pcall(function()
+        method(plugin_name)
+    end)
+
+    local colon_ok = pcall(function()
+        method(Turbine.PluginManager, plugin_name)
+    end)
+    return dot_ok == true or colon_ok == true
+end
+
 local function _suppression_set(values)
     local set = {}
     if values == nil then
@@ -75,6 +115,7 @@ local function _import_external(namespace, spec)
         end
     end)
 
+    local imported_runtime = _G[namespace]
     local native_unload = Turbine.Plugin.Unload
     Turbine.Plugin.Unload = previous_unload
     Turbine.Shell.AddCommand = previous_add_command
@@ -87,11 +128,27 @@ local function _import_external(namespace, spec)
         error(err)
     end
 
-    for key, value in pairs(store) do
-        runtime[key] = value
-    end
-    for key, value in pairs(suppressed) do
-        runtime[key] = value
+    if imported_runtime ~= runtime then
+        if type(imported_runtime) ~= "table" then
+            _G[namespace] = previous_namespace_value
+            error("External integration import did not create table namespace: " .. namespace)
+        end
+
+        runtime = imported_runtime
+        for key, _ in pairs(suppressed_names) do
+            local value = runtime[key]
+            if type(value) == "function" then
+                suppressed[key] = value
+                runtime[key] = _noop
+            end
+        end
+    else
+        for key, value in pairs(store) do
+            runtime[key] = value
+        end
+        for key, value in pairs(suppressed) do
+            runtime[key] = value
+        end
     end
 
     return runtime, {
@@ -113,7 +170,7 @@ local function _register_potential(spec)
 end
 
 local function _unload_plugins(spec)
-    integrations.unload_plugin_if_loaded(spec.plugin_name)
+    integrations.unload_plugin(spec.plugin_name)
 
     local unload_plugins = spec.unload_plugins
     if unload_plugins == nil then
@@ -131,7 +188,7 @@ local function _unload_plugins(spec)
         if type(plugin_name) ~= "string" or plugin_name == "" then
             error("External integration unload plugin entry must be a non-empty string")
         end
-        integrations.unload_plugin_if_loaded(plugin_name)
+        integrations.unload_plugin(plugin_name)
     end
 end
 
@@ -200,27 +257,46 @@ function integrations.load_external(spec)
     _unload_plugins(spec)
 
     local namespace = spec.namespace or spec.plugin_name
-    local ok, runtime, external = pcall(function()
-        return _import_external(namespace, spec)
-    end)
-    if ok ~= true or _has_required_runtime(spec, runtime) ~= true then
-        _register_potential(spec)
-        return nil
+    local runtime, external = _import_external(namespace, spec)
+    if _has_required_runtime(spec, runtime) ~= true then
+        local previous_runtime = external.previous_namespace_value
+        if type(previous_runtime) == "table" and _has_required_runtime(spec, previous_runtime) == true then
+            runtime = previous_runtime
+            _G[namespace] = runtime
+        else
+            _G[namespace] = previous_runtime
+            error("External integration import did not define required runtime for: " .. spec.plugin_name)
+        end
     end
 
     _setup_runtime(spec, runtime, external)
     return runtime, external
 end
 
-function integrations.exists(plugin_name)
-    if Turbine == nil or Turbine.PluginManager == nil or Turbine.PluginManager.GetAvailablePlugins == nil then
+function integrations.prepare_external(spec)
+    if type(spec) ~= "table" then
+        error("integrations.prepare_external expects a table")
+    end
+    if type(spec.plugin_name) ~= "string" or spec.plugin_name == "" then
+        error("External integration is missing plugin_name")
+    end
+
+    if integrations.exists(spec.plugin_name) ~= true then
+        _register_potential(spec)
         return false
     end
 
-    local ok, available = pcall(function()
-        return Turbine.PluginManager:GetAvailablePlugins()
-    end)
-    if ok ~= true or type(available) ~= "table" then
+    _unload_plugins(spec)
+    return true
+end
+
+function integrations.exists(plugin_name)
+    if Turbine == nil or Turbine.PluginManager == nil then
+        return false
+    end
+
+    local available = _plugin_manager_list("GetAvailablePlugins")
+    if available == nil then
         return false
     end
 
@@ -237,14 +313,12 @@ function integrations.is_plugin_available(plugin_name)
 end
 
 function integrations.is_plugin_loaded(plugin_name)
-    if Turbine == nil or Turbine.PluginManager == nil or Turbine.PluginManager.GetLoadedPlugins == nil then
+    if Turbine == nil or Turbine.PluginManager == nil then
         return false
     end
 
-    local ok, loaded = pcall(function()
-        return Turbine.PluginManager:GetLoadedPlugins()
-    end)
-    if ok ~= true or type(loaded) ~= "table" then
+    local loaded = _plugin_manager_list("GetLoadedPlugins")
+    if loaded == nil then
         return false
     end
 
@@ -260,9 +334,12 @@ function integrations.unload_plugin_if_loaded(plugin_name)
     if integrations.is_plugin_loaded(plugin_name) ~= true then
         return false
     end
-    if Turbine.PluginManager.UnloadScriptState ~= nil then
-        Turbine.PluginManager.UnloadScriptState(plugin_name)
-        return true
+    return _plugin_manager_unload(plugin_name)
+end
+
+function integrations.unload_plugin(plugin_name)
+    if Turbine == nil or Turbine.PluginManager == nil then
+        return false
     end
-    return false
+    return _plugin_manager_unload(plugin_name)
 end
