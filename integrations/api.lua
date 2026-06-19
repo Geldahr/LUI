@@ -1,10 +1,12 @@
 import "LUI.src.UI.shortcuts"
 import "LUI.src.StatusBar.common"
+import "LUI.src.UI.Widgets.window"
 
 local LUI = _G.LUI
 local integrations = LUI.integrations
 local State = LUI.Settings.State
 local Shortcuts = LUI.UI.Shortcuts
+local UI = LUI.UI
 local StatusBarCommon = LUI.Features.StatusBar.Common
 local Windows = LUI.Runtime.Windows
 
@@ -34,6 +36,9 @@ local FieldType = {
 }
 
 integrations.FieldType = FieldType
+
+local DEFAULT_WINDOW_WIDTH = 900
+local DEFAULT_WINDOW_HEIGHT = 650
 
 local function _copy_table(value)
     if type(value) ~= "table" then
@@ -258,7 +263,26 @@ local function _action_token_key(entry_key, action_key)
 end
 
 local function _window_is_visible(window)
-    return window ~= nil and window.IsVisible ~= nil and window:IsVisible() == true
+    if window == nil then
+        return false
+    end
+    return window:IsVisible() == true
+end
+
+local function _spec_dimension(spec, primary_key, alias_key, default_value, integration_key)
+    local value = spec[primary_key]
+    if value == nil then
+        value = spec[alias_key]
+    end
+    if value == nil then
+        value = default_value
+    end
+
+    local numeric = tonumber(value)
+    if numeric == nil or numeric <= 0 then
+        error("Invalid integration window " .. primary_key .. ": " .. tostring(integration_key))
+    end
+    return numeric
 end
 
 local function _raw_settings()
@@ -415,6 +439,8 @@ function integrations.register(spec)
     entry.title = spec.title
     entry.icon = spec.icon
     entry.content_window = spec.content_window or spec.window
+    entry.window_width = _spec_dimension(spec, "window_width", "width", DEFAULT_WINDOW_WIDTH, key)
+    entry.window_height = _spec_dimension(spec, "window_height", "height", DEFAULT_WINDOW_HEIGHT, key)
     entry.settings_template = spec.settings or spec.template or {}
     if spec.set_settings ~= nil and type(spec.set_settings) ~= "function" then
         error("Integration set_settings must be a function: " .. key)
@@ -593,36 +619,34 @@ function integrations.resolve_content_window(entry)
         return existing
     end
 
-    local source = entry.content_window
-    if type(source) == "function" then
-        source = source(entry)
+    local window = UI.Widgets.LuiWindow()
+    window:set_title(entry.title)
+    window:set_icon(entry.icon)
+    window:set_margin(0, 0, 0, 0)
+    window:SetSize(entry.window_width, entry.window_height)
+    window:apply_settings(State.settings.global.scale)
+
+    local content = entry.content_window
+    if type(content) == "function" then
+        content = content(entry, window)
     end
-    if source == nil then
+    if content == nil then
         error("Integration has no content window: " .. entry.key)
     end
 
-    Windows.integrations[entry.key] = source
-    return source
+    window:set_central_widget(content)
+    Windows.integrations[entry.key] = window
+    return window
 end
 
 function integrations.toggle_content_window(entry)
     local window = integrations.resolve_content_window(entry)
-    if window.IsVisible ~= nil and window:IsVisible() == true then
-        if window.hide ~= nil then
-            window:hide()
-        else
-            window:SetVisible(false)
-        end
+    if window:IsVisible() == true then
+        window:hide()
         return
     end
 
-    if window.open ~= nil then
-        window:open()
-    elseif window.show ~= nil then
-        window:show()
-    else
-        window:SetVisible(true)
-    end
+    window:show()
 end
 
 function integrations.activate(key, action_key)
@@ -709,12 +733,8 @@ function integrations.apply_settings()
         if state.enabled ~= true then
             local window = Windows.integrations[key]
             if window ~= nil then
-                if window.SetWantsUpdates ~= nil then
-                    window:SetWantsUpdates(false)
-                end
-                if window.SetVisible ~= nil then
-                    window:SetVisible(false)
-                end
+                window:SetWantsUpdates(false)
+                window:hide()
             end
         end
     end
@@ -734,17 +754,10 @@ function integrations.unload()
 
         local window = Windows.integrations[key]
         if window ~= nil then
-            if window.SetWantsUpdates ~= nil then
-                window:SetWantsUpdates(false)
-            end
-            if window.SetVisible ~= nil then
-                window:SetVisible(false)
-            end
-            if window.destroy ~= nil then
-                window:destroy()
-            elseif window.SetParent ~= nil then
-                window:SetParent(nil)
-            end
+            window:SetWantsUpdates(false)
+            window:hide()
+            window:set_central_widget(nil)
+            window:unregister_hideable()
             Windows.integrations[key] = nil
         end
 
@@ -757,7 +770,7 @@ function integrations.is_plugin_available(plugin_name)
         return false
     end
 
-    local available = Turbine.PluginManager:GetAvailablePlugins()
+    local available = Turbine.PluginManager.GetAvailablePlugins()
     for _, plugin in pairs(available) do
         if plugin.Name == plugin_name then
             return true
@@ -771,7 +784,7 @@ function integrations.is_plugin_loaded(plugin_name)
         return false
     end
 
-    local loaded = Turbine.PluginManager:GetLoadedPlugins()
+    local loaded = Turbine.PluginManager.GetLoadedPlugins()
     for _, plugin in pairs(loaded) do
         if plugin.Name == plugin_name then
             return true

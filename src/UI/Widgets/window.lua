@@ -365,6 +365,23 @@ function LuiWindow:set_central_widget(widget)
     self:_layout()
 end
 
+function LuiWindow:set_central_widget_size(width, height)
+    local content_w = tonumber(width)
+    local content_h = tonumber(height)
+    local border = self:_border()
+    local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
+    local divider_h = self:_divider_h()
+    local margin_l = _scaled_int(self._scale, self._margin_left)
+    local margin_t = _scaled_int(self._scale, self._margin_top)
+    local margin_r = _scaled_int(self._scale, self._margin_right)
+    local margin_b = _scaled_int(self._scale, self._margin_bottom)
+
+    self:SetSize(
+        content_w + margin_l + margin_r + (border * 2),
+        content_h + margin_t + margin_b + title_h + divider_h + (border * 2)
+    )
+end
+
 function LuiWindow:central_widget()
     return self._central_widget
 end
