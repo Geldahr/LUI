@@ -1,38 +1,36 @@
 local TR = _G.LUI.Locale.TR
 local Pages = _G.LUI.Settings.Pages
 local ConfigContent = _G.LUI.Settings.Content.ConfigContent
+local ConfigSectionPage = _G.LUI.Settings.Content.ConfigSectionPage
 local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
 local ConfigNestedTabs = _G.LUI.Settings.Content.ConfigNestedTabs
 local integrations = _G.LUI.integrations
+local UI = _G.LUI.UI
 local class = _G.LUI.Core.class
+
+import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.integrations.api"
 import "LUI.src.Settings.Content.content"
+import "LUI.src.Settings.Content.section_page"
 import "LUI.src.Settings.Content.tabs"
 import "LUI.src.Settings.Content.nested_tabs"
 
+local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local FieldType = integrations.FieldType
-local Placement = integrations.Placement
+local scaled_int = FeatureShell.scaled_int
 
-local PLACEMENT_LABELS = {
-    TR["None"],
-    TR["LUI Menu"],
-    TR["Status Bar"],
-}
+local function _normalize_key(value, context)
+    if type(value) ~= "string" or value == "" then
+        error("Integration settings tab key must be a non-empty string: " .. tostring(context))
+    end
 
-local PLACEMENT_VALUES = {
-    Placement.NONE,
-    Placement.LUI_MENU,
-    Placement.STATUS_BAR,
-}
-
-local function _normalize_key(value)
-    local key = string.lower(tostring(value))
+    local key = string.lower(value)
     key = key:gsub("[^%w_%-%.]+", "_")
     key = key:gsub("_+", "_")
     key = key:gsub("^_+", "")
     key = key:gsub("_+$", "")
     if key == "" then
-        return "settings"
+        error("Integration settings tab key normalizes to empty: " .. tostring(value))
     end
     return key
 end
@@ -44,14 +42,14 @@ local function _field_label(field)
     if type(field.description) == "string" and field.description ~= "" then
         return field.description
     end
-    if type(field.key) == "string" and field.key ~= "" then
-        return field.key
-    end
     error("Integration setting field is missing label")
 end
 
 local function _option_label(option)
     if type(option) == "table" then
+        if option.value == nil then
+            error("Integration dropdown option is missing value")
+        end
         if type(option.label) == "string" then
             return option.label
         end
@@ -62,6 +60,9 @@ end
 
 local function _option_value(option)
     if type(option) == "table" then
+        if option.value == nil then
+            error("Integration dropdown option is missing value")
+        end
         return option.value
     end
     return option
@@ -81,34 +82,11 @@ local function _dropdown_options(field)
     return labels, values
 end
 
-local function _field_default(field)
-    if field.default ~= nil then
-        return field.default
-    end
-
-    if field.type == FieldType.CHECKBOX then
-        return false
-    end
-    if field.type == FieldType.DROPDOWN then
-        return _option_value(field.values[1])
-    end
-    if field.type == FieldType.NUMBER then
-        return 0
-    end
-    if field.type == FieldType.LINE_EDIT then
-        return ""
-    end
-    if field.type == FieldType.COLOR then
-        return "#FFFFFFFF"
-    end
-    return nil
-end
-
 local function _field_value(page_owner, field_key, field)
     local integration_settings = page_owner:integration_settings()
     local value = integration_settings.settings[field_key]
     if value == nil then
-        return _field_default(field)
+        error("Missing persisted integration setting: " .. page_owner.integration.key .. "/" .. field_key)
     end
     return value
 end
@@ -183,7 +161,7 @@ local function _add_generated_field(page, page_owner, first_key, second_key, fie
     if field_type == FieldType.LINE_EDIT then
         page:add_line_edit(control_key, label,
             function(value)
-                _save_field_value(page_owner, storage_key, tostring(value or ""))
+                _save_field_value(page_owner, storage_key, value)
             end,
             function()
                 return tostring(_field_value(page_owner, storage_key, field))
@@ -196,7 +174,7 @@ local function _add_generated_field(page, page_owner, first_key, second_key, fie
     if field_type == FieldType.COLOR then
         page:add_color_picker(control_key, label,
             function(value)
-                _save_field_value(page_owner, storage_key, tostring(value or ""))
+                _save_field_value(page_owner, storage_key, value)
             end,
             function()
                 return tostring(_field_value(page_owner, storage_key, field))
@@ -209,32 +187,49 @@ local function _add_generated_field(page, page_owner, first_key, second_key, fie
     error("Unsupported integration setting field type: " .. tostring(field_type))
 end
 
-local IntegrationDetailPage = class(ConfigTabs)
+local function _collect_template_groups(integration)
+    local groups = {}
+    local order = {}
+
+    integrations.walk_fields(integration.settings_template, function(first_key, second_key, field_index, field)
+        local first_group = groups[first_key]
+        if first_group == nil then
+            first_group = {
+                second_groups = {},
+                second_order = {},
+            }
+            groups[first_key] = first_group
+            order[#order + 1] = first_key
+        end
+
+        local second_group = first_group.second_groups[second_key]
+        if second_group == nil then
+            second_group = {}
+            first_group.second_groups[second_key] = second_group
+            first_group.second_order[#first_group.second_order + 1] = second_key
+        end
+
+        second_group[#second_group + 1] = {
+            index = field_index,
+            field = field,
+        }
+    end)
+
+    return groups, order
+end
+
+local function _add_field_group(page, page_owner, first_key, second_key, fields)
+    for i = 1, #fields do
+        local field_entry = fields[i]
+        _add_generated_field(page, page_owner, first_key, second_key, field_entry.index, field_entry.field)
+    end
+end
+
+local IntegrationDetailPage = class(ConfigSectionPage)
 
 function IntegrationDetailPage:Constructor(window, integration)
-    ConfigTabs.Constructor(self, window)
+    ConfigSectionPage.Constructor(self, window, nil, nil, nil)
     self.integration = integration
-
-    local general = ConfigContent(window, 4)
-    general:add_checkbox("integration_" .. integration.key .. "_enabled", TR["Enabled"],
-        function(value)
-            self:integration_settings().enabled = value == true
-        end,
-        function()
-            return self:integration_settings().enabled == true
-        end,
-        true)
-    general:add_dropdown("integration_" .. integration.key .. "_placement", TR["Button"], PLACEMENT_LABELS,
-        PLACEMENT_VALUES,
-        function(value)
-            self:integration_settings().placement = value
-        end,
-        function()
-            return self:integration_settings().placement
-        end,
-        nil,
-        true)
-    self:add_tab(TR["General"], "general", general)
 
     self:_build_template_tabs()
 end
@@ -246,30 +241,79 @@ end
 function IntegrationDetailPage:_build_template_tabs()
     local template = self.integration.settings_template
     if type(template) ~= "table" then
-        return
+        error("Integration settings template must be a table: " .. self.integration.key)
     end
 
-    local first_pages = {}
-    integrations.walk_fields(template, function(first_key, second_key, field_index, field)
-        local first_page = first_pages[first_key]
-        if first_page == nil then
-            first_page = {
-                tabs = ConfigNestedTabs(self.window),
-                second_pages = {},
-            }
-            first_pages[first_key] = first_page
-            self:add_tab(tostring(first_key), "settings_" .. _normalize_key(first_key), first_page.tabs)
-        end
+    local groups, order = _collect_template_groups(self.integration)
+    local consumed_general = {}
 
-        local second_page = first_page.second_pages[second_key]
-        if second_page == nil then
-            second_page = ConfigContent(self.window, 4)
-            first_page.second_pages[second_key] = second_page
-            first_page.tabs:add_tab(tostring(second_key), _normalize_key(second_key), second_page)
-        end
+    local general = ConfigContent(self.window, 4)
+    general:add_checkbox("integration_" .. self.integration.key .. "_enabled", TR["Enabled"],
+        function(value)
+            self:integration_settings().enabled = value == true
+        end,
+        function()
+            return self:integration_settings().enabled == true
+        end,
+        true)
 
-        _add_generated_field(second_page, self, first_key, second_key, field_index, field)
-    end)
+    local general_first_key = nil
+    if groups[TR["General"]] ~= nil then
+        general_first_key = TR["General"]
+    elseif groups["General"] ~= nil then
+        general_first_key = "General"
+    end
+    local general_group = general_first_key ~= nil and groups[general_first_key] or nil
+    if general_group ~= nil then
+        local general_second_key = nil
+        if general_group.second_groups[TR["General"]] ~= nil then
+            general_second_key = TR["General"]
+        elseif general_group.second_groups["General"] ~= nil then
+            general_second_key = "General"
+        end
+        local general_fields = general_second_key ~= nil and general_group.second_groups[general_second_key] or nil
+        if general_fields ~= nil then
+            _add_field_group(general, self, general_first_key, general_second_key, general_fields)
+            consumed_general[general_second_key] = true
+        end
+    end
+    self:add_tab(TR["General"], "general", general)
+
+    if general_group ~= nil then
+        for second_index = 1, #general_group.second_order do
+            local second_key = general_group.second_order[second_index]
+            if consumed_general[second_key] ~= true then
+                local page = ConfigContent(self.window, 4)
+                _add_field_group(page, self, general_first_key, second_key, general_group.second_groups[second_key])
+                self:add_tab(second_key, _normalize_key(second_key, self.integration.key .. "/" .. general_first_key),
+                    page)
+            end
+        end
+    end
+
+    for first_index = 1, #order do
+        local first_key = order[first_index]
+        if first_key ~= "General" and first_key ~= TR["General"] then
+            local first_group = groups[first_key]
+            local only_second_key = first_group.second_order[1]
+            if #first_group.second_order == 1 and (only_second_key == "General" or only_second_key == TR["General"]) then
+                local page = ConfigContent(self.window, 4)
+                _add_field_group(page, self, first_key, only_second_key, first_group.second_groups[only_second_key])
+                self:add_tab(first_key, _normalize_key(first_key, self.integration.key), page)
+            else
+                local page = ConfigNestedTabs(self.window, UI.Widgets.LuiTabBar.position.left,
+                    FeatureShell.nested_tab_scale, FeatureShell.nested_tab_font_size)
+                for second_index = 1, #first_group.second_order do
+                    local second_key = first_group.second_order[second_index]
+                    local second_page = ConfigContent(self.window, 3)
+                    _add_field_group(second_page, self, first_key, second_key, first_group.second_groups[second_key])
+                    page:add_tab(second_key, _normalize_key(second_key, self.integration.key .. "/" .. first_key),
+                        second_page)
+                end
+                self:add_tab(first_key, "settings_" .. _normalize_key(first_key, self.integration.key), page)
+            end
+        end
+    end
 end
 
 local PotentialPage = class(ConfigContent)
@@ -300,6 +344,7 @@ Pages.IntegrationsPage = IntegrationsPage
 function IntegrationsPage:Constructor(window)
     ConfigTabs.Constructor(self, window)
     self.show_main_content_border = false
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 
     local registered = integrations.get_registered()
     for i = 1, #registered do
@@ -311,6 +356,11 @@ function IntegrationsPage:Constructor(window)
     if #registered == 0 or #potential > 0 then
         self:add_tab(TR["Available"], "available", PotentialPage(window))
     end
+end
+
+function IntegrationsPage:apply_ui_scale()
+    ConfigTabs.apply_ui_scale(self)
+    self.sub_tab_bar:set_content_padding(scaled_int(8))
 end
 
 function IntegrationsPage:load()

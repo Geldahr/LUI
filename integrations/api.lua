@@ -33,14 +33,7 @@ local FieldType = {
     BreakLine = "break",
 }
 
-local Placement = {
-    NONE = "none",
-    LUI_MENU = "lui_menu",
-    STATUS_BAR = "status_bar",
-}
-
 integrations.FieldType = FieldType
-integrations.Placement = Placement
 
 local function _copy_table(value)
     if type(value) ~= "table" then
@@ -141,7 +134,7 @@ local function _field_base_key(field, index)
         return key .. "_" .. tostring(index)
     end
 
-    return "field_" .. tostring(index)
+    error("Integration settings field is missing key, name, label, or description")
 end
 
 local function _field_callback_path(field, index)
@@ -170,6 +163,9 @@ end
 
 local function _dropdown_value(option)
     if type(option) == "table" then
+        if option.value == nil then
+            error("Integration dropdown option is missing value")
+        end
         return option.value
     end
     return option
@@ -200,12 +196,12 @@ local function _field_default(field)
         return "#FFFFFFFF"
     end
 
-    return nil
+    error("Unsupported integration setting field type: " .. tostring(field_type))
 end
 
 local function _walk_fields(settings_template, fn)
     if type(settings_template) ~= "table" then
-        return
+        error("Integration settings template must be a table")
     end
 
     local first_keys = _ordered_keys(settings_template)
@@ -246,9 +242,6 @@ local function _ensure_integration_settings(settings, key)
     if integration_settings.enabled == nil then
         integration_settings.enabled = false
     end
-    if integration_settings.placement == nil then
-        integration_settings.placement = Placement.NONE
-    end
     if type(integration_settings.settings) ~= "table" then
         integration_settings.settings = {}
     end
@@ -266,56 +259,6 @@ end
 
 local function _window_is_visible(window)
     return window ~= nil and window.IsVisible ~= nil and window:IsVisible() == true
-end
-
-local function _append_unique(list, value)
-    for i = 1, #list do
-        if list[i] == value then
-            return
-        end
-    end
-    list[#list + 1] = value
-end
-
-local function _remove_list_value(list, value)
-    for i = #list, 1, -1 do
-        if list[i] == value then
-            table.remove(list, i)
-        end
-    end
-end
-
-local function _layout_has_token(layout_text, token)
-    local source = tostring(layout_text or "")
-    for current in source:gmatch("%%[^%%]+%%") do
-        if current == token then
-            return true
-        end
-    end
-    return false
-end
-
-local function _remove_layout_token(layout_text, token)
-    local kept = {}
-    local source = tostring(layout_text or "")
-    for current in source:gmatch("%%[^%%]+%%") do
-        if current ~= token then
-            kept[#kept + 1] = current
-        end
-    end
-    return table.concat(kept, " ")
-end
-
-local function _layout_has_token_in_status_bar(raw_status_bar, token)
-    return _layout_has_token(raw_status_bar.layout.left, token) == true or
-        _layout_has_token(raw_status_bar.layout.center, token) == true or
-        _layout_has_token(raw_status_bar.layout.right, token) == true
-end
-
-local function _remove_token_from_status_bar(raw_status_bar, token)
-    raw_status_bar.layout.left = _remove_layout_token(raw_status_bar.layout.left, token)
-    raw_status_bar.layout.center = _remove_layout_token(raw_status_bar.layout.center, token)
-    raw_status_bar.layout.right = _remove_layout_token(raw_status_bar.layout.right, token)
 end
 
 local function _raw_settings()
@@ -379,7 +322,6 @@ end
 local function _integration_state(integration_settings)
     return {
         enabled = integration_settings.enabled == true,
-        placement = integration_settings.placement,
     }
 end
 
@@ -411,7 +353,6 @@ local function _register_action(entry, action_spec)
         activate = action_spec.activate,
         is_active = action_spec.is_active,
         shortcut_key = shortcut_key,
-        status_bar_token = "%" .. _action_token_key(entry.key, action_key) .. "%",
     }
     entry.actions_by_key[action_key] = action
     entry.action_order[#entry.action_order + 1] = action_key
@@ -420,6 +361,9 @@ local function _register_action(entry, action_spec)
         key = shortcut_key,
         label = title,
         icon = icon,
+        visible_if = function()
+            return integrations.is_enabled(entry.key) == true
+        end,
         get_state = function()
             return integrations.is_enabled(entry.key), integrations.is_action_active(entry.key, action_key)
         end,
@@ -432,6 +376,9 @@ local function _register_action(entry, action_spec)
         shortcut_key = shortcut_key,
         token_key = _action_token_key(entry.key, action_key),
         title = title,
+        visible_if = function()
+            return integrations.is_enabled(entry.key) == true
+        end,
     })
 
     return action
@@ -699,7 +646,7 @@ end
 
 function integrations.ensure_loaded_settings(settings)
     if type(settings) ~= "table" then
-        return false
+        error("Integration settings root must be a table")
     end
 
     local before = settings.integrations
@@ -730,46 +677,10 @@ end
 
 function integrations.sync_placements(settings)
     if type(settings) ~= "table" then
-        return
+        error("Integration settings root must be a table")
     end
 
     integrations.ensure_loaded_settings(settings)
-
-    local raw_launcher = settings.launcher
-    local raw_status_bar = settings.status_bar
-    local buttons = raw_launcher.buttons
-
-    for i = 1, #Registry.order do
-        local key = Registry.order[i]
-        local entry = Registry.by_key[key]
-        local integration_settings = settings.integrations[key]
-        local enabled = integration_settings.enabled == true
-        local placement = integration_settings.placement
-
-        if placement ~= Placement.NONE and placement ~= Placement.LUI_MENU and placement ~= Placement.STATUS_BAR then
-            error("Invalid integration button placement: " .. tostring(placement))
-        end
-
-        for action_index = 1, #entry.action_order do
-            local action = entry.actions_by_key[entry.action_order[action_index]]
-            if enabled ~= true or placement ~= Placement.LUI_MENU then
-                _remove_list_value(buttons, action.shortcut_key)
-            end
-            if enabled ~= true or placement ~= Placement.STATUS_BAR then
-                _remove_token_from_status_bar(raw_status_bar, action.status_bar_token)
-            end
-
-            if enabled == true and placement == Placement.LUI_MENU then
-                _append_unique(buttons, action.shortcut_key)
-            elseif enabled == true and placement == Placement.STATUS_BAR and
-                _layout_has_token_in_status_bar(raw_status_bar, action.status_bar_token) ~= true then
-                raw_status_bar.layout.right = StatusBarCommon.append_status_bar_layout_token(
-                    raw_status_bar.layout.right,
-                    action.status_bar_token
-                )
-            end
-        end
-    end
 end
 
 function integrations.apply_settings()

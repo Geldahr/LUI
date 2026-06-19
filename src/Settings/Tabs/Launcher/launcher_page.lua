@@ -124,6 +124,7 @@ function LauncherPage:Constructor(window)
     local buttons_save = buttons.save
     function buttons:load()
         buttons_load(self)
+        buttons_entry:set_definitions(Shortcuts.get_launcher_definitions())
         buttons_entry:set_items(launcher_page._settings.launcher.buttons)
     end
     function buttons:save()

@@ -169,22 +169,24 @@ function LauncherMenu:_rebuild_shortcut_buttons()
             error("Unknown launcher shortcut: " .. tostring(shortcut_key))
         end
 
-        local icon = Shortcuts.get_icon(shortcut_key)
-        if icon == nil then
-            error("Missing launcher shortcut icon: " .. tostring(shortcut_key))
-        end
-
-        local button = self:_new_button(icon)
-        button.shortcut_key = shortcut_key
-        button.Click = function()
-            Shortcuts.activate(shortcut_key)
-            if _launcher_settings().collapse_after_click == true then
-                self:set_expanded(false)
+        if Shortcuts.is_visible(shortcut_key) == true then
+            local icon = Shortcuts.get_icon(shortcut_key)
+            if icon == nil then
+                error("Missing launcher shortcut icon: " .. tostring(shortcut_key))
             end
-            self:_refresh_shortcut_availability()
-        end
 
-        self.shortcut_buttons[#self.shortcut_buttons + 1] = button
+            local button = self:_new_button(icon)
+            button.shortcut_key = shortcut_key
+            button.Click = function()
+                Shortcuts.activate(shortcut_key)
+                if _launcher_settings().collapse_after_click == true then
+                    self:set_expanded(false)
+                end
+                self:_refresh_shortcut_availability()
+            end
+
+            self.shortcut_buttons[#self.shortcut_buttons + 1] = button
+        end
     end
 end
 

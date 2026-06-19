@@ -107,6 +107,13 @@ local DYNAMIC_SHORTCUTS = Shortcuts.Dynamic
 DYNAMIC_SHORTCUTS.by_key = DYNAMIC_SHORTCUTS.by_key or {}
 DYNAMIC_SHORTCUTS.order = DYNAMIC_SHORTCUTS.order or {}
 
+local function _shortcut_is_visible(spec)
+    if type(spec.visible_if) == "function" then
+        return spec.visible_if(spec) == true
+    end
+    return true
+end
+
 local function _copy_shortcut_definitions()
     local out = {}
     for i = 1, #STATIC_SHORTCUTS do
@@ -119,7 +126,7 @@ local function _copy_shortcut_definitions()
     for i = 1, #DYNAMIC_SHORTCUTS.order do
         local key = DYNAMIC_SHORTCUTS.order[i]
         local spec = DYNAMIC_SHORTCUTS.by_key[key]
-        if spec ~= nil then
+        if spec ~= nil and _shortcut_is_visible(spec) == true then
             out[#out + 1] = {
                 key = spec.key,
                 label = spec.label,
@@ -159,6 +166,9 @@ function Shortcuts.register(spec)
     if type(spec.activate) ~= "function" then
         error("Shortcuts.register is missing activate: " .. spec.key)
     end
+    if spec.visible_if ~= nil and type(spec.visible_if) ~= "function" then
+        error("Shortcuts.register visible_if must be a function: " .. spec.key)
+    end
 
     local entry = DYNAMIC_SHORTCUTS.by_key[spec.key]
     if entry == nil then
@@ -172,11 +182,20 @@ function Shortcuts.register(spec)
     entry.icon = spec.icon
     entry.get_state = spec.get_state
     entry.activate = spec.activate
+    entry.visible_if = spec.visible_if
     return entry
 end
 
 function Shortcuts.is_valid(shortcut_key)
     return _shortcut_spec(shortcut_key) ~= nil
+end
+
+function Shortcuts.is_visible(shortcut_key)
+    local spec = _shortcut_spec(shortcut_key)
+    if spec ~= nil then
+        return _shortcut_is_visible(spec)
+    end
+    return false
 end
 
 function Shortcuts.get_icon(shortcut_key)

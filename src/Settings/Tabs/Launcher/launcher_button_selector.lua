@@ -450,6 +450,15 @@ function Controls.CreateLauncherButtonSelector(page, key, definitions)
         _rebuild_lists(self)
     end
 
+    function entry:set_definitions(definitions)
+        self.definitions = definitions
+        self.selected_items = _normalize_items(self.definitions, self.selected_items)
+        self.active_list = nil
+        self.available_index = nil
+        self.selected_index = nil
+        _rebuild_lists(self)
+    end
+
     function entry:get_items()
         return _copy_list(self.selected_items)
     end

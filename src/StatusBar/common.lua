@@ -674,6 +674,9 @@ function S.register_status_bar_shortcut_widget(spec)
     if title == nil then
         error("Status bar shortcut widget registration is missing title: " .. spec.shortcut_key)
     end
+    if spec.visible_if ~= nil and type(spec.visible_if) ~= "function" then
+        error("Status bar shortcut widget visible_if must be a function: " .. spec.shortcut_key)
+    end
 
     local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[spec.shortcut_key]
     if entry == nil then
@@ -687,6 +690,7 @@ function S.register_status_bar_shortcut_widget(spec)
     entry.token_key = token_key
     entry.title = title
     entry.token = _make_status_bar_api_layout_token(token_key)
+    entry.visible_if = spec.visible_if
 
     if entry.token == nil then
         error("Failed to build status bar shortcut token: " .. spec.shortcut_key)
@@ -698,12 +702,23 @@ function S.register_status_bar_shortcut_widget(spec)
     return entry
 end
 
+function S.is_status_bar_shortcut_widget_visible(shortcut_key)
+    local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[shortcut_key]
+    if entry == nil then
+        return true
+    end
+    if type(entry.visible_if) == "function" then
+        return entry.visible_if(entry) == true
+    end
+    return true
+end
+
 function S.get_status_bar_shortcut_widget_entries()
     local out = {}
     for i = 1, #STATUS_BAR_SHORTCUT_WIDGETS.order do
         local key = STATUS_BAR_SHORTCUT_WIDGETS.order[i]
         local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[key]
-        if entry ~= nil then
+        if entry ~= nil and S.is_status_bar_shortcut_widget_visible(key) == true then
             out[#out + 1] = entry
         end
     end
@@ -719,7 +734,7 @@ function S.get_status_bar_shortcut_hint_lines()
     for i = 1, #STATUS_BAR_SHORTCUT_WIDGETS.order do
         local key = STATUS_BAR_SHORTCUT_WIDGETS.order[i]
         local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[key]
-        if entry ~= nil then
+        if entry ~= nil and S.is_status_bar_shortcut_widget_visible(key) == true then
             lines[#lines + 1] = "  " .. tostring(entry.token or "") .. " - " .. tostring(entry.title or "")
         end
     end
@@ -964,7 +979,7 @@ function S.get_status_bar_edit_palette_entries()
     for i = 1, #STATUS_BAR_SHORTCUT_WIDGETS.order do
         local key = STATUS_BAR_SHORTCUT_WIDGETS.order[i]
         local entry = STATUS_BAR_SHORTCUT_WIDGETS.by_key[key]
-        if entry ~= nil then
+        if entry ~= nil and S.is_status_bar_shortcut_widget_visible(key) == true then
             entries[#entries + 1] = {
                 kind = "widget",
                 widget_key = entry.shortcut_key,

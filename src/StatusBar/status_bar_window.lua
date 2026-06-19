@@ -15,6 +15,7 @@ import "LUI.src.StatusBar.edit_bar_window"
 import "LUI.src.UI.Widgets"
 
 local S = StatusBar.Common
+local Shortcuts = UI.Shortcuts
 local StatusBarEditWindow = StatusBar.StatusBarEditWindow
 local Style = UI.Widgets.Style
 
@@ -131,7 +132,8 @@ local function _layout_token_is_visible(token)
         return true
     end
 
-    return S.STATUS_BAR_LAYOUT_TOKENS[string.lower(inner)] ~= nil
+    local widget_key = S.STATUS_BAR_LAYOUT_TOKENS[string.lower(inner)]
+    return widget_key ~= nil and S.is_status_bar_shortcut_widget_visible(widget_key) == true
 end
 
 local function _insert_layout_token_at_visible_index(text, token, insert_index)
@@ -1416,9 +1418,13 @@ function StatusBarWindow:_rebuild_widgets(sb)
                 cfg = widgets_cfg.button
             else
                 cfg = widgets_cfg[widget_key]
+                if cfg == nil and Shortcuts.is_valid(widget_key) == true then
+                    cfg = widgets_cfg.shortcut
+                end
             end
 
-            if cfg ~= nil and (widget_key == "item" or widget_key == "button" or cfg.enabled == true) then
+            if cfg ~= nil and (widget_key == "item" or widget_key == "button" or cfg.enabled == true) and
+                S.is_status_bar_shortcut_widget_visible(widget_key) == true then
                 local inst = _widget_factory(widget_key, cfg.width, sb.height, sb.font, cfg, entry)
                 inst._status_bar_zone_key = zone_key
                 inst._status_bar_visible_index = i
