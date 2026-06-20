@@ -29,10 +29,10 @@ Style changes are applied after a plugin reload.
 
 | Setting | Style token | What it changes |
 | --- | --- | --- |
-| Border color | `CONTROL_BORDER` | Default border color for shared windows, controls, dropdown popups, tab outlines, checkboxes, framed settings sections, tooltips, and other generic frames. |
-| Hover border color | `CONTROL_BORDER_HOVER` | Border color used when shared interactive controls are hovered, such as buttons, checkbox boxes, tabs, and similar controls. |
-| Active border color | `CONTROL_BORDER_ACTIVE` | Border color for active or selected shared controls, such as active buttons, selected tabs, and focused/active framed controls where supported. |
-| Disabled border color | `CONTROL_BORDER_DISABLED` | Border color for disabled shared controls. |
+| Border color | `CONTROL_BORDER` | Default border color for shared windows, controls, text inputs, dropdown popups, tab outlines, checkboxes, framed settings sections, tooltips, and other generic frames. |
+| Hover border color | `CONTROL_BORDER_HOVER` | Border color used when shared interactive controls are hovered, such as buttons, text inputs, checkbox boxes, tabs, and similar controls. |
+| Active border color | `CONTROL_BORDER_ACTIVE` | Border color for active or selected shared controls, such as active buttons, selected tabs, focused text inputs, and focused/active framed controls where supported. |
+| Disabled border color | `CONTROL_BORDER_DISABLED` | Border color for disabled shared controls, including disabled text inputs. |
 
 ## Global > UI > Colors > Backgrounds
 
@@ -91,6 +91,7 @@ Style changes are applied after a plugin reload.
 | --- | --- | --- |
 | Accent background | `ACCENT_BACKGROUND` | Accent fill used by shared UI controls, such as checkbox check indicators and other small emphasized UI marks. |
 | Accent text | `ACCENT_FOREGROUND` | Text color used on accent backgrounds when a shared control needs text over an accent fill. |
+| Subtle foreground | `SUBTLE_FOREGROUND` | Low-emphasis foreground for subtle shared UI marks, including thin divider and separator lines that should be visible without reading as borders. |
 | Disabled accent | `ACCENT_BACKGROUND_DISABLED` | Accent fill for disabled shared controls. |
 | Invalid background | `INVALID_BACKGROUND` | Background for invalid shared UI states, such as invalid color input swatches or validation-style fields. |
 

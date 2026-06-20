@@ -398,6 +398,7 @@ LUI.src.Languages.de.DE = {
     ["Alternate selection text"] = "Alternativer Auswahltext",
     ["Main text"] = "Haupttext",
     ["Secondary text"] = "Sekundärtext",
+    ["Subtle foreground"] = "Dezenter Vordergrund",
     ["Info text"] = "Infotext",
     ["Disabled text"] = "Deaktivierter Text",
     ["Placeholder text"] = "Platzhaltertext",

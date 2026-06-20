@@ -398,6 +398,7 @@ LUI.src.Languages.fr.FR = {
     ["Alternate selection text"] = "Texte de sélection alternatif",
     ["Main text"] = "Texte principal",
     ["Secondary text"] = "Texte secondaire",
+    ["Subtle foreground"] = "Premier plan discret",
     ["Info text"] = "Texte d'information",
     ["Disabled text"] = "Texte désactivé",
     ["Placeholder text"] = "Texte d'espace réservé",

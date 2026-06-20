@@ -8,6 +8,8 @@
 
 ### Changed
 
+- Moved Assets view/order/group/stack controls and Bestiary order controls into LuiWindow title-bar menus.
+
 ### Fixed
 
 ### Removed

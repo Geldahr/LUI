@@ -11,6 +11,15 @@ local Style = Widgets.Style
 local DEFAULT_INSET_X = 4
 local PLACEHOLDER_CURSOR_GAP = 2
 
+local function _scaled_int(scale, value)
+    return math.floor((value * scale) + 0.5)
+end
+
+local function _set_alpha_blend(control)
+    control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+    control:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
+end
+
 ---@class LuiLineEdit : Turbine.UI.Control
 local LuiLineEdit = class(Turbine.UI.Control)
 Widgets.LuiLineEdit = LuiLineEdit
@@ -23,14 +32,30 @@ function LuiLineEdit:Constructor()
     self._placeholder_text = ""
     self._placeholder_color = Style.PLACEHOLDER_FOREGROUND
     self._text_alignment = Turbine.UI.ContentAlignment.MiddleLeft
+    self._enabled = true
+    self._read_only = false
+    self._hover = false
+    self._focused = false
+    self._border_visible = true
+    self._back_color = Style.BACKGROUND
+    self._back_color_custom = false
+    self._text_color = Style.CONTROL_FOREGROUND
+
+    self:SetMouseVisible(true)
+    _set_alpha_blend(self)
+
+    self._inner = Turbine.UI.Control()
+    self._inner:SetParent(self)
+    self._inner:SetMouseVisible(false)
+    _set_alpha_blend(self._inner)
 
     self.text_box = Turbine.UI.Lotro.TextBox()
-    self.text_box:SetParent(self)
+    self.text_box:SetParent(self._inner)
     self.text_box:SetZOrder(1)
     self.text_box:SetTextAlignment(self._text_alignment)
 
     self.placeholder_label = LuiLabel()
-    self.placeholder_label:SetParent(self)
+    self.placeholder_label:SetParent(self._inner)
     self.placeholder_label:SetZOrder(2)
     self.placeholder_label:SetMouseVisible(false)
     self.placeholder_label:SetSelectable(false)
@@ -40,11 +65,15 @@ function LuiLineEdit:Constructor()
     self.placeholder_label:SetVisible(false)
 
     self.text_box.MouseEnter = function(sender, args)
+        self._hover = true
+        self:_update_visual_state()
         if type(self.MouseEnter) == "function" then
             self.MouseEnter(self, args)
         end
     end
     self.text_box.MouseLeave = function(sender, args)
+        self._hover = false
+        self:_update_visual_state()
         if type(self.MouseLeave) == "function" then
             self.MouseLeave(self, args)
         end
@@ -56,11 +85,15 @@ function LuiLineEdit:Constructor()
         end
     end
     self.text_box.FocusGained = function(sender, args)
+        self._focused = true
+        self:_update_visual_state()
         if type(self.FocusGained) == "function" then
             self.FocusGained(self, args)
         end
     end
     self.text_box.FocusLost = function(sender, args)
+        self._focused = false
+        self:_update_visual_state()
         if type(self.FocusLost) == "function" then
             self.FocusLost(self, args)
         end
@@ -75,16 +108,89 @@ function LuiLineEdit:Constructor()
             self.KeyUp(self, args)
         end
     end
+
+    self.MouseClick = function(_, args)
+        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        self:Focus()
+    end
+
+    self:_update_visual_state()
+end
+
+function LuiLineEdit:_border_width()
+    if self._border_visible ~= true then
+        return 0
+    end
+    return math.max(1, _scaled_int(self._scale, Style.BORDER_WIDTH_THIN))
+end
+
+function LuiLineEdit:_current_border_color()
+    if self._border_visible ~= true then
+        return Style.TRANSPARENT_BACKGROUND
+    end
+    if self._enabled ~= true then
+        return Style.CONTROL_BORDER_DISABLED
+    end
+    if self._focused == true then
+        return Style.CONTROL_BORDER_ACTIVE
+    end
+    if self._hover == true then
+        return Style.CONTROL_BORDER_HOVER
+    end
+    return Style.CONTROL_BORDER
+end
+
+function LuiLineEdit:_current_back_color()
+    if self._enabled ~= true then
+        return Style.CONTROL_BACKGROUND_DISABLED
+    end
+    if self._read_only == true and self._back_color_custom ~= true then
+        return Style.CONTROL_BACKGROUND_READONLY
+    end
+    return self._back_color
+end
+
+function LuiLineEdit:_current_text_color()
+    if self._enabled ~= true then
+        return Style.CONTROL_FOREGROUND_DISABLED
+    end
+    return self._text_color
+end
+
+function LuiLineEdit:_update_visual_state()
+    local back = self:_current_back_color()
+    Turbine.UI.Control.SetBackColor(self, self:_current_border_color())
+    self._inner:SetBackColor(back)
+    if self.text_box.SetBackColor ~= nil then
+        self.text_box:SetBackColor(back)
+    end
+    if self.text_box.SetForeColor ~= nil then
+        self.text_box:SetForeColor(self:_current_text_color())
+    end
+    if self._enabled == true then
+        self.placeholder_label:SetForeColor(self._placeholder_color)
+    else
+        self.placeholder_label:SetForeColor(Style.CONTROL_FOREGROUND_DISABLED)
+    end
 end
 
 function LuiLineEdit:_layout()
     local w, h = self:GetSize()
+    local border = self:_border_width()
+    local inner_w = math.max(0, w - (border * 2))
+    local inner_h = math.max(0, h - (border * 2))
+
+    self._inner:SetPosition(border, border)
+    self._inner:SetSize(inner_w, inner_h)
+
     self.text_box:SetPosition(0, 0)
-    self.text_box:SetSize(w, h)
+    self.text_box:SetSize(inner_w, inner_h)
 
     local inset_x = math.floor(((DEFAULT_INSET_X + PLACEHOLDER_CURSOR_GAP) * self._scale) + 0.5)
     self.placeholder_label:SetPosition(inset_x, 0)
-    self.placeholder_label:SetSize(math.max(0, w - (inset_x * 2)), h)
+    self.placeholder_label:SetSize(math.max(0, inner_w - (inset_x * 2)), inner_h)
 end
 
 function LuiLineEdit:_refresh_placeholder()
@@ -107,7 +213,7 @@ function LuiLineEdit:set_placeholder_color(color)
         return
     end
     self._placeholder_color = color
-    self.placeholder_label:SetForeColor(color)
+    self:_update_visual_state()
 end
 
 function LuiLineEdit:SetPlaceholderText(text)
@@ -133,6 +239,16 @@ function LuiLineEdit:set_scale(scale)
     self:_layout()
 end
 
+function LuiLineEdit:set_border_visible(visible)
+    self._border_visible = visible == true
+    self:_layout()
+    self:_update_visual_state()
+end
+
+function LuiLineEdit:SetBorderVisible(visible)
+    self:set_border_visible(visible)
+end
+
 function LuiLineEdit:SetSize(w, h)
     Turbine.UI.Control.SetSize(self, w, h)
     self:_layout()
@@ -156,8 +272,9 @@ function LuiLineEdit:SetTextAlignment(alignment)
 end
 
 function LuiLineEdit:SetForeColor(color)
-    if color ~= nil and self.text_box.SetForeColor ~= nil then
-        self.text_box:SetForeColor(color)
+    if color ~= nil then
+        self._text_color = color
+        self:_update_visual_state()
     end
 end
 
@@ -165,10 +282,9 @@ function LuiLineEdit:SetBackColor(color)
     if color == nil then
         return
     end
-    Turbine.UI.Control.SetBackColor(self, color)
-    if self.text_box.SetBackColor ~= nil then
-        self.text_box:SetBackColor(color)
-    end
+    self._back_color = color
+    self._back_color_custom = true
+    self:_update_visual_state()
 end
 
 function LuiLineEdit:SetMultiline(multiline)
@@ -199,16 +315,20 @@ function LuiLineEdit:SetSelectable(selectable)
 end
 
 function LuiLineEdit:SetReadOnly(read_only)
+    self._read_only = read_only == true
     if self.text_box.SetReadOnly ~= nil then
         self.text_box:SetReadOnly(read_only)
     end
+    self:_update_visual_state()
 end
 
 function LuiLineEdit:SetEnabled(enabled)
-    Turbine.UI.Control.SetEnabled(self, enabled)
+    self._enabled = enabled == true
+    Turbine.UI.Control.SetEnabled(self, self._enabled)
     if self.text_box.SetEnabled ~= nil then
-        self.text_box:SetEnabled(enabled)
+        self.text_box:SetEnabled(self._enabled)
     end
+    self:_update_visual_state()
 end
 
 function LuiLineEdit:Focus()
@@ -229,5 +349,6 @@ function LuiLineEdit:destroy()
     if self.text_box ~= nil then
         self.text_box:SetParent(nil)
     end
+    self._inner:SetParent(nil)
     self:SetVisible(false)
 end

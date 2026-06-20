@@ -37,8 +37,6 @@ local BASE_BAR_H = 21
 local BASE_FILTER_H = 21
 local BASE_GAP = 4
 local BASE_CLEAR_W = 59
-local BASE_ORDER_LABEL_W = 41
-local BASE_SORT_W = 68
 local BASE_LEVEL_INPUT_W = 44
 local BASE_NAV_W = 22
 local BASE_PAGE_W = 74
@@ -1170,26 +1168,44 @@ function BestiaryWindow:Constructor()
     self.nav_bar = Turbine.UI.Control()
     self.nav_bar:SetParent(content_host)
 
-    self.order_label = UI.Widgets.LuiLabel()
-    self.order_label:SetParent(self.nav_bar)
-    self.order_label:SetMouseVisible(false)
-    self.order_label:SetSelectable(false)
-    self.order_label:SetMultiline(false)
-    self.order_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.order_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.order_label:SetText(TR["Order"] .. ":")
-
-    self.sort_dropdown = UI.Widgets.LuiDropdown()
-    self.sort_dropdown:SetParent(self.nav_bar)
-    self.sort_dropdown:SetPopupHost(self)
-    self.sort_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.sort_dropdown:SetMappedOptions(
-        { TR["A-Z"], TR["Z-A"], TR["Lvl <"], TR["Lvl >"] },
-        { SORT_NAME_ASC, SORT_NAME_DESC, SORT_LEVEL_ASC, SORT_LEVEL_DESC }
-    )
-    self.sort_dropdown.ValueChanged = function(_, value)
-        self:set_sort_mode(value)
-    end
+    local menu_bar = self:get_menu_bar()
+    self.order_menu = menu_bar:add_menu(TR["Order"])
+    self.sort_name_asc_action = self.order_menu:add_action({
+        text = TR["A-Z"],
+        checkable = true,
+        checked = self.sort_mode == SORT_NAME_ASC,
+        action = function()
+            self:set_sort_mode(SORT_NAME_ASC)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.sort_name_desc_action = self.order_menu:add_action({
+        text = TR["Z-A"],
+        checkable = true,
+        checked = self.sort_mode == SORT_NAME_DESC,
+        action = function()
+            self:set_sort_mode(SORT_NAME_DESC)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.sort_level_asc_action = self.order_menu:add_action({
+        text = TR["Lvl <"],
+        checkable = true,
+        checked = self.sort_mode == SORT_LEVEL_ASC,
+        action = function()
+            self:set_sort_mode(SORT_LEVEL_ASC)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.sort_level_desc_action = self.order_menu:add_action({
+        text = TR["Lvl >"],
+        checkable = true,
+        checked = self.sort_mode == SORT_LEVEL_DESC,
+        action = function()
+            self:set_sort_mode(SORT_LEVEL_DESC)
+            self:_sync_menu_actions()
+        end,
+    })
 
     self.page_bar = Turbine.UI.Control()
     self.page_bar:SetParent(content_host)
@@ -1435,7 +1451,6 @@ function BestiaryWindow:Constructor()
             self:sync_area_filter_query()
             self:apply_current_area_filter(true)
         else
-            self.sort_dropdown:Close()
             self.genus_dropdown:Close()
             self.subcategory_dropdown:Close()
         end
@@ -1510,10 +1525,7 @@ function BestiaryWindow:apply_settings()
     self:set_minimum_size(min_w, min_h)
 
     local button_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
-    self.order_label:SetFont(button_font)
-    self.sort_dropdown:SetFont(button_font)
-    self.sort_dropdown:set_scale(State.settings.global.scale)
-    self.sort_dropdown:SetValue(self.sort_mode)
+    self:_sync_menu_actions()
     self.prev_button:set_font(button_font)
     self.page_label:SetFont(button_font)
     self.next_button:set_font(button_font)
@@ -1869,7 +1881,15 @@ function BestiaryWindow:set_sort_mode(mode)
 
     self.sort_mode = mode
     self.page_index = 1
+    self:_sync_menu_actions()
     self:apply_view()
+end
+
+function BestiaryWindow:_sync_menu_actions()
+    self.sort_name_asc_action:set_checked(self.sort_mode == SORT_NAME_ASC)
+    self.sort_name_desc_action:set_checked(self.sort_mode == SORT_NAME_DESC)
+    self.sort_level_asc_action:set_checked(self.sort_mode == SORT_LEVEL_ASC)
+    self.sort_level_desc_action:set_checked(self.sort_mode == SORT_LEVEL_DESC)
 end
 
 function BestiaryWindow:set_page(index)
@@ -1940,16 +1960,8 @@ function BestiaryWindow:layout()
     self.nav_bar:SetPosition(margin_left, margin_top)
     self.nav_bar:SetSize(inner_w, bar_h)
 
-    local order_label_w = _scaled_int(BASE_ORDER_LABEL_W)
-    local sort_w = _scaled_int(BASE_SORT_W)
     local nav_w = _scaled_int(BASE_NAV_W)
     local page_w = _scaled_int(BASE_PAGE_W)
-
-    self.order_label:SetPosition(0, 0)
-    self.order_label:SetSize(order_label_w, bar_h)
-
-    self.sort_dropdown:SetPosition(order_label_w + gap, 0)
-    self.sort_dropdown:SetSize(sort_w, bar_h)
 
     self.page_bar:SetSize((2 * nav_w) + page_w + (2 * gap), bar_h)
     local _, host_h = self:central_widget():GetSize()
@@ -1965,9 +1977,8 @@ function BestiaryWindow:layout()
     self.next_button:SetPosition(nav_w + gap + page_w + gap, 0)
     self.next_button:SetSize(nav_w, bar_h)
 
-    local taxonomy_left = order_label_w + gap + sort_w + (2 * gap)
-    local taxonomy_w = math.max(1, inner_w - taxonomy_left)
-    self.taxonomy_bar:SetPosition(taxonomy_left, 0)
+    local taxonomy_w = math.max(1, inner_w)
+    self.taxonomy_bar:SetPosition(0, 0)
     self.taxonomy_bar:SetSize(taxonomy_w, bar_h)
 
     local genus_label_w = math.min(_scaled_int(BASE_GENUS_LABEL_W), math.max(1, taxonomy_w))
@@ -2005,7 +2016,6 @@ function BestiaryWindow:layout()
     self.level_bar:SetSize(inner_w, level_h)
 
     local level_label_w = math.max(
-        order_label_w,
         _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
     )
     local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)

@@ -116,6 +116,7 @@ local BASE_CRITICAL_RESULT_ROW_H = 34
 local BASE_ICON_SIDE = 32
 local BASE_SCROLL_W = 10
 local BASE_PAGE_LABEL_W = 52
+local BASE_PAGE_BUTTON_MARGIN = 4
 local BASE_PANEL_BORDER = 1
 local BASE_DETAIL_HEADER_H = 78
 local BASE_PLAN_HEADER_H = 24
@@ -4011,7 +4012,8 @@ function CraftingWindow:layout()
 
     local recipe_inner_w = self.left_panel.inner:GetWidth()
     local recipe_inner_h = self.left_panel.inner:GetHeight()
-    local page_h = pages_mode == true and bar_h or 0
+    local page_button_margin = pages_mode == true and _scaled_int(BASE_PAGE_BUTTON_MARGIN) or 0
+    local page_h = pages_mode == true and bar_h + (page_button_margin * 2) or 0
     local page_gap = pages_mode == true and gap or 0
     local recipe_list_h = recipe_inner_h - page_h - page_gap
     if recipe_list_h < 0 then
@@ -4041,12 +4043,12 @@ function CraftingWindow:layout()
         if pager_x < 0 then
             pager_x = 0
         end
-        self.recipe_prev_button:SetPosition(pager_x, 0)
-        self.recipe_prev_button:SetSize(nav_w, page_h)
-        self.recipe_page_label:SetPosition(pager_x + nav_w + gap, 0)
-        self.recipe_page_label:SetSize(page_label_w, page_h)
-        self.recipe_next_button:SetPosition(pager_x + nav_w + gap + page_label_w + gap, 0)
-        self.recipe_next_button:SetSize(nav_w, page_h)
+        self.recipe_prev_button:SetPosition(pager_x, page_button_margin)
+        self.recipe_prev_button:SetSize(nav_w, bar_h)
+        self.recipe_page_label:SetPosition(pager_x + nav_w + gap, page_button_margin)
+        self.recipe_page_label:SetSize(page_label_w, bar_h)
+        self.recipe_next_button:SetPosition(pager_x + nav_w + gap + page_label_w + gap, page_button_margin)
+        self.recipe_next_button:SetSize(nav_w, bar_h)
     end
     self.recipe_empty:SetPosition(_scaled_int(8), _scaled_int(8))
     self.recipe_empty:SetSize(

@@ -18,6 +18,7 @@ local LuiBaseWindow = Widgets.LuiBaseWindow
 local LuiButton = Widgets.LuiButton
 local Image = Widgets.Image
 local LuiLabel = Widgets.LuiLabel
+local LuiMenu = Widgets.LuiMenu
 local LuiMenuBar = Widgets.LuiMenuBar
 local Style = Widgets.Style
 
@@ -712,6 +713,13 @@ function LuiWindow:request_close()
         return
     end
     self:hide()
+end
+
+function LuiWindow:SetVisible(visible)
+    if visible ~= true and LuiMenu._active_root ~= nil then
+        LuiMenu._active_root:close()
+    end
+    LuiBaseWindow.SetVisible(self, visible)
 end
 
 function LuiWindow:hide()

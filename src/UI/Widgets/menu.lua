@@ -32,8 +32,11 @@ local BASE_ARROW_W = 16
 local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_ICON_SIZE = 16
+local BASE_SEPARATOR_MARGIN_Y = 4
+local BASE_SEPARATOR_LINE_H = 1
 local BASE_SCROLL_W = 10
 local DEFAULT_MAX_VISIBLE = 10
+local SEPARATOR_WIDTH_FACTOR = 0.75
 
 local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
@@ -255,6 +258,10 @@ function LuiAction:preferred_width()
     return math.max(_scaled_int(self._scale, BASE_POPUP_MIN_W), width)
 end
 
+function LuiAction:preferred_height()
+    return _scaled_int(self._scale, BASE_ITEM_H)
+end
+
 function LuiAction:_layout()
     local width, height = self:GetSize()
     local pad = _scaled_int(self._scale, BASE_POPUP_PAD_X)
@@ -300,6 +307,64 @@ function LuiAction:_update_visual_state()
     self._label:SetForeColor(text)
     self._arrow:SetForeColor(text)
     self._checkbox:SetChecked(self._checkable == true and self._checked == true)
+end
+
+---@class LuiSeparator : Turbine.UI.Control
+local LuiSeparator = class(Turbine.UI.Control)
+Widgets.LuiSeparator = LuiSeparator
+
+function LuiSeparator:Constructor()
+    Turbine.UI.Control.Constructor(self)
+
+    self._scale = 1
+    self._submenu = nil
+
+    self:SetMouseVisible(false)
+    self:SetBackColor(Style.BACKGROUND)
+    _set_blend(self)
+
+    self._line = Turbine.UI.Control()
+    self._line:SetParent(self)
+    self._line:SetMouseVisible(false)
+    self._line:SetBackColor(Style.SUBTLE_FOREGROUND)
+    _set_blend(self._line)
+
+    self.SizeChanged = function()
+        self:_layout()
+    end
+
+    Turbine.UI.Control.SetSize(self, _scaled_int(self._scale, BASE_POPUP_MIN_W), self:preferred_height())
+    self:_layout()
+end
+
+function LuiSeparator:set_scale(scale)
+    self._scale = tonumber(scale) or 1
+    self:_layout()
+end
+
+function LuiSeparator:set_font()
+end
+
+function LuiSeparator:preferred_width()
+    return _scaled_int(self._scale, BASE_POPUP_MIN_W)
+end
+
+function LuiSeparator:preferred_height()
+    return (2 * _scaled_int(self._scale, BASE_SEPARATOR_MARGIN_Y)) +
+        math.max(1, _scaled_int(self._scale, BASE_SEPARATOR_LINE_H))
+end
+
+function LuiSeparator:_layout()
+    local width, height = self:GetSize()
+    local line_h = math.max(1, _scaled_int(self._scale, BASE_SEPARATOR_LINE_H))
+    local line_w = math.floor((width * SEPARATOR_WIDTH_FACTOR) + 0.5)
+    local line_x = math.max(0, math.floor((width - line_w) / 2))
+    local line_y = math.max(0, math.floor((height - line_h) / 2))
+
+    self:SetBackColor(Style.BACKGROUND)
+    self._line:SetBackColor(Style.SUBTLE_FOREGROUND)
+    self._line:SetPosition(line_x, line_y)
+    self._line:SetSize(line_w, line_h)
 end
 
 ---@class LuiMenu : Turbine.UI.Control
@@ -467,6 +532,20 @@ function LuiMenu:add_action(spec)
     self._items[#self._items + 1] = action
     self:_layout_popup()
     return action
+end
+
+function LuiMenu:add_separator()
+    local separator = LuiSeparator()
+    if self._scroll_enabled == true then
+        self.popup_list:AddItem(separator)
+    else
+        separator:SetParent(self.popup_inner)
+    end
+    separator:set_scale(self._scale)
+
+    self._items[#self._items + 1] = separator
+    self:_layout_popup()
+    return separator
 end
 
 function LuiMenu:add_menu(title, options)
@@ -693,14 +772,16 @@ end
 function LuiMenu:_layout_popup()
     local border = self:_popup_border()
     local width = self:_popup_width()
-    local item_h = _scaled_int(self._scale, BASE_ITEM_H)
     local inner_w = math.max(0, width - (2 * border))
     local item_count = #self._items
     local visible_count = item_count
     if self._scroll_enabled == true then
         visible_count = math.min(item_count, self._max_visible)
     end
-    local inner_h = item_h * visible_count
+    local inner_h = 0
+    for i = 1, visible_count do
+        inner_h = inner_h + self._items[i]:preferred_height()
+    end
     local use_scroll = self._scroll_enabled == true and item_count > visible_count
     local scroll_w = use_scroll == true and BASE_SCROLL_W or 0
     local item_w = math.max(0, inner_w - scroll_w)
@@ -716,14 +797,17 @@ function LuiMenu:_layout_popup()
     self.popup_scroll:SetSize(BASE_SCROLL_W, inner_h)
     self.popup_scroll:SetVisible(use_scroll)
 
+    local item_y = 0
     for i = 1, item_count do
         local action = self._items[i]
+        local item_h = action:preferred_height()
         if self._scroll_enabled == true then
             action:SetSize(item_w, item_h)
         else
-            action:SetPosition(0, (i - 1) * item_h)
+            action:SetPosition(0, item_y)
             action:SetSize(inner_w, item_h)
         end
+        item_y = item_y + item_h
     end
 end
 
@@ -862,5 +946,6 @@ function LuiMenuBar:_layout()
 end
 
 UI.Widgets.LuiAction = LuiAction
+UI.Widgets.LuiSeparator = LuiSeparator
 UI.Widgets.LuiMenu = LuiMenu
 UI.Widgets.LuiMenuBar = LuiMenuBar

@@ -40,18 +40,11 @@ local BASE_MIN_H = 262
 local BASE_DETAILS_W = 170
 local BASE_DETAILS_MIN_H = 46
 local BASE_DETAILS_EXTRA_H = 6
-local BASE_ORDER_LABEL_W = 41
-local BASE_GROUP_LABEL_W = 59
-local BASE_SORT_W = 63
-local BASE_GROUP_W = 78
 local BASE_CLEAR_W = 59
-local BASE_STACK_CB_W = 93
-local BASE_STACK_BOX_W = 15
 local BASE_STORAGE_LABEL_W = 56
 local BASE_STORAGE_W = 133
 local BASE_OWNER_LABEL_W = 67
 local BASE_OWNER_W = 100
-local BASE_VIEW_ICON_W = 19
 local BASE_STACK_HINT_W = 200
 local BASE_STACK_HINT_MAX_H = 178
 local BASE_STACK_HINT_MIN_H = 44
@@ -83,11 +76,6 @@ local ASSETS_QUERY_TOKENS = {
     owner = true,
     store = true,
 }
-
-local VIEW_DETAILS_UP = Turbine.UI.Graphic(0x4110C76F)
-local VIEW_DETAILS_DOWN = Turbine.UI.Graphic(0x4110C76D)
-local VIEW_ICONS_UP = Turbine.UI.Graphic(0x4110C76C)
-local VIEW_ICONS_DOWN = Turbine.UI.Graphic(0x4110C76A)
 
 local SOURCE_ORDER = {
     backpack = 1,
@@ -387,23 +375,6 @@ local function _build_stack_key(record, keep_owner, keep_source)
     return table.concat(parts, "\30")
 end
 
-local function _set_view_button_background(control, up_texture, down_texture, active)
-    if control == nil then
-        return
-    end
-    local texture = up_texture
-    if active == true then
-        texture = down_texture
-    end
-
-    local w, h = control:GetSize()
-    if type(w) == "number" and w > 0 and type(h) == "number" and h > 0 then
-        control:set_icon(texture, w, h)
-    else
-        control:set_icon(texture)
-    end
-end
-
 local function _compare_text(left, right, descending)
     if left == right then
         return nil
@@ -552,6 +523,103 @@ function AssetsWindow:Constructor()
     content_host:SetMouseVisible(true)
     self:set_central_widget(content_host)
 
+    local menu_bar = self:get_menu_bar()
+    self.view_menu = menu_bar:add_menu(TR["View"])
+    self.view_details_action = self.view_menu:add_action({
+        text = TR["Details"],
+        checkable = true,
+        checked = self.view_mode == LUI_ENUMS.assets_view_mode.DETAILS,
+        action = function()
+            self:set_view_mode(LUI_ENUMS.assets_view_mode.DETAILS, true)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.view_icons_action = self.view_menu:add_action({
+        text = TR["Icons"],
+        checkable = true,
+        checked = self.view_mode == LUI_ENUMS.assets_view_mode.ICONS,
+        action = function()
+            self:set_view_mode(LUI_ENUMS.assets_view_mode.ICONS, true)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.view_menu:add_separator()
+    self.stack_items_action = self.view_menu:add_action({
+        text = TR[STACK_ITEMS_LABEL],
+        checkable = true,
+        checked = self.stack_items == true,
+        action = function(action)
+            self:set_stack_items(action:is_checked())
+        end,
+    })
+
+    self.order_menu = menu_bar:add_menu(TR["Order"])
+    self.sort_name_asc_action = self.order_menu:add_action({
+        text = TR["A-Z"],
+        checkable = true,
+        checked = self.sort_mode == SORT_NAME_ASC,
+        action = function()
+            self:set_sort_mode(SORT_NAME_ASC)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.sort_name_desc_action = self.order_menu:add_action({
+        text = TR["Z-A"],
+        checkable = true,
+        checked = self.sort_mode == SORT_NAME_DESC,
+        action = function()
+            self:set_sort_mode(SORT_NAME_DESC)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.sort_quantity_asc_action = self.order_menu:add_action({
+        text = TR["Qty <"],
+        checkable = true,
+        checked = self.sort_mode == SORT_QUANTITY_ASC,
+        action = function()
+            self:set_sort_mode(SORT_QUANTITY_ASC)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.sort_quantity_desc_action = self.order_menu:add_action({
+        text = TR["Qty >"],
+        checkable = true,
+        checked = self.sort_mode == SORT_QUANTITY_DESC,
+        action = function()
+            self:set_sort_mode(SORT_QUANTITY_DESC)
+            self:_sync_menu_actions()
+        end,
+    })
+
+    self.group_menu = menu_bar:add_menu(TR["Group by"])
+    self.group_none_action = self.group_menu:add_action({
+        text = TR["None"],
+        checkable = true,
+        checked = self.grouping_mode == GROUP_NONE,
+        action = function()
+            self:set_grouping_mode(GROUP_NONE)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.group_place_action = self.group_menu:add_action({
+        text = TR["Place"],
+        checkable = true,
+        checked = self.grouping_mode == GROUP_PLACE,
+        action = function()
+            self:set_grouping_mode(GROUP_PLACE)
+            self:_sync_menu_actions()
+        end,
+    })
+    self.group_character_action = self.group_menu:add_action({
+        text = TR["Character"],
+        checkable = true,
+        checked = self.grouping_mode == GROUP_CHARACTER,
+        action = function()
+            self:set_grouping_mode(GROUP_CHARACTER)
+            self:_sync_menu_actions()
+        end,
+    })
+
     self.nav_bar = Turbine.UI.Control()
     self.nav_bar:SetParent(content_host)
 
@@ -597,26 +665,6 @@ function AssetsWindow:Constructor()
         self:set_page(self.page_index + 1)
     end
 
-    self.view_icons_button = UI.Widgets.Image()
-    self.view_icons_button:SetParent(self.nav_bar)
-    self.view_icons_button:SetMouseVisible(true)
-    self.view_icons_button.MouseClick = function(_, args)
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        self:set_view_mode(LUI_ENUMS.assets_view_mode.ICONS, true)
-    end
-
-    self.view_details_button = UI.Widgets.Image()
-    self.view_details_button:SetParent(self.nav_bar)
-    self.view_details_button:SetMouseVisible(true)
-    self.view_details_button.MouseClick = function(_, args)
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        self:set_view_mode(LUI_ENUMS.assets_view_mode.DETAILS, true)
-    end
-
     self.filter_bar = Turbine.UI.Control()
     self.filter_bar:SetParent(content_host)
 
@@ -635,35 +683,6 @@ function AssetsWindow:Constructor()
         self.filter_tb:SetText("")
         self:update_filter()
         self.filter_tb:Focus()
-    end
-
-    self._suppress_stack_changed = false
-    self.stack_items_toggle = Turbine.UI.Control()
-    self.stack_items_toggle:SetParent(content_host)
-
-    self.stack_items_cb = UI.Widgets.LuiCheckBox()
-    self.stack_items_cb:SetParent(self.stack_items_toggle)
-    self.stack_items_cb:SetText("")
-    self.stack_items_cb.CheckedChanged = function()
-        if self._suppress_stack_changed == true then
-            return
-        end
-        self:set_stack_items(self.stack_items_cb:IsChecked() == true)
-    end
-
-    self.stack_items_label = UI.Widgets.LuiLabel()
-    self.stack_items_label:SetParent(self.stack_items_toggle)
-    self.stack_items_label:SetMouseVisible(true)
-    self.stack_items_label:SetSelectable(false)
-    self.stack_items_label:SetMultiline(false)
-    self.stack_items_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
-    self.stack_items_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.stack_items_label:SetText(TR[STACK_ITEMS_LABEL])
-    self.stack_items_label.MouseClick = function(_, args)
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        self.stack_items_cb:SetChecked(self.stack_items_cb:IsChecked() ~= true)
     end
 
     self.owner_label = UI.Widgets.LuiLabel()
@@ -757,48 +776,6 @@ function AssetsWindow:Constructor()
         if window ~= nil then
             window:open_from_asset_materials(nil)
         end
-    end
-
-    self.order_label = UI.Widgets.LuiLabel()
-    self.order_label:SetParent(self.nav_bar)
-    self.order_label:SetMouseVisible(false)
-    self.order_label:SetSelectable(false)
-    self.order_label:SetMultiline(false)
-    self.order_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
-    self.order_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.order_label:SetText(TR["Order"] .. ":")
-
-    self.sort_dropdown = UI.Widgets.LuiDropdown()
-    self.sort_dropdown:SetParent(self.nav_bar)
-    self.sort_dropdown:SetPopupHost(self)
-    self.sort_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.sort_dropdown:SetMappedOptions(
-        { TR["A-Z"], TR["Z-A"], TR["Qty <"], TR["Qty >"] },
-        { SORT_NAME_ASC, SORT_NAME_DESC, SORT_QUANTITY_ASC, SORT_QUANTITY_DESC }
-    )
-    self.sort_dropdown.ValueChanged = function(_, value)
-        self:set_sort_mode(value)
-    end
-
-    self.group_label = UI.Widgets.LuiLabel()
-    self.group_label:SetParent(self.nav_bar)
-    self.group_label:SetMouseVisible(false)
-    self.group_label:SetSelectable(false)
-    self.group_label:SetMultiline(false)
-    self.group_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
-    self.group_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    self.group_label:SetText(TR["Group by"] .. ":")
-
-    self.group_dropdown = UI.Widgets.LuiDropdown()
-    self.group_dropdown:SetParent(self.nav_bar)
-    self.group_dropdown:SetPopupHost(self)
-    self.group_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.group_dropdown:SetMappedOptions(
-        { TR["None"], TR["Place"], TR["Character"] },
-        { GROUP_NONE, GROUP_PLACE, GROUP_CHARACTER }
-    )
-    self.group_dropdown.ValueChanged = function(_, value)
-        self:set_grouping_mode(value)
     end
 
     self.content = Turbine.UI.Control()
@@ -928,7 +905,7 @@ function AssetsWindow:set_view_mode(mode, persist)
         window_state.tile = geometry.tile
     end
     self:set_geometry(Defaults.get_ui_window_state("assets"))
-    self:_update_view_buttons()
+    self:_sync_menu_actions()
     self:layout()
     self:refresh_from_store(true)
 end
@@ -989,6 +966,7 @@ function AssetsWindow:set_stack_items(enabled)
     State.settings.assets.stack_items = enabled
     State.loaded_settings.assets.stack_items = enabled
     self:_hide_stack_hint()
+    self:_sync_menu_actions()
     self:_apply_record_view(true)
 end
 
@@ -1002,6 +980,7 @@ function AssetsWindow:set_sort_mode(mode)
     end
 
     self.sort_mode = mode
+    self:_sync_menu_actions()
     self:_apply_record_view(true)
 end
 
@@ -1014,6 +993,7 @@ function AssetsWindow:set_grouping_mode(mode)
     end
 
     self.grouping_mode = mode
+    self:_sync_menu_actions()
     self:_apply_record_view(true)
 end
 
@@ -1034,32 +1014,19 @@ function AssetsWindow:apply_settings()
     self.next_button:set_font(button_font)
     self.clear_button:set_font(button_font)
     self.filter_tb:SetFont(button_font)
-    self.stack_items_cb:set_scale(State.settings.global.scale)
-    self.stack_items_cb:SetFont(button_font)
-    self.stack_items_label:SetFont(button_font)
     self.owner_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.owner_dropdown:SetFont(button_font)
     self.storage_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.storage_dropdown:SetFont(button_font)
-    self.sort_dropdown:SetFont(button_font)
-    self.group_dropdown:SetFont(button_font)
     self.owner_dropdown:set_scale(State.settings.global.scale)
     self.storage_dropdown:set_scale(State.settings.global.scale)
-    self.sort_dropdown:set_scale(State.settings.global.scale)
-    self.group_dropdown:set_scale(State.settings.global.scale)
-    self._suppress_stack_changed = true
-    self.stack_items_cb:SetChecked(self.stack_items == true)
-    self._suppress_stack_changed = false
     self.owner_dropdown:SetValue(self.owner_filter)
     self.storage_dropdown:SetValue(self.storage_filter)
-    self.sort_dropdown:SetValue(self.sort_mode)
-    self.group_dropdown:SetValue(self.grouping_mode)
+    self:_sync_menu_actions()
 
     self.page_label:SetFont(button_font)
     self.summary_text:SetFont(button_font)
     self.recipes_button:set_font(button_font)
-    self.order_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
-    self.group_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.hint_label:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
     self.empty_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE))
     if self.stack_hint ~= nil then
@@ -1080,7 +1047,7 @@ function AssetsWindow:apply_settings()
         window_state.tile = geometry.tile
     end
     self:set_geometry(window_state)
-    self:_update_view_buttons()
+    self:_sync_menu_actions()
     self:layout()
     self:refresh_from_store(true)
 end
@@ -1358,19 +1325,17 @@ function AssetsWindow:_ensure_entries(count)
     end
 end
 
-function AssetsWindow:_update_view_buttons()
-    _set_view_button_background(
-        self.view_icons_button,
-        VIEW_ICONS_UP,
-        VIEW_ICONS_DOWN,
-        self.view_mode == LUI_ENUMS.assets_view_mode.ICONS
-    )
-    _set_view_button_background(
-        self.view_details_button,
-        VIEW_DETAILS_UP,
-        VIEW_DETAILS_DOWN,
-        self.view_mode == LUI_ENUMS.assets_view_mode.DETAILS
-    )
+function AssetsWindow:_sync_menu_actions()
+    self.view_icons_action:set_checked(self.view_mode == LUI_ENUMS.assets_view_mode.ICONS)
+    self.view_details_action:set_checked(self.view_mode == LUI_ENUMS.assets_view_mode.DETAILS)
+    self.stack_items_action:set_checked(self.stack_items == true)
+    self.sort_name_asc_action:set_checked(self.sort_mode == SORT_NAME_ASC)
+    self.sort_name_desc_action:set_checked(self.sort_mode == SORT_NAME_DESC)
+    self.sort_quantity_asc_action:set_checked(self.sort_mode == SORT_QUANTITY_ASC)
+    self.sort_quantity_desc_action:set_checked(self.sort_mode == SORT_QUANTITY_DESC)
+    self.group_none_action:set_checked(self.grouping_mode == GROUP_NONE)
+    self.group_place_action:set_checked(self.grouping_mode == GROUP_PLACE)
+    self.group_character_action:set_checked(self.grouping_mode == GROUP_CHARACTER)
 end
 
 function AssetsWindow:_refresh_empty_state()
@@ -1835,18 +1800,11 @@ function AssetsWindow:layout()
     local gap = layout.gap
     local nav_w = _scaled_int(BASE_NAV_W)
     local page_w = _scaled_int(BASE_PAGE_W)
-    local order_label_w = _scaled_int(BASE_ORDER_LABEL_W)
-    local group_label_w = _scaled_int(BASE_GROUP_LABEL_W)
-    local sort_w = _scaled_int(BASE_SORT_W)
-    local group_w = _scaled_int(BASE_GROUP_W)
     local clear_w = _scaled_int(BASE_CLEAR_W)
-    local stack_cb_w = _scaled_int(BASE_STACK_CB_W)
-    local stack_box_w = math.max(_scaled_int(BASE_STACK_BOX_W), hint_h)
     local owner_label_w = _scaled_int(BASE_OWNER_LABEL_W)
     local owner_w = _scaled_int(BASE_OWNER_W)
     local storage_label_w = _scaled_int(BASE_STORAGE_LABEL_W)
     local storage_w = _scaled_int(BASE_STORAGE_W)
-    local view_icon_w = _scaled_int(BASE_VIEW_ICON_W)
 
     local inner_w = width - margin_left - margin_right
     if inner_w < 0 then inner_w = 0 end
@@ -1854,93 +1812,51 @@ function AssetsWindow:layout()
     self.nav_bar:SetPosition(margin_left, margin_top)
     self.nav_bar:SetSize(inner_w, bar_h)
 
-    local nav_full_w = owner_label_w + owner_w + storage_label_w + storage_w + order_label_w + sort_w +
-        group_label_w + group_w + (view_icon_w * 2) + (gap * 9)
+    local nav_full_w = owner_label_w + owner_w + storage_label_w + storage_w + (gap * 3)
     local show_nav_labels = inner_w >= nav_full_w
 
     self.owner_label:SetVisible(show_nav_labels)
     self.storage_label:SetVisible(show_nav_labels)
-    self.order_label:SetVisible(show_nav_labels)
-    self.group_label:SetVisible(show_nav_labels)
-
-    local owner_left_x = 0
-    if show_nav_labels == true then
-        self.owner_label:SetPosition(0, 0)
-        self.owner_label:SetSize(owner_label_w, bar_h)
-        owner_left_x = owner_label_w + gap
-    else
-        self.owner_label:SetPosition(0, 0)
-        self.owner_label:SetSize(0, bar_h)
-    end
 
     local nav_right_x = inner_w
 
-    local view_icon_y = math.floor((bar_h - view_icon_w) / 2)
-    if view_icon_y < 0 then
-        view_icon_y = 0
-    end
-
-    self.view_details_button:set_size(view_icon_w, view_icon_w)
-    nav_right_x = nav_right_x - view_icon_w
-    self.view_details_button:SetPosition(nav_right_x, view_icon_y)
-    nav_right_x = nav_right_x - gap
-
-    self.view_icons_button:set_size(view_icon_w, view_icon_w)
-    nav_right_x = nav_right_x - view_icon_w
-    self.view_icons_button:SetPosition(nav_right_x, view_icon_y)
-    nav_right_x = nav_right_x - gap
-
-    self.group_dropdown:SetSize(group_w, bar_h)
-    nav_right_x = nav_right_x - group_w
-    self.group_dropdown:SetPosition(nav_right_x, 0)
-    if show_nav_labels == true then
-        nav_right_x = nav_right_x - gap
-        self.group_label:SetPosition(nav_right_x - group_label_w, 0)
-        self.group_label:SetSize(group_label_w, bar_h)
-        nav_right_x = nav_right_x - group_label_w
-    else
-        self.group_label:SetPosition(nav_right_x, 0)
-        self.group_label:SetSize(0, bar_h)
-    end
-
-    nav_right_x = nav_right_x - gap
-    self.sort_dropdown:SetSize(sort_w, bar_h)
-    nav_right_x = nav_right_x - sort_w
-    self.sort_dropdown:SetPosition(nav_right_x, 0)
-    if show_nav_labels == true then
-        nav_right_x = nav_right_x - gap
-        self.order_label:SetPosition(nav_right_x - order_label_w, 0)
-        self.order_label:SetSize(order_label_w, bar_h)
-        nav_right_x = nav_right_x - order_label_w
-    else
-        self.order_label:SetPosition(nav_right_x, 0)
-        self.order_label:SetSize(0, bar_h)
-    end
-
-    nav_right_x = nav_right_x - gap
     self.storage_dropdown:SetSize(storage_w, bar_h)
     nav_right_x = nav_right_x - storage_w
     self.storage_dropdown:SetPosition(nav_right_x, 0)
     if show_nav_labels == true then
         nav_right_x = nav_right_x - gap
-        self.storage_label:SetPosition(nav_right_x - storage_label_w, 0)
-        self.storage_label:SetSize(storage_label_w, bar_h)
         nav_right_x = nav_right_x - storage_label_w
+        self.storage_label:SetPosition(nav_right_x, 0)
+        self.storage_label:SetSize(storage_label_w, bar_h)
     else
         self.storage_label:SetPosition(nav_right_x, 0)
         self.storage_label:SetSize(0, bar_h)
     end
 
-    local owner_dropdown_w = owner_w
-    local owner_max_w = nav_right_x - gap - owner_left_x
-    if owner_max_w < owner_dropdown_w then
-        owner_dropdown_w = owner_max_w
+    nav_right_x = nav_right_x - gap
+    if show_nav_labels == true then
+        nav_right_x = nav_right_x - owner_w
+        self.owner_dropdown:SetPosition(nav_right_x, 0)
+        self.owner_dropdown:SetSize(owner_w, bar_h)
+
+        nav_right_x = nav_right_x - gap - owner_label_w
+        self.owner_label:SetPosition(nav_right_x, 0)
+        self.owner_label:SetSize(owner_label_w, bar_h)
+    else
+        local owner_dropdown_w = owner_w
+        if nav_right_x < owner_dropdown_w then
+            owner_dropdown_w = nav_right_x
+        end
+        if owner_dropdown_w < 0 then
+            owner_dropdown_w = 0
+        end
+        nav_right_x = nav_right_x - owner_dropdown_w
+        self.owner_dropdown:SetPosition(nav_right_x, 0)
+        self.owner_dropdown:SetSize(owner_dropdown_w, bar_h)
+
+        self.owner_label:SetPosition(nav_right_x, 0)
+        self.owner_label:SetSize(0, bar_h)
     end
-    if owner_dropdown_w < 0 then
-        owner_dropdown_w = 0
-    end
-    self.owner_dropdown:SetPosition(owner_left_x, 0)
-    self.owner_dropdown:SetSize(owner_dropdown_w, bar_h)
 
     local filter_top = margin_top + bar_h + gap
     self.filter_bar:SetPosition(margin_left, filter_top)
@@ -1997,28 +1913,6 @@ function AssetsWindow:layout()
 
     local footer_h = self:_get_footer_height(layout)
     local footer_top = height - margin_bottom - footer_h
-    local stack_toggle_w = stack_cb_w
-    if stack_toggle_w > inner_w then
-        stack_toggle_w = inner_w
-    end
-    if stack_toggle_w < 0 then
-        stack_toggle_w = 0
-    end
-    local stack_toggle_y = footer_top + math.floor((footer_h - hint_h) / 2)
-    self.stack_items_toggle:SetPosition(margin_left, stack_toggle_y)
-    self.stack_items_toggle:SetSize(stack_toggle_w, hint_h)
-
-    local stack_box_h = hint_h
-    self.stack_items_cb:SetPosition(0, 0)
-    self.stack_items_cb:SetSize(math.min(stack_box_w, stack_toggle_w), stack_box_h)
-
-    local stack_label_x = math.min(stack_toggle_w, stack_box_w + gap)
-    local stack_label_w = stack_toggle_w - stack_label_x
-    if stack_label_w < 0 then
-        stack_label_w = 0
-    end
-    self.stack_items_label:SetPosition(stack_label_x, 0)
-    self.stack_items_label:SetSize(stack_label_w, hint_h)
 
     local recipes_button_w = _scaled_int(BASE_RECIPES_BUTTON_W)
     if recipes_button_w > inner_w then

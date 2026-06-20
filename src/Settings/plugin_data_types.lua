@@ -402,7 +402,10 @@ function Types.decode(value, schema)
     local decoded = {}
     for key, child in pairs(value) do
         local decoded_key = _decode_key(schema, key)
-        decoded[decoded_key] = Types.decode(child, _resolve_decode_schema(schema, decoded_key))
+        local child_schema = _resolve_decode_schema(schema, decoded_key)
+        if child_schema ~= nil then
+            decoded[decoded_key] = Types.decode(child, child_schema)
+        end
     end
 
     return decoded

@@ -143,6 +143,7 @@ function LuiSpinBox:Constructor()
 
     self.text_box = LuiLineEdit()
     self.text_box:SetParent(self._field_back)
+    self.text_box:set_border_visible(false)
     self.text_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.text_box:SetWantsKeyEvents(true)
     _set_alpha_blend(self.text_box)
