@@ -231,7 +231,7 @@ function LuiWindow:Constructor(opts)
     self._menu_bar = LuiMenuBar()
     self._menu_bar:SetParent(self._title_bar)
     self._menu_bar:SetZOrder(10)
-    self._menu_bar.Changed = function()
+    self._menu_bar.on_change = function()
         self:_layout()
     end
     _attach_drag_handlers(self._menu_bar, self)

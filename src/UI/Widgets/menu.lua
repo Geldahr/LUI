@@ -768,6 +768,7 @@ function LuiMenuBar:Constructor()
     self._scale = 1
     self._font = _scaled_font(self._scale)
     self._menus = {}
+    self.on_change = nil
 
     self:SetMouseVisible(true)
     self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
@@ -798,20 +799,44 @@ function LuiMenuBar:set_font(font)
     end
 end
 
-function LuiMenuBar:add_menu(title, options)
-    local menu = LuiMenu()
+function LuiMenuBar:add_menu(title_or_menu, options)
+    local menu = title_or_menu
+    if type(title_or_menu) ~= "table" then
+        menu = LuiMenu()
+        menu:set_title(title_or_menu)
+    elseif options ~= nil then
+        menu:set_scroll_options(options)
+    end
+
     menu:SetParent(self)
-    menu:set_title(title)
-    menu:set_scroll_options(options)
+    if type(title_or_menu) ~= "table" then
+        menu:set_scroll_options(options)
+    end
     menu:set_scale(self._scale)
     menu:set_font(self._font)
 
     self._menus[#self._menus + 1] = menu
     self:_layout()
-    if type(self.Changed) == "function" then
-        self:Changed()
+    if self.on_change ~= nil then
+        self:on_change()
     end
     return menu
+end
+
+function LuiMenuBar:remove_menu(menu)
+    for i = 1, #self._menus do
+        if self._menus[i] == menu then
+            menu:close()
+            menu:SetParent(nil)
+            table.remove(self._menus, i)
+            self:_layout()
+            if self.on_change ~= nil then
+                self:on_change()
+            end
+            return menu
+        end
+    end
+    error("LuiMenuBar:remove_menu menu is not registered")
 end
 
 function LuiMenuBar:preferred_width()
