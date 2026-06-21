@@ -8,6 +8,7 @@ LUI is a custom user interface plugin for The Lord of the Rings Online. It focus
 - [What LUI Replaces](#what-lui-replaces)
 - [Installation](#installation)
 - [Commands](#commands)
+- [FAQ](#faq)
 - [Status Bar API](#status-bar-api)
 - [Configuration Notes](#configuration-notes)
 - [Scaling Notes](#scaling-notes)
@@ -80,6 +81,40 @@ git clone https://github.com/Geldahr/LUI.git
 - `/lui bestiary`, `/lui beast`, or `/lui b` - Toggle the bestiary window
 - `/lui card [monster name]` - Open the bestiary card for a monster
 - `/lui api.sb --add -k "key" -t "Title" [-d "Description"] -i "0x11223344|path/to/icon.tga" -c "/command args"` - Register a status bar API button
+
+## FAQ
+
+### How do I configure LUI after the first setup?
+
+Use `/lui config` for detailed settings and `/lui move` to position windows and combat frames. Use `/lui help` in game to see the available commands.
+
+### Can I install LUI with LOTRO Plugin Compendium?
+
+Yes. Current releases include Plugin Compendium metadata, so Plugin Compendium can download and load LUI. Manual installation still works; keep the shipped folder structure intact.
+
+### Why do I still see a built-in vitals frame after LUI loads?
+
+LUI hides the built-in player, target, fellowship, and raid vitals when those replacements are enabled. If a native frame comes back after login but disappears after saving LUI settings, another UI or vitals plugin may be re-enabling the native LotRO vitals after LUI loads. Try disabling other UI/vitals plugins to confirm the conflict.
+
+### How do I hide the built-in target-of-target frame?
+
+LUI cannot disable that frame directly through the plugin API. Disable it in LotRO under `Options > Combat Options > Show the vitals of your selection's target`.
+
+### Can LUI hide the native pet vitals?
+
+No. Native pet vitals cannot be hidden properly through the plugin like the other built-in vitals. As a workaround, reduce their size in the LotRO settings and move them under the minimap so they are effectively not visible.
+
+### Why is Bestiary capture only available on English clients?
+
+Bestiary capture needs game text to match LUI's structured Bestiary data, and that data is currently English-only. On non-English clients, the Bestiary browser still uses English data, while target-vitals double-click cards and Crafting-to-Bestiary links are disabled.
+
+### Why does the Bestiary show deed information but not my deed completion?
+
+LUI can show deed information that exists in its Bestiary data, but LotRO does not expose reliable character deed completion state to plugins.
+
+### Why do some monster or item details not appear?
+
+Some details, such as monster rank, difficulty, aggressive/passive state, item sources, and gathering locations, are not directly exposed by the LotRO plugin API. LUI can only show that information when it has its own structured data for it.
 
 ## Status Bar API
 
