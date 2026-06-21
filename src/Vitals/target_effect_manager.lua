@@ -31,9 +31,9 @@ local _player_manager_cache = setmetatable({}, { __mode = "v" })
 local _other_manager_cache = {}
 local OTHER_IDENTITY_METHODS = {
     "GetLevel",
-    "GetMorale",
+    -- "GetMorale",
     "GetMaxMorale",
-    "GetPower",
+    -- "GetPower",
     "GetMaxPower",
     "GetBaseMaxMorale",
     "GetBaseMaxPower",
