@@ -34,8 +34,6 @@ function LuiLineEdit:Constructor()
     self._text_alignment = Turbine.UI.ContentAlignment.MiddleLeft
     self._enabled = true
     self._read_only = false
-    self._hover = false
-    self._focused = false
     self._border_visible = true
     self._back_color = Style.BACKGROUND
     self._back_color_custom = false
@@ -65,15 +63,11 @@ function LuiLineEdit:Constructor()
     self.placeholder_label:SetVisible(false)
 
     self.text_box.MouseEnter = function(sender, args)
-        self._hover = true
-        self:_update_visual_state()
         if type(self.MouseEnter) == "function" then
             self.MouseEnter(self, args)
         end
     end
     self.text_box.MouseLeave = function(sender, args)
-        self._hover = false
-        self:_update_visual_state()
         if type(self.MouseLeave) == "function" then
             self.MouseLeave(self, args)
         end
@@ -85,15 +79,11 @@ function LuiLineEdit:Constructor()
         end
     end
     self.text_box.FocusGained = function(sender, args)
-        self._focused = true
-        self:_update_visual_state()
         if type(self.FocusGained) == "function" then
             self.FocusGained(self, args)
         end
     end
     self.text_box.FocusLost = function(sender, args)
-        self._focused = false
-        self:_update_visual_state()
         if type(self.FocusLost) == "function" then
             self.FocusLost(self, args)
         end
@@ -109,14 +99,7 @@ function LuiLineEdit:Constructor()
         end
     end
 
-    self.MouseClick = function(_, args)
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        self:Focus()
-    end
-
-    self:_update_visual_state()
+    self:_update_visual_state(true)
 end
 
 function LuiLineEdit:_border_width()
@@ -132,12 +115,6 @@ function LuiLineEdit:_current_border_color()
     end
     if self._enabled ~= true then
         return Style.CONTROL_BORDER_DISABLED
-    end
-    if self._focused == true then
-        return Style.CONTROL_BORDER_ACTIVE
-    end
-    if self._hover == true then
-        return Style.CONTROL_BORDER_HOVER
     end
     return Style.CONTROL_BORDER
 end
@@ -159,14 +136,14 @@ function LuiLineEdit:_current_text_color()
     return self._text_color
 end
 
-function LuiLineEdit:_update_visual_state()
+function LuiLineEdit:_update_visual_state(sync_text_box)
     local back = self:_current_back_color()
     Turbine.UI.Control.SetBackColor(self, self:_current_border_color())
     self._inner:SetBackColor(back)
-    if self.text_box.SetBackColor ~= nil then
+    if sync_text_box == true and self.text_box.SetBackColor ~= nil then
         self.text_box:SetBackColor(back)
     end
-    if self.text_box.SetForeColor ~= nil then
+    if sync_text_box == true and self.text_box.SetForeColor ~= nil then
         self.text_box:SetForeColor(self:_current_text_color())
     end
     if self._enabled == true then
@@ -274,7 +251,7 @@ end
 function LuiLineEdit:SetForeColor(color)
     if color ~= nil then
         self._text_color = color
-        self:_update_visual_state()
+        self:_update_visual_state(true)
     end
 end
 
@@ -284,7 +261,7 @@ function LuiLineEdit:SetBackColor(color)
     end
     self._back_color = color
     self._back_color_custom = true
-    self:_update_visual_state()
+    self:_update_visual_state(true)
 end
 
 function LuiLineEdit:SetMultiline(multiline)
@@ -319,7 +296,7 @@ function LuiLineEdit:SetReadOnly(read_only)
     if self.text_box.SetReadOnly ~= nil then
         self.text_box:SetReadOnly(read_only)
     end
-    self:_update_visual_state()
+    self:_update_visual_state(true)
 end
 
 function LuiLineEdit:SetEnabled(enabled)
@@ -328,7 +305,7 @@ function LuiLineEdit:SetEnabled(enabled)
     if self.text_box.SetEnabled ~= nil then
         self.text_box:SetEnabled(self._enabled)
     end
-    self:_update_visual_state()
+    self:_update_visual_state(true)
 end
 
 function LuiLineEdit:Focus()

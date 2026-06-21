@@ -444,6 +444,7 @@ Windows.target_vital = UI.TargetVitals(nil)
 Windows.boss_vital = UI.BossVitals(nil)
 Windows.player_vital = UI.SelfVitals(Turbine.Gameplay.LocalPlayer.GetInstance())
 Windows.player_vital:set_target_vitals(Windows.target_vital, Windows.boss_vital)
+Windows.companion_vital = UI.CompanionVitals(Turbine.Gameplay.LocalPlayer.GetInstance())
 Windows.fellowship_vitals = UI.FellowshipVitals()
 Windows.raid_vitals = UI.RaidVitals()
 Windows.expiring_self_effects = ExpiringEffects.SelfExpiringEffectsWindow()
@@ -532,6 +533,11 @@ Plugins["LUI"].Unload = function()
     if Windows.bestiary_card ~= nil then
         Windows.bestiary_card:SetVisible(false)
         Windows.bestiary_card = nil
+    end
+
+    if Windows.companion_vital ~= nil then
+        Windows.companion_vital:destroy()
+        Windows.companion_vital = nil
     end
 
     if Windows.bestiary_tracker ~= nil then

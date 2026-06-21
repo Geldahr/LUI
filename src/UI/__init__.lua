@@ -24,6 +24,7 @@ import "LUI.src.Launcher"
 UI.VitalsBase = Vitals.VitalsBase
 UI.SelfVitals = Vitals.SelfVitals
 UI.TargetVitals = Vitals.TargetVitals
+UI.CompanionVitals = Vitals.CompanionVitals
 UI.BossVitals = Vitals.BossVitals
 UI.FellowshipVitals = Vitals.FellowshipVitals
 UI.RaidVitals = Vitals.RaidVitals

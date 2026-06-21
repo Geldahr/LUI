@@ -104,6 +104,13 @@ function Builder.new_general_page(window, root, deps)
         function()
             return root._settings.target.vitals.enabled == true
         end)
+    page:add_checkbox("companion_vitals_enabled", TR["Enable companion vitals"],
+        function(value)
+            root._settings.companion.enabled = value == true
+        end,
+        function()
+            return root._settings.companion.enabled == true
+        end)
     page:add_checkbox("target_boss_enabled", TR["Enable boss vitals"],
         function(value)
             root._settings.target.boss_vitals.enabled = value == true

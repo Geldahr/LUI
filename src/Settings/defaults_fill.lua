@@ -164,6 +164,7 @@ local function _ensure_preview_label_defaults(loaded)
     _ensure_vital_labels_defaults(loaded.target and loaded.target.vitals)
     _ensure_targets_target_labels_defaults(loaded.target and loaded.target.vitals)
     _ensure_vital_labels_defaults(loaded.target and loaded.target.boss_vitals)
+    _ensure_vital_labels_defaults(loaded.companion)
     _ensure_vital_labels_defaults(loaded.fellowship)
     _ensure_vital_labels_defaults(loaded.raid)
 end

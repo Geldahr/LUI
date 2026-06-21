@@ -973,6 +973,29 @@ function VitalsPage:Constructor(window)
         new_effects_section = _new_effects_section,
         bind_standard_outline_visibility = _bind_standard_outline_visibility,
     }))
+    self:add_tab(TR["Companion"], "companion", StandardVitalsPageBuilder.new_standard_unit_page(window, self, {
+        get_settings = function(root)
+            return root._settings.companion
+        end,
+        prefix = "companion",
+        preview_key = "companion_vitals_preview",
+        preview_method = "update_companion_vitals_preview",
+        preview_height = 222,
+        show_outline_settings = true,
+        boss_power_mode = false,
+    }, {
+        ConfigContent = ConfigContent,
+        ConfigSectionPage = ConfigSectionPage,
+        add_number_field = _add_number_field,
+        add_checkbox_field = _add_checkbox_field,
+        new_standard_colors_section = _new_standard_colors_section,
+        build_standard_morale_form = _build_standard_morale_form,
+        build_standard_power_form = _build_standard_power_form,
+        build_info_form = _build_info_form,
+        new_texts_section = _new_texts_section,
+        new_effects_section = _new_effects_section,
+        bind_standard_outline_visibility = _bind_standard_outline_visibility,
+    }))
     self:add_tab(TR["Boss"], "boss", StandardVitalsPageBuilder.new_standard_unit_page(window, self, {
         get_settings = function(root)
             return root._settings.target.boss_vitals

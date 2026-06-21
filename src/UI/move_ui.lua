@@ -247,6 +247,7 @@ local function _capture_move_settings_snapshot()
     MOVE_UI_POSITION_SNAPSHOT = {
         self_vitals = _snapshot_position(hud.self_vitals),
         target_vitals = _snapshot_position(hud.target_vitals),
+        companion_vitals = _snapshot_position(hud.companion_vitals),
         target_target_vitals = _snapshot_position(hud.target_target_vitals),
         boss_vitals = _snapshot_position(hud.boss_vitals),
         fellowship_vitals = _snapshot_position(hud.fellowship_vitals),
@@ -276,6 +277,7 @@ local function _restore_saved_move_settings()
     local hud = State.loaded_settings.ui.hud
     _restore_position(hud.self_vitals, MOVE_UI_POSITION_SNAPSHOT.self_vitals)
     _restore_position(hud.target_vitals, MOVE_UI_POSITION_SNAPSHOT.target_vitals)
+    _restore_position(hud.companion_vitals, MOVE_UI_POSITION_SNAPSHOT.companion_vitals)
     _restore_position(hud.target_target_vitals, MOVE_UI_POSITION_SNAPSHOT.target_target_vitals)
     _restore_position(hud.boss_vitals, MOVE_UI_POSITION_SNAPSHOT.boss_vitals)
     _restore_position(hud.fellowship_vitals, MOVE_UI_POSITION_SNAPSHOT.fellowship_vitals)
@@ -299,6 +301,10 @@ local function _restore_saved_move_settings()
     end
     if Windows.target_vital ~= nil then
         Windows.target_vital:resize()
+    end
+    if Windows.companion_vital ~= nil then
+        Windows.companion_vital:resize()
+        Windows.companion_vital:update_pet()
     end
     if Windows.boss_vital ~= nil then
         Windows.boss_vital:resize()
@@ -449,6 +455,9 @@ function MoveMode.set_mode(enabled, return_to_config, cancel_changes, show_done_
 
     Windows.player_vital:set_move_mode(enabled)
     Windows.target_vital:set_move_mode(enabled)
+    if Windows.companion_vital ~= nil then
+        Windows.companion_vital:set_move_mode(enabled)
+    end
     if Windows.boss_vital ~= nil then
         Windows.boss_vital:set_move_mode(enabled)
     end

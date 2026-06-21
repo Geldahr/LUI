@@ -18,11 +18,26 @@ import "Turbine.Gameplay"
 ---@field player Turbine.Gameplay.Actor|nil
 ---@field source_target Turbine.Gameplay.Actor|nil
 ---@field background_source_target Turbine.Gameplay.Actor|nil
+---@field cache_kind string|nil
+---@field cache_name string|nil
+---@field cache_entry table|nil
 ---@field effects table<number, TargetEffectManagerEffectEntry>
 local TargetEffectManager = class(Turbine.Object)
 Vitals.TargetEffectManager = TargetEffectManager
 
-local _manager_cache = setmetatable({}, { __mode = "v" })
+local PLAYER_CACHE_KIND = "player"
+local OTHER_CACHE_KIND = "other"
+local _player_manager_cache = setmetatable({}, { __mode = "v" })
+local _other_manager_cache = {}
+local OTHER_IDENTITY_METHODS = {
+    "GetLevel",
+    -- "GetMorale",
+    "GetMaxMorale",
+    -- "GetPower",
+    "GetMaxPower",
+    "GetBaseMaxMorale",
+    "GetBaseMaxPower",
+}
 
 ---@return Turbine.Gameplay.EffectList|nil
 local function _get_target_effects(player, source_target)
@@ -46,48 +61,221 @@ local function _get_target_effects(player, source_target)
     return target:GetEffects()
 end
 
-local function _target_cache_key(target)
-    if target == nil or target.GetName == nil then
+local function _entity_name(entity)
+    if entity == nil or entity.GetName == nil then
         return nil
     end
 
-    local name = target:GetName()
-    if name == "" then
+    local name = entity:GetName()
+    if name == nil or name == "" then
         return nil
     end
 
     return name
 end
 
-local function _acquire_manager(player, target, source_target)
-    local key = _target_cache_key(target)
-    local cached = nil
-    if key ~= nil then
-        cached = _manager_cache[key]
-        if cached ~= nil then
-            cached.ref_count = (cached.ref_count or 0) + 1
-            -- Party vitals passes a stable source for background tracking.
-            -- Target vitals passes nil to use player:GetTarget() while selected.
-            if source_target ~= nil then
-                cached.background_source_target = source_target
-            end
-            if cached.set_source_target ~= nil then
-                cached:set_source_target(source_target)
-            end
+local function _external_entity_value(entity, method_name)
+    if entity == nil then
+        return nil, false
+    end
+
+    local method = entity[method_name]
+    if method == nil then
+        return nil, false
+    end
+
+    return method(entity), true
+end
+
+local function _entity_is_player(entity)
+    if entity == nil then
+        return false
+    end
+
+    if entity.IsLinkDead ~= nil then
+        return true
+    end
+
+    return entity.GetClass ~= nil
+end
+
+local function _other_entities_match(left, right)
+    if _entity_name(left) ~= _entity_name(right) then
+        return false
+    end
+
+    for i = 1, #OTHER_IDENTITY_METHODS do
+        local method_name = OTHER_IDENTITY_METHODS[i]
+        local left_value, left_available = _external_entity_value(left, method_name)
+        local right_value, right_available = _external_entity_value(right, method_name)
+
+        if left_available ~= right_available then
+            return false
+        end
+        if left_available == true and left_value ~= right_value then
+            return false
         end
     end
 
-    if cached ~= nil then
-        return cached
+    return true
+end
+
+local function _remove_other_entry(entry)
+    if entry.name == nil then
+        return
     end
 
-    local manager = TargetEffectManager(player, source_target)
-    manager.cache_key = key
-    manager.ref_count = 1
-    if key ~= nil then
-        _manager_cache[key] = manager
+    local bucket = _other_manager_cache[entry.name]
+
+    for i = #bucket, 1, -1 do
+        if bucket[i] == entry then
+            table.remove(bucket, i)
+            break
+        end
     end
+
+    if #bucket == 0 then
+        _other_manager_cache[entry.name] = nil
+    end
+end
+
+local function _add_other_entry(entry, name)
+    local bucket = _other_manager_cache[name]
+    if bucket == nil then
+        bucket = {}
+        _other_manager_cache[name] = bucket
+    end
+
+    entry.name = name
+    bucket[#bucket + 1] = entry
+end
+
+local function _move_other_entry(entry)
+    local old_name = entry.name
+    local new_name = _entity_name(entry.identity_entity)
+    if old_name == new_name then
+        return
+    end
+
+    _remove_other_entry(entry)
+    if new_name ~= nil then
+        _add_other_entry(entry, new_name)
+    else
+        entry.name = nil
+    end
+end
+
+local function _attach_other_entry_name_changed(entry)
+    entry.name_changed_event = add_callback(entry.identity_entity, "NameChanged", function()
+        _move_other_entry(entry)
+    end)
+end
+
+local function _detach_other_entry_name_changed(entry)
+    if entry.name_changed_event == nil then
+        error("Missing target effect manager NameChanged callback token")
+    end
+
+    remove_callback(entry.identity_entity, "NameChanged", entry.name_changed_event)
+    entry.name_changed_event = nil
+end
+
+local function _find_other_entry(name, target)
+    local bucket = _other_manager_cache[name]
+    if bucket == nil then
+        return nil
+    end
+
+    for i = 1, #bucket do
+        local entry = bucket[i]
+        if _other_entities_match(entry.identity_entity, target) == true then
+            return entry
+        end
+    end
+
+    return nil
+end
+
+local function _reuse_manager(cached, source_target)
+    cached.ref_count = cached.ref_count + 1
+    -- Group and companion vitals pass a stable source for background tracking.
+    -- Target vitals passes nil to use player:GetTarget() while selected.
+    if source_target ~= nil then
+        cached.background_source_target = source_target
+    end
+    if cached.source_target ~= nil or source_target == nil then
+        cached:set_source_target(source_target)
+    end
+
+    return cached
+end
+
+local function _new_manager(player, source_target)
+    return TargetEffectManager(player, source_target)
+end
+
+local function _acquire_player_manager(player, target, source_target, name)
+    local cached = _player_manager_cache[name]
+    if cached ~= nil then
+        return _reuse_manager(cached, source_target)
+    end
+
+    local manager = _new_manager(player, source_target)
+    manager.cache_kind = PLAYER_CACHE_KIND
+    manager.cache_name = name
+    _player_manager_cache[name] = manager
     return manager
+end
+
+local function _acquire_other_manager(player, target, source_target, name)
+    local entry = _find_other_entry(name, target)
+    if entry ~= nil then
+        return _reuse_manager(entry.manager, source_target)
+    end
+
+    local manager = _new_manager(player, source_target)
+    entry = {
+        manager = manager,
+        identity_entity = target,
+        name = nil,
+        name_changed_event = nil,
+    }
+    manager.cache_kind = OTHER_CACHE_KIND
+    manager.cache_entry = entry
+    _add_other_entry(entry, name)
+    _attach_other_entry_name_changed(entry)
+    return manager
+end
+
+local function _acquire_manager(player, target, source_target)
+    local name = _entity_name(target)
+    if name == nil then
+        return _new_manager(player, source_target)
+    end
+
+    if _entity_is_player(target) == true then
+        return _acquire_player_manager(player, target, source_target, name)
+    end
+
+    return _acquire_other_manager(player, target, source_target, name)
+end
+
+local function _delete_from_cache(manager)
+    if manager.cache_kind == PLAYER_CACHE_KIND then
+        if _player_manager_cache[manager.cache_name] == manager then
+            _player_manager_cache[manager.cache_name] = nil
+        end
+    elseif manager.cache_kind == OTHER_CACHE_KIND then
+        _detach_other_entry_name_changed(manager.cache_entry)
+        _remove_other_entry(manager.cache_entry)
+        manager.cache_entry.manager = nil
+    elseif manager.cache_kind ~= nil then
+        error("Unknown target effect manager cache kind: " .. tostring(manager.cache_kind))
+    end
+
+    manager.cache_kind = nil
+    manager.cache_name = nil
+    manager.cache_entry = nil
 end
 
 function TargetEffectManager.acquire(player, target)
@@ -112,7 +300,9 @@ function TargetEffectManager:Constructor(player, source_target)
     self.source_target = source_target
     self.background_source_target = source_target
     self.ref_count = 1
-    self.cache_key = nil
+    self.cache_kind = nil
+    self.cache_name = nil
+    self.cache_entry = nil
 
     self.call_in_s = nil
 
@@ -136,18 +326,13 @@ end
 -- It MUST be called for safety reasons
 function TargetEffectManager:delete()
     local count = self.ref_count
-    if type(count) ~= "number" then
-        count = 1
-    end
     if count > 1 then
         self.ref_count = count - 1
         return
     end
 
     self.ref_count = 0
-    if self.cache_key ~= nil and _manager_cache[self.cache_key] == self then
-        _manager_cache[self.cache_key] = nil
-    end
+    _delete_from_cache(self)
 
     self.effects = nil
     self.added_event = {}
@@ -158,7 +343,6 @@ function TargetEffectManager:delete()
     self.player = nil
     self.source_target = nil
     self.background_source_target = nil
-    self.cache_key = nil
 end
 
 ---------------------------------------------------------------------

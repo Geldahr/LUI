@@ -701,10 +701,22 @@ function ConfigWindow:init_target_vitals_preview()
     return self.target_vitals_preview
 end
 
+function ConfigWindow:init_companion_vitals_preview()
+    if self.companion_vitals_preview == nil then
+        self.companion_vitals_preview = StandardVitalsPreview(self, "companion_vitals_preview", "companion",
+            TR["Companion"], "150")
+    end
+    return self.companion_vitals_preview
+end
+
 function ConfigWindow:update_self_vitals_preview()
     self:init_self_vitals_preview():update()
 end
 
 function ConfigWindow:update_target_vitals_preview()
     self:init_target_vitals_preview():update()
+end
+
+function ConfigWindow:update_companion_vitals_preview()
+    self:init_companion_vitals_preview():update()
 end
