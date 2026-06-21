@@ -324,30 +324,33 @@ function ConfigWindow:update_target_boss_vitals_preview()
     local debuff_count = 10
     local buff_cols = math.max(1, math.floor(frame_w / buff_size))
     local debuff_cols = math.max(1, math.floor(frame_w / debuff_size))
-    local buffs_h = math.min(effects_h, math.ceil(buff_count / buff_cols) * buff_size)
-    local debuffs_h = math.min(math.max(0, effects_h - buffs_h), math.ceil(debuff_count / debuff_cols) * debuff_size)
+    local buffs_reserved_h = effects_h / 2
+    local debuffs_reserved_h = effects_h / 2
+    local buffs_h = math.min(buffs_reserved_h, math.ceil(buff_count / buff_cols) * buff_size)
+    local debuffs_h = math.min(debuffs_reserved_h, math.ceil(debuff_count / debuff_cols) * debuff_size)
 
     local top_entries = {}
     local bottom_entries = {}
 
-    local function add_entry(list, area, slot, height)
+    local function add_entry(list, area, slot, reserved_height, height)
         list[#list + 1] = {
             area = area,
             slot = slot,
+            reserved_height = reserved_height,
             height = height,
             order = _slot_order(slot),
         }
     end
 
     if _slot_is_top(buff_slot) then
-        add_entry(top_entries, "buffs", buff_slot, buffs_h)
+        add_entry(top_entries, "buffs", buff_slot, buffs_reserved_h, buffs_h)
     else
-        add_entry(bottom_entries, "buffs", buff_slot, buffs_h)
+        add_entry(bottom_entries, "buffs", buff_slot, buffs_reserved_h, buffs_h)
     end
     if _slot_is_top(debuff_slot) then
-        add_entry(top_entries, "debuffs", debuff_slot, debuffs_h)
+        add_entry(top_entries, "debuffs", debuff_slot, debuffs_reserved_h, debuffs_h)
     else
-        add_entry(bottom_entries, "debuffs", debuff_slot, debuffs_h)
+        add_entry(bottom_entries, "debuffs", debuff_slot, debuffs_reserved_h, debuffs_h)
     end
 
     table.sort(top_entries, function(a, b)
@@ -442,22 +445,33 @@ function ConfigWindow:update_target_boss_vitals_preview()
     p.border_left:SetPosition(off_x, outer_y)
     p.border_right:SetPosition(off_x + outer_w - preview_border, outer_y)
 
-    local top_height = 0
+    local top_reserved_height = 0
+    local top_visual_height = 0
     local effect_positions = {
         buffs = nil,
         debuffs = nil,
     }
     for i = 1, #top_entries do
+        top_reserved_height = top_reserved_height + top_entries[i].reserved_height
+        top_visual_height = top_visual_height + top_entries[i].height
+    end
+
+    local top_cursor = top_reserved_height - top_visual_height
+    if top_cursor < 0 then
+        top_cursor = 0
+    end
+
+    for i = 1, #top_entries do
         local entry = top_entries[i]
         effect_positions[entry.area] = {
-            top = top_height,
+            top = top_cursor,
             height = entry.height,
             reverse_fill = true,
         }
-        top_height = top_height + entry.height
+        top_cursor = top_cursor + entry.height
     end
 
-    local morale_top = top_height
+    local morale_top = top_reserved_height
     local power_top = morale_top + morale_h - border
     local info_top = power_top
     if power_hidden ~= true then
