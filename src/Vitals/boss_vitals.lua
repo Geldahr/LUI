@@ -417,11 +417,11 @@ function BossVitals:_detach_effect_manager()
         return
     end
 
-    if self.em_added_event ~= nil and self.em.unregister_added_event ~= nil then
+    if self.em_added_event ~= nil then
         self.em:unregister_added_event(self.em_added_event)
         self.em_added_event = nil
     end
-    if self.em_removed_event ~= nil and self.em.unregister_removed_event ~= nil then
+    if self.em_removed_event ~= nil then
         self.em:unregister_removed_event(self.em_removed_event)
         self.em_removed_event = nil
     end
