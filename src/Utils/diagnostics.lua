@@ -5,11 +5,19 @@ Runtime.Diagnostic = Diagnostic
 local MAX_LOG_LINES = 1000
 local DIAGNOSTIC_LOG_DATA_KEY = "LUI_DIAGNOSTIC_LOG"
 
+Diagnostic.Level = {
+    DISABLED = 0,
+    ERROR = 1,
+    WARN = 2,
+    INFO = 3,
+}
+
 local Log = {}
 Diagnostic.Log = Log
 Runtime.Log = Log
 
 Diagnostic.lines = {}
+Diagnostic.level = Diagnostic.Level.INFO
 
 local function _timestamp()
     if os ~= nil and os.date ~= nil then
@@ -25,11 +33,25 @@ local function _normalize_level(level)
         return "WARN"
     end
 
-    if normalized ~= "WARN" and normalized ~= "ERROR" and normalized ~= "INFO" then
-        return "INFO"
+    return normalized
+end
+
+local function _level_value(level)
+    if type(level) == "number" then
+        if level < Diagnostic.Level.DISABLED or level > Diagnostic.Level.INFO or math.floor(level) ~= level then
+            error("Invalid diagnostic level: " .. tostring(level))
+        end
+
+        return level
     end
 
-    return normalized
+    local normalized = _normalize_level(level)
+    local value = Diagnostic.Level[normalized]
+    if value == nil then
+        error("Invalid diagnostic level: " .. tostring(level))
+    end
+
+    return value
 end
 
 local function _message_from_args(level_or_data, has_message, message)
@@ -66,12 +88,29 @@ function Diagnostic.push(level_or_data, ...)
     local lines = Diagnostic.lines
     local has_message = select("#", ...) > 0
     local message = select(1, ...)
-    local line = "[" .. _normalize_level(_level_from_args(level_or_data, has_message)) .. "] [" .. _timestamp() .. "] - " ..
-        _message_from_args(level_or_data, has_message, message)
+    local level = _normalize_level(_level_from_args(level_or_data, has_message))
+    if _level_value(level) <= Diagnostic.level then
+        local line = "[" .. level .. "] [" .. _timestamp() .. "] - " ..
+            _message_from_args(level_or_data, has_message, message)
 
-    lines[#lines + 1] = line
-    while #lines > MAX_LOG_LINES do
-        table.remove(lines, 1)
+        lines[#lines + 1] = line
+        while #lines > MAX_LOG_LINES do
+            table.remove(lines, 1)
+        end
+    end
+end
+
+function Diagnostic.set_level(level)
+    Diagnostic.level = _level_value(level)
+end
+
+function Diagnostic.configure(config)
+    if config.enabled == false then
+        Diagnostic.set_level("DISABLED")
+    elseif config.level ~= nil then
+        Diagnostic.set_level(config.level)
+    elseif config.enabled == true and Diagnostic.level == Diagnostic.Level.DISABLED then
+        Diagnostic.set_level("INFO")
     end
 end
 
