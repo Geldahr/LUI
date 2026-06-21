@@ -179,9 +179,7 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
     ---------------------------------------------------------------------
     -- MORALE
     ---------------------------------------------------------------------
-    local effects_above = self.show_effects == true and frame.effects_position ~= LUI_ENUMS.vitals_effects_position
-        .BELOW
-    local morale_top = effects_above and effects_height or 0
+    local morale_top = self.show_effects == true and v.effects.layout.top_reserved_height or 0
     local frame_border_color = self:get_frame_border_color()
 
     self.morale_frame = Turbine.UI.Control()
@@ -489,21 +487,6 @@ end
 function VitalsBase:get_lower_bars_height()
     local v = self:get_vitals_settings()
     return v.power.height
-end
-
-local function _slot_is_top(slot)
-    return slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR
-end
-
-local function _slot_is_bottom(slot)
-    return slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_NEAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR
-end
-
-local function _slot_order(slot)
-    if slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR then
-        return 2
-    end
-    return 1
 end
 
 function VitalsBase:get_empty_morale_text()
@@ -1143,6 +1126,63 @@ end
 -- Private functions
 ---------------------------------------------------------------------
 
+function VitalsBase:_effect_area_for_key(area_key)
+    if area_key == "buffs" then
+        return self.buffs
+    end
+    if area_key == "debuffs" then
+        return self.debuffs
+    end
+    error("Unknown vitals effect area key: " .. tostring(area_key))
+end
+
+function VitalsBase:_effect_entry_visual_height(entry)
+    local area = self:_effect_area_for_key(entry.area_key)
+    local height = area:GetHeight()
+    if height < 0 then
+        height = 0
+    end
+    if height > entry.reserved_height then
+        height = entry.reserved_height
+    end
+    return area, height
+end
+
+function VitalsBase:_layout_top_effect_entries(entries, reserved_height)
+    local visual_entries = {}
+    local visual_total = 0
+
+    for i = 1, #entries do
+        local area, height = self:_effect_entry_visual_height(entries[i])
+        visual_entries[i] = {
+            area = area,
+            height = height,
+        }
+        visual_total = visual_total + height
+    end
+
+    local cursor = reserved_height - visual_total
+    if cursor < 0 then
+        cursor = 0
+    end
+
+    for i = 1, #visual_entries do
+        local entry = visual_entries[i]
+        entry.area:SetTop(cursor)
+        cursor = cursor + entry.height
+    end
+end
+
+function VitalsBase:_layout_bottom_effect_entries(entries, bottom_start)
+    local cursor = bottom_start
+
+    for i = 1, #entries do
+        local area, height = self:_effect_entry_visual_height(entries[i])
+        area:SetTop(cursor)
+        cursor = cursor + height
+    end
+end
+
 function VitalsBase:_layout_effect_windows(bottom_start_override)
     if self.show_effects ~= true then
         return 0
@@ -1152,89 +1192,30 @@ function VitalsBase:_layout_effect_windows(bottom_start_override)
     end
 
     local v = self:get_vitals_settings()
-    local effects_height = self:get_effects_height()
+    local layout = v.effects.layout
 
-    local buffs_h = self.buffs:GetHeight()
-    if type(buffs_h) ~= "number" then
-        buffs_h = 0
-    end
-    if buffs_h < 0 then
-        buffs_h = 0
-    end
-    if type(effects_height) == "number" and buffs_h > effects_height then
-        buffs_h = effects_height
-    end
+    self.buffs:set_max_height(layout.buffs_reserved_height)
+    self.debuffs:set_max_height(layout.debuffs_reserved_height)
 
-    local debuffs_h = effects_height - buffs_h
-    if debuffs_h < 0 then
-        debuffs_h = 0
-    end
-    self.debuffs:set_max_height(debuffs_h)
-
-    local buff_slot = v.effects.buffs.slot
-    local debuff_slot = v.effects.debuffs.slot
-
-    self.buffs:set_reverse_fill(_slot_is_top(buff_slot))
+    self.buffs:set_reverse_fill(layout.buffs_reverse_fill)
     self.buffs:set_horizontal_alignment(v.effects.buffs.alignment)
-    self.debuffs:set_reverse_fill(_slot_is_top(debuff_slot))
+    self.debuffs:set_reverse_fill(layout.debuffs_reverse_fill)
     self.debuffs:set_horizontal_alignment(v.effects.debuffs.alignment)
 
-    local top_entries = {}
-    local bottom_entries = {}
-
-    local function add_entry(list, order, area, height)
-        list[#list + 1] = {
-            order = order,
-            area = area,
-            height = height,
-        }
-    end
-
-    if _slot_is_top(buff_slot) then
-        add_entry(top_entries, _slot_order(buff_slot), self.buffs, buffs_h)
-    elseif _slot_is_bottom(buff_slot) then
-        add_entry(bottom_entries, _slot_order(buff_slot), self.buffs, buffs_h)
-    end
-
-    if _slot_is_top(debuff_slot) then
-        add_entry(top_entries, _slot_order(debuff_slot), self.debuffs, debuffs_h)
-    elseif _slot_is_bottom(debuff_slot) then
-        add_entry(bottom_entries, _slot_order(debuff_slot), self.debuffs, debuffs_h)
-    end
-
-    table.sort(top_entries, function(a, b)
-        return a.order > b.order
-    end)
-    table.sort(bottom_entries, function(a, b)
-        return a.order < b.order
-    end)
-
-    local top_height = 0
-    local cursor = 0
-    for i = 1, #top_entries do
-        local entry = top_entries[i]
-        entry.area:SetTop(cursor)
-        cursor = cursor + entry.height
-        top_height = top_height + entry.height
-    end
+    self:_layout_top_effect_entries(layout.top, layout.top_reserved_height)
 
     local bottom_start = bottom_start_override
     if type(bottom_start) ~= "number" then
-        bottom_start = top_height + _stack_height({
+        bottom_start = layout.top_reserved_height + _stack_height({
             v.morale.height,
             self:get_lower_bars_height(),
             self:get_info_height(),
         }, v.frame.border_width)
     end
 
-    cursor = bottom_start
-    for i = 1, #bottom_entries do
-        local entry = bottom_entries[i]
-        entry.area:SetTop(cursor)
-        cursor = cursor + entry.height
-    end
+    self:_layout_bottom_effect_entries(layout.bottom, bottom_start)
 
-    return top_height
+    return layout.top_reserved_height
 end
 
 function VitalsBase:_set_effect_areas_visible(visible)

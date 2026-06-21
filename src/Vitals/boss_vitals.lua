@@ -437,7 +437,7 @@ function BossVitals:_layout_effect_windows(bottom_start_override)
     self._layout_busy = true
 
     local v = self:get_vitals_settings()
-    local effects_max_h = self._effects_height or 0
+    local layout = v.effects.layout
     local bottom_start = bottom_start_override
     if type(bottom_start) ~= "number" then
         if self.info_frame:IsVisible() == true then
@@ -457,90 +457,21 @@ function BossVitals:_layout_effect_windows(bottom_start_override)
         return 0
     end
 
-    local buffs_h = self.buffs:GetHeight()
-    if type(buffs_h) ~= "number" then
-        buffs_h = 0
-    end
-    if buffs_h < 0 then
-        buffs_h = 0
-    end
-    if buffs_h > effects_max_h then
-        buffs_h = effects_max_h
-    end
+    self.buffs:set_max_height(layout.buffs_reserved_height)
+    self.debuffs:set_max_height(layout.debuffs_reserved_height)
 
-    local debuffs_h = effects_max_h - buffs_h
-    if debuffs_h < 0 then
-        debuffs_h = 0
-    end
-    self.debuffs:set_max_height(debuffs_h)
-
-    local buff_slot = v.effects.buffs.slot
-    local debuff_slot = v.effects.debuffs.slot
-
-    self.buffs:set_reverse_fill(buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR
-        or buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR)
+    self.buffs:set_reverse_fill(layout.buffs_reverse_fill)
     self.buffs:set_horizontal_alignment(v.effects.buffs.alignment)
-    self.debuffs:set_reverse_fill(debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR
-        or debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR)
+    self.debuffs:set_reverse_fill(layout.debuffs_reverse_fill)
     self.debuffs:set_horizontal_alignment(v.effects.debuffs.alignment)
 
-    local top_entries = {}
-    local bottom_entries = {}
-
-    local function slot_order(slot)
-        if slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR then
-            return 2
-        end
-        return 1
-    end
-
-    local function add_entry(list, order, area, height)
-        list[#list + 1] = {
-            order = order,
-            area = area,
-            height = height,
-        }
-    end
-
-    if buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or buff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR then
-        add_entry(top_entries, slot_order(buff_slot), self.buffs, buffs_h)
-    else
-        add_entry(bottom_entries, slot_order(buff_slot), self.buffs, buffs_h)
-    end
-
-    if debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or debuff_slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR then
-        add_entry(top_entries, slot_order(debuff_slot), self.debuffs, debuffs_h)
-    else
-        add_entry(bottom_entries, slot_order(debuff_slot), self.debuffs, debuffs_h)
-    end
-
-    table.sort(top_entries, function(a, b)
-        return a.order > b.order
-    end)
-    table.sort(bottom_entries, function(a, b)
-        return a.order < b.order
-    end)
-
-    local top_height = 0
-    local top_cursor = 0
-    for i = 1, #top_entries do
-        local entry = top_entries[i]
-        entry.area:SetPosition(0, top_cursor)
-        top_cursor = top_cursor + entry.height
-    end
-    top_height = top_cursor
-
-    local bottom_cursor = bottom_start
-    for i = 1, #bottom_entries do
-        local entry = bottom_entries[i]
-        entry.area:SetPosition(0, bottom_cursor)
-        bottom_cursor = bottom_cursor + entry.height
-    end
+    self:_layout_top_effect_entries(layout.top, layout.top_reserved_height)
+    self:_layout_bottom_effect_entries(layout.bottom, bottom_start)
 
     if self.effects_top_border ~= nil then
         self.effects_top_border:SetVisible(false)
     end
 
     self._layout_busy = false
-    return top_height
+    return layout.top_reserved_height
 end

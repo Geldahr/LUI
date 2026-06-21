@@ -11,6 +11,7 @@ local UI = LUI.UI
 local Settings = LUI.Settings
 local State = Settings.State
 local ToLotro = Settings.ToLotro
+local LUI_ENUMS = Settings.Enums
 local S = LUI.Features.StatusBar.Common
 local FONT_TO_LOTRO = LUI.Utils.FONT_TO_LOTRO
 
@@ -116,6 +117,7 @@ function Settings.rebuild()
                 effects = {
                     buffs = { timer_font = {} },
                     debuffs = { timer_font = {} },
+                    layout = { top = {}, bottom = {} },
                 },
             },
             expiring_effects = { font = {}, color = {} },
@@ -133,6 +135,7 @@ function Settings.rebuild()
                 effects = {
                     buffs = { timer_font = {} },
                     debuffs = { timer_font = {} },
+                    layout = { top = {}, bottom = {} },
                 },
             },
             boss_vitals = {
@@ -144,6 +147,7 @@ function Settings.rebuild()
                 effects = {
                     buffs = { timer_font = {} },
                     debuffs = { timer_font = {} },
+                    layout = { top = {}, bottom = {} },
                 },
             },
             expiring_effects = { font = {}, color = {} },
@@ -157,6 +161,7 @@ function Settings.rebuild()
             effects = {
                 buffs = { timer_font = {} },
                 debuffs = { timer_font = {} },
+                layout = { top = {}, bottom = {} },
             },
         },
         fellowship = {
@@ -172,6 +177,7 @@ function Settings.rebuild()
             effects = {
                 buffs = { timer_font = {} },
                 debuffs = { timer_font = {} },
+                layout = { top = {}, bottom = {} },
             },
         },
         raid = {
@@ -189,6 +195,7 @@ function Settings.rebuild()
             effects = {
                 buffs = { timer_font = {} },
                 debuffs = { timer_font = {} },
+                layout = { top = {}, bottom = {} },
             },
         },
         inventory = {},
@@ -293,6 +300,70 @@ function Settings.rebuild()
         return dst
     end
 
+    local function effect_slot_is_top(slot)
+        return slot == LUI_ENUMS.vitals_effect_slot.TOP_NEAR or slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR
+    end
+
+    local function effect_slot_is_bottom(slot)
+        return slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_NEAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR
+    end
+
+    local function effect_slot_order(slot)
+        if slot == LUI_ENUMS.vitals_effect_slot.TOP_FAR or slot == LUI_ENUMS.vitals_effect_slot.BOTTOM_FAR then
+            return 2
+        end
+        return 1
+    end
+
+    local function build_effect_layout(dst)
+        local half_height = dst.frame.effects_height / 2
+        local layout = {
+            buffs_reserved_height = half_height,
+            debuffs_reserved_height = half_height,
+            buffs_reverse_fill = effect_slot_is_top(dst.effects.buffs.slot),
+            debuffs_reverse_fill = effect_slot_is_top(dst.effects.debuffs.slot),
+            top_reserved_height = 0,
+            bottom_reserved_height = 0,
+            top = {},
+            bottom = {},
+        }
+
+        local function add_entry(list, area_key, slot, reserved_height)
+            list[#list + 1] = {
+                area_key = area_key,
+                order = effect_slot_order(slot),
+                reserved_height = reserved_height,
+            }
+        end
+
+        local buff_slot = dst.effects.buffs.slot
+        if effect_slot_is_top(buff_slot) then
+            add_entry(layout.top, "buffs", buff_slot, layout.buffs_reserved_height)
+            layout.top_reserved_height = layout.top_reserved_height + layout.buffs_reserved_height
+        elseif effect_slot_is_bottom(buff_slot) then
+            add_entry(layout.bottom, "buffs", buff_slot, layout.buffs_reserved_height)
+            layout.bottom_reserved_height = layout.bottom_reserved_height + layout.buffs_reserved_height
+        end
+
+        local debuff_slot = dst.effects.debuffs.slot
+        if effect_slot_is_top(debuff_slot) then
+            add_entry(layout.top, "debuffs", debuff_slot, layout.debuffs_reserved_height)
+            layout.top_reserved_height = layout.top_reserved_height + layout.debuffs_reserved_height
+        elseif effect_slot_is_bottom(debuff_slot) then
+            add_entry(layout.bottom, "debuffs", debuff_slot, layout.debuffs_reserved_height)
+            layout.bottom_reserved_height = layout.bottom_reserved_height + layout.debuffs_reserved_height
+        end
+
+        table.sort(layout.top, function(a, b)
+            return a.order > b.order
+        end)
+        table.sort(layout.bottom, function(a, b)
+            return a.order < b.order
+        end)
+
+        dst.effects.layout = layout
+    end
+
     local function build_vital(dst, src)
         dst.enabled = src.enabled == true
         dst.frame.width = scaled_int(src.frame.width)
@@ -352,6 +423,7 @@ function Settings.rebuild()
 
             dst.effects.debuffs.track_curable = src.effects.debuffs.track_curable
             dst.effects.debuffs.track_noncurable = src.effects.debuffs.track_noncurable
+            build_effect_layout(dst)
         end
     end
 
