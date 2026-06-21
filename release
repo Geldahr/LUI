@@ -60,13 +60,14 @@ fi
 # Guard against ambiguous releases from dirty tracked state.
 git rev-parse -q --verify "refs/tags/$version" >/dev/null 2>&1 && die "Local tag $version already exists."
 if [ "$dry_run" != 1 ]; then
-  other=$(git status --porcelain --untracked-files=no | grep -Ev '^.. (CHANGELOG\.md|LUI\.plugin)$' || true)
-  [ -z "$other" ] || die "Tracked changes outside CHANGELOG.md and LUI.plugin would make this release ambiguous."
+  other=$(git status --porcelain --untracked-files=no | grep -Ev '^.. (CHANGELOG\.md|LUI\.plugin|LUI\.plugincompendium)$' || true)
+  [ -z "$other" ] || die "Tracked changes outside CHANGELOG.md, LUI.plugin, and LUI.plugincompendium would make this release ambiguous."
 fi
 b=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || die "Release automation must run from a branch."
 tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/lui-release.XXXXXX" 2>/dev/null || mktemp -d -t lui-release)
 changelog=$tmpdir/CHANGELOG.md
 plugin=$tmpdir/LUI.plugin
+plugincompendium=$tmpdir/LUI.plugincompendium
 current=$tmpdir/current.md
 
 # Stage the next changelog state: new placeholder + released content below it.
@@ -106,19 +107,21 @@ EOF
   done
 } >"$changelog"
 
-# Update the plugin manifest version independently of changelog processing.
+# Update plugin manifest versions independently of changelog processing.
 sed "s#<Version>[^<]*</Version>#<Version>${version#v}</Version>#" LUI.plugin >"$plugin"
+sed "s#<Version>[^<]*</Version>#<Version>${version}</Version>#" LUI.plugincompendium >"$plugincompendium"
 notes=$(extract_notes_file "$version" "$changelog")
 [ -n "$notes" ] || die "The Unreleased changelog section has no entries to release."
 
-printf 'Prepared release %s\n- Updated CHANGELOG.md\n- Updated LUI.plugin -> %s\n- Release notes:\n%s\n' \
-  "$version" "${version#v}" "$notes"
+printf 'Prepared release %s\n- Updated CHANGELOG.md\n- Updated LUI.plugin -> %s\n- Updated LUI.plugincompendium -> %s\n- Release notes:\n%s\n' \
+  "$version" "${version#v}" "$version" "$notes"
 
 # Dry-run prints the exact write and git steps without mutating the repo.
 if [ "$dry_run" = 1 ]; then
   printf '[dry-run] cp %s CHANGELOG.md\n' "$changelog"
   printf '[dry-run] cp %s LUI.plugin\n' "$plugin"
-  printf '[dry-run] git add CHANGELOG.md LUI.plugin\n'
+  printf '[dry-run] cp %s LUI.plugincompendium\n' "$plugincompendium"
+  printf '[dry-run] git add CHANGELOG.md LUI.plugin LUI.plugincompendium\n'
   printf '[dry-run] git commit -m %s\n' "$version"
   printf '[dry-run] git tag -a %s -m %s\n' "$version" "$version"
   printf '[dry-run] git push %s HEAD:refs/heads/%s refs/tags/%s\n' "$remote" "$b" "$version"
@@ -128,7 +131,8 @@ fi
 # Apply staged files, commit the release, tag it, and push branch plus tag.
 cp "$changelog" CHANGELOG.md
 cp "$plugin" LUI.plugin
-git add CHANGELOG.md LUI.plugin
+cp "$plugincompendium" LUI.plugincompendium
+git add CHANGELOG.md LUI.plugin LUI.plugincompendium
 git commit -m "$version"
 git tag -a "$version" -m "$version"
 git push "$remote" "HEAD:refs/heads/$b" "refs/tags/$version"
