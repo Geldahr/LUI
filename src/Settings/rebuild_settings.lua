@@ -148,6 +148,17 @@ function Settings.rebuild()
             },
             expiring_effects = { font = {}, color = {} },
         },
+        companion = {
+            frame = {},
+            morale = { color = {} },
+            power = { color = {} },
+            labels = {},
+            info = { color = {} },
+            effects = {
+                buffs = { timer_font = {} },
+                debuffs = { timer_font = {} },
+            },
+        },
         fellowship = {
             frame = {},
             morale = { color = {} },
@@ -374,6 +385,7 @@ function Settings.rebuild()
     build_vital(State.settings.self.vitals, raw.self.vitals)
     build_vital(State.settings.target.vitals, raw.target.vitals)
     build_vital(State.settings.target.boss_vitals, raw.target.boss_vitals)
+    build_vital(State.settings.companion, raw.companion)
     build_group_vital(State.settings.fellowship, raw.fellowship)
     build_group_vital(State.settings.raid, raw.raid)
     State.settings.fellowship.show_self_in_fellowship = raw.fellowship.show_self_in_fellowship == true

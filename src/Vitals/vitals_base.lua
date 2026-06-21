@@ -94,6 +94,7 @@ local _gradient_morale_color = lui_gradient_morale_color
 local HUD_KEY_BY_VITAL = {
     self = "self_vitals",
     target = "target_vitals",
+    companion = "companion_vitals",
     boss = "boss_vitals",
     fellowship = "fellowship_vitals",
     raid = "raid_vitals",

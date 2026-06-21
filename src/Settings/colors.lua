@@ -60,6 +60,7 @@ function Colors.fix_colors()
     fix_vital(s.self.vitals)
     fix_vital(s.target.vitals)
     fix_vital(s.target.boss_vitals)
+    fix_vital(s.companion)
     fix_vital(s.fellowship)
     fix_vital(s.raid)
 

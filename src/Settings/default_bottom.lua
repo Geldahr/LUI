@@ -34,6 +34,21 @@ _G.LUI.Settings.Defaults.Bottom =
             },
         },
     },
+    ["companion"] = {
+        ["effects"] = {
+            ["debuffs"] = {
+                ["alignment"] = 2.000000,
+                ["slot"] = 2.000000,
+            },
+            ["buffs"] = {
+                ["alignment"] = 2.000000,
+                ["slot"] = 1.000000,
+            },
+        },
+        ["frame"] = {
+            ["effects_position"] = 1.000000,
+        },
+    },
     ["ui"] = {
         ["hud"] = {
             ["fellowship_vitals"] = {
@@ -70,6 +85,10 @@ _G.LUI.Settings.Defaults.Bottom =
             ["target_vitals"] = {
                 ["left"] = 1600.000000,
                 ["top"] = 820.000000,
+            },
+            ["companion_vitals"] = {
+                ["left"] = 1600.000000,
+                ["top"] = 930.000000,
             },
         },
         ["windows"] = {

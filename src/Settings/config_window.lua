@@ -644,6 +644,10 @@ function ConfigWindow:refresh_runtime_settings()
     if Windows.target_vital ~= nil then
         Windows.target_vital:resize()
     end
+    if Windows.companion_vital ~= nil then
+        Windows.companion_vital:resize()
+        Windows.companion_vital:update_pet()
+    end
     if Windows.boss_vital ~= nil then
         Windows.boss_vital:resize()
     end

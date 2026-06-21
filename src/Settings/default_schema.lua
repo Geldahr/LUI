@@ -2138,3 +2138,25 @@ _G.LUI.Settings.Defaults.Schema =
 		},
 	},
 }
+
+local Defaults = _G.LUI.Settings.Defaults
+
+local function _copy_default_table(value)
+	if type(value) ~= "table" then
+		return value
+	end
+
+	local copy = {}
+	for key, child in pairs(value) do
+		copy[key] = _copy_default_table(child)
+	end
+	return copy
+end
+
+Defaults.Schema.companion = _copy_default_table(Defaults.Schema.target.vitals)
+Defaults.Schema.companion.enabled = false
+Defaults.Schema.companion.targets_target = nil
+Defaults.Schema.ui.hud.companion_vitals = {
+	["left"] = 370.000000,
+	["top"] = 130.000000,
+}

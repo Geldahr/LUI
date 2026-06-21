@@ -71,7 +71,7 @@ local function _acquire_manager(player, target, source_target)
             if source_target ~= nil then
                 cached.background_source_target = source_target
             end
-            if cached.set_source_target ~= nil then
+            if cached.source_target ~= nil or source_target == nil then
                 cached:set_source_target(source_target)
             end
         end

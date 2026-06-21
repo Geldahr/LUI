@@ -46,6 +46,9 @@ local function _normalize_main_tab_request(main_key, preferred_sub_key)
     if main_key == "target_vitals" then
         return "vitals", "target"
     end
+    if main_key == "companion_vitals" then
+        return "vitals", "companion"
+    end
     if main_key == "target_boss_vitals" then
         return "vitals", "boss"
     end
