@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v1.2.0
+
+### Added
+
 - Added companion/pet vitals with configurable morale, power, labels, buffs, debuffs, preview support, move-mode placement, and shared cached effect tracking when the pet is selected as the target.
 - Added vertical and corner resizing to the Inventory window, with capacity-aware minimum sizing so the window keeps enough rows/columns for all backpack slots while still resizing smoothly by pixels.
 
@@ -16,8 +26,6 @@
 - Fixed vitals effect layout so `effects_height` is treated as total reserved space split between buffs and debuffs when they are on opposite sides of the frame.
 - Fixed vitals effect shrinking so buffs and debuffs on the same side do not leave an empty reserved gap between the effect areas.
 - Fixed live vitals positioning to match the preview when effects are split above and below the vitals, including layouts with the optional info section.
-
-### Removed
 
 ## v1.1.0
 
