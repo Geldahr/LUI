@@ -38,6 +38,6 @@ TravelWindowII:
 
 - https://github.com/wduda/TravelWindowII
 
-Credit goes to the TravelWindowII maintainers, including wduda / Hyoss, and to
+Credit goes to the TravelWindowII maintainers, including wduda / Hyoss / whiterabbit963, and to
 the original Travel Window authors credited upstream, including Dhor and later
 contributors.
