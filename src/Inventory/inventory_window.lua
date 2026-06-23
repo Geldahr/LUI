@@ -2,6 +2,7 @@ local TR = _G.LUI.Locale.TR
 local lui_abbrev_gold = _G.LUI.Utils.lui_abbrev_gold
 local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
 local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
+local Settings = _G.LUI.Settings
 local Defaults = _G.LUI.Settings.Defaults
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
@@ -42,6 +43,9 @@ local MIN_ROWS = 1
 local MAX_COLS = 20
 local TITLE_FULL_MIN_W = 360
 local TITLE_COMPACT_MIN_W = 310
+local TILE_SIZE_SMALL = 32
+local TILE_SIZE_MEDIUM = 40
+local TILE_SIZE_LARGE = 48
 local RESIZE_LEFT = 1
 local RESIZE_TOP = 4
 
@@ -208,7 +212,8 @@ function InventoryWindow:Constructor()
     end
 
     local menu_bar = self:get_menu_bar()
-    self.sort_menu = menu_bar:add_menu(TR["Sort"])
+    self.edit_menu = menu_bar:add_menu(TR["Edit"])
+    self.sort_menu = self.edit_menu:add_menu(TR["Sort"])
     self.sort_category_action = self.sort_menu:add_action({
         text = TR["Category + A-Z"],
         action = function()
@@ -228,7 +233,7 @@ function InventoryWindow:Constructor()
         end,
     })
 
-    self.merge_menu = menu_bar:add_menu(TR["Merge"])
+    self.merge_menu = self.edit_menu:add_menu(TR["Merge"])
     self.merge_up_action = self.merge_menu:add_action({
         text = TR["Up"],
         action = function()
@@ -239,6 +244,31 @@ function InventoryWindow:Constructor()
         text = TR["Down"],
         action = function()
             self:start_inventory_merge(Inventory.Operations.MERGE_DOWN)
+        end,
+    })
+    self.view_menu = menu_bar:add_menu(TR["View"])
+    self.view_small_action = self.view_menu:add_action({
+        text = TR["Small"],
+        checkable = true,
+        checked = State.loaded_settings.inventory.tile_size == TILE_SIZE_SMALL,
+        action = function()
+            self:set_tile_size(TILE_SIZE_SMALL)
+        end,
+    })
+    self.view_medium_action = self.view_menu:add_action({
+        text = TR["Medium"],
+        checkable = true,
+        checked = State.loaded_settings.inventory.tile_size == TILE_SIZE_MEDIUM,
+        action = function()
+            self:set_tile_size(TILE_SIZE_MEDIUM)
+        end,
+    })
+    self.view_large_action = self.view_menu:add_action({
+        text = TR["Large"],
+        checkable = true,
+        checked = State.loaded_settings.inventory.tile_size == TILE_SIZE_LARGE,
+        action = function()
+            self:set_tile_size(TILE_SIZE_LARGE)
         end,
     })
 
@@ -311,7 +341,6 @@ function InventoryWindow:bring_to_front()
 end
 
 function InventoryWindow:capture_geometry()
-    local raw = State.loaded_settings.inventory
     local window_state = Defaults.get_ui_window_state("inventory")
     local geometry = self:get_geometry()
     window_state.left = geometry.left
@@ -319,9 +348,6 @@ function InventoryWindow:capture_geometry()
     window_state.width = geometry.width
     window_state.height = geometry.height
     window_state.tile = geometry.tile
-    if self:is_tiled() ~= true then
-        raw.cols = self.cols
-    end
 end
 
 function InventoryWindow:persist_geometry()
@@ -529,21 +555,50 @@ function InventoryWindow:window_size_has_inventory_capacity(window_w, window_h)
     return rows >= self:get_needed_rows(cols)
 end
 
-function InventoryWindow:clamp_window_height_to_inventory_capacity(window_w, window_h, max_h)
-    if self:window_size_has_inventory_capacity(window_w, window_h) == true then
-        return window_w, window_h
+function InventoryWindow:fit_window_size_to_inventory_capacity(window_w, window_h)
+    local fit_w, fit_h = self:_fit_size_to_screen(window_w, window_h)
+    if self:window_size_has_inventory_capacity(fit_w, fit_h) == true then
+        return fit_w, fit_h
     end
 
-    local cols = self:get_columns_for_window_width(window_w)
+    local _, _, work_w, work_h = self:_work_area()
+    local min_w, min_h = self:minimum_window_size()
+    local max_w = math.max(min_w, work_w)
+    local max_h = math.max(min_h, work_h)
+
+    local cols = self:get_columns_for_window_width(fit_w)
     local needed_rows = self:get_needed_rows(cols)
-    local _, min_h = self:compute_window_size(cols, needed_rows)
-    if min_h > max_h then
-        min_h = max_h
+    local _, needed_h = self:compute_window_size(cols, needed_rows)
+    needed_h = math.min(max_h, math.max(min_h, needed_h))
+    if self:window_size_has_inventory_capacity(fit_w, needed_h) == true then
+        return fit_w, needed_h
     end
-    if window_h < min_h then
-        window_h = min_h
+
+    local rows = self:get_visible_rows_for_window_height(fit_h, MIN_ROWS)
+    local needed_cols = self:get_columns_for_visible_rows(rows)
+    local needed_w = self:compute_window_size(needed_cols, rows)
+    needed_w = math.min(max_w, math.max(min_w, needed_w))
+    if self:window_size_has_inventory_capacity(needed_w, fit_h) == true then
+        return needed_w, fit_h
     end
-    return window_w, window_h
+
+    cols = self:get_columns_for_window_width(max_w)
+    needed_rows = self:get_needed_rows(cols)
+    _, needed_h = self:compute_window_size(cols, needed_rows)
+    needed_h = math.min(max_h, math.max(min_h, needed_h))
+    if self:window_size_has_inventory_capacity(max_w, needed_h) == true then
+        return max_w, needed_h
+    end
+
+    rows = self:get_visible_rows_for_window_height(max_h, MIN_ROWS)
+    needed_cols = self:get_columns_for_visible_rows(rows)
+    needed_w = self:compute_window_size(needed_cols, rows)
+    needed_w = math.min(max_w, math.max(min_w, needed_w))
+    if self:window_size_has_inventory_capacity(needed_w, max_h) == true then
+        return needed_w, max_h
+    end
+
+    return max_w, max_h
 end
 
 function InventoryWindow:clamp_resize_to_inventory_capacity(window_w, window_h)
@@ -621,14 +676,10 @@ function InventoryWindow:apply_resize_candidate(window_x, window_y, window_w, wi
 
     local cols = self:get_columns_for_window_width(desired_w)
     local rows = self:get_visible_rows_for_window_height(desired_h, MIN_ROWS)
-    local raw = State.loaded_settings.inventory
     local changed = cols ~= self.cols or rows ~= self.rows_visible
 
     self.cols = cols
     self.rows_visible = rows
-    if self:is_tiled() ~= true then
-        raw.cols = cols
-    end
 
     if self:is_tiled() == true then
         desired_w = window_w
@@ -702,13 +753,49 @@ function InventoryWindow:update_money()
     self.c_label:SetText(tostring(copper))
 end
 
+function InventoryWindow:_sync_view_menu_actions()
+    local tile_size = State.loaded_settings.inventory.tile_size
+    self.view_small_action:set_checked(tile_size == TILE_SIZE_SMALL)
+    self.view_medium_action:set_checked(tile_size == TILE_SIZE_MEDIUM)
+    self.view_large_action:set_checked(tile_size == TILE_SIZE_LARGE)
+end
+
+function InventoryWindow:set_tile_size(tile_size)
+    if tile_size ~= TILE_SIZE_SMALL and tile_size ~= TILE_SIZE_MEDIUM and tile_size ~= TILE_SIZE_LARGE then
+        error("Unsupported inventory tile size: " .. tostring(tile_size))
+    end
+
+    if State.loaded_settings.inventory.tile_size == tile_size then
+        self:_sync_view_menu_actions()
+        return
+    end
+
+    local geometry = self:get_geometry()
+    local cols = self.cols
+    local rows = self.rows_visible
+
+    State.loaded_settings.inventory.tile_size = tile_size
+    Settings.rebuild()
+
+    self.tile_size = State.settings.inventory.tile_size
+    local width, height = self:compute_window_size(cols, rows)
+    local window_state = Defaults.get_ui_window_state("inventory")
+    window_state.left = geometry.left
+    window_state.top = geometry.top
+    window_state.width = width
+    window_state.height = height
+    window_state.tile = geometry.tile
+
+    self:_sync_view_menu_actions()
+    self:apply_settings()
+end
+
 function InventoryWindow:apply_settings()
     UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
 
     local s = State.settings.inventory
     self.update_every = 1.0 / State.settings.global.refresh_rate
     self.tile_size = s.tile_size
-    self.cols = s.cols
     self.rows_visible = self:get_needed_rows(self.cols)
 
     self.margin_left = _scaled_int(MARGIN_LEFT)
@@ -776,11 +863,10 @@ function InventoryWindow:apply_settings()
     end
     local min_w, min_h = self:minimum_window_size()
     self:set_minimum_size(min_w, min_h)
+    self:_sync_view_menu_actions()
     if w < min_w then w = min_w end
     if h < min_h then h = min_h end
-    local restore_cols = self:get_columns_for_window_width(w)
-    local _, restore_h = self:compute_window_size(restore_cols, self:get_needed_rows(restore_cols))
-    w, h = self:clamp_window_height_to_inventory_capacity(w, h, restore_h)
+    w, h = self:fit_window_size_to_inventory_capacity(w, h)
     self.cols = self:get_columns_for_window_width(w)
     self.rows_visible = self:get_visible_rows_for_window_height(h, MIN_ROWS)
     self._suppress_size_changed = true
@@ -794,6 +880,9 @@ function InventoryWindow:apply_settings()
         height = h,
         tile = window_tile,
     })
+    local actual_w, actual_h = self:GetSize()
+    self.cols = self:get_columns_for_window_width(actual_w)
+    self.rows_visible = self:get_visible_rows_for_window_height(actual_h, MIN_ROWS)
 
     self:layout()
     self:build_grid()
@@ -1155,11 +1244,11 @@ end
 function InventoryWindow:_set_inventory_actions_enabled(enabled)
     local is_enabled = enabled == true
     if is_enabled ~= true then
+        self.edit_menu:close()
         self.sort_menu:close()
         self.merge_menu:close()
     end
-    self.sort_menu.button:set_enabled(is_enabled)
-    self.merge_menu.button:set_enabled(is_enabled)
+    self.edit_menu.button:set_enabled(is_enabled)
     self.sort_category_action:set_enabled(is_enabled)
     self.sort_az_action:set_enabled(is_enabled)
     self.sort_quantity_action:set_enabled(is_enabled)

@@ -210,6 +210,25 @@ function TravelWindow:Constructor()
     self.content:SetMouseVisible(false)
     self:set_central_widget(self.content)
 
+    local menu_bar = self:get_menu_bar()
+    self.view_menu = menu_bar:add_menu(TR["View"])
+    self.view_list_action = self.view_menu:add_action({
+        text = TR["List"],
+        checkable = true,
+        checked = self:_display_mode() == DISPLAY_MODE_LIST,
+        action = function()
+            self:set_display_mode(DISPLAY_MODE_LIST, true)
+        end,
+    })
+    self.view_grid_action = self.view_menu:add_action({
+        text = TR["Grid"],
+        checkable = true,
+        checked = self:_display_mode() == DISPLAY_MODE_GRID,
+        action = function()
+            self:set_display_mode(DISPLAY_MODE_GRID, true)
+        end,
+    })
+
     self.list = Turbine.UI.ListBox()
     self.list:SetParent(self.content)
     self.list:SetOrientation(Turbine.UI.Orientation.Vertical)
@@ -306,6 +325,34 @@ function TravelWindow:_display_mode()
         return DISPLAY_MODE_GRID
     end
     return DISPLAY_MODE_LIST
+end
+
+function TravelWindow:_sync_menu_actions()
+    local display_mode = self:_display_mode()
+    self.view_list_action:set_checked(display_mode == DISPLAY_MODE_LIST)
+    self.view_grid_action:set_checked(display_mode == DISPLAY_MODE_GRID)
+end
+
+function TravelWindow:set_display_mode(mode, persist)
+    if mode ~= DISPLAY_MODE_GRID then
+        mode = DISPLAY_MODE_LIST
+    end
+    if mode == self:_display_mode() then
+        self:_sync_menu_actions()
+        return
+    end
+
+    State.settings.travel.display_mode = mode
+    if persist == true then
+        State.loaded_settings.travel.display_mode = mode
+    end
+
+    self:_apply_resize_mode()
+    local min_w, min_h = self:minimum_window_size()
+    self:set_minimum_size(min_w, min_h)
+    self:_sync_menu_actions()
+    self:_layout_content(true)
+    self:refresh(true)
 end
 
 function TravelWindow:_grid_columns(width_override)
@@ -535,6 +582,7 @@ function TravelWindow:apply_settings()
     self:_apply_resize_mode()
     local min_w, min_h = self:minimum_window_size()
     self:set_minimum_size(min_w, min_h)
+    self:_sync_menu_actions()
     self:_layout_content()
     self:refresh(true)
 end

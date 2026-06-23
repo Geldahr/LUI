@@ -44,16 +44,6 @@ function InventoryPage:Constructor(window)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4)
-    layout:add_line_edit("inventory_cols", TR["Columns"],
-        function(value)
-            local cols = tonumber(value)
-            if cols ~= nil then
-                self._settings.inventory.cols = cols
-            end
-        end,
-        function()
-            return tostring(self._settings.inventory.cols)
-        end)
     layout:add_dropdown("inventory_tile_size", TR["Tile Size"], TILE_SIZE_LABELS, TILE_SIZE_VALUES,
         function(value)
             self._settings.inventory.tile_size = value

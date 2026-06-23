@@ -473,7 +473,6 @@ function Settings.rebuild()
         local inv = State.settings.inventory
         inv.enabled = raw_inv.enabled
         inv.replace = raw_inv.replace
-        inv.cols = raw_inv.cols
         inv.tile_size = scaled_int(raw_inv.tile_size)
     end
 

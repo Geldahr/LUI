@@ -2135,7 +2135,6 @@ _G.LUI.Settings.Defaults.Schema =
 	},
 	["inventory"] = {
 		["enabled"] = true,
-		["cols"] = 10.000000,
 		["replace"] = true,
 		["tile_size"] = 40.000000,
 	},

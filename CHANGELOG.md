@@ -4,11 +4,18 @@
 
 ### Added
 
+- Added Travel window `View` menu actions for switching between List and Grid display modes.
+- Added Inventory window `View` menu actions for Small, Medium, and Large tile sizes.
+
 ### Changed
+
+- Moved Inventory Sort and Merge actions under an `Edit` menu and made tile-size changes preserve the current row/column count while clamping the resized window to the screen.
 
 ### Fixed
 
 ### Removed
+
+- Removed the exposed and persisted Inventory columns setting; inventory columns are now derived from saved window geometry.
 
 ## v1.2.0
 
