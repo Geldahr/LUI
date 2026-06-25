@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
 local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
 local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width

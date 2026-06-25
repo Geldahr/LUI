@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 local TR = _G.LUI.Locale.TR
 local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
 local Defaults = _G.LUI.Settings.Defaults

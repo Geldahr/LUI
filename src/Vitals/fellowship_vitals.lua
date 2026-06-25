@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 local GroupLayout = _G.LUI.Features.Vitals.GroupLayout
 local GroupSnapshot = _G.LUI.Features.Vitals.GroupSnapshot
 local GroupOrdering = _G.LUI.Features.Vitals.GroupOrdering

@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 local TR = _G.LUI.Locale.TR
 local is_lui_english_language = _G.LUI.Locale.is_english_language
 local Pages = _G.LUI.Settings.Pages

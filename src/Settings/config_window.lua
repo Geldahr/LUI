@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 local Windows = _G.LUI.Runtime.Windows
 local Apply = _G.LUI.Runtime.Apply
 local MoveMode = _G.LUI.UI.MoveMode

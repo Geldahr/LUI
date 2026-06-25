@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
 local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
 local lui_format_timeout = _G.LUI.Utils.lui_format_timeout

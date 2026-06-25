@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 local lui_dim_color = _G.LUI.Utils.lui_dim_color
 local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
 local lui_hex_to_color = _G.LUI.Utils.lui_hex_to_color

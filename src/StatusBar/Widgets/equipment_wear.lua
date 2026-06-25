@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 import "LUI.src.Utils.callbacks"
 local StatusBarWidgets = _G.LUI.Features.StatusBar.Widgets
 local lui_gradient_morale_color = _G.LUI.Utils.lui_gradient_morale_color
