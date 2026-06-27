@@ -3,7 +3,9 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 local TR = _G.LUI.Locale.TR
+local Utils = _G.LUI.Utils
 local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Settings = _G.LUI.Settings
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Bestiary = _G.LUI.Features.Bestiary
@@ -19,7 +21,6 @@ local BUILTIN_BESTIARY = Bestiary.Data or {}
 local DATA_ACCESS = Bestiary.DataAccess
 
 local BASE_WIDTH = 550
-local BASE_HEIGHT = 570
 local BASE_SECTION_GAP = 6
 local BASE_PANEL_HEADER_H = 20
 local BASE_PANEL_BODY_PAD_X = 8
@@ -346,7 +347,11 @@ local function _build_record_for_target(target)
     local exact_morale = target.GetMaxMorale ~= nil and target:GetMaxMorale() or 0
     local exact_power = target.GetMaxPower ~= nil and target:GetMaxPower() or 0
 
-    return _build_record_from_entry(normalized_name, entry, exact_level, exact_morale, exact_power)
+    local record = _build_record_from_entry(normalized_name, entry, exact_level, exact_morale, exact_power)
+    -- The boss matcher compares the raw in-game name, so keep the exact
+    -- target:GetName() value used to open this card for the boss-target action.
+    record.live_target_name = target:GetName()
+    return record
 end
 
 local function _build_record_for_name(name)
@@ -1262,6 +1267,15 @@ function BestiaryCard:Constructor()
     --     end
     -- end
 
+    local menu_bar = self:get_menu_bar()
+    self.edit_menu = menu_bar:add_menu(TR["Edit"])
+    self.add_boss_action = self.edit_menu:add_action({
+        text = TR["Add to Boss Targets"],
+        triggered = function()
+            self:_add_current_to_boss_targets()
+        end,
+    })
+
     local central = Turbine.UI.Control()
     central:SetMouseVisible(true)
     self:set_central_widget(central)
@@ -1437,6 +1451,49 @@ function BestiaryCard:_apply_selected_variant()
     end
 
     self:_apply_record(record)
+    self:_sync_boss_action()
+end
+
+-- The boss matcher compares the raw in-game name. For a card opened from a live
+-- target that exact name was captured; for a card opened from the Bestiary list
+-- the canonical dataset key is the value a live GetName() resolves to.
+function BestiaryCard:_boss_target_name()
+    local record = self.current_record
+    if type(record) ~= "table" then
+        return nil
+    end
+    if type(record.live_target_name) == "string" and record.live_target_name ~= "" then
+        return record.live_target_name
+    end
+    return record.key
+end
+
+function BestiaryCard:_sync_boss_action()
+    local name = self:_boss_target_name()
+    local can_add = type(name) == "string" and name ~= "" and Utils.is_boss_name(name) ~= true
+    self.add_boss_action:set_enabled(can_add)
+end
+
+function BestiaryCard:_add_current_to_boss_targets()
+    local name = self:_boss_target_name()
+    if type(name) ~= "string" or name == "" or Utils.is_boss_name(name) == true then
+        return
+    end
+
+    -- Append the name as a new line to the persisted multiline custom boss list,
+    -- mirroring how the Boss vitals settings page stores it.
+    local boss_vitals = State.loaded_settings.target.boss_vitals
+    local text = boss_vitals.custom_targets
+    if text ~= "" and string.sub(text, -1) ~= "\n" then
+        text = text .. "\n"
+    end
+    boss_vitals.custom_targets = text .. name
+
+    -- Rebuild so the runtime boss matcher picks up the new name immediately.
+    -- Persistence follows the runtime-menu convention (e.g. Inventory tile size):
+    -- the change is saved on unload, not written to disk on every edit.
+    Settings.rebuild()
+    self:_sync_boss_action()
 end
 
 function BestiaryCard:_select_variant_index(index, sync_variant_bar)
@@ -1922,10 +1979,9 @@ function BestiaryCard:apply_settings()
     self:set_resizable(false)
 
     local window_w, window_h = self:GetSize()
-    local central_w, central_h = self:central_widget():GetSize()
+    local central_w = self:central_widget():GetSize()
     local w = _scaled_int(BASE_WIDTH) + math.max(0, window_w - central_w)
-    local h = _scaled_int(BASE_HEIGHT) + math.max(0, window_h - central_h)
-    self:SetSize(w, h)
+    self:SetSize(w, window_h)
 
     _style_panel(self.level_panel)
     _style_panel(self.morale_panel)

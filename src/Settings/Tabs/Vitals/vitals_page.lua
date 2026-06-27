@@ -919,6 +919,25 @@ local function _new_effects_section(window, refresh_preview_fn, prefix, get)
     return page
 end
 
+local BOSS_TARGETS_COLUMN_SPAN = 2
+
+local function _new_boss_targets_section(window, refresh_preview_fn, get)
+    local page = ConfigContent(window, 4, refresh_preview_fn)
+    page:add_info(
+        TR["Enter one boss name per line. When your target's name matches a line exactly, the Boss Vitals frame is shown."],
+        48)
+    page:add_text_area("target_boss_custom_targets", TR["Custom Bosses"],
+        function(value)
+            get().custom_targets = value
+        end,
+        function()
+            return get().custom_targets
+        end,
+        nil, BOSS_TARGETS_COLUMN_SPAN)
+
+    return page
+end
+
 local VitalsPage = class(ConfigTabs)
 Pages.VitalsPage = VitalsPage
 
@@ -1010,6 +1029,7 @@ function VitalsPage:Constructor(window)
         preview_height = 178,
         show_outline_settings = true,
         boss_power_mode = true,
+        boss_targets = true,
     }, {
         ConfigContent = ConfigContent,
         ConfigSectionPage = ConfigSectionPage,
@@ -1022,6 +1042,7 @@ function VitalsPage:Constructor(window)
         new_texts_section = _new_texts_section,
         new_effects_section = _new_effects_section,
         bind_standard_outline_visibility = _bind_standard_outline_visibility,
+        new_boss_targets_section = _new_boss_targets_section,
     }))
     self:add_tab(TR["Target's Target"], "target_targets_target",
         StandardVitalsPageBuilder.new_targets_target_unit_page(window, self, {

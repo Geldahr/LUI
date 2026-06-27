@@ -5,6 +5,7 @@
 import "LUI.src.Utils.boss_names"
 
 local Utils = _G.LUI.Utils
+local State = _G.LUI.Settings.State
 local BOSS_NAMES = Utils.BOSS_NAMES
 
 local BOSS_FALLBACK_BASE_MORALE_RATIO = 3
@@ -46,7 +47,11 @@ local function _should_try_boss_name_fallback(target, self_entity)
 end
 
 function Utils.is_boss_name(target_name)
-    return BOSS_NAMES[target_name] == true
+    if BOSS_NAMES[target_name] == true then
+        return true
+    end
+
+    return State.settings.target.boss_vitals.custom_target_names[target_name] == true
 end
 
 function Utils.does_boss_name_match(target_name, target, self_entity)

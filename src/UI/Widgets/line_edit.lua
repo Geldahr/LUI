@@ -14,6 +14,7 @@ local LuiLabel = Widgets.LuiLabel
 local Style = Widgets.Style
 local DEFAULT_INSET_X = 4
 local PLACEHOLDER_CURSOR_GAP = 2
+local SCROLL_BAR_WIDTH = 10
 
 local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
@@ -38,6 +39,8 @@ function LuiLineEdit:Constructor()
     self._text_alignment = Turbine.UI.ContentAlignment.MiddleLeft
     self._enabled = true
     self._read_only = false
+    self._multiline = false
+    self._scroll_bar = nil
     self._border_visible = true
     self._back_color = Style.BACKGROUND
     self._back_color_custom = false
@@ -166,12 +169,23 @@ function LuiLineEdit:_layout()
     self._inner:SetPosition(border, border)
     self._inner:SetSize(inner_w, inner_h)
 
+    local text_w = inner_w
+    if self._scroll_bar ~= nil and self._multiline == true then
+        local sb_w = SCROLL_BAR_WIDTH
+        if sb_w > inner_w then
+            sb_w = inner_w
+        end
+        self._scroll_bar:SetPosition(inner_w - sb_w, 0)
+        self._scroll_bar:SetSize(sb_w, inner_h)
+        text_w = math.max(0, inner_w - sb_w)
+    end
+
     self.text_box:SetPosition(0, 0)
-    self.text_box:SetSize(inner_w, inner_h)
+    self.text_box:SetSize(text_w, inner_h)
 
     local inset_x = math.floor(((DEFAULT_INSET_X + PLACEHOLDER_CURSOR_GAP) * self._scale) + 0.5)
     self.placeholder_label:SetPosition(inset_x, 0)
-    self.placeholder_label:SetSize(math.max(0, inner_w - (inset_x * 2)), inner_h)
+    self.placeholder_label:SetSize(math.max(0, text_w - (inset_x * 2)), inner_h)
 end
 
 function LuiLineEdit:_refresh_placeholder()
@@ -269,9 +283,24 @@ function LuiLineEdit:SetBackColor(color)
 end
 
 function LuiLineEdit:SetMultiline(multiline)
+    self._multiline = multiline == true
     if self.text_box.SetMultiline ~= nil then
-        self.text_box:SetMultiline(multiline)
+        self.text_box:SetMultiline(self._multiline)
     end
+
+    if self._multiline == true and self._scroll_bar == nil and self.text_box.SetVerticalScrollBar ~= nil then
+        self._scroll_bar = Turbine.UI.Lotro.ScrollBar()
+        self._scroll_bar:SetParent(self._inner)
+        self._scroll_bar:SetOrientation(Turbine.UI.Orientation.Vertical)
+        self._scroll_bar:SetZOrder(3)
+        self.text_box:SetVerticalScrollBar(self._scroll_bar)
+    end
+
+    if self._scroll_bar ~= nil then
+        self._scroll_bar:SetVisible(self._multiline)
+    end
+
+    self:_layout()
 end
 
 function LuiLineEdit:SetText(text)
@@ -329,6 +358,9 @@ function LuiLineEdit:destroy()
     end
     if self.text_box ~= nil then
         self.text_box:SetParent(nil)
+    end
+    if self._scroll_bar ~= nil then
+        self._scroll_bar:SetParent(nil)
     end
     self._inner:SetParent(nil)
     self:SetVisible(false)

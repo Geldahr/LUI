@@ -533,6 +533,18 @@ function Settings.rebuild()
     dst_bv.power.hide = raw_bv.power.hide
     dst_bv.power.side = raw_bv.power.side
 
+    -- Parse the user's multiline custom boss list (one name per line) into an
+    -- exact-match set so the runtime boss check is a single table lookup.
+    local custom_target_names = {}
+    for line in string.gmatch(raw_bv.custom_targets, "[^\r\n]+") do
+        local name = string.gsub(line, "^%s+", "")
+        name = string.gsub(name, "%s+$", "")
+        if name ~= "" then
+            custom_target_names[name] = true
+        end
+    end
+    dst_bv.custom_target_names = custom_target_names
+
     local raw_self_ee = raw.self.expiring_effects
     local self_ee = State.settings.self.expiring_effects
     self_ee.enabled = raw_self_ee.enabled

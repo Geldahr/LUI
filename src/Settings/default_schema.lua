@@ -1095,6 +1095,7 @@ _G.LUI.Settings.Defaults.Schema =
 				},
 			},
 			["enabled"] = true,
+			["custom_targets"] = "",
 			["background_matches_missing"] = true,
 			["background_dimming"] = 0.750000,
 			["background_opacity"] = 1.000000,
