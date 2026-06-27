@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a custom boss list under `Vitals > Boss > Custom Bosses` to show the Boss Vitals frame for your own listed target names.
 - Added Travel window `View` menu actions for switching between List and Grid display modes.
 - Added Inventory window `View` menu actions for Small, Medium, and Large tile sizes.
 
