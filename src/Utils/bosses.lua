@@ -8,29 +8,6 @@ local Utils = _G.LUI.Utils
 local State = _G.LUI.Settings.State
 local BOSS_NAMES = Utils.BOSS_NAMES
 
--- Custom boss names are stored as a single multiline string (one name per line)
--- in target.boss_vitals.custom_targets. Parse it into an exact-match set, cached
--- against the raw string so we only reparse when the user edits the list.
-local _custom_cache = { raw = nil, set = {} }
-
-local function _custom_boss_names()
-    local raw = State.loaded_settings.target.boss_vitals.custom_targets
-    if raw ~= _custom_cache.raw then
-        local set = {}
-        for line in string.gmatch(raw, "[^\r\n]+") do
-            local name = string.gsub(line, "^%s+", "")
-            name = string.gsub(name, "%s+$", "")
-            if name ~= "" then
-                set[name] = true
-            end
-        end
-        _custom_cache.raw = raw
-        _custom_cache.set = set
-    end
-
-    return _custom_cache.set
-end
-
 local BOSS_FALLBACK_BASE_MORALE_RATIO = 3
 local BOSS_FALLBACK_LEVEL_DELTA_SCALE = 0.02
 
@@ -74,7 +51,7 @@ function Utils.is_boss_name(target_name)
         return true
     end
 
-    return _custom_boss_names()[target_name] == true
+    return State.settings.target.boss_vitals.custom_target_names[target_name] == true
 end
 
 function Utils.does_boss_name_match(target_name, target, self_entity)
