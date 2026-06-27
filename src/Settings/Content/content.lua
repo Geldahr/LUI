@@ -323,6 +323,72 @@ function ConfigContent:add_line_edit(key, label_text, save_fn, load_fn, help_tex
     return entry
 end
 
+function ConfigContent:add_text_area(key, label_text, save_fn, load_fn, help_text, span, base_height)
+    local entry = {}
+    entry.kind = "textarea"
+    entry.key = key
+    entry.label_text = label_text
+    entry.is_color = false
+    entry.help_text = help_text
+    entry.span = span
+    entry.base_height = base_height or 120
+    entry.height = _scaled_int(entry.base_height)
+
+    entry.label = UI.Widgets.LuiLabel()
+    entry.label:SetParent(self.form)
+    entry.label:SetFont(self.window.field_label_font)
+    entry.label:SetMultiline(true)
+    entry.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    entry.label:SetText(label_text)
+    entry.label:SetZOrder(1)
+
+    entry.tb = UI.Widgets.LuiLineEdit()
+    entry.tb:SetParent(self.form)
+    entry.tb:set_scale(State.settings.global.scale)
+    entry.tb:SetFont(self.window.input_font)
+    entry.tb:SetMultiline(true)
+    entry.tb:SetTextAlignment(Turbine.UI.ContentAlignment.TopLeft)
+    entry.tb:SetZOrder(2)
+
+    self:_bind_hint(entry.tb, function()
+        return entry.help_text
+    end)
+
+    entry.tb.TextChanged = function()
+        if self.loading == true then
+            return
+        end
+        if entry.on_changed ~= nil then
+            entry.on_changed(entry.tb:GetText())
+        end
+        self:_refresh_preview()
+    end
+
+    function entry:get_value()
+        return entry.tb:GetText()
+    end
+
+    function entry:set_value(value)
+        entry.tb:SetText(value)
+    end
+
+    if save_fn ~= nil or load_fn ~= nil then
+        if type(save_fn) ~= "function" then
+            error("ConfigContent text area binding is missing save_fn")
+        end
+        if type(load_fn) ~= "function" then
+            error("ConfigContent text area binding is missing load_fn")
+        end
+        entry.save_fn = save_fn
+        entry.load_fn = load_fn
+        self._bound_entries[#self._bound_entries + 1] = entry
+    end
+
+    self.controls[key] = entry
+    self.fields[#self.fields + 1] = entry
+    return entry
+end
+
 function ConfigContent:add_color_picker(key, label_text, save_fn, load_fn, help_text, span)
     local entry = {}
     entry.kind = "text"
@@ -542,7 +608,7 @@ function ConfigContent:apply_ui_scale()
                 if field.base_height ~= nil then
                     field.height = _scaled_int(field.base_height)
                 end
-            elseif field.kind == "text" then
+            elseif field.kind == "text" or field.kind == "textarea" then
                 if field.label ~= nil then
                     field.label:SetFont(self.window.field_label_font)
                 end
@@ -551,6 +617,9 @@ function ConfigContent:apply_ui_scale()
                 end
                 if field.tb ~= nil and field.tb.SetFont ~= nil then
                     field.tb:SetFont(self.window.input_font)
+                end
+                if field.kind == "textarea" and field.base_height ~= nil then
+                    field.height = _scaled_int(field.base_height)
                 end
             elseif field.kind == "dropdown" then
                 if field.label ~= nil then
@@ -595,7 +664,7 @@ function ConfigContent:refresh_text_inputs()
     for i = 1, #self.fields do
         local field = self.fields[i]
         if field ~= nil then
-            if field.kind == "text" then
+            if field.kind == "text" or field.kind == "textarea" then
                 self:_refresh_text_control(field.tb)
             elseif field.kind == "custom" and field.refresh_text ~= nil then
                 field:refresh_text()
@@ -686,6 +755,9 @@ function ConfigContent:layout()
             field.button:SetVisible(is_visible)
         elseif field.kind == "checkbox" then
             field.cb:SetVisible(is_visible)
+        elseif field.kind == "textarea" then
+            field.label:SetVisible(is_visible)
+            field.tb:SetVisible(is_visible)
         end
 
         if is_visible and field.kind == "title" then
@@ -761,6 +833,25 @@ function ConfigContent:layout()
             field.control:SetPosition(self.window.content_padding, y)
             field.control:SetSize(inner_width, h)
             y = y + h + custom_gap
+            col = 0
+        elseif is_visible and field.kind == "textarea" then
+            if self.compact_fields == true and col ~= 0 then
+                y = y + compact_label_h + compact_field_gap + self.window.input_height + compact_row_gap
+                col = 0
+            elseif col == 1 then
+                y = y + self.window.row_height
+                col = 0
+            end
+
+            local field_span = _resolve_entry_span(field.span, grid_columns)
+            local span_w = (col_width * field_span) + ((field_span - 1) * self.window.col_gap)
+
+            field.label:SetPosition(self.window.content_padding, y)
+            field.label:SetSize(span_w, compact_label_h)
+            local box_y = y + compact_label_h + compact_field_gap
+            field.tb:SetPosition(self.window.content_padding, box_y)
+            field.tb:SetSize(span_w, field.height)
+            y = box_y + field.height + compact_row_gap
             col = 0
         elseif is_visible and self.compact_fields == true then
             local field_span = _resolve_entry_span(field.span, grid_columns)

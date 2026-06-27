@@ -56,6 +56,11 @@ function Builder.new_standard_unit_page(window, root, options, deps)
     page:add_tab(TR["Effects"], "effects", deps.new_effects_section(window, page.refresh_preview, options.prefix, get))
     deps.bind_standard_outline_visibility(page, colors, options.prefix, options.show_outline_settings)
 
+    if options.boss_targets == true then
+        page:add_tab(TR["Custom Bosses"], "custom_bosses",
+            deps.new_boss_targets_section(window, page.refresh_preview, get))
+    end
+
     return page
 end
 
