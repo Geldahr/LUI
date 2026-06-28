@@ -312,6 +312,14 @@ function LuiWindow:Constructor(opts)
         self:_layout()
     end
 
+    self:SetWantsKeyEvents(true)
+    self.KeyDown = function(_, args)
+        if args.Action == Turbine.UI.Lotro.Action.Escape
+            and _G.LUI.Settings.State.settings.global.close_windows_with_esc == true then
+            self:request_close()
+        end
+    end
+
     LuiWindow.apply_settings(self)
     self:SetSize(_scaled_int(self._scale, BASE_DEFAULT_W), _scaled_int(self._scale, BASE_DEFAULT_H))
 end

@@ -1118,13 +1118,7 @@ function BestiaryWindow:Constructor()
     self:set_icon(UI.AssetIds.book_orange_cover)
     self:set_resizable(true)
     self:hide()
-    self:SetWantsKeyEvents(true)
     self:SetWantsUpdates(false)
-    self.KeyDown = function(_, args)
-        if args.Action == Turbine.UI.Lotro.Action.Escape then
-            self:hide()
-        end
-    end
 
     self.last_update_at = 0
     self.update_every = 0.5

@@ -1260,12 +1260,6 @@ function BestiaryCard:Constructor()
     self:enable_maximize(false)
     self:hide()
     self:SetMouseVisible(true)
-    self:SetWantsKeyEvents(true)
-    -- self.KeyDown = function(_, args)
-    --     if args.Action == Turbine.UI.Lotro.Action.Escape then
-    --         self:close()
-    --     end
-    -- end
 
     local menu_bar = self:get_menu_bar()
     self.edit_menu = menu_bar:add_menu(TR["Edit"])

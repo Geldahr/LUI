@@ -216,6 +216,7 @@ function Settings.rebuild()
     State.settings.global.refresh_rate = refresh_rate
     State.settings.global.native_scaling = raw.global.native_scaling == true
     State.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
+    State.settings.global.close_windows_with_esc = raw.global.close_windows_with_esc == true
     State.settings.global.bestiary_capture = raw.global.bestiary_capture == true
     State.settings.global.style = raw.global.style
     State.settings.ui.windows = raw.ui.windows

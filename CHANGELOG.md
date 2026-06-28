@@ -8,6 +8,7 @@
 - Added an `Edit > Add to Boss Targets` action to the Bestiary card that adds the shown creature to the custom boss list, disabled when it is already a boss target.
 - Added Travel window `View` menu actions for switching between List and Grid display modes.
 - Added Inventory window `View` menu actions for Small, Medium, and Large tile sizes.
+- Added a `Global > General > Close LUI windows with Esc` setting (enabled by default) so the Escape key closes LUI windows.
 
 ### Changed
 

@@ -532,6 +532,14 @@ function GlobalPage:Constructor(window)
             return self._settings.global.move_mode_shortcut == true
         end, 2)
     general:add_row_break()
+    general:add_checkbox("close_windows_with_esc", TR["Close LUI windows with Esc"],
+        function(value)
+            self._settings.global.close_windows_with_esc = value == true
+        end,
+        function()
+            return self._settings.global.close_windows_with_esc == true
+        end, 2)
+    general:add_row_break()
     general:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"],
         function(value)
             if is_lui_english_language() == true then

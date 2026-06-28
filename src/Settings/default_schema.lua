@@ -2079,6 +2079,7 @@ _G.LUI.Settings.Defaults.Schema =
 	},
 	["global"] = {
 		["bestiary_capture"] = false,
+		["close_windows_with_esc"] = true,
 		["move_mode_shortcut"] = true,
 		["native_scaling"] = false,
 		["number_abbrev"] = {

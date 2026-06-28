@@ -490,6 +490,7 @@ LUI.src.Languages.de.DE = {
     ["Unlock non-matches"] = "Nicht-Treffer entsperren",
     ["Use"] = "Verwenden",
     ["Use LotRO move mode shortcut"] = "LotRO-Kurzbefehl für den Verschiebemodus verwenden",
+    ["Close LUI windows with Esc"] = "LUI-Fenster mit Esc schließen",
     ["Use native LotRO UI scaling"] = "Native LotRO-UI-Skalierung verwenden",
     ["Vault"] = "Tresor",
     ["View"] = "Ansicht",
