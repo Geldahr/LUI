@@ -230,25 +230,35 @@ function GroupMemberVitals:_update_member_state()
 end
 
 function GroupMemberVitals:_setup_silent_effect_manager()
-    if self.em ~= nil then
-        self:SetWantsUpdates(true)
-        return
-    end
+    -- DISABLED: group member effect tracking is intentionally off for now.
+    -- Fellowship/raid members do not create a silent effect manager, so they
+    -- never call GetEffects() or subscribe to effect events in the background.
+    -- This is deferred until effect tracking can be made configurable. To
+    -- re-enable, remove this early return and uncomment the body below. The
+    -- call site, Update() poll, and
+    -- _detach_silent_effect_manager all guard on self.em, so they stay inert
+    -- while self.em remains nil.
+    self:SetWantsUpdates(false)
 
-    if self.entity == nil or self:_is_local_player(self.entity) == true then
-        self:SetWantsUpdates(false)
-        return
-    end
-
-    if self.entity.GetEffects == nil or self.entity:GetEffects() == nil then
-        self:SetWantsUpdates(false)
-        return
-    end
-
-    self.em = Vitals.TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
-    self.em_added_event = self.em:register_added_event(function()
-    end)
-    self:SetWantsUpdates(true)
+    -- if self.em ~= nil then
+    --     self:SetWantsUpdates(true)
+    --     return
+    -- end
+    --
+    -- if self.entity == nil or self:_is_local_player(self.entity) == true then
+    --     self:SetWantsUpdates(false)
+    --     return
+    -- end
+    --
+    -- if self.entity.GetEffects == nil or self.entity:GetEffects() == nil then
+    --     self:SetWantsUpdates(false)
+    --     return
+    -- end
+    --
+    -- self.em = Vitals.TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    -- self.em_added_event = self.em:register_added_event(function()
+    -- end)
+    -- self:SetWantsUpdates(true)
 end
 
 function GroupMemberVitals:_detach_silent_effect_manager()
