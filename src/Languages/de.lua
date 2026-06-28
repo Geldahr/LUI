@@ -302,6 +302,7 @@ LUI.src.Languages.de.DE = {
     ["Medium (40)"] = "Mittel (40)",
     ["Missing Argument for more information type /lui help."] = "Fehlendes Argument. Für weitere Informationen gib /lui help ein.",
     ["Money"] = "Geld",
+    ["Session earnings"] = "Sitzungseinnahmen",
     ["Move"] = "Verschieben",
     ["Name"] = "Name",
     ["New"] = "Neu",
