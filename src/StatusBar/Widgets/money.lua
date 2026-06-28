@@ -10,6 +10,7 @@ import "LUI.src.UI.Widgets"
 
 local S = _G.LUI.Features.StatusBar.Common
 local Style = UI.Widgets.Style
+local TR = _G.LUI.Locale.TR
 
 local MoneyWidget = class(Turbine.UI.Control)
 StatusBarWidgets.MoneyWidget = MoneyWidget
@@ -100,6 +101,13 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
         end
     end
 
+    self._interaction_enabled = true
+    self._tooltip = UI.Widgets.LuiTooltip()
+    self._tooltip:SetZOrder(2200)
+    self._tooltip:Bind(self, function()
+        return self:_session_tooltip_text()
+    end)
+
     self.SizeChanged = function()
         self:_layout()
     end
@@ -107,8 +115,29 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
     self:_layout()
 end
 
+function MoneyWidget:set_interaction_enabled(enabled)
+    self._interaction_enabled = enabled == true
+    if self._interaction_enabled ~= true then
+        self._tooltip:Hide()
+    end
+end
+
+function MoneyWidget:_session_tooltip_text()
+    if self._interaction_enabled ~= true then
+        return nil
+    end
+
+    local delta = S.get_session_money_delta(self:_get_total_money())
+    if delta == nil then
+        return nil
+    end
+
+    return TR["Session earnings"] .. "\n" .. S.format_money_copper_signed(delta)
+end
+
 function MoneyWidget:update(now)
     local total = self:_get_total_money()
+    S.note_session_start_money(total)
     if total == self._last_total then
         return
     end
@@ -130,6 +159,8 @@ function MoneyWidget:update(now)
 end
 
 function MoneyWidget:destroy()
+    self._tooltip:Hide()
+    self._tooltip:SetParent(nil)
     self:SetVisible(false)
     if self.g_icon ~= nil then self.g_icon:SetVisible(false) end
     if self.s_icon ~= nil then self.s_icon:SetVisible(false) end

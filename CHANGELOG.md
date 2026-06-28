@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a session earnings tooltip on the status bar Money widget that shows how much money you have gained or spent since the plugin loaded.
 - Added a custom boss list under `Vitals > Boss > Custom Bosses` to show the Boss Vitals frame for your own listed target names.
 - Added an `Edit > Add to Boss Targets` action to the Bestiary card that adds the shown creature to the custom boss list, disabled when it is already a boss target.
 - Added Travel window `View` menu actions for switching between List and Grid display modes.

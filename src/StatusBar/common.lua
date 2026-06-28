@@ -1244,6 +1244,61 @@ function S.format_money_copper(total_copper)
     return string.format("%dg %ds %dc", gold, silver, copper)
 end
 
+function S.format_money_copper_signed(total_copper)
+    local v = tonumber(total_copper)
+    if v == nil then
+        return "--"
+    end
+
+    local sign = ""
+    if v > 0 then
+        sign = "+"
+    elseif v < 0 then
+        sign = "-"
+        v = -v
+    end
+
+    local gold, silver, copper = S.split_money_copper(v)
+    if gold == nil then
+        return "--"
+    end
+
+    local parts = {}
+    if gold > 0 then
+        parts[#parts + 1] = string.format("%dg", gold)
+    end
+    if silver > 0 then
+        parts[#parts + 1] = string.format("%ds", silver)
+    end
+    if copper > 0 or #parts == 0 then
+        parts[#parts + 1] = string.format("%dc", copper)
+    end
+
+    return sign .. table.concat(parts, " ")
+end
+
+-- Session money tracking. The first valid money reading after the plugin
+-- loads becomes the session baseline; the delta is shown in the money
+-- widget tooltip. The baseline lives on the shared Common module so it
+-- survives status-bar rebuilds (e.g. settings changes) within a session.
+S.session_start_money = nil
+
+function S.note_session_start_money(total_copper)
+    if type(total_copper) ~= "number" then
+        return
+    end
+    if S.session_start_money == nil then
+        S.session_start_money = total_copper
+    end
+end
+
+function S.get_session_money_delta(total_copper)
+    if type(total_copper) ~= "number" or S.session_start_money == nil then
+        return nil
+    end
+    return total_copper - S.session_start_money
+end
+
 function S.format_gold_compact(gold)
     return lui_abbrev_gold(gold)
 end

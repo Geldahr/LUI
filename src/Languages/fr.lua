@@ -302,6 +302,7 @@ LUI.src.Languages.fr.FR = {
     ["Medium (40)"] = "Moyen (40)",
     ["Missing Argument for more information type /lui help."] = "Argument manquant. Pour plus d'informations, tapez /lui help.",
     ["Money"] = "Argent",
+    ["Session earnings"] = "Gains de la session",
     ["Move"] = "Déplacer",
     ["Name"] = "Nom",
     ["New"] = "Nouveau",
