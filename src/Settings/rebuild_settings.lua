@@ -183,6 +183,7 @@ function Settings.rebuild()
                 debuffs = { timer_font = {} },
                 layout = { top = {}, bottom = {} },
             },
+            group_effects = { timer_font = {} },
         },
         raid = {
             frame = {},
@@ -201,6 +202,7 @@ function Settings.rebuild()
                 debuffs = { timer_font = {} },
                 layout = { top = {}, bottom = {} },
             },
+            group_effects = { timer_font = {} },
         },
         inventory = {},
         drops = { hud = {}, item = {} },
@@ -432,8 +434,32 @@ function Settings.rebuild()
         end
     end
 
+    local function build_group_effects(dst, src)
+        local raw_ge = src.group_effects
+        local ge = dst.group_effects
+        ge.enabled = raw_ge.enabled == true
+        ge.show_buffs = raw_ge.show_buffs == true
+        ge.show_curable_debuffs = raw_ge.show_curable_debuffs == true
+        ge.show_noncurable_debuffs = raw_ge.show_noncurable_debuffs == true
+        ge.side = raw_ge.side
+        ge.icon_size = scaled_int(raw_ge.icon_size)
+
+        ge.timer_font.name = raw_ge.timer_font.name
+        ge.timer_font.size = scaled_number(raw_ge.timer_font.size)
+        ge.timer_font.lotro = FONT_TO_LOTRO(ge.timer_font.name, ge.timer_font.size)
+        ge.timer_font.style = raw_ge.timer_font.style
+        ge.timer_font.color = build_color(raw_ge.timer_font.color)
+        ge.timer_font.outline_color = build_color(raw_ge.timer_font.outline_color)
+
+        -- Derived: feature is only active (and only then does it subscribe to
+        -- effect events) when enabled and at least one effect kind is shown.
+        ge.effects_active = ge.enabled
+            and (ge.show_buffs or ge.show_curable_debuffs or ge.show_noncurable_debuffs)
+    end
+
     local function build_group_vital(dst, src)
         build_vital(dst, src)
+        build_group_effects(dst, src)
 
         local raw_class_icon = src.class_icon
         dst.class_icon.enabled = raw_class_icon.enabled

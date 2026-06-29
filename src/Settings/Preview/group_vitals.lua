@@ -3,6 +3,7 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 local RaidLayout = _G.LUI.Utils.RaidLayout
+local GroupLayout = _G.LUI.Features.Vitals.GroupLayout
 local TR = _G.LUI.Locale.TR
 local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
 local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
@@ -43,6 +44,52 @@ local _sync_preview_holder_height = Common.sync_preview_holder_height
 local PREVIEW_WRATH_MAX = Common.PREVIEW_WRATH_MAX
 local RAID_GROUP_SIZE = 6
 local RAID_GROUP_KEYS = { "a", "b", "c", "d" }
+local EFFECT_BOX_COLOR = Turbine.UI.Color(0.30, 0.05, 0.05, 0.05)
+local EFFECT_BUFF_COLOR = Turbine.UI.Color(1, 0.40, 0.78, 0.42)
+local EFFECT_CURABLE_COLOR = Turbine.UI.Color(1, 0.85, 0.30, 0.30)
+local EFFECT_NONCURABLE_COLOR = Turbine.UI.Color(1, 0.90, 0.58, 0.20)
+local EFFECT_PREVIEW_ICON_COUNT = 6
+
+-- Placeholder effect icons inside a member's effect box. Colors mock the
+-- enabled kinds (buff / curable / non-curable) so the user can see placement.
+local function _render_preview_effect_box(member, area_x, area_y, frame_w, member_h, icon_size, show_buffs,
+                                          show_curable, show_noncurable)
+    local box = member.effect_box
+    box:SetPosition(area_x, area_y)
+    box:SetSize(frame_w, member_h)
+    box:SetVisible(true)
+    box:SetBackColor(EFFECT_BOX_COLOR)
+
+    local kinds = {}
+    if show_buffs == true then
+        kinds[#kinds + 1] = EFFECT_BUFF_COLOR
+    end
+    if show_curable == true then
+        kinds[#kinds + 1] = EFFECT_CURABLE_COLOR
+    end
+    if show_noncurable == true then
+        kinds[#kinds + 1] = EFFECT_NONCURABLE_COLOR
+    end
+
+    local per_row = math.floor(frame_w / icon_size)
+    if per_row < 1 then
+        per_row = 1
+    end
+
+    for j = 1, #member.effect_icons do
+        local icon = member.effect_icons[j]
+        if #kinds > 0 and j <= EFFECT_PREVIEW_ICON_COUNT then
+            local col = (j - 1) % per_row
+            local row = math.floor((j - 1) / per_row)
+            icon:SetPosition(col * icon_size, row * icon_size)
+            icon:SetSize(math.max(1, icon_size - 2), math.max(1, icon_size - 2))
+            icon:SetBackColor(kinds[((j - 1) % #kinds) + 1])
+            icon:SetVisible(true)
+        else
+            icon:SetVisible(false)
+        end
+    end
+end
 
 local function _preview_compute_grid_size(member_count, rows, spacing_x, spacing_y, member_width, member_height)
     local normalized_count = member_count
@@ -291,6 +338,9 @@ local function _sync_preview_member_parents(state, split_by_group)
             if member.root:GetParent() ~= group_window.root then
                 member.root:SetParent(group_window.root)
             end
+            if member.effect_box:GetParent() ~= group_window.root then
+                member.effect_box:SetParent(group_window.root)
+            end
         end
         return
     end
@@ -299,6 +349,9 @@ local function _sync_preview_member_parents(state, split_by_group)
         local member = state.members[i]
         if member.root:GetParent() ~= state.root then
             member.root:SetParent(state.root)
+        end
+        if member.effect_box:GetParent() ~= state.root then
+            member.effect_box:SetParent(state.root)
         end
     end
 end
@@ -510,6 +563,19 @@ function Preview.init(window, spec)
         member.info_background:SetParent(member.info_border)
         member.info_background:SetMouseVisible(false)
 
+        member.effect_box = Turbine.UI.Control()
+        member.effect_box:SetParent(state.root)
+        member.effect_box:SetMouseVisible(false)
+        member.effect_box:SetVisible(false)
+        member.effect_icons = {}
+        for j = 1, EFFECT_PREVIEW_ICON_COUNT do
+            local icon = Turbine.UI.Control()
+            icon:SetParent(member.effect_box)
+            icon:SetMouseVisible(false)
+            icon:SetVisible(false)
+            member.effect_icons[j] = icon
+        end
+
         table.insert(state.members, member)
     end
 end
@@ -604,6 +670,19 @@ function Preview.update(window, spec)
     local state = window[spec.state_key]
     local preview_count = spec.get_preview_count(window)
     local selected_preview_slot = preview_count >= 2 and 2 or 1
+
+    local ge_enabled = window.controls[prefix .. "_group_effects_enabled"].cb:IsChecked() == true
+    local ge_buffs = window.controls[prefix .. "_group_effects_buffs"].cb:IsChecked() == true
+    local ge_curable = window.controls[prefix .. "_group_effects_curable"].cb:IsChecked() == true
+    local ge_noncurable = window.controls[prefix .. "_group_effects_noncurable"].cb:IsChecked() == true
+    local ge_side = _require_control_enum(window.controls, prefix .. "_group_effects_side")
+    local ge_icon_size = _preview_scaled_int(raw_scale,
+        _require_control_number(window.controls, prefix .. "_group_effects_size"))
+    if ge_icon_size < 8 then ge_icon_size = 8 end
+    -- Effects are previewed only for the fellowship layout; the raid split
+    -- preview path is left unchanged.
+    local fellowship_effects = ge_enabled == true and spec.raid_layout_mode_control_key == nil
+        and (ge_buffs == true or ge_curable == true or ge_noncurable == true)
     local total_w = nil
     local total_h = nil
     local raid_layout_mode = nil
@@ -632,7 +711,25 @@ function Preview.update(window, spec)
             _hide_preview_border(group_window)
         end
 
-        total_w, total_h = _preview_compute_grid_size(preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
+        if fellowship_effects == true then
+            local rows_grid = math.min(rows, preview_count)
+            if rows_grid < 1 then rows_grid = 1 end
+            local cols = math.ceil(preview_count / rows)
+            if cols < 1 then cols = 1 end
+            local max_col = 0
+            local max_row = 0
+            for i = 1, preview_count do
+                local index = i - 1
+                local column = math.floor(index / rows)
+                local r = index - (column * rows)
+                if column > max_col then max_col = column end
+                if r > max_row then max_row = r end
+            end
+            total_w, total_h = GroupLayout.effect_grid_size(max_col, max_row, cols, rows_grid, spacing_x, spacing_y,
+                frame_w, member_h)
+        else
+            total_w, total_h = _preview_compute_grid_size(preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
+        end
     end
     _sync_preview_member_parents(state, split_by_group)
 
@@ -657,6 +754,9 @@ function Preview.update(window, spec)
     local root_windows = {}
     for i = 1, #state.members do
         root_windows[i] = state.members[i].root
+        if fellowship_effects ~= true then
+            state.members[i].effect_box:SetVisible(false)
+        end
     end
 
     local morale_samples = {
@@ -982,7 +1082,29 @@ function Preview.update(window, spec)
             end
         end
     else
-        _preview_apply_grid_positions(root_windows, preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
+        if fellowship_effects == true then
+            local rows_grid = math.min(rows, preview_count)
+            if rows_grid < 1 then rows_grid = 1 end
+            local cols = math.ceil(preview_count / rows)
+            if cols < 1 then cols = 1 end
+            for i = 1, #root_windows do
+                if i <= preview_count then
+                    local index = i - 1
+                    local column = math.floor(index / rows)
+                    local r = index - (column * rows)
+                    local bar_x, bar_y, area_x, area_y = GroupLayout.place_with_effects(column, r, cols, rows_grid,
+                        ge_side, spacing_x, spacing_y, frame_w, member_h)
+                    root_windows[i]:SetPosition(bar_x, bar_y)
+                    _render_preview_effect_box(state.members[i], area_x, area_y, frame_w, member_h, ge_icon_size,
+                        ge_buffs, ge_curable, ge_noncurable)
+                else
+                    root_windows[i]:SetPosition(0, 0)
+                    state.members[i].effect_box:SetVisible(false)
+                end
+            end
+        else
+            _preview_apply_grid_positions(root_windows, preview_count, rows, spacing_x, spacing_y, frame_w, member_h)
+        end
     end
 
     lui_clear_number_abbrev_preview_settings()

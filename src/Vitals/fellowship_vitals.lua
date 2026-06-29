@@ -12,6 +12,7 @@ local remove_callback = _G.LUI.Utils.remove_callback
 local Vitals = _G.LUI.Features.Vitals
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
+local LUI_ENUMS = _G.LUI.Settings.Enums
 local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
@@ -22,6 +23,7 @@ import "LUI.src.Vitals.group_snapshot"
 import "LUI.src.Vitals.group_ordering"
 import "LUI.src.Vitals.group_layout"
 import "LUI.src.Vitals.group_member_vitals"
+import "LUI.src.Vitals.group_effects_area"
 
 local function _fellowship_vitals_enabled()
     return State.loaded_settings.fellowship.enabled == true
@@ -44,6 +46,7 @@ function FellowshipVitals:Constructor()
     self.lp = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.group = nil
     self.members = {}
+    self.member_effects = {}
     self.events = {
         party_changed = nil,
         raid_changed = nil,
@@ -138,6 +141,10 @@ function FellowshipVitals:refresh_group()
 end
 
 function FellowshipVitals:ensure_member_windows(count)
+    local vitals_settings = State.settings.fellowship
+    local member_width = vitals_settings.frame.width
+    local member_height = GroupLayout.member_height(vitals_settings)
+
     for i = #self.members + 1, count do
         local member_window = Vitals.GroupMemberVitals("fellowship", nil)
         member_window:SetParent(self)
@@ -145,7 +152,73 @@ function FellowshipVitals:ensure_member_windows(count)
         member_window.entity_control:SetMouseVisible(not self:is_move_mode())
         member_window:SetVisible(false)
         table.insert(self.members, member_window)
+
+        local effect_area = Vitals.GroupEffectsArea(member_width, vitals_settings.group_effects, member_height)
+        effect_area:SetParent(self)
+        effect_area:SetZOrder(9)
+        effect_area:SetVisible(false)
+        table.insert(self.member_effects, effect_area)
     end
+end
+
+function FellowshipVitals:hide_member_effects()
+    for i = 1, #self.member_effects do
+        self.member_effects[i]:SetVisible(false)
+    end
+end
+
+function FellowshipVitals:layout_members_with_effects(count, member_width, member_height)
+    local vitals_settings = State.settings.fellowship
+    local layout = vitals_settings.layout
+    local ge = vitals_settings.group_effects
+    local rows_setting = layout.rows
+    if rows_setting == nil or rows_setting < 1 then
+        rows_setting = 1
+    end
+
+    local cols = math.ceil(count / rows_setting)
+    if cols < 1 then
+        cols = 1
+    end
+    local rows_grid = math.min(rows_setting, count)
+    if rows_grid < 1 then
+        rows_grid = 1
+    end
+
+    local max_column = 0
+    local max_row = 0
+    for i = 1, count do
+        local index = i - 1
+        local column = math.floor(index / rows_setting)
+        local row = index - (column * rows_setting)
+        local bar_x, bar_y, area_x, area_y, placement = GroupLayout.place_with_effects(column, row, cols, rows_grid,
+            ge.side, layout.spacing_x, layout.spacing_y, member_width, member_height)
+
+        self.members[i]:SetPosition(bar_x, bar_y)
+
+        local effect_area = self.member_effects[i]
+        effect_area:SetPosition(area_x, area_y)
+        if placement == "left" then
+            effect_area:set_horizontal_alignment(LUI_ENUMS.side.RIGHT)
+        else
+            effect_area:set_horizontal_alignment(LUI_ENUMS.side.LEFT)
+        end
+
+        if column > max_column then
+            max_column = column
+        end
+        if row > max_row then
+            max_row = row
+        end
+    end
+
+    local total_width, total_height = GroupLayout.effect_grid_size(max_column, max_row, cols, rows_grid,
+        layout.spacing_x, layout.spacing_y, member_width, member_height)
+    self:SetSize(total_width, total_height)
+end
+
+function FellowshipVitals:effects_active()
+    return State.settings.fellowship.group_effects.effects_active == true and not self:is_move_mode()
 end
 
 function FellowshipVitals:layout_members(count)
@@ -153,12 +226,18 @@ function FellowshipVitals:layout_members(count)
     local member_width = vitals_settings.frame.width
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
-    local total_width, total_height = GroupLayout.compute_size(count, layout.rows, layout.spacing_x, layout.spacing_y,
-        member_width, member_height)
 
-    self:SetSize(total_width, total_height)
-    GroupLayout.apply_positions(self.members, count, layout.rows, layout.spacing_x, layout.spacing_y, member_width,
-        member_height)
+    if self:effects_active() == true then
+        self:layout_members_with_effects(count, member_width, member_height)
+    else
+        self:hide_member_effects()
+        local total_width, total_height = GroupLayout.compute_size(count, layout.rows, layout.spacing_x,
+            layout.spacing_y, member_width, member_height)
+
+        self:SetSize(total_width, total_height)
+        GroupLayout.apply_positions(self.members, count, layout.rows, layout.spacing_x, layout.spacing_y, member_width,
+            member_height)
+    end
 
     if self:is_move_mode() then
         self:layout_move_chrome()
@@ -183,12 +262,26 @@ function FellowshipVitals:apply_settings()
     self:apply_native_scaling()
     self:apply_hud_position()
 
+    local vitals_settings = State.settings.fellowship
+    local member_width = vitals_settings.frame.width
+    local member_height = GroupLayout.member_height(vitals_settings)
     for i = 1, #self.members do
         self.members[i]:resize()
+        -- Drop the area assignment so update_members re-subscribes with the
+        -- refreshed filter/icon settings and replays current effects.
+        self.members[i]:set_effect_area(nil)
+        self.member_effects[i]:apply_bar_settings(member_width, vitals_settings.group_effects, member_height)
     end
 
     self:update_members()
     _G.LUI.Runtime.Apply.lotro_vitals_handoff()
+end
+
+function FellowshipVitals:destroy()
+    for i = 1, #self.members do
+        self.members[i]:set_effect_area(nil)
+    end
+    self:SetVisible(false)
 end
 
 function FellowshipVitals:current_target_name()
@@ -236,7 +329,9 @@ function FellowshipVitals:update_members(snapshot)
             member_window.entity_control:SetMouseVisible(false)
             member_window:set_entity(nil)
             member_window:set_is_leader(false)
+            member_window:set_effect_area(nil)
             member_window:SetVisible(false)
+            self.member_effects[i]:SetVisible(false)
         end
 
         self:layout_members(desired_count)
@@ -246,8 +341,10 @@ function FellowshipVitals:update_members(snapshot)
     end
 
     local leader_name = current_snapshot.leader_name
+    local effects_on = self:effects_active()
     for i = 1, #self.members do
         local member_window = self.members[i]
+        local effect_area = self.member_effects[i]
         member_window.entity_control:SetMouseVisible(true)
 
         if i <= #ordered_members then
@@ -255,10 +352,19 @@ function FellowshipVitals:update_members(snapshot)
             member_window:set_entity(entity)
             member_window:set_is_leader(leader_name ~= nil and entity:GetName() == leader_name)
             member_window:SetVisible(true)
+            if effects_on == true then
+                member_window:set_effect_area(effect_area)
+                effect_area:SetVisible(true)
+            else
+                member_window:set_effect_area(nil)
+                effect_area:SetVisible(false)
+            end
         else
             member_window:set_entity(nil)
             member_window:set_is_leader(false)
+            member_window:set_effect_area(nil)
             member_window:SetVisible(false)
+            effect_area:SetVisible(false)
         end
     end
 

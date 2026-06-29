@@ -8,6 +8,7 @@ local TR = _G.LUI.Locale.TR
 local Vitals = _G.LUI.Features.Vitals
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
+local LUI_ENUMS = _G.LUI.Settings.Enums
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 
@@ -15,6 +16,7 @@ import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.raid_layout"
 import "LUI.src.Vitals.group_layout"
 import "LUI.src.Vitals.group_member_vitals"
+import "LUI.src.Vitals.group_effects_area"
 
 local function _raid_group_windows_enabled()
     return State.loaded_settings.raid.enabled == true and State.loaded_settings.raid.split_by_group == true
@@ -57,10 +59,12 @@ function RaidGroupVitalsWindow:Constructor(group_key, group_index)
     self.group_key = group_key
     self.group_index = group_index
     self.members = {}
+    self.member_effects = {}
     self.current_members = {}
     self.current_leader_name = nil
     self.current_target_name = nil
     self.current_active = false
+    self.current_enable_effects = false
     self.group_border = nil
 
     UI.Widgets.LuiHUD.Constructor(self, {
@@ -105,7 +109,7 @@ function RaidGroupVitalsWindow:set_move_mode(enabled)
     end
 
     UI.Widgets.LuiHUD.set_move_mode(self, enabled)
-    self:update_members(self.current_members, self.current_leader_name, self.current_active)
+    self:update_members(self.current_members, self.current_leader_name, self.current_active, self.current_enable_effects)
 end
 
 function RaidGroupVitalsWindow:get_placeholder_count()
@@ -113,6 +117,10 @@ function RaidGroupVitalsWindow:get_placeholder_count()
 end
 
 function RaidGroupVitalsWindow:ensure_member_windows(count)
+    local vitals_settings = State.settings.raid
+    local member_width = vitals_settings.frame.width
+    local member_height = GroupLayout.member_height(vitals_settings)
+
     for i = #self.members + 1, count do
         local member_window = Vitals.GroupMemberVitals("raid", nil)
         member_window:SetParent(self)
@@ -120,11 +128,27 @@ function RaidGroupVitalsWindow:ensure_member_windows(count)
         member_window.entity_control:SetMouseVisible(not self:is_move_mode())
         member_window:SetVisible(false)
         table.insert(self.members, member_window)
+
+        local effect_area = Vitals.GroupEffectsArea(member_width, vitals_settings.group_effects, member_height)
+        effect_area:SetParent(self)
+        effect_area:SetZOrder(9)
+        effect_area:SetVisible(false)
+        table.insert(self.member_effects, effect_area)
+    end
+end
+
+function RaidGroupVitalsWindow:hide_member_effects()
+    for i = 1, #self.member_effects do
+        self.member_effects[i]:SetVisible(false)
     end
 end
 
 function RaidGroupVitalsWindow:get_border_color()
     return State.settings.raid.group_colors[self.group_key]
+end
+
+function RaidGroupVitalsWindow:effects_active()
+    return self.current_enable_effects == true and not self:is_move_mode()
 end
 
 function RaidGroupVitalsWindow:layout_members(count)
@@ -133,23 +157,69 @@ function RaidGroupVitalsWindow:layout_members(count)
     local member_height = GroupLayout.member_height(vitals_settings)
     local layout = vitals_settings.layout
     local outer_border = vitals_settings.group_border_width
-    local total_width, total_height = GroupLayout.compute_raid_group_size(count, layout.mode, layout.spacing_x,
-        layout.spacing_y, member_width, member_height)
 
-    self:SetSize(total_width + (2 * outer_border), total_height + (2 * outer_border))
-    GroupLayout.apply_raid_group_positions(self.members, count, layout.mode, layout.spacing_x, layout.spacing_y,
-        member_width, member_height)
-    for i = 1, count do
-        local member_window = self.members[i]
-        local x, y = member_window:GetPosition()
-        member_window:SetPosition(x + outer_border, y + outer_border)
+    if self:effects_active() == true then
+        self:layout_members_with_effects(count, vitals_settings, member_width, member_height, outer_border)
+    else
+        self:hide_member_effects()
+        local total_width, total_height = GroupLayout.compute_raid_group_size(count, layout.mode, layout.spacing_x,
+            layout.spacing_y, member_width, member_height)
+
+        self:SetSize(total_width + (2 * outer_border), total_height + (2 * outer_border))
+        GroupLayout.apply_raid_group_positions(self.members, count, layout.mode, layout.spacing_x, layout.spacing_y,
+            member_width, member_height)
+        for i = 1, count do
+            local member_window = self.members[i]
+            local x, y = member_window:GetPosition()
+            member_window:SetPosition(x + outer_border, y + outer_border)
+        end
     end
+
     self:update_group_border(count)
 
     if self:is_move_mode() then
         self:layout_move_chrome()
         self:sync_move_inputs_from_position()
     end
+end
+
+function RaidGroupVitalsWindow:layout_members_with_effects(count, vitals_settings, member_width, member_height,
+                                                           outer_border)
+    local layout = vitals_settings.layout
+    local ge = vitals_settings.group_effects
+    local shape_cells = RaidLayout.group_shape_cells(layout.mode)
+    local dims = RaidLayout.group_shape_dimensions(layout.mode)
+    local cols = dims.columns
+    local rows = dims.rows
+
+    local max_column = 0
+    local max_row = 0
+    for i = 1, count do
+        local cell = shape_cells[i]
+        local bar_x, bar_y, area_x, area_y, placement = GroupLayout.place_with_effects(cell.column, cell.row, cols, rows,
+            ge.side, layout.spacing_x, layout.spacing_y, member_width, member_height)
+
+        self.members[i]:SetPosition(bar_x + outer_border, bar_y + outer_border)
+
+        local effect_area = self.member_effects[i]
+        effect_area:SetPosition(area_x + outer_border, area_y + outer_border)
+        if placement == "left" then
+            effect_area:set_horizontal_alignment(LUI_ENUMS.side.RIGHT)
+        else
+            effect_area:set_horizontal_alignment(LUI_ENUMS.side.LEFT)
+        end
+
+        if cell.column > max_column then
+            max_column = cell.column
+        end
+        if cell.row > max_row then
+            max_row = cell.row
+        end
+    end
+
+    local total_width, total_height = GroupLayout.effect_grid_size(max_column, max_row, cols, rows, layout.spacing_x,
+        layout.spacing_y, member_width, member_height)
+    self:SetSize(total_width + (2 * outer_border), total_height + (2 * outer_border))
 end
 
 function RaidGroupVitalsWindow:update_group_border(count)
@@ -180,11 +250,25 @@ function RaidGroupVitalsWindow:apply_settings()
     self:apply_native_scaling()
     self:apply_hud_position()
 
+    local vitals_settings = State.settings.raid
+    local member_width = vitals_settings.frame.width
+    local member_height = GroupLayout.member_height(vitals_settings)
     for i = 1, #self.members do
         self.members[i]:resize()
+        -- Drop the area assignment so update_members re-subscribes with the
+        -- refreshed filter/icon settings and replays current effects.
+        self.members[i]:set_effect_area(nil)
+        self.member_effects[i]:apply_bar_settings(member_width, vitals_settings.group_effects, member_height)
     end
 
-    self:update_members(self.current_members, self.current_leader_name, self.current_active)
+    self:update_members(self.current_members, self.current_leader_name, self.current_active, self.current_enable_effects)
+end
+
+function RaidGroupVitalsWindow:destroy()
+    for i = 1, #self.members do
+        self.members[i]:set_effect_area(nil)
+    end
+    self:SetVisible(false)
 end
 
 function RaidGroupVitalsWindow:set_target_name(target_name)
@@ -198,10 +282,11 @@ function RaidGroupVitalsWindow:update_target_highlight()
     end
 end
 
-function RaidGroupVitalsWindow:update_members(members, leader_name, active)
+function RaidGroupVitalsWindow:update_members(members, leader_name, active, enable_effects)
     self.current_members = members
     self.current_leader_name = leader_name
     self.current_active = active == true
+    self.current_enable_effects = enable_effects == true
 
     local ordered_members = members
     local move_mode = self:is_move_mode()
@@ -219,7 +304,9 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
             member_window:set_entity(nil)
             member_window:set_is_leader(false)
             member_window:set_frame_border_color_override(nil)
+            member_window:set_effect_area(nil)
             member_window:SetVisible(false)
+            self.member_effects[i]:SetVisible(false)
         end
 
         self:layout_members(desired_count)
@@ -228,8 +315,10 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
         return
     end
 
+    local effects_on = self:effects_active()
     for i = 1, #self.members do
         local member_window = self.members[i]
+        local effect_area = self.member_effects[i]
         member_window.entity_control:SetMouseVisible(true)
         member_window:set_frame_border_color_override(nil)
 
@@ -238,10 +327,19 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
             member_window:set_entity(entity)
             member_window:set_is_leader(leader_name ~= nil and entity:GetName() == leader_name)
             member_window:SetVisible(true)
+            if effects_on == true then
+                member_window:set_effect_area(effect_area)
+                effect_area:SetVisible(true)
+            else
+                member_window:set_effect_area(nil)
+                effect_area:SetVisible(false)
+            end
         else
             member_window:set_entity(nil)
             member_window:set_is_leader(false)
+            member_window:set_effect_area(nil)
             member_window:SetVisible(false)
+            effect_area:SetVisible(false)
         end
     end
 

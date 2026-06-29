@@ -76,6 +76,9 @@ function GroupMemberVitals:Constructor(settings_root, entity)
     self.link_dead_event = nil
     self.em = nil
     self.em_added_event = nil
+    self.em_removed_event = nil
+    self.em_cleared_event = nil
+    self.effect_area = nil
 
     Vitals.VitalsBase.Constructor(self, settings_root, entity, "Group Member", {
         hud_key = settings_root .. "_vitals",
@@ -229,52 +232,72 @@ function GroupMemberVitals:_update_member_state()
     end
 end
 
-function GroupMemberVitals:_setup_silent_effect_manager()
-    -- DISABLED: group member effect tracking is intentionally off for now.
-    -- Fellowship/raid members do not create a silent effect manager, so they
-    -- never call GetEffects() or subscribe to effect events in the background.
-    -- This is deferred until effect tracking can be made configurable. To
-    -- re-enable, remove this early return and uncomment the body below. The
-    -- call site, Update() poll, and
-    -- _detach_silent_effect_manager all guard on self.em, so they stay inert
-    -- while self.em remains nil.
-    self:SetWantsUpdates(false)
+-- The group HUD owns the effect-area widget (so it can sit beside the bar
+-- without being clipped by the bar's bounds) and assigns it here. A nil area
+-- means this member is not tracked: no effect manager is created, so we never
+-- call GetEffects() or subscribe to effect events.
+function GroupMemberVitals:set_effect_area(area)
+    if self.effect_area == area then
+        return
+    end
 
-    -- if self.em ~= nil then
-    --     self:SetWantsUpdates(true)
-    --     return
-    -- end
-    --
-    -- if self.entity == nil or self:_is_local_player(self.entity) == true then
-    --     self:SetWantsUpdates(false)
-    --     return
-    -- end
-    --
-    -- if self.entity.GetEffects == nil or self.entity:GetEffects() == nil then
-    --     self:SetWantsUpdates(false)
-    --     return
-    -- end
-    --
-    -- self.em = Vitals.TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
-    -- self.em_added_event = self.em:register_added_event(function()
-    -- end)
-    -- self:SetWantsUpdates(true)
+    self:_detach_silent_effect_manager()
+    self.effect_area = area
+    self:_setup_silent_effect_manager()
 end
 
-function GroupMemberVitals:_detach_silent_effect_manager()
-    if self.em == nil then
-        self.em_added_event = nil
+function GroupMemberVitals:_setup_silent_effect_manager()
+    if self.em ~= nil then
+        self:SetWantsUpdates(true)
+        return
+    end
+
+    if self.effect_area == nil or self.entity == nil or self:_is_local_player(self.entity) == true then
         self:SetWantsUpdates(false)
         return
     end
 
-    if self.em_added_event ~= nil then
-        self.em:unregister_added_event(self.em_added_event)
-        self.em_added_event = nil
+    if self.entity.GetEffects == nil or self.entity:GetEffects() == nil then
+        self:SetWantsUpdates(false)
+        return
     end
 
-    self.em:delete()
-    self.em = nil
+    local area = self.effect_area
+    self.em = Vitals.TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    self.em_added_event = self.em:register_added_event(function(effect)
+        area:add_effect(effect)
+    end)
+    self.em_removed_event = self.em:register_removed_event(function(effect)
+        area:remove_effect(effect)
+    end)
+    self.em_cleared_event = self.em:register_cleared_event(function()
+        area:clear_effects()
+    end)
+    self:SetWantsUpdates(true)
+end
+
+function GroupMemberVitals:_detach_silent_effect_manager()
+    if self.em ~= nil then
+        if self.em_added_event ~= nil then
+            self.em:unregister_added_event(self.em_added_event)
+            self.em_added_event = nil
+        end
+        if self.em_removed_event ~= nil then
+            self.em:unregister_removed_event(self.em_removed_event)
+            self.em_removed_event = nil
+        end
+        if self.em_cleared_event ~= nil then
+            self.em:unregister_cleared_event(self.em_cleared_event)
+            self.em_cleared_event = nil
+        end
+        self.em:delete()
+        self.em = nil
+    end
+
+    if self.effect_area ~= nil then
+        self.effect_area:clear_effects()
+    end
+
     self:SetWantsUpdates(false)
 end
 

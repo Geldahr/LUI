@@ -919,6 +919,66 @@ local function _new_effects_section(window, refresh_preview_fn, prefix, get)
     return page
 end
 
+local function _new_group_effects_section(window, refresh_preview_fn, prefix, get, note)
+    local page = ConfigContent(window, 3, refresh_preview_fn)
+    if note ~= nil then
+        page:add_info(note, 32)
+    end
+    _add_checkbox_field(page, prefix .. "_group_effects_enabled", TR["Track group member effects"],
+        function()
+            return get().group_effects.enabled
+        end,
+        function(value)
+            get().group_effects.enabled = value
+        end, true)
+    page:add_row_break()
+    _add_checkbox_field(page, prefix .. "_group_effects_buffs", TR["Track buffs"],
+        function()
+            return get().group_effects.show_buffs
+        end,
+        function(value)
+            get().group_effects.show_buffs = value
+        end, false)
+    _add_checkbox_field(page, prefix .. "_group_effects_curable", TR["Track curable debuffs"],
+        function()
+            return get().group_effects.show_curable_debuffs
+        end,
+        function(value)
+            get().group_effects.show_curable_debuffs = value
+        end, false)
+    _add_checkbox_field(page, prefix .. "_group_effects_noncurable", TR["Track non-curable debuffs"],
+        function()
+            return get().group_effects.show_noncurable_debuffs
+        end,
+        function(value)
+            get().group_effects.show_noncurable_debuffs = value
+        end, false)
+    page:add_row_break()
+    _add_dropdown_field(page, prefix .. "_group_effects_side", TR["Effects Side"], page.side_labels, page.side_values,
+        function()
+            return get().group_effects.side
+        end,
+        function(value)
+            get().group_effects.side = value
+        end,
+        TR["A single column/row uses this side. Multiple columns/rows auto-place effects on the outer edge."])
+    page:add_row_break()
+    _add_number_field(page, prefix .. "_group_effects_size", TR["Icon Size"],
+        function()
+            return get().group_effects.icon_size
+        end,
+        function(value)
+            get().group_effects.icon_size = value
+        end)
+    page:add_row_break()
+    _add_font_identity_controls(page, prefix .. "_group_effects_timer",
+        function()
+            return get().group_effects.timer_font
+        end,
+        TR["Timer Font"], TR["Timer Font Size"], TR["Timer Font Style"])
+    return page
+end
+
 local BOSS_TARGETS_COLUMN_SPAN = 2
 
 local function _new_boss_targets_section(window, refresh_preview_fn, get)
@@ -1072,6 +1132,7 @@ function VitalsPage:Constructor(window)
         build_standard_power_form = _build_standard_power_form,
         build_info_form = _build_info_form,
         new_texts_section = _new_texts_section,
+        new_group_effects_section = _new_group_effects_section,
         bind_standard_outline_visibility = _bind_standard_outline_visibility,
     }))
     self:add_tab(TR["Raid"], "raid", GroupVitalsPageBuilder.new_group_unit_page(window, self, {
@@ -1094,6 +1155,7 @@ function VitalsPage:Constructor(window)
         build_standard_power_form = _build_standard_power_form,
         build_info_form = _build_info_form,
         new_texts_section = _new_texts_section,
+        new_group_effects_section = _new_group_effects_section,
         bind_standard_outline_visibility = _bind_standard_outline_visibility,
     }))
 end

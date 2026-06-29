@@ -544,6 +544,16 @@ Plugins["LUI"].Unload = function()
         Windows.companion_vital = nil
     end
 
+    if Windows.fellowship_vitals ~= nil then
+        Windows.fellowship_vitals:destroy()
+        Windows.fellowship_vitals = nil
+    end
+
+    if Windows.raid_vitals ~= nil then
+        Windows.raid_vitals:destroy()
+        Windows.raid_vitals = nil
+    end
+
     if Windows.bestiary_tracker ~= nil then
         Windows.bestiary_tracker:save()
         Windows.bestiary_tracker:destroy()

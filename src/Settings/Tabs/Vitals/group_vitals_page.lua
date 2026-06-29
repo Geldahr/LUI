@@ -175,6 +175,13 @@ function Builder.new_group_unit_page(window, root, options, deps)
         function(value) get().leader_icon.y = value end)
     page:add_tab(TR["Icons"], "icons", icons)
 
+    local group_effects_note = nil
+    if options.raid_layout_dropdown == true then
+        group_effects_note = TR["Group member effects are shown only in split view, for your own group."]
+    end
+    page:add_tab(TR["Effects"], "effects",
+        deps.new_group_effects_section(window, page.refresh_preview, options.prefix, get, group_effects_note))
+
     deps.bind_standard_outline_visibility(page, colors, options.prefix, false)
 
     return page
