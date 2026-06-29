@@ -4,7 +4,7 @@
 
 local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
 local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
-local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_icon_timeout = _G.LUI.Utils.lui_format_icon_timeout
 local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
 local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
@@ -177,9 +177,9 @@ local function _layout_preview_icons(icons, count, cols, icon_size, left, top, w
             icon.label:SetForeColor(font_color)
             icon.label:SetOutlineColor(font_outline)
             if i == 1 then
-                icon.label:SetText(lui_format_timeout(first_time))
+                icon.label:SetText(lui_format_icon_timeout(first_time))
             elseif i == 2 then
-                icon.label:SetText(lui_format_timeout(second_time))
+                icon.label:SetText(lui_format_icon_timeout(second_time))
             else
                 icon.label:SetText("")
             end

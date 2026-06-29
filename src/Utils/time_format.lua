@@ -25,6 +25,22 @@ local function lui_format_timeout(seconds)
 end
 Utils.lui_format_timeout = lui_format_timeout
 
+-- Unitless variant for effect-icon overlays: on a small square the trailing
+-- "s" wastes a character and the countdown is self-explanatory in context.
+local function lui_format_icon_timeout(seconds)
+    if seconds <= 0 then
+        return "0"
+    end
+    if seconds >= 60 then
+        return _format_m_ss(seconds)
+    end
+    if seconds < 10 then
+        return string.format("%.1f", seconds)
+    end
+    return string.format("%d", math.floor(seconds))
+end
+Utils.lui_format_icon_timeout = lui_format_icon_timeout
+
 local function lui_format_timeout_seconds(seconds)
     if seconds <= 0 then
         return "0s"

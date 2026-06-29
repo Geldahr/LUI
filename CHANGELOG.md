@@ -14,6 +14,7 @@
 ### Changed
 
 - Moved Inventory Sort and Merge actions under an `Edit` menu and made tile-size changes preserve the current row/column count while clamping the resized window to the screen.
+- Effect icon countdown timers now drop the trailing `s` (for example `2.6` instead of `2.6s`) and show for the full final 10 seconds instead of the final 9.
 
 ### Fixed
 

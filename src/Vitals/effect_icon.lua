@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
+local lui_format_icon_timeout = _G.LUI.Utils.lui_format_icon_timeout
 local Vitals = _G.LUI.Features.Vitals
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
@@ -145,8 +145,8 @@ function EffectIcon:Update()
     local time_left = self.ending - Turbine.Engine.GetGameTime()
     if time_left < 0 then
         self.timer:SetText("")
-    elseif time_left < 9 then
-        self.timer:SetText(lui_format_timeout(time_left))
+    elseif time_left < 10 then
+        self.timer:SetText(lui_format_icon_timeout(time_left))
     else
         self.timer:SetText("")
     end
