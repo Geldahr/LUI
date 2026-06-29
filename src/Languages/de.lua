@@ -53,6 +53,7 @@ LUI.src.Languages.de.DE = {
     ["Debuffs Slot"] = "Schwächungs-Slot",
     ["Buffs: max %d (%dx%d)"] = "Stärkungen: max %d (%dx%d)",
     ["Debuffs: max %d (%dx%d)"] = "Schwächungen: max %d (%dx%d)",
+    ["Effects: max %d (%dx%d)"] = "Effekte: max %d (%dx%d)",
     ["Preview"] = "Vorschau",
     ["Section"] = "Bereich",
     ["Frame Width"] = "Rahmenbreite",

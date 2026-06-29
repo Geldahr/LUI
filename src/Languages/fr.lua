@@ -53,6 +53,7 @@ LUI.src.Languages.fr.FR = {
     ["Debuffs Slot"] = "Emplacement des affaiblissements",
     ["Buffs: max %d (%dx%d)"] = "Améliorations : max %d (%dx%d)",
     ["Debuffs: max %d (%dx%d)"] = "Affaiblissements : max %d (%dx%d)",
+    ["Effects: max %d (%dx%d)"] = "Effets : max %d (%dx%d)",
     ["Preview"] = "Aperçu",
     ["Section"] = "Section",
     ["Frame Width"] = "Largeur du cadre",

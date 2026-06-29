@@ -7,6 +7,7 @@ local GroupLayout = _G.LUI.Features.Vitals.GroupLayout
 local TR = _G.LUI.Locale.TR
 local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
 local lui_format_tokenized = _G.LUI.Utils.lui_format_tokenized
+local lui_format_timeout = _G.LUI.Utils.lui_format_timeout
 local lui_vitals_layout_label = _G.LUI.Utils.lui_vitals_layout_label
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
 local lui_abbrev_number = _G.LUI.Utils.lui_abbrev_number
@@ -44,49 +45,101 @@ local _sync_preview_holder_height = Common.sync_preview_holder_height
 local PREVIEW_WRATH_MAX = Common.PREVIEW_WRATH_MAX
 local RAID_GROUP_SIZE = 6
 local RAID_GROUP_KEYS = { "a", "b", "c", "d" }
-local EFFECT_BOX_COLOR = Turbine.UI.Color(0.30, 0.05, 0.05, 0.05)
+local EFFECT_BOX_COLOR = Turbine.UI.Color(1, 0.10, 0.10, 0.10)
 local EFFECT_BUFF_COLOR = Turbine.UI.Color(1, 0.40, 0.78, 0.42)
 local EFFECT_CURABLE_COLOR = Turbine.UI.Color(1, 0.85, 0.30, 0.30)
 local EFFECT_NONCURABLE_COLOR = Turbine.UI.Color(1, 0.90, 0.58, 0.20)
-local EFFECT_PREVIEW_ICON_COUNT = 6
+local EFFECT_PREVIEW_ICON_COUNT = 3
+local EFFECT_LABEL_HEIGHT = 14
+
+local function _new_preview_effect_icon(parent)
+    local icon = {}
+
+    icon.root = Turbine.UI.Control()
+    icon.root:SetParent(parent)
+    icon.root:SetMouseVisible(false)
+    icon.root:SetBackColor(Turbine.UI.Color(1, 0, 0, 0))
+    icon.root:SetVisible(false)
+
+    icon.inner = Turbine.UI.Control()
+    icon.inner:SetParent(icon.root)
+    icon.inner:SetMouseVisible(false)
+
+    icon.timer = UI.Widgets.LuiLabel()
+    icon.timer:SetParent(icon.root)
+    icon.timer:SetMouseVisible(false)
+    icon.timer:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
+    icon.timer:SetForeColor(Turbine.UI.Color(1, 1, 1, 1))
+    icon.timer:SetOutlineColor(Turbine.UI.Color(0, 0, 0, 1))
+    icon.timer:SetZOrder(1)
+
+    return icon
+end
 
 -- Placeholder effect icons inside a member's effect box. Colors mock the
--- enabled kinds (buff / curable / non-curable) so the user can see placement.
+-- enabled kinds (buff / curable / non-curable), sample timers exercise the
+-- configured timer font, and a capacity label reports how many effects fit.
 local function _render_preview_effect_box(member, area_x, area_y, frame_w, member_h, icon_size, show_buffs,
-                                          show_curable, show_noncurable)
+                                          show_curable, show_noncurable, timer_font, timer_style, label_font)
     local box = member.effect_box
     box:SetPosition(area_x, area_y)
     box:SetSize(frame_w, member_h)
     box:SetVisible(true)
     box:SetBackColor(EFFECT_BOX_COLOR)
 
+    local cols = math.floor(frame_w / icon_size)
+    if cols < 1 then cols = 1 end
+    local rows = math.floor(member_h / icon_size)
+    if rows < 1 then rows = 1 end
+    local max_effects = cols * rows
+
+    local label_h = EFFECT_LABEL_HEIGHT
+    if label_h > member_h then label_h = member_h end
+    member.effect_label:SetFont(label_font)
+    member.effect_label:SetPosition(0, 0)
+    member.effect_label:SetSize(frame_w, label_h)
+    member.effect_label:SetText(string.format(TR["Effects: max %d (%dx%d)"], max_effects, cols, rows))
+    member.effect_label:SetVisible(true)
+
     local kinds = {}
     if show_buffs == true then
-        kinds[#kinds + 1] = EFFECT_BUFF_COLOR
+        kinds[#kinds + 1] = { color = EFFECT_BUFF_COLOR, time = 8.4 }
     end
     if show_curable == true then
-        kinds[#kinds + 1] = EFFECT_CURABLE_COLOR
+        kinds[#kinds + 1] = { color = EFFECT_CURABLE_COLOR, time = 5.1 }
     end
     if show_noncurable == true then
-        kinds[#kinds + 1] = EFFECT_NONCURABLE_COLOR
+        kinds[#kinds + 1] = { color = EFFECT_NONCURABLE_COLOR, time = 2.6 }
     end
 
-    local per_row = math.floor(frame_w / icon_size)
-    if per_row < 1 then
-        per_row = 1
-    end
+    local size = icon_size
+    local available_h = member_h - label_h
+    if size > available_h then size = available_h end
+    if size < 1 then size = 1 end
 
     for j = 1, #member.effect_icons do
         local icon = member.effect_icons[j]
-        if #kinds > 0 and j <= EFFECT_PREVIEW_ICON_COUNT then
-            local col = (j - 1) % per_row
-            local row = math.floor((j - 1) / per_row)
-            icon:SetPosition(col * icon_size, row * icon_size)
-            icon:SetSize(math.max(1, icon_size - 2), math.max(1, icon_size - 2))
-            icon:SetBackColor(kinds[((j - 1) % #kinds) + 1])
-            icon:SetVisible(true)
+        if j <= #kinds and j <= EFFECT_PREVIEW_ICON_COUNT then
+            local kind = kinds[j]
+            icon.root:SetPosition((j - 1) * size, label_h)
+            icon.root:SetSize(size, size)
+            icon.root:SetVisible(true)
+
+            local border = 1
+            local inner = size - (2 * border)
+            if inner < 1 then inner = 1 end
+            icon.inner:SetPosition(border, border)
+            icon.inner:SetSize(inner, inner)
+            icon.inner:SetBackColor(kind.color)
+
+            icon.timer:SetPosition(0, 0)
+            icon.timer:SetSize(size, size)
+            icon.timer:SetFont(timer_font)
+            icon.timer:SetFontStyle(timer_style)
+            icon.timer:SetText(lui_format_timeout(kind.time))
+            icon.timer:SetVisible(true)
         else
-            icon:SetVisible(false)
+            icon.root:SetVisible(false)
         end
     end
 end
@@ -567,13 +620,16 @@ function Preview.init(window, spec)
         member.effect_box:SetParent(state.root)
         member.effect_box:SetMouseVisible(false)
         member.effect_box:SetVisible(false)
+
+        member.effect_label = UI.Widgets.LuiLabel()
+        member.effect_label:SetParent(member.effect_box)
+        member.effect_label:SetMouseVisible(false)
+        member.effect_label:SetTextAlignment(Turbine.UI.ContentAlignment.TopCenter)
+        member.effect_label:SetZOrder(2)
+
         member.effect_icons = {}
         for j = 1, EFFECT_PREVIEW_ICON_COUNT do
-            local icon = Turbine.UI.Control()
-            icon:SetParent(member.effect_box)
-            icon:SetMouseVisible(false)
-            icon:SetVisible(false)
-            member.effect_icons[j] = icon
+            member.effect_icons[j] = _new_preview_effect_icon(member.effect_box)
         end
 
         table.insert(state.members, member)
@@ -679,6 +735,11 @@ function Preview.update(window, spec)
     local ge_icon_size = _preview_scaled_int(raw_scale,
         _require_control_number(window.controls, prefix .. "_group_effects_size"))
     if ge_icon_size < 8 then ge_icon_size = 8 end
+    local ge_timer_font_name = _require_control_enum(window.controls, prefix .. "_group_effects_timer_font_name")
+    local ge_timer_font = _require_font(ge_timer_font_name,
+        _preview_scaled_number(raw_scale, _require_control_number(window.controls, prefix .. "_group_effects_timer_font_size")))
+    local ge_timer_style = LUI_TO_LOTRO.font_style[_require_control_enum(window.controls,
+        prefix .. "_group_effects_timer_font_style")] or Turbine.UI.FontStyle.Outline
     -- Effects are previewed only for the fellowship layout; the raid split
     -- preview path is left unchanged.
     local fellowship_effects = ge_enabled == true and spec.raid_layout_mode_control_key == nil
@@ -1096,7 +1157,7 @@ function Preview.update(window, spec)
                         ge_side, spacing_x, spacing_y, frame_w, member_h)
                     root_windows[i]:SetPosition(bar_x, bar_y)
                     _render_preview_effect_box(state.members[i], area_x, area_y, frame_w, member_h, ge_icon_size,
-                        ge_buffs, ge_curable, ge_noncurable)
+                        ge_buffs, ge_curable, ge_noncurable, ge_timer_font, ge_timer_style, window.field_label_font)
                 else
                     root_windows[i]:SetPosition(0, 0)
                     state.members[i].effect_box:SetVisible(false)
