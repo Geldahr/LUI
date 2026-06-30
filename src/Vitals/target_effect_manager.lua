@@ -33,6 +33,14 @@ local PLAYER_CACHE_KIND = "player"
 local OTHER_CACHE_KIND = "other"
 local _player_manager_cache = setmetatable({}, { __mode = "v" })
 local _other_manager_cache = {}
+-- OTHER entries whose entity has no name yet (e.g. a pet during the seconds-long window
+-- between summon and its name resolving). Each record is { entry, time }. The sweep in
+-- poll() buckets them once named and drops any that never get a name within the timeout.
+local _pending_other_entries = {}
+local PENDING_OTHER_TIMEOUT_S = 5
+-- poll() is driven from each vitals' per-frame Update(); cap its actual work (the sweep and
+-- refresh) to 30/s per manager so it does not run every single frame.
+local POLL_INTERVAL_S = 1 / 30
 local OTHER_IDENTITY_METHODS = {
     "GetLevel",
     -- "GetMorale",
@@ -124,6 +132,19 @@ local function _other_entities_match(left, right)
     return true
 end
 
+local function _add_pending_other_entry(entry)
+    _pending_other_entries[#_pending_other_entries + 1] = { entry = entry, time = Turbine.Engine.GetGameTime() }
+end
+
+local function _remove_pending_other_entry(entry)
+    for i = #_pending_other_entries, 1, -1 do
+        if _pending_other_entries[i].entry == entry then
+            table.remove(_pending_other_entries, i)
+            break
+        end
+    end
+end
+
 local function _remove_other_entry(entry)
     if entry.name == nil then
         return
@@ -143,7 +164,13 @@ local function _remove_other_entry(entry)
     end
 end
 
+-- Files the entry into the cache bucket for `name`. This is the single place an entry
+-- becomes findable by _find_other_entry; an entry with a nil name lives outside any bucket.
 local function _add_other_entry(entry, name)
+    -- Getting a name means it is no longer pending; drop it from the unbucketed list
+    -- (no-op if it was created already-named).
+    _remove_pending_other_entry(entry)
+
     local bucket = _other_manager_cache[name]
     if bucket == nil then
         bucket = {}
@@ -154,6 +181,10 @@ local function _add_other_entry(entry, name)
     bucket[#bucket + 1] = entry
 end
 
+-- Runs whenever the tracked entity's name changes. Re-files the entry under its current
+-- name. The key case here is a freshly-summoned pet: it was acquired nameless (unbucketed),
+-- so when its name first resolves (nil -> "Goose") this adds it to the cache, making it
+-- shareable with target vitals.
 local function _move_other_entry(entry)
     local old_name = entry.name
     local new_name = _entity_name(entry.identity_entity)
@@ -169,6 +200,8 @@ local function _move_other_entry(entry)
     end
 end
 
+-- Wires the entity's NameChanged event to _move_other_entry, so the entry is (re)bucketed
+-- the moment a name appears or changes.
 local function _attach_other_entry_name_changed(entry)
     entry.name_changed_event = add_callback(entry.identity_entity, "NameChanged", function()
         _move_other_entry(entry)
@@ -198,6 +231,19 @@ local function _find_other_entry(name, target)
     end
 
     return nil
+end
+
+-- Walk the floating (still-nameless) entries: bucket any whose name has resolved, and drop
+-- any that never got a name within the timeout so the list cannot grow with dead entries.
+local function _sweep_pending_other_entries(now)
+    for i = #_pending_other_entries, 1, -1 do
+        local record = _pending_other_entries[i]
+        if _entity_name(record.entry.identity_entity) ~= nil then
+            _move_other_entry(record.entry)
+        elseif now - record.time > PENDING_OTHER_TIMEOUT_S then
+            table.remove(_pending_other_entries, i)
+        end
+    end
 end
 
 local function _reuse_manager(cached, source_target)
@@ -246,21 +292,25 @@ local function _acquire_other_manager(player, target, source_target, name)
     }
     manager.cache_kind = OTHER_CACHE_KIND
     manager.cache_entry = entry
-    _add_other_entry(entry, name)
+    -- A freshly-summoned pet has no name yet. Track it in the floating list and bucket it
+    -- (via the sweep in poll() or the NameChanged hook) once its name resolves; if it never
+    -- does, the sweep drops it after the timeout. _move_other_entry buckets immediately if
+    -- the name is already available.
+    _add_pending_other_entry(entry)
     _attach_other_entry_name_changed(entry)
+    _move_other_entry(entry)
     return manager
 end
 
 local function _acquire_manager(player, target, source_target)
     local name = _entity_name(target)
-    if name == nil then
-        return _new_manager(player, source_target)
-    end
 
-    if _entity_is_player(target) == true then
+    if name ~= nil and _entity_is_player(target) == true then
         return _acquire_player_manager(player, target, source_target, name)
     end
 
+    -- name may be nil here (e.g. freshly-summoned pet); the OTHER cache attaches a
+    -- NameChanged hook so the entry is bucketed and shareable once it is named.
     return _acquire_other_manager(player, target, source_target, name)
 end
 
@@ -271,6 +321,7 @@ local function _delete_from_cache(manager)
         end
     elseif manager.cache_kind == OTHER_CACHE_KIND then
         _detach_other_entry_name_changed(manager.cache_entry)
+        _remove_pending_other_entry(manager.cache_entry)
         _remove_other_entry(manager.cache_entry)
         manager.cache_entry.manager = nil
     elseif manager.cache_kind ~= nil then
@@ -309,6 +360,7 @@ function TargetEffectManager:Constructor(player, source_target)
     self.cache_entry = nil
 
     self.call_in_s = nil
+    self.next_poll_at = 0
 
     -- /!\ IMPORTANT /!\
     -- DO NOT COPY THE INSTANCE OF THAT VARIABLE IN ANOTHER PLACE
@@ -572,6 +624,17 @@ end
 -- Call in a loop the faster the loop the quicker the remove events will trigger
 -- If no refresh is scheduled then this function does nothing.
 function TargetEffectManager:poll()
+    -- Driven from each vitals' per-frame Update(); cap the actual work to POLL_INTERVAL_S.
+    local now = Turbine.Engine.GetGameTime()
+    if now < self.next_poll_at then
+        return
+    end
+    self.next_poll_at = now + POLL_INTERVAL_S
+
+    -- Bucket floating entries once their name resolves and time out any that never get one,
+    -- without depending on the NameChanged event ever firing.
+    _sweep_pending_other_entries(now)
+
     if self.instance_effects == nil then
         self.instance_effects = _get_target_effects(self.player, self.source_target)
         if self.instance_effects ~= nil then
@@ -590,7 +653,7 @@ function TargetEffectManager:poll()
         end
     end
 
-    if self.call_in_s and Turbine.Engine.GetGameTime() >= self.call_in_s then
+    if self.call_in_s and now >= self.call_in_s then
         self.call_in_s = nil
         self:refresh()
     end
