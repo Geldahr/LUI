@@ -143,6 +143,8 @@ local function _remove_other_entry(entry)
     end
 end
 
+-- Files the entry into the cache bucket for `name`. This is the single place an entry
+-- becomes findable by _find_other_entry; an entry with a nil name lives outside any bucket.
 local function _add_other_entry(entry, name)
     local bucket = _other_manager_cache[name]
     if bucket == nil then
@@ -154,6 +156,10 @@ local function _add_other_entry(entry, name)
     bucket[#bucket + 1] = entry
 end
 
+-- Runs whenever the tracked entity's name changes. Re-files the entry under its current
+-- name. The key case here is a freshly-summoned pet: it was acquired nameless (unbucketed),
+-- so when its name first resolves (nil -> "Goose") this adds it to the cache, making it
+-- shareable with target vitals.
 local function _move_other_entry(entry)
     local old_name = entry.name
     local new_name = _entity_name(entry.identity_entity)
@@ -169,6 +175,8 @@ local function _move_other_entry(entry)
     end
 end
 
+-- Wires the entity's NameChanged event to _move_other_entry, so the entry is (re)bucketed
+-- the moment a name appears or changes.
 local function _attach_other_entry_name_changed(entry)
     entry.name_changed_event = add_callback(entry.identity_entity, "NameChanged", function()
         _move_other_entry(entry)
@@ -246,21 +254,25 @@ local function _acquire_other_manager(player, target, source_target, name)
     }
     manager.cache_kind = OTHER_CACHE_KIND
     manager.cache_entry = entry
-    _add_other_entry(entry, name)
+    -- A freshly-summoned pet has no name yet, so it can't be bucketed now. Leave the entry
+    -- out of the cache and rely on the NameChanged hook below: once the name resolves,
+    -- _move_other_entry calls _add_other_entry to file it, making it shareable with target vitals.
+    if name ~= nil then
+        _add_other_entry(entry, name)
+    end
     _attach_other_entry_name_changed(entry)
     return manager
 end
 
 local function _acquire_manager(player, target, source_target)
     local name = _entity_name(target)
-    if name == nil then
-        return _new_manager(player, source_target)
-    end
 
-    if _entity_is_player(target) == true then
+    if name ~= nil and _entity_is_player(target) == true then
         return _acquire_player_manager(player, target, source_target, name)
     end
 
+    -- name may be nil here (e.g. freshly-summoned pet); the OTHER cache attaches a
+    -- NameChanged hook so the entry is bucketed and shareable once it is named.
     return _acquire_other_manager(player, target, source_target, name)
 end
 

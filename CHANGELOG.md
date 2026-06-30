@@ -18,6 +18,8 @@
 
 ### Fixed
 
+- Fixed target vitals not showing a freshly-summoned pet's buffs and debuffs when the pet was selected as the target.
+
 ### Removed
 
 - Removed the exposed and persisted Inventory columns setting; inventory columns are now derived from saved window geometry.
