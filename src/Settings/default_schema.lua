@@ -1591,6 +1591,31 @@ _G.LUI.Settings.Defaults.Schema =
 				["slot"] = 1.000000,
 			},
 		},
+		["group_effects"] = {
+			["enabled"] = false,
+			["show_buffs"] = false,
+			["show_curable_debuffs"] = true,
+			["show_noncurable_debuffs"] = true,
+			["side"] = 2.000000,
+			["icon_size"] = 22.000000,
+			["timer_font"] = {
+				["name"] = 1.000000,
+				["color"] = {
+					["A"] = 1.000000,
+					["R"] = 1.000000,
+					["G"] = 1.000000,
+					["B"] = 1.000000,
+				},
+				["outline_color"] = {
+					["A"] = 1.000000,
+					["R"] = 0.000000,
+					["G"] = 0.000000,
+					["B"] = 0.000000,
+				},
+				["style"] = 2.000000,
+				["size"] = 12.000000,
+			},
+		},
 		["frame"] = {
 			["width"] = 140.000000,
 			["border_width"] = 1.000000,
@@ -1891,6 +1916,31 @@ _G.LUI.Settings.Defaults.Schema =
 				},
 				["icon_size"] = 32.000000,
 				["slot"] = 1.000000,
+			},
+		},
+		["group_effects"] = {
+			["enabled"] = false,
+			["show_buffs"] = false,
+			["show_curable_debuffs"] = true,
+			["show_noncurable_debuffs"] = true,
+			["side"] = 2.000000,
+			["icon_size"] = 22.000000,
+			["timer_font"] = {
+				["name"] = 1.000000,
+				["color"] = {
+					["A"] = 1.000000,
+					["R"] = 1.000000,
+					["G"] = 1.000000,
+					["B"] = 1.000000,
+				},
+				["outline_color"] = {
+					["A"] = 1.000000,
+					["R"] = 0.000000,
+					["G"] = 0.000000,
+					["B"] = 0.000000,
+				},
+				["style"] = 2.000000,
+				["size"] = 12.000000,
 			},
 		},
 		["frame"] = {

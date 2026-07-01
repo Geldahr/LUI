@@ -306,6 +306,16 @@ function RaidVitals:update_visibility(active, visible_members)
     self:SetVisible(active == true and visible_members > 0)
 end
 
+function RaidVitals:destroy()
+    for i = 1, #self.members do
+        self.members[i]:set_effect_area(nil)
+    end
+    for i = 1, #self.group_windows do
+        self.group_windows[i]:destroy()
+    end
+    self:SetVisible(false)
+end
+
 function RaidVitals:apply_settings()
     self:apply_native_scaling()
     self:apply_hud_position()
@@ -420,8 +430,37 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
     self:update_visibility(active, #ordered_members)
 end
 
+-- Index (1-based) of the group the local player belongs to, in raid ordering.
+function RaidVitals:local_group_index(ordered_members)
+    if self.lp == nil or self.lp.GetName == nil then
+        return nil
+    end
+    local lp_name = self.lp:GetName()
+    if lp_name == nil then
+        return nil
+    end
+
+    for i = 1, #ordered_members do
+        local entity = ordered_members[i]
+        if entity ~= nil and entity.GetName ~= nil and entity:GetName() == lp_name then
+            return RaidLayout.member_group_index(i)
+        end
+    end
+
+    return nil
+end
+
 function RaidVitals:update_split_members(active, ordered_members, leader_name)
     local group_size = RaidLayout.group_size()
+
+    -- Effects are tracked only for the local player's own group, and only in
+    -- split view with the feature enabled. This is the bounded subscription.
+    local ge = State.settings.raid.group_effects
+    local effects_feature_on = ge.effects_active == true and _raid_split_enabled() == true
+    local local_group_index = nil
+    if effects_feature_on == true then
+        local_group_index = self:local_group_index(ordered_members)
+    end
 
     for group_index = 1, #self.group_windows do
         local first_member = ((group_index - 1) * group_size) + 1
@@ -433,7 +472,8 @@ function RaidVitals:update_split_members(active, ordered_members, leader_name)
             end
         end
 
-        self.group_windows[group_index]:update_members(group_members, leader_name, active)
+        local enable_effects = effects_feature_on == true and group_index == local_group_index
+        self.group_windows[group_index]:update_members(group_members, leader_name, active, enable_effects)
     end
 end
 

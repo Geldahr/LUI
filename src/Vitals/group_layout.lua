@@ -6,6 +6,7 @@ import "LUI.src.Utils.raid_layout"
 
 local Vitals = _G.LUI.Features.Vitals
 local RaidLayout = _G.LUI.Utils.RaidLayout
+local LUI_ENUMS = _G.LUI.Settings.Enums
 local GroupLayout = Vitals.GroupLayout or {}
 Vitals.GroupLayout = GroupLayout
 
@@ -121,6 +122,78 @@ function GroupLayout.apply_positions(member_windows, member_count, rows, spacing
             member_window:SetPosition(0, 0)
         end
     end
+end
+
+---------------------------------------------------------------------
+-- Member effect-area placement
+--
+-- When a group shows per-member effects, each member slot grows to fit a
+-- merged effect area equal in size to the member bar. The placement axis is
+-- derived from the group block shape: a taller-than-wide block (cols <= rows)
+-- puts effects on the left/right; a wider block puts them on the top/bottom.
+-- A single column/row uses the configured side; multi column/row auto-places
+-- on the outer edge (left half -> left, right half -> right, etc.).
+---------------------------------------------------------------------
+
+function GroupLayout.effects_axis_is_horizontal(cols, rows)
+    return cols <= rows
+end
+
+function GroupLayout.effect_side(column, row, cols, rows, side)
+    local prefer_far = side == LUI_ENUMS.side.RIGHT
+    if GroupLayout.effects_axis_is_horizontal(cols, rows) then
+        if cols <= 1 then
+            return prefer_far and "right" or "left"
+        end
+        if column < cols / 2 then
+            return "left"
+        end
+        return "right"
+    end
+
+    if rows <= 1 then
+        return prefer_far and "bottom" or "top"
+    end
+    if row < rows / 2 then
+        return "top"
+    end
+    return "bottom"
+end
+
+-- Size of one member slot (bar + effect area) in the placement axis.
+function GroupLayout.effect_cell_size(cols, rows, member_width, member_height)
+    if GroupLayout.effects_axis_is_horizontal(cols, rows) then
+        return (2 * member_width), member_height
+    end
+    return member_width, (2 * member_height)
+end
+
+-- Returns bar and area positions (relative to the block origin) plus the
+-- placement keyword, for a member at grid cell (column, row).
+function GroupLayout.place_with_effects(column, row, cols, rows, side, spacing_x, spacing_y, member_width, member_height)
+    local cell_w, cell_h = GroupLayout.effect_cell_size(cols, rows, member_width, member_height)
+    local cell_x = column * (cell_w + spacing_x)
+    local cell_y = row * (cell_h + spacing_y)
+    local placement = GroupLayout.effect_side(column, row, cols, rows, side)
+
+    if placement == "left" then
+        return cell_x + member_width, cell_y, cell_x, cell_y, placement
+    end
+    if placement == "right" then
+        return cell_x, cell_y, cell_x + member_width, cell_y, placement
+    end
+    if placement == "top" then
+        return cell_x, cell_y + member_height, cell_x, cell_y, placement
+    end
+    -- bottom
+    return cell_x, cell_y, cell_x, cell_y + member_height, placement
+end
+
+function GroupLayout.effect_grid_size(max_column, max_row, cols, rows, spacing_x, spacing_y, member_width, member_height)
+    local cell_w, cell_h = GroupLayout.effect_cell_size(cols, rows, member_width, member_height)
+    local total_width = ((max_column + 1) * cell_w) + (max_column * spacing_x)
+    local total_height = ((max_row + 1) * cell_h) + (max_row * spacing_y)
+    return total_width, total_height
 end
 
 function GroupLayout.compute_raid_size(member_count, layout_mode, spacing_x, spacing_y, member_width, member_height)
