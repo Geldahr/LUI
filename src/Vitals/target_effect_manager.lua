@@ -3,6 +3,7 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import "LUI.src.Utils.callbacks"
+import "LUI.src.Vitals.target_effect_manager_cache"
 local Vitals = _G.LUI.Features.Vitals
 local add_callback = _G.LUI.Utils.add_callback
 local remove_callback = _G.LUI.Utils.remove_callback
@@ -29,28 +30,6 @@ import "Turbine.Gameplay"
 local TargetEffectManager = class(Turbine.Object)
 Vitals.TargetEffectManager = TargetEffectManager
 
-local PLAYER_CACHE_KIND = "player"
-local OTHER_CACHE_KIND = "other"
-local _player_manager_cache = setmetatable({}, { __mode = "v" })
-local _other_manager_cache = {}
--- OTHER entries whose entity has no name yet (e.g. a pet during the seconds-long window
--- between summon and its name resolving). Each record is { entry, time }. The sweep in
--- poll() buckets them once named and drops any that never get a name within the timeout.
-local _pending_other_entries = {}
-local PENDING_OTHER_TIMEOUT_S = 5
--- poll() is driven from each vitals' per-frame Update(); cap its actual work (the sweep and
--- refresh) to 30/s per manager so it does not run every single frame.
-local POLL_INTERVAL_S = 1 / 30
-local OTHER_IDENTITY_METHODS = {
-    "GetLevel",
-    -- "GetMorale",
-    "GetMaxMorale",
-    -- "GetPower",
-    "GetMaxPower",
-    "GetBaseMaxMorale",
-    "GetBaseMaxPower",
-}
-
 ---@return Turbine.Gameplay.EffectList|nil
 local function _get_target_effects(player, source_target)
     if source_target ~= nil then
@@ -73,272 +52,12 @@ local function _get_target_effects(player, source_target)
     return target:GetEffects()
 end
 
-local function _entity_name(entity)
-    if entity == nil or entity.GetName == nil then
-        return nil
-    end
-
-    local name = entity:GetName()
-    if name == nil or name == "" then
-        return nil
-    end
-
-    return name
-end
-
-local function _external_entity_value(entity, method_name)
-    if entity == nil then
-        return nil, false
-    end
-
-    local method = entity[method_name]
-    if method == nil then
-        return nil, false
-    end
-
-    return method(entity), true
-end
-
-local function _entity_is_player(entity)
-    if entity == nil then
-        return false
-    end
-
-    if entity.IsLinkDead ~= nil then
-        return true
-    end
-
-    return entity.GetClass ~= nil
-end
-
-local function _other_entities_match(left, right)
-    if _entity_name(left) ~= _entity_name(right) then
-        return false
-    end
-
-    for i = 1, #OTHER_IDENTITY_METHODS do
-        local method_name = OTHER_IDENTITY_METHODS[i]
-        local left_value, left_available = _external_entity_value(left, method_name)
-        local right_value, right_available = _external_entity_value(right, method_name)
-
-        if left_available ~= right_available then
-            return false
-        end
-        if left_available == true and left_value ~= right_value then
-            return false
-        end
-    end
-
-    return true
-end
-
-local function _add_pending_other_entry(entry)
-    _pending_other_entries[#_pending_other_entries + 1] = { entry = entry, time = Turbine.Engine.GetGameTime() }
-end
-
-local function _remove_pending_other_entry(entry)
-    for i = #_pending_other_entries, 1, -1 do
-        if _pending_other_entries[i].entry == entry then
-            table.remove(_pending_other_entries, i)
-            break
-        end
-    end
-end
-
-local function _remove_other_entry(entry)
-    if entry.name == nil then
-        return
-    end
-
-    local bucket = _other_manager_cache[entry.name]
-
-    for i = #bucket, 1, -1 do
-        if bucket[i] == entry then
-            table.remove(bucket, i)
-            break
-        end
-    end
-
-    if #bucket == 0 then
-        _other_manager_cache[entry.name] = nil
-    end
-end
-
--- Files the entry into the cache bucket for `name`. This is the single place an entry
--- becomes findable by _find_other_entry; an entry with a nil name lives outside any bucket.
-local function _add_other_entry(entry, name)
-    -- Getting a name means it is no longer pending; drop it from the unbucketed list
-    -- (no-op if it was created already-named).
-    _remove_pending_other_entry(entry)
-
-    local bucket = _other_manager_cache[name]
-    if bucket == nil then
-        bucket = {}
-        _other_manager_cache[name] = bucket
-    end
-
-    entry.name = name
-    bucket[#bucket + 1] = entry
-end
-
--- Runs whenever the tracked entity's name changes. Re-files the entry under its current
--- name. The key case here is a freshly-summoned pet: it was acquired nameless (unbucketed),
--- so when its name first resolves (nil -> "Goose") this adds it to the cache, making it
--- shareable with target vitals.
-local function _move_other_entry(entry)
-    local old_name = entry.name
-    local new_name = _entity_name(entry.identity_entity)
-    if old_name == new_name then
-        return
-    end
-
-    _remove_other_entry(entry)
-    if new_name ~= nil then
-        _add_other_entry(entry, new_name)
-    else
-        entry.name = nil
-    end
-end
-
--- Wires the entity's NameChanged event to _move_other_entry, so the entry is (re)bucketed
--- the moment a name appears or changes.
-local function _attach_other_entry_name_changed(entry)
-    entry.name_changed_event = add_callback(entry.identity_entity, "NameChanged", function()
-        _move_other_entry(entry)
-    end)
-end
-
-local function _detach_other_entry_name_changed(entry)
-    if entry.name_changed_event == nil then
-        error("Missing target effect manager NameChanged callback token")
-    end
-
-    remove_callback(entry.identity_entity, "NameChanged", entry.name_changed_event)
-    entry.name_changed_event = nil
-end
-
-local function _find_other_entry(name, target)
-    local bucket = _other_manager_cache[name]
-    if bucket == nil then
-        return nil
-    end
-
-    for i = 1, #bucket do
-        local entry = bucket[i]
-        if _other_entities_match(entry.identity_entity, target) == true then
-            return entry
-        end
-    end
-
-    return nil
-end
-
--- Walk the floating (still-nameless) entries: bucket any whose name has resolved, and drop
--- any that never got a name within the timeout so the list cannot grow with dead entries.
-local function _sweep_pending_other_entries(now)
-    for i = #_pending_other_entries, 1, -1 do
-        local record = _pending_other_entries[i]
-        if _entity_name(record.entry.identity_entity) ~= nil then
-            _move_other_entry(record.entry)
-        elseif now - record.time > PENDING_OTHER_TIMEOUT_S then
-            table.remove(_pending_other_entries, i)
-        end
-    end
-end
-
-local function _reuse_manager(cached, source_target)
-    cached.ref_count = cached.ref_count + 1
-    -- Group and companion vitals pass a stable source for background tracking.
-    -- Target vitals passes nil to use player:GetTarget() while selected.
-    if source_target ~= nil then
-        cached.background_source_target = source_target
-    end
-    if cached.source_target ~= nil or source_target == nil then
-        cached:set_source_target(source_target)
-    end
-
-    return cached
-end
-
-local function _new_manager(player, source_target)
-    return TargetEffectManager(player, source_target)
-end
-
-local function _acquire_player_manager(player, target, source_target, name)
-    local cached = _player_manager_cache[name]
-    if cached ~= nil then
-        return _reuse_manager(cached, source_target)
-    end
-
-    local manager = _new_manager(player, source_target)
-    manager.cache_kind = PLAYER_CACHE_KIND
-    manager.cache_name = name
-    _player_manager_cache[name] = manager
-    return manager
-end
-
-local function _acquire_other_manager(player, target, source_target, name)
-    local entry = _find_other_entry(name, target)
-    if entry ~= nil then
-        return _reuse_manager(entry.manager, source_target)
-    end
-
-    local manager = _new_manager(player, source_target)
-    entry = {
-        manager = manager,
-        identity_entity = target,
-        name = nil,
-        name_changed_event = nil,
-    }
-    manager.cache_kind = OTHER_CACHE_KIND
-    manager.cache_entry = entry
-    -- A freshly-summoned pet has no name yet. Track it in the floating list and bucket it
-    -- (via the sweep in poll() or the NameChanged hook) once its name resolves; if it never
-    -- does, the sweep drops it after the timeout. _move_other_entry buckets immediately if
-    -- the name is already available.
-    _add_pending_other_entry(entry)
-    _attach_other_entry_name_changed(entry)
-    _move_other_entry(entry)
-    return manager
-end
-
-local function _acquire_manager(player, target, source_target)
-    local name = _entity_name(target)
-
-    if name ~= nil and _entity_is_player(target) == true then
-        return _acquire_player_manager(player, target, source_target, name)
-    end
-
-    -- name may be nil here (e.g. freshly-summoned pet); the OTHER cache attaches a
-    -- NameChanged hook so the entry is bucketed and shareable once it is named.
-    return _acquire_other_manager(player, target, source_target, name)
-end
-
-local function _delete_from_cache(manager)
-    if manager.cache_kind == PLAYER_CACHE_KIND then
-        if _player_manager_cache[manager.cache_name] == manager then
-            _player_manager_cache[manager.cache_name] = nil
-        end
-    elseif manager.cache_kind == OTHER_CACHE_KIND then
-        _detach_other_entry_name_changed(manager.cache_entry)
-        _remove_pending_other_entry(manager.cache_entry)
-        _remove_other_entry(manager.cache_entry)
-        manager.cache_entry.manager = nil
-    elseif manager.cache_kind ~= nil then
-        error("Unknown target effect manager cache kind: " .. tostring(manager.cache_kind))
-    end
-
-    manager.cache_kind = nil
-    manager.cache_name = nil
-    manager.cache_entry = nil
-end
-
 function TargetEffectManager.acquire(player, target)
-    return _acquire_manager(player, target, nil)
+    return Vitals.TargetEffectManagerCache.acquire(player, target, nil)
 end
 
 function TargetEffectManager.acquire_silent(player, target)
-    return _acquire_manager(player, target, target)
+    return Vitals.TargetEffectManagerCache.acquire(player, target, target)
 end
 
 
@@ -360,7 +79,6 @@ function TargetEffectManager:Constructor(player, source_target)
     self.cache_entry = nil
 
     self.call_in_s = nil
-    self.next_poll_at = 0
 
     -- /!\ IMPORTANT /!\
     -- DO NOT COPY THE INSTANCE OF THAT VARIABLE IN ANOTHER PLACE
@@ -388,7 +106,7 @@ function TargetEffectManager:delete()
     end
 
     self.ref_count = 0
-    _delete_from_cache(self)
+    Vitals.TargetEffectManagerCache.release(self)
 
     self.effects = nil
     self.added_event = {}
@@ -624,16 +342,8 @@ end
 -- Call in a loop the faster the loop the quicker the remove events will trigger
 -- If no refresh is scheduled then this function does nothing.
 function TargetEffectManager:poll()
-    -- Driven from each vitals' per-frame Update(); cap the actual work to POLL_INTERVAL_S.
-    local now = Turbine.Engine.GetGameTime()
-    if now < self.next_poll_at then
-        return
-    end
-    self.next_poll_at = now + POLL_INTERVAL_S
-
-    -- Bucket floating entries once their name resolves and time out any that never get one,
-    -- without depending on the NameChanged event ever firing.
-    _sweep_pending_other_entries(now)
+    -- Bucket freshly-summoned pets once their name resolves (pet cache maintenance).
+    Vitals.TargetEffectManagerCache.sweep(Turbine.Engine.GetGameTime())
 
     if self.instance_effects == nil then
         self.instance_effects = _get_target_effects(self.player, self.source_target)
@@ -653,7 +363,7 @@ function TargetEffectManager:poll()
         end
     end
 
-    if self.call_in_s and now >= self.call_in_s then
+    if self.call_in_s and Turbine.Engine.GetGameTime() >= self.call_in_s then
         self.call_in_s = nil
         self:refresh()
     end
