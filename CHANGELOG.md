@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a `Background effect tracking` setting to `Vitals > Fellowship` and `Vitals > Raid` (one per group, enabled by default). When disabled, LUI never reads or subscribes to that group's member effects in the background; targeting a member then shows no effects until one of their effects changes.
 - Added a session earnings tooltip on the status bar Money widget that shows how much money you have gained or spent since the plugin loaded.
 - Added a custom boss list under `Vitals > Boss > Custom Bosses` to show the Boss Vitals frame for your own listed target names.
 - Added an `Edit > Add to Boss Targets` action to the Bestiary card that adds the shown creature to the custom boss list, disabled when it is already a boss target.
@@ -18,6 +19,7 @@
 
 ### Fixed
 
+- Fixed targeted fellowship/raid member effects not displaying, and disappearing on deselect/reselect, by restoring the v1.1.0 effect-manager behavior: shared managers are looked up by name again regardless of the target entity shape, and group member background tracking is re-enabled. The manager cache now lives in its own file (`target_effect_manager_cache.lua`). Note that pet and fellowship/raid member effects are still partially broken when they are targeted: the displayed effects can be missing or stale until one of their effects changes.
 - Fixed target vitals not showing a freshly-summoned pet's buffs and debuffs when the pet was selected as the target.
 
 ### Removed
