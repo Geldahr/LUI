@@ -2074,7 +2074,7 @@ _G.LUI.Settings.Defaults.Schema =
 				["y_offset"] = 0.000000,
 			},
 		},
-		["background_effect_tracking"] = true,
+		["background_effect_tracking"] = false,
 		["background_matches_missing"] = true,
 		["background_dimming"] = 0.750000,
 		["background_opacity"] = 1.000000,
