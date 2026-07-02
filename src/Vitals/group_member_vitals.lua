@@ -230,6 +230,15 @@ function GroupMemberVitals:_update_member_state()
 end
 
 function GroupMemberVitals:_setup_silent_effect_manager()
+    -- Per-root toggle (fellowship and raid each have their own). When off, group
+    -- members never call GetEffects() or subscribe to effect events, so selecting
+    -- a member falls back to the cold path and shows no effects (LotRO does not
+    -- expose a fellowship member's effects on the target entity).
+    if self:get_vitals_settings().background_effect_tracking ~= true then
+        self:_detach_silent_effect_manager()
+        return
+    end
+
     if self.em ~= nil then
         self:SetWantsUpdates(true)
         return
