@@ -466,6 +466,8 @@ function Settings.rebuild()
     build_group_vital(State.settings.fellowship, raw.fellowship)
     build_group_vital(State.settings.raid, raw.raid)
     State.settings.fellowship.show_self_in_fellowship = raw.fellowship.show_self_in_fellowship == true
+    State.settings.fellowship.background_effect_tracking = raw.fellowship.background_effect_tracking == true
+    State.settings.raid.background_effect_tracking = raw.raid.background_effect_tracking == true
     State.settings.raid.group_border_width = scaled_border(raw.raid.group_border_width)
     State.settings.raid.split_by_group = raw.raid.split_by_group == true
     State.settings.raid.group_colors.a = build_color(raw.raid.group_colors.a)

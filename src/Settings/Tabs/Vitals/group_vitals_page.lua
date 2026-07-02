@@ -103,6 +103,14 @@ function Builder.new_group_unit_page(window, root, options, deps)
     deps.add_number_field(frame, options.prefix .. "_select_border_width", TR["Select Border Width"],
         function() return get().select.border_width end,
         function(value) get().select.border_width = value end)
+    frame:add_row_break()
+    deps.add_checkbox_field(frame, options.prefix .. "_background_effect_tracking",
+        TR["Background effect tracking"],
+        function() return get().background_effect_tracking end,
+        function(value) get().background_effect_tracking = value end, true)
+    frame:add_info(
+        TR["When background effect tracking is enabled, it may add some lag. Whether enabled or not, targeting a group member may not display the correct effects until one of their effects changes."],
+        48)
     page:add_tab(TR["Frame"], "frame", frame)
 
     local colors = deps.new_standard_colors_section(window, page.refresh_preview, options.prefix, get, false)

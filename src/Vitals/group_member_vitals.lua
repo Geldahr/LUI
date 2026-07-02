@@ -230,35 +230,34 @@ function GroupMemberVitals:_update_member_state()
 end
 
 function GroupMemberVitals:_setup_silent_effect_manager()
-    -- DISABLED: group member effect tracking is intentionally off for now.
-    -- Fellowship/raid members do not create a silent effect manager, so they
-    -- never call GetEffects() or subscribe to effect events in the background.
-    -- This is deferred until effect tracking can be made configurable. To
-    -- re-enable, remove this early return and uncomment the body below. The
-    -- call site, Update() poll, and
-    -- _detach_silent_effect_manager all guard on self.em, so they stay inert
-    -- while self.em remains nil.
-    self:SetWantsUpdates(false)
+    -- Per-root toggle (fellowship and raid each have their own). When off, group
+    -- members never call GetEffects() or subscribe to effect events, so selecting
+    -- a member falls back to the cold path and shows no effects (LotRO does not
+    -- expose a fellowship member's effects on the target entity).
+    if self:get_vitals_settings().background_effect_tracking ~= true then
+        self:_detach_silent_effect_manager()
+        return
+    end
 
-    -- if self.em ~= nil then
-    --     self:SetWantsUpdates(true)
-    --     return
-    -- end
-    --
-    -- if self.entity == nil or self:_is_local_player(self.entity) == true then
-    --     self:SetWantsUpdates(false)
-    --     return
-    -- end
-    --
-    -- if self.entity.GetEffects == nil or self.entity:GetEffects() == nil then
-    --     self:SetWantsUpdates(false)
-    --     return
-    -- end
-    --
-    -- self.em = Vitals.TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
-    -- self.em_added_event = self.em:register_added_event(function()
-    -- end)
-    -- self:SetWantsUpdates(true)
+    if self.em ~= nil then
+        self:SetWantsUpdates(true)
+        return
+    end
+
+    if self.entity == nil or self:_is_local_player(self.entity) == true then
+        self:SetWantsUpdates(false)
+        return
+    end
+
+    if self.entity.GetEffects == nil or self.entity:GetEffects() == nil then
+        self:SetWantsUpdates(false)
+        return
+    end
+
+    self.em = Vitals.TargetEffectManager.acquire_silent(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
+    self.em_added_event = self.em:register_added_event(function()
+    end)
+    self:SetWantsUpdates(true)
 end
 
 function GroupMemberVitals:_detach_silent_effect_manager()

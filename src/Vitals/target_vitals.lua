@@ -28,13 +28,10 @@ import "LUI.src.Utils.color"
 import "LUI.src.Settings.enums"
 
 local function _target_is_player(target)
-    if target == nil then
+    if type(target.IsPlayer) ~= "function" then
         return false
     end
-    if target.IsLinkDead ~= nil then
-        return true
-    end
-    return target.GetClass ~= nil
+    return target:IsPlayer() == true
 end
 
 local function _target_is_local_player(target)
