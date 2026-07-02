@@ -179,7 +179,18 @@ local function _detach_other_entry_name_changed(entry)
     entry.name_changed_event = nil
 end
 
-local function _find_other_entry(name, target)
+-- A live acquire (source_target == nil, reading player:GetTarget()) must never reuse a
+-- manager that is itself live. Switching between two identity-identical mobs while another
+-- live holder (boss vitals) keeps the manager alive would otherwise reuse it with
+-- set_source_target(nil) early-returning (source unchanged), leaving the manager attached
+-- to the PREVIOUS mob's effect list and delivering its stale effects for the new target.
+-- Silent-backed managers (pets, group members) are safe to reuse: their source genuinely
+-- changes, which forces a detach/refetch/attach cycle.
+local function _reuse_allowed(cached, source_target)
+    return source_target ~= nil or cached.source_target ~= nil
+end
+
+local function _find_other_entry(name, target, source_target)
     local bucket = _other_manager_cache[name]
     if bucket == nil then
         return nil
@@ -187,7 +198,8 @@ local function _find_other_entry(name, target)
 
     for i = 1, #bucket do
         local entry = bucket[i]
-        if _other_entities_match(entry.identity_entity, target) == true then
+        if _other_entities_match(entry.identity_entity, target) == true
+            and _reuse_allowed(entry.manager, source_target) then
             return entry
         end
     end
@@ -254,11 +266,11 @@ function TargetEffectManagerCache.acquire(player, target, source_target)
 
     if name ~= nil then
         local cached = _player_manager_cache[name]
-        if cached ~= nil then
+        if cached ~= nil and _reuse_allowed(cached, source_target) then
             return _reuse_manager(cached, source_target)
         end
 
-        local entry = _find_other_entry(name, target)
+        local entry = _find_other_entry(name, target, source_target)
         if entry ~= nil then
             return _reuse_manager(entry.manager, source_target)
         end
