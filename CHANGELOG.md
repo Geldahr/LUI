@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v1.3.0
+
+### Added
+
 - Added a `Background effect tracking` setting to `Vitals > Fellowship` and `Vitals > Raid` (one per group, enabled by default). When disabled, LUI never reads or subscribes to that group's member effects in the background; targeting a member then shows no effects until one of their effects changes.
 - Added a session earnings tooltip on the status bar Money widget that shows how much money you have gained or spent since the plugin loaded.
 - Added a custom boss list under `Vitals > Boss > Custom Bosses` to show the Boss Vitals frame for your own listed target names.
