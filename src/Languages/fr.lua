@@ -947,6 +947,7 @@ LUI.src.Languages.fr.FR = {
     ["Wildermore Coin"] = "Wildermore Coin",
     ["Worn Helmet of the Pelennor Fields"] = "Worn Helmet of the Pelennor Fields",
     ["All professions"] = "Tous les métiers",
+    ["Rarity"] = "Rareté",
     ["Encyclopedia"] = "Encyclopédie",
     ["Equipment"] = "Équipement",
     ["Resources"] = "Ressources",

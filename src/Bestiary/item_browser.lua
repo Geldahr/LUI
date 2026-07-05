@@ -23,6 +23,8 @@ import "LUI.src.UI.Widgets.item_icon"
 -- control metrics match the bestiary filter bar (21px controls, 4px gaps)
 local BASE_BAR_H = 21
 local BASE_ROW_H = 34
+-- native item art is 32px and must never be scaled (stretch mode 0 tiles)
+local BASE_ICON_SIDE = 32
 local BASE_GAP = 4
 -- page bar matches the bestiary tab exactly (22x21 square nav buttons)
 local BASE_NAV_W = 22
@@ -94,7 +96,14 @@ end
 
 function ItemBrowserRow:layout_row(width, height)
     local gap = scaled_int(BASE_GAP)
-    local icon_side = _even_int(height - 2)
+    -- fixed icon side like the crafting rows: native 32px art, clamped to
+    -- the row, evened for exact pixel centering
+    local icon_side = BASE_ICON_SIDE
+    local max_icon_side = height - 2
+    if icon_side > max_icon_side then
+        icon_side = max_icon_side
+    end
+    icon_side = _even_int(icon_side)
     self:SetSize(width, height)
     self.icon:set_side(icon_side)
     self.icon:SetPosition(gap, math.max(0, math.floor((height - icon_side) / 2)))
@@ -136,6 +145,22 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     self.search_box.TextChanged = function()
         self:_on_filters_changed()
     end
+
+    self.type_label = UI.Widgets.LuiLabel()
+    self.type_label:SetParent(self)
+    self.type_label:SetMouseVisible(false)
+    self.type_label:SetSelectable(false)
+    self.type_label:SetMultiline(false)
+    self.type_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.type_label:SetText(TR["Type"] .. ":")
+
+    self.rarity_label = UI.Widgets.LuiLabel()
+    self.rarity_label:SetParent(self)
+    self.rarity_label:SetMouseVisible(false)
+    self.rarity_label:SetSelectable(false)
+    self.rarity_label:SetMultiline(false)
+    self.rarity_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.rarity_label:SetText(TR["Rarity"] .. ":")
 
     self.quality_dropdown = UI.Widgets.LuiDropdown()
     self.quality_dropdown:SetParent(self)
@@ -269,6 +294,8 @@ end
 function ItemBrowserPanel:apply_fonts()
     local font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
     self.search_box:SetFont(font)
+    self.type_label:SetFont(font)
+    self.rarity_label:SetFont(font)
     self.quality_dropdown:SetFont(font)
     self.quality_dropdown:set_scale(State.settings.global.scale)
     self.class_dropdown:SetFont(font)
@@ -431,32 +458,43 @@ function ItemBrowserPanel:layout()
     local quality_w = scaled_int(BASE_QUALITY_W)
     local class_w = scaled_int(BASE_CLASS_W)
 
-    local x = gap
-    local search_w = math.max(scaled_int(120),
-        width - (2 * gap) - quality_w - class_w - (2 * level_w)
-        - scaled_int(10) - scaled_int(42) - (7 * gap))
-    self.search_box:SetPosition(x, gap)
-    self.search_box:SetSize(search_w, bar_h)
-    x = x + search_w + gap
-    self.quality_dropdown:SetPosition(x, gap)
-    self.quality_dropdown:SetSize(quality_w, bar_h)
-    x = x + quality_w + gap
-    self.class_dropdown:SetPosition(x, gap)
-    self.class_dropdown:SetSize(class_w, bar_h)
-    x = x + class_w + gap
+    -- row 1: Type / Rarity left, Level block flush right
+    local type_label_w = scaled_int(38)
+    local rarity_label_w = scaled_int(48)
     local dash_w = scaled_int(10)
     local level_label_w = scaled_int(42)
-    self.level_label:SetPosition(x, gap)
+    local level_block_w = level_label_w + gap + level_w + gap + dash_w + gap + level_w
+
+    local x = gap
+    self.type_label:SetPosition(x, gap)
+    self.type_label:SetSize(type_label_w, bar_h)
+    x = x + type_label_w + gap
+    self.class_dropdown:SetPosition(x, gap)
+    self.class_dropdown:SetSize(class_w, bar_h)
+    x = x + class_w + (2 * gap)
+    self.rarity_label:SetPosition(x, gap)
+    self.rarity_label:SetSize(rarity_label_w, bar_h)
+    x = x + rarity_label_w + gap
+    self.quality_dropdown:SetPosition(x, gap)
+    self.quality_dropdown:SetSize(quality_w, bar_h)
+
+    local level_x = width - gap - level_block_w
+    self.level_label:SetPosition(level_x, gap)
     self.level_label:SetSize(level_label_w, bar_h)
-    x = x + level_label_w + gap
-    self.level_min_box:SetPosition(x, gap)
+    level_x = level_x + level_label_w + gap
+    self.level_min_box:SetPosition(level_x, gap)
     self.level_min_box:SetSize(level_w, bar_h)
-    x = x + level_w + gap
-    self.level_dash_label:SetPosition(x, gap)
+    level_x = level_x + level_w + gap
+    self.level_dash_label:SetPosition(level_x, gap)
     self.level_dash_label:SetSize(dash_w, bar_h)
-    x = x + dash_w + gap
-    self.level_max_box:SetPosition(x, gap)
+    level_x = level_x + dash_w + gap
+    self.level_max_box:SetPosition(level_x, gap)
     self.level_max_box:SetSize(level_w, bar_h)
+
+    -- row 2: search across the full width
+    local search_y = gap + bar_h + gap
+    self.search_box:SetPosition(gap, search_y)
+    self.search_box:SetSize(math.max(1, width - (2 * gap)), bar_h)
 
     local nav_w = scaled_int(BASE_NAV_W)
     local page_bar_h = scaled_int(BASE_PAGE_BAR_H)
@@ -471,7 +509,7 @@ function ItemBrowserPanel:layout()
     self.next_button:SetPosition(footer_x + nav_w + gap + page_w + gap, footer_y)
     self.next_button:SetSize(nav_w, page_bar_h)
 
-    local list_top = gap + bar_h + gap
+    local list_top = gap + bar_h + gap + bar_h + gap
     self.list_host:SetPosition(gap, list_top)
     self.list_host:SetSize(math.max(1, width - (2 * gap)),
         math.max(1, footer_y - gap - list_top))

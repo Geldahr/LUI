@@ -1993,7 +1993,8 @@ function BestiaryWindow:_content_metrics()
     local gap = _scaled_int(BASE_GAP)
     local host_w, host_h = self.bestiary_host:GetSize()
     local inner_w = host_w - margin_left - margin_right
-    local content_top = margin_top + bar_h + gap + level_h + gap + filter_h + gap
+    -- two filter rows: taxonomy + level share the first, search the second
+    local content_top = margin_top + bar_h + gap + filter_h + gap
     local content_h = host_h - content_top - margin_bottom - gap - bar_h
     return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, level_h, filter_h, gap
 end
@@ -2036,7 +2037,14 @@ function BestiaryWindow:layout()
     self.next_button:SetPosition(nav_w + gap + page_w + gap, 0)
     self.next_button:SetSize(nav_w, bar_h)
 
-    local taxonomy_w = math.max(1, inner_w)
+    local level_label_w = math.max(
+        _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
+    )
+    local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)
+    local level_dash_w = _scaled_int(10)
+    local level_block_w = level_label_w + gap + level_input_w + gap + level_dash_w + gap + level_input_w
+
+    local taxonomy_w = math.max(1, inner_w - level_block_w - (2 * gap))
     self.taxonomy_bar:SetPosition(0, 0)
     self.taxonomy_bar:SetSize(taxonomy_w, bar_h)
 
@@ -2071,14 +2079,10 @@ function BestiaryWindow:layout()
     self.subcategory_dropdown:SetPosition(cursor_x, 0)
     self.subcategory_dropdown:SetSize(subcategory_dropdown_w, bar_h)
 
-    self.level_bar:SetPosition(margin_left, margin_top + bar_h + gap)
-    self.level_bar:SetSize(inner_w, level_h)
+    -- level block right-aligned on the taxonomy row
+    self.level_bar:SetPosition(margin_left + inner_w - level_block_w, margin_top)
+    self.level_bar:SetSize(level_block_w, level_h)
 
-    local level_label_w = math.max(
-        _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
-    )
-    local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)
-    local level_dash_w = _scaled_int(10)
     local level_min_x = level_label_w + gap
     local level_dash_x = level_min_x + level_input_w + gap
     local level_max_x = level_dash_x + level_dash_w + gap
@@ -2090,9 +2094,9 @@ function BestiaryWindow:layout()
     self.level_dash_label:SetPosition(level_dash_x, 0)
     self.level_dash_label:SetSize(level_dash_w, level_h)
     self.level_max_box:SetPosition(level_max_x, 0)
-    self.level_max_box:SetSize(math.min(level_input_w, math.max(1, inner_w - level_max_x)), level_h)
+    self.level_max_box:SetSize(level_input_w, level_h)
 
-    self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap + level_h + gap)
+    self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap)
     self.filter_bar:SetSize(inner_w, filter_h)
 
     local area_slot_size = filter_h
