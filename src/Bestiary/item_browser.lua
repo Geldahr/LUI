@@ -16,6 +16,7 @@ local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
 local scaled_int = UI.NativeScaling.scaled_int
 local class = _G.LUI.Core.class
 local Lore = _G.LUI.Data.Lore
+local SearchQuery = _G.LUI.Utils.SearchQuery
 local Bestiary = _G.LUI.Features.Bestiary
 import "Turbine.UI"
 import "LUI.src.UI.Widgets.item_icon"
@@ -353,6 +354,54 @@ function ItemBrowserPanel:_set_page(page)
     self:_render_page()
 end
 
+-- shared query grammar (space = AND, | = OR, quotes = literal phrase),
+-- evaluated over the packed per-term search sets: intersect terms inside a
+-- group, union the groups. nil means "no search filter".
+local function _search_set_for_query(query)
+    local state = SearchQuery.parse(query, {})
+    local groups = state.normalized_groups
+    if #groups == 0 then
+        return nil
+    end
+
+    local Items = Lore.Items
+    local result, total = {}, 0
+    for group_index = 1, #groups do
+        local group = groups[group_index]
+        local term_sets = {}
+        for term_index = 1, #group do
+            local set, count = Items.search(group[term_index])
+            if set ~= nil then
+                term_sets[#term_sets + 1] = { set = set, count = count }
+            end
+        end
+
+        if #term_sets > 0 then
+            table.sort(term_sets, function(left, right)
+                return left.count < right.count
+            end)
+            local smallest = term_sets[1].set
+            for ordinal in pairs(smallest) do
+                if result[ordinal] == nil then
+                    local hit = true
+                    for k = 2, #term_sets do
+                        if term_sets[k].set[ordinal] ~= true then
+                            hit = false
+                            break
+                        end
+                    end
+                    if hit == true then
+                        result[ordinal] = true
+                        total = total + 1
+                    end
+                end
+            end
+        end
+    end
+
+    return result, total
+end
+
 function ItemBrowserPanel:_rebuild_filtered()
     local Items = Lore.Items
     local query = self.search_box:GetText() or ""
@@ -368,7 +417,7 @@ function ItemBrowserPanel:_rebuild_filtered()
     end
     self._signature = signature
 
-    local search_set = Items.search(query)
+    local search_set = _search_set_for_query(query)
     local quality = self._quality_filter
     local class_code = self._class_filter
     local level_min = self._level_min
