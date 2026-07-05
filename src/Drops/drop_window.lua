@@ -6,6 +6,7 @@ local TR = _G.LUI.Locale.TR
 local Drops = _G.LUI.Features.Drops
 local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
+local Lore = _G.LUI.Data.Lore
 local UI = _G.LUI.UI
 local scaled_int = UI.NativeScaling.scaled_int
 local class = _G.LUI.Core.class
@@ -256,6 +257,9 @@ function DropsWindow:Constructor()
     self._pending_item_events = {}
     self._active_drops = {}
     self._entry_pool = {}
+    self._lore_import_plan = nil
+    self._lore_import_index = 1
+    self._db_icon_cache = {}
 
     if self.player ~= nil and self.player.GetName ~= nil then
         self.player_name = self.player:GetName()
@@ -363,6 +367,8 @@ function DropsWindow:Update()
         return
     end
     self.last_update_at = now
+
+    self:_step_lore_import()
 
     if self:is_move_mode() == true then
         self:_refresh_background(true)
@@ -507,6 +513,10 @@ function DropsWindow:_queue_chat_drop(name, quantity, now)
         record.live_item = pending_item.item
     elseif self.backpack ~= nil then
         record.live_item = _find_backpack_item_by_name(self.backpack, normalized_name)
+    end
+    if record.live_item == nil then
+        -- carry-all loot: no live item ever appears, resolve from the DB
+        record.db_icon_id, record.db_background_id = self:_db_icon_for(name, normalized_name)
     end
 
     self._pending_chat_drops[#self._pending_chat_drops + 1] = record
@@ -663,6 +673,10 @@ function DropsWindow:_promote_pending_chat_drops(now)
         if record.live_item == nil and self.backpack ~= nil then
             record.live_item = _find_backpack_item_by_name(self.backpack, record.normalized_name)
         end
+        if record.live_item == nil and record.db_icon_id == nil then
+            record.db_icon_id, record.db_background_id =
+                self:_db_icon_for(record.name, record.normalized_name)
+        end
         record.entry = self:_acquire_entry()
         record.entry:apply_settings()
         record.entry:set_record(record)
@@ -670,6 +684,54 @@ function DropsWindow:_promote_pending_chat_drops(now)
         self._active_drops[#self._active_drops + 1] = record
         self:_layout_active_drops(now, false)
     end
+end
+
+-- stage the lore Items DB one file per tick so carry-all loot (which never
+-- surfaces a live backpack item) can resolve icons by name; a no-op once
+-- another feature (crafting) has already loaded the domain
+function DropsWindow:_step_lore_import()
+    if Lore.Items.loaded == true then
+        return
+    end
+    if self._lore_import_plan == nil then
+        self._lore_import_plan = Lore.items_import_plan()
+        self._lore_import_index = 1
+    end
+    if self._lore_import_index <= #self._lore_import_plan then
+        Lore.import_step(self._lore_import_plan[self._lore_import_index])
+        self._lore_import_index = self._lore_import_index + 1
+        return
+    end
+    Lore.load_items()
+end
+
+-- lore-DB icon fallback, cached per item name; false = known miss (item
+-- newer than the data drop, or a chat string that is not an item name)
+function DropsWindow:_db_icon_for(name, normalized_name)
+    if Lore.Items.loaded ~= true then
+        return nil, nil
+    end
+
+    local cached = self._db_icon_cache[normalized_name]
+    if cached == false then
+        return nil, nil
+    end
+    if cached ~= nil then
+        return cached[1], cached[2]
+    end
+
+    local ordinals = Lore.Items.find_ordinals(name)
+    if ordinals == nil then
+        self._db_icon_cache[normalized_name] = false
+        return nil, nil
+    end
+    local icon_id, background_id = Lore.Items.icon_layers(ordinals[1])
+    if icon_id == nil then
+        self._db_icon_cache[normalized_name] = false
+        return nil, nil
+    end
+    self._db_icon_cache[normalized_name] = { icon_id, background_id }
+    return icon_id, background_id
 end
 
 function DropsWindow:_rows_capacity()

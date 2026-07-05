@@ -119,14 +119,15 @@ function Lore.import_step(package_name)
     import(package_name)
 end
 
--- the Items files are the heavy ones (records + labels, several MB each);
--- the crafting store stages exactly these across ticks
+-- the Items files are the heavy ones (records + labels + name index,
+-- several MB each); consumers stage exactly these across ticks
 function Lore.items_import_plan()
     local lang = Lore.language()
     return {
         "LUI.src.Data.Items.manifest",
         "LUI.src.Data.Items.records",
         "LUI.src.Data.Items.labels_" .. lang,
+        "LUI.src.Data.Items.names_" .. lang,
     }
 end
 
@@ -272,10 +273,12 @@ function Lore.load_items()
     import("LUI.src.Data.Items.manifest")
     import("LUI.src.Data.Items.records")
     import("LUI.src.Data.Items.labels_" .. lang)
+    import("LUI.src.Data.Items.names_" .. lang)
     local Data = _G.LoreData
     Items.M = Data["Items.manifest"]
     Items.R = Data["Items.records"]
     Items.L = Data["Items.labels_" .. lang]
+    Items.NM = Data["Items.names_" .. lang]
     Items.count = Items.M.count
     local M = Items.M
     -- field byte offsets within a record tuple
@@ -290,6 +293,10 @@ function Lore.load_items()
         Items._field_w[M.fields[k]] = M.widths[k]
     end
     Items.loaded = true
+end
+
+function Items.find_ordinals(name)
+    return _find_ordinals(Items.NM, name)
 end
 
 function Items.ordinal_of(id)

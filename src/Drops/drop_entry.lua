@@ -280,15 +280,37 @@ function DropEntry:_apply_item()
         self:_bind_item(nil)
         return
     end
-    self:_bind_item(record.live_item)
+    self:_bind_item(record.live_item, record.db_icon_id, record.db_background_id)
 end
 
-function DropEntry:_bind_item(item)
-    if self._item_bound == item then
+function DropEntry:_bind_item(item, db_icon_id, db_background_id)
+    local bound_key = item
+    if bound_key == nil then
+        bound_key = db_icon_id
+    end
+    if self._item_bound == bound_key then
         return
     end
 
-    self._item_bound = item
+    self._item_bound = bound_key
+
+    if item == nil and db_icon_id ~= nil then
+        -- lore-DB fallback: icon + quality background resolved by name
+        -- (carry-all loot never surfaces a live backpack item); no native
+        -- tooltip in this mode, the toast is transient anyway
+        self:SetMouseVisible(false)
+        self.icon_host:SetMouseVisible(false)
+        self.icon_background:set_icon(db_background_id, self._icon_side)
+        self.icon_background:SetVisible(db_background_id ~= nil)
+        self.icon_foreground:set_icon(db_icon_id, self._icon_side)
+        self.icon_foreground:SetVisible(true)
+        self.item_info_control:SetMouseVisible(false)
+        self.item_info_control:SetVisible(false)
+        self.item_info_control:SetItemInfo(nil)
+        _set_stretch_mode_fit(self.icon_background)
+        _set_stretch_mode_fit(self.icon_foreground)
+        return
+    end
 
     if item == nil then
         self:SetMouseVisible(false)
