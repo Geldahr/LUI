@@ -7,6 +7,7 @@ local Persistence = _G.LUI.Settings.Persistence
 local AssetCache = _G.LUI.Runtime.Caches.Assets
 local Stores = _G.LUI.Runtime.Stores
 local State = _G.LUI.Settings.State
+local Lore = _G.LUI.Data.Lore
 local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 import "Turbine.UI"
@@ -24,6 +25,7 @@ local SOURCE_OTHER_CHARACTERS = "other_characters"
 local SOURCE_SCOPE_PREFIX = "sources:"
 
 local FILTER_ALL = "__all"
+local FILTER_MINE = "__mine"
 local BACKGROUND_RECIPE_BATCH_SIZE = 2
 local BACKGROUND_UPDATE_EVERY = 0.20
 local FOREGROUND_UPDATE_EVERY = 0.20
@@ -58,6 +60,35 @@ local PROFESSION_ORDER = {
     Turbine.Gameplay.Profession.Weaponsmith,
     Turbine.Gameplay.Profession.Woodworker,
 }
+
+-- local lore database join keys (profession enum values in the generated DB)
+local DB_PROFESSION_KEYS = {
+    [Turbine.Gameplay.Profession.Cook] = "COOK",
+    [Turbine.Gameplay.Profession.Farmer] = "FARMER",
+    [Turbine.Gameplay.Profession.Forester] = "FORESTER",
+    [Turbine.Gameplay.Profession.Jeweller] = "JEWELLER",
+    [Turbine.Gameplay.Profession.Metalsmith] = "METALSMITH",
+    [Turbine.Gameplay.Profession.Prospector] = "PROSPECTOR",
+    [Turbine.Gameplay.Profession.Scholar] = "SCHOLAR",
+    [Turbine.Gameplay.Profession.Tailor] = "TAILOR",
+    [Turbine.Gameplay.Profession.Weaponsmith] = "WEAPONSMITH",
+    [Turbine.Gameplay.Profession.Woodworker] = "WOODWORKER",
+}
+
+local DB_QUALITY_TO_LOTRO = {
+    COMMON = Turbine.Gameplay.ItemQuality.Common,
+    UNCOMMON = Turbine.Gameplay.ItemQuality.Uncommon,
+    RARE = Turbine.Gameplay.ItemQuality.Rare,
+    INCOMPARABLE = Turbine.Gameplay.ItemQuality.Incomparable,
+    LEGENDARY = Turbine.Gameplay.ItemQuality.Legendary,
+}
+
+-- building records from the local DB is cheap; step many more recipes per
+-- tick than the old API content path allowed
+local DB_BATCH_MULTIPLIER = 50
+-- known-tagging touches the game's recipe book (identity only), keep batches
+-- moderate so it stays invisible in the background
+local KNOWN_PASS_BATCH_SIZE = 100
 
 local function _safe_string(value, fallback)
     if value == nil then
@@ -338,174 +369,6 @@ local function _current_character_name()
     return "__unknown_character__"
 end
 
-local function _item_info_icon_id(item_info)
-    if item_info == nil then
-        return nil
-    end
-    local icon_id = tonumber(item_info:GetIconImageID())
-    if icon_id == 0 then
-        icon_id = nil
-    end
-    return icon_id
-end
-
-local function _item_info_background_id(item_info)
-    if item_info == nil then
-        return nil
-    end
-    local background_id = tonumber(item_info:GetBackgroundImageID())
-    if background_id == nil or background_id == 0 then
-        background_id = tonumber(item_info:GetQualityImageID())
-        if background_id == 0 then
-            background_id = nil
-        end
-    end
-    return background_id
-end
-
-local function _item_info_quality(item_info)
-    if item_info == nil then
-        return nil
-    end
-    return item_info:GetQuality()
-end
-
-
-
-
-
-
-
-local function _positive_integer(value)
-    local number = tonumber(value)
-    if number == nil then
-        return nil
-    end
-    number = math.floor(number + 0.5)
-    if number <= 0 then
-        return nil
-    end
-    return number
-end
-
-local function _extract_level_from_text(text)
-    if type(text) ~= "string" or text == "" then
-        return nil
-    end
-
-    local patterns = {
-        "%([Ll]evel%s+(%d+)%)",
-        "%([Nn]iveau%s+(%d+)%)",
-        "%([Ss]tufe%s+(%d+)%)",
-        "[Mm]inimum%s+[Ll]evel%s*:?%s*(%d+)",
-        "[Rr]equires%s+[Ll]evel%s*:?%s*(%d+)",
-        "[Nn]iveau%s+minimum%s*:?%s*(%d+)",
-        "[Mm]indeststufe%s*:?%s*(%d+)",
-    }
-
-    for i = 1, #patterns do
-        local level = _positive_integer(string.match(text, patterns[i]))
-        if level ~= nil then
-            return level
-        end
-    end
-
-    return nil
-end
-
-local function _item_info_required_level(item_info)
-    if item_info == nil then
-        return nil
-    end
-
-    local method_names = {
-        "GetRequiredLevel",
-        "GetMinimumLevel",
-        "GetMinLevel",
-    }
-
-    for i = 1, #method_names do
-        local method = item_info[method_names[i]]
-        if type(method) == "function" then
-            local level = _positive_integer(method(item_info))
-            if level ~= nil then
-                return level
-            end
-        end
-    end
-
-    local level = _extract_level_from_text(item_info:GetName())
-    if level ~= nil then
-        return level
-    end
-
-    level = _extract_level_from_text(item_info:GetDescription())
-    if level ~= nil then
-        return level
-    end
-
-    return nil
-end
-
-local function _recipe_required_level(result_info, recipe_name, category_name)
-    local level = _item_info_required_level(result_info)
-    if level ~= nil then
-        return level
-    end
-
-    level = _extract_level_from_text(category_name)
-    if level ~= nil then
-        return level
-    end
-
-    level = _extract_level_from_text(recipe_name)
-    if level ~= nil then
-        return level
-    end
-
-    return nil
-end
-
-local function _remember_item(items, key, name, item_info)
-    if key == nil or key == "" then
-        return
-    end
-
-    local current = items[key]
-    if type(current) ~= "table" then
-        current = {
-            key = key,
-            name = _trim(name),
-            icon_id = nil,
-            background_image_id = nil,
-            quality = nil,
-            required_level = nil,
-            item_info = nil,
-        }
-        items[key] = current
-    end
-
-    if current.name == nil or current.name == "" then
-        current.name = _trim(name)
-    end
-
-    if current.icon_id == nil then
-        current.icon_id = _item_info_icon_id(item_info)
-    end
-    if current.background_image_id == nil then
-        current.background_image_id = _item_info_background_id(item_info)
-    end
-    if current.quality == nil then
-        current.quality = _item_info_quality(item_info)
-    end
-    if current.required_level == nil then
-        current.required_level = _item_info_required_level(item_info)
-    end
-    if current.item_info == nil then
-        current.item_info = item_info
-    end
-end
-
 local function _copy_asset_record(record)
     if type(record) ~= "table" then
         return nil
@@ -598,30 +461,6 @@ local function _source_label(source_key)
     return _safe_string(source_key, "")
 end
 
-local function _recipe_sort_compare(items, left, right)
-    local left_profession = _lower(left ~= nil and left.profession_name or nil)
-    local right_profession = _lower(right ~= nil and right.profession_name or nil)
-    if left_profession ~= right_profession then
-        return left_profession < right_profession
-    end
-
-    local left_item = type(items) == "table" and items[left ~= nil and left.result_key or nil] or nil
-    local right_item = type(items) == "table" and items[right ~= nil and right.result_key or nil] or nil
-    local left_name = _lower(left_item ~= nil and left_item.name or nil)
-    local right_name = _lower(right_item ~= nil and right_item.name or nil)
-    if left_name ~= right_name then
-        return left_name < right_name
-    end
-
-    local left_recipe_name = _lower(left ~= nil and left.recipe_name or nil)
-    local right_recipe_name = _lower(right ~= nil and right.recipe_name or nil)
-    if left_recipe_name ~= right_recipe_name then
-        return left_recipe_name < right_recipe_name
-    end
-
-    return _lower(left ~= nil and left.id or nil) < _lower(right ~= nil and right.id or nil)
-end
-
 local function _recipe_reenters_path(recipe, visiting)
     if type(recipe) ~= "table" or type(recipe.ingredients) ~= "table" or type(visiting) ~= "table" then
         return false
@@ -670,10 +509,13 @@ function CraftingStore:Constructor()
 
     self.current_character_name = _current_character_name()
     self.professions = {}
+    self.profession_by_key = {}
+    self.owned_profession_keys = {}
     self.items = {}
     self.recipes = {}
     self.recipe_by_id = {}
     self.recipes_by_result = {}
+    self.known_recipes_by_result = {}
     self.source_ownership = {
         [SOURCE_BACKPACK] = {},
         [SOURCE_BANK] = {},
@@ -697,6 +539,8 @@ function CraftingStore:Constructor()
     self._foreground_loading = false
     self._pending_loaded_result_keys = {}
     self._live_inventory_token = ""
+    self._known_queue = nil
+    self._known_loading = false
     self.update_every = BACKGROUND_UPDATE_EVERY
     self.last_update_at = 0
     self.version = 0
@@ -826,6 +670,7 @@ function CraftingStore:refresh_if_due()
     self.last_update_at = now
 
     local batch_size = self._foreground_loading == true and FOREGROUND_RECIPE_BATCH_SIZE or BACKGROUND_RECIPE_BATCH_SIZE
+    batch_size = batch_size * DB_BATCH_MULTIPLIER
     return self:refresh(false, batch_size)
 end
 
@@ -841,6 +686,8 @@ function CraftingStore:refresh(force, recipe_batch_size)
         self:_start_recipe_load(current_character)
         changed = true
     elseif self._recipe_loading == true and self:_step_recipe_load(recipe_batch_size or BACKGROUND_RECIPE_BATCH_SIZE) == true then
+        changed = true
+    elseif self._known_loading == true and self:_step_known_pass() == true then
         changed = true
     end
 
@@ -954,22 +801,7 @@ function CraftingStore:recipe_matches_query(recipe, groups)
         return true
     end
 
-    local result_item = self:get_item(recipe.result_key)
-    local searchable = {
-        _lower(result_item ~= nil and result_item.name or nil),
-        _lower(recipe.profession_name),
-        _lower(recipe.category_name),
-        _lower(recipe.recipe_name),
-    }
-    if type(recipe.ingredients) == "table" then
-        for i = 1, #recipe.ingredients do
-            local ingredient = recipe.ingredients[i]
-            local item = self:get_item(ingredient ~= nil and ingredient.key or nil)
-            searchable[#searchable + 1] = _lower(item ~= nil and item.name or nil)
-        end
-    end
-
-    local haystack = table.concat(searchable, "\n")
+    local haystack = recipe.search_text
     for group_index = 1, #groups do
         local group = groups[group_index]
         local matched = true
@@ -1319,69 +1151,103 @@ function CraftingStore:_build_source_ownership(current_character, live_inventory
 end
 
 function CraftingStore:_start_recipe_load(current_character)
+    Lore.load_recipes()
+    Lore.load_items()
+
     local professions = {}
-    local profession_labels = { TR["All professions"] }
-    local profession_values = { FILTER_ALL }
-    local recipe_queue = {}
-    local recipe_total = 0
+    local profession_labels = { TR["All professions"], TR["All my professions"] }
+    local profession_values = { FILTER_ALL, FILTER_MINE }
+    local known_queue = {}
+    local profession_by_db_code = {}
+    local owned_keys = {}
 
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
     local attributes = player ~= nil and player:GetAttributes() or nil
 
-    if attributes ~= nil then
-        for i = 1, #PROFESSION_ORDER do
-            local profession_enum = PROFESSION_ORDER[i]
-            local profession_info = attributes:GetProfessionInfo(profession_enum)
-            if profession_info ~= nil then
-                local profession_name = _trim(profession_info:GetName())
-                if profession_name == "" then
-                    profession_name = tostring(profession_enum)
-                end
+    -- every DB profession is listed; the character's own get live rank data
+    -- and a background known-tagging pass (identity only, never content)
+    for i = 1, #PROFESSION_ORDER do
+        local profession_enum = PROFESSION_ORDER[i]
+        local db_key = DB_PROFESSION_KEYS[profession_enum]
+        local profession_info = attributes ~= nil and attributes:GetProfessionInfo(profession_enum) or nil
+        local owned = profession_info ~= nil
 
-                local recipe_count = profession_info:GetRecipeCount() or 0
-                local profession = {
-                    profession = profession_enum,
-                    key = tostring(profession_enum),
-                    name = profession_name,
-                    recipe_count = recipe_count,
-                    proficiency_level = profession_info:GetProficiencyLevel() or 0,
-                    proficiency_title = _trim(profession_info:GetProficiencyTitle()),
-                    mastery_level = profession_info:GetMasteryLevel() or 0,
-                    mastery_title = _trim(profession_info:GetMasteryTitle()),
+        local profession_name = nil
+        if owned then
+            profession_name = _trim(profession_info:GetName())
+        end
+        if profession_name == nil or profession_name == "" then
+            profession_name = Lore.Recipes.profession_name(db_key)
+        end
+
+        local profession = {
+            profession = profession_enum,
+            key = tostring(profession_enum),
+            name = profession_name,
+            owned = owned,
+            recipe_count = 0,
+            proficiency_level = owned and (profession_info:GetProficiencyLevel() or 0) or 0,
+            proficiency_title = owned and _trim(profession_info:GetProficiencyTitle()) or "",
+            mastery_level = owned and (profession_info:GetMasteryLevel() or 0) or 0,
+            mastery_title = owned and _trim(profession_info:GetMasteryTitle()) or "",
+        }
+        professions[#professions + 1] = profession
+        profession_labels[#profession_labels + 1] = profession_name
+        profession_values[#profession_values + 1] = profession.key
+        profession_by_db_code[Lore.Recipes.profession_codes[db_key]] = profession
+
+        if owned then
+            owned_keys[profession.key] = true
+            local known_count = profession_info:GetRecipeCount() or 0
+            if known_count > 0 then
+                known_queue[#known_queue + 1] = {
+                    profession = profession,
+                    profession_info = profession_info,
+                    recipe_count = known_count,
+                    next_recipe_index = 1,
                 }
-                professions[#professions + 1] = profession
-                profession_labels[#profession_labels + 1] = profession_name
-                profession_values[#profession_values + 1] = profession.key
-
-                if recipe_count > 0 then
-                    recipe_queue[#recipe_queue + 1] = {
-                        profession = profession,
-                        profession_info = profession_info,
-                        recipe_count = recipe_count,
-                        next_recipe_index = 1,
-                    }
-                    recipe_total = recipe_total + recipe_count
-                end
             end
+        end
+    end
+
+    -- the recipe list itself comes from the local DB: every recipe of the
+    -- character's professions, no GetRecipe content loading
+    local recipe_queue = {}
+    for ordinal = 1, Lore.Recipes.count do
+        local profession = profession_by_db_code[Lore.Recipes.profession_code(ordinal)]
+        if profession ~= nil then
+            recipe_queue[#recipe_queue + 1] = {
+                ordinal = ordinal,
+                profession = profession,
+            }
+            profession.recipe_count = profession.recipe_count + 1
         end
     end
 
     self.current_character_name = current_character
     self.professions = professions
+    self.profession_by_key = {}
+    for i = 1, #professions do
+        self.profession_by_key[professions[i].key] = professions[i]
+    end
+    self.owned_profession_keys = owned_keys
     self.items = {}
     self.recipes = {}
     self.recipe_by_id = {}
     self.recipes_by_result = {}
+    self.known_recipes_by_result = {}
     self.profession_option_labels = profession_labels
     self.profession_option_values = profession_values
     self._status_cache = {}
     self._recipe_token = tostring(current_character or "")
     self._recipes_initialized = true
-    self._recipe_loading = recipe_total > 0
+    self._recipe_loading = #recipe_queue > 0
     self._recipe_load_queue = recipe_queue
     self._recipe_load_queue_index = 1
     self._recipe_load_done = 0
-    self._recipe_load_total = recipe_total
+    self._recipe_load_total = #recipe_queue
+    self._known_queue = known_queue
+    self._known_loading = false
     self._pending_loaded_result_keys = {}
 end
 
@@ -1424,35 +1290,25 @@ function CraftingStore:_step_recipe_load(batch_size)
     end
 
     local changed = false
-    while remaining > 0 and type(self._recipe_load_queue) == "table" and
-        self._recipe_load_queue_index <= #self._recipe_load_queue do
-        local queue_entry = self._recipe_load_queue[self._recipe_load_queue_index]
-        local recipe_index = tonumber(queue_entry ~= nil and queue_entry.next_recipe_index or nil) or 1
-        local profession = queue_entry ~= nil and queue_entry.profession or nil
-        local profession_info = queue_entry ~= nil and queue_entry.profession_info or nil
-        local recipe = profession_info ~= nil and profession_info:GetRecipe(recipe_index) or nil
-        if recipe ~= nil and profession ~= nil then
-            local record = self:_build_recipe_record(recipe, profession, recipe_index, self.items)
-            self:_register_recipe_record(record)
-            self:_remember_loaded_recipe_result(record)
-        end
+    local queue = self._recipe_load_queue
+    while remaining > 0 and type(queue) == "table" and self._recipe_load_queue_index <= #queue do
+        local queue_entry = queue[self._recipe_load_queue_index]
+        local record = self:_build_db_recipe_record(queue_entry.ordinal, queue_entry.profession)
+        self:_register_recipe_record(record)
+        self:_remember_loaded_recipe_result(record)
 
         self._recipe_load_done = self._recipe_load_done + 1
-        queue_entry.next_recipe_index = recipe_index + 1
+        self._recipe_load_queue_index = self._recipe_load_queue_index + 1
         remaining = remaining - 1
         changed = true
-
-        if queue_entry.next_recipe_index > (tonumber(queue_entry.recipe_count) or 0) then
-            self._recipe_load_queue_index = self._recipe_load_queue_index + 1
-        end
     end
 
-    if type(self._recipe_load_queue) ~= "table" or self._recipe_load_queue_index > #self._recipe_load_queue then
+    if type(queue) ~= "table" or self._recipe_load_queue_index > #queue then
         self._recipe_loading = false
         self._recipe_load_queue = nil
         self._recipe_load_queue_index = 1
         table.sort(self.recipes, function(left, right)
-            return _recipe_sort_compare(self.items, left, right)
+            return left.sort_key < right.sort_key
         end)
         self._recipe_token = table.concat({
             tostring(self.current_character_name or ""),
@@ -1460,100 +1316,247 @@ function CraftingStore:_step_recipe_load(batch_size)
             tostring(#self.recipes),
         }, "\30")
         self._status_cache = {}
+        self._known_loading = type(self._known_queue) == "table" and #self._known_queue > 0
     end
 
     return changed
 end
 
-function CraftingStore:_build_recipe_record(recipe, profession, recipe_index, items)
-    local recipe_name = _trim(recipe:GetName())
-    local recipe_name_key = _normalize_name(recipe_name)
-    local result_info = recipe:GetResultItemInfo()
-    local result_name = _trim(result_info ~= nil and result_info:GetName() or nil)
-    local category_name = _trim(recipe:GetCategoryName())
+-- sorted required-ingredient quantities, e.g. "1,2,4": cheap discriminator
+-- for same-name bulk/conversion variants (no ItemInfo access)
+local function _api_ingredient_signature(recipe)
+    local counts = {}
+    local n = tonumber(recipe:GetIngredientCount()) or 0
+    for i = 1, n do
+        local ingredient = recipe:GetIngredient(i)
+        if ingredient ~= nil then
+            counts[#counts + 1] = math.max(1, tonumber(ingredient:GetRequiredQuantity()) or 1)
+        end
+    end
+    table.sort(counts)
+    return table.concat(counts, ",")
+end
+
+local function _record_ingredient_signature(record)
+    local counts = {}
+    for i = 1, #record.ingredients do
+        counts[#counts + 1] = record.ingredients[i].quantity
+    end
+    table.sort(counts)
+    return table.concat(counts, ",")
+end
+
+function CraftingStore:_mark_recipe_known(record)
+    if record.known == true then
+        return
+    end
+    record.known = true
+    -- conversions register too: _satisfy_item only ever uses them one step
+    -- from on-hand scraps
+    _add_result_index_entry(self.known_recipes_by_result, record.result_key, record)
+    if record.recipe_name_key ~= nil then
+        _add_result_index_entry(self.known_recipes_by_result, record.recipe_name_key, record)
+    end
+end
+
+-- Tag records the character actually knows. Identity only (localized name,
+-- tier and category per book entry); runs in the background after the DB
+-- list is built and never blocks the recipe list. Several DB records can
+-- share one identity (alternate-ingredient variants, conversion siblings) -
+-- every record matching the book entry is tagged, category-exact matches
+-- preferred.
+function CraftingStore:_step_known_pass()
+    if self._known_loading ~= true then
+        return false
+    end
+
+    local remaining = KNOWN_PASS_BATCH_SIZE
+    while remaining > 0 and type(self._known_queue) == "table" and #self._known_queue > 0 do
+        local entry = self._known_queue[1]
+        local recipe = entry.profession_info:GetRecipe(entry.next_recipe_index)
+        if recipe ~= nil then
+            local name = _trim(recipe:GetName())
+            local tier = tonumber(recipe:GetTier()) or 0
+            local category_name = _trim(recipe:GetCategoryName())
+            local ordinals = name ~= "" and Lore.Recipes.find_ordinals(name) or nil
+            if ordinals ~= nil then
+                local db_code = Lore.Recipes.profession_codes[DB_PROFESSION_KEYS[entry.profession.profession]]
+                local candidates, n = {}, 0
+                for k = 1, #ordinals do
+                    local ordinal = ordinals[k]
+                    if Lore.Recipes.profession_code(ordinal) == db_code and Lore.Recipes.tier_of(ordinal) == tier then
+                        local record = self.recipe_by_id[tostring(Lore.Recipes.id_of(ordinal))]
+                        if record ~= nil then
+                            n = n + 1
+                            candidates[n] = record
+                        end
+                    end
+                end
+                -- tag the most specific identity level the API can express:
+                -- 3 = category + result quantity + ingredient quantities
+                --     (separates same-name bulk/conversion variants)
+                -- 2 = category
+                -- 1 = profession + tier (drift fallback; never leave the
+                --     book entry untagged)
+                local result_quantity = math.max(1, tonumber(recipe:GetResultItemQuantity()) or 1)
+                local ingredient_signature = _api_ingredient_signature(recipe)
+                local levels, best = {}, 0
+                for k = 1, n do
+                    local record = candidates[k]
+                    local level = 1
+                    if record.category_name == category_name then
+                        level = 2
+                        if record.result_quantity == result_quantity and
+                            _record_ingredient_signature(record) == ingredient_signature then
+                            level = 3
+                        end
+                    end
+                    levels[k] = level
+                    if level > best then
+                        best = level
+                    end
+                end
+                for k = 1, n do
+                    if levels[k] == best then
+                        self:_mark_recipe_known(candidates[k])
+                    end
+                end
+            end
+        end
+
+        entry.next_recipe_index = entry.next_recipe_index + 1
+        if entry.next_recipe_index > entry.recipe_count then
+            table.remove(self._known_queue, 1)
+        end
+        remaining = remaining - 1
+    end
+
+    if type(self._known_queue) ~= "table" or #self._known_queue == 0 then
+        self._known_loading = false
+        self._known_queue = nil
+        -- craftability can change now that known recipes may expand
+        -- material trees; recompute statuses on demand
+        self._status_cache = {}
+        return true
+    end
+    return false
+end
+
+-- Register an item from the local lore DB into self.items, keyed like the
+-- API path (normalized localized name). Returns key, display name; nil when
+-- the item is not in the local DB (data drop older than the game).
+function CraftingStore:_remember_db_item(item_id)
+    local ordinal = Lore.Items.ordinal_of(item_id)
+    if ordinal == nil then
+        return nil, nil
+    end
+    local name = Lore.Items.label(ordinal)
+    local key = _normalize_name(name)
+    if key == "" then
+        return nil, nil
+    end
+
+    local current = self.items[key]
+    if type(current) ~= "table" then
+        local icon_id, background_id = Lore.Items.icon_layers(ordinal)
+        current = {
+            key = key,
+            name = name,
+            icon_id = icon_id,
+            background_image_id = background_id,
+            quality = DB_QUALITY_TO_LOTRO[Lore.Items.quality_name(ordinal)],
+            required_level = Lore.Items.min_level(ordinal),
+            item_info = nil,
+        }
+        self.items[key] = current
+    end
+    return key, current.name
+end
+
+-- Build a recipe record straight from the local lore DB. Returns nil for
+-- records that are not products (obsolete conversion categories) or whose
+-- item references are missing from the local items DB.
+function CraftingStore:_build_db_recipe_record(ordinal, profession)
+    local rec = Lore.Recipes.decode(ordinal)
+    local recipe_name = Lore.Recipes.label(ordinal)
+    local tier = rec.tier
+
+    local category_name = Lore.Recipes.category_name(rec.category)
     if _is_obsolete_conversion_category(category_name) == true then
         return nil
     end
-    local critical_result_info = nil
-    local critical_result_name = ""
+
+    local version = rec.versions[1]
+    if version == nil or version.results[1] == nil then
+        return nil
+    end
+
+    local result_key, result_name = self:_remember_db_item(version.results[1][1])
+    if result_key == nil then
+        return nil
+    end
+
     local critical_result_key = nil
-    if result_name == "" then
-        result_name = recipe_name
-    end
-    if result_name == "" then
-        return nil
-    end
-
-    local result_key = _normalize_name(result_name)
-    if result_key == "" then
-        return nil
-    end
-
-    _remember_item(items, result_key, result_name, result_info)
-    if type(items[result_key]) == "table" and items[result_key].required_level == nil then
-        items[result_key].required_level = _recipe_required_level(result_info, recipe_name, category_name)
-    end
-
-    if recipe.HasCriticalResultItem ~= nil and recipe:HasCriticalResultItem() == true and
-        recipe.GetCriticalResultItemInfo ~= nil then
-        critical_result_info = recipe:GetCriticalResultItemInfo()
-        critical_result_name = _trim(critical_result_info ~= nil and critical_result_info:GetName() or nil)
-        critical_result_key = _normalize_name(critical_result_name)
-        if critical_result_key ~= "" then
-            _remember_item(items, critical_result_key, critical_result_name, critical_result_info)
-            if type(items[critical_result_key]) == "table" and items[critical_result_key].required_level == nil then
-                items[critical_result_key].required_level =
-                    _recipe_required_level(critical_result_info, recipe_name, category_name)
-            end
-        else
-            critical_result_key = nil
+    local critical_result_quantity = 0
+    if version.crit_results[1] ~= nil then
+        local crit_key = self:_remember_db_item(version.crit_results[1][1])
+        if crit_key ~= nil then
+            critical_result_key = crit_key
+            critical_result_quantity = version.crit_results[1][2]
         end
     end
 
-    local ingredient_count = recipe:GetIngredientCount() or 0
     local ingredients = {}
-
-    for ingredient_index = 1, ingredient_count do
-        local ingredient = recipe:GetIngredient(ingredient_index)
-        if ingredient ~= nil then
-            local ingredient_info = ingredient:GetItemInfo()
-            local ingredient_name = _trim(ingredient_info ~= nil and ingredient_info:GetName() or nil)
-            local ingredient_key = _normalize_name(ingredient_name)
-            if ingredient_key ~= "" then
-                local ingredient_record = {
-                    key = ingredient_key,
-                    quantity = math.max(1, tonumber(ingredient:GetRequiredQuantity()) or 1),
-                }
-                ingredients[#ingredients + 1] = ingredient_record
-                _remember_item(items, ingredient_key, ingredient_name, ingredient_info)
-            end
+    for i = 1, #version.ingredients do
+        local entry = version.ingredients[i]
+        local key = self:_remember_db_item(entry[1])
+        if key == nil then
+            return nil
         end
+        ingredients[#ingredients + 1] = {
+            key = key,
+            quantity = entry[2],
+        }
     end
 
+    local recipe_name_key = _normalize_name(recipe_name)
     local record = {
-        id = table.concat({
-            tostring(profession.key),
-            tostring(recipe_index),
-            result_key,
-            _normalize_name(recipe_name),
-        }, "\30"),
+        id = tostring(rec.id),
         profession = profession.profession,
         profession_key = profession.key,
         profession_name = profession.name,
         category_name = category_name,
-        tier = tonumber(recipe:GetTier()) or 0,
-        cooldown = tonumber(recipe:GetCooldown()) or 0,
-        critical_chance = recipe.GetBaseCriticalSuccessChance ~= nil and
-            tonumber(recipe:GetBaseCriticalSuccessChance()) or nil,
+        conversion = rec.conversion,
+        tier = tier,
+        cooldown = rec.cooldown,
+        critical_chance = version.crit,
         result_key = result_key,
         critical_result_key = critical_result_key,
-        critical_result_quantity = critical_result_key ~= nil and recipe.GetCriticalResultItemQuantity ~= nil and
-            math.max(1, tonumber(recipe:GetCriticalResultItemQuantity()) or 1) or 0,
+        critical_result_quantity = critical_result_quantity,
         recipe_name_key = recipe_name_key ~= "" and recipe_name_key ~= result_key and recipe_name_key or nil,
         recipe_name = recipe_name ~= "" and recipe_name ~= result_name and recipe_name or nil,
-        result_quantity = math.max(1, tonumber(recipe:GetResultItemQuantity()) or 1),
+        result_quantity = version.results[1][2],
         ingredients = ingredients,
     }
+
+    -- hot paths read prepared values: search and sort must stay allocation-
+    -- free across the full recipe catalog
+    local search_parts = {
+        _lower(result_name),
+        _lower(profession.name),
+        _lower(category_name),
+        _lower(record.recipe_name),
+    }
+    for i = 1, #ingredients do
+        search_parts[#search_parts + 1] = _lower(self.items[ingredients[i].key].name)
+    end
+    record.search_text = table.concat(search_parts, "\n")
+    record.sort_key = table.concat({
+        _lower(profession.name),
+        _lower(result_name),
+        _lower(record.recipe_name),
+        record.id,
+    }, "\30")
 
     return record
 end
@@ -1584,7 +1587,11 @@ function CraftingStore:_make_missing_entry(item_key, quantity)
 end
 
 function CraftingStore:_get_recipes_for_item(item_key)
-    local list = self.recipes_by_result[item_key]
+    -- material-tree expansion only walks through recipes the character
+    -- knows: expanding through the full catalog of unlearned recipes is both
+    -- wrong ("craftable" would assume recipes you cannot craft) and
+    -- combinatorially explosive
+    local list = self.known_recipes_by_result[item_key]
     if type(list) == "table" and #list > 0 then
         return list
     end
@@ -1592,7 +1599,7 @@ function CraftingStore:_get_recipes_for_item(item_key)
     return nil
 end
 
-function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
+function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting, stock_only)
     local needed = math.max(0, tonumber(quantity) or 0)
     local node = {
         key = item_key,
@@ -1627,7 +1634,10 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
         return true, node, next_stock, {}
     end
 
-    local recipes = self:_get_recipes_for_item(item_key)
+    local recipes = nil
+    if stock_only ~= true then
+        recipes = self:_get_recipes_for_item(item_key)
+    end
     if recipes == nil or visiting[item_key] == true then
         node.missing = needed
         node.satisfied = false
@@ -1642,8 +1652,24 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
     local best_failed_total = nil
     local best_failed_distinct = nil
 
+    -- conversion ("scraps") recipes are tried first and may only draw their
+    -- ingredients from on-hand stock (their children never expand, so
+    -- conversion pairs cannot loop): own enough scraps and the tree starts
+    -- there, otherwise regular recipes craft from the base resource
+    local order = {}
     for recipe_index = 1, #recipes do
-        local recipe = recipes[recipe_index]
+        if recipes[recipe_index].conversion == true then
+            order[#order + 1] = recipe_index
+        end
+    end
+    for recipe_index = 1, #recipes do
+        if recipes[recipe_index].conversion ~= true then
+            order[#order + 1] = recipe_index
+        end
+    end
+
+    for order_index = 1, #order do
+        local recipe = recipes[order[order_index]]
         if _recipe_reenters_path(recipe, visiting) ~= true then
             local branch_stock = _copy_counts(next_stock)
             local per_craft = math.max(1, tonumber(recipe.result_quantity) or 1)
@@ -1671,7 +1697,8 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting)
                     branch_stock,
                     ingredient.key,
                     ingredient.quantity * crafts_needed,
-                    visiting
+                    visiting,
+                    recipe.conversion == true
                 )
                 branch_stock = child_stock
                 candidate_node.children[#candidate_node.children + 1] = child_node
@@ -1764,7 +1791,8 @@ function CraftingStore:_evaluate_recipe_with_stock(recipe, craft_count, stock)
             working_stock,
             ingredient.key,
             required,
-            {}
+            {},
+            recipe.conversion == true
         )
 
         working_stock = next_stock

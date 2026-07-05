@@ -24,9 +24,12 @@ import "LUI.src.Utils.search_query"
 local Style = UI.Widgets.Style
 
 local FILTER_ALL = "__all"
-local AVAILABILITY_ALL = "all"
+local FILTER_MINE = "__mine"
+local RANK_MINE = "__mine"
 local AVAILABILITY_READY = "ready"
-local AVAILABILITY_MISSING = "missing"
+local AVAILABILITY_KNOWN = "known"
+local AVAILABILITY_UNLEARNED = "unlearned"
+local SHOW_VALUES = { AVAILABILITY_READY, AVAILABILITY_KNOWN, AVAILABILITY_UNLEARNED }
 local DISPLAY_PAGES = "pages"
 local DISPLAY_SCROLL = "scroll"
 local CRAFTING_QUERY_TOKENS = {
@@ -379,16 +382,42 @@ local function _format_percent(value)
     return _format_count(percent) .. "%"
 end
 
-local function _normalize_availability_filter(value)
-    if value == AVAILABILITY_READY then
-        return AVAILABILITY_READY
+-- "Show" is a faceted multi-select: materials axis (Craftable) and book
+-- axis (Known / Not known). Selections are stored as a set keyed by the
+-- AVAILABILITY_* values; the empty set means "All".
+local function _normalize_show_selection(values)
+    local selection = {}
+    if type(values) == "table" then
+        for i = 1, #values do
+            local value = values[i]
+            if value == AVAILABILITY_READY or value == AVAILABILITY_KNOWN or value == AVAILABILITY_UNLEARNED then
+                selection[value] = true
+            end
+        end
     end
-    return AVAILABILITY_ALL
+    return selection
+end
+
+local function _show_selection_values(selection)
+    local out = {}
+    for i = 1, #SHOW_VALUES do
+        if selection[SHOW_VALUES[i]] == true then
+            out[#out + 1] = SHOW_VALUES[i]
+        end
+    end
+    return out
+end
+
+local function _show_selection_signature(selection)
+    return table.concat(_show_selection_values(selection), ",")
 end
 
 local function _normalize_rank_filter_value(value)
     if value == FILTER_ALL then
         return FILTER_ALL
+    end
+    if value == RANK_MINE then
+        return RANK_MINE
     end
 
     local tier = tonumber(value)
@@ -435,6 +464,11 @@ local function _parse_rank_query_value(value)
     end
     if normalized == "all" then
         return FILTER_ALL, true
+    end
+    if normalized == "mine" or normalized == "my" or normalized == "myrank" or
+        normalized == "unlocked" or
+        normalized == _normalize_rank_match_value(TR["Unlocked ranks"]) then
+        return RANK_MINE, true
     end
 
     local numeric_tier = tonumber(normalized)
@@ -497,15 +531,25 @@ end
 local function _parse_availability_query_value(value)
     local normalized = _lower(_trim(value))
     if normalized == "" then
-        return AVAILABILITY_ALL, false
+        return {}, false
     end
     if normalized == "all" or normalized == _lower(TR["All"]) then
-        return AVAILABILITY_ALL, true
+        return {}, true
     end
-    if normalized == "craftable" or normalized == _lower(TR["Craftable"]) then
-        return AVAILABILITY_READY, true
+    local selection = {}
+    for part in string.gmatch(normalized, "[^,]+") do
+        part = _trim(part)
+        if part == "craftable" or part == _lower(TR["Craftable"]) then
+            selection[AVAILABILITY_READY] = true
+        elseif part == "known" or part == _lower(TR["Known"]) then
+            selection[AVAILABILITY_KNOWN] = true
+        elseif part == "unlearned" or part == _lower(TR["Not known"]) then
+            selection[AVAILABILITY_UNLEARNED] = true
+        else
+            return {}, false
+        end
     end
-    return AVAILABILITY_ALL, false
+    return selection, true
 end
 
 local function _parse_favorite_query_value(value)
@@ -1460,13 +1504,13 @@ function CraftingWindow:Constructor()
     self.search_query_state = SearchQuery.parse("", CRAFTING_QUERY_TOKENS)
     self.scope_source_keys = self.store:get_default_source_keys()
     self.scope_key = self.store:scope_key_from_sources(self.scope_source_keys)
-    self.profession_filter = FILTER_ALL
-    self.rank_filter = FILTER_ALL
-    self.availability_filter = AVAILABILITY_ALL
+    self.profession_filter = FILTER_MINE
+    self.rank_filter = RANK_MINE
+    self.show_filter = { [AVAILABILITY_KNOWN] = true }
     self.favorite_filter_active = false
     self.query_profession_filter = FILTER_ALL
     self.query_rank_filter = FILTER_ALL
-    self.query_availability_filter = AVAILABILITY_ALL
+    self.query_availability_filter = {}
     self.query_favorite_filter_active = false
     self.query_profession_filter_active = false
     self.query_rank_filter_active = false
@@ -1605,19 +1649,34 @@ function CraftingWindow:Constructor()
     self.availability_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.availability_label:SetText(TR["Show"])
 
-    self.availability_dropdown = UI.Widgets.LuiDropdown()
+    self.availability_dropdown = UI.Widgets.LuiCheckDropdown()
     self.availability_dropdown:SetParent(self.top_bar)
     self.availability_dropdown:SetPopupHost(self)
     self.availability_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.availability_dropdown:SetMappedOptions(
-        { TR["All"], TR["Craftable"] },
-        { AVAILABILITY_ALL, AVAILABILITY_READY }
+        { TR["Craftable"], TR["Known"], TR["Not known"] },
+        { AVAILABILITY_READY, AVAILABILITY_KNOWN, AVAILABILITY_UNLEARNED }
     )
-    self.availability_dropdown.ValueChanged = function(_, value)
-        self.availability_filter = _normalize_availability_filter(value)
+    self.availability_dropdown:SetSummaryFormatter(function(selected_values)
+        if #selected_values == 0 then
+            return TR["All"]
+        end
+        if #selected_values == 1 then
+            local labels = {
+                [AVAILABILITY_READY] = TR["Craftable"],
+                [AVAILABILITY_KNOWN] = TR["Known"],
+                [AVAILABILITY_UNLEARNED] = TR["Not known"],
+            }
+            return labels[selected_values[1]]
+        end
+        return _format_count(#selected_values) .. " " .. TR["filters"]
+    end)
+    self.availability_dropdown.SelectedValuesChanged = function(_, values)
+        self.show_filter = _normalize_show_selection(values)
         self.recipe_page_index = 1
         self:refresh_recipe_list()
     end
+    self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
 
     self.level_label = UI.Widgets.LuiLabel()
     self.level_label:SetParent(self.top_bar)
@@ -2691,8 +2750,13 @@ function CraftingWindow:_refresh_rank_options()
         return left < right
     end)
 
+    table.insert(values, 2, RANK_MINE)
     for index = 2, #values do
-        labels[#labels + 1] = _craft_rank_name(values[index])
+        if values[index] == RANK_MINE then
+            labels[#labels + 1] = TR["Unlocked ranks"]
+        else
+            labels[#labels + 1] = _craft_rank_name(values[index])
+        end
     end
 
     local options_signature = _option_list_signature(labels, values)
@@ -2770,7 +2834,7 @@ function CraftingWindow:open_from_asset_materials(_)
     self.profession_filter = FILTER_ALL
     self.rank_filter = FILTER_ALL
     self:set_scope_sources(self.store:get_all_source_keys(), false)
-    self.availability_filter = AVAILABILITY_READY
+    self.show_filter = { [AVAILABILITY_READY] = true }
     self.level_min_filter = nil
     self.level_max_filter = nil
     self.recipe_page_index = 1
@@ -2787,7 +2851,7 @@ function CraftingWindow:open_from_asset_materials(_)
         self.scope_dropdown:SetSelectedValues(self.scope_source_keys, false)
     end
     if self.availability_dropdown ~= nil then
-        self.availability_dropdown:SetValue(self.availability_filter)
+        self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
     end
     if self.level_min_box ~= nil then
         self.level_min_box:SetText("")
@@ -2906,8 +2970,7 @@ function CraftingWindow:apply_settings()
     self:_set_scope_dropdown_options()
     self:_load_favorites()
     self:_refresh_favorite_filter_button()
-    self.availability_filter = _normalize_availability_filter(self.availability_filter)
-    self.availability_dropdown:SetValue(self.availability_filter)
+    self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
 
     self:_load_geometry()
     self:refresh_from_store(true)
@@ -3079,7 +3142,7 @@ function CraftingWindow:_ensure_selected_visible_recipe()
     self.selected_recipe_id = self.visible_recipes[1] ~= nil and self.visible_recipes[1].id or nil
 end
 
-function CraftingWindow:_recipe_matches_filters(recipe, status)
+function CraftingWindow:_recipe_matches_filters(recipe)
     if recipe == nil then
         return false
     end
@@ -3101,11 +3164,23 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
 
     local profession_filter = self.query_profession_filter_active == true and
         self.query_profession_filter or self.profession_filter
-    if profession_filter ~= FILTER_ALL and recipe.profession_key ~= profession_filter then
+    if profession_filter == FILTER_MINE then
+        if self.store.owned_profession_keys[recipe.profession_key] ~= true then
+            return false
+        end
+    elseif profession_filter ~= FILTER_ALL and recipe.profession_key ~= profession_filter then
         return false
     end
     local required_rank = self.query_rank_filter_active == true and self.query_rank_filter or self.rank_filter
-    if required_rank ~= FILTER_ALL and tonumber(recipe.tier) ~= required_rank then
+    if required_rank == RANK_MINE then
+        -- "up to my rank": Beginner through the profession's current rank,
+        -- each recipe measured against its own profession; unowned
+        -- professions have rank 0 and never match
+        local profession = self.store.profession_by_key[recipe.profession_key]
+        if tonumber(recipe.tier) > profession.proficiency_level then
+            return false
+        end
+    elseif required_rank ~= FILTER_ALL and tonumber(recipe.tier) ~= required_rank then
         return false
     end
     if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
@@ -3138,12 +3213,32 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
         end
     end
 
-    local availability_filter = self.query_availability_filter_active == true and
-        self.query_availability_filter or self.availability_filter
-    if availability_filter == AVAILABILITY_READY then
-        return status ~= nil and status.craftable == true
-    elseif availability_filter == AVAILABILITY_MISSING then
-        return status ~= nil and status.craftable ~= true
+    local show = self.query_availability_filter_active == true and
+        self.query_availability_filter or self.show_filter
+    if show[AVAILABILITY_READY] == true then
+        -- fetched lazily, only for recipes that survived the cheap filters:
+        -- status evaluation walks material trees and must never run for the
+        -- whole 7.7k-recipe catalog up front
+        local status = self.store:get_recipe_status(recipe, self.scope_key)
+        if status == nil or status.craftable ~= true then
+            return false
+        end
+    end
+    local want_known = show[AVAILABILITY_KNOWN] == true
+    local want_unlearned = show[AVAILABILITY_UNLEARNED] == true
+    if want_known ~= want_unlearned then
+        if want_known then
+            if recipe.known ~= true then
+                return false
+            end
+        else
+            -- "not known" only means something for professions the character
+            -- has: unowned professions are trivially unknown and would drown
+            -- the learnable-but-not-learned signal
+            if recipe.known == true or self.store.owned_profession_keys[recipe.profession_key] ~= true then
+                return false
+            end
+        end
     end
 
     return true
@@ -3164,7 +3259,7 @@ function CraftingWindow:_recipe_filter_signature()
         _safe_string(self.scope_key, ""),
         _safe_string(self.profession_filter, ""),
         _safe_string(self.rank_filter, ""),
-        _safe_string(self.availability_filter, ""),
+        _show_selection_signature(self.show_filter),
         self.favorite_filter_active == true and "favorites" or "",
         _safe_string(self.level_min_filter, ""),
         _safe_string(self.level_max_filter, ""),
@@ -3202,12 +3297,6 @@ function CraftingWindow:_recipe_page_capacity()
     local row_h = math.max(1, _scaled_int(BASE_RECIPE_ROW_H))
     local list_h = math.max(0, self.recipe_list:GetHeight())
     return math.max(1, math.floor(list_h / row_h))
-end
-
-function CraftingWindow:_recipe_filter_needs_status()
-    local availability_filter = self.query_availability_filter_active == true and
-        self.query_availability_filter or self.availability_filter
-    return availability_filter == AVAILABILITY_READY or availability_filter == AVAILABILITY_MISSING
 end
 
 function CraftingWindow:_refresh_recipe_page_controls()
@@ -3276,7 +3365,6 @@ function CraftingWindow:refresh_recipe_list(options)
     local loaded_count = #self.store.recipes
     local pages_mode = self.display_mode == DISPLAY_PAGES
     local page_size = pages_mode == true and self:_recipe_page_capacity() or 0
-    local needs_status = self:_recipe_filter_needs_status()
     local state = {
         selection_changed = false,
         rows_changed = false,
@@ -3293,8 +3381,7 @@ function CraftingWindow:refresh_recipe_list(options)
         self.visible_recipes = {}
         for i = 1, loaded_count do
             local recipe = self.store.recipes[i]
-            local status = needs_status == true and self.store:get_recipe_status(recipe, self.scope_key) or nil
-            if self:_recipe_matches_filters(recipe, status) == true then
+            if self:_recipe_matches_filters(recipe) == true then
                 self.visible_recipes[#self.visible_recipes + 1] = recipe
             end
         end
@@ -3314,8 +3401,7 @@ function CraftingWindow:refresh_recipe_list(options)
         local visible_count_before = #self.visible_recipes
         for i = self._recipe_list_loaded_count + 1, loaded_count do
             local recipe = self.store.recipes[i]
-            local status = needs_status == true and self.store:get_recipe_status(recipe, self.scope_key) or nil
-            if self:_recipe_matches_filters(recipe, status) == true then
+            if self:_recipe_matches_filters(recipe) == true then
                 self.visible_recipes[#self.visible_recipes + 1] = recipe
                 if self.selected_recipe_id == nil then
                     self.selected_recipe_id = recipe.id
