@@ -3273,6 +3273,10 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
     end
 
     local status = self.store:get_recipe_status(recipe, self.scope_key)
+    if status ~= nil and status.craftable == true then
+        -- materialize the lazy craft count only for rows actually rendered
+        self.store:get_recipe_craftable_count(recipe, self.scope_key)
+    end
     local result_item = self:_recipe_result_item(recipe)
     local required_level = self:_recipe_required_level(recipe)
     local row = CraftingRecipeRow(

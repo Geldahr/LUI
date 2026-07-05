@@ -527,7 +527,7 @@ function CraftingStore:Constructor()
     self.profession_option_values = { FILTER_ALL }
     self.source_option_labels = _source_option_labels()
     self.source_option_values = _source_option_values()
-    self._status_cache = {}
+    self:_reset_status_caches()
     self._assets_token = nil
     self._recipe_token = nil
     self._recipes_initialized = false
@@ -701,12 +701,28 @@ function CraftingStore:refresh(force, recipe_batch_size)
     self.current_character_name = current_character
     if ownership_refresh_needed == true then
         self.source_ownership = self:_build_source_ownership(current_character, live_inventory_counts)
-        self._status_cache = {}
+        self:_reset_status_caches()
         self._assets_token = assets_token
         self._live_inventory_token = live_inventory_token
     end
     self.version = self.version + 1
     return true
+end
+
+function CraftingStore:_reset_status_caches()
+    self._status_cache = {}
+    self._scope_stock_cache = {}
+end
+
+-- merged stock tables are expensive to build (every item across sources);
+-- share one per scope for the lifetime of the status cache
+function CraftingStore:_cached_stock_for_scope(scope)
+    local stock = self._scope_stock_cache[scope]
+    if stock == nil then
+        stock = self:_stock_for_scope(scope)
+        self._scope_stock_cache[scope] = stock
+    end
+    return stock
 end
 
 function CraftingStore:get_recipe_status(recipe_or_id, scope_key)
@@ -725,36 +741,93 @@ function CraftingStore:get_recipe_status(recipe_or_id, scope_key)
 
     local cache = self._status_cache[scope]
     if cache[recipe.id] == nil then
-        local stock = self:_stock_for_scope(scope)
-        local evaluation = self:_evaluate_recipe_with_stock(recipe, 1, stock)
-        local craftable_count = 0
-        local craftable_count_limited = false
-        if evaluation ~= nil and evaluation.craftable == true then
-            craftable_count = self:_max_craftable_with_stock(recipe, stock, RECIPE_STATUS_CRAFT_LIMIT)
-            if craftable_count >= RECIPE_STATUS_CRAFT_LIMIT then
-                local over_limit = self:_evaluate_recipe_with_stock(recipe, RECIPE_STATUS_CRAFT_LIMIT + 1, stock)
-                craftable_count_limited = over_limit ~= nil and over_limit.craftable == true
+        local stock = self:_cached_stock_for_scope(scope)
+
+        -- cheap rejection first: an ingredient with no stock at all and no
+        -- known producing recipe can never be satisfied; skip the material
+        -- tree evaluation entirely
+        local impossible = false
+        for i = 1, #recipe.ingredients do
+            local key = recipe.ingredients[i].key
+            if stock[key] == nil and self.known_recipes_by_result[key] == nil then
+                impossible = true
+                break
             end
         end
-        local summary = {
-            craftable = evaluation ~= nil and evaluation.craftable == true or false,
-            craftable_count = craftable_count,
-            craftable_count_limited = craftable_count_limited,
-            used_expansion = evaluation ~= nil and evaluation.used_expansion == true or false,
-            ingredients = {},
-        }
-        if evaluation ~= nil and type(evaluation.ingredients) == "table" then
+
+        local summary
+        if impossible == true then
+            summary = {
+                craftable = false,
+                craftable_count = 0,
+                craftable_count_limited = false,
+                used_expansion = false,
+                ingredients = {},
+            }
+            for i = 1, #recipe.ingredients do
+                local ingredient = recipe.ingredients[i]
+                summary.ingredients[i] = {
+                    satisfied = (tonumber(stock[ingredient.key]) or 0) >= ingredient.quantity,
+                    expanded = false,
+                }
+            end
+        else
+            local evaluation = self:_evaluate_recipe_with_stock(recipe, 1, stock)
+            -- craftable_count stays nil until a consumer asks for it
+            -- (get_recipe_craftable_count): the capped count search costs
+            -- ~10 more tree evaluations per recipe and only rendered rows
+            -- ever display it
+            local craftable_count = nil
+            if evaluation.craftable ~= true then
+                craftable_count = 0
+            end
+            summary = {
+                craftable = evaluation.craftable == true,
+                craftable_count = craftable_count,
+                craftable_count_limited = false,
+                used_expansion = evaluation.used_expansion == true,
+                ingredients = {},
+            }
             for i = 1, #evaluation.ingredients do
                 local node = evaluation.ingredients[i]
-                summary.ingredients[#summary.ingredients + 1] = {
-                    satisfied = node ~= nil and node.satisfied == true or false,
-                    expanded = node ~= nil and node.expanded == true or false,
+                summary.ingredients[i] = {
+                    satisfied = node.satisfied == true,
+                    expanded = node.expanded == true,
                 }
             end
         end
         cache[recipe.id] = summary
     end
     return cache[recipe.id]
+end
+
+function CraftingStore:get_recipe_craftable_count(recipe_or_id, scope_key)
+    local recipe = recipe_or_id
+    if type(recipe_or_id) ~= "table" then
+        recipe = self.recipe_by_id[recipe_or_id]
+    end
+    if type(recipe) ~= "table" then
+        return 0, false
+    end
+
+    local status = self:get_recipe_status(recipe, scope_key)
+    if status == nil or status.craftable ~= true then
+        return 0, false
+    end
+
+    if status.craftable_count == nil then
+        local scope = _normalized_scope_key(scope_key)
+        local stock = self:_cached_stock_for_scope(scope)
+        local craftable_count = self:_max_craftable_with_stock(recipe, stock, RECIPE_STATUS_CRAFT_LIMIT)
+        local limited = false
+        if craftable_count >= RECIPE_STATUS_CRAFT_LIMIT then
+            local over_limit = self:_evaluate_recipe_with_stock(recipe, RECIPE_STATUS_CRAFT_LIMIT + 1, stock)
+            limited = over_limit.craftable == true
+        end
+        status.craftable_count = craftable_count
+        status.craftable_count_limited = limited
+    end
+    return status.craftable_count, status.craftable_count_limited == true
 end
 
 function CraftingStore:get_item(item_key)
@@ -1238,7 +1311,7 @@ function CraftingStore:_start_recipe_load(current_character)
     self.known_recipes_by_result = {}
     self.profession_option_labels = profession_labels
     self.profession_option_values = profession_values
-    self._status_cache = {}
+    self:_reset_status_caches()
     self._recipe_token = tostring(current_character or "")
     self._recipes_initialized = true
     self._recipe_loading = #recipe_queue > 0
@@ -1315,7 +1388,7 @@ function CraftingStore:_step_recipe_load(batch_size)
             tostring(#self.professions),
             tostring(#self.recipes),
         }, "\30")
-        self._status_cache = {}
+        self:_reset_status_caches()
         self._known_loading = type(self._known_queue) == "table" and #self._known_queue > 0
     end
 
@@ -1436,7 +1509,7 @@ function CraftingStore:_step_known_pass()
         self._known_queue = nil
         -- craftability can change now that known recipes may expand
         -- material trees; recompute statuses on demand
-        self._status_cache = {}
+        self:_reset_status_caches()
         return true
     end
     return false
