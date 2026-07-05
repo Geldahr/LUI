@@ -1206,6 +1206,13 @@ function BestiaryWindow:Constructor()
     end
     -- same look as the config window tab bars
     self.encyclopedia_tabs:set_content_padding(4)
+    self.encyclopedia_tabs:set_show_border_left(false)
+    self.encyclopedia_tabs:set_show_border_right(false)
+    self.encyclopedia_tabs:set_show_border_bottom(false)
+    -- the border setters also drop the tab-button caps; restore them
+    self.encyclopedia_tabs:set_show_tab_cap_left(true)
+    self.encyclopedia_tabs:set_show_tab_cap_right(true)
+    self.encyclopedia_tabs:set_show_tab_cap_bottom(true)
     self.encyclopedia_tabs:set_scale(State.settings.global.scale)
     self.encyclopedia_tabs:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 3))
     self.encyclopedia_tabs:set_selected_index(1, false)
@@ -1276,6 +1283,12 @@ function BestiaryWindow:Constructor()
     self.page_label:SetParent(self.page_bar)
     self.page_label:SetMouseVisible(false)
     self.page_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+
+    self.results_label = UI.Widgets.LuiLabel()
+    self.results_label:SetParent(self.bestiary_host)
+    self.results_label:SetMouseVisible(false)
+    self.results_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.results_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
 
     self.next_button = UI.Widgets.LuiButton()
     self.next_button:SetParent(self.page_bar)
@@ -1576,6 +1589,7 @@ function BestiaryWindow:apply_settings()
     self.prev_button:set_font(button_font)
     self.page_label:SetFont(button_font)
     self.next_button:set_font(button_font)
+    self.results_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.level_label:SetFont(button_font)
     self.level_min_box:SetFont(button_font)
     self.level_dash_label:SetFont(button_font)
@@ -2038,6 +2052,11 @@ function BestiaryWindow:layout()
         host_h - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h
     )
 
+    local results_w = _scaled_int(140)
+    self.results_label:SetPosition(margin_left + inner_w - results_w,
+        host_h - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h)
+    self.results_label:SetSize(results_w, bar_h)
+
     self.prev_button:SetPosition(0, 0)
     self.prev_button:SetSize(nav_w, bar_h)
     self.page_label:SetPosition(nav_w + gap, 0)
@@ -2444,6 +2463,7 @@ function BestiaryWindow:refresh_visible_page_layout()
     end
 
     self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, #self.pages)))
+    self.results_label:SetText(tostring(#self.records) .. " " .. TR["results"])
     local column_count, content_w = self:_column_metrics()
     self:_apply_page_layout(page, column_count, content_w)
 end
@@ -2451,6 +2471,7 @@ end
 function BestiaryWindow:render_page()
     local page_count = #self.pages
     self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, page_count)))
+    self.results_label:SetText(tostring(#self.records) .. " " .. TR["results"])
     self.prev_button:set_enabled(page_count > 0 and self.page_index > 1)
     self.next_button:set_enabled(page_count > 0 and self.page_index < page_count)
 

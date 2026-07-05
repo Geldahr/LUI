@@ -948,6 +948,7 @@ LUI.src.Languages.fr.FR = {
     ["Worn Helmet of the Pelennor Fields"] = "Worn Helmet of the Pelennor Fields",
     ["All professions"] = "Tous les métiers",
     ["Rarity"] = "Rareté",
+    ["results"] = "résultats",
     ["Encyclopedia"] = "Encyclopédie",
     ["Equipment"] = "Équipement",
     ["Resources"] = "Ressources",

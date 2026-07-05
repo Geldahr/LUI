@@ -261,6 +261,12 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     self.page_label:SetMouseVisible(false)
     self.page_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 
+    self.results_label = UI.Widgets.LuiLabel()
+    self.results_label:SetParent(self)
+    self.results_label:SetMouseVisible(false)
+    self.results_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.results_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
+
     self.list_host = Turbine.UI.Control()
     self.list_host:SetParent(self)
     self.list_host:SetMouseVisible(false)
@@ -305,6 +311,7 @@ function ItemBrowserPanel:apply_fonts()
     self.level_dash_label:SetFont(font)
     self.level_max_box:SetFont(font)
     self.page_label:SetFont(font)
+    self.results_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.prev_button:set_font(font)
     self.next_button:set_font(font)
     for i = 1, #self._rows do
@@ -439,8 +446,8 @@ function ItemBrowserPanel:_render_page()
         self._rows[slot]:SetVisible(false)
     end
 
-    self.page_label:SetText(tostring(self._page) .. " / " .. tostring(pages) ..
-        "  (" .. tostring(#self._filtered) .. ")")
+    self.page_label:SetText(tostring(self._page) .. " / " .. tostring(pages))
+    self.results_label:SetText(tostring(#self._filtered) .. " " .. TR["results"])
     self.prev_button:set_enabled(self._page > 1)
     self.next_button:set_enabled(self._page < pages)
 end
@@ -514,6 +521,10 @@ function ItemBrowserPanel:layout()
     self.page_label:SetSize(page_w, page_bar_h)
     self.next_button:SetPosition(footer_x + nav_w + gap + page_w + gap, footer_y)
     self.next_button:SetSize(nav_w, page_bar_h)
+
+    local results_w = scaled_int(140)
+    self.results_label:SetPosition(width - margin_r - results_w, footer_y)
+    self.results_label:SetSize(results_w, page_bar_h)
 
     local list_top = search_y + bar_h + gap
     self.list_host:SetPosition(margin_l, list_top)
