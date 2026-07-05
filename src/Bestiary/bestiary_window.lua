@@ -1124,7 +1124,7 @@ local BestiaryWindow = class(UI.Widgets.LuiWindow)
 function BestiaryWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
-    self:set_title(TR["Bestiary"])
+    self:set_title(TR["Encyclopedia"])
     self:set_icon(UI.AssetIds.book_orange_cover)
     self:set_resizable(true)
     self:hide()
@@ -1173,8 +1173,37 @@ function BestiaryWindow:Constructor()
     content_host:SetMouseVisible(true)
     self:set_central_widget(content_host)
 
+    -- Encyclopedia tabs: the tab bar owns the whole central area and hosts
+    -- one content widget per tab -- the bestiary content lives inside
+    -- bestiary_host (tab 1), item browsers inside their own hosts
+    self._item_panels = {}
+    self._item_tab_hosts = {}
+    self._active_encyclopedia_tab = 1
+    self.bestiary_host = Turbine.UI.Control()
+    self.bestiary_host:SetMouseVisible(true)
+
+    self.encyclopedia_tabs = UI.Widgets.LuiTabBar()
+    self.encyclopedia_tabs:SetParent(content_host)
+    self.encyclopedia_tabs:add_tab(TR["Bestiary"], self.bestiary_host)
+    for tab = 2, 4 do
+        local host = Turbine.UI.Control()
+        host:SetMouseVisible(true)
+        self._item_tab_hosts[tab] = host
+    end
+    self.encyclopedia_tabs:add_tab(TR["Equipment"], self._item_tab_hosts[2])
+    self.encyclopedia_tabs:add_tab(TR["Resources"], self._item_tab_hosts[3])
+    self.encyclopedia_tabs:add_tab(TR["Consumables"], self._item_tab_hosts[4])
+    self.encyclopedia_tabs.on_tab_changed = function(index)
+        self:_set_encyclopedia_tab(index)
+    end
+    -- same look as the config window tab bars
+    self.encyclopedia_tabs:set_content_padding(4)
+    self.encyclopedia_tabs:set_scale(State.settings.global.scale)
+    self.encyclopedia_tabs:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 3))
+    self.encyclopedia_tabs:set_selected_index(1, false)
+
     self.nav_bar = Turbine.UI.Control()
-    self.nav_bar:SetParent(content_host)
+    self.nav_bar:SetParent(self.bestiary_host)
 
     local menu_bar = self:get_menu_bar()
     self.order_menu = menu_bar:add_menu(TR["Order"])
@@ -1216,7 +1245,7 @@ function BestiaryWindow:Constructor()
     })
 
     self.page_bar = Turbine.UI.Control()
-    self.page_bar:SetParent(content_host)
+    self.page_bar:SetParent(self.bestiary_host)
 
     self.prev_button = UI.Widgets.LuiButton()
     self.prev_button:SetParent(self.page_bar)
@@ -1258,10 +1287,10 @@ function BestiaryWindow:Constructor()
     end
 
     self.filter_bar = Turbine.UI.Control()
-    self.filter_bar:SetParent(content_host)
+    self.filter_bar:SetParent(self.bestiary_host)
 
     self.level_bar = Turbine.UI.Control()
-    self.level_bar:SetParent(content_host)
+    self.level_bar:SetParent(self.bestiary_host)
 
     self.level_label = UI.Widgets.LuiLabel()
     self.level_label:SetParent(self.level_bar)
@@ -1430,7 +1459,7 @@ function BestiaryWindow:Constructor()
     end
 
     self.content = Turbine.UI.Control()
-    self.content:SetParent(content_host)
+    self.content:SetParent(self.bestiary_host)
     self.content:SetMouseVisible(false)
 
     self.empty_label = UI.Widgets.LuiLabel()
@@ -1546,6 +1575,11 @@ function BestiaryWindow:apply_settings()
     self.filter_tb:SetFont(button_font)
     self.clear_button:set_font(button_font)
     self.area_label:SetFont(button_font)
+    self.encyclopedia_tabs:set_scale(State.settings.global.scale)
+    self.encyclopedia_tabs:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 3))
+    for _, panel in pairs(self._item_panels) do
+        panel:apply_fonts()
+    end
     self:ensure_area_shortcut()
     self.genus_label:SetFont(button_font)
     self.genus_dropdown:SetFont(button_font)
@@ -1957,7 +1991,7 @@ function BestiaryWindow:_content_metrics()
     local level_h = _scaled_int(BASE_BAR_H)
     local filter_h = _scaled_int(BASE_FILTER_H)
     local gap = _scaled_int(BASE_GAP)
-    local host_w, host_h = self:central_widget():GetSize()
+    local host_w, host_h = self.bestiary_host:GetSize()
     local inner_w = host_w - margin_left - margin_right
     local content_top = margin_top + bar_h + gap + level_h + gap + filter_h + gap
     local content_h = host_h - content_top - margin_bottom - gap - bar_h
@@ -1965,6 +1999,21 @@ function BestiaryWindow:_content_metrics()
 end
 
 function BestiaryWindow:layout()
+    -- the tab bar owns the whole central area; sizing it lays out the
+    -- selected tab's content host synchronously, so the bestiary metrics
+    -- below read a valid bestiary_host size
+    local central_w, central_h = self:central_widget():GetSize()
+    self.encyclopedia_tabs:SetPosition(0, 0)
+    self.encyclopedia_tabs:SetSize(central_w, central_h)
+
+    local active_panel = self._item_panels[self._active_encyclopedia_tab]
+    if active_panel ~= nil then
+        local host = self._item_tab_hosts[self._active_encyclopedia_tab]
+        active_panel:SetPosition(0, 0)
+        active_panel:SetSize(host:GetSize())
+        active_panel:layout()
+    end
+
     local margin_left, margin_top, inner_w, content_top, content_h, bar_h, level_h, filter_h, gap = self:_content_metrics()
 
     self.nav_bar:SetPosition(margin_left, margin_top)
@@ -1974,7 +2023,7 @@ function BestiaryWindow:layout()
     local page_w = _scaled_int(BASE_PAGE_W)
 
     self.page_bar:SetSize((2 * nav_w) + page_w + (2 * gap), bar_h)
-    local _, host_h = self:central_widget():GetSize()
+    local _, host_h = self.bestiary_host:GetSize()
     self.page_bar:SetPosition(
         margin_left + math.max(0, math.floor((inner_w - self.page_bar:GetWidth()) / 2)),
         host_h - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h
@@ -2071,6 +2120,22 @@ function BestiaryWindow:layout()
     self.empty_label:SetSize(inner_w, bar_h)
 end
 
+-- tab 1 = bestiary (this window's own content); tabs 2-4 are item browser
+-- panels laid over the content area, created on first activation
+local ENCYCLOPEDIA_TAB_BUCKETS = { nil, "equipment", "resource", "consumable" }
+
+function BestiaryWindow:_set_encyclopedia_tab(index)
+    self._active_encyclopedia_tab = index
+    -- the tab bar shows/hides the tab hosts itself; item panels are only
+    -- created lazily inside their host on first activation
+    if index ~= 1 and self._item_panels[index] == nil then
+        local panel = Bestiary.ItemBrowserPanel(ENCYCLOPEDIA_TAB_BUCKETS[index], self)
+        panel:SetParent(self._item_tab_hosts[index])
+        self._item_panels[index] = panel
+    end
+    self:layout()
+end
+
 function BestiaryWindow:refresh_from_store(force)
     local generation = BestiaryCache.generation or 0
     if force ~= true and self._last_generation == generation then
@@ -2107,7 +2172,7 @@ function BestiaryWindow:_measure_record_height(record, width)
 end
 
 function BestiaryWindow:_column_metrics()
-    local host_w = self:central_widget():GetSize()
+    local host_w = self.bestiary_host:GetSize()
     local window_w = math.max(1, math.floor(host_w + 0.5))
     local content_w = math.max(1, math.floor(self.content:GetWidth() + 0.5))
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)

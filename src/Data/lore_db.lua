@@ -119,8 +119,9 @@ function Lore.import_step(package_name)
     import(package_name)
 end
 
--- the Items files are the heavy ones (records + labels + name index,
--- several MB each); consumers stage exactly these across ticks
+-- the Items files are the heavy ones (records + labels + name index +
+-- search + buckets, several MB each); consumers stage exactly these across
+-- ticks so the load_items finalizer only wires already-imported files
 function Lore.items_import_plan()
     local lang = Lore.language()
     return {
@@ -128,6 +129,9 @@ function Lore.items_import_plan()
         "LUI.src.Data.Items.records",
         "LUI.src.Data.Items.labels_" .. lang,
         "LUI.src.Data.Items.names_" .. lang,
+        "LUI.src.Data.Items.classes",
+        "LUI.src.Data.Items.buckets_" .. lang,
+        "LUI.src.Data.Items.search_" .. lang,
     }
 end
 
@@ -274,11 +278,27 @@ function Lore.load_items()
     import("LUI.src.Data.Items.records")
     import("LUI.src.Data.Items.labels_" .. lang)
     import("LUI.src.Data.Items.names_" .. lang)
+    import("LUI.src.Data.Items.classes")
+    import("LUI.src.Data.Items.buckets_" .. lang)
+    import("LUI.src.Data.Items.search_" .. lang)
     local Data = _G.LoreData
     Items.M = Data["Items.manifest"]
     Items.R = Data["Items.records"]
     Items.L = Data["Items.labels_" .. lang]
     Items.NM = Data["Items.names_" .. lang]
+    Items.CLASSES = Data["Items.classes"].CLASSES[lang]
+    Items.BUCKET_CLASSES = Data["Items.classes"].BUCKET_CLASSES
+    Items.FOLD = Data["Items.classes"].FOLD
+    Items.QUALITY_LABELS = Data["Items.classes"].QUALITIES[lang]
+    Items.BK = Data["Items.buckets_" .. lang]
+    Items.S = Data["Items.search_" .. lang]
+    Items._bucket_lists = {}
+    Items._search_cache = {}
+    Items.QUALITY_NAMES = Items.M.enums.quality
+    Items.QUALITY_CODES = {}
+    for code = 1, #Items.QUALITY_NAMES do
+        Items.QUALITY_CODES[Items.QUALITY_NAMES[code]] = code
+    end
     Items.count = Items.M.count
     local M = Items.M
     -- field byte offsets within a record tuple
@@ -308,6 +328,11 @@ function Items.ordinal_of(id)
     return _bsearch_id(Items.R.IDS, M.id_width, M.count, target)
 end
 
+function Items.id_of(ordinal)
+    local M = Items.M
+    return u(Items.R.IDS, (ordinal - 1) * M.id_width + 1, M.id_width) + M.base_id
+end
+
 function Items.label(ordinal)
     local L = Items.L
     local w = L.loff_width
@@ -334,6 +359,125 @@ function Items.quality_name(ordinal)
         return nil
     end
     return Items.M.enums.quality[code]
+end
+
+function Items.bucket(ordinal)
+    return _item_field(ordinal, "bucket")
+end
+
+function Items.class_code(ordinal)
+    return _item_field(ordinal, "class")
+end
+
+function Items.class_name(ordinal)
+    return Items.CLASSES[_item_field(ordinal, "class")]
+end
+
+function Items.quality_code(ordinal)
+    return _item_field(ordinal, "quality")
+end
+
+function Items.level(ordinal)
+    return _item_field(ordinal, "level")
+end
+
+-- per-bucket ordinal list, sorted by display label at build time
+function Items.bucket_list(bucket_name)
+    local cached = Items._bucket_lists[bucket_name]
+    if cached ~= nil then
+        return cached
+    end
+    local blob = Items.BK["B_" .. string.upper(bucket_name)]
+    local w = Items.BK.ord_width
+    local list = {}
+    for k = 1, #blob / w do
+        list[k] = u(blob, (k - 1) * w + 1, w)
+    end
+    Items._bucket_lists[bucket_name] = list
+    return list
+end
+
+-- fold a typed needle exactly like the build-time search blobs: ASCII
+-- lowering plus the generated accent map
+function Items.fold_needle(text)
+    local folded = string.lower(text)
+    for from, to in pairs(Items.FOLD) do
+        folded = folded:gsub(from, to)
+    end
+    return folded
+end
+
+-- type-ahead search over the folded name blob: one C-speed scan per novel
+-- query, refinement for extensions, session cache for repeats/backspace.
+-- Returns a set { ordinal = true } plus its size; nil means "no filter"
+-- (empty query).
+function Items.search(query)
+    local needle = Items.fold_needle(query)
+    if needle == "" then
+        return nil, 0
+    end
+    local cached = Items._search_cache[needle]
+    if cached ~= nil then
+        return cached.set, cached.count
+    end
+
+    local S = Items.S
+    local sw = S.soff_width
+    local function soff(k)
+        return u(S.SOFF, (k - 1) * sw + 1, sw)
+    end
+    local function entry_at(pos)
+        local lo, hi = 1, Items.count
+        while lo < hi do
+            local mid = floor((lo + hi + 1) / 2)
+            if soff(mid) <= pos then
+                lo = mid
+            else
+                hi = mid - 1
+            end
+        end
+        return lo
+    end
+
+    -- refine from the longest cached prefix if one exists
+    local parent = nil
+    for k = #needle - 1, 1, -1 do
+        local candidate = Items._search_cache[string.sub(needle, 1, k)]
+        if candidate ~= nil then
+            parent = candidate
+            break
+        end
+    end
+
+    local set, count = {}, 0
+    if parent ~= nil then
+        for ordinal in pairs(parent.set) do
+            local from = soff(ordinal)
+            local to = soff(ordinal + 1) - 2
+            local s = find(S.SRCH, needle, from, true)
+            -- a hit starting inside the entry cannot cross the trailing
+            -- newline (needles never contain one)
+            if s ~= nil and s <= to then
+                set[ordinal] = true
+                count = count + 1
+            end
+        end
+    else
+        local pos = 1
+        while true do
+            local s = find(S.SRCH, needle, pos, true)
+            if s == nil then
+                break
+            end
+            local ordinal = entry_at(s)
+            set[ordinal] = true
+            count = count + 1
+            pos = soff(ordinal + 1)
+        end
+    end
+
+    Items._search_cache[needle] = { set = set, count = count }
+    return set, count
 end
 
 -- composite icon "main-background-shadow-underlay": up to 4 numeric layers
