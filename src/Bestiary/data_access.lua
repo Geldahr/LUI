@@ -572,16 +572,12 @@ local function _build_source_index(source)
     return index
 end
 
-local BUILTIN_INDEX = nil
 local CACHE_INDEX = nil
 local CACHE_GENERATION = nil
 
 function Bestiary.DataAccess.get_builtin_index()
-    if BUILTIN_INDEX == nil or BUILTIN_INDEX.source ~= BUILTIN_BESTIARY then
-        BUILTIN_INDEX = _build_source_index(BUILTIN_BESTIARY)
-    end
-
-    return BUILTIN_INDEX
+    -- baked at pack time; same shape _build_source_index produces
+    return _G.LUI.Data.Lore.Bestiary.builtin_index()
 end
 
 function Bestiary.DataAccess.get_cache_index()

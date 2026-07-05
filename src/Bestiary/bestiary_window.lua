@@ -254,7 +254,17 @@ local function _merged_bestiary()
         end
     end
 
-    merge_source(BUILTIN_BESTIARY)
+    -- the packed builtin DB iterates by ordinal (its proxy table only
+    -- serves point lookups); alias entries are not records, so no alias
+    -- filtering is needed here
+    local LoreBestiary = _G.LUI.Data.Lore.Bestiary
+    _G.LUI.Data.Lore.load_bestiary()
+    for ordinal = 1, LoreBestiary.count do
+        local name = LoreBestiary.key_at(ordinal)
+        merged[name] = DATA_ACCESS.new_merged_entry(name)
+        DATA_ACCESS.merge_entry(merged[name], LoreBestiary.decode(ordinal), name)
+    end
+
     local cache = DATA_ACCESS.ensure_cache()
     merge_source(cache)
 
@@ -1443,9 +1453,11 @@ function BestiaryWindow:Constructor()
             local tracker = Windows.bestiary_tracker
             tracker:flush_pending()
             self.last_update_at = 0
-            self._last_generation = nil
             self:bring_to_front()
-            self:refresh_from_store(true)
+            -- generation-gated: flush_pending above bumps the cache
+            -- generation when new kills landed, so an unchanged bestiary
+            -- reopens without rebuilding 12k records
+            self:refresh_from_store(false)
             self:sync_area_filter_query()
             self:apply_current_area_filter(true)
         else
