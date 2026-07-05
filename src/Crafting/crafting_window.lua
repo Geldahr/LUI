@@ -262,6 +262,20 @@ local function _fixed_int(value)
     return math.floor(value + 0.5)
 end
 
+-- icon sides and the containers that center them snap to even pixel counts:
+-- (container - icon) stays even, so floor((container - icon) / 2) is a
+-- perfect center at every UI scale
+local function _even_int(value)
+    local out = math.floor((tonumber(value) or 0) + 0.5)
+    if out % 2 ~= 0 then
+        out = out - 1
+    end
+    if out < 0 then
+        out = 0
+    end
+    return out
+end
+
 local function _safe_string(value, fallback)
     if value == nil then
         return fallback or ""
@@ -738,8 +752,46 @@ function CraftingItemIcon:Constructor(on_click, on_hover_change)
     self:bind_item(nil, nil, nil)
 end
 
+-- native item tooltip without an ItemInfo object: the client resolves
+-- "0x0,0x<gameId>" item shortcuts with full live item data (stats and all),
+-- and our lore DB carries the real game ids. The quickslot is a tooltip
+-- host only: it sits *beneath* our mouse-transparent icon images, so its
+-- own rendering (grayed for unowned items, native-size art) stays hidden
+-- while hover still reaches it.
+function CraftingItemIcon:_ensure_quickslot()
+    if self.quickslot ~= nil then
+        return
+    end
+
+    local quickslot = Turbine.UI.Lotro.Quickslot()
+    quickslot:SetParent(self)
+    quickslot:SetZOrder(-1)
+    quickslot:SetVisible(false)
+    quickslot:SetMouseVisible(false)
+    if quickslot.SetAllowDrop ~= nil then
+        quickslot:SetAllowDrop(false)
+    end
+    quickslot.MouseEnter = function()
+        if type(self._on_hover_change) == "function" then
+            self._on_hover_change(true)
+        end
+    end
+    quickslot.MouseClick = function(_, args)
+        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        if type(self._on_click) == "function" then
+            self._on_click()
+        end
+    end
+
+    quickslot:SetPosition(0, 0)
+    quickslot:SetSize(self._side, self._side)
+    self.quickslot = quickslot
+end
+
 function CraftingItemIcon:set_side(side)
-    side = math.max(0, _fixed_int(side or BASE_ICON_SIDE))
+    side = _even_int(side or BASE_ICON_SIDE)
     self._side = side
 
     self:SetSize(side, side)
@@ -749,27 +801,35 @@ function CraftingItemIcon:set_side(side)
     self.foreground:set_size(side, side)
     self.item_info_control:SetPosition(ITEM_INFO_CONTROL_OFFSET, ITEM_INFO_CONTROL_OFFSET)
     self.item_info_control:SetSize(side + ITEM_INFO_CONTROL_EXTRA, side + ITEM_INFO_CONTROL_EXTRA)
+    if self.quickslot ~= nil then
+        self.quickslot:SetPosition(0, 0)
+        self.quickslot:SetSize(side, side)
+    end
 end
 
-function CraftingItemIcon:bind_item(item_info, icon_id, background_image_id)
-    local has_visual = item_info ~= nil or icon_id ~= nil or background_image_id ~= nil
+function CraftingItemIcon:bind_item(item_info, icon_id, background_image_id, item_id)
+    local has_visual = item_info ~= nil or icon_id ~= nil or background_image_id ~= nil or item_id ~= nil
     local use_item_info = item_info ~= nil and self.item_info_control.SetItemInfo ~= nil
+    local use_quickslot = use_item_info ~= true and item_id ~= nil
+    -- our images stay the visual in quickslot mode; the quickslot only
+    -- hosts the native tooltip underneath them
+    local show_images = use_item_info ~= true
     self:SetVisible(has_visual)
 
-    if use_item_info == true then
-        self.background:set_icon(nil, self._side)
-    else
+    if show_images == true then
         self.background:set_icon(background_image_id, self._side)
+    else
+        self.background:set_icon(nil, self._side)
     end
-    self.background:SetVisible(use_item_info ~= true and background_image_id ~= nil)
+    self.background:SetVisible(show_images == true and background_image_id ~= nil)
     _set_stretch_mode_zero(self.background)
 
-    if use_item_info == true then
-        self.foreground:set_icon(nil, self._side)
-    else
+    if show_images == true then
         self.foreground:set_icon(icon_id, self._side)
+    else
+        self.foreground:set_icon(nil, self._side)
     end
-    self.foreground:SetVisible(use_item_info ~= true and icon_id ~= nil)
+    self.foreground:SetVisible(show_images == true and icon_id ~= nil)
     _set_stretch_mode_zero(self.foreground)
 
     if self.item_info_control.SetItemInfo ~= nil then
@@ -778,6 +838,17 @@ function CraftingItemIcon:bind_item(item_info, icon_id, background_image_id)
     self.item_info_control:SetVisible(use_item_info == true)
     self.item_info_control:SetMouseVisible(use_item_info == true)
     _set_stretch_mode_zero(self.item_info_control)
+
+    if use_quickslot == true then
+        self:_ensure_quickslot()
+        self.quickslot:SetShortcut(Turbine.UI.Lotro.Shortcut(
+            Turbine.UI.Lotro.ShortcutType.Item,
+            string.format("0x0,0x%X", item_id)))
+    end
+    if self.quickslot ~= nil then
+        self.quickslot:SetVisible(use_quickslot == true)
+        self.quickslot:SetMouseVisible(use_quickslot == true)
+    end
 end
 
 function CraftingItemIcon:destroy()
@@ -883,7 +954,7 @@ function CraftingRecipeRow:set_scale(scale)
 end
 
 function CraftingRecipeRow:set_width(width)
-    self:SetSize(width, _scaled_int(BASE_RECIPE_ROW_H))
+    self:SetSize(width, _even_int(_scaled_int(BASE_RECIPE_ROW_H)))
     self:_layout()
 end
 
@@ -922,7 +993,7 @@ function CraftingRecipeRow:set_data(recipe, status, result_item, required_level,
     self.status_label:SetForeColor(CraftingWindow._status_color(nil, status))
 
     if result_item ~= nil then
-        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id)
+        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id, result_item.item_id)
     else
         self.icon:bind_item(nil, nil, nil)
     end
@@ -952,9 +1023,7 @@ function CraftingRecipeRow:_layout()
     if icon_side > max_icon_side then
         icon_side = max_icon_side
     end
-    if icon_side < 0 then
-        icon_side = 0
-    end
+    icon_side = _even_int(icon_side)
     local status_w = _scaled_int(BASE_STATUS_W)
     local favorite_w = _favorite_icon_size()
     local text_left = strip_w + gap + icon_side + gap
@@ -1085,16 +1154,16 @@ function CraftingIngredientRow:set_scale(scale)
 end
 
 function CraftingIngredientRow:set_width(width)
-    self:SetSize(width, _scaled_int(BASE_INGREDIENT_ROW_H))
+    self:SetSize(width, _even_int(_scaled_int(BASE_INGREDIENT_ROW_H)))
     self:_layout()
 end
 
-function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level, source_hint_text, source_hint_color)
+function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level, source_hint_text, source_hint_color, item_id)
     self._indent_level = math.max(0, math.floor((tonumber(indent_level) or 0) + 0.5))
     self._detail_text = detail_text or ""
     self._source_hint_text = source_hint_text or ""
     self._source_hint_color = source_hint_color or Style.ALTERNATE_FOREGROUND
-    self.icon:bind_item(item_info, icon_id, background_image_id)
+    self.icon:bind_item(item_info, icon_id, background_image_id, item_id)
     self.name:SetText(label_text or "")
     self.detail:SetText(self._detail_text)
     self.source_hint:SetText(self._source_hint_text)
@@ -1132,9 +1201,7 @@ function CraftingIngredientRow:_layout()
     if icon_side > max_icon_side then
         icon_side = max_icon_side
     end
-    if icon_side < 0 then
-        icon_side = 0
-    end
+    icon_side = _even_int(icon_side)
     local left = strip_w + gap + indent_w + icon_side + gap
     local amount_x = width - amount_w - gap
     local text_right = amount_x - gap
@@ -1249,12 +1316,12 @@ function CraftingResultInfoRow:set_scale(scale)
 end
 
 function CraftingResultInfoRow:set_width(width)
-    self:SetSize(width, _scaled_int(BASE_CRITICAL_RESULT_ROW_H))
+    self:SetSize(width, _even_int(_scaled_int(BASE_CRITICAL_RESULT_ROW_H)))
     self:_layout()
 end
 
-function CraftingResultInfoRow:set_data(item_info, icon_id, background_image_id, title, detail, color)
-    self.icon:bind_item(item_info, icon_id, background_image_id)
+function CraftingResultInfoRow:set_data(item_info, icon_id, background_image_id, title, detail, color, item_id)
+    self.icon:bind_item(item_info, icon_id, background_image_id, item_id)
     self.title:SetText(title or "")
     self.detail:SetText(detail or "")
     self.status_strip:SetBackColor(color or Style.ALTERNATE_FOREGROUND)
@@ -1272,9 +1339,7 @@ function CraftingResultInfoRow:_layout()
     if icon_side > max_icon_side then
         icon_side = max_icon_side
     end
-    if icon_side < 0 then
-        icon_side = 0
-    end
+    icon_side = _even_int(icon_side)
 
     local text_left = strip_w + gap + icon_side + gap
     local text_w = width - text_left - gap
@@ -1363,7 +1428,7 @@ function CraftingPlanRow:set_scale(scale)
 end
 
 function CraftingPlanRow:set_width(width)
-    self:SetSize(width, _scaled_int(BASE_PLAN_ROW_H))
+    self:SetSize(width, _even_int(_scaled_int(BASE_PLAN_ROW_H)))
     self:_layout()
 end
 
@@ -1375,7 +1440,7 @@ end
 function CraftingPlanRow:set_data(recipe, result_item, result_name, plan_count, evaluation, craftable_count)
     self.recipe = recipe
     if result_item ~= nil then
-        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id)
+        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id, result_item.item_id)
     else
         self.icon:bind_item(nil, nil, nil)
     end
@@ -1414,9 +1479,7 @@ function CraftingPlanRow:_layout()
     if icon_side > max_icon_side then
         icon_side = max_icon_side
     end
-    if icon_side < 0 then
-        icon_side = 0
-    end
+    icon_side = _even_int(icon_side)
     local button_w = _scaled_int(BASE_SMALL_BUTTON_W)
     local count_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local control_h = _scaled_int(BASE_BAR_H)
@@ -3298,7 +3361,7 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
 end
 
 function CraftingWindow:_recipe_page_capacity()
-    local row_h = math.max(1, _scaled_int(BASE_RECIPE_ROW_H))
+    local row_h = math.max(2, _even_int(_scaled_int(BASE_RECIPE_ROW_H)))
     local list_h = math.max(0, self.recipe_list:GetHeight())
     return math.max(1, math.floor(list_h / row_h))
 end
@@ -3532,7 +3595,8 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
         self:_node_status_color(node),
         indent_level,
         source_hint_text,
-        source_hint_color
+        source_hint_color,
+        item ~= nil and item.item_id or nil
     )
     row:set_source_breakdown(
         source_breakdown,
@@ -3606,7 +3670,8 @@ function CraftingWindow:_refresh_critical_result_detail(recipe)
             critical_item.background_image_id,
             critical_item.name,
             self:_critical_result_detail(recipe),
-            STATUS_AUTO
+            STATUS_AUTO,
+            critical_item.item_id
         )
         self.critical_result_row:SetVisible(true)
     end
@@ -3644,7 +3709,8 @@ function CraftingWindow:refresh_selected_recipe()
     self.detail_icon:bind_item(
         result_item ~= nil and result_item.item_info or nil,
         result_item ~= nil and result_item.icon_id or nil,
-        result_item ~= nil and result_item.background_image_id or nil
+        result_item ~= nil and result_item.background_image_id or nil,
+        result_item ~= nil and result_item.item_id or nil
     )
 
     self.detail_title:SetText(result_name)
@@ -3859,7 +3925,8 @@ function CraftingWindow:refresh_plan()
             entry.complete == true and STATUS_READY or STATUS_MISSING,
             0,
             source_hint_text,
-            source_hint_color
+            source_hint_color,
+            entry.item_id
         )
         row:set_source_breakdown(
             source_breakdown,
@@ -4029,8 +4096,8 @@ function CraftingWindow:layout()
     local scroll_w = _fixed_int(BASE_SCROLL_W)
     local plan_header_h = _scaled_int(BASE_PLAN_HEADER_H)
     local section_bar_h = plan_header_h
-    local detail_top_h = math.max(0, _scaled_int(BASE_DETAIL_HEADER_H) - section_bar_h)
-    local critical_result_h = self._critical_result_visible == true and _scaled_int(BASE_CRITICAL_RESULT_ROW_H) or 0
+    local detail_top_h = _even_int(math.max(0, _scaled_int(BASE_DETAIL_HEADER_H) - section_bar_h))
+    local critical_result_h = self._critical_result_visible == true and _even_int(_scaled_int(BASE_CRITICAL_RESULT_ROW_H)) or 0
     local detail_header_h = detail_top_h + critical_result_h + section_bar_h
     local plan_controls_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local loading_track_h = _scaled_int(BASE_LOADING_TRACK_H)
@@ -4181,7 +4248,7 @@ function CraftingWindow:layout()
     self.recipe_split_border:SetSize(recipe_page_w, split_gap)
 
     local detail_inner = self.detail_panel.inner
-    local icon_side = _fixed_int(BASE_ICON_SIDE)
+    local icon_side = _even_int(_fixed_int(BASE_ICON_SIDE))
     local detail_icon_y = math.max(0, math.floor((detail_top_h - icon_side) / 2))
     self.detail_icon:SetPosition(_scaled_int(8), detail_icon_y)
     self.detail_icon:set_side(icon_side)

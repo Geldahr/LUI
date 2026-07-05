@@ -1094,6 +1094,7 @@ function CraftingStore:evaluate_plan_resources(plan_entries, scope_key)
                 key = key,
                 name = item ~= nil and item.name or key,
                 item_info = item ~= nil and item.item_info or nil,
+                item_id = item ~= nil and item.item_id or nil,
                 icon_id = item ~= nil and item.icon_id or nil,
                 background_image_id = item ~= nil and item.background_image_id or nil,
                 quality = item ~= nil and item.quality or nil,
@@ -1535,6 +1536,7 @@ function CraftingStore:_remember_db_item(item_id)
         current = {
             key = key,
             name = name,
+            item_id = item_id,
             icon_id = icon_id,
             background_image_id = background_id,
             quality = DB_QUALITY_TO_LOTRO[Lore.Items.quality_name(ordinal)],
