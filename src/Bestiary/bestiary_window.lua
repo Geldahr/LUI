@@ -33,10 +33,18 @@ local Style = UI.Widgets.Style
 -- Book icon normal: 0x41005F07 25x25
 -- Book icon hover: 0x41005F0F 25x25
 
-local BASE_MARGIN_LEFT = 15
-local BASE_MARGIN_TOP = 11
-local BASE_MARGIN_RIGHT = 15
-local BASE_MARGIN_BOTTOM = 15
+local BASE_MARGIN_LEFT = 8
+local BASE_MARGIN_TOP = 8
+local BASE_MARGIN_RIGHT = 8
+local BASE_MARGIN_BOTTOM = 8
+
+-- shared with the encyclopedia item tabs so all tab content aligns
+Bestiary.CONTENT_MARGINS = {
+    left = BASE_MARGIN_LEFT,
+    top = BASE_MARGIN_TOP,
+    right = BASE_MARGIN_RIGHT,
+    bottom = BASE_MARGIN_BOTTOM,
+}
 local BASE_BAR_H = 21
 local BASE_FILTER_H = 21
 local BASE_GAP = 4

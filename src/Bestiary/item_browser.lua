@@ -454,6 +454,12 @@ function ItemBrowserPanel:layout()
     local width, height = self:GetSize()
     local gap = scaled_int(BASE_GAP)
     local bar_h = scaled_int(BASE_BAR_H)
+    -- shared margins from the bestiary window: all tabs align
+    local margins = Bestiary.CONTENT_MARGINS
+    local margin_l = scaled_int(margins.left)
+    local margin_t = scaled_int(margins.top)
+    local margin_r = scaled_int(margins.right)
+    local margin_b = scaled_int(margins.bottom)
     local level_w = scaled_int(BASE_LEVEL_W)
     local quality_w = scaled_int(BASE_QUALITY_W)
     local class_w = scaled_int(BASE_CLASS_W)
@@ -465,41 +471,41 @@ function ItemBrowserPanel:layout()
     local level_label_w = scaled_int(42)
     local level_block_w = level_label_w + gap + level_w + gap + dash_w + gap + level_w
 
-    local x = gap
-    self.type_label:SetPosition(x, gap)
+    local x = margin_l
+    self.type_label:SetPosition(x, margin_t)
     self.type_label:SetSize(type_label_w, bar_h)
     x = x + type_label_w + gap
-    self.class_dropdown:SetPosition(x, gap)
+    self.class_dropdown:SetPosition(x, margin_t)
     self.class_dropdown:SetSize(class_w, bar_h)
     x = x + class_w + (2 * gap)
-    self.rarity_label:SetPosition(x, gap)
+    self.rarity_label:SetPosition(x, margin_t)
     self.rarity_label:SetSize(rarity_label_w, bar_h)
     x = x + rarity_label_w + gap
-    self.quality_dropdown:SetPosition(x, gap)
+    self.quality_dropdown:SetPosition(x, margin_t)
     self.quality_dropdown:SetSize(quality_w, bar_h)
 
-    local level_x = width - gap - level_block_w
-    self.level_label:SetPosition(level_x, gap)
+    local level_x = width - margin_r - level_block_w
+    self.level_label:SetPosition(level_x, margin_t)
     self.level_label:SetSize(level_label_w, bar_h)
     level_x = level_x + level_label_w + gap
-    self.level_min_box:SetPosition(level_x, gap)
+    self.level_min_box:SetPosition(level_x, margin_t)
     self.level_min_box:SetSize(level_w, bar_h)
     level_x = level_x + level_w + gap
-    self.level_dash_label:SetPosition(level_x, gap)
+    self.level_dash_label:SetPosition(level_x, margin_t)
     self.level_dash_label:SetSize(dash_w, bar_h)
     level_x = level_x + dash_w + gap
-    self.level_max_box:SetPosition(level_x, gap)
+    self.level_max_box:SetPosition(level_x, margin_t)
     self.level_max_box:SetSize(level_w, bar_h)
 
     -- row 2: search across the full width
-    local search_y = gap + bar_h + gap
-    self.search_box:SetPosition(gap, search_y)
-    self.search_box:SetSize(math.max(1, width - (2 * gap)), bar_h)
+    local search_y = margin_t + bar_h + gap
+    self.search_box:SetPosition(margin_l, search_y)
+    self.search_box:SetSize(math.max(1, width - margin_l - margin_r), bar_h)
 
     local nav_w = scaled_int(BASE_NAV_W)
     local page_bar_h = scaled_int(BASE_PAGE_BAR_H)
     local page_w = scaled_int(BASE_PAGE_W)
-    local footer_y = height - gap - page_bar_h
+    local footer_y = height - margin_b - page_bar_h
     local footer_total = (2 * nav_w) + page_w + (2 * gap)
     local footer_x = math.max(0, math.floor((width - footer_total) / 2))
     self.prev_button:SetPosition(footer_x, footer_y)
@@ -509,9 +515,9 @@ function ItemBrowserPanel:layout()
     self.next_button:SetPosition(footer_x + nav_w + gap + page_w + gap, footer_y)
     self.next_button:SetSize(nav_w, page_bar_h)
 
-    local list_top = gap + bar_h + gap + bar_h + gap
-    self.list_host:SetPosition(gap, list_top)
-    self.list_host:SetSize(math.max(1, width - (2 * gap)),
+    local list_top = search_y + bar_h + gap
+    self.list_host:SetPosition(margin_l, list_top)
+    self.list_host:SetSize(math.max(1, width - margin_l - margin_r),
         math.max(1, footer_y - gap - list_top))
 
     self:_refresh_list()
