@@ -1689,14 +1689,21 @@ function AssetsWindow:_refresh_recipes_button()
     local store = self:_get_crafting_store()
     if store ~= nil then
         store:refresh(false, 1)
-        for i = 1, #store.recipes do
-            local recipe = store.recipes[i]
-            local status = store:get_recipe_status(recipe, "server")
-            if status ~= nil and status.craftable == true then
-                count = count + 1
+        loading = store:is_loading() == true or store:is_known_pass_running() == true
+        if loading ~= true then
+            -- only the character's known recipes: the store now holds the
+            -- full DB catalog, and evaluating status across all of it is a
+            -- frame-freezing sweep with a meaningless count
+            for i = 1, #store.recipes do
+                local recipe = store.recipes[i]
+                if recipe.known == true then
+                    local status = store:get_recipe_status(recipe, "server")
+                    if status.craftable == true then
+                        count = count + 1
+                    end
+                end
             end
         end
-        loading = store:is_loading() == true
         self._last_crafting_store_version = tonumber(store.version) or 0
     else
         self._last_crafting_store_version = nil

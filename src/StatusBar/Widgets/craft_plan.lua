@@ -27,8 +27,6 @@ local LOADING_TRACK_BACK = Turbine.UI.Color(0.35, 0.10, 0.12, 0.16)
 local LOADING_FILL_BACK = Turbine.UI.Color(0.65, 0.38, 0.54, 0.78)
 local POPUP_ROW_GAP = 2
 local POPUP_SECTION_GAP = 4
-local ITEM_INFO_CONTROL_OFFSET = -3
-local ITEM_INFO_CONTROL_EXTRA = 3
 
 local function _set_stretch_mode_fit(control)
     if control ~= nil and control.SetStretchMode ~= nil then
@@ -95,7 +93,6 @@ function CraftPlanItemSlot:Constructor(forward_target)
     Turbine.UI.Control.Constructor(self)
 
     self._forward_target = forward_target
-    self._item_info = nil
     self._interaction_enabled = true
 
     self.background = UI.Widgets.Image()
@@ -116,15 +113,9 @@ function CraftPlanItemSlot:Constructor(forward_target)
     end
     _set_stretch_mode_fit(self.foreground)
 
-    self.item_info_control = Turbine.UI.Lotro.ItemInfoControl()
-    self.item_info_control:SetParent(self)
-    self.item_info_control:SetVisible(false)
-    self.item_info_control:SetMouseVisible(false)
-    self.item_info_control:SetZOrder(0)
-    if self.item_info_control.SetBlendMode ~= nil then
-        self.item_info_control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    end
-    _set_stretch_mode_fit(self.item_info_control)
+    self.quickslot = nil
+    self._quickslot_active = false
+    self._item_id = nil
 
     local function _forward(name, args)
         local target = self._forward_target
@@ -134,18 +125,7 @@ function CraftPlanItemSlot:Constructor(forward_target)
         end
     end
 
-    self.item_info_control.MouseClick = function(_, args)
-        _forward("MouseClick", args)
-    end
-    self.item_info_control.MouseDown = function(_, args)
-        _forward("MouseDown", args)
-    end
-    self.item_info_control.MouseMove = function(_, args)
-        _forward("MouseMove", args)
-    end
-    self.item_info_control.MouseUp = function(_, args)
-        _forward("MouseUp", args)
-    end
+    self._forward = _forward
     local function _set_icon_hover(hovering)
         local target = self._forward_target
         local handler = target ~= nil and target._on_icon_hover_changed or nil
@@ -154,18 +134,60 @@ function CraftPlanItemSlot:Constructor(forward_target)
         end
     end
 
+    self._set_icon_hover = _set_icon_hover
     self.MouseEnter = function()
         _set_icon_hover(true)
     end
     self.MouseLeave = function()
         _set_icon_hover(false)
     end
-    self.item_info_control.MouseEnter = function()
-        _set_icon_hover(true)
+    self.MouseUp = function(_, args)
+        if self.quickslot ~= nil then
+            self.quickslot:SetMouseVisible(self._quickslot_active == true)
+        end
+        _forward("MouseUp", args)
     end
-    self.item_info_control.MouseLeave = function()
-        _set_icon_hover(false)
+end
+
+-- native tooltip host from the lore-DB item id: a hidden quickslot beneath
+-- the mouse-transparent images (same pattern as UI.Widgets.LuiItemIcon);
+-- left-click activation is swallowed on MouseDown
+function CraftPlanItemSlot:_ensure_quickslot()
+    if self.quickslot ~= nil then
+        return
     end
+
+    local quickslot = Turbine.UI.Lotro.Quickslot()
+    quickslot:SetParent(self)
+    quickslot:SetZOrder(-1)
+    quickslot:SetVisible(false)
+    quickslot:SetMouseVisible(false)
+    if quickslot.SetAllowDrop ~= nil then
+        quickslot:SetAllowDrop(false)
+    end
+    quickslot:SetPosition(0, 0)
+    quickslot:SetSize(self._side, self._side)
+    quickslot.MouseEnter = function()
+        self._set_icon_hover(true)
+    end
+    quickslot.MouseLeave = function()
+        self._set_icon_hover(false)
+    end
+    quickslot.MouseDown = function(_, args)
+        self._forward("MouseDown", args)
+        quickslot:SetMouseVisible(false)
+    end
+    quickslot.MouseUp = function(_, args)
+        quickslot:SetMouseVisible(self._quickslot_active == true)
+        self._forward("MouseUp", args)
+    end
+    quickslot.MouseMove = function(_, args)
+        self._forward("MouseMove", args)
+    end
+    quickslot.MouseClick = function(_, args)
+        self._forward("MouseClick", args)
+    end
+    self.quickslot = quickslot
 end
 
 function CraftPlanItemSlot:set_interaction_enabled(enabled)
@@ -180,33 +202,39 @@ function CraftPlanItemSlot:set_side(side)
     self.background:set_size(self._side, self._side)
     self.foreground:SetPosition(0, 0)
     self.foreground:set_size(self._side, self._side)
-    self.item_info_control:SetPosition(ITEM_INFO_CONTROL_OFFSET, ITEM_INFO_CONTROL_OFFSET)
-    self.item_info_control:SetSize(self._side + ITEM_INFO_CONTROL_EXTRA, self._side + ITEM_INFO_CONTROL_EXTRA)
+    if self.quickslot ~= nil then
+        self.quickslot:SetPosition(0, 0)
+        self.quickslot:SetSize(self._side, self._side)
+    end
 end
 
-function CraftPlanItemSlot:bind_item(item_info, icon_id, background_image_id)
-    self._item_info = item_info
+function CraftPlanItemSlot:bind_item(icon_id, background_image_id, item_id)
     self._icon_id = icon_id
     self._background_image_id = background_image_id
+    self._item_id = item_id
     self:_refresh_item_binding()
 end
 
 function CraftPlanItemSlot:_refresh_item_binding()
-    local has_item_info = self._item_info ~= nil and self.item_info_control.SetItemInfo ~= nil
-    local has_manual_visual = self._background_image_id ~= nil or self._icon_id ~= nil
-
     self.background:set_icon(self._background_image_id, self._side)
     self.background:SetVisible(self._background_image_id ~= nil)
     self.foreground:set_icon(self._icon_id, self._side)
     self.foreground:SetVisible(self._icon_id ~= nil)
-    if self.item_info_control.SetItemInfo ~= nil then
-        self.item_info_control:SetItemInfo(self._item_info)
-    end
-    self.item_info_control:SetVisible(has_item_info == true and (has_manual_visual ~= true or self._interaction_enabled == true))
-    self.item_info_control:SetMouseVisible(has_item_info == true and self._interaction_enabled == true)
     _set_stretch_mode_fit(self.background)
     _set_stretch_mode_fit(self.foreground)
-    _set_stretch_mode_fit(self.item_info_control)
+
+    local use_quickslot = self._item_id ~= nil and self._interaction_enabled == true
+    self._quickslot_active = use_quickslot
+    if use_quickslot == true then
+        self:_ensure_quickslot()
+        self.quickslot:SetShortcut(Turbine.UI.Lotro.Shortcut(
+            Turbine.UI.Lotro.ShortcutType.Item,
+            string.format("0x0,0x%X", self._item_id)))
+    end
+    if self.quickslot ~= nil then
+        self.quickslot:SetVisible(use_quickslot == true)
+        self.quickslot:SetMouseVisible(use_quickslot == true)
+    end
 end
 
 function CraftPlanItemSlot:destroy()
@@ -379,9 +407,9 @@ function CraftPlanChip:bind_resource(resource)
     self.label:SetText(self._display_text)
     self.label:SetForeColor(type(resource) == "table" and resource.complete == true and READY_TEXT or MISSING_TEXT)
     self.slot:bind_item(
-        resource ~= nil and resource.item_info or nil,
         resource ~= nil and resource.icon_id or nil,
-        resource ~= nil and resource.background_image_id or nil
+        resource ~= nil and resource.background_image_id or nil,
+        resource ~= nil and resource.item_id or nil
     )
     self:_layout()
     self:_refresh_visual()
@@ -488,9 +516,9 @@ function CraftPlanPopupRow:set_data(resource, width, height)
     self.slot:set_side(icon_w)
     self.slot:SetPosition(CHIP_ICON_MARGIN, icon_y)
     self.slot:bind_item(
-        resource ~= nil and resource.item_info or nil,
         resource ~= nil and resource.icon_id or nil,
-        resource ~= nil and resource.background_image_id or nil
+        resource ~= nil and resource.background_image_id or nil,
+        resource ~= nil and resource.item_id or nil
     )
     self.name:SetText(resource ~= nil and resource.name or "")
     self.amount:SetText(tostring(resource ~= nil and resource.owned or 0) .. "/" .. tostring(resource ~= nil and resource.required or 0))

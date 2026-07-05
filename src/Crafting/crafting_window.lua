@@ -26,6 +26,9 @@ local Style = UI.Widgets.Style
 local FILTER_ALL = "__all"
 local FILTER_MINE = "__mine"
 local RANK_MINE = "__mine"
+-- scroll (non-paged) mode renders real row widgets; cap them so a broad
+-- filter over the full catalog cannot construct thousands in one frame
+local SCROLL_RENDER_CAP = 500
 local AVAILABILITY_READY = "ready"
 local AVAILABILITY_KNOWN = "known"
 local AVAILABILITY_UNLEARNED = "unlearned"
@@ -144,8 +147,6 @@ local BASE_SOURCE_TOOLTIP_MAX_H = 132
 local BASE_SOURCE_TOOLTIP_PAD_X = 12
 local BASE_SOURCE_TOOLTIP_PAD_Y = 9
 local BASE_SOURCE_TOOLTIP_LINE_H = 12
-local ITEM_INFO_CONTROL_OFFSET = -3
-local ITEM_INFO_CONTROL_EXTRA = 3
 local BESTIARY_ACTION_ICON = UI.AssetIds.book_orange_cover
 
 local STATUS_READY = Turbine.UI.Color(1.00, 0.31, 0.78, 0.43)
@@ -266,7 +267,7 @@ end
 -- (container - icon) stays even, so floor((container - icon) / 2) is a
 -- perfect center at every UI scale
 local function _even_int(value)
-    local out = math.floor((tonumber(value) or 0) + 0.5)
+    local out = math.floor(value + 0.5)
     if out % 2 ~= 0 then
         out = out - 1
     end
@@ -386,12 +387,11 @@ local function _source_hint_color(source_key)
 end
 
 local function _format_percent(value)
+    -- critical_chance is an integer percent straight from the lore DB
+    -- (1 means 1%); no fraction heuristic
     local percent = tonumber(value)
     if percent == nil then
         return nil
-    end
-    if percent > 0 and percent <= 1 then
-        percent = percent * 100
     end
     return _format_count(percent) .. "%"
 end
@@ -401,12 +401,10 @@ end
 -- AVAILABILITY_* values; the empty set means "All".
 local function _normalize_show_selection(values)
     local selection = {}
-    if type(values) == "table" then
-        for i = 1, #values do
-            local value = values[i]
-            if value == AVAILABILITY_READY or value == AVAILABILITY_KNOWN or value == AVAILABILITY_UNLEARNED then
-                selection[value] = true
-            end
+    for i = 1, #values do
+        local value = values[i]
+        if value == AVAILABILITY_READY or value == AVAILABILITY_KNOWN or value == AVAILABILITY_UNLEARNED then
+            selection[value] = true
         end
     end
     return selection
@@ -692,174 +690,9 @@ local function _set_stretch_mode_zero(control)
     end
 end
 
-local CraftingItemIcon = class(Turbine.UI.Control)
-
-function CraftingItemIcon:Constructor(on_click, on_hover_change)
-    Turbine.UI.Control.Constructor(self)
-
-    self._on_click = on_click
-    self._on_hover_change = on_hover_change
-    self._side = _fixed_int(BASE_ICON_SIDE)
-
-    self:SetMouseVisible(true)
-
-    self.background = UI.Widgets.Image()
-    self.background:SetParent(self)
-    self.background:SetMouseVisible(false)
-    _set_stretch_mode_zero(self.background)
-
-    self.foreground = UI.Widgets.Image()
-    self.foreground:SetParent(self)
-    self.foreground:SetMouseVisible(false)
-    _set_stretch_mode_zero(self.foreground)
-
-    self.item_info_control = Turbine.UI.Lotro.ItemInfoControl()
-    self.item_info_control:SetParent(self)
-    self.item_info_control:SetMouseVisible(false)
-    self.item_info_control:SetVisible(false)
-    if self.item_info_control.SetBlendMode ~= nil then
-        self.item_info_control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    end
-    if self.item_info_control.SetStretchMode ~= nil then
-        self.item_info_control:SetStretchMode(0)
-    end
-
-    local function forward_hover(hovering)
-        if type(self._on_hover_change) == "function" then
-            self._on_hover_change(hovering == true)
-        end
-    end
-
-    local function forward_click(_, args)
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        if type(self._on_click) == "function" then
-            self._on_click()
-        end
-    end
-
-    self.MouseEnter = function()
-        forward_hover(true)
-    end
-    self.MouseClick = forward_click
-    self.item_info_control.MouseEnter = function()
-        forward_hover(true)
-    end
-    self.item_info_control.MouseClick = forward_click
-
-    self:set_side(self._side)
-    self:bind_item(nil, nil, nil)
-end
-
--- native item tooltip without an ItemInfo object: the client resolves
--- "0x0,0x<gameId>" item shortcuts with full live item data (stats and all),
--- and our lore DB carries the real game ids. The quickslot is a tooltip
--- host only: it sits *beneath* our mouse-transparent icon images, so its
--- own rendering (grayed for unowned items, native-size art) stays hidden
--- while hover still reaches it.
-function CraftingItemIcon:_ensure_quickslot()
-    if self.quickslot ~= nil then
-        return
-    end
-
-    local quickslot = Turbine.UI.Lotro.Quickslot()
-    quickslot:SetParent(self)
-    quickslot:SetZOrder(-1)
-    quickslot:SetVisible(false)
-    quickslot:SetMouseVisible(false)
-    if quickslot.SetAllowDrop ~= nil then
-        quickslot:SetAllowDrop(false)
-    end
-    quickslot.MouseEnter = function()
-        if type(self._on_hover_change) == "function" then
-            self._on_hover_change(true)
-        end
-    end
-    quickslot.MouseClick = function(_, args)
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        if type(self._on_click) == "function" then
-            self._on_click()
-        end
-    end
-
-    quickslot:SetPosition(0, 0)
-    quickslot:SetSize(self._side, self._side)
-    self.quickslot = quickslot
-end
-
-function CraftingItemIcon:set_side(side)
-    side = _even_int(side or BASE_ICON_SIDE)
-    self._side = side
-
-    self:SetSize(side, side)
-    self.background:SetPosition(0, 0)
-    self.background:set_size(side, side)
-    self.foreground:SetPosition(0, 0)
-    self.foreground:set_size(side, side)
-    self.item_info_control:SetPosition(ITEM_INFO_CONTROL_OFFSET, ITEM_INFO_CONTROL_OFFSET)
-    self.item_info_control:SetSize(side + ITEM_INFO_CONTROL_EXTRA, side + ITEM_INFO_CONTROL_EXTRA)
-    if self.quickslot ~= nil then
-        self.quickslot:SetPosition(0, 0)
-        self.quickslot:SetSize(side, side)
-    end
-end
-
-function CraftingItemIcon:bind_item(item_info, icon_id, background_image_id, item_id)
-    local has_visual = item_info ~= nil or icon_id ~= nil or background_image_id ~= nil or item_id ~= nil
-    local use_item_info = item_info ~= nil and self.item_info_control.SetItemInfo ~= nil
-    local use_quickslot = use_item_info ~= true and item_id ~= nil
-    -- our images stay the visual in quickslot mode; the quickslot only
-    -- hosts the native tooltip underneath them
-    local show_images = use_item_info ~= true
-    self:SetVisible(has_visual)
-
-    if show_images == true then
-        self.background:set_icon(background_image_id, self._side)
-    else
-        self.background:set_icon(nil, self._side)
-    end
-    self.background:SetVisible(show_images == true and background_image_id ~= nil)
-    _set_stretch_mode_zero(self.background)
-
-    if show_images == true then
-        self.foreground:set_icon(icon_id, self._side)
-    else
-        self.foreground:set_icon(nil, self._side)
-    end
-    self.foreground:SetVisible(show_images == true and icon_id ~= nil)
-    _set_stretch_mode_zero(self.foreground)
-
-    if self.item_info_control.SetItemInfo ~= nil then
-        self.item_info_control:SetItemInfo(item_info)
-    end
-    self.item_info_control:SetVisible(use_item_info == true)
-    self.item_info_control:SetMouseVisible(use_item_info == true)
-    _set_stretch_mode_zero(self.item_info_control)
-
-    if use_quickslot == true then
-        self:_ensure_quickslot()
-        self.quickslot:SetShortcut(Turbine.UI.Lotro.Shortcut(
-            Turbine.UI.Lotro.ShortcutType.Item,
-            string.format("0x0,0x%X", item_id)))
-    end
-    if self.quickslot ~= nil then
-        self.quickslot:SetVisible(use_quickslot == true)
-        self.quickslot:SetMouseVisible(use_quickslot == true)
-    end
-end
-
-function CraftingItemIcon:destroy()
-    self:bind_item(nil, nil, nil)
-    self:SetVisible(false)
-end
-
-function CraftingItemIcon:prepare_for_list_clear()
-    self:bind_item(nil, nil, nil)
-    self:SetVisible(false)
-end
+-- item icons (layered images + native tooltip from the lore-DB item id)
+-- come from the shared widget
+local CraftingItemIcon = UI.Widgets.LuiItemIcon
 
 local CraftingRecipeRow = class(Turbine.UI.Control)
 
@@ -993,9 +826,9 @@ function CraftingRecipeRow:set_data(recipe, status, result_item, required_level,
     self.status_label:SetForeColor(CraftingWindow._status_color(nil, status))
 
     if result_item ~= nil then
-        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id, result_item.item_id)
+        self.icon:bind(result_item.icon_id, result_item.background_image_id, result_item.item_id)
     else
-        self.icon:bind_item(nil, nil, nil)
+        self.icon:bind(nil, nil, nil)
     end
 
     self:set_favorite(favorite)
@@ -1158,12 +991,12 @@ function CraftingIngredientRow:set_width(width)
     self:_layout()
 end
 
-function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level, source_hint_text, source_hint_color, item_id)
+function CraftingIngredientRow:set_data(icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level, source_hint_text, source_hint_color, item_id)
     self._indent_level = math.max(0, math.floor((tonumber(indent_level) or 0) + 0.5))
     self._detail_text = detail_text or ""
     self._source_hint_text = source_hint_text or ""
     self._source_hint_color = source_hint_color or Style.ALTERNATE_FOREGROUND
-    self.icon:bind_item(item_info, icon_id, background_image_id, item_id)
+    self.icon:bind(icon_id, background_image_id, item_id)
     self.name:SetText(label_text or "")
     self.detail:SetText(self._detail_text)
     self.source_hint:SetText(self._source_hint_text)
@@ -1320,8 +1153,8 @@ function CraftingResultInfoRow:set_width(width)
     self:_layout()
 end
 
-function CraftingResultInfoRow:set_data(item_info, icon_id, background_image_id, title, detail, color, item_id)
-    self.icon:bind_item(item_info, icon_id, background_image_id, item_id)
+function CraftingResultInfoRow:set_data(icon_id, background_image_id, title, detail, color, item_id)
+    self.icon:bind(icon_id, background_image_id, item_id)
     self.title:SetText(title or "")
     self.detail:SetText(detail or "")
     self.status_strip:SetBackColor(color or Style.ALTERNATE_FOREGROUND)
@@ -1440,9 +1273,9 @@ end
 function CraftingPlanRow:set_data(recipe, result_item, result_name, plan_count, evaluation, craftable_count)
     self.recipe = recipe
     if result_item ~= nil then
-        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id, result_item.item_id)
+        self.icon:bind(result_item.icon_id, result_item.background_image_id, result_item.item_id)
     else
-        self.icon:bind_item(nil, nil, nil)
+        self.icon:bind(nil, nil, nil)
     end
     self.name:SetText(result_name or "")
     self.count_box:set_value(plan_count, false)
@@ -1459,7 +1292,7 @@ end
 
 function CraftingPlanRow:set_placeholder_data(label_text, plan_count, loading)
     self.recipe = nil
-    self.icon:bind_item(nil, nil, nil)
+    self.icon:bind(nil, nil, nil)
     self.name:SetText(label_text or "")
     self.count_box:set_value(plan_count, false)
     self.count_box:set_enabled(false)
@@ -1720,17 +1553,16 @@ function CraftingWindow:Constructor()
         { TR["Craftable"], TR["Known"], TR["Not known"] },
         { AVAILABILITY_READY, AVAILABILITY_KNOWN, AVAILABILITY_UNLEARNED }
     )
-    self.availability_dropdown:SetSummaryFormatter(function(selected_values)
+    self.availability_dropdown:SetSummaryFormatter(function(selected_values, labels, values)
         if #selected_values == 0 then
             return TR["All"]
         end
         if #selected_values == 1 then
-            local labels = {
-                [AVAILABILITY_READY] = TR["Craftable"],
-                [AVAILABILITY_KNOWN] = TR["Known"],
-                [AVAILABILITY_UNLEARNED] = TR["Not known"],
-            }
-            return labels[selected_values[1]]
+            for i = 1, #values do
+                if values[i] == selected_values[1] then
+                    return labels[i]
+                end
+            end
         end
         return _format_count(#selected_values) .. " " .. TR["filters"]
     end)
@@ -2794,12 +2626,13 @@ function CraftingWindow:_refresh_rank_options()
     local values = { FILTER_ALL }
     local seen = {}
 
-    for index = 1, #self.store.recipes do
-        local recipe = self.store.recipes[index]
-        local tier = recipe ~= nil and _normalize_rank_filter_value(recipe.tier) or FILTER_ALL
-        if tier ~= FILTER_ALL and seen[tier] ~= true then
-            seen[tier] = true
-            values[#values + 1] = tier
+    -- the store maintains the distinct-tier set incrementally; never rescan
+    -- the whole catalog here
+    for tier in pairs(self.store.recipe_tiers) do
+        local normalized = _normalize_rank_filter_value(tier)
+        if normalized ~= FILTER_ALL and seen[normalized] ~= true then
+            seen[normalized] = true
+            values[#values + 1] = normalized
         end
     end
 
@@ -3283,22 +3116,24 @@ function CraftingWindow:_recipe_matches_filters(recipe)
         -- status evaluation walks material trees and must never run for the
         -- whole 7.7k-recipe catalog up front
         local status = self.store:get_recipe_status(recipe, self.scope_key)
-        if status == nil or status.craftable ~= true then
+        if status.craftable ~= true then
             return false
         end
     end
     local want_known = show[AVAILABILITY_KNOWN] == true
     local want_unlearned = show[AVAILABILITY_UNLEARNED] == true
-    if want_known ~= want_unlearned then
-        if want_known then
-            if recipe.known ~= true then
+    if want_known or want_unlearned then
+        -- the book axis only means something for professions the character
+        -- has; applying the restriction to the whole axis keeps
+        -- Known + Not known == the exact union of the two selections
+        if self.store.owned_profession_keys[recipe.profession_key] ~= true then
+            return false
+        end
+        if want_known ~= want_unlearned then
+            if want_known and recipe.known ~= true then
                 return false
             end
-        else
-            -- "not known" only means something for professions the character
-            -- has: unowned professions are trivially unknown and would drown
-            -- the learnable-but-not-learned signal
-            if recipe.known == true or self.store.owned_profession_keys[recipe.profession_key] ~= true then
+            if want_unlearned and recipe.known == true then
                 return false
             end
         end
@@ -3330,13 +3165,25 @@ function CraftingWindow:_recipe_filter_signature()
     }, "\30")
 end
 
+function CraftingWindow:_append_scroll_cap_notice(shown, total)
+    local notice = UI.Widgets.LuiLabel()
+    notice:SetMouseVisible(false)
+    notice:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    notice:SetForeColor(Style.ALTERNATE_FOREGROUND)
+    notice:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    notice:SetText(_format_count(shown) .. " / " .. _format_count(total) .. " - " ..
+        TR["Refine filters or use pages mode to see more."])
+    notice:SetSize(self:_current_recipe_list_width(), _scaled_int(24))
+    self.recipe_list:AddItem(notice)
+end
+
 function CraftingWindow:_append_recipe_row(recipe, row_w)
     if recipe == nil then
         return
     end
 
     local status = self.store:get_recipe_status(recipe, self.scope_key)
-    if status ~= nil and status.craftable == true then
+    if status.craftable == true then
         -- materialize the lazy craft count only for rows actually rendered
         self.store:get_recipe_craftable_count(recipe, self.scope_key)
     end
@@ -3458,8 +3305,12 @@ function CraftingWindow:refresh_recipe_list(options)
             self:_refresh_recipe_page_rows(row_w)
         else
             _clear_list_box(self.recipe_list)
-            for i = 1, #self.visible_recipes do
+            local render_count = math.min(#self.visible_recipes, SCROLL_RENDER_CAP)
+            for i = 1, render_count do
                 self:_append_recipe_row(self.visible_recipes[i], row_w)
+            end
+            if #self.visible_recipes > SCROLL_RENDER_CAP then
+                self:_append_scroll_cap_notice(render_count, #self.visible_recipes)
             end
         end
         state.rows_changed = true
@@ -3473,7 +3324,7 @@ function CraftingWindow:refresh_recipe_list(options)
                 if self.selected_recipe_id == nil then
                     self.selected_recipe_id = recipe.id
                 end
-                if pages_mode ~= true then
+                if pages_mode ~= true and #self.visible_recipes <= SCROLL_RENDER_CAP then
                     self:_append_recipe_row(recipe, row_w)
                     state.rows_changed = true
                 end
@@ -3513,6 +3364,10 @@ function CraftingWindow:refresh_recipe_list(options)
                 TR["Loading recipes"] .. " " ..
                 _format_count(progress.loaded) .. " / " .. _format_count(progress.total)
             )
+        elseif self.store:is_known_pass_running() == true then
+            -- default view filters on Known; the background pass is still
+            -- tagging the book, so "no matches" would be a lie
+            self.recipe_empty:SetText(TR["Matching known recipes..."])
         else
             self.recipe_empty:SetText(TR["No matching recipes."])
         end
@@ -3586,7 +3441,6 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
     row:set_scale(State.settings.global.scale)
     row:set_width(row_w)
     row:set_data(
-        item ~= nil and item.item_info or nil,
         item ~= nil and item.icon_id or nil,
         item ~= nil and item.background_image_id or nil,
         item ~= nil and item.name or node.key,
@@ -3647,7 +3501,7 @@ end
 function CraftingWindow:_clear_critical_result_detail()
     self._critical_result_visible = false
     if self.critical_result_row ~= nil then
-        self.critical_result_row:set_data(nil, nil, nil, "", "", Style.ALTERNATE_FOREGROUND)
+        self.critical_result_row:set_data(nil, nil, "", "", Style.ALTERNATE_FOREGROUND)
         self.critical_result_row:SetVisible(false)
     end
 end
@@ -3665,7 +3519,6 @@ function CraftingWindow:_refresh_critical_result_detail(recipe)
         self.critical_result_row:set_scale(State.settings.global.scale)
         self.critical_result_row:set_width(row_w)
         self.critical_result_row:set_data(
-            critical_item.item_info,
             critical_item.icon_id,
             critical_item.background_image_id,
             critical_item.name,
@@ -3687,7 +3540,7 @@ function CraftingWindow:refresh_selected_recipe()
         self:_clear_critical_result_detail()
         self:layout()
         self.detail_empty:SetVisible(true)
-        self.detail_icon:bind_item(nil, nil, nil)
+        self.detail_icon:bind(nil, nil, nil)
         self.detail_title:SetText("")
         self.detail_meta:SetText("")
         self.detail_status:SetText("")
@@ -3706,8 +3559,7 @@ function CraftingWindow:refresh_selected_recipe()
     self:_refresh_critical_result_detail(recipe)
     self:layout()
 
-    self.detail_icon:bind_item(
-        result_item ~= nil and result_item.item_info or nil,
+    self.detail_icon:bind(
         result_item ~= nil and result_item.icon_id or nil,
         result_item ~= nil and result_item.background_image_id or nil,
         result_item ~= nil and result_item.item_id or nil
@@ -3916,7 +3768,6 @@ function CraftingWindow:refresh_plan()
         row:set_scale(State.settings.global.scale)
         row:set_width(missing_w)
         row:set_data(
-            entry.item_info,
             entry.icon_id,
             entry.background_image_id,
             entry.name,

@@ -383,7 +383,6 @@ local function _copy_asset_record(record)
         icon_id = record.icon_id,
         background_image_id = record.background_image_id,
         quality = record.quality,
-        item_info = record.item_info,
     }
 end
 
@@ -476,7 +475,7 @@ local function _recipe_reenters_path(recipe, visiting)
     return false
 end
 
-local function _add_result_index_entry(index_map, key, record)
+local function _add_result_index_entry(index_map, key, record, prepend)
     if type(index_map) ~= "table" or type(record) ~= "table" then
         return
     end
@@ -498,7 +497,11 @@ local function _add_result_index_entry(index_map, key, record)
         end
     end
 
-    list[#list + 1] = record
+    if prepend == true then
+        table.insert(list, 1, record)
+    else
+        list[#list + 1] = record
+    end
 end
 
 function CraftingStore:Constructor()
@@ -514,8 +517,11 @@ function CraftingStore:Constructor()
     self.items = {}
     self.recipes = {}
     self.recipe_by_id = {}
-    self.recipes_by_result = {}
     self.known_recipes_by_result = {}
+    self.recipes_by_ingredient = {}
+    self.recipe_tiers = {}
+    self.recipe_tiers_version = 0
+    self._live_inventory_counts = nil
     self.source_ownership = {
         [SOURCE_BACKPACK] = {},
         [SOURCE_BANK] = {},
@@ -532,10 +538,15 @@ function CraftingStore:Constructor()
     self._recipe_token = nil
     self._recipes_initialized = false
     self._recipe_loading = false
-    self._recipe_load_queue = nil
-    self._recipe_load_queue_index = 1
+    self._import_queue = nil
+    self._import_index = 1
+    self._import_total = 0
+    self._import_done = 0
+    self._profession_by_db_code = nil
+    self._recipe_load_next = 1
     self._recipe_load_done = 0
     self._recipe_load_total = 0
+    self._known_loose_matches = 0
     self._foreground_loading = false
     self._pending_loaded_result_keys = {}
     self._live_inventory_token = ""
@@ -623,9 +634,13 @@ function CraftingStore:is_loading()
     return self._recipe_loading == true
 end
 
+function CraftingStore:is_known_pass_running()
+    return self._known_loading == true
+end
+
 function CraftingStore:get_loading_progress()
-    local total = tonumber(self._recipe_load_total) or #self.recipes
-    local loaded = tonumber(self._recipe_load_done) or #self.recipes
+    local total = self._import_total + self._recipe_load_total
+    local loaded = self._import_done + self._recipe_load_done
     if total < loaded then
         total = loaded
     end
@@ -685,6 +700,9 @@ function CraftingStore:refresh(force, recipe_batch_size)
     if recipe_refresh_needed == true then
         self:_start_recipe_load(current_character)
         changed = true
+    elseif self._import_queue ~= nil then
+        self:_step_import()
+        changed = true
     elseif self._recipe_loading == true and self:_step_recipe_load(recipe_batch_size or BACKGROUND_RECIPE_BATCH_SIZE) == true then
         changed = true
     elseif self._known_loading == true and self:_step_known_pass() == true then
@@ -700,8 +718,17 @@ function CraftingStore:refresh(force, recipe_batch_size)
 
     self.current_character_name = current_character
     if ownership_refresh_needed == true then
+        local previous_counts = self._live_inventory_counts
         self.source_ownership = self:_build_source_ownership(current_character, live_inventory_counts)
-        self:_reset_status_caches()
+        if force ~= true and recipe_refresh_needed ~= true and self._assets_token == assets_token and
+            previous_counts ~= nil then
+            -- only the live backpack changed: drop just the statuses that
+            -- can depend on the changed items instead of nuking everything
+            self:_invalidate_statuses_for_changes(previous_counts, live_inventory_counts)
+        else
+            self:_reset_status_caches()
+        end
+        self._live_inventory_counts = live_inventory_counts
         self._assets_token = assets_token
         self._live_inventory_token = live_inventory_token
     end
@@ -712,6 +739,41 @@ end
 function CraftingStore:_reset_status_caches()
     self._status_cache = {}
     self._scope_stock_cache = {}
+end
+
+-- selective status invalidation for live-backpack deltas: only recipes whose
+-- ingredients intersect the changed items, plus (conservatively) any status
+-- whose evaluation expanded a material tree, can change
+function CraftingStore:_invalidate_statuses_for_changes(old_counts, new_counts)
+    self._scope_stock_cache = {}
+
+    local changed_keys = {}
+    for key, count in pairs(new_counts) do
+        if old_counts[key] ~= count then
+            changed_keys[key] = true
+        end
+    end
+    for key in pairs(old_counts) do
+        if new_counts[key] == nil then
+            changed_keys[key] = true
+        end
+    end
+
+    for _, cache in pairs(self._status_cache) do
+        for key in pairs(changed_keys) do
+            local records = self.recipes_by_ingredient[key]
+            if records ~= nil then
+                for i = 1, #records do
+                    cache[records[i].id] = nil
+                end
+            end
+        end
+        for id, summary in pairs(cache) do
+            if summary.used_expansion == true then
+                cache[id] = nil
+            end
+        end
+    end
 end
 
 -- merged stock tables are expensive to build (every item across sources);
@@ -766,8 +828,9 @@ function CraftingStore:get_recipe_status(recipe_or_id, scope_key)
             }
             for i = 1, #recipe.ingredients do
                 local ingredient = recipe.ingredients[i]
+                local available = stock[ingredient.key]
                 summary.ingredients[i] = {
-                    satisfied = (tonumber(stock[ingredient.key]) or 0) >= ingredient.quantity,
+                    satisfied = available ~= nil and available >= ingredient.quantity,
                     expanded = false,
                 }
             end
@@ -811,7 +874,7 @@ function CraftingStore:get_recipe_craftable_count(recipe_or_id, scope_key)
     end
 
     local status = self:get_recipe_status(recipe, scope_key)
-    if status == nil or status.craftable ~= true then
+    if status.craftable ~= true then
         return 0, false
     end
 
@@ -1010,6 +1073,40 @@ function CraftingStore:serialize_recipe_identity(recipe)
     }
 end
 
+-- Legacy PluginData repair: match a pre-DB plan entry to a DB record via
+-- profession + result (disambiguated by recipe-name key and category when
+-- the old entry carried them). Known records win, then the lowest tier.
+function CraftingStore:_resolve_legacy_plan_entry(saved_entry)
+    local profession_key = saved_entry.p ~= nil and tostring(saved_entry.p) or nil
+    local result_key = saved_entry.r ~= nil and tostring(saved_entry.r) or nil
+    if profession_key == nil or result_key == nil then
+        return nil
+    end
+    local name_key = saved_entry.n ~= nil and tostring(saved_entry.n) or nil
+    local category_key = saved_entry.c ~= nil and tostring(saved_entry.c) or nil
+
+    local best = nil
+    for i = 1, #self.recipes do
+        local record = self.recipes[i]
+        if record.profession_key == profession_key and record.result_key == result_key then
+            local name_ok = name_key == nil or
+                name_key == tostring(record.recipe_name_key or record.result_key or "")
+            local category_ok = category_key == nil or
+                category_key == _normalize_name(record.category_name)
+            if name_ok and category_ok then
+                if best == nil then
+                    best = record
+                elseif record.known == true and best.known ~= true then
+                    best = record
+                elseif (record.known == true) == (best.known == true) and record.tier < best.tier then
+                    best = record
+                end
+            end
+        end
+    end
+    return best
+end
+
 function CraftingStore:resolve_saved_plan_entries(saved_entries)
     local resolved_entries = {}
     local unresolved_entries = {}
@@ -1034,6 +1131,16 @@ function CraftingStore:resolve_saved_plan_entries(saved_entries)
             recipe = saved_entry.i ~= nil and self.recipe_by_id[saved_entry.i] or nil
             if _saved_plan_entry_matches_recipe(saved_entry, recipe) ~= true then
                 recipe = nil
+            end
+            if recipe == nil and type(saved_entry.i) == "string" and
+                string.find(saved_entry.i, "\30", 1, true) ~= nil then
+                -- pre-DB id format ("profession\30index\30result\30name"):
+                -- resolve by the identity fields the old entry carried and
+                -- migrate the persisted id in place (saved on next save)
+                recipe = self:_resolve_legacy_plan_entry(saved_entry)
+                if recipe ~= nil then
+                    saved_entry.i = recipe.id
+                end
             end
         end
 
@@ -1093,7 +1200,6 @@ function CraftingStore:evaluate_plan_resources(plan_entries, scope_key)
             local resource = {
                 key = key,
                 name = item ~= nil and item.name or key,
-                item_info = item ~= nil and item.item_info or nil,
                 item_id = item ~= nil and item.item_id or nil,
                 icon_id = item ~= nil and item.icon_id or nil,
                 background_image_id = item ~= nil and item.background_image_id or nil,
@@ -1225,8 +1331,9 @@ function CraftingStore:_build_source_ownership(current_character, live_inventory
 end
 
 function CraftingStore:_start_recipe_load(current_character)
+    -- the recipes domain is small (~1.3 MB) and profession names come from
+    -- it; the heavy Items files are staged one per tick via _step_import
     Lore.load_recipes()
-    Lore.load_items()
 
     local professions = {}
     local profession_labels = { TR["All professions"], TR["All my professions"] }
@@ -1284,20 +1391,6 @@ function CraftingStore:_start_recipe_load(current_character)
         end
     end
 
-    -- the recipe list itself comes from the local DB: every recipe of the
-    -- character's professions, no GetRecipe content loading
-    local recipe_queue = {}
-    for ordinal = 1, Lore.Recipes.count do
-        local profession = profession_by_db_code[Lore.Recipes.profession_code(ordinal)]
-        if profession ~= nil then
-            recipe_queue[#recipe_queue + 1] = {
-                ordinal = ordinal,
-                profession = profession,
-            }
-            profession.recipe_count = profession.recipe_count + 1
-        end
-    end
-
     self.current_character_name = current_character
     self.professions = professions
     self.profession_by_key = {}
@@ -1308,21 +1401,41 @@ function CraftingStore:_start_recipe_load(current_character)
     self.items = {}
     self.recipes = {}
     self.recipe_by_id = {}
-    self.recipes_by_result = {}
     self.known_recipes_by_result = {}
+    self.recipes_by_ingredient = {}
+    self.recipe_tiers = {}
+    self.recipe_tiers_version = 0
     self.profession_option_labels = profession_labels
     self.profession_option_values = profession_values
     self:_reset_status_caches()
     self._recipe_token = tostring(current_character or "")
     self._recipes_initialized = true
-    self._recipe_loading = #recipe_queue > 0
-    self._recipe_load_queue = recipe_queue
-    self._recipe_load_queue_index = 1
+    -- phase 1: stage the heavy Items imports, one file per tick
+    self._import_queue = Lore.items_import_plan()
+    self._import_index = 1
+    self._import_total = #self._import_queue
+    self._import_done = 0
+    -- phase 2: build records straight from the DB, ordinal cursor, batched
+    self._profession_by_db_code = profession_by_db_code
+    self._recipe_loading = true
+    self._recipe_load_next = 1
     self._recipe_load_done = 0
-    self._recipe_load_total = #recipe_queue
+    self._recipe_load_total = Lore.Recipes.count
+    -- phase 3: background known-tagging over the in-game book
     self._known_queue = known_queue
     self._known_loading = false
+    self._known_loose_matches = 0
     self._pending_loaded_result_keys = {}
+end
+
+function CraftingStore:_step_import()
+    Lore.import_step(self._import_queue[self._import_index])
+    self._import_index = self._import_index + 1
+    self._import_done = self._import_done + 1
+    if self._import_index > self._import_total then
+        self._import_queue = nil
+        Lore.load_items()
+    end
 end
 
 function CraftingStore:_register_recipe_record(record)
@@ -1332,9 +1445,23 @@ function CraftingStore:_register_recipe_record(record)
 
     self.recipes[#self.recipes + 1] = record
     self.recipe_by_id[record.id] = record
-    _add_result_index_entry(self.recipes_by_result, record.result_key, record)
-    if record.recipe_name_key ~= nil then
-        _add_result_index_entry(self.recipes_by_result, record.recipe_name_key, record)
+
+    -- ingredient -> recipes: selective status invalidation on stock changes
+    for i = 1, #record.ingredients do
+        local key = record.ingredients[i].key
+        local list = self.recipes_by_ingredient[key]
+        if list == nil then
+            list = {}
+            self.recipes_by_ingredient[key] = list
+        end
+        list[#list + 1] = record
+    end
+
+    -- distinct tiers, maintained incrementally so the rank dropdown never
+    -- rescans the whole catalog
+    if self.recipe_tiers[record.tier] == nil then
+        self.recipe_tiers[record.tier] = true
+        self.recipe_tiers_version = self.recipe_tiers_version + 1
     end
 end
 
@@ -1359,28 +1486,28 @@ function CraftingStore:_step_recipe_load(batch_size)
     end
 
     local remaining = tonumber(batch_size) or BACKGROUND_RECIPE_BATCH_SIZE
-    if remaining == nil or remaining < 1 then
+    if remaining < 1 then
         remaining = BACKGROUND_RECIPE_BATCH_SIZE
     end
 
     local changed = false
-    local queue = self._recipe_load_queue
-    while remaining > 0 and type(queue) == "table" and self._recipe_load_queue_index <= #queue do
-        local queue_entry = queue[self._recipe_load_queue_index]
-        local record = self:_build_db_recipe_record(queue_entry.ordinal, queue_entry.profession)
+    local total = self._recipe_load_total
+    while remaining > 0 and self._recipe_load_next <= total do
+        local ordinal = self._recipe_load_next
+        local profession = self._profession_by_db_code[Lore.Recipes.profession_code(ordinal)]
+        local record = self:_build_db_recipe_record(ordinal, profession)
         self:_register_recipe_record(record)
         self:_remember_loaded_recipe_result(record)
+        profession.recipe_count = profession.recipe_count + 1
 
         self._recipe_load_done = self._recipe_load_done + 1
-        self._recipe_load_queue_index = self._recipe_load_queue_index + 1
+        self._recipe_load_next = self._recipe_load_next + 1
         remaining = remaining - 1
         changed = true
     end
 
-    if type(queue) ~= "table" or self._recipe_load_queue_index > #queue then
+    if self._recipe_load_next > total then
         self._recipe_loading = false
-        self._recipe_load_queue = nil
-        self._recipe_load_queue_index = 1
         table.sort(self.recipes, function(left, right)
             return left.sort_key < right.sort_key
         end)
@@ -1390,7 +1517,7 @@ function CraftingStore:_step_recipe_load(batch_size)
             tostring(#self.recipes),
         }, "\30")
         self:_reset_status_caches()
-        self._known_loading = type(self._known_queue) == "table" and #self._known_queue > 0
+        self._known_loading = #self._known_queue > 0
     end
 
     return changed
@@ -1411,25 +1538,21 @@ local function _api_ingredient_signature(recipe)
     return table.concat(counts, ",")
 end
 
-local function _record_ingredient_signature(record)
-    local counts = {}
-    for i = 1, #record.ingredients do
-        counts[#counts + 1] = record.ingredients[i].quantity
-    end
-    table.sort(counts)
-    return table.concat(counts, ",")
-end
-
-function CraftingStore:_mark_recipe_known(record)
+function CraftingStore:_mark_recipe_known(record, register_expansion)
     if record.known == true then
         return
     end
     record.known = true
-    -- conversions register too: _satisfy_item only ever uses them one step
-    -- from on-hand scraps
-    _add_result_index_entry(self.known_recipes_by_result, record.result_key, record)
-    if record.recipe_name_key ~= nil then
-        _add_result_index_entry(self.known_recipes_by_result, record.recipe_name_key, record)
+    -- register_expansion is false for loose (level-1 drift) matches: those
+    -- stay visible under "Known" but must never satisfy material trees.
+    -- Conversions register too (prepended, so _satisfy_item tries them
+    -- first); they only ever draw one step from on-hand scraps.
+    if register_expansion == true then
+        local prepend = record.conversion == true
+        _add_result_index_entry(self.known_recipes_by_result, record.result_key, record, prepend)
+        if record.recipe_name_key ~= nil then
+            _add_result_index_entry(self.known_recipes_by_result, record.recipe_name_key, record, prepend)
+        end
     end
 end
 
@@ -1445,7 +1568,8 @@ function CraftingStore:_step_known_pass()
     end
 
     local remaining = KNOWN_PASS_BATCH_SIZE
-    while remaining > 0 and type(self._known_queue) == "table" and #self._known_queue > 0 do
+    local processed = false
+    while remaining > 0 and #self._known_queue > 0 do
         local entry = self._known_queue[1]
         local recipe = entry.profession_info:GetRecipe(entry.next_recipe_index)
         if recipe ~= nil then
@@ -1481,7 +1605,7 @@ function CraftingStore:_step_known_pass()
                     if record.category_name == category_name then
                         level = 2
                         if record.result_quantity == result_quantity and
-                            _record_ingredient_signature(record) == ingredient_signature then
+                            record.ingredient_signature == ingredient_signature then
                             level = 3
                         end
                     end
@@ -1490,9 +1614,13 @@ function CraftingStore:_step_known_pass()
                         best = level
                     end
                 end
+                if best == 1 and n > 0 then
+                    self._known_loose_matches = self._known_loose_matches + 1
+                end
                 for k = 1, n do
                     if levels[k] == best then
-                        self:_mark_recipe_known(candidates[k])
+                        -- loose matches stay out of the expansion index
+                        self:_mark_recipe_known(candidates[k], best >= 2)
                     end
                 end
             end
@@ -1503,17 +1631,25 @@ function CraftingStore:_step_known_pass()
             table.remove(self._known_queue, 1)
         end
         remaining = remaining - 1
+        processed = true
     end
 
-    if type(self._known_queue) ~= "table" or #self._known_queue == 0 then
+    if #self._known_queue == 0 then
         self._known_loading = false
         self._known_queue = nil
         -- craftability can change now that known recipes may expand
         -- material trees; recompute statuses on demand
         self:_reset_status_caches()
+        if self._known_loose_matches > 0 then
+            -- drift alarm: the shipped DB is probably older than the game
+            Turbine.Shell.WriteLine("[LUI] " .. tostring(self._known_loose_matches) .. " " ..
+                TR["recipes matched loosely - the crafting database may be older than the game."])
+        end
         return true
     end
-    return false
+    -- report every batch so the window refreshes progressively while the
+    -- default "Known" view fills in
+    return processed
 end
 
 -- Register an item from the local lore DB into self.items, keyed like the
@@ -1541,7 +1677,6 @@ function CraftingStore:_remember_db_item(item_id)
             background_image_id = background_id,
             quality = DB_QUALITY_TO_LOTRO[Lore.Items.quality_name(ordinal)],
             required_level = Lore.Items.min_level(ordinal),
-            item_info = nil,
         }
         self.items[key] = current
     end
@@ -1625,6 +1760,13 @@ function CraftingStore:_build_db_recipe_record(ordinal, profession)
     for i = 1, #ingredients do
         search_parts[#search_parts + 1] = _lower(self.items[ingredients[i].key].name)
     end
+    local quantity_counts = {}
+    for i = 1, #ingredients do
+        quantity_counts[i] = ingredients[i].quantity
+    end
+    table.sort(quantity_counts)
+    record.ingredient_signature = table.concat(quantity_counts, ",")
+
     record.search_text = table.concat(search_parts, "\n")
     record.sort_key = table.concat({
         _lower(profession.name),
@@ -1727,24 +1869,13 @@ function CraftingStore:_satisfy_item(stock, item_key, quantity, visiting, stock_
     local best_failed_total = nil
     local best_failed_distinct = nil
 
-    -- conversion ("scraps") recipes are tried first and may only draw their
-    -- ingredients from on-hand stock (their children never expand, so
-    -- conversion pairs cannot loop): own enough scraps and the tree starts
-    -- there, otherwise regular recipes craft from the base resource
-    local order = {}
+    -- conversion ("scraps") recipes come first in the index (prepended at
+    -- registration) and may only draw their ingredients from on-hand stock
+    -- (their children never expand, so conversion pairs cannot loop): own
+    -- enough scraps and the tree starts there, otherwise regular recipes
+    -- craft from the base resource
     for recipe_index = 1, #recipes do
-        if recipes[recipe_index].conversion == true then
-            order[#order + 1] = recipe_index
-        end
-    end
-    for recipe_index = 1, #recipes do
-        if recipes[recipe_index].conversion ~= true then
-            order[#order + 1] = recipe_index
-        end
-    end
-
-    for order_index = 1, #order do
-        local recipe = recipes[order[order_index]]
+        local recipe = recipes[recipe_index]
         if _recipe_reenters_path(recipe, visiting) ~= true then
             local branch_stock = _copy_counts(next_stock)
             local per_craft = math.max(1, tonumber(recipe.result_quantity) or 1)

@@ -51,48 +51,83 @@ local function _bsearch_id(IDS, id_width, count, target)
     return nil
 end
 
--- Bytewise string order. The generated name indexes are sorted bytewise;
--- Lua 5.1's `<` uses strcoll (locale-dependent), so it cannot be trusted
--- for the binary search when names contain non-ASCII bytes.
-local function _bytewise_less(a, b)
-    local la, lb = #a, #b
-    local n = la
-    if lb < n then
-        n = lb
-    end
-    for k = 1, n do
-        local ba, bb = byte(a, k), byte(b, k)
-        if ba ~= bb then
-            return ba < bb
-        end
-    end
-    return la < lb
-end
-
--- name -> ordinals over a sorted NAME/NOFF index; nil means "not in DB"
+-- name -> ordinals over a sorted NAME/NOFF index; nil means "not in DB".
+-- The index is sorted bytewise, so the probe compares bytes in place: no
+-- substring allocation per probe, and Lua 5.1's `<` (locale strcoll) is
+-- never trusted for the ordering.
 local function _find_ordinals(NM, name)
+    local blob = NM.NAME
     local nw, ow = NM.noff_width, NM.ord_width
+    local name_len = #name
     local lo, hi = 1, NM.entry_count
     while lo <= hi do
         local mid = floor((lo + hi) / 2)
         local p = u(NM.NOFF, (mid - 1) * nw + 1, nw)
-        local q = find(NM.NAME, "\t", p + 1, true)
-        local entry = sub(NM.NAME, p + 1, q - 1)
-        if entry == name then
+        local q = find(blob, "\t", p + 1, true)
+        local entry_len = q - p - 1
+
+        local cmp = 0
+        local limit = entry_len < name_len and entry_len or name_len
+        for k = 1, limit do
+            local be = byte(blob, p + k)
+            local bn = byte(name, k)
+            if be ~= bn then
+                cmp = be < bn and -1 or 1
+                break
+            end
+        end
+        if cmp == 0 and entry_len ~= name_len then
+            cmp = entry_len < name_len and -1 or 1
+        end
+
+        if cmp == 0 then
             local res, n = {}, 0
-            local e = find(NM.NAME, "\n", q + 1, true)
+            local e = find(blob, "\n", q + 1, true)
             for k = q + 1, e - 1, ow do
                 n = n + 1
-                res[n] = u(NM.NAME, k, ow)
+                res[n] = u(blob, k, ow)
             end
             return res
-        elseif _bytewise_less(entry, name) then
+        elseif cmp < 0 then
             lo = mid + 1
         else
             hi = mid - 1
         end
     end
     return nil
+end
+
+-- Ordered package list for everything the crafting domains need. Consumers
+-- that must not hitch import these one per frame (Turbine caches imports, so
+-- the load_* finalizers below re-import for free afterwards); standalone
+-- consumers may skip straight to load_recipes()/load_items().
+function Lore.import_plan()
+    local lang = Lore.language()
+    return {
+        "LUI.src.Data.Recipes.manifest",
+        "LUI.src.Data.Recipes.records",
+        "LUI.src.Data.Recipes.labels_" .. lang,
+        "LUI.src.Data.Recipes.names_" .. lang,
+        "LUI.src.Data.Recipes.categories",
+        "LUI.src.Data.Items.manifest",
+        "LUI.src.Data.Items.records",
+        "LUI.src.Data.Items.labels_" .. lang,
+    }
+end
+
+function Lore.import_step(package_name)
+    import(package_name)
+end
+
+-- the Items files are the heavy ones (records + labels, several MB each);
+-- the crafting store stages exactly these across ticks
+function Lore.items_import_plan()
+    local lang = Lore.language()
+    return {
+        "LUI.src.Data.Items.manifest",
+        "LUI.src.Data.Items.records",
+        "LUI.src.Data.Items.labels_" .. lang,
+    }
 end
 
 -- ------------------------------------------------------------- Recipes ----
