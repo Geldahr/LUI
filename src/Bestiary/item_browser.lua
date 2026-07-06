@@ -18,6 +18,8 @@ local class = _G.LUI.Core.class
 local Lore = _G.LUI.Data.Lore
 local SearchQuery = _G.LUI.Utils.SearchQuery
 local Bestiary = _G.LUI.Features.Bestiary
+local Crafting = _G.LUI.Features.Crafting
+local Shortcuts = UI.Shortcuts
 import "Turbine.UI"
 import "LUI.src.UI.Widgets.item_icon"
 
@@ -41,6 +43,25 @@ local function _scaled_font(name, size)
     return FONT_TO_LOTRO(name, size * State.settings.global.scale)
 end
 
+-- crafting-link action icon: identical treatment to the crafting window's
+-- bestiary button on drop resources (16px icon in a 22px square button)
+local CRAFT_ACTION_ICON = UI.AssetIds.anvil_silver_glow
+local BASE_LINK_BUTTON_W = 22
+
+local function _apply_craft_icon(button)
+    -- same treatment as the crafting window's bestiary action button
+    local side = math.max(14, scaled_int(16))
+    button:set_icon(
+        CRAFT_ACTION_ICON,
+        CRAFT_ACTION_ICON,
+        CRAFT_ACTION_ICON,
+        CRAFT_ACTION_ICON,
+        side,
+        side,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
+end
+
 local function _even_int(value)
     local out = math.floor(value + 0.5)
     if out % 2 ~= 0 then
@@ -56,6 +77,9 @@ local ItemBrowserRow = class(Turbine.UI.Control)
 
 function ItemBrowserRow:Constructor()
     Turbine.UI.Control.Constructor(self)
+
+    self._link_name = nil
+    self._link_recipe_id = nil
 
     self:SetMouseVisible(false)
     self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
@@ -73,18 +97,32 @@ function ItemBrowserRow:Constructor()
     self.meta_label:SetMouseVisible(false)
     self.meta_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.meta_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+
+    -- visible crafting link: opens the crafting window searched on this
+    -- item, preselecting the producing recipe when the item is craftable
+    self.craft_button = UI.Widgets.LuiButton()
+    self.craft_button:SetParent(self)
+    self.craft_button:set_scale(1)
+    _apply_craft_icon(self.craft_button)
+    self.craft_button:SetVisible(false)
+    self.craft_button.Click = function()
+        Shortcuts.open_crafting_item_search(self._link_name, self._link_recipe_id)
+    end
 end
 
 function ItemBrowserRow:apply_fonts()
     self.name_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
     self.meta_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.craft_button:set_scale(1)
+    _apply_craft_icon(self.craft_button)
 end
 
 function ItemBrowserRow:set_row(ordinal)
     local Items = Lore.Items
     local icon_id, background_id = Items.icon_layers(ordinal)
     self.icon:bind(icon_id, background_id, Items.id_of(ordinal))
-    self.name_label:SetText(Items.label(ordinal))
+    local name = Items.label(ordinal)
+    self.name_label:SetText(name)
 
     local meta = Items.class_name(ordinal)
     local level = Items.level(ordinal)
@@ -93,6 +131,19 @@ function ItemBrowserRow:set_row(ordinal)
         meta = meta ~= nil and (meta .. "  " .. level_text) or level_text
     end
     self.meta_label:SetText(meta or "")
+
+    -- O(1) name probes decide the crafting-link button; the store is nil
+    -- only while the crafting feature is disabled
+    local store = Crafting.get_shared_store()
+    local producing = nil
+    local linkable = false
+    if store ~= nil then
+        producing = store:first_recipe_producing_name(name)
+        linkable = producing ~= nil or store:has_recipes_using_name(name) == true
+    end
+    self._link_name = name
+    self._link_recipe_id = producing ~= nil and producing.id or nil
+    self.craft_button:SetVisible(linkable == true)
 end
 
 function ItemBrowserRow:layout_row(width, height)
@@ -109,11 +160,18 @@ function ItemBrowserRow:layout_row(width, height)
     self.icon:set_side(icon_side)
     self.icon:SetPosition(gap, math.max(0, math.floor((height - icon_side) / 2)))
 
+    -- crafting-link slot is always reserved so meta text stays aligned
+    -- across rows with and without the button
+    local btn_side = math.min(scaled_int(BASE_LINK_BUTTON_W), math.max(0, height - gap))
+    self.craft_button:SetPosition(width - gap - btn_side, math.max(0, math.floor((height - btn_side) / 2)))
+    self.craft_button:SetSize(btn_side, btn_side)
+
     local meta_w = scaled_int(220)
     local name_x = gap + icon_side + gap
+    local meta_x = width - gap - btn_side - gap - meta_w
     self.name_label:SetPosition(name_x, 0)
-    self.name_label:SetSize(math.max(0, width - name_x - meta_w - (2 * gap)), height)
-    self.meta_label:SetPosition(width - meta_w - gap, 0)
+    self.name_label:SetSize(math.max(0, meta_x - name_x - gap), height)
+    self.meta_label:SetPosition(meta_x, 0)
     self.meta_label:SetSize(meta_w, height)
 end
 

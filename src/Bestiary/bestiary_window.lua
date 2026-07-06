@@ -1793,6 +1793,10 @@ function BestiaryWindow:open_query_search(query)
         return
     end
 
+    -- cross-window links must land on the Bestiary tab regardless of which
+    -- Encyclopedia tab was left active
+    self.encyclopedia_tabs:set_selected_index(1)
+
     self.current_area = nil
     self.last_applied_area_query = nil
     BestiaryCache.area_filter_query = nil

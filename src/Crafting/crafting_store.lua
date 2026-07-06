@@ -519,6 +519,7 @@ function CraftingStore:Constructor()
     self.recipe_by_id = {}
     self.known_recipes_by_result = {}
     self.recipes_by_ingredient = {}
+    self.recipes_by_result = {}
     self.recipe_tiers = {}
     self.recipe_tiers_version = 0
     self._live_inventory_counts = nil
@@ -955,6 +956,37 @@ function CraftingStore:recipe_matches_query(recipe, groups)
     return false
 end
 
+-- Cross-window link probes (Encyclopedia rows, bestiary card drops): both
+-- indexes are keyed by normalized item name, the same normalization used
+-- when recipe records are registered.
+function CraftingStore:has_recipes_using_name(item_name)
+    return self.recipes_by_ingredient[_normalize_name(item_name)] ~= nil
+end
+
+-- Which output of a recipe an item name refers to: 0 for the main result
+-- (or its crit), 1..n for a variant (or its crit).
+function CraftingStore:variant_index_for_result_name(recipe, item_name)
+    local key = _normalize_name(item_name)
+    if key == "" or recipe.result_key == key or recipe.critical_result_key == key then
+        return 0
+    end
+    for i = 1, #recipe.variants do
+        local variant = recipe.variants[i]
+        if variant.result_key == key or variant.critical_result_key == key then
+            return i
+        end
+    end
+    return 0
+end
+
+function CraftingStore:first_recipe_producing_name(item_name)
+    local records = self.recipes_by_result[_normalize_name(item_name)]
+    if records == nil then
+        return nil
+    end
+    return records[1]
+end
+
 function CraftingStore:_stock_for_source_keys(source_keys)
     local stock = {}
     local normalized = _normalize_source_keys(source_keys)
@@ -1052,6 +1084,10 @@ function CraftingStore:serialize_plan_entries(plan_entries)
         if recipe ~= nil and count > 0 then
             local saved_entry = self:serialize_recipe_identity(recipe)
             saved_entry.q = count
+            local variant = math.floor((tonumber(entry.variant) or 0) + 0.5)
+            if variant > 0 then
+                saved_entry.v = variant
+            end
             saved_entries[#saved_entries + 1] = saved_entry
         end
     end
@@ -1145,9 +1181,15 @@ function CraftingStore:resolve_saved_plan_entries(saved_entries)
         end
 
         if recipe ~= nil and count > 0 then
+            -- saved variant index, clamped against the current catalog
+            local variant = math.floor((tonumber(saved_entry.v) or 0) + 0.5)
+            if variant < 0 or variant > #recipe.variants then
+                variant = 0
+            end
             resolved_entries[#resolved_entries + 1] = {
                 recipe_id = recipe.id,
                 count = count,
+                variant = variant,
             }
         elseif count > 0 then
             unresolved_entries[#unresolved_entries + 1] = {
@@ -1403,6 +1445,7 @@ function CraftingStore:_start_recipe_load(current_character)
     self.recipe_by_id = {}
     self.known_recipes_by_result = {}
     self.recipes_by_ingredient = {}
+    self.recipes_by_result = {}
     self.recipe_tiers = {}
     self.recipe_tiers_version = 0
     self.profession_option_labels = profession_labels
@@ -1455,6 +1498,34 @@ function CraftingStore:_register_recipe_record(record)
             self.recipes_by_ingredient[key] = list
         end
         list[#list + 1] = record
+    end
+
+    -- outputs -> recipes over the full catalog (known or not), covering the
+    -- critical result and every alternate-version output: cross-window
+    -- "how to craft" links resolve the producing recipe here
+    local output_keys = { record.result_key }
+    if record.critical_result_key ~= nil then
+        output_keys[#output_keys + 1] = record.critical_result_key
+    end
+    for i = 1, #record.variants do
+        local variant = record.variants[i]
+        output_keys[#output_keys + 1] = variant.result_key
+        if variant.critical_result_key ~= nil then
+            output_keys[#output_keys + 1] = variant.critical_result_key
+        end
+    end
+    local seen_outputs = {}
+    for i = 1, #output_keys do
+        local key = output_keys[i]
+        if seen_outputs[key] == nil then
+            seen_outputs[key] = true
+            local result_list = self.recipes_by_result[key]
+            if result_list == nil then
+                result_list = {}
+                self.recipes_by_result[key] = result_list
+            end
+            result_list[#result_list + 1] = record
+        end
     end
 
     -- distinct tiers, maintained incrementally so the rank dropdown never
@@ -1729,6 +1800,32 @@ function CraftingStore:_build_db_recipe_record(ordinal, profession)
         }
     end
 
+    -- alternate outputs: versions past the first are the same craft with a
+    -- different output choice at the workbench; costs/status stay
+    -- version-1 based, variants exist for display, search and result links
+    local variants = {}
+    for vi = 2, #rec.versions do
+        local alt = rec.versions[vi]
+        if alt.results[1] ~= nil then
+            local alt_key = self:_remember_db_item(alt.results[1][1])
+            if alt_key ~= nil then
+                local alt_crit_key = nil
+                local alt_crit_quantity = 0
+                if alt.crit_results[1] ~= nil then
+                    alt_crit_key = self:_remember_db_item(alt.crit_results[1][1])
+                    alt_crit_quantity = alt.crit_results[1][2]
+                end
+                variants[#variants + 1] = {
+                    result_key = alt_key,
+                    result_quantity = alt.results[1][2],
+                    critical_result_key = alt_crit_key,
+                    critical_result_quantity = alt_crit_quantity,
+                    critical_chance = alt.crit,
+                }
+            end
+        end
+    end
+
     local recipe_name_key = _normalize_name(recipe_name)
     local record = {
         id = tostring(rec.id),
@@ -1747,6 +1844,7 @@ function CraftingStore:_build_db_recipe_record(ordinal, profession)
         recipe_name = recipe_name ~= "" and recipe_name ~= result_name and recipe_name or nil,
         result_quantity = version.results[1][2],
         ingredients = ingredients,
+        variants = variants,
     }
 
     -- hot paths read prepared values: search and sort must stay allocation-
@@ -1759,6 +1857,15 @@ function CraftingStore:_build_db_recipe_record(ordinal, profession)
     }
     for i = 1, #ingredients do
         search_parts[#search_parts + 1] = _lower(self.items[ingredients[i].key].name)
+    end
+    if critical_result_key ~= nil then
+        search_parts[#search_parts + 1] = _lower(self.items[critical_result_key].name)
+    end
+    for i = 1, #variants do
+        search_parts[#search_parts + 1] = _lower(self.items[variants[i].result_key].name)
+        if variants[i].critical_result_key ~= nil then
+            search_parts[#search_parts + 1] = _lower(self.items[variants[i].critical_result_key].name)
+        end
     end
     local quantity_counts = {}
     for i = 1, #ingredients do

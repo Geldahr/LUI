@@ -27,6 +27,27 @@ local function _has_flag(value, flag)
     return math.floor(value / flag) % 2 == 1
 end
 
+-- Measure an icon asset's real native pixel size (icons are not all
+-- square): same measure as the travel window's _measure_quickslot_size --
+-- flip to stretch mode 2 so the control auto-sizes to the art, read the
+-- size, restore. One shared probe control, never parented.
+local _probe = nil
+
+function Image.native_size(icon)
+    if _probe == nil then
+        _probe = Turbine.UI.Control()
+        _probe:SetMouseVisible(false)
+    end
+    local old_w, old_h = _probe:GetSize()
+    _probe:SetBackground(icon)
+    _probe:SetStretchMode(2)
+    local w, h = _probe:GetSize()
+    _probe:SetSize(old_w, old_h)
+    _probe:SetStretchMode(1)
+    _probe:SetBackground(nil)
+    return w, h
+end
+
 function Image:Constructor(icon, w, h)
     Turbine.UI.Control.Constructor(self)
 

@@ -228,6 +228,16 @@ function Shortcuts.open_bestiary_query_search(query)
     return true
 end
 
+function Shortcuts.open_crafting_item_search(item_name, select_recipe_id)
+    local window = _ensure_crafting_window()
+    if window == nil then
+        return false
+    end
+
+    window:open_item_search(item_name, select_recipe_id)
+    return true
+end
+
 function Shortcuts.toggle_crafting()
     local window = _ensure_crafting_window()
     if window == nil then

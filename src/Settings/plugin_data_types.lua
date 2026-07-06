@@ -426,6 +426,8 @@ local function _recipe_identity_schema(include_count)
 
     if include_count == true then
         fields.q = NUMBER
+        -- alternate-output choice for plan entries (0/absent = main output)
+        fields.v = NUMBER
     end
 
     return _table_schema(fields)

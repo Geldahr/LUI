@@ -61,6 +61,7 @@ LUI.UI.NativeScaling = ensure(LUI.UI, "NativeScaling")
 LUI.UI.MoveMode = ensure(LUI.UI, "MoveMode")
 LUI.UI.Hidable = ensure(LUI.UI, "Hidable")
 LUI.UI.PopupState = ensure(LUI.UI, "PopupState")
+LUI.UI.ItemActions = ensure(LUI.UI, "ItemActions")
 
 LUI.Features = ensure(LUI, "Features")
 LUI.Features.Assets = ensure(LUI.Features, "Assets")

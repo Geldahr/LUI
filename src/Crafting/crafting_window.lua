@@ -129,6 +129,8 @@ local BASE_PAGE_LABEL_W = 52
 local BASE_PAGE_BUTTON_MARGIN = 4
 local BASE_PANEL_BORDER = 1
 local BASE_DETAIL_HEADER_H = 78
+local BASE_VARIANT_BAR_H = 22
+local BASE_VARIANT_NAV_W = 12
 local BASE_PLAN_HEADER_H = 24
 local BASE_PLAN_CONTROLS_W = 72
 local BASE_SMALL_BUTTON_W = 22
@@ -306,6 +308,7 @@ local function _saved_plan_entry_signature(entry)
         tostring(entry.n or ""),
         tostring(entry.c or ""),
         tostring(entry.q or ""),
+        tostring(entry.v or ""),
     }, "\31")
 end
 
@@ -738,6 +741,15 @@ function CraftingRecipeRow:Constructor(on_click, on_favorite_toggle)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.title:SetForeColor(Style.FOREGROUND)
 
+    -- middle line, only for multi-output recipes: "+2 variants"
+    self._variant_count = 0
+    self.variants_label = UI.Widgets.LuiLabel()
+    self.variants_label:SetParent(self)
+    self.variants_label:SetMouseVisible(false)
+    self.variants_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.variants_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
+    self.variants_label:SetVisible(false)
+
     self.subtitle = UI.Widgets.LuiLabel()
     self.subtitle:SetParent(self)
     self.subtitle:SetMouseVisible(false)
@@ -780,6 +792,7 @@ end
 function CraftingRecipeRow:set_scale(scale)
     self._scale = scale
     self.title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.variants_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.subtitle:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.status_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.favorite_button:set_scale(1)
@@ -822,6 +835,12 @@ function CraftingRecipeRow:set_data(recipe, status, result_item, required_level,
 
     self.title:SetText(title)
     self.subtitle:SetText(table.concat(subtitle_parts, " - "))
+    self._variant_count = recipe ~= nil and #recipe.variants or 0
+    if self._variant_count > 0 then
+        self.variants_label:SetText("+" .. tostring(self._variant_count) .. " " .. TR["variants"])
+    else
+        self.variants_label:SetText("")
+    end
     self.status_label:SetText(CraftingWindow._recipe_status_text(nil, status))
     self.status_label:SetForeColor(CraftingWindow._status_color(nil, status))
 
@@ -833,6 +852,7 @@ function CraftingRecipeRow:set_data(recipe, status, result_item, required_level,
 
     self:set_favorite(favorite)
     self:_refresh_visual()
+    self:_layout()
 end
 
 function CraftingRecipeRow:_refresh_visual()
@@ -863,8 +883,17 @@ function CraftingRecipeRow:_layout()
     local status_x = width - status_w - gap
     local favorite_x = status_x - gap - favorite_w
     local text_w = favorite_x - text_left - gap
-    local title_h = math.floor(height * 0.55)
-    local subtitle_h = height - title_h
+    -- three compact lines when the recipe has variants (name / +x variants
+    -- / profession meta), the usual two lines otherwise
+    local title_h, variants_h
+    if self._variant_count > 0 then
+        title_h = math.floor(height * 0.42)
+        variants_h = math.floor(height * 0.29)
+    else
+        title_h = math.floor(height * 0.55)
+        variants_h = 0
+    end
+    local subtitle_h = height - title_h - variants_h
 
     self.status_strip:SetPosition(0, 0)
     self.status_strip:SetSize(strip_w, height)
@@ -874,7 +903,10 @@ function CraftingRecipeRow:_layout()
 
     self.title:SetPosition(text_left, 0)
     self.title:SetSize(math.max(0, text_w), title_h)
-    self.subtitle:SetPosition(text_left, title_h)
+    self.variants_label:SetVisible(self._variant_count > 0)
+    self.variants_label:SetPosition(text_left, title_h)
+    self.variants_label:SetSize(math.max(0, text_w), variants_h)
+    self.subtitle:SetPosition(text_left, title_h + variants_h)
     self.subtitle:SetSize(math.max(0, text_w), subtitle_h)
 
     self.favorite_button:SetPosition(favorite_x, math.max(0, math.floor((height - favorite_w) / 2)))
@@ -1432,6 +1464,7 @@ function CraftingWindow:Constructor()
     self.recipe_page_count = 1
     self.plan_order = {}
     self.plan_counts = {}
+    self.plan_variants = {}
     self._plan_dirty = false
     self._plan_user_changed = false
     self._suppress_search_text_changed = false
@@ -1448,6 +1481,9 @@ function CraftingWindow:Constructor()
     self._selected_recipe_watch_keys = {}
     self._plan_recipe_watch_keys = {}
     self._critical_result_visible = false
+    self._variant_selector_visible = false
+    self._selected_variant_index = 0
+    self._variant_recipe_id = nil
 
     self.top_bar = Turbine.UI.Control()
     self.top_bar:SetParent(content_host)
@@ -1715,6 +1751,58 @@ function CraftingWindow:Constructor()
     self.critical_result_row = CraftingResultInfoRow()
     self.critical_result_row:SetParent(self.detail_panel.inner)
     self.critical_result_row:SetVisible(false)
+
+    -- variant selector, only for multi-output recipes: Variant [<] n/x [>]
+    self.variant_label = UI.Widgets.LuiLabel()
+    self.variant_label:SetParent(self.detail_panel.inner)
+    self.variant_label:SetMouseVisible(false)
+    self.variant_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
+    self.variant_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.variant_label:SetText(TR["Variant"] .. ":")
+    self.variant_label:SetVisible(false)
+
+    self.variant_prev_button = UI.Widgets.LuiButton()
+    self.variant_prev_button:SetParent(self.detail_panel.inner)
+    self.variant_prev_button:set_text("")
+    self.variant_prev_button:set_padding(2)
+    self.variant_prev_button:set_icon(
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_transparent,
+        BASE_VARIANT_NAV_W,
+        nil,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
+    self.variant_prev_button:SetVisible(false)
+    self.variant_prev_button.Click = function()
+        self:_step_variant(-1)
+    end
+
+    self.variant_pos_label = UI.Widgets.LuiLabel()
+    self.variant_pos_label:SetParent(self.detail_panel.inner)
+    self.variant_pos_label:SetMouseVisible(false)
+    self.variant_pos_label:SetForeColor(Style.FOREGROUND)
+    self.variant_pos_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.variant_pos_label:SetVisible(false)
+
+    self.variant_next_button = UI.Widgets.LuiButton()
+    self.variant_next_button:SetParent(self.detail_panel.inner)
+    self.variant_next_button:set_text("")
+    self.variant_next_button:set_padding(2)
+    self.variant_next_button:set_icon(
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_transparent,
+        BASE_VARIANT_NAV_W,
+        nil,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
+    self.variant_next_button:SetVisible(false)
+    self.variant_next_button.Click = function()
+        self:_step_variant(1)
+    end
 
     self.plan_label = UI.Widgets.LuiLabel()
     self.plan_label:SetParent(self.detail_panel.inner)
@@ -2485,6 +2573,7 @@ end
 function CraftingWindow:_set_runtime_plan_entries(plan_entries)
     self.plan_order = {}
     self.plan_counts = {}
+    self.plan_variants = {}
 
     if type(plan_entries) ~= "table" then
         return
@@ -2498,6 +2587,10 @@ function CraftingWindow:_set_runtime_plan_entries(plan_entries)
         if recipe_id ~= nil and count > 0 then
             self.plan_order[#self.plan_order + 1] = recipe_id
             self.plan_counts[recipe_id] = count
+            local variant = math.floor((tonumber(entry.variant) or 0) + 0.5)
+            if variant > 0 then
+                self.plan_variants[recipe_id] = variant
+            end
         end
     end
 end
@@ -2519,7 +2612,8 @@ function CraftingWindow:_sync_draft_plan_from_tracked()
             local left = current_entries[i]
             local right = next_entries[i]
             if left == nil or right == nil or left.recipe_id ~= right.recipe_id or
-                (tonumber(left.count) or 0) ~= (tonumber(right.count) or 0) then
+                (tonumber(left.count) or 0) ~= (tonumber(right.count) or 0) or
+                (tonumber(left.variant) or 0) ~= (tonumber(right.variant) or 0) then
                 same = false
                 break
             end
@@ -2760,6 +2854,47 @@ function CraftingWindow:open_from_asset_materials(_)
     self:show_recipe_tab()
 end
 
+-- Cross-window link entry (Encyclopedia rows, bestiary card drops): open on
+-- an exact item-name search over the full catalog. Filters that could hide
+-- matches reset to "All"; select_recipe_id preselects the producing recipe
+-- for "how to craft" links.
+function CraftingWindow:open_item_search(item_name, select_recipe_id)
+    local query = _trim(item_name)
+    if query == "" then
+        return
+    end
+    if string.find(query, "\"", 1, true) == nil then
+        query = "\"" .. query .. "\""
+    end
+
+    self.profession_filter = FILTER_ALL
+    self.rank_filter = FILTER_ALL
+    self.show_filter = {}
+    self.level_min_filter = nil
+    self.level_max_filter = nil
+    self.recipe_page_index = 1
+    if select_recipe_id ~= nil then
+        self.selected_recipe_id = tostring(select_recipe_id)
+        -- land the variant selector on the output that was asked for
+        local recipe = self.store.recipe_by_id[self.selected_recipe_id]
+        if recipe ~= nil then
+            self._variant_recipe_id = recipe.id
+            self._selected_variant_index = self.store:variant_index_for_result_name(recipe, item_name)
+        end
+    end
+    self:_apply_search_query(query)
+    self:_invalidate_recipe_list()
+
+    self.profession_dropdown:SetValue(self.profession_filter)
+    self.rank_dropdown:SetValue(self.rank_filter)
+    self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
+    self.level_min_box:SetText("")
+    self.level_max_box:SetText("")
+
+    self:open()
+    self:show_recipe_tab()
+end
+
 function CraftingWindow:open_plan()
     self:open()
     self:show_plan_tab()
@@ -2841,6 +2976,10 @@ function CraftingWindow:apply_settings()
     self.detail_meta:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.detail_status:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.critical_result_row:set_scale(State.settings.global.scale)
+    self.variant_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.variant_pos_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.variant_prev_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.variant_next_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.plan_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.plan_spin_box:set_scale(State.settings.global.scale)
     self.plan_spin_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
@@ -3498,6 +3637,49 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
     end
 end
 
+-- The alternate output currently chosen in the detail selector; nil means
+-- the main (version 1) output.
+function CraftingWindow:_display_variant(recipe)
+    if recipe == nil or self._selected_variant_index <= 0 then
+        return nil
+    end
+    return recipe.variants[self._selected_variant_index]
+end
+
+-- The alternate output recorded for a plan entry; nil means main output.
+function CraftingWindow:_plan_entry_variant(recipe)
+    local index = self.plan_variants[recipe.id]
+    if index == nil or index <= 0 then
+        return nil
+    end
+    return recipe.variants[index]
+end
+
+function CraftingWindow:_step_variant(delta)
+    local recipe = self:_selected_recipe()
+    if recipe == nil or #recipe.variants == 0 then
+        return
+    end
+
+    local total = #recipe.variants + 1
+    local index = (self._selected_variant_index + delta) % total
+    if index == self._selected_variant_index then
+        return
+    end
+    self._selected_variant_index = index
+
+    -- a planned recipe follows the selector: the plan entry now produces
+    -- the chosen variant
+    if self.plan_counts[recipe.id] ~= nil and (self.plan_variants[recipe.id] or 0) ~= index then
+        self.plan_variants[recipe.id] = index
+        self._plan_user_changed = true
+        self:_refresh_plan_dirty_state()
+        self:refresh_plan()
+    end
+
+    self:refresh_selected_recipe()
+end
+
 function CraftingWindow:_clear_critical_result_detail()
     self._critical_result_visible = false
     if self.critical_result_row ~= nil then
@@ -3506,14 +3688,19 @@ function CraftingWindow:_clear_critical_result_detail()
     end
 end
 
-function CraftingWindow:_refresh_critical_result_detail(recipe)
+function CraftingWindow:_refresh_critical_result_detail(recipe, variant)
     self:_clear_critical_result_detail()
     if type(recipe) ~= "table" then
         return
     end
 
     local row_w = math.max(0, self.detail_panel.inner:GetWidth())
-    local critical_item = self:_recipe_critical_result_item(recipe)
+    local critical_item
+    if variant ~= nil then
+        critical_item = self:_item(variant.critical_result_key)
+    else
+        critical_item = self:_recipe_critical_result_item(recipe)
+    end
     if critical_item ~= nil then
         self._critical_result_visible = true
         self.critical_result_row:set_scale(State.settings.global.scale)
@@ -3522,7 +3709,9 @@ function CraftingWindow:_refresh_critical_result_detail(recipe)
             critical_item.icon_id,
             critical_item.background_image_id,
             critical_item.name,
-            self:_critical_result_detail(recipe),
+            -- variants carry their own crit quantity/chance fields, so the
+            -- detail formatter reads either source
+            self:_critical_result_detail(variant ~= nil and variant or recipe),
             STATUS_AUTO,
             critical_item.item_id
         )
@@ -3538,6 +3727,8 @@ function CraftingWindow:refresh_selected_recipe()
     local recipe = self:_selected_recipe()
     if recipe == nil then
         self:_clear_critical_result_detail()
+        self._variant_selector_visible = false
+        self._variant_recipe_id = nil
         self:layout()
         self.detail_empty:SetVisible(true)
         self.detail_icon:bind(nil, nil, nil)
@@ -3551,12 +3742,31 @@ function CraftingWindow:refresh_selected_recipe()
         return
     end
 
+    -- variant selection: adopt the plan's recorded variant when the
+    -- selection moves to a new recipe, clamp against the catalog
+    if self._variant_recipe_id ~= recipe.id then
+        self._variant_recipe_id = recipe.id
+        self._selected_variant_index = self.plan_variants[recipe.id] or 0
+    end
+    if self._selected_variant_index > #recipe.variants then
+        self._selected_variant_index = 0
+    end
+    self._variant_selector_visible = #recipe.variants > 0
+    local variant = self:_display_variant(recipe)
+
     local evaluation = self.store:evaluate_recipe(recipe, self.scope_key, 1)
-    local result_item = self:_recipe_result_item(recipe)
-    local result_name = self:_recipe_result_name(recipe)
+    local result_item = variant ~= nil and self:_item(variant.result_key) or self:_recipe_result_item(recipe)
+    local result_name
+    if variant ~= nil then
+        result_name = result_item ~= nil and result_item.name or ""
+    else
+        result_name = self:_recipe_result_name(recipe)
+    end
     local required_level = self:_recipe_required_level(recipe)
     self.detail_empty:SetVisible(false)
-    self:_refresh_critical_result_detail(recipe)
+    self:_refresh_critical_result_detail(recipe, variant)
+    self.variant_pos_label:SetText(tostring(self._selected_variant_index + 1) .. "/" ..
+        tostring(#recipe.variants + 1))
     self:layout()
 
     self.detail_icon:bind(
@@ -3579,8 +3789,9 @@ function CraftingWindow:refresh_selected_recipe()
     if recipe.tier > 0 then
         meta_parts[#meta_parts + 1] = _craft_rank_name(recipe.tier)
     end
-    if recipe.result_quantity > 1 then
-        meta_parts[#meta_parts + 1] = TR["Makes x"] .. _format_count(recipe.result_quantity)
+    local result_quantity = variant ~= nil and variant.result_quantity or recipe.result_quantity
+    if result_quantity > 1 then
+        meta_parts[#meta_parts + 1] = TR["Makes x"] .. _format_count(result_quantity)
     end
     self.detail_meta:SetText(table.concat(meta_parts, " - "))
     self.detail_status:SetText(self:_status_text(evaluation))
@@ -3617,6 +3828,7 @@ function CraftingWindow:_build_plan_entries()
             entries[#entries + 1] = {
                 recipe_id = recipe_id,
                 count = count,
+                variant = self.plan_variants[recipe_id] or 0,
             }
         end
     end
@@ -3677,10 +3889,19 @@ function CraftingWindow:refresh_plan()
         )
         queue_row:set_scale(State.settings.global.scale)
         queue_row:set_width(queue_w)
+        local queue_variant = self:_plan_entry_variant(entry.recipe)
+        local queue_item = queue_variant ~= nil and self:_item(queue_variant.result_key)
+            or self:_recipe_result_item(entry.recipe)
+        local queue_name
+        if queue_variant ~= nil then
+            queue_name = queue_item ~= nil and queue_item.name or ""
+        else
+            queue_name = self:_recipe_result_name(entry.recipe)
+        end
         queue_row:set_data(
             entry.recipe,
-            self:_recipe_result_item(entry.recipe),
-            self:_recipe_result_name(entry.recipe),
+            queue_item,
+            queue_name,
             entry.count,
             entry.evaluation,
             entry.craftable_count
@@ -3715,10 +3936,19 @@ function CraftingWindow:refresh_plan()
         plan_row:set_scale(State.settings.global.scale)
         plan_row:set_width(row_w)
         plan_row:set_read_only(true)
+        local plan_variant = self:_plan_entry_variant(entry.recipe)
+        local plan_item = plan_variant ~= nil and self:_item(plan_variant.result_key)
+            or self:_recipe_result_item(entry.recipe)
+        local plan_name
+        if plan_variant ~= nil then
+            plan_name = plan_item ~= nil and plan_item.name or ""
+        else
+            plan_name = self:_recipe_result_name(entry.recipe)
+        end
         plan_row:set_data(
             entry.recipe,
-            self:_recipe_result_item(entry.recipe),
-            self:_recipe_result_name(entry.recipe),
+            plan_item,
+            plan_name,
             entry.count,
             entry.evaluation,
             entry.craftable_count
@@ -3834,6 +4064,7 @@ function CraftingWindow:set_plan_count(recipe_id, count)
 
     if next_count == 0 then
         self.plan_counts[recipe_id] = nil
+        self.plan_variants[recipe_id] = nil
         for i = #self.plan_order, 1, -1 do
             if self.plan_order[i] == recipe_id then
                 table.remove(self.plan_order, i)
@@ -3844,6 +4075,12 @@ function CraftingWindow:set_plan_count(recipe_id, count)
             self.plan_order[#self.plan_order + 1] = recipe_id
         end
         self.plan_counts[recipe_id] = next_count
+        -- the detail selector's variant travels into the plan entry, but
+        -- only for the recipe currently shown: count edits made from
+        -- plan/queue rows must not clobber their recorded variant
+        if recipe_id == self.selected_recipe_id then
+            self.plan_variants[recipe_id] = self._selected_variant_index
+        end
     end
 
     self._plan_user_changed = true
@@ -3875,6 +4112,7 @@ end
 function CraftingWindow:clear_plan()
     self.plan_order = {}
     self.plan_counts = {}
+    self.plan_variants = {}
     Crafting.set_tracked_plan_entries({}, true)
     self._plan_user_changed = false
     self._plan_dirty = false
@@ -3947,7 +4185,14 @@ function CraftingWindow:layout()
     local scroll_w = _fixed_int(BASE_SCROLL_W)
     local plan_header_h = _scaled_int(BASE_PLAN_HEADER_H)
     local section_bar_h = plan_header_h
+    -- the variant selector sits on the status line (same level as the
+    -- ready ratio); the header grows just enough for the part that extends
+    -- below the base header, pushing the critical-result row down
     local detail_top_h = _even_int(math.max(0, _scaled_int(BASE_DETAIL_HEADER_H) - section_bar_h))
+    if self._variant_selector_visible == true then
+        detail_top_h = _even_int(math.max(detail_top_h,
+            _scaled_int(48) + _even_int(_scaled_int(BASE_VARIANT_BAR_H)) + _scaled_int(2)))
+    end
     local critical_result_h = self._critical_result_visible == true and _even_int(_scaled_int(BASE_CRITICAL_RESULT_ROW_H)) or 0
     local detail_header_h = detail_top_h + critical_result_h + section_bar_h
     local plan_controls_w = _scaled_int(BASE_PLAN_CONTROLS_W)
@@ -4100,7 +4345,11 @@ function CraftingWindow:layout()
 
     local detail_inner = self.detail_panel.inner
     local icon_side = _even_int(_fixed_int(BASE_ICON_SIDE))
-    local detail_icon_y = math.max(0, math.floor((detail_top_h - icon_side) / 2))
+    -- center on the title + meta block (y 6..48), not the whole header:
+    -- the variant selector line must not drag the icon down
+    local detail_icon_top = _scaled_int(6)
+    local detail_icon_span = _scaled_int(48) - detail_icon_top
+    local detail_icon_y = detail_icon_top + math.max(0, math.floor((detail_icon_span - icon_side) / 2))
     self.detail_icon:SetPosition(_scaled_int(8), detail_icon_y)
     self.detail_icon:set_side(icon_side)
     self.detail_title:SetPosition(_scaled_int(8) + icon_side + gap, _scaled_int(6))
@@ -4115,6 +4364,33 @@ function CraftingWindow:layout()
     self.plan_label:SetSize(plan_controls_w, _scaled_int(16))
     self.plan_spin_box:SetPosition(plan_controls_x, _scaled_int(24))
     self.plan_spin_box:SetSize(plan_controls_w, bar_h)
+
+    -- variant selector: right-aligned under the Build plan controls, on
+    -- the same line as the ready-ratio status text
+    local selector_visible = self._variant_selector_visible == true
+    local selector_h = _even_int(_scaled_int(BASE_VARIANT_BAR_H))
+    local selector_y = _scaled_int(48)
+    local variant_label_w = _scaled_int(52)
+    local variant_nav_w = _even_int(_scaled_int(BASE_VARIANT_NAV_W))
+    local variant_pos_w = _scaled_int(40)
+    local variant_label_gap = 2 * gap
+    local variant_block_w = variant_label_w + variant_label_gap + variant_nav_w + gap + variant_pos_w + gap + variant_nav_w
+    local selector_x = detail_inner:GetWidth() - _scaled_int(8) - variant_block_w
+    local variant_nav_y = selector_y + math.max(0, math.floor((selector_h - variant_nav_w) / 2))
+    self.variant_label:SetPosition(selector_x, selector_y)
+    self.variant_label:SetSize(variant_label_w, selector_h)
+    self.variant_prev_button:SetPosition(selector_x + variant_label_w + variant_label_gap, variant_nav_y)
+    self.variant_prev_button:SetSize(variant_nav_w, variant_nav_w)
+    self.variant_pos_label:SetPosition(selector_x + variant_label_w + variant_label_gap + variant_nav_w + gap, selector_y)
+    self.variant_pos_label:SetSize(variant_pos_w, selector_h)
+    self.variant_next_button:SetPosition(
+        selector_x + variant_label_w + variant_label_gap + variant_nav_w + gap + variant_pos_w + gap,
+        variant_nav_y)
+    self.variant_next_button:SetSize(variant_nav_w, variant_nav_w)
+    self.variant_label:SetVisible(selector_visible)
+    self.variant_prev_button:SetVisible(selector_visible)
+    self.variant_pos_label:SetVisible(selector_visible)
+    self.variant_next_button:SetVisible(selector_visible)
 
     if self.critical_result_row ~= nil then
         self.critical_result_row:SetPosition(0, detail_top_h)
