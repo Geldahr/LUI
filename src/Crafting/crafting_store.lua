@@ -909,7 +909,9 @@ function CraftingStore:get_recipe_result_item(recipe_or_id)
     if type(recipe) ~= "table" then
         return nil
     end
-    return self:get_item(recipe.result_key)
+    -- resolved by real item id: the name-keyed items map can hold a
+    -- same-named crit upgrade instead of the normal result
+    return self:item_display_by_id(recipe.result_item_id)
 end
 
 function CraftingStore:get_recipe_required_level(recipe_or_id)
@@ -954,6 +956,25 @@ function CraftingStore:recipe_matches_query(recipe, groups)
     end
 
     return false
+end
+
+-- Display entry straight from the lore DB by item id, bypassing the
+-- name-keyed items map: crit outputs can share their name with the base
+-- item while being a different item (teal upgrades).
+function CraftingStore:item_display_by_id(item_id)
+    local ordinal = Lore.Items.ordinal_of(item_id)
+    if ordinal == nil then
+        return nil
+    end
+    local icon_id, background_id = Lore.Items.icon_layers(ordinal)
+    return {
+        name = Lore.Items.label(ordinal),
+        item_id = item_id,
+        icon_id = icon_id,
+        background_image_id = background_id,
+        quality = DB_QUALITY_TO_LOTRO[Lore.Items.quality_name(ordinal)],
+        required_level = Lore.Items.min_level(ordinal),
+    }
 end
 
 -- Cross-window link probes (Encyclopedia rows, bestiary card drops): both
@@ -1779,11 +1800,16 @@ function CraftingStore:_build_db_recipe_record(ordinal, profession)
 
     local critical_result_key = nil
     local critical_result_quantity = 0
+    local critical_result_item_id = nil
     if version.crit_results[1] ~= nil then
         local crit_key = self:_remember_db_item(version.crit_results[1][1])
         if crit_key ~= nil then
             critical_result_key = crit_key
             critical_result_quantity = version.crit_results[1][2]
+            -- crit outputs can share their display name with the base item
+            -- (teal upgrades); the name-keyed items map would then return
+            -- the base item, so displays must resolve by this real id
+            critical_result_item_id = version.crit_results[1][1]
         end
     end
 
@@ -1818,8 +1844,10 @@ function CraftingStore:_build_db_recipe_record(ordinal, profession)
                 variants[#variants + 1] = {
                     result_key = alt_key,
                     result_quantity = alt.results[1][2],
+                    result_item_id = alt.results[1][1],
                     critical_result_key = alt_crit_key,
                     critical_result_quantity = alt_crit_quantity,
+                    critical_result_item_id = alt_crit_key ~= nil and alt.crit_results[1][1] or nil,
                     critical_chance = alt.crit,
                 }
             end
@@ -1843,6 +1871,8 @@ function CraftingStore:_build_db_recipe_record(ordinal, profession)
         recipe_name_key = recipe_name_key ~= "" and recipe_name_key ~= result_key and recipe_name_key or nil,
         recipe_name = recipe_name ~= "" and recipe_name ~= result_name and recipe_name or nil,
         result_quantity = version.results[1][2],
+        result_item_id = version.results[1][1],
+        critical_result_item_id = critical_result_item_id,
         ingredients = ingredients,
         variants = variants,
     }

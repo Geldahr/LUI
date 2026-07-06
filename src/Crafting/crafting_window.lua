@@ -2342,7 +2342,12 @@ function CraftingWindow:_recipe_result_name(recipe)
 end
 
 function CraftingWindow:_recipe_critical_result_item(recipe)
-    return self:_item(recipe ~= nil and recipe.critical_result_key or nil)
+    -- resolved by real item id: same-named crit upgrades would otherwise
+    -- display the base item's icon and tooltip
+    if recipe == nil or recipe.critical_result_item_id == nil then
+        return nil
+    end
+    return self.store:item_display_by_id(recipe.critical_result_item_id)
 end
 
 function CraftingWindow:_recipe_required_level(recipe)
@@ -3697,7 +3702,8 @@ function CraftingWindow:_refresh_critical_result_detail(recipe, variant)
     local row_w = math.max(0, self.detail_panel.inner:GetWidth())
     local critical_item
     if variant ~= nil then
-        critical_item = self:_item(variant.critical_result_key)
+        critical_item = variant.critical_result_item_id ~= nil
+            and self.store:item_display_by_id(variant.critical_result_item_id) or nil
     else
         critical_item = self:_recipe_critical_result_item(recipe)
     end
@@ -3755,7 +3761,8 @@ function CraftingWindow:refresh_selected_recipe()
     local variant = self:_display_variant(recipe)
 
     local evaluation = self.store:evaluate_recipe(recipe, self.scope_key, 1)
-    local result_item = variant ~= nil and self:_item(variant.result_key) or self:_recipe_result_item(recipe)
+    local result_item = variant ~= nil and self.store:item_display_by_id(variant.result_item_id)
+        or self:_recipe_result_item(recipe)
     local result_name
     if variant ~= nil then
         result_name = result_item ~= nil and result_item.name or ""
@@ -3890,7 +3897,7 @@ function CraftingWindow:refresh_plan()
         queue_row:set_scale(State.settings.global.scale)
         queue_row:set_width(queue_w)
         local queue_variant = self:_plan_entry_variant(entry.recipe)
-        local queue_item = queue_variant ~= nil and self:_item(queue_variant.result_key)
+        local queue_item = queue_variant ~= nil and self.store:item_display_by_id(queue_variant.result_item_id)
             or self:_recipe_result_item(entry.recipe)
         local queue_name
         if queue_variant ~= nil then
@@ -3937,7 +3944,7 @@ function CraftingWindow:refresh_plan()
         plan_row:set_width(row_w)
         plan_row:set_read_only(true)
         local plan_variant = self:_plan_entry_variant(entry.recipe)
-        local plan_item = plan_variant ~= nil and self:_item(plan_variant.result_key)
+        local plan_item = plan_variant ~= nil and self.store:item_display_by_id(plan_variant.result_item_id)
             or self:_recipe_result_item(entry.recipe)
         local plan_name
         if plan_variant ~= nil then
