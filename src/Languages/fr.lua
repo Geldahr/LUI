@@ -957,6 +957,7 @@ LUI.src.Languages.fr.FR = {
     ["How to craft this"] = "Voir la recette de fabrication",
     ["variants"] = "variantes",
     ["Variant"] = "Variante",
+    ["Open in Encyclopedia"] = "Ouvrir dans l'encyclopédie",
     ["Known"] = "Connues",
     ["filters"] = "filtres",
     ["Matching known recipes..."] = "Association des recettes connues...",

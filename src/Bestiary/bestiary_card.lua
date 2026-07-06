@@ -16,6 +16,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
 local Style = UI.Widgets.Style
+local Shortcuts = UI.Shortcuts
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
 local DATA_ACCESS = Bestiary.DataAccess
@@ -57,6 +58,10 @@ local COLOR_DROP_CHIP_TEXT = Turbine.UI.Color(1, 0.76, 0.88, 0.79)
 local COLOR_CHEST_CHIP_BORDER = Turbine.UI.Color(1, 0.45, 0.32, 0.12)
 local COLOR_CHEST_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
 local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.95, 0.83, 0.49)
+-- clickable chips (drop resolves to a browsable item) get a distinct
+-- steel-blue border; chest chips keep a brighter gold instead
+local COLOR_DROP_CHIP_LINK_BORDER = Turbine.UI.Color(1, 0.30, 0.52, 0.68)
+local COLOR_CHEST_CHIP_LINK_BORDER = Turbine.UI.Color(1, 0.70, 0.52, 0.20)
 local COMBAT_SCALE_COLORS = {
     feeble = Turbine.UI.Color(1, 0.26, 0.77, 0.42),
     poor = Turbine.UI.Color(1, 0.49, 0.81, 0.31),
@@ -729,7 +734,7 @@ local function _build_drop_texts(record)
                 else
                     text = drop.name
                 end
-                texts[#texts + 1] = { text = text, chest = drop.chest == true }
+                texts[#texts + 1] = { text = text, chest = drop.chest == true, name = drop.name }
             end
         end
     end
@@ -813,6 +818,7 @@ local function _build_chip_layout(texts, max_width)
         layout[#layout + 1] = {
             text = text,
             chest = type(item) == "table" and item.chest == true,
+            name = type(item) == "table" and item.name or nil,
             x = x,
             y = y,
             w = width,
@@ -1079,13 +1085,54 @@ local function _bind_row_set(rows, values, color_resolver, default_value_color)
     end
 end
 
+-- Whether a drop name resolves to a browsable Encyclopedia item; probed at
+-- card bind (bounded by drops per card) and cached per name for reopens.
+local _drop_link_known = {}
+
+local function _drop_link_name(name)
+    if name == nil then
+        return nil
+    end
+    local known = _drop_link_known[name]
+    if known == nil then
+        known = Bestiary.encyclopedia_tab_for_item(name) ~= nil
+        _drop_link_known[name] = known
+    end
+    return known == true and name or nil
+end
+
 local DropChip = class(Turbine.UI.Control)
 
 function DropChip:Constructor()
     Turbine.UI.Control.Constructor(self)
 
+    self._link_name = nil
+    self._chest = false
+
     self:SetMouseVisible(false)
     self:SetBackColor(COLOR_DROP_CHIP_BORDER)
+
+    -- linkable drops: left click opens the Encyclopedia on the matching
+    -- item tab, right click opens the item actions menu (Encyclopedia /
+    -- recipe); the chip is only mouse-visible when a link target exists
+    self.MouseClick = function(_, args)
+        if self._link_name == nil or args == nil then
+            return
+        end
+        if args.Button == Turbine.UI.MouseButton.Left then
+            Shortcuts.open_encyclopedia_item_search(self._link_name)
+        elseif args.Button == Turbine.UI.MouseButton.Right then
+            UI.ItemActions.show_menu(self, args.X, args.Y, self._link_name)
+        end
+    end
+    self.MouseEnter = function()
+        if self._link_name ~= nil then
+            self.label:SetForeColor(Style.FOREGROUND)
+        end
+    end
+    self.MouseLeave = function()
+        self:apply_settings(self._chest)
+    end
 
     self.inner = Turbine.UI.Control()
     self.inner:SetParent(self)
@@ -1101,15 +1148,22 @@ function DropChip:Constructor()
     self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 end
 
+function DropChip:set_link(item_name)
+    self._link_name = item_name
+    self:SetMouseVisible(item_name ~= nil)
+end
+
 function DropChip:apply_settings(chest)
+    self._chest = chest == true
+    local linked = self._link_name ~= nil
     local border_w = _scaled_int(BASE_CHIP_BORDER)
     self.inner:SetPosition(border_w, border_w)
     if chest == true then
-        self:SetBackColor(COLOR_CHEST_CHIP_BORDER)
+        self:SetBackColor(linked and COLOR_CHEST_CHIP_LINK_BORDER or COLOR_CHEST_CHIP_BORDER)
         self.inner:SetBackColor(COLOR_CHEST_CHIP_BG)
         _style_text(self.label, "Verdana", BASE_TEXT_SIZE, COLOR_CHEST_CHIP_TEXT)
     else
-        self:SetBackColor(COLOR_DROP_CHIP_BORDER)
+        self:SetBackColor(linked and COLOR_DROP_CHIP_LINK_BORDER or COLOR_DROP_CHIP_BORDER)
         self.inner:SetBackColor(COLOR_DROP_CHIP_BG)
         _style_text(self.label, "Verdana", BASE_TEXT_SIZE, COLOR_DROP_CHIP_TEXT)
     end
@@ -1934,6 +1988,8 @@ function BestiaryCard:_apply_drop_layout(drop_texts)
     for i = 1, #layout do
         local chip_info = layout[i]
         local chip = self.drop_chips[i]
+        -- link state first: apply_settings picks the border color from it
+        chip:set_link(_drop_link_name(chip_info.name))
         chip:apply_settings(chip_info.chest == true)
         chip:SetPosition(chip_info.x, chip_info.y)
         chip:bind(chip_info.text, chip_info.w, chip_h)

@@ -957,6 +957,7 @@ LUI.src.Languages.de.DE = {
     ["How to craft this"] = "Herstellungsrezept anzeigen",
     ["variants"] = "Varianten",
     ["Variant"] = "Variante",
+    ["Open in Encyclopedia"] = "In der Enzyklopädie öffnen",
     ["Known"] = "Bekannt",
     ["filters"] = "Filter",
     ["Matching known recipes..."] = "Bekannte Rezepte werden zugeordnet...",

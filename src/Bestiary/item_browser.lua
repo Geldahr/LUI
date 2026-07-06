@@ -43,19 +43,19 @@ local function _scaled_font(name, size)
     return FONT_TO_LOTRO(name, size * State.settings.global.scale)
 end
 
--- crafting-link action icon: identical treatment to the crafting window's
+-- link action icons: identical treatment to the crafting window's
 -- bestiary button on drop resources (16px icon in a 22px square button)
 local CRAFT_ACTION_ICON = UI.AssetIds.anvil_silver_glow
+local BESTIARY_ACTION_ICON = UI.AssetIds.book_orange_cover
 local BASE_LINK_BUTTON_W = 22
 
-local function _apply_craft_icon(button)
-    -- same treatment as the crafting window's bestiary action button
+local function _apply_link_icon(button, icon)
     local side = math.max(14, scaled_int(16))
     button:set_icon(
-        CRAFT_ACTION_ICON,
-        CRAFT_ACTION_ICON,
-        CRAFT_ACTION_ICON,
-        CRAFT_ACTION_ICON,
+        icon,
+        icon,
+        icon,
+        icon,
         side,
         side,
         UI.Widgets.LuiButton.icon_position.LEFT
@@ -103,10 +103,22 @@ function ItemBrowserRow:Constructor()
     self.craft_button = UI.Widgets.LuiButton()
     self.craft_button:SetParent(self)
     self.craft_button:set_scale(1)
-    _apply_craft_icon(self.craft_button)
+    _apply_link_icon(self.craft_button, CRAFT_ACTION_ICON)
     self.craft_button:SetVisible(false)
     self.craft_button.Click = function()
         Shortcuts.open_crafting_item_search(self._link_name, self._link_recipe_id)
+    end
+
+    -- "which mobs drop this": bestiary search by drop name, shown only
+    -- when the bestiary drop table knows the name (same O(1) gate as the
+    -- crafting window's bestiary buttons)
+    self.bestiary_button = UI.Widgets.LuiButton()
+    self.bestiary_button:SetParent(self)
+    self.bestiary_button:set_scale(1)
+    _apply_link_icon(self.bestiary_button, BESTIARY_ACTION_ICON)
+    self.bestiary_button:SetVisible(false)
+    self.bestiary_button.Click = function()
+        Shortcuts.open_bestiary_item_search(self._link_name)
     end
 end
 
@@ -114,7 +126,9 @@ function ItemBrowserRow:apply_fonts()
     self.name_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
     self.meta_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.craft_button:set_scale(1)
-    _apply_craft_icon(self.craft_button)
+    _apply_link_icon(self.craft_button, CRAFT_ACTION_ICON)
+    self.bestiary_button:set_scale(1)
+    _apply_link_icon(self.bestiary_button, BESTIARY_ACTION_ICON)
 end
 
 function ItemBrowserRow:set_row(ordinal)
@@ -144,6 +158,7 @@ function ItemBrowserRow:set_row(ordinal)
     self._link_name = name
     self._link_recipe_id = producing ~= nil and producing.id or nil
     self.craft_button:SetVisible(linkable == true)
+    self.bestiary_button:SetVisible(Bestiary.has_droppable_item(name) == true)
 end
 
 function ItemBrowserRow:layout_row(width, height)
@@ -160,15 +175,18 @@ function ItemBrowserRow:layout_row(width, height)
     self.icon:set_side(icon_side)
     self.icon:SetPosition(gap, math.max(0, math.floor((height - icon_side) / 2)))
 
-    -- crafting-link slot is always reserved so meta text stays aligned
-    -- across rows with and without the button
+    -- link slots are always reserved so meta text stays aligned across
+    -- rows: bestiary book at the edge (always shown), anvil left of it
     local btn_side = math.min(scaled_int(BASE_LINK_BUTTON_W), math.max(0, height - gap))
-    self.craft_button:SetPosition(width - gap - btn_side, math.max(0, math.floor((height - btn_side) / 2)))
+    local btn_y = math.max(0, math.floor((height - btn_side) / 2))
+    self.bestiary_button:SetPosition(width - gap - btn_side, btn_y)
+    self.bestiary_button:SetSize(btn_side, btn_side)
+    self.craft_button:SetPosition(width - gap - btn_side - gap - btn_side, btn_y)
     self.craft_button:SetSize(btn_side, btn_side)
 
     local meta_w = scaled_int(220)
     local name_x = gap + icon_side + gap
-    local meta_x = width - gap - btn_side - gap - meta_w
+    local meta_x = width - gap - btn_side - gap - btn_side - gap - meta_w
     self.name_label:SetPosition(name_x, 0)
     self.name_label:SetSize(math.max(0, meta_x - name_x - gap), height)
     self.meta_label:SetPosition(meta_x, 0)
@@ -562,6 +580,25 @@ end
 function ItemBrowserPanel:_refresh_list()
     self:_rebuild_filtered()
     self:_render_page()
+end
+
+-- Cross-window link entry (card drop chips): exact-name search with every
+-- filter reset so the match can never be hidden.
+function ItemBrowserPanel:open_item_search(item_name)
+    local query = item_name
+    if string.find(query, "\"", 1, true) == nil then
+        query = "\"" .. query .. "\""
+    end
+
+    self._quality_filter = FILTER_ALL_CODE
+    self._class_filter = FILTER_ALL_CODE
+    self.quality_dropdown:SetValue(FILTER_ALL_CODE)
+    self.class_dropdown:SetValue(FILTER_ALL_CODE)
+    self.level_min_box:SetText("")
+    self.level_max_box:SetText("")
+    self.search_box:SetText(query)
+    -- programmatic SetText does not fire TextChanged: refresh explicitly
+    self:_on_filters_changed()
 end
 
 function ItemBrowserPanel:layout()

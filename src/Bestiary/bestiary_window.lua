@@ -1831,6 +1831,22 @@ function BestiaryWindow:open_item_search(item_name)
     self:open_query_search(query)
 end
 
+-- Cross-window link (card drop chips): open the Encyclopedia on the item
+-- tab that shows this item, with an exact-name search. Returns false when
+-- the name is not a browsable item.
+function BestiaryWindow:open_encyclopedia_item_search(item_name)
+    local tab_index = Bestiary.encyclopedia_tab_for_item(item_name)
+    if tab_index == nil then
+        return false
+    end
+
+    self.encyclopedia_tabs:set_selected_index(tab_index)
+    self._item_panels[tab_index]:open_item_search(item_name)
+    self:open()
+    self:bring_to_front()
+    return true
+end
+
 function BestiaryWindow:_refresh_genus_dropdown()
     local labels = { TR["All"] }
     local values = { FILTER_ALL }
@@ -2158,6 +2174,29 @@ end
 -- tab 1 = bestiary (this window's own content); tabs 2-4 are item browser
 -- panels laid over the content area, created on first activation
 local ENCYCLOPEDIA_TAB_BUCKETS = { nil, "equipment", "resource", "consumable" }
+
+-- converter bucket codes (1=equipment 2=consumable 3=resource, 0=other) to
+-- encyclopedia tab index; "other" items have no tab and are not linkable
+local BUCKET_TAB_BY_CODE = { [1] = 2, [2] = 4, [3] = 3 }
+
+-- Which encyclopedia tab shows this item name; nil when the name is not a
+-- browsable item (unknown name or bucket "other"). Shared probe for every
+-- surface that decides whether an item link makes sense.
+function Bestiary.encyclopedia_tab_for_item(item_name)
+    local Lore = _G.LUI.Data.Lore
+    Lore.load_items()
+    local ordinals = Lore.Items.find_ordinals(item_name)
+    if ordinals == nil then
+        return nil
+    end
+    for i = 1, #ordinals do
+        local tab_index = BUCKET_TAB_BY_CODE[Lore.Items.bucket(ordinals[i])]
+        if tab_index ~= nil then
+            return tab_index
+        end
+    end
+    return nil
+end
 
 function BestiaryWindow:_set_encyclopedia_tab(index)
     self._active_encyclopedia_tab = index
