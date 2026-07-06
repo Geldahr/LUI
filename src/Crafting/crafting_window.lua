@@ -120,8 +120,6 @@ local BASE_MIN_W = 940
 local BASE_MIN_H = 620
 local BASE_RIGHT_W = 340
 local BASE_RECIPE_ROW_H = 46
-local BASE_INGREDIENT_ROW_H = 38
-local BASE_PLAN_ROW_H = 38
 local BASE_CRITICAL_RESULT_ROW_H = 34
 local BASE_ICON_SIDE = 32
 local BASE_SCROLL_W = 10
@@ -277,6 +275,13 @@ local function _even_int(value)
         out = 0
     end
     return out
+end
+
+-- material/plan rows derive their height from the fixed 32px item art
+-- (never scaled) plus 2 scaled pixels of padding each side, so the icon
+-- fits exactly at every UI scale
+local function _material_row_height()
+    return _even_int(_fixed_int(BASE_ICON_SIDE) + (2 * _scaled_int(2)))
 end
 
 local function _safe_string(value, fallback)
@@ -1002,7 +1007,7 @@ function CraftingIngredientRow:set_scale(scale)
 end
 
 function CraftingIngredientRow:set_width(width)
-    self:SetSize(width, _even_int(_scaled_int(BASE_INGREDIENT_ROW_H)))
+    self:SetSize(width, _material_row_height())
     self:_layout()
 end
 
@@ -1071,6 +1076,12 @@ function CraftingIngredientRow:_layout()
             source_hint_w = text_w
             detail_w = 0
         end
+    end
+
+    -- name-only rows: the title spans the full height so the text centers
+    -- vertically instead of hugging the top line of the two-line split
+    if has_detail_text ~= true and source_hint_visible ~= true then
+        title_h = height
     end
 
     self.status_strip:SetPosition(0, 0)
@@ -1276,7 +1287,7 @@ function CraftingPlanRow:set_scale(scale)
 end
 
 function CraftingPlanRow:set_width(width)
-    self:SetSize(width, _even_int(_scaled_int(BASE_PLAN_ROW_H)))
+    self:SetSize(width, _material_row_height())
     self:_layout()
 end
 
