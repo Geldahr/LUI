@@ -2848,6 +2848,11 @@ function CraftingWindow:open_item_search(item_name, select_recipe_id)
         query = "\"" .. query .. "\""
     end
 
+    -- window first, text after: the Lotro TextBox does not repaint text
+    -- set while its window is hidden until it is interacted with
+    self:open()
+    self:show_recipe_tab()
+
     self.profession_filter = FILTER_ALL
     self.rank_filter = FILTER_ALL
     self.show_filter = {}
@@ -2864,7 +2869,7 @@ function CraftingWindow:open_item_search(item_name, select_recipe_id)
         end
     end
     self:_apply_search_query(query)
-    self:_invalidate_recipe_list()
+    self.search_box:refresh_text_async()
 
     self.profession_dropdown:SetValue(self.profession_filter)
     self.rank_dropdown:SetValue(self.rank_filter)
@@ -2872,8 +2877,9 @@ function CraftingWindow:open_item_search(item_name, select_recipe_id)
     self.level_min_box:SetText("")
     self.level_max_box:SetText("")
 
-    self:open()
-    self:show_recipe_tab()
+    self:_invalidate_recipe_list()
+    self:refresh_recipe_list()
+    self:refresh_selected_recipe()
 end
 
 function CraftingWindow:open_plan()

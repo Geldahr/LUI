@@ -1797,6 +1797,11 @@ function BestiaryWindow:open_query_search(query)
     -- Encyclopedia tab was left active
     self.encyclopedia_tabs:set_selected_index(1)
 
+    -- window first, text after: the Lotro TextBox does not repaint text
+    -- set while its window is hidden until it is interacted with
+    self:open()
+    self:bring_to_front()
+
     self.current_area = nil
     self.last_applied_area_query = nil
     BestiaryCache.area_filter_query = nil
@@ -1811,10 +1816,9 @@ function BestiaryWindow:open_query_search(query)
     self._suppress_area_text_changed = true
     self.filter_tb:SetText(query)
     self._suppress_area_text_changed = false
+    self.filter_tb:refresh_text_async()
     self:update_filter()
 
-    self:open()
-    self:bring_to_front()
     self.filter_tb:Focus()
 end
 
@@ -1841,9 +1845,11 @@ function BestiaryWindow:open_encyclopedia_item_search(item_name)
     end
 
     self.encyclopedia_tabs:set_selected_index(tab_index)
-    self._item_panels[tab_index]:open_item_search(item_name)
+    -- window first, text after: the Lotro TextBox does not repaint text
+    -- set while its window is hidden until it is interacted with
     self:open()
     self:bring_to_front()
+    self._item_panels[tab_index]:open_item_search(item_name)
     return true
 end
 

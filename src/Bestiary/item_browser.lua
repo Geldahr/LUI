@@ -597,6 +597,7 @@ function ItemBrowserPanel:open_item_search(item_name)
     self.level_min_box:SetText("")
     self.level_max_box:SetText("")
     self.search_box:SetText(query)
+    self.search_box:refresh_text_async()
     -- programmatic SetText does not fire TextChanged: refresh explicitly
     self:_on_filters_changed()
 end
