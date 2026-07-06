@@ -589,23 +589,6 @@ local function _normalize_display_mode(value)
     return DISPLAY_PAGES
 end
 
-local function _top_level_progress(evaluation)
-    if type(evaluation) ~= "table" or type(evaluation.ingredients) ~= "table" then
-        return 0, 0
-    end
-
-    local ready = 0
-    local total = #evaluation.ingredients
-    for index = 1, total do
-        local ingredient = evaluation.ingredients[index]
-        if type(ingredient) == "table" and ingredient.satisfied == true then
-            ready = ready + 1
-        end
-    end
-
-    return ready, total
-end
-
 local function _parse_level_value(text)
     local value = tonumber(_trim(text))
     if value == nil then
@@ -1743,11 +1726,6 @@ function CraftingWindow:Constructor()
     self.detail_meta:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.detail_meta:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
-    self.detail_status = UI.Widgets.LuiLabel()
-    self.detail_status:SetParent(self.detail_panel.inner)
-    self.detail_status:SetMouseVisible(false)
-    self.detail_status:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-
     self.critical_result_row = CraftingResultInfoRow()
     self.critical_result_row:SetParent(self.detail_panel.inner)
     self.critical_result_row:SetVisible(false)
@@ -2369,19 +2347,6 @@ function CraftingWindow:_critical_result_detail(recipe)
     return table.concat(parts, " - ")
 end
 
-function CraftingWindow._status_text(_, evaluation)
-    if evaluation == nil then
-        return ""
-    end
-
-    local ready, total = _top_level_progress(evaluation)
-    if total <= 0 then
-        return ""
-    end
-
-    return _ratio_text(ready, total)
-end
-
 function CraftingWindow._recipe_status_text(_, status)
     if type(status) == "table" then
         local craftable_count = tonumber(status.craftable_count) or 0
@@ -2979,7 +2944,6 @@ function CraftingWindow:apply_settings()
     self.right_tab_bar:set_scale(State.settings.global.scale)
     self.detail_title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 2))
     self.detail_meta:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.detail_status:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.critical_result_row:set_scale(State.settings.global.scale)
     self.variant_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.variant_pos_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
@@ -3740,7 +3704,6 @@ function CraftingWindow:refresh_selected_recipe()
         self.detail_icon:bind(nil, nil, nil)
         self.detail_title:SetText("")
         self.detail_meta:SetText("")
-        self.detail_status:SetText("")
         self.plan_spin_box:set_enabled(false)
         self.plan_spin_box:set_value(0, false)
         self.ingredients_list:SetVisible(false)
@@ -3801,8 +3764,6 @@ function CraftingWindow:refresh_selected_recipe()
         meta_parts[#meta_parts + 1] = TR["Makes x"] .. _format_count(result_quantity)
     end
     self.detail_meta:SetText(table.concat(meta_parts, " - "))
-    self.detail_status:SetText(self:_status_text(evaluation))
-    self.detail_status:SetForeColor(self:_status_color(evaluation))
     self.plan_spin_box:set_enabled(true)
     self.plan_spin_box:set_value(self.plan_counts[recipe.id] or 0, false)
 
@@ -4192,9 +4153,8 @@ function CraftingWindow:layout()
     local scroll_w = _fixed_int(BASE_SCROLL_W)
     local plan_header_h = _scaled_int(BASE_PLAN_HEADER_H)
     local section_bar_h = plan_header_h
-    -- the variant selector sits on the status line (same level as the
-    -- ready ratio); the header grows just enough for the part that extends
-    -- below the base header, pushing the critical-result row down
+    -- when the variant selector line (y 48) is shown, the header grows so
+    -- the opaque critical-result row cannot cover it
     local detail_top_h = _even_int(math.max(0, _scaled_int(BASE_DETAIL_HEADER_H) - section_bar_h))
     if self._variant_selector_visible == true then
         detail_top_h = _even_int(math.max(detail_top_h,
@@ -4363,8 +4323,6 @@ function CraftingWindow:layout()
     self.detail_title:SetSize(detail_inner:GetWidth() - icon_side - _scaled_int(16) - gap, _scaled_int(24))
     self.detail_meta:SetPosition(_scaled_int(8) + icon_side + gap, _scaled_int(28))
     self.detail_meta:SetSize(detail_inner:GetWidth() - icon_side - _scaled_int(16) - gap, _scaled_int(20))
-    self.detail_status:SetPosition(_scaled_int(8), _scaled_int(48))
-    self.detail_status:SetSize(detail_inner:GetWidth() - _scaled_int(16) - plan_controls_w, _scaled_int(22))
 
     local plan_controls_x = detail_inner:GetWidth() - plan_controls_w
     self.plan_label:SetPosition(plan_controls_x, _scaled_int(6))
