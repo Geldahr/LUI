@@ -4,11 +4,26 @@
 
 ### Added
 
+- The Bestiary window is now the Encyclopedia: the bestiary became its first tab, joined by Equipment, Resources, and Consumables item tabs with type/rarity/level filters, the shared search grammar (space = and, `|` = or, quotes = exact phrase), and result counts.
+- Added cross-window link buttons to Encyclopedia item rows: an anvil button opens the crafting window searched on the item (preselecting the producing recipe when it is craftable), and a book button searches the bestiary for creatures dropping it (shown only for known drop names).
+- Bestiary card drops that match a real item are now clickable, marked with a distinct border color: left click opens the item in the Encyclopedia on its matching tab, right click opens a context menu with `Open in Encyclopedia`, `How to craft this`, and `Show crafts using this` entries when they apply.
+- Added a `Variant` selector to the crafting recipe details for multi-output recipes (choose which of the recipe's outputs to display), a `+x variants` line on their recipe list rows, and variant-aware build plans: the plan and queue show the chosen output, and the choice is saved with tracked plans.
+- The crafting search and the Encyclopedia crafting links now cover critical results and alternate recipe outputs (for example `Adamant Earring of Combat` or `Carved Combat Bow`), which were previously unreachable.
+
 ### Changed
+
+- The bestiary database now loads from packed local data with a background pre-warm instead of parsing a large Lua table at login, making plugin load and Encyclopedia opening faster.
+- Crafting ingredient, plan, and queue rows derive their height from the item icon plus padding so icons fit exactly at every UI scale, and rows with only a name center their text vertically.
+- Cross-window link buttons now always select the matching window tab (Recipes tab in crafting, Bestiary tab in the Encyclopedia).
 
 ### Fixed
 
+- Fixed the crafting critical-result row showing the normal item's icon and tooltip when the critical result is a different item with the same name (Heraldry recipes and similar); recipe lists always show the normal result.
+- Fixed search text set by cross-window link buttons being invisible until the input box was clicked.
+
 ### Removed
+
+- Removed the ready-ratio (`0/3`) status text from the crafting recipe details; per-ingredient readiness and the plan/queue ratios carry that information.
 
 ## v1.3.0
 
