@@ -961,6 +961,7 @@ LUI.src.Languages.de.DE = {
     ["Resource"] = "Ressource",
     ["Housing"] = "Behausung",
     ["Recipes"] = "Rezepte",
+    ["Class"] = "Klasse",
     ["Profession"] = "Beruf",
     ["Tier"] = "Stufe",
     ["Always contains"] = "Enthält immer",

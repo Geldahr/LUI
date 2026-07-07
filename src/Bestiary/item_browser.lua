@@ -33,13 +33,30 @@ local BASE_GAP = 4
 local BASE_NAV_W = 22
 local BASE_PAGE_BAR_H = 21
 local BASE_PAGE_W = 120
-local BASE_QUALITY_W = 130
-local BASE_CLASS_W = 190
 local BASE_LEVEL_W = 44
 
 local FILTER_ALL_CODE = 0
 -- grouped Type entry matching every per-tier recipe class (Items.RECIPE_CLASS_SET)
 local FILTER_RECIPES_CODE = -1
+
+-- filter dropdowns size to their longest option (estimate, same approach
+-- as the card chips): byte length x char width + arrow/padding, clamped
+local BASE_FILTER_CHAR_W = 6.2
+local BASE_DROPDOWN_PAD = 26
+local BASE_DROPDOWN_MIN_W = 70
+local BASE_DROPDOWN_MAX_W = 190
+
+local function _dropdown_base_w(labels)
+    local longest = 0
+    for i = 1, #labels do
+        local n = string.len(labels[i] or "")
+        if n > longest then
+            longest = n
+        end
+    end
+    local w = (longest * BASE_FILTER_CHAR_W) + BASE_DROPDOWN_PAD
+    return math.min(BASE_DROPDOWN_MAX_W, math.max(BASE_DROPDOWN_MIN_W, w))
+end
 
 local function _scaled_font(name, size)
     return FONT_TO_LOTRO(name, size * State.settings.global.scale)
@@ -141,10 +158,27 @@ function ItemBrowserRow:set_row(ordinal)
     self.name_label:SetText(name)
 
     local meta = Items.class_name(ordinal)
-    local level = Items.level(ordinal)
-    if level > 0 then
-        local level_text = TR["Level"] .. " " .. tostring(level)
-        meta = meta ~= nil and (meta .. "  " .. level_text) or level_text
+    if self.is_tracery == true then
+        -- traceries: player class, usable character-level band, then the
+        -- base iLvl with its enhancement cap
+        local min_il, max_il, _, tr_class, char_max = Lore.Traceries.info(ordinal)
+        local pclass = Lore.Traceries.class_label(tr_class)
+        if pclass ~= nil then
+            meta = meta ~= nil and (meta .. "  " .. pclass) or pclass
+        end
+        local char_min = Items.min_level(ordinal)
+        if char_min ~= nil then
+            meta = meta .. "  " .. TR["Level"] .. " " .. tostring(char_min) .. "-" .. tostring(char_max)
+        end
+        meta = meta .. "  iLvl " .. tostring(min_il) .. " (max " .. tostring(max_il) .. ")"
+    else
+        -- "Level" is the equipable/required character level; the packed
+        -- `level` field is the item level and must not show here
+        local level = Items.min_level(ordinal)
+        if level ~= nil then
+            local level_text = TR["Level"] .. " " .. tostring(level)
+            meta = meta ~= nil and (meta .. "  " .. level_text) or level_text
+        end
     end
     self.meta_label:SetText(meta or "")
 
@@ -202,7 +236,9 @@ function ItemBrowserRow:layout_row(width, height)
     self.craft_button:SetPosition(width - gap - btn_side - gap - btn_side, btn_y)
     self.craft_button:SetSize(btn_side, btn_side)
 
-    local meta_w = scaled_int(220)
+    -- tracery meta carries type + class + Level band + iLvl/cap: needs
+    -- the extra room so localized labels never truncate
+    local meta_w = scaled_int(self.is_tracery == true and 390 or 220)
     local name_x = gap + icon_side + gap
     local meta_x = width - gap - btn_side - gap - btn_side - gap - meta_w
     self.name_label:SetPosition(name_x, 0)
@@ -227,6 +263,8 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     self._class_filter = FILTER_ALL_CODE
     self._level_min = nil
     self._level_max = nil
+    self._ilvl_min = nil
+    self._ilvl_max = nil
 
     self:SetMouseVisible(true)
     self:SetBackColor(Style.PANEL_BACKGROUND)
@@ -270,6 +308,7 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
         quality_values[#quality_values + 1] = code
     end
     self.quality_dropdown:SetMappedOptions(quality_labels, quality_values)
+    self._quality_dd_base_w = _dropdown_base_w(quality_labels)
     self.quality_dropdown.ValueChanged = function(_, value)
         self._quality_filter = tonumber(value) or FILTER_ALL_CODE
         self:_on_filters_changed()
@@ -281,9 +320,73 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     self.class_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     local class_labels, class_values = self:_class_options()
     self.class_dropdown:SetMappedOptions(class_labels, class_values)
+    self._class_dd_base_w = _dropdown_base_w(class_labels)
     self.class_dropdown.ValueChanged = function(_, value)
         self._class_filter = tonumber(value) or FILTER_ALL_CODE
         self:_on_filters_changed()
+    end
+
+    -- traceries only: player-class filter; the level boxes switch to
+    -- LI item-level band semantics in _rebuild_filtered
+    self._pclass_filter = nil
+    if self._bucket == "tracery" then
+        Lore.load_traceries()
+        self._pclass_filter = FILTER_ALL_CODE
+        self.pclass_label = UI.Widgets.LuiLabel()
+        self.pclass_label:SetParent(self)
+        self.pclass_label:SetMouseVisible(false)
+        self.pclass_label:SetSelectable(false)
+        self.pclass_label:SetMultiline(false)
+        self.pclass_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        self.pclass_label:SetText(TR["Class"] .. ":")
+
+        self.pclass_dropdown = UI.Widgets.LuiDropdown()
+        self.pclass_dropdown:SetParent(self)
+        self.pclass_dropdown:SetPopupHost(popup_host)
+        self.pclass_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        local pclass_labels, pclass_values = { TR["All"] }, { FILTER_ALL_CODE }
+        for idx = 1, #Lore.Traceries.CLASS_LABELS do
+            pclass_labels[#pclass_labels + 1] = Lore.Traceries.CLASS_LABELS[idx]
+            pclass_values[#pclass_values + 1] = idx
+        end
+        self.pclass_dropdown:SetMappedOptions(pclass_labels, pclass_values)
+        self._pclass_dd_base_w = _dropdown_base_w(pclass_labels)
+        self.pclass_dropdown.ValueChanged = function(_, value)
+            self._pclass_filter = tonumber(value) or FILTER_ALL_CODE
+            self:_on_filters_changed()
+        end
+
+        -- a second range next to Level: the Level boxes match the usable
+        -- character band, these match the tracery's BASE iLvl
+        self.ilvl_label = UI.Widgets.LuiLabel()
+        self.ilvl_label:SetParent(self)
+        self.ilvl_label:SetMouseVisible(false)
+        self.ilvl_label:SetSelectable(false)
+        self.ilvl_label:SetMultiline(false)
+        self.ilvl_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        self.ilvl_label:SetText("iLvl:")
+
+        self.ilvl_min_box = UI.Widgets.LuiLineEdit()
+        self.ilvl_min_box:SetParent(self)
+        self.ilvl_min_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        self.ilvl_min_box.TextChanged = function()
+            self:_on_filters_changed()
+        end
+
+        self.ilvl_dash_label = UI.Widgets.LuiLabel()
+        self.ilvl_dash_label:SetParent(self)
+        self.ilvl_dash_label:SetMouseVisible(false)
+        self.ilvl_dash_label:SetSelectable(false)
+        self.ilvl_dash_label:SetMultiline(false)
+        self.ilvl_dash_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        self.ilvl_dash_label:SetText("-")
+
+        self.ilvl_max_box = UI.Widgets.LuiLineEdit()
+        self.ilvl_max_box:SetParent(self)
+        self.ilvl_max_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        self.ilvl_max_box.TextChanged = function()
+            self:_on_filters_changed()
+        end
     end
 
     self.level_label = UI.Widgets.LuiLabel()
@@ -411,6 +514,15 @@ function ItemBrowserPanel:apply_fonts()
     self.quality_dropdown:set_scale(State.settings.global.scale)
     self.class_dropdown:SetFont(font)
     self.class_dropdown:set_scale(State.settings.global.scale)
+    if self.pclass_dropdown ~= nil then
+        self.pclass_label:SetFont(font)
+        self.pclass_dropdown:SetFont(font)
+        self.pclass_dropdown:set_scale(State.settings.global.scale)
+        self.ilvl_label:SetFont(font)
+        self.ilvl_min_box:SetFont(font)
+        self.ilvl_dash_label:SetFont(font)
+        self.ilvl_max_box:SetFont(font)
+    end
     self.level_label:SetFont(font)
     self.level_min_box:SetFont(font)
     self.level_dash_label:SetFont(font)
@@ -439,6 +551,10 @@ end
 function ItemBrowserPanel:_on_filters_changed()
     self._level_min = self:_parse_level(self.level_min_box:GetText())
     self._level_max = self:_parse_level(self.level_max_box:GetText())
+    if self.ilvl_min_box ~= nil then
+        self._ilvl_min = self:_parse_level(self.ilvl_min_box:GetText())
+        self._ilvl_max = self:_parse_level(self.ilvl_max_box:GetText())
+    end
     self._page = 1
     self:_refresh_list()
 end
@@ -513,8 +629,11 @@ function ItemBrowserPanel:_rebuild_filtered()
         query,
         tostring(self._quality_filter),
         tostring(self._class_filter),
+        tostring(self._pclass_filter or ""),
         tostring(self._level_min or ""),
         tostring(self._level_max or ""),
+        tostring(self._ilvl_min or ""),
+        tostring(self._ilvl_max or ""),
     }, "\30")
     if signature == self._signature and self._filtered ~= nil then
         return
@@ -525,8 +644,12 @@ function ItemBrowserPanel:_rebuild_filtered()
     local quality = self._quality_filter
     local class_code = self._class_filter
     local recipe_class_set = class_code == FILTER_RECIPES_CODE and Items.RECIPE_CLASS_SET or nil
+    local is_tracery = self._bucket == "tracery"
+    local pclass = self._pclass_filter
     local level_min = self._level_min
     local level_max = self._level_max
+    local ilvl_min = self._ilvl_min
+    local ilvl_max = self._ilvl_max
     local list = Items.bucket_list(self._bucket)
     local filtered, n = {}, 0
     for i = 1, #list do
@@ -537,8 +660,32 @@ function ItemBrowserPanel:_rebuild_filtered()
                     or (recipe_class_set ~= nil and recipe_class_set[Items.class_code(ordinal)] == true)
                     or Items.class_code(ordinal) == class_code then
                     local ok = true
-                    if level_min ~= nil or level_max ~= nil then
-                        local level = Items.level(ordinal)
+                    if is_tracery == true then
+                        local min_il, max_il, _, tr_class, char_max = Lore.Traceries.info(ordinal)
+                        if pclass ~= FILTER_ALL_CODE and tr_class ~= pclass then
+                            ok = false
+                        end
+                        -- Level range: the usable character band must
+                        -- overlap it (a single value means "usable at X")
+                        if ok and (level_min ~= nil or level_max ~= nil) then
+                            local char_min = Items.min_level(ordinal) or 1
+                            local lo = level_min or level_max
+                            local hi = level_max or level_min
+                            if char_max < lo or char_min > hi then
+                                ok = false
+                            end
+                        end
+                        -- iLvl range: the tracery's BASE iLvl within it,
+                        -- so 450-499 shows the 450 tier only, never lower
+                        -- tiers whose enhancement cap merely covers 450
+                        if ok and ((ilvl_min ~= nil and min_il < ilvl_min)
+                            or (ilvl_max ~= nil and min_il > ilvl_max)) then
+                            ok = false
+                        end
+                    elseif level_min ~= nil or level_max ~= nil then
+                        -- equipable/required character level; items with
+                        -- no requirement are usable from level 1
+                        local level = Items.min_level(ordinal) or 1
                         if level_min ~= nil and level < level_min then
                             ok = false
                         end
@@ -584,6 +731,7 @@ function ItemBrowserPanel:_render_page()
         local row = self._rows[slot]
         if row == nil then
             row = ItemBrowserRow()
+            row.is_tracery = self._bucket == "tracery"
             row:SetParent(self.list_host)
             row:apply_fonts()
             self._rows[slot] = row
@@ -625,8 +773,16 @@ function ItemBrowserPanel:open_item_search(item_name)
     self._class_filter = FILTER_ALL_CODE
     self.quality_dropdown:SetValue(FILTER_ALL_CODE)
     self.class_dropdown:SetValue(FILTER_ALL_CODE)
+    if self.pclass_dropdown ~= nil then
+        self._pclass_filter = FILTER_ALL_CODE
+        self.pclass_dropdown:SetValue(FILTER_ALL_CODE)
+    end
     self.level_min_box:SetText("")
     self.level_max_box:SetText("")
+    if self.ilvl_min_box ~= nil then
+        self.ilvl_min_box:SetText("")
+        self.ilvl_max_box:SetText("")
+    end
     self.search_box:SetText(query)
     self.search_box:refresh_text_async()
     -- programmatic SetText does not fire TextChanged: refresh explicitly
@@ -644,15 +800,21 @@ function ItemBrowserPanel:layout()
     local margin_r = scaled_int(margins.right)
     local margin_b = scaled_int(margins.bottom)
     local level_w = scaled_int(BASE_LEVEL_W)
-    local quality_w = scaled_int(BASE_QUALITY_W)
-    local class_w = scaled_int(BASE_CLASS_W)
+    local quality_w = scaled_int(self._quality_dd_base_w)
+    local class_w = scaled_int(self._class_dd_base_w)
 
-    -- row 1: Type / Rarity left, Level block flush right
+    -- row 1: Type / Rarity left, Level block flush right. Traceries swap
+    -- the min-max range for two single-value inputs (Level and iLvl)
     local type_label_w = scaled_int(38)
     local rarity_label_w = scaled_int(48)
     local dash_w = scaled_int(10)
     local level_label_w = scaled_int(42)
-    local level_block_w = level_label_w + gap + level_w + gap + dash_w + gap + level_w
+    local ilvl_label_w = scaled_int(34)
+    local range_w = level_w + gap + dash_w + gap + level_w
+    local level_block_w = level_label_w + gap + range_w
+    if self.ilvl_label ~= nil then
+        level_block_w = level_block_w + (2 * gap) + ilvl_label_w + gap + range_w
+    end
 
     local x = margin_l
     self.type_label:SetPosition(x, margin_t)
@@ -667,6 +829,17 @@ function ItemBrowserPanel:layout()
     self.quality_dropdown:SetPosition(x, margin_t)
     self.quality_dropdown:SetSize(quality_w, bar_h)
 
+    if self.pclass_dropdown ~= nil then
+        local pclass_label_w = scaled_int(46)
+        local pclass_w = scaled_int(self._pclass_dd_base_w)
+        x = x + quality_w + (2 * gap)
+        self.pclass_label:SetPosition(x, margin_t)
+        self.pclass_label:SetSize(pclass_label_w, bar_h)
+        x = x + pclass_label_w + gap
+        self.pclass_dropdown:SetPosition(x, margin_t)
+        self.pclass_dropdown:SetSize(pclass_w, bar_h)
+    end
+
     local level_x = width - margin_r - level_block_w
     self.level_label:SetPosition(level_x, margin_t)
     self.level_label:SetSize(level_label_w, bar_h)
@@ -679,6 +852,20 @@ function ItemBrowserPanel:layout()
     level_x = level_x + dash_w + gap
     self.level_max_box:SetPosition(level_x, margin_t)
     self.level_max_box:SetSize(level_w, bar_h)
+    if self.ilvl_label ~= nil then
+        level_x = level_x + level_w + (2 * gap)
+        self.ilvl_label:SetPosition(level_x, margin_t)
+        self.ilvl_label:SetSize(ilvl_label_w, bar_h)
+        level_x = level_x + ilvl_label_w + gap
+        self.ilvl_min_box:SetPosition(level_x, margin_t)
+        self.ilvl_min_box:SetSize(level_w, bar_h)
+        level_x = level_x + level_w + gap
+        self.ilvl_dash_label:SetPosition(level_x, margin_t)
+        self.ilvl_dash_label:SetSize(dash_w, bar_h)
+        level_x = level_x + dash_w + gap
+        self.ilvl_max_box:SetPosition(level_x, margin_t)
+        self.ilvl_max_box:SetSize(level_w, bar_h)
+    end
 
     -- row 2: search across the full width
     local search_y = margin_t + bar_h + gap

@@ -509,6 +509,55 @@ function Items.icon_layers(ordinal)
     return layers[1], layers[2], layers[3], layers[4]
 end
 
+-- ----------------------------------------------------------- Traceries ----
+-- LI tracery metadata keyed by items-DB ordinal: the LI item-level band a
+-- tracery sockets into, its uniqueness channel and the player class it is
+-- restricted to (0 = none). Sorted-ordinal blob, bsearch per probe.
+
+Lore.Traceries = Lore.Traceries or {}
+local Traceries = Lore.Traceries
+
+function Lore.load_traceries()
+    if Traceries.loaded == true then
+        return
+    end
+    local lang = Lore.language()
+    import("LUI.src.Data.Items.traceries")
+    local D = _G.LoreData["Items.traceries"]
+    Traceries.D = D
+    Traceries.CLASS_LABELS = D.CLASSES[lang]
+    Traceries.stride = (3 * D.il_width) + D.ch_width + 1
+    Traceries.loaded = true
+end
+
+-- base iLvl, enhancement-cap iLvl, uniqueness channel, class index, max
+-- usable character level (the min is the records' min_level field).
+-- nil when the ordinal is not a tracery.
+function Traceries.info(ordinal)
+    local D = Traceries.D
+    local slot = _bsearch_id(D.T_ORD, D.ord_width, D.count, ordinal)
+    if slot == nil then
+        return nil
+    end
+    local p = (slot - 1) * Traceries.stride + 1
+    local R = D.T_REC
+    local ilw = D.il_width
+    local min_il = u(R, p, ilw)
+    local max_il = u(R, p + ilw, ilw)
+    local channel = u(R, p + (2 * ilw), D.ch_width)
+    local class_idx = u(R, p + (2 * ilw) + D.ch_width, 1)
+    local char_max = u(R, p + (2 * ilw) + D.ch_width + 1, ilw)
+    return min_il, max_il, channel, class_idx, char_max
+end
+
+-- localized player class name for a class index; nil for 0 (unrestricted)
+function Traceries.class_label(class_idx)
+    if class_idx == 0 then
+        return nil
+    end
+    return Traceries.CLASS_LABELS[class_idx]
+end
+
 -- --------------------------------------------------------------- Nodes ----
 -- Harvest/resource nodes (deposits, branches, crop fields, artifacts):
 -- localized node-name lookup plus per-node yields with quantity ranges.
