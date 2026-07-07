@@ -502,3 +502,51 @@ function Items.icon_layers(ordinal)
     end
     return layers[1], layers[2], layers[3], layers[4]
 end
+
+-- --------------------------------------------------------------- Nodes ----
+-- Harvest/resource nodes (deposits, branches, crop fields, artifacts):
+-- localized node-name lookup plus per-node yields with quantity ranges.
+-- One small plain-table file; safe to load eagerly on a target double-click.
+
+Lore.Nodes = Lore.Nodes or {}
+local Nodes = Lore.Nodes
+
+function Lore.load_nodes()
+    if Nodes.loaded == true then
+        return
+    end
+    local lang = Lore.language()
+    import("LUI.src.Data.Nodes.nodes")
+    local D = _G.LoreData["Nodes.nodes"]
+    Nodes.NAMES = D.NAMES[lang]
+    Nodes.NODES = D.NODES
+    Nodes.PROFS = D.PROFS[lang]
+    Nodes.TIERS = D.TIERS[lang]
+    Nodes.ICONS = D.ICONS
+    Nodes.loaded = true
+end
+
+-- localized in-game object name -> node record + item id; nil when the
+-- name is not a harvest node. Record: { p = profession key, t = tier,
+-- y = { { item id, min, max, band 1|2|3 }, ... } } (1 = guaranteed,
+-- 2 = bonus, 3 = rare; yields sorted band first, largest haul first).
+function Nodes.for_name(name)
+    local id = Nodes.NAMES[name]
+    if id == nil then
+        return nil
+    end
+    return Nodes.NODES[id], id
+end
+
+function Nodes.profession_name(key)
+    return Nodes.PROFS[key]
+end
+
+function Nodes.tier_name(tier)
+    return Nodes.TIERS[tier]
+end
+
+-- 3-layer badge icon (game asset ids) for a profession tier
+function Nodes.badge_layers(key, tier)
+    return Nodes.ICONS[key][tier]
+end

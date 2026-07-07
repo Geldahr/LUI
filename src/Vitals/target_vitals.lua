@@ -555,6 +555,12 @@ function TargetVitals:_on_entity_control_double_click(args)
     if self.entity == nil or _target_is_player(self.entity) == true then
         return
     end
+    -- harvest nodes get the resource card; everything else falls through
+    -- to the bestiary card (node lookup is localized, so it also works on
+    -- clients the wiki bestiary does not support)
+    if Windows.resource_card:toggle_for_target(self.entity, self) == true then
+        return
+    end
     if Bestiary.supports_target_name_lookup() ~= true then
         return
     end

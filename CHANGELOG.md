@@ -9,6 +9,7 @@
 - Bestiary card drops that match a real item are now clickable, marked with a distinct border color: left click opens the item in the Encyclopedia on its matching tab, right click opens a context menu with `Open in Encyclopedia`, `How to craft this`, and `Show crafts using this` entries when they apply.
 - Added a `Variant` selector to the crafting recipe details for multi-output recipes (choose which of the recipe's outputs to display), a `+x variants` line on their recipe list rows, and variant-aware build plans: the plan and queue show the chosen output, and the choice is saved with tracked plans.
 - The crafting search and the Encyclopedia crafting links now cover critical results and alternate recipe outputs (for example `Adamant Earring of Combat` or `Carved Combat Bow`), which were previously unreachable.
+- Added a Resource card: double-clicking a targeted harvest node (ore deposits, branches, crop fields, scholar artifacts) opens a card showing the node's profession and tier with the in-game tier badge, what it always contains with quantity ranges (for example `Chunk of Gold Ore x1-3`), and what it may contain, with rare finds in the gold chest styling. Yield chips are clickable like bestiary card drops: left click opens the item in the Encyclopedia, right click offers the Encyclopedia and crafting actions. Node lookup is localized, so it also works on French and German clients.
 
 ### Changed
 

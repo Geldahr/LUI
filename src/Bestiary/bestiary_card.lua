@@ -4,7 +4,6 @@
 
 local TR = _G.LUI.Locale.TR
 local Utils = _G.LUI.Utils
-local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
 local Settings = _G.LUI.Settings
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
@@ -16,52 +15,38 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 
 local Style = UI.Widgets.Style
-local Shortcuts = UI.Shortcuts
 
 local BUILTIN_BESTIARY = Bestiary.Data or {}
 local DATA_ACCESS = Bestiary.DataAccess
+local CW = Bestiary.CardWidgets
 
+-- shared card style tokens live in card_widgets.lua; card-specific
+-- dimensions stay here
 local BASE_WIDTH = 550
-local BASE_SECTION_GAP = 6
-local BASE_PANEL_HEADER_H = 20
-local BASE_PANEL_BODY_PAD_X = 8
-local BASE_PANEL_BODY_PAD_TOP = 4
-local BASE_PANEL_BODY_PAD_BOTTOM = 10
-local BASE_STAT_BOX_H = 52
+local BASE_SECTION_GAP = CW.BASE.SECTION_GAP
+local BASE_PANEL_HEADER_H = CW.BASE.PANEL_HEADER_H
+local BASE_PANEL_BODY_PAD_X = CW.BASE.PANEL_BODY_PAD_X
+local BASE_PANEL_BODY_PAD_TOP = CW.BASE.PANEL_BODY_PAD_TOP
+local BASE_PANEL_BODY_PAD_BOTTOM = CW.BASE.PANEL_BODY_PAD_BOTTOM
+local BASE_STAT_BOX_H = CW.BASE.STAT_BOX_H
 local BASE_PROFILE_H = 78
 local BASE_TWO_COL_H = 88
 local BASE_MITIGATION_H = 104
 local BASE_NOTES_MIN_H = 76
 local BASE_DROP_MIN_H = 42
 local BASE_DROP_MAX_H = 150
-local BASE_TITLE_SIZE = 20
-local BASE_SECTION_TITLE_SIZE = 12
-local BASE_TEXT_SIZE = 11
-local BASE_OFFSET = 12
-local BASE_CHIP_H = 18
-local BASE_CHIP_PAD_X = 6
-local BASE_CHIP_GAP_X = 4
-local BASE_CHIP_GAP_Y = 4
-local BASE_CHIP_BORDER = 1
-local BASE_CHIP_CHAR_W = 5.8
-local BASE_TEXT_CHAR_W = 5.8
-local BASE_TEXT_LINE_H = 14
-local BASE_SCROLL_W = 10
-local BASE_SCROLL_GAP = 3
+local BASE_TITLE_SIZE = CW.BASE.TITLE_SIZE
+local BASE_TEXT_SIZE = CW.BASE.TEXT_SIZE
+local BASE_OFFSET = CW.BASE.OFFSET
+local BASE_CHIP_H = CW.BASE.CHIP_H
+local BASE_TEXT_CHAR_W = CW.BASE.TEXT_CHAR_W
+local BASE_TEXT_LINE_H = CW.BASE.TEXT_LINE_H
+local BASE_SCROLL_W = CW.BASE.SCROLL_W
+local BASE_SCROLL_GAP = CW.BASE.SCROLL_GAP
 local BASE_VARIANT_TAB_H = 22
 local BASE_VARIANT_TAB_PAD_X = 10
 
 local COLOR_VALUE_GREY = Turbine.UI.Color(1, 0.56, 0.59, 0.61)
-local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
-local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
-local COLOR_DROP_CHIP_TEXT = Turbine.UI.Color(1, 0.76, 0.88, 0.79)
-local COLOR_CHEST_CHIP_BORDER = Turbine.UI.Color(1, 0.45, 0.32, 0.12)
-local COLOR_CHEST_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
-local COLOR_CHEST_CHIP_TEXT = Turbine.UI.Color(1, 0.95, 0.83, 0.49)
--- clickable chips (drop resolves to a browsable item) get a distinct
--- steel-blue border; chest chips keep a brighter gold instead
-local COLOR_DROP_CHIP_LINK_BORDER = Turbine.UI.Color(1, 0.30, 0.52, 0.68)
-local COLOR_CHEST_CHIP_LINK_BORDER = Turbine.UI.Color(1, 0.70, 0.52, 0.20)
 local COMBAT_SCALE_COLORS = {
     feeble = Turbine.UI.Color(1, 0.26, 0.77, 0.42),
     poor = Turbine.UI.Color(1, 0.49, 0.81, 0.31),
@@ -74,21 +59,8 @@ local COMBAT_SCALE_COLORS = {
     extraordinary = Turbine.UI.Color(1, 0.59, 0.16, 0.20),
 }
 
-local function _scaled_size(value)
-    return value * State.settings.global.scale
-end
-
-local function _scaled_int(value)
-    return math.floor(_scaled_size(value) + 0.5)
-end
-
-local function _scaled_font(name, size)
-    local font = FONT_TO_LOTRO(name, _scaled_size(size))
-    if font == nil then
-        error("Missing scaled font: " .. tostring(name) .. " " .. tostring(_scaled_size(size)))
-    end
-    return font
-end
+local _scaled_int = CW.scaled_int
+local _scaled_font = CW.scaled_font
 
 local function _to_number(value, fallback)
     if type(value) ~= "number" then
@@ -746,9 +718,7 @@ local function _build_drop_texts(record)
     return texts
 end
 
-local function _estimate_text_width(text, base_char_w)
-    return math.floor((string.len(text or "") * base_char_w * State.settings.global.scale) + 0.5)
-end
+local _estimate_text_width = CW.estimate_text_width
 
 local function _estimate_font_text_width(text, font_size)
     local scaled_char_w = BASE_TEXT_CHAR_W * (font_size / BASE_TEXT_SIZE)
@@ -788,62 +758,8 @@ local function _estimate_wrapped_line_count(text, max_width)
     return math.max(1, line_count)
 end
 
-local function _estimate_chip_width(text)
-    local pad_x = _scaled_int(BASE_CHIP_PAD_X)
-    local border_w = _scaled_int(BASE_CHIP_BORDER)
-    return _estimate_text_width(text or "", BASE_CHIP_CHAR_W) + (2 * pad_x) + (2 * border_w)
-end
-
-local function _build_chip_layout(texts, max_width)
-    local layout = {}
-    local chip_h = _scaled_int(BASE_CHIP_H)
-    local gap_x = _scaled_int(BASE_CHIP_GAP_X)
-    local gap_y = _scaled_int(BASE_CHIP_GAP_Y)
-    local x = 0
-    local y = 0
-
-    for i = 1, #texts do
-        local item = texts[i]
-        local text = type(item) == "table" and item.text or item
-        local width = _estimate_chip_width(text)
-        if width > max_width then
-            width = max_width
-        end
-
-        if x > 0 and (x + width) > max_width then
-            x = 0
-            y = y + chip_h + gap_y
-        end
-
-        layout[#layout + 1] = {
-            text = text,
-            chest = type(item) == "table" and item.chest == true,
-            name = type(item) == "table" and item.name or nil,
-            x = x,
-            y = y,
-            w = width,
-        }
-
-        x = x + width + gap_x
-    end
-
-    if #layout == 0 then
-        return layout, chip_h
-    end
-
-    return layout, y + chip_h
-end
-
-local function _create_text(parent, multiline, alignment)
-    local text = UI.Widgets.LuiLabel()
-    text:SetParent(parent)
-    text:SetMouseVisible(false)
-    text:SetSelectable(false)
-    text:SetMultiline(multiline == true)
-    text:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
-    text:SetTextAlignment(alignment or Turbine.UI.ContentAlignment.TopLeft)
-    return text
-end
+local _build_chip_layout = CW.build_chip_layout
+local _create_text = CW.create_text
 
 local function _apply_scroll_label_style(area)
     if area == nil or area.label == nil then
@@ -951,13 +867,7 @@ local function _measure_scroll_label_panel(panel_w, text)
     return panel_h, uses_scroll
 end
 
-local function _style_text(text, font_name, font_size, color)
-    local resolved_font_name = font_name == "Verdana" and Style.CONTROL_FONT_NAME or font_name
-    text:SetFont(_scaled_font(resolved_font_name, font_size))
-    text:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    text:SetOutlineColor(Style.TEXT_OUTLINE)
-    text:SetForeColor(color)
-end
+local _style_text = CW.style_text
 
 local function _style_variant_tab_bar(tab_bar)
     if tab_bar == nil then
@@ -988,28 +898,8 @@ local function _style_variant_tab_bar(tab_bar)
     tab_bar:refresh_layout()
 end
 
-local function _create_panel(parent, title_text)
-    local panel = {}
-    panel.frame = Turbine.UI.Control()
-    panel.frame:SetParent(parent)
-    panel.frame:SetMouseVisible(false)
-    panel.header = Turbine.UI.Control()
-    panel.header:SetParent(panel.frame)
-    panel.header:SetMouseVisible(false)
-    panel.body = Turbine.UI.Control()
-    panel.body:SetParent(panel.frame)
-    panel.body:SetMouseVisible(false)
-    panel.title = _create_text(panel.header, false, Turbine.UI.ContentAlignment.MiddleLeft)
-    panel.title:SetText(title_text or "")
-    return panel
-end
-
-local function _style_panel(panel)
-    panel.frame:SetBackColor(Style.CONTROL_BORDER)
-    panel.header:SetBackColor(Style.CONTROL_BACKGROUND)
-    panel.body:SetBackColor(Style.PANEL_BACKGROUND)
-    _style_text(panel.title, "Verdana", BASE_SECTION_TITLE_SIZE, Style.FOREGROUND)
-end
+local _create_panel = CW.create_panel
+local _style_panel = CW.style_panel
 
 local function _create_row_set(parent, field_order)
     local rows = {}
@@ -1101,85 +991,7 @@ local function _drop_link_name(name)
     return known == true and name or nil
 end
 
-local DropChip = class(Turbine.UI.Control)
-
-function DropChip:Constructor()
-    Turbine.UI.Control.Constructor(self)
-
-    self._link_name = nil
-    self._chest = false
-
-    self:SetMouseVisible(false)
-    self:SetBackColor(COLOR_DROP_CHIP_BORDER)
-
-    -- linkable drops: left click opens the Encyclopedia on the matching
-    -- item tab, right click opens the item actions menu (Encyclopedia /
-    -- recipe); the chip is only mouse-visible when a link target exists
-    self.MouseClick = function(_, args)
-        if self._link_name == nil or args == nil then
-            return
-        end
-        if args.Button == Turbine.UI.MouseButton.Left then
-            Shortcuts.open_encyclopedia_item_search(self._link_name)
-        elseif args.Button == Turbine.UI.MouseButton.Right then
-            UI.ItemActions.show_menu(self, args.X, args.Y, self._link_name)
-        end
-    end
-    self.MouseEnter = function()
-        if self._link_name ~= nil then
-            self.label:SetForeColor(Style.FOREGROUND)
-        end
-    end
-    self.MouseLeave = function()
-        self:apply_settings(self._chest)
-    end
-
-    self.inner = Turbine.UI.Control()
-    self.inner:SetParent(self)
-    self.inner:SetMouseVisible(false)
-    self.inner:SetBackColor(COLOR_DROP_CHIP_BG)
-
-    self.label = UI.Widgets.LuiLabel()
-    self.label:SetParent(self.inner)
-    self.label:SetMouseVisible(false)
-    self.label:SetSelectable(false)
-    self.label:SetMultiline(false)
-    self.label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
-    self.label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-end
-
-function DropChip:set_link(item_name)
-    self._link_name = item_name
-    self:SetMouseVisible(item_name ~= nil)
-end
-
-function DropChip:apply_settings(chest)
-    self._chest = chest == true
-    local linked = self._link_name ~= nil
-    local border_w = _scaled_int(BASE_CHIP_BORDER)
-    self.inner:SetPosition(border_w, border_w)
-    if chest == true then
-        self:SetBackColor(linked and COLOR_CHEST_CHIP_LINK_BORDER or COLOR_CHEST_CHIP_BORDER)
-        self.inner:SetBackColor(COLOR_CHEST_CHIP_BG)
-        _style_text(self.label, "Verdana", BASE_TEXT_SIZE, COLOR_CHEST_CHIP_TEXT)
-    else
-        self:SetBackColor(linked and COLOR_DROP_CHIP_LINK_BORDER or COLOR_DROP_CHIP_BORDER)
-        self.inner:SetBackColor(COLOR_DROP_CHIP_BG)
-        _style_text(self.label, "Verdana", BASE_TEXT_SIZE, COLOR_DROP_CHIP_TEXT)
-    end
-end
-
-function DropChip:bind(text, width, height)
-    local border_w = _scaled_int(BASE_CHIP_BORDER)
-    local pad_x = _scaled_int(BASE_CHIP_PAD_X)
-
-    self:SetSize(width, height)
-    self.inner:SetSize(math.max(1, width - (2 * border_w)), math.max(1, height - (2 * border_w)))
-    self.label:SetPosition(pad_x, 0)
-    self.label:SetSize(math.max(1, self.inner:GetWidth() - (2 * pad_x)), self.inner:GetHeight())
-    self.label:SetText(text or "")
-    self:SetVisible(true)
-end
+local DropChip = CW.DropChip
 
 local BestiaryVariantTab = class(Turbine.UI.Control)
 
@@ -1597,16 +1409,7 @@ function BestiaryCard:_ensure_drop_chip_count(count)
 end
 
 function BestiaryCard:_layout_panel(panel, x, y, w, h)
-    local header_h = _scaled_int(BASE_PANEL_HEADER_H)
-
-    panel.frame:SetPosition(x, y)
-    panel.frame:SetSize(w, h)
-    panel.header:SetPosition(1, 1)
-    panel.header:SetSize(math.max(1, w - 2), header_h)
-    panel.body:SetPosition(1, header_h + 1)
-    panel.body:SetSize(math.max(1, w - 2), math.max(1, h - header_h - 2))
-    panel.title:SetPosition(_scaled_int(9), 0)
-    panel.title:SetSize(math.max(1, panel.header:GetWidth() - _scaled_int(18)), header_h)
+    CW.layout_panel(panel, x, y, w, h)
 end
 
 function BestiaryCard:_measure_viewport_width()

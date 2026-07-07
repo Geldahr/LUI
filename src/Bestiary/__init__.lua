@@ -11,7 +11,9 @@ pcall(import, "LUI.src.Bestiary.drop_table_de")
 pcall(import, "LUI.src.Bestiary.drop_table_fr")
 import "LUI.src.Bestiary.data_resolver"
 import "LUI.src.Bestiary.data_access"
+import "LUI.src.Bestiary.card_widgets"
 import "LUI.src.Bestiary.bestiary_card"
+import "LUI.src.Bestiary.resource_card"
 import "LUI.src.Bestiary.bestiary_tracker"
 import "LUI.src.Bestiary.item_browser"
 import "LUI.src.Bestiary.bestiary_window"

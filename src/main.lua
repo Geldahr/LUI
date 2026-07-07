@@ -457,6 +457,7 @@ Apply.saved_global_style()
 Flags.crafting_display_mode_active = State.settings.crafting.display_mode
 
 Windows.bestiary_card = Bestiary.BestiaryCard()
+Windows.resource_card = Bestiary.ResourceCard()
 
 -- Initialize target vitals first: self vitals depend on them for current target state.
 Windows.target_vital = UI.TargetVitals(nil)
@@ -552,6 +553,11 @@ Plugins["LUI"].Unload = function()
     if Windows.bestiary_card ~= nil then
         Windows.bestiary_card:SetVisible(false)
         Windows.bestiary_card = nil
+    end
+
+    if Windows.resource_card ~= nil then
+        Windows.resource_card:SetVisible(false)
+        Windows.resource_card = nil
     end
 
     if Windows.companion_vital ~= nil then
