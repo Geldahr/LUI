@@ -29,7 +29,7 @@ LUI is a custom user interface plugin for The Lord of the Rings Online. It focus
 - Assets window for server-wide item holdings across characters
 - Crafting browser with recipe search, source filters, favorites, recursive ingredient breakdowns, per-character tracked plans, and bestiary search links for supported client languages
 - Status bar widgets for local time, inventory space, money, crafting shortcuts, tracked crafting resources, and more planned
-- Bestiary browser, bestiary cards, and optional bestiary capture on English clients
+- Encyclopedia (bestiary, equipment, resources, consumables, housing, and traceries browsing), bestiary cards, and optional bestiary capture on English clients
 - First-run quick setup to get you up and running quickly
 - Profile management so multiple characters can reuse or switch configurations
 - Localized UI strings for English, German, and French
@@ -106,7 +106,7 @@ No. Native pet vitals cannot be hidden properly through the plugin like the othe
 
 ### Why is Bestiary capture only available on English clients?
 
-Bestiary capture needs game text to match LUI's structured Bestiary data, and that data is currently English-only. On non-English clients, the Bestiary browser still uses English data, while target-vitals double-click cards and Crafting-to-Bestiary links are disabled.
+Bestiary capture needs game text to match LUI's structured Bestiary data, and that data is currently English-only. On non-English clients, the Bestiary tab of the Encyclopedia still uses English data, while target-vitals double-click cards and Crafting-to-Bestiary links are disabled.
 
 ### Why does the Bestiary show deed information but not my deed completion?
 
@@ -165,7 +165,7 @@ LUI uses pixel-based scaling instead of LotRO UI scaling. That keeps borders and
 - Automatic item locking based on a whitelist or blacklist is not currently possible through the LotRO API.
 - Bestiary capture is restricted to English clients.
 - Bestiary data is currently English-only.
-- On non-English clients, the bestiary browser still uses English data, but target-vitals double-click cards and Crafting-to-Bestiary links are disabled.
+- On non-English clients, the Bestiary tab of the Encyclopedia still uses English data, but target-vitals double-click cards and Crafting-to-Bestiary links are disabled.
 - Translations are not up to date.
 
 ## Known Issues

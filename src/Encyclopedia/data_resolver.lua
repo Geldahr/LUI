@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local DB = _G.LUI.Data.Bestiary.DB or {}
 _G.LUI.Data.Bestiary.DB = DB
 DB.en = DB.en or {}
@@ -123,25 +123,25 @@ if requested_locale ~= "en" then
     _ensure_drop_table(requested_locale)
 end
 
-Bestiary.RequestedLocale = requested_locale
-Bestiary.Data, Bestiary.DataLocale = _resolve_locale_table(requested_locale, "bestiary")
-Bestiary.DropTable, Bestiary.DropTableLocale = _resolve_locale_table(requested_locale, "drop_table")
+Encyclopedia.RequestedLocale = requested_locale
+Encyclopedia.Data, Encyclopedia.DataLocale = _resolve_locale_table(requested_locale, "bestiary")
+Encyclopedia.DropTable, Encyclopedia.DropTableLocale = _resolve_locale_table(requested_locale, "drop_table")
 
-function Bestiary.supports_target_name_lookup()
-    local requested = Bestiary.RequestedLocale or "en"
-    return Bestiary.DataLocale == requested
+function Encyclopedia.supports_target_name_lookup()
+    local requested = Encyclopedia.RequestedLocale or "en"
+    return Encyclopedia.DataLocale == requested
 end
 
-function Bestiary.supports_drop_name_lookup()
-    local requested = Bestiary.RequestedLocale or "en"
-    return Bestiary.DataLocale == requested and Bestiary.DropTableLocale == requested
+function Encyclopedia.supports_drop_name_lookup()
+    local requested = Encyclopedia.RequestedLocale or "en"
+    return Encyclopedia.DataLocale == requested and Encyclopedia.DropTableLocale == requested
 end
 
-function Bestiary.has_droppable_item(name)
-    if Bestiary.supports_drop_name_lookup() ~= true then
+function Encyclopedia.has_droppable_item(name)
+    if Encyclopedia.supports_drop_name_lookup() ~= true then
         return false
     end
 
     local key = _normalize_drop_name(name)
-    return key ~= "" and type(Bestiary.DropTable) == "table" and Bestiary.DropTable[key] == true
+    return key ~= "" and type(Encyclopedia.DropTable) == "table" and Encyclopedia.DropTable[key] == true
 end

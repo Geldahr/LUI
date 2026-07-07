@@ -17,7 +17,7 @@ local scaled_int = UI.NativeScaling.scaled_int
 local class = _G.LUI.Core.class
 local Lore = _G.LUI.Data.Lore
 local SearchQuery = _G.LUI.Utils.SearchQuery
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Crafting = _G.LUI.Features.Crafting
 local Shortcuts = UI.Shortcuts
 import "Turbine.UI"
@@ -195,7 +195,7 @@ function ItemBrowserRow:set_row(ordinal)
     self._craft_search_name = craft_search_name
     self._link_recipe_id = craft_recipe_id
     self.craft_button:SetVisible(linkable == true)
-    self.bestiary_button:SetVisible(Bestiary.has_droppable_item(name) == true)
+    self.bestiary_button:SetVisible(Encyclopedia.has_droppable_item(name) == true)
 end
 
 function ItemBrowserRow:layout_row(width, height)
@@ -231,7 +231,7 @@ function ItemBrowserRow:layout_row(width, height)
 end
 
 local ItemBrowserPanel = class(Turbine.UI.Control)
-Bestiary.ItemBrowserPanel = ItemBrowserPanel
+Encyclopedia.ItemBrowserPanel = ItemBrowserPanel
 
 function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     Turbine.UI.Control.Constructor(self)
@@ -891,8 +891,8 @@ function ItemBrowserPanel:layout()
     local width, height = self:GetSize()
     local gap = scaled_int(BASE_GAP)
     local bar_h = scaled_int(BASE_BAR_H)
-    -- shared margins from the bestiary window: all tabs align
-    local margins = Bestiary.CONTENT_MARGINS
+    -- shared margins from the encyclopedia window: all tabs align
+    local margins = Encyclopedia.CONTENT_MARGINS
     local margin_l = scaled_int(margins.left)
     local margin_t = scaled_int(margins.top)
     local margin_r = scaled_int(margins.right)

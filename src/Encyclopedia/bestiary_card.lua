@@ -7,7 +7,7 @@ local Utils = _G.LUI.Utils
 local Settings = _G.LUI.Settings
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -16,9 +16,9 @@ import "LUI.src.UI.Widgets"
 
 local Style = UI.Widgets.Style
 
-local BUILTIN_BESTIARY = Bestiary.Data or {}
-local DATA_ACCESS = Bestiary.DataAccess
-local CW = Bestiary.CardWidgets
+local BUILTIN_BESTIARY = Encyclopedia.Data or {}
+local DATA_ACCESS = Encyclopedia.DataAccess
+local CW = Encyclopedia.CardWidgets
 
 -- shared card style tokens live in card_widgets.lua; card-specific
 -- dimensions stay here
@@ -985,7 +985,7 @@ local function _drop_link_name(name)
     end
     local known = _drop_link_known[name]
     if known == nil then
-        known = Bestiary.encyclopedia_tab_for_item(name) ~= nil
+        known = Encyclopedia.encyclopedia_tab_for_item(name) ~= nil
         _drop_link_known[name] = known
     end
     return known == true and name or nil
@@ -1075,7 +1075,7 @@ function BestiaryVariantTab:set_selected(selected)
 end
 
 local BestiaryCard = class(UI.Widgets.LuiWindow)
-Bestiary.BestiaryCard = BestiaryCard
+Encyclopedia.BestiaryCard = BestiaryCard
 
 local function _card_window_settings(create)
     local root = State.loaded_settings

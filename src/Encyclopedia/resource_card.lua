@@ -11,7 +11,7 @@
 local TR = _G.LUI.Locale.TR
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Lore = _G.LUI.Data.Lore
 local class = _G.LUI.Core.class
 import "Turbine.UI"
@@ -21,7 +21,7 @@ import "LUI.src.UI.Widgets"
 import "LUI.src.UI.Widgets.item_icon"
 
 local Style = UI.Widgets.Style
-local CW = Bestiary.CardWidgets
+local CW = Encyclopedia.CardWidgets
 
 local BASE_WIDTH = 420
 -- taller than the bestiary stat boxes: the body hosts the native 32px
@@ -37,7 +37,7 @@ local function _yield_chip_texts(node)
         local y = node.y[i]
         local ordinal = Lore.Items.ordinal_of(y[1])
         local label = Lore.Items.label(ordinal)
-        local linked = Bestiary.encyclopedia_tab_for_item(label) ~= nil
+        local linked = Encyclopedia.encyclopedia_tab_for_item(label) ~= nil
         if y[4] == 1 then
             local text = label
             if y[3] > 1 then
@@ -56,7 +56,7 @@ local function _yield_chip_texts(node)
 end
 
 local ResourceCard = class(UI.Widgets.LuiWindow)
-Bestiary.ResourceCard = ResourceCard
+Encyclopedia.ResourceCard = ResourceCard
 
 function ResourceCard:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
@@ -126,21 +126,21 @@ local function _card_window_settings(create)
         return nil
     end
 
-    if type(root.bestiary) ~= "table" then
+    if type(root.encyclopedia) ~= "table" then
         if create ~= true then
             return nil
         end
-        root.bestiary = {}
+        root.encyclopedia = {}
     end
 
-    if type(root.bestiary.resource_card_window) ~= "table" then
+    if type(root.encyclopedia.resource_card_window) ~= "table" then
         if create ~= true then
             return nil
         end
-        root.bestiary.resource_card_window = {}
+        root.encyclopedia.resource_card_window = {}
     end
 
-    return root.bestiary.resource_card_window
+    return root.encyclopedia.resource_card_window
 end
 
 function ResourceCard:_persist_current_position()

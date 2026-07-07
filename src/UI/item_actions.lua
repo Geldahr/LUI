@@ -40,7 +40,7 @@ function ItemActions.show_menu(anchor, x, y, item_name)
     end
     menu:clear_items()
 
-    if _G.LUI.Features.Bestiary.encyclopedia_tab_for_item(item_name) ~= nil then
+    if _G.LUI.Features.Encyclopedia.encyclopedia_tab_for_item(item_name) ~= nil then
         menu:add_action({
             text = TR["Open in Encyclopedia"],
             triggered = function()

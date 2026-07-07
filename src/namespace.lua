@@ -65,7 +65,7 @@ LUI.UI.ItemActions = ensure(LUI.UI, "ItemActions")
 
 LUI.Features = ensure(LUI, "Features")
 LUI.Features.Assets = ensure(LUI.Features, "Assets")
-LUI.Features.Bestiary = ensure(LUI.Features, "Bestiary")
+LUI.Features.Encyclopedia = ensure(LUI.Features, "Encyclopedia")
 LUI.Features.Cooldowns = ensure(LUI.Features, "Cooldowns")
 LUI.Features.Crafting = ensure(LUI.Features, "Crafting")
 LUI.Features.Drops = ensure(LUI.Features, "Drops")

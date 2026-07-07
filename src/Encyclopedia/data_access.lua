@@ -3,11 +3,11 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Persistence = _G.LUI.Settings.Persistence
-Bestiary.DataAccess = Bestiary.DataAccess or {}
+Encyclopedia.DataAccess = Encyclopedia.DataAccess or {}
 
-local BUILTIN_BESTIARY = Bestiary.Data or {}
+local BUILTIN_BESTIARY = Encyclopedia.Data or {}
 
 local function _trim(text)
     if type(text) ~= "string" then
@@ -575,13 +575,13 @@ end
 local CACHE_INDEX = nil
 local CACHE_GENERATION = nil
 
-function Bestiary.DataAccess.get_builtin_index()
+function Encyclopedia.DataAccess.get_builtin_index()
     -- baked at pack time; same shape _build_source_index produces
     return _G.LUI.Data.Lore.Bestiary.builtin_index()
 end
 
-function Bestiary.DataAccess.get_cache_index()
-    local source = Bestiary.DataAccess.ensure_cache()
+function Encyclopedia.DataAccess.get_cache_index()
+    local source = Encyclopedia.DataAccess.ensure_cache()
     local generation = BestiaryCache.generation or 0
     if CACHE_INDEX == nil or CACHE_INDEX.source ~= source or CACHE_GENERATION ~= generation then
         CACHE_INDEX = _build_source_index(source)
@@ -626,7 +626,7 @@ local function _resolve_key(source, index, name)
     return type(index) == "table" and index.first_key_by_base_lower[lowered] or nil
 end
 
-function Bestiary.DataAccess.resolve_entry(source, index, name)
+function Encyclopedia.DataAccess.resolve_entry(source, index, name)
     local resolved_key = _resolve_key(source, index, name)
     if type(resolved_key) ~= "string" then
         return nil, nil
@@ -640,8 +640,8 @@ function Bestiary.DataAccess.resolve_entry(source, index, name)
     return resolved_key, entry
 end
 
-function Bestiary.DataAccess.resolve_builtin_name(name)
-    local resolved_key = _resolve_key(BUILTIN_BESTIARY, Bestiary.DataAccess.get_builtin_index(), name)
+function Encyclopedia.DataAccess.resolve_builtin_name(name)
+    local resolved_key = _resolve_key(BUILTIN_BESTIARY, Encyclopedia.DataAccess.get_builtin_index(), name)
     if type(resolved_key) == "string" then
         return resolved_key
     end
@@ -649,7 +649,7 @@ function Bestiary.DataAccess.resolve_builtin_name(name)
     return _normalize_name(name)
 end
 
-function Bestiary.DataAccess.get_group_keys(source, index, base_name)
+function Encyclopedia.DataAccess.get_group_keys(source, index, base_name)
     local normalized = _normalize_name(base_name)
     if normalized == nil or type(index) ~= "table" then
         return nil
@@ -658,23 +658,23 @@ function Bestiary.DataAccess.get_group_keys(source, index, base_name)
     return _copy_array(index.group_keys_by_base_lower[_lower(normalized)])
 end
 
-function Bestiary.DataAccess.new_merged_entry(name)
+function Encyclopedia.DataAccess.new_merged_entry(name)
     return _new_merged_entry(name)
 end
 
-function Bestiary.DataAccess.merge_entry(dst, src, name)
+function Encyclopedia.DataAccess.merge_entry(dst, src, name)
     _merge_entry(dst, src, name)
 end
 
-function Bestiary.DataAccess.build_drop_records(entry)
+function Encyclopedia.DataAccess.build_drop_records(entry)
     return _build_drop_records(entry)
 end
 
-function Bestiary.DataAccess.is_alias_entry(entry)
+function Encyclopedia.DataAccess.is_alias_entry(entry)
     return _is_alias_entry(entry)
 end
 
-function Bestiary.DataAccess.ensure_cache()
+function Encyclopedia.DataAccess.ensure_cache()
     local cache = Persistence.ensure_bestiary_cache()
 
     local changed = false
@@ -687,6 +687,6 @@ function Bestiary.DataAccess.ensure_cache()
     return cache
 end
 
-function Bestiary.DataAccess.normalize_name(name)
+function Encyclopedia.DataAccess.normalize_name(name)
     return _normalize_name(name)
 end

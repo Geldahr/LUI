@@ -249,7 +249,7 @@ local function _group_ordinals(base_lowered)
     return ordinals
 end
 
--- ---- the shapes src/Bestiary/data_access.lua consumes -------------------
+-- ---- the shapes src/Encyclopedia/data_access.lua consumes -------------------
 
 -- read-only proxy behaving like the old DB.en.bestiary table for point
 -- lookups; full iteration must go through count/key_at

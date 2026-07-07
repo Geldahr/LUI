@@ -10,7 +10,7 @@ local Flags = _G.LUI.Runtime.Flags
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Crafting = _G.LUI.Features.Crafting
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Shortcuts = UI.Shortcuts
 local class = _G.LUI.Core.class
 local CraftingWindow
@@ -2088,7 +2088,7 @@ function CraftingWindow:_source_breakdown_for_item(item_key, required)
 end
 
 function CraftingWindow:_can_open_bestiary_for_item(item_key)
-    return Bestiary.has_droppable_item(item_key) == true
+    return Encyclopedia.has_droppable_item(item_key) == true
 end
 
 function CraftingWindow:_bind_bestiary_action(row, item_key, item_name)

@@ -8,7 +8,7 @@ local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
 local Persistence = _G.LUI.Settings.Persistence
 local State = _G.LUI.Settings.State
 local Locale = _G.LUI.Locale
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Windows = _G.LUI.Runtime.Windows
 local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
@@ -19,10 +19,10 @@ import "LUI.src.Utils.search_query"
 
 local add_callback = _G.LUI.Utils.add_callback
 local remove_callback = _G.LUI.Utils.remove_callback
-Bestiary.Collector = class()
-Bestiary.current_location = Bestiary.current_location or nil
+Encyclopedia.Collector = class()
+Encyclopedia.current_location = Encyclopedia.current_location or nil
 
-local DATA_ACCESS = Bestiary.DataAccess
+local DATA_ACCESS = Encyclopedia.DataAccess
 -- Loot messages often arrive after the kill line and XP line, so keep a short
 -- post-kill attribution window here. Adjust if the client/chat timing shifts.
 local LOOT_POST_KILL_WINDOW_SECONDS = 0.10
@@ -45,7 +45,7 @@ local function _trim(text)
 end
 
 local function _is_bestiary_open()
-    local window = Windows.bestiary
+    local window = Windows.encyclopedia
     return window ~= nil and window:IsVisible() == true
 end
 
@@ -67,11 +67,11 @@ local function _build_location_filter_query(location)
     return query
 end
 
-function Bestiary.get_current_location()
-    return Bestiary.current_location
+function Encyclopedia.get_current_location()
+    return Encyclopedia.current_location
 end
 
-function Bestiary.set_current_location(location)
+function Encyclopedia.set_current_location(location)
     if type(location) ~= "table" then
         return
     end
@@ -94,17 +94,17 @@ function Bestiary.set_current_location(location)
     }
     local query = _build_location_filter_query(current_location)
 
-    Bestiary.current_location = current_location
+    Encyclopedia.current_location = current_location
     BestiaryCache.area_filter_query = query
 
-    local window = Windows.bestiary
+    local window = Windows.encyclopedia
     if window ~= nil then
         window:on_location_resolved()
     end
 end
 
 local function _apply_location_filter(location)
-    Bestiary.set_current_location(location)
+    Encyclopedia.set_current_location(location)
 end
 
 local function _to_number(value, fallback)
@@ -198,7 +198,7 @@ local function _parse_drop_name(message)
     return _trim(string.sub(bracketed, 2, -2))
 end
 
-function Bestiary.Collector:Constructor()
+function Encyclopedia.Collector:Constructor()
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
     self.player_name = nil
     self.enabled = false
@@ -218,7 +218,7 @@ function Bestiary.Collector:Constructor()
     end
 end
 
-function Bestiary.Collector:is_enabled()
+function Encyclopedia.Collector:is_enabled()
     local settings = State.settings
     if type(settings) ~= "table" or type(settings.global) ~= "table" then
         return false
@@ -227,7 +227,7 @@ function Bestiary.Collector:is_enabled()
     return settings.global.bestiary_capture == true and _is_english_client() == true
 end
 
-function Bestiary.Collector:apply_settings()
+function Encyclopedia.Collector:apply_settings()
     local should_enable = self:is_enabled()
     self.enabled = should_enable
 
@@ -242,25 +242,25 @@ function Bestiary.Collector:apply_settings()
     end
 end
 
-function Bestiary.Collector:save()
+function Encyclopedia.Collector:save()
     self:_flush_pending_kills(true)
     Persistence.save_bestiary_cache()
 end
 
-function Bestiary.Collector:flush_expired()
+function Encyclopedia.Collector:flush_expired()
     self:_flush_pending_kills(false)
 end
 
-function Bestiary.Collector:flush_pending()
+function Encyclopedia.Collector:flush_pending()
     self:_flush_pending_kills(true)
 end
 
-function Bestiary.Collector:destroy()
+function Encyclopedia.Collector:destroy()
     self:_flush_pending_kills(true)
     self:_unbind()
 end
 
-function Bestiary.Collector:_bind()
+function Encyclopedia.Collector:_bind()
     if self.player == nil then
         self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
         if self.player ~= nil and self.player.GetName ~= nil then
@@ -283,14 +283,14 @@ function Bestiary.Collector:_bind()
     end
 end
 
-function Bestiary.Collector:_unbind_player_events()
+function Encyclopedia.Collector:_unbind_player_events()
     if self._cb_target ~= nil and self.player ~= nil then
         remove_callback(self.player, "TargetChanged", self._cb_target)
     end
     self._cb_target = nil
 end
 
-function Bestiary.Collector:_unbind_target_events()
+function Encyclopedia.Collector:_unbind_target_events()
     if self._tracked_target ~= nil then
         if self._cb_target_morale ~= nil then
             remove_callback(self._tracked_target, "MoraleChanged", self._cb_target_morale)
@@ -319,7 +319,7 @@ function Bestiary.Collector:_unbind_target_events()
     self._tracked_target_attrs = nil
 end
 
-function Bestiary.Collector:_unbind()
+function Encyclopedia.Collector:_unbind()
     self:_unbind_target_events()
     self:_unbind_player_events()
 
@@ -329,7 +329,7 @@ function Bestiary.Collector:_unbind()
     end
 end
 
-function Bestiary.Collector:_track_current_target()
+function Encyclopedia.Collector:_track_current_target()
     if self.player == nil or self.player.GetTarget == nil then
         self:_unbind_target_events()
         return
@@ -338,7 +338,7 @@ function Bestiary.Collector:_track_current_target()
     self:_track_target(self.player:GetTarget())
 end
 
-function Bestiary.Collector:_track_target(target)
+function Encyclopedia.Collector:_track_target(target)
     if target == self._tracked_target then
         return
     end
@@ -383,7 +383,7 @@ function Bestiary.Collector:_track_target(target)
     end
 end
 
-function Bestiary.Collector:_record_target(target)
+function Encyclopedia.Collector:_record_target(target)
     if self.enabled ~= true or target == nil then
         return
     end
@@ -429,7 +429,7 @@ function Bestiary.Collector:_record_target(target)
     end
 end
 
-function Bestiary.Collector:_commit_kill(record)
+function Encyclopedia.Collector:_commit_kill(record)
     if type(record) ~= "table" then
         return
     end
@@ -451,7 +451,7 @@ function Bestiary.Collector:_commit_kill(record)
     _touch_generation()
 end
 
-function Bestiary.Collector:_flush_pending_kills(flush_all)
+function Encyclopedia.Collector:_flush_pending_kills(flush_all)
     local now = Turbine.Engine.GetGameTime()
     while #self._pending_kills > 0 do
         local record = self._pending_kills[1]
@@ -464,7 +464,7 @@ function Bestiary.Collector:_flush_pending_kills(flush_all)
     end
 end
 
-function Bestiary.Collector:_on_target_changed()
+function Encyclopedia.Collector:_on_target_changed()
     if self.enabled ~= true then
         return
     end
@@ -472,7 +472,7 @@ function Bestiary.Collector:_on_target_changed()
     self:_track_current_target()
 end
 
-function Bestiary.Collector:_on_chat_received(args)
+function Encyclopedia.Collector:_on_chat_received(args)
     if args.ChatType ~= Turbine.ChatType.Standard and
         args.ChatType ~= Turbine.ChatType.Death and
         args.ChatType ~= Turbine.ChatType.SelfLoot then

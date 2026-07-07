@@ -656,11 +656,11 @@ function Persistence.capture_runtime_geometry()
         end
     end
 
-    if Windows.bestiary ~= nil then
-        if Windows.bestiary.capture_geometry ~= nil then
-            Windows.bestiary:capture_geometry()
-        elseif Windows.bestiary.persist_geometry ~= nil then
-            Windows.bestiary:persist_geometry()
+    if Windows.encyclopedia ~= nil then
+        if Windows.encyclopedia.capture_geometry ~= nil then
+            Windows.encyclopedia:capture_geometry()
+        elseif Windows.encyclopedia.persist_geometry ~= nil then
+            Windows.encyclopedia:persist_geometry()
         end
     end
 

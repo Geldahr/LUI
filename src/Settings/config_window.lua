@@ -679,8 +679,8 @@ function ConfigWindow:refresh_runtime_settings()
     if Windows.drops ~= nil then
         Windows.drops:apply_settings()
     end
-    if Windows.bestiary ~= nil then
-        Windows.bestiary:apply_settings()
+    if Windows.encyclopedia ~= nil then
+        Windows.encyclopedia:apply_settings()
     end
     if Windows.bestiary_card ~= nil then
         Windows.bestiary_card:apply_settings()

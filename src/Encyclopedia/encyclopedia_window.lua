@@ -10,7 +10,7 @@ local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
 local Flags = _G.LUI.Runtime.Flags
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Windows = _G.LUI.Runtime.Windows
 local class = _G.LUI.Core.class
 import "Turbine.UI"
@@ -21,8 +21,8 @@ import "LUI.src.Inventory.filter"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.search_query"
 
-local BUILTIN_BESTIARY = Bestiary.Data or {}
-local DATA_ACCESS = Bestiary.DataAccess
+local BUILTIN_BESTIARY = Encyclopedia.Data or {}
+local DATA_ACCESS = Encyclopedia.DataAccess
 local Style = UI.Widgets.Style
 
 -- Bestiary icon for shortcut button: 0x410E0435
@@ -39,7 +39,7 @@ local BASE_MARGIN_RIGHT = 8
 local BASE_MARGIN_BOTTOM = 8
 
 -- shared with the encyclopedia item tabs so all tab content aligns
-Bestiary.CONTENT_MARGINS = {
+Encyclopedia.CONTENT_MARGINS = {
     left = BASE_MARGIN_LEFT,
     top = BASE_MARGIN_TOP,
     right = BASE_MARGIN_RIGHT,
@@ -1127,9 +1127,9 @@ function BestiaryRow:bind(record, width)
     self:SetVisible(true)
 end
 
-local BestiaryWindow = class(UI.Widgets.LuiWindow)
+local EncyclopediaWindow = class(UI.Widgets.LuiWindow)
 
-function BestiaryWindow:Constructor()
+function EncyclopediaWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Encyclopedia"])
@@ -1527,17 +1527,17 @@ function BestiaryWindow:Constructor()
     self:apply_settings()
 end
 
-function BestiaryWindow:bring_to_front()
+function EncyclopediaWindow:bring_to_front()
     if self:IsVisible() == true then
         self:Activate()
     end
 end
 
-function BestiaryWindow:open()
+function EncyclopediaWindow:open()
     self:show()
 end
 
-function BestiaryWindow:toggle()
+function EncyclopediaWindow:toggle()
     if self:IsVisible() == true then
         self:hide()
     else
@@ -1545,7 +1545,7 @@ function BestiaryWindow:toggle()
     end
 end
 
-function BestiaryWindow:capture_geometry()
+function EncyclopediaWindow:capture_geometry()
     local window = Defaults.get_ui_window_state("bestiary")
     if type(window) ~= "table" then
         return
@@ -1559,18 +1559,18 @@ function BestiaryWindow:capture_geometry()
     window.tile = geometry.tile
 end
 
-function BestiaryWindow:persist_geometry()
+function EncyclopediaWindow:persist_geometry()
     self:capture_geometry()
 end
 
-function BestiaryWindow:_minimum_window_size()
+function EncyclopediaWindow:_minimum_window_size()
     local window_w, window_h = self:GetSize()
     local central_w, central_h = self:central_widget():GetSize()
     return _scaled_int(BASE_MIN_W) + math.max(0, window_w - central_w),
         _scaled_int(BASE_MIN_H) + math.max(0, window_h - central_h)
 end
 
-function BestiaryWindow:ensure_area_shortcut()
+function EncyclopediaWindow:ensure_area_shortcut()
     if self.area_shortcut == nil or self.area_slot == nil then
         return
     end
@@ -1580,7 +1580,7 @@ function BestiaryWindow:ensure_area_shortcut()
     self.area_slot:SetAllowDrop(false)
 end
 
-function BestiaryWindow:apply_settings()
+function EncyclopediaWindow:apply_settings()
     UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
     self.update_every = 1.0 / math.max(1, _to_number(State.settings.global.refresh_rate, 30))
     local min_w, min_h = self:_minimum_window_size()
@@ -1637,7 +1637,7 @@ function BestiaryWindow:apply_settings()
     self:apply_view()
 end
 
-function BestiaryWindow:Update()
+function EncyclopediaWindow:Update()
     if Flags.is_unloading == true then
         self:SetWantsUpdates(false)
         return
@@ -1672,7 +1672,7 @@ function BestiaryWindow:Update()
     end
 end
 
-function BestiaryWindow:handle_user_resize()
+function EncyclopediaWindow:handle_user_resize()
     local min_w, min_h = self:_minimum_window_size()
     self:set_minimum_size(min_w, min_h)
     local cur_w, cur_h = self:GetSize()
@@ -1694,7 +1694,7 @@ function BestiaryWindow:handle_user_resize()
     self._last_resize_at = Turbine.Engine.GetGameTime()
 end
 
-function BestiaryWindow:update_filter()
+function EncyclopediaWindow:update_filter()
     local query = self.filter_tb:GetText() or ""
     local state = SearchQuery.parse(query, BESTIARY_QUERY_TOKENS)
     local level_filter = SearchQuery.read_level_filter(state, "lvl")
@@ -1715,14 +1715,14 @@ function BestiaryWindow:update_filter()
     self:apply_view()
 end
 
-function BestiaryWindow:_set_filter_query_text(query)
+function EncyclopediaWindow:_set_filter_query_text(query)
     self._suppress_area_text_changed = true
     self.filter_tb:SetText(query)
     self._suppress_area_text_changed = false
     self:update_filter()
 end
 
-function BestiaryWindow:_apply_location_query_value(value)
+function EncyclopediaWindow:_apply_location_query_value(value)
     local location_parts = _parse_location_token_value(value)
     if location_parts == nil then
         error("Invalid bestiary location query value")
@@ -1738,7 +1738,7 @@ function BestiaryWindow:_apply_location_query_value(value)
     self:_set_filter_query_text(SearchQuery.serialize(self.query_state.text_groups, tokens, BESTIARY_QUERY_TOKENS))
 end
 
-function BestiaryWindow:sync_area_filter_query()
+function EncyclopediaWindow:sync_area_filter_query()
     local query = BestiaryCache.area_filter_query
     if type(query) ~= "string" or query == "" then
         self.current_area = nil
@@ -1748,7 +1748,7 @@ function BestiaryWindow:sync_area_filter_query()
     self.current_area = query
 end
 
-function BestiaryWindow:apply_current_area_filter(force)
+function EncyclopediaWindow:apply_current_area_filter(force)
     local query = self.current_area
     if type(query) ~= "string" or query == "" then
         return
@@ -1774,12 +1774,12 @@ function BestiaryWindow:apply_current_area_filter(force)
     self:_apply_location_query_value(location_value)
 end
 
-function BestiaryWindow:on_location_resolved()
+function EncyclopediaWindow:on_location_resolved()
     self:sync_area_filter_query()
     self:apply_current_area_filter(true)
 end
 
-function BestiaryWindow:set_area_filter_query(query)
+function EncyclopediaWindow:set_area_filter_query(query)
     if type(query) ~= "string" or query == "" then
         return
     end
@@ -1789,7 +1789,7 @@ function BestiaryWindow:set_area_filter_query(query)
     self:apply_current_area_filter(true)
 end
 
-function BestiaryWindow:open_query_search(query)
+function EncyclopediaWindow:open_query_search(query)
     query = _trim_text(query)
     if query == "" then
         return
@@ -1824,7 +1824,7 @@ function BestiaryWindow:open_query_search(query)
     self.filter_tb:Focus()
 end
 
-function BestiaryWindow:open_item_search(item_name)
+function EncyclopediaWindow:open_item_search(item_name)
     local query = _trim_text(item_name)
     if query == "" then
         return
@@ -1840,8 +1840,8 @@ end
 -- Cross-window link (card drop chips): open the Encyclopedia on the item
 -- tab that shows this item, with an exact-name search. Returns false when
 -- the name is not a browsable item.
-function BestiaryWindow:open_encyclopedia_item_search(item_name)
-    local tab_index = Bestiary.encyclopedia_tab_for_item(item_name)
+function EncyclopediaWindow:open_encyclopedia_item_search(item_name)
+    local tab_index = Encyclopedia.encyclopedia_tab_for_item(item_name)
     if tab_index == nil then
         return false
     end
@@ -1855,7 +1855,7 @@ function BestiaryWindow:open_encyclopedia_item_search(item_name)
     return true
 end
 
-function BestiaryWindow:_refresh_genus_dropdown()
+function EncyclopediaWindow:_refresh_genus_dropdown()
     local labels = { TR["All"] }
     local values = { FILTER_ALL }
     local genera = _collect_unique_record_values(self.all_records, "genus", nil)
@@ -1876,7 +1876,7 @@ function BestiaryWindow:_refresh_genus_dropdown()
     self._suppress_genus_changed = false
 end
 
-function BestiaryWindow:_refresh_subcategory_dropdown()
+function EncyclopediaWindow:_refresh_subcategory_dropdown()
     local labels = { "-" }
     local values = { FILTER_NONE }
     local enabled = false
@@ -1907,12 +1907,12 @@ function BestiaryWindow:_refresh_subcategory_dropdown()
     self._suppress_subcategory_changed = false
 end
 
-function BestiaryWindow:refresh_taxonomy_filters()
+function EncyclopediaWindow:refresh_taxonomy_filters()
     self:_refresh_genus_dropdown()
     self:_refresh_subcategory_dropdown()
 end
 
-function BestiaryWindow:set_taxonomy_filters(genus_value, subcategory_value)
+function EncyclopediaWindow:set_taxonomy_filters(genus_value, subcategory_value)
     if type(genus_value) ~= "string" or genus_value == "" then
         genus_value = FILTER_ALL
     end
@@ -1934,7 +1934,7 @@ function BestiaryWindow:set_taxonomy_filters(genus_value, subcategory_value)
     self:apply_view()
 end
 
-function BestiaryWindow:set_genus_filter(value)
+function EncyclopediaWindow:set_genus_filter(value)
     if type(value) ~= "string" or value == "" then
         value = FILTER_ALL
     end
@@ -1949,7 +1949,7 @@ function BestiaryWindow:set_genus_filter(value)
     self:apply_view()
 end
 
-function BestiaryWindow:set_subcategory_filter(value)
+function EncyclopediaWindow:set_subcategory_filter(value)
     if self.genus_filter == FILTER_ALL then
         value = FILTER_NONE
     elseif type(value) ~= "string" or value == "" then
@@ -1965,7 +1965,7 @@ function BestiaryWindow:set_subcategory_filter(value)
     self:apply_view()
 end
 
-function BestiaryWindow:set_sort_mode(mode)
+function EncyclopediaWindow:set_sort_mode(mode)
     if mode ~= SORT_NAME_ASC and mode ~= SORT_NAME_DESC and mode ~= SORT_LEVEL_ASC and mode ~= SORT_LEVEL_DESC then
         mode = SORT_NAME_ASC
     end
@@ -1979,14 +1979,14 @@ function BestiaryWindow:set_sort_mode(mode)
     self:apply_view()
 end
 
-function BestiaryWindow:_sync_menu_actions()
+function EncyclopediaWindow:_sync_menu_actions()
     self.sort_name_asc_action:set_checked(self.sort_mode == SORT_NAME_ASC)
     self.sort_name_desc_action:set_checked(self.sort_mode == SORT_NAME_DESC)
     self.sort_level_asc_action:set_checked(self.sort_mode == SORT_LEVEL_ASC)
     self.sort_level_desc_action:set_checked(self.sort_mode == SORT_LEVEL_DESC)
 end
 
-function BestiaryWindow:set_page(index)
+function EncyclopediaWindow:set_page(index)
     local count = #self.pages
     if count < 1 then
         count = 1
@@ -2001,7 +2001,7 @@ function BestiaryWindow:set_page(index)
     self:render_page()
 end
 
-function BestiaryWindow:open_card_for_record(record, anchor)
+function EncyclopediaWindow:open_card_for_record(record, anchor)
     local name = record.key
     if type(name) ~= "string" or name == "" then
         name = record.name
@@ -2010,7 +2010,7 @@ function BestiaryWindow:open_card_for_record(record, anchor)
     return Windows.bestiary_card:show_for_name(name, anchor)
 end
 
-function BestiaryWindow:_ensure_rows(count)
+function EncyclopediaWindow:_ensure_rows(count)
     while #self.entries < count do
         local row = BestiaryRow(self)
         row:SetParent(self.content)
@@ -2020,7 +2020,7 @@ function BestiaryWindow:_ensure_rows(count)
     end
 end
 
-function BestiaryWindow:_ensure_column_separators(count)
+function EncyclopediaWindow:_ensure_column_separators(count)
     while #self.column_separators < count do
         local separator = Turbine.UI.Control()
         separator:SetParent(self.content)
@@ -2032,7 +2032,7 @@ function BestiaryWindow:_ensure_column_separators(count)
     end
 end
 
-function BestiaryWindow:_content_metrics()
+function EncyclopediaWindow:_content_metrics()
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)
     local margin_top = _scaled_int(BASE_MARGIN_TOP)
     local margin_right = _scaled_int(BASE_MARGIN_RIGHT)
@@ -2049,7 +2049,7 @@ function BestiaryWindow:_content_metrics()
     return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, level_h, filter_h, gap
 end
 
-function BestiaryWindow:layout()
+function EncyclopediaWindow:layout()
     -- the tab bar owns the whole central area; sizing it lays out the
     -- selected tab's content host synchronously, so the bestiary metrics
     -- below read a valid bestiary_host size
@@ -2190,7 +2190,7 @@ local BUCKET_TAB_BY_CODE = { [1] = 2, [2] = 4, [3] = 3, [4] = 5, [5] = 6 }
 -- Which encyclopedia tab shows this item name; nil when the name is not a
 -- browsable item (unknown name or bucket "other"). Shared probe for every
 -- surface that decides whether an item link makes sense.
-function Bestiary.encyclopedia_tab_for_item(item_name)
+function Encyclopedia.encyclopedia_tab_for_item(item_name)
     local Lore = _G.LUI.Data.Lore
     Lore.load_items()
     local ordinals = Lore.Items.find_ordinals(item_name)
@@ -2206,19 +2206,19 @@ function Bestiary.encyclopedia_tab_for_item(item_name)
     return nil
 end
 
-function BestiaryWindow:_set_encyclopedia_tab(index)
+function EncyclopediaWindow:_set_encyclopedia_tab(index)
     self._active_encyclopedia_tab = index
     -- the tab bar shows/hides the tab hosts itself; item panels are only
     -- created lazily inside their host on first activation
     if index ~= 1 and self._item_panels[index] == nil then
-        local panel = Bestiary.ItemBrowserPanel(ENCYCLOPEDIA_TAB_BUCKETS[index], self)
+        local panel = Encyclopedia.ItemBrowserPanel(ENCYCLOPEDIA_TAB_BUCKETS[index], self)
         panel:SetParent(self._item_tab_hosts[index])
         self._item_panels[index] = panel
     end
     self:layout()
 end
 
-function BestiaryWindow:refresh_from_store(force)
+function EncyclopediaWindow:refresh_from_store(force)
     local generation = BestiaryCache.generation or 0
     if force ~= true and self._last_generation == generation then
         return
@@ -2233,7 +2233,7 @@ function BestiaryWindow:refresh_from_store(force)
     self:apply_view()
 end
 
-function BestiaryWindow:_prepare_records(records)
+function EncyclopediaWindow:_prepare_records(records)
     for i = 1, #records do
         local record = records[i]
         _ensure_record_display_texts(record)
@@ -2244,7 +2244,7 @@ function BestiaryWindow:_prepare_records(records)
     end
 end
 
-function BestiaryWindow:_measure_record_height(record, width)
+function EncyclopediaWindow:_measure_record_height(record, width)
     _ensure_record_row_layout(record, width)
     if type(record) ~= "table" then
         return 0
@@ -2253,7 +2253,7 @@ function BestiaryWindow:_measure_record_height(record, width)
     return _to_number(record._view_height, 0)
 end
 
-function BestiaryWindow:_column_metrics()
+function EncyclopediaWindow:_column_metrics()
     local host_w = self.bestiary_host:GetSize()
     local window_w = math.max(1, math.floor(host_w + 0.5))
     local content_w = math.max(1, math.floor(self.content:GetWidth() + 0.5))
@@ -2266,7 +2266,7 @@ function BestiaryWindow:_column_metrics()
     return column_count, content_w, bucket_content_w
 end
 
-function BestiaryWindow:refresh_layout_view(force)
+function EncyclopediaWindow:refresh_layout_view(force)
     local column_count, content_w, bucket_content_w = self:_column_metrics()
     local content_h = math.max(1, self.content:GetHeight())
     local width_changed = self._prepared_content_w ~= content_w
@@ -2298,7 +2298,7 @@ function BestiaryWindow:refresh_layout_view(force)
     self:render_page()
 end
 
-function BestiaryWindow:_build_pages(records)
+function EncyclopediaWindow:_build_pages(records)
     local pages = {}
     local content_h = math.max(1, self.content:GetHeight())
     local column_count, content_w = self:_column_metrics()
@@ -2368,7 +2368,7 @@ function BestiaryWindow:_build_pages(records)
     return pages
 end
 
-function BestiaryWindow:apply_view()
+function EncyclopediaWindow:apply_view()
     local filtered = {}
     local filter_groups = self.filter_groups
     local has_query = type(filter_groups) == "table" and #filter_groups > 0
@@ -2429,7 +2429,7 @@ function BestiaryWindow:apply_view()
     self:refresh_layout_view(true)
 end
 
-function BestiaryWindow:_apply_page_layout(page, column_count, content_w)
+function EncyclopediaWindow:_apply_page_layout(page, column_count, content_w)
     local record_indices = type(page) == "table" and page.items or nil
     if type(record_indices) ~= "table" then
         record_indices = {}
@@ -2501,7 +2501,7 @@ function BestiaryWindow:_apply_page_layout(page, column_count, content_w)
     end
 end
 
-function BestiaryWindow:refresh_visible_page_layout()
+function EncyclopediaWindow:refresh_visible_page_layout()
     if #self.records == 0 then
         self:render_page()
         return
@@ -2519,7 +2519,7 @@ function BestiaryWindow:refresh_visible_page_layout()
     self:_apply_page_layout(page, column_count, content_w)
 end
 
-function BestiaryWindow:render_page()
+function EncyclopediaWindow:render_page()
     local page_count = #self.pages
     self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, page_count)))
     self.results_label:SetText(tostring(#self.records) .. " " .. TR["results"])
@@ -2559,4 +2559,4 @@ function BestiaryWindow:render_page()
     self:_apply_page_layout(page, column_count, content_w)
 end
 
-Bestiary.BestiaryWindow = BestiaryWindow
+Encyclopedia.EncyclopediaWindow = EncyclopediaWindow

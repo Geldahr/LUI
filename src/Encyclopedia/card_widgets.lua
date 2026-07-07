@@ -10,7 +10,7 @@
 local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 
@@ -20,7 +20,7 @@ local Style = UI.Widgets.Style
 local Shortcuts = UI.Shortcuts
 
 local CardWidgets = {}
-Bestiary.CardWidgets = CardWidgets
+Encyclopedia.CardWidgets = CardWidgets
 
 CardWidgets.BASE = {
     SECTION_GAP = 6,

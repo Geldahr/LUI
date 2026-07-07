@@ -7,7 +7,7 @@ local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Windows = _G.LUI.Runtime.Windows
 local Crafting = _G.LUI.Features.Crafting
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 import "Turbine.UI"
 
 import "LUI.src.UI.assets"
@@ -86,8 +86,8 @@ function Shortcuts.get_state(shortcut_key)
     elseif shortcut_key == "assets" then
         return Windows.assets ~= nil, _window_is_visible(Windows.assets)
     elseif shortcut_key == "bestiary" then
-        local can_open = Windows.bestiary ~= nil or Bestiary.BestiaryWindow ~= nil
-        return can_open, _window_is_visible(Windows.bestiary)
+        local can_open = Windows.encyclopedia ~= nil or Encyclopedia.EncyclopediaWindow ~= nil
+        return can_open, _window_is_visible(Windows.encyclopedia)
     end
     return false, false
 end
@@ -104,6 +104,6 @@ function Shortcuts.activate(shortcut_key)
     elseif shortcut_key == "assets" then
         Shortcuts.toggle_assets()
     elseif shortcut_key == "bestiary" then
-        Shortcuts.toggle_bestiary()
+        Shortcuts.toggle_encyclopedia()
     end
 end
