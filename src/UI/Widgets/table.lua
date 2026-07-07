@@ -21,10 +21,28 @@ import "LUI.src.UI.Widgets.style"
 
 local Widgets = _G.LUI.UI.Widgets
 local Style = Widgets.Style
+local State = _G.LUI.Settings.State
 
 local SCROLL_SIZE = 10
 local SCROLL_GAP = 2
 local CELL_PAD_X = 4
+
+-- border widths may come from the style as fractions (BORDER_WIDTH is
+-- 1.5 by default); the table does pixel math, so round - and a positive
+-- border must never round to zero
+local function _border_px(width)
+    if width <= 0 then
+        return 0
+    end
+    return math.max(1, math.floor(width + 0.5))
+end
+
+-- the frame (and its header underline) follows the shared widget border
+-- exactly like LuiWindow: scaled BORDER_WIDTH, never below 1px
+local function _frame_border_px()
+    local width = tonumber(Style.BORDER_WIDTH) or 1
+    return math.max(1, math.floor((width * State.settings.global.scale) + 0.5))
+end
 
 local LuiTable = class(Turbine.UI.Control)
 Widgets.LuiTable = LuiTable
@@ -39,11 +57,10 @@ function LuiTable:Constructor()
     self._header_h = 20
     -- chrome defaults come from the shared style; per-instance setters
     -- below remain as programmatic overrides
-    self._border_w = Style.TABLE_BORDER_WIDTH
-    self._header_border_w = Style.TABLE_HEADER_BORDER_WIDTH
+    self._border_override = nil
     self._border_color = Style.CONTROL_BORDER
-    self._v_border_w = Style.TABLE_VERTICAL_BORDER_WIDTH
-    self._h_border_w = Style.TABLE_HORIZONTAL_BORDER_WIDTH
+    self._v_border_w = _border_px(Style.TABLE_VERTICAL_BORDER_WIDTH)
+    self._h_border_w = _border_px(Style.TABLE_HORIZONTAL_BORDER_WIDTH)
     self._inner_border_color = Style.SEPARATOR
     self._auto_height = false
     self._visible_rows = nil
@@ -123,12 +140,16 @@ function LuiTable:set_mode(mode)
     self:_layout()
 end
 
+function LuiTable:_frame_border()
+    return self._border_override or _frame_border_px()
+end
+
 -- the body height the auto-height ceiling allows (independent of any
 -- current shrunken size)
 function LuiTable:_body_max_height()
-    local bw = self._border_w
+    local bw = self:_frame_border()
     local ceiling = self._max_h > 0 and self._max_h or self:GetHeight()
-    return math.max(0, ceiling - (2 * bw) - self._header_border_w - self._header_h)
+    return math.max(0, ceiling - (3 * bw) - self._header_h)
 end
 
 -- paged mode: how many rows fit the available body height
@@ -250,10 +271,9 @@ end
 -- ----------------------------------------------------------- appearance ----
 
 -- external frame; also closes under the header row so the title bar reads
--- as distinct from the items (underline width = TABLE_HEADER_BORDER_WIDTH)
+-- as distinct from the items (the underline uses the same width)
 function LuiTable:set_border(width, color)
-    self._border_w = width
-    self._header_border_w = width
+    self._border_override = _border_px(width)
     self._border_color = color
     self:SetBackColor(color)
     self:_layout()
@@ -263,8 +283,8 @@ end
 -- grid lines: vertical between columns (also through the header),
 -- horizontal between rows; 0 disables a direction
 function LuiTable:set_inner_border(vertical_w, horizontal_w, color)
-    self._v_border_w = vertical_w
-    self._h_border_w = horizontal_w
+    self._v_border_w = _border_px(vertical_w)
+    self._h_border_w = _border_px(horizontal_w)
     self._inner_border_color = color
     for i = 1, #self._rows do
         self:_style_row_separators(self._rows[i])
@@ -550,7 +570,7 @@ function LuiTable:_resolve_widths(content_w)
 end
 
 function LuiTable:_row_content_width()
-    local bw = self._border_w
+    local bw = self:_frame_border()
     local inner_w = math.max(1, self:GetWidth() - (2 * bw))
     if self._mode == "scroll" then
         return math.max(1, inner_w - SCROLL_SIZE - SCROLL_GAP)
@@ -611,7 +631,7 @@ function LuiTable:_layout_rows()
 end
 
 function LuiTable:_layout()
-    local bw = self._border_w
+    local bw = self:_frame_border()
     local w, h = self:GetSize()
     local inner_w = math.max(1, w - (2 * bw))
 
@@ -619,7 +639,7 @@ function LuiTable:_layout()
     self.header:SetSize(inner_w, self._header_h)
 
     -- the header underline separates the title bar from the body
-    local body_y = bw + self._header_h + self._header_border_w
+    local body_y = bw + self._header_h + bw
     self.body:SetPosition(bw, body_y)
     self.body:SetSize(inner_w, math.max(1, h - body_y - bw))
 
@@ -653,7 +673,7 @@ function LuiTable:_sync_auto_height()
     if self._auto_height ~= true or self._mode ~= "paged" then
         return
     end
-    local target_h = (2 * self._border_w) + self._header_border_w
+    local target_h = (3 * self:_frame_border())
         + self._header_h + (self:_shown_rows() * self._row_h)
     if target_h ~= self:GetHeight() then
         Turbine.UI.Control.SetSize(self, self:GetWidth(), target_h)

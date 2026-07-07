@@ -1749,11 +1749,13 @@ function CraftingStore:_step_known_pass()
         -- craftability can change now that known recipes may expand
         -- material trees; recompute statuses on demand
         self:_reset_status_caches()
-        if self._known_loose_matches > 0 then
-            -- drift alarm: the shipped DB is probably older than the game
-            Turbine.Shell.WriteLine("[LUI] " .. tostring(self._known_loose_matches) .. " " ..
-                TR["recipes matched loosely - the crafting database may be older than the game."])
-        end
+        -- drift alarm (the shipped DB is probably older than the game),
+        -- silenced for now: a handful of loose matches is normal and the
+        -- chat line worried users more than it helped
+        -- if self._known_loose_matches > 0 then
+        --     Turbine.Shell.WriteLine("[LUI] " .. tostring(self._known_loose_matches) .. " " ..
+        --         TR["recipes matched loosely - the crafting database may be older than the game."])
+        -- end
         return true
     end
     -- report every batch so the window refreshes progressively while the
