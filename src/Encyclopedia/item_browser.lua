@@ -25,7 +25,6 @@ import "LUI.src.UI.Widgets.item_icon"
 
 -- control metrics match the bestiary filter bar (21px controls, 4px gaps)
 local BASE_BAR_H = 21
-local BASE_ROW_H = 34
 -- native item art is 32px and must never be scaled (stretch mode 0 tiles)
 local BASE_ICON_SIDE = 32
 local BASE_GAP = 4
@@ -92,144 +91,6 @@ local function _even_int(value)
     return out
 end
 
-local ItemBrowserRow = class(Turbine.UI.Control)
-
-function ItemBrowserRow:Constructor()
-    Turbine.UI.Control.Constructor(self)
-
-    self._link_name = nil
-    self._link_recipe_id = nil
-
-    self:SetMouseVisible(false)
-    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
-
-    self.icon = UI.Widgets.LuiItemIcon()
-    self.icon:SetParent(self)
-
-    self.name_label = UI.Widgets.LuiLabel()
-    self.name_label:SetParent(self)
-    self.name_label:SetMouseVisible(false)
-    self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-
-    self.meta_label = UI.Widgets.LuiLabel()
-    self.meta_label:SetParent(self)
-    self.meta_label:SetMouseVisible(false)
-    self.meta_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
-    self.meta_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-
-    -- visible crafting link: opens the crafting window searched on this
-    -- item, preselecting the producing recipe when the item is craftable
-    self.craft_button = UI.Widgets.LuiButton()
-    self.craft_button:SetParent(self)
-    self.craft_button:set_scale(1)
-    _apply_link_icon(self.craft_button, CRAFT_ACTION_ICON)
-    self.craft_button:SetVisible(false)
-    self.craft_button.Click = function()
-        Shortcuts.open_crafting_item_search(self._craft_search_name, self._link_recipe_id)
-    end
-
-    -- "which mobs drop this": bestiary search by drop name, shown only
-    -- when the bestiary drop table knows the name (same O(1) gate as the
-    -- crafting window's bestiary buttons)
-    self.bestiary_button = UI.Widgets.LuiButton()
-    self.bestiary_button:SetParent(self)
-    self.bestiary_button:set_scale(1)
-    _apply_link_icon(self.bestiary_button, BESTIARY_ACTION_ICON)
-    self.bestiary_button:SetVisible(false)
-    self.bestiary_button.Click = function()
-        Shortcuts.open_bestiary_item_search(self._link_name)
-    end
-end
-
-function ItemBrowserRow:apply_fonts()
-    self.name_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
-    self.meta_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.craft_button:set_scale(1)
-    _apply_link_icon(self.craft_button, CRAFT_ACTION_ICON)
-    self.bestiary_button:set_scale(1)
-    _apply_link_icon(self.bestiary_button, BESTIARY_ACTION_ICON)
-end
-
-function ItemBrowserRow:set_row(ordinal)
-    local Items = Lore.Items
-    local icon_id, background_id = Items.icon_layers(ordinal)
-    self.icon:bind(icon_id, background_id, Items.id_of(ordinal))
-    local name = Items.label(ordinal)
-    self.name_label:SetText(name)
-
-    local meta = Items.class_name(ordinal)
-    -- "Level" is the equipable/required character level; the packed
-    -- `level` field is the item level and must not show here
-    local level = Items.min_level(ordinal)
-    if level ~= nil then
-        local level_text = TR["Level"] .. " " .. tostring(level)
-        meta = meta ~= nil and (meta .. "  " .. level_text) or level_text
-    end
-    self.meta_label:SetText(meta or "")
-
-    -- O(1) name probes decide the crafting-link button; the store is nil
-    -- only while the crafting feature is disabled
-    local store = Crafting.get_shared_store()
-    local linkable = false
-    local craft_search_name = name
-    local craft_recipe_id = nil
-    if store ~= nil then
-        local producing = store:first_recipe_producing_name(name)
-        linkable = producing ~= nil or store:has_recipes_using_name(name) == true
-        if producing ~= nil then
-            craft_recipe_id = producing.id
-        end
-        if linkable ~= true then
-            -- recipe scrolls: the anvil opens the recipe the scroll
-            -- teaches, searched by the recipe's result name (the scroll
-            -- name itself is not in the crafting search haystack)
-            local taught = store:recipe_taught_by_item_id(Items.id_of(ordinal))
-            if taught ~= nil then
-                linkable = true
-                craft_recipe_id = taught.id
-                craft_search_name = store:recipe_result_display_name(taught)
-            end
-        end
-    end
-    self._link_name = name
-    self._craft_search_name = craft_search_name
-    self._link_recipe_id = craft_recipe_id
-    self.craft_button:SetVisible(linkable == true)
-    self.bestiary_button:SetVisible(Encyclopedia.has_droppable_item(name) == true)
-end
-
-function ItemBrowserRow:layout_row(width, height)
-    local gap = scaled_int(BASE_GAP)
-    -- fixed icon side like the crafting rows: native 32px art, clamped to
-    -- the row, evened for exact pixel centering
-    local icon_side = BASE_ICON_SIDE
-    local max_icon_side = height - 2
-    if icon_side > max_icon_side then
-        icon_side = max_icon_side
-    end
-    icon_side = _even_int(icon_side)
-    self:SetSize(width, height)
-    self.icon:set_side(icon_side)
-    self.icon:SetPosition(gap, math.max(0, math.floor((height - icon_side) / 2)))
-
-    -- link slots are always reserved so meta text stays aligned across
-    -- rows: bestiary book at the edge (always shown), anvil left of it
-    local btn_side = math.min(scaled_int(BASE_LINK_BUTTON_W), math.max(0, height - gap))
-    local btn_y = math.max(0, math.floor((height - btn_side) / 2))
-    self.bestiary_button:SetPosition(width - gap - btn_side, btn_y)
-    self.bestiary_button:SetSize(btn_side, btn_side)
-    self.craft_button:SetPosition(width - gap - btn_side - gap - btn_side, btn_y)
-    self.craft_button:SetSize(btn_side, btn_side)
-
-    local meta_w = scaled_int(220)
-    local name_x = gap + icon_side + gap
-    local meta_x = width - gap - btn_side - gap - btn_side - gap - meta_w
-    self.name_label:SetPosition(name_x, 0)
-    self.name_label:SetSize(math.max(0, meta_x - name_x - gap), height)
-    self.meta_label:SetPosition(meta_x, 0)
-    self.meta_label:SetSize(meta_w, height)
-end
-
 local ItemBrowserPanel = class(Turbine.UI.Control)
 Encyclopedia.ItemBrowserPanel = ItemBrowserPanel
 
@@ -241,7 +102,6 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     self._page = 1
     self._filtered = nil
     self._signature = nil
-    self._rows = {}
     self._quality_filter = FILTER_ALL_CODE
     self._class_filter = FILTER_ALL_CODE
     self._level_min = nil
@@ -371,14 +231,16 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
             self:_on_filters_changed()
         end
 
-        -- the traceries list is a LuiTable (paged mode, pagination stays
-        -- in this panel's footer); rows are a pooled set of cell widgets
-        -- updated in place per page
-        -- chrome comes entirely from the shared style (TABLE_* tokens +
-        -- the generic colors), so player settings reach it untouched
-        self.table = UI.Widgets.LuiTable()
-        self.table:SetParent(self)
-        self.table:set_auto_height(true)
+    end
+
+    -- every tab lists through a LuiTable (paged mode; this panel's footer
+    -- drives the pagination); rows are pooled cell widgets updated in
+    -- place per page. Chrome comes entirely from the shared style
+    -- (TABLE_* tokens + the generic colors).
+    self.table = UI.Widgets.LuiTable()
+    self.table:SetParent(self)
+    self.table:set_auto_height(true)
+    if self._bucket == "tracery" then
         self.table:set_columns({
             { title = "", width = 40 },
             { title = TR["Name"] },
@@ -388,8 +250,16 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
             { title = "iLvl", width = 46 },
             { title = TR["Limit"], width = 46 },
         })
-        self._table_cells = {}
+    else
+        self.table:set_columns({
+            { title = "", width = 40 },
+            { title = TR["Name"] },
+            { title = TR["Type"], width = 170 },
+            { title = TR["Level"], width = 70 },
+            { title = "", width = 60 },
+        })
     end
+    self._table_cells = {}
 
     self.level_label = UI.Widgets.LuiLabel()
     self.level_label:SetParent(self)
@@ -467,10 +337,6 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     self.results_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.results_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
 
-    self.list_host = Turbine.UI.Control()
-    self.list_host:SetParent(self)
-    self.list_host:SetMouseVisible(false)
-    self.list_host:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
 
     self:apply_fonts()
 end
@@ -524,12 +390,18 @@ function ItemBrowserPanel:apply_fonts()
         self.ilvl_min_box:SetFont(font)
         self.ilvl_dash_label:SetFont(font)
         self.ilvl_max_box:SetFont(font)
-        self.table:set_header_font(font)
-        for slot = 1, #self._table_cells do
-            local cells = self._table_cells[slot]
-            for _, key in ipairs({ "name", "type", "class", "level", "ilvl", "limit" }) do
-                cells[key]:SetFont(font)
-            end
+    end
+    self.table:set_header_font(font)
+    for slot = 1, #self._table_cells do
+        local cells = self._table_cells[slot]
+        for _, key in ipairs(cells.label_keys) do
+            cells[key]:SetFont(font)
+        end
+        if cells.craft_button ~= nil then
+            cells.craft_button:set_scale(1)
+            _apply_link_icon(cells.craft_button, CRAFT_ACTION_ICON)
+            cells.bestiary_button:set_scale(1)
+            _apply_link_icon(cells.bestiary_button, BESTIARY_ACTION_ICON)
         end
     end
     self.level_label:SetFont(font)
@@ -540,9 +412,6 @@ function ItemBrowserPanel:apply_fonts()
     self.results_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.prev_button:set_font(font)
     self.next_button:set_font(font)
-    for i = 1, #self._rows do
-        self._rows[i]:apply_fonts()
-    end
 end
 
 function ItemBrowserPanel:_parse_level(text)
@@ -714,12 +583,7 @@ function ItemBrowserPanel:_rebuild_filtered()
 end
 
 function ItemBrowserPanel:_page_capacity()
-    if self.table ~= nil then
-        return math.max(1, self.table:visible_capacity()), 0
-    end
-    local row_h = _even_int(scaled_int(BASE_ROW_H))
-    local _, host_h = self.list_host:GetSize()
-    return math.max(1, math.floor(host_h / (row_h + scaled_int(2)))), row_h
+    return math.max(1, self.table:visible_capacity())
 end
 
 function ItemBrowserPanel:_page_count()
@@ -744,35 +608,80 @@ function ItemBrowserPanel:_ensure_table_row(slot)
     cells.icon_host = Turbine.UI.Control()
     cells.icon_host:SetMouseVisible(false)
     cells.icon = UI.Widgets.LuiItemIcon()
-    cells.icon:set_side(32)
+    cells.icon:set_side(BASE_ICON_SIDE)
     cells.icon:SetParent(cells.icon_host)
     cells.center_icon = function()
         local w, h = cells.icon_host:GetSize()
-        cells.icon:SetPosition(math.max(0, math.floor((w - 32) / 2)),
-            math.max(0, math.floor((h - 32) / 2)))
+        cells.icon:SetPosition(math.max(0, math.floor((w - BASE_ICON_SIDE) / 2)),
+            math.max(0, math.floor((h - BASE_ICON_SIDE) / 2)))
     end
     cells.name = UI.Widgets.LuiLabel()
     cells.name:SetMouseVisible(false)
     cells.name:SetSelectable(false)
     cells.name:SetMultiline(true)
     cells.name:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    for _, key in ipairs({ "type", "class", "level", "ilvl", "limit" }) do
-        local label = UI.Widgets.LuiLabel()
-        label:SetMouseVisible(false)
-        label:SetSelectable(false)
-        label:SetMultiline(false)
-        label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        cells[key] = label
+    if self._bucket == "tracery" then
+        cells.label_keys = { "name", "type", "class", "level", "ilvl", "limit" }
+    else
+        cells.label_keys = { "name", "type", "level" }
+    end
+    for _, key in ipairs(cells.label_keys) do
+        if key ~= "name" then
+            local label = UI.Widgets.LuiLabel()
+            label:SetMouseVisible(false)
+            label:SetSelectable(false)
+            label:SetMultiline(false)
+            label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+            cells[key] = label
+        end
     end
 
     local font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
-    for _, key in ipairs({ "name", "type", "class", "level", "ilvl", "limit" }) do
+    for _, key in ipairs(cells.label_keys) do
         cells[key]:SetFont(font)
         cells[key]:SetForeColor(Style.FOREGROUND)
     end
 
-    self.table:append_row({ cells.icon_host, cells.name, cells.type, cells.class,
-        cells.level, cells.ilvl, cells.limit })
+    if self._bucket == "tracery" then
+        self.table:append_row({ cells.icon_host, cells.name, cells.type, cells.class,
+            cells.level, cells.ilvl, cells.limit })
+    else
+        -- action cell: crafting anvil + bestiary book, the batch-1 links
+        cells.actions = Turbine.UI.Control()
+        cells.actions:SetMouseVisible(false)
+        cells.craft_button = UI.Widgets.LuiButton()
+        cells.craft_button:SetParent(cells.actions)
+        cells.craft_button:set_scale(1)
+        _apply_link_icon(cells.craft_button, CRAFT_ACTION_ICON)
+        cells.craft_button:SetVisible(false)
+        cells.craft_button.Click = function()
+            Shortcuts.open_crafting_item_search(cells._craft_search_name, cells._link_recipe_id)
+        end
+        cells.bestiary_button = UI.Widgets.LuiButton()
+        cells.bestiary_button:SetParent(cells.actions)
+        cells.bestiary_button:set_scale(1)
+        _apply_link_icon(cells.bestiary_button, BESTIARY_ACTION_ICON)
+        cells.bestiary_button:SetVisible(false)
+        cells.bestiary_button.Click = function()
+            Shortcuts.open_bestiary_item_search(cells._link_name)
+        end
+        -- explicit layout at render time (no SizeChanged on internal
+        -- widgets): the two-slot block is centered in the cell, slots stay
+        -- fixed (anvil left, book right) so buttons align across rows
+        cells.layout_actions = function()
+            local w, h = cells.actions:GetSize()
+            local side = math.min(scaled_int(BASE_LINK_BUTTON_W), math.max(0, h - 2))
+            local y = math.max(0, math.floor((h - side) / 2))
+            local gap = scaled_int(BASE_GAP)
+            local block_x = math.max(0, math.floor((w - (2 * side) - gap) / 2))
+            cells.craft_button:SetSize(side, side)
+            cells.craft_button:SetPosition(block_x, y)
+            cells.bestiary_button:SetSize(side, side)
+            cells.bestiary_button:SetPosition(block_x + side + gap, y)
+        end
+        self.table:append_row({ cells.icon_host, cells.name, cells.type,
+            cells.level, cells.actions })
+    end
     self._table_cells[slot] = cells
     return cells
 end
@@ -789,64 +698,77 @@ function ItemBrowserPanel:_render_table_page(capacity, first)
             local icon_id, background_id = Items.icon_layers(ordinal)
             cells.icon:bind(icon_id, background_id, Items.id_of(ordinal))
             cells.center_icon()
-            cells.name:SetText(Items.label(ordinal))
-            local min_il, max_il, _, tr_class, char_max = Tr.info(ordinal)
-            cells.type:SetText(Items.class_name(ordinal))
-            -- unrestricted traceries (heraldic/power/craft) have no class
-            cells.class:SetText(Tr.class_label(tr_class) or "-")
-            local char_min = Items.min_level(ordinal)
-            cells.level:SetText(char_min ~= nil
-                and (tostring(char_min) .. " - " .. tostring(char_max)) or "-")
-            cells.ilvl:SetText(tostring(min_il))
-            cells.limit:SetText(tostring(max_il))
+            local name = Items.label(ordinal)
+            cells.name:SetText(name)
+            if self._bucket == "tracery" then
+                local min_il, max_il, _, tr_class, char_max = Tr.info(ordinal)
+                cells.type:SetText(Items.class_name(ordinal))
+                -- unrestricted traceries (heraldic/power/craft): no class
+                cells.class:SetText(Tr.class_label(tr_class) or "-")
+                local char_min = Items.min_level(ordinal)
+                cells.level:SetText(char_min ~= nil
+                    and (tostring(char_min) .. " - " .. tostring(char_max)) or "-")
+                cells.ilvl:SetText(tostring(min_il))
+                cells.limit:SetText(tostring(max_il))
+            else
+                cells.type:SetText(Items.class_name(ordinal) or "")
+                -- equipable/required character level, never the item level
+                local level = Items.min_level(ordinal)
+                cells.level:SetText(level ~= nil and tostring(level) or "")
+                -- O(1) name probes decide the crafting link; the store is
+                -- nil only while the crafting feature is disabled
+                local store = Crafting.get_shared_store()
+                local linkable = false
+                local craft_search_name = name
+                local craft_recipe_id = nil
+                if store ~= nil then
+                    local producing = store:first_recipe_producing_name(name)
+                    linkable = producing ~= nil or store:has_recipes_using_name(name) == true
+                    if producing ~= nil then
+                        craft_recipe_id = producing.id
+                    end
+                    if linkable ~= true then
+                        -- recipe scrolls: the anvil opens the recipe the
+                        -- scroll teaches, searched by its result name
+                        local taught = store:recipe_taught_by_item_id(Items.id_of(ordinal))
+                        if taught ~= nil then
+                            linkable = true
+                            craft_recipe_id = taught.id
+                            craft_search_name = store:recipe_result_display_name(taught)
+                        end
+                    end
+                end
+                cells._link_name = name
+                cells._craft_search_name = craft_search_name
+                cells._link_recipe_id = craft_recipe_id
+                cells.craft_button:SetVisible(linkable == true)
+                cells.bestiary_button:SetVisible(Encyclopedia.has_droppable_item(name) == true)
+                cells.layout_actions()
+            end
             self.table:set_row_data(slot, ordinal)
         else
             cells.icon:bind(nil, nil, nil)
-            cells.name:SetText("")
-            cells.type:SetText("")
-            cells.class:SetText("")
-            cells.level:SetText("")
-            cells.ilvl:SetText("")
-            cells.limit:SetText("")
+            for _, key in ipairs(cells.label_keys) do
+                cells[key]:SetText("")
+            end
+            if cells.craft_button ~= nil then
+                cells.craft_button:SetVisible(false)
+                cells.bestiary_button:SetVisible(false)
+            end
             self.table:set_row_data(slot, nil)
         end
     end
 end
 
 function ItemBrowserPanel:_render_page()
-    local capacity, row_h = self:_page_capacity()
+    local capacity = self:_page_capacity()
     local pages = self:_page_count()
     if self._page > pages then
         self._page = pages
     end
     local first = (self._page - 1) * capacity
 
-    if self.table ~= nil then
-        self:_render_table_page(capacity, first)
-    else
-        local host_w = self.list_host:GetWidth()
-        for slot = 1, capacity do
-            local row = self._rows[slot]
-            if row == nil then
-                row = ItemBrowserRow()
-                row:SetParent(self.list_host)
-                row:apply_fonts()
-                self._rows[slot] = row
-            end
-            local ordinal = self._filtered[first + slot]
-            if ordinal ~= nil then
-                row:SetVisible(true)
-                row:layout_row(host_w, row_h)
-                row:SetPosition(0, (slot - 1) * (row_h + scaled_int(2)))
-                row:set_row(ordinal)
-            else
-                row:SetVisible(false)
-            end
-        end
-        for slot = capacity + 1, #self._rows do
-            self._rows[slot]:SetVisible(false)
-        end
-    end
+    self:_render_table_page(capacity, first)
 
     self.page_label:SetText(tostring(self._page) .. " / " .. tostring(pages))
     self.results_label:SetText(tostring(#self._filtered) .. " " .. TR["results"])
@@ -990,22 +912,22 @@ function ItemBrowserPanel:layout()
     local list_top = search_y + bar_h + gap
     local list_w = math.max(1, width - margin_l - margin_r)
     local list_h = math.max(1, footer_y - gap - list_top)
-    self.list_host:SetPosition(margin_l, list_top)
-    self.list_host:SetSize(list_w, list_h)
-
-    if self.table ~= nil then
-        self.list_host:SetVisible(false)
-        self.table:set_header_height(scaled_int(20))
-        self.table:set_row_height(_even_int(scaled_int(38)))
-        self.table:set_column_width(1, scaled_int(40))
+    self.table:set_header_height(scaled_int(20))
+    self.table:set_row_height(_even_int(scaled_int(38)))
+    self.table:set_column_width(1, scaled_int(40))
+    if self._bucket == "tracery" then
         self.table:set_column_width(3, scaled_int(140))
         self.table:set_column_width(4, scaled_int(110))
         self.table:set_column_width(5, scaled_int(76))
         self.table:set_column_width(6, scaled_int(46))
         self.table:set_column_width(7, scaled_int(46))
-        self.table:SetPosition(margin_l, list_top)
-        self.table:SetSize(list_w, list_h)
+    else
+        self.table:set_column_width(3, scaled_int(170))
+        self.table:set_column_width(4, scaled_int(70))
+        self.table:set_column_width(5, scaled_int(60))
     end
+    self.table:SetPosition(margin_l, list_top)
+    self.table:SetSize(list_w, list_h)
 
     self:_refresh_list()
 end
