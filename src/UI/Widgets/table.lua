@@ -37,17 +37,19 @@ function LuiTable:Constructor()
     self._rows = {}
     self._row_h = 24
     self._header_h = 20
-    self._border_w = 1
+    -- chrome defaults come from the shared style; per-instance setters
+    -- below remain as programmatic overrides
+    self._border_w = Style.TABLE_BORDER_WIDTH
+    self._header_border_w = Style.TABLE_HEADER_BORDER_WIDTH
     self._border_color = Style.CONTROL_BORDER
-    self._inner_border_w = 0
-    -- grid lines must stay subtle: never the primary border color
+    self._v_border_w = Style.TABLE_VERTICAL_BORDER_WIDTH
+    self._h_border_w = Style.TABLE_HORIZONTAL_BORDER_WIDTH
     self._inner_border_color = Style.SEPARATOR
-    self._horizontal_lines = true
     self._auto_height = false
     self._visible_rows = nil
     self._max_h = 0
     self._row_color_a = Style.PANEL_BACKGROUND
-    self._row_color_b = nil
+    self._row_color_b = Style.TABLE_ALTERNATE_ROWS == true and Style.ALTERNATE_BACKGROUND or nil
     self._font = nil
     self._header_font = nil
     self._selected_index = nil
@@ -126,7 +128,7 @@ end
 function LuiTable:_body_max_height()
     local bw = self._border_w
     local ceiling = self._max_h > 0 and self._max_h or self:GetHeight()
-    return math.max(0, ceiling - (3 * bw) - self._header_h)
+    return math.max(0, ceiling - (2 * bw) - self._header_border_w - self._header_h)
 end
 
 -- paged mode: how many rows fit the available body height
@@ -188,7 +190,7 @@ function LuiTable:set_columns(columns)
         sep:SetParent(self.header)
         sep:SetMouseVisible(false)
         sep:SetBackColor(self._inner_border_color)
-        sep:SetVisible(self._inner_border_w > 0)
+        sep:SetVisible(self._v_border_w > 0)
         self._header_seps[i] = sep
     end
 
@@ -248,34 +250,28 @@ end
 -- ----------------------------------------------------------- appearance ----
 
 -- external frame; also closes under the header row so the title bar reads
--- as distinct from the items
+-- as distinct from the items (underline width = TABLE_HEADER_BORDER_WIDTH)
 function LuiTable:set_border(width, color)
     self._border_w = width
+    self._header_border_w = width
     self._border_color = color
     self:SetBackColor(color)
     self:_layout()
+    self:_sync_auto_height()
 end
 
--- grid lines between rows and between columns; 0 disables them
-function LuiTable:set_inner_border(width, color)
-    self._inner_border_w = width
+-- grid lines: vertical between columns (also through the header),
+-- horizontal between rows; 0 disables a direction
+function LuiTable:set_inner_border(vertical_w, horizontal_w, color)
+    self._v_border_w = vertical_w
+    self._h_border_w = horizontal_w
     self._inner_border_color = color
     for i = 1, #self._rows do
         self:_style_row_separators(self._rows[i])
     end
     for i = 1, #self._header_seps do
         self._header_seps[i]:SetBackColor(color)
-        self._header_seps[i]:SetVisible(width > 0)
-    end
-    self:_layout()
-end
-
--- horizontal grid lines between rows; alternating row colors usually
--- make them redundant
-function LuiTable:set_horizontal_lines(enabled)
-    self._horizontal_lines = enabled == true
-    for i = 1, #self._rows do
-        self:_style_row_separators(self._rows[i])
+        self._header_seps[i]:SetVisible(vertical_w > 0)
     end
     self:_layout()
 end
@@ -328,13 +324,12 @@ function LuiTable:_create_row()
 end
 
 function LuiTable:_style_row_separators(row)
-    local visible = self._inner_border_w > 0
     for c = 1, #row.seps do
         row.seps[c]:SetBackColor(self._inner_border_color)
-        row.seps[c]:SetVisible(visible)
+        row.seps[c]:SetVisible(self._v_border_w > 0)
     end
     row.bottom_sep:SetBackColor(self._inner_border_color)
-    row.bottom_sep:SetVisible(visible and self._horizontal_lines == true)
+    row.bottom_sep:SetVisible(self._h_border_w > 0)
 end
 
 function LuiTable:_apply_row_background(row)
@@ -523,7 +518,7 @@ end
 
 -- per-column x/width over the row content width; one stretch column
 function LuiTable:_resolve_widths(content_w)
-    local ib = self._inner_border_w
+    local ib = self._v_border_w
     local fixed = 0
     local stretch = nil
     for i = 1, #self._columns do
@@ -568,7 +563,6 @@ function LuiTable:_layout_row(row)
     if resolved == nil then
         return
     end
-    local ib = self._inner_border_w
     row.control:SetSize(self:_row_content_width(), self._row_h)
     for c = 1, #row.cells do
         local col = resolved[c]
@@ -577,10 +571,10 @@ function LuiTable:_layout_row(row)
     end
     for c = 1, #row.seps do
         row.seps[c]:SetPosition(resolved[c].x + resolved[c].w, 0)
-        row.seps[c]:SetSize(ib, self._row_h)
+        row.seps[c]:SetSize(self._v_border_w, self._row_h)
     end
-    row.bottom_sep:SetPosition(0, self._row_h - ib)
-    row.bottom_sep:SetSize(row.control:GetWidth(), ib)
+    row.bottom_sep:SetPosition(0, self._row_h - self._h_border_w)
+    row.bottom_sep:SetSize(row.control:GetWidth(), self._h_border_w)
 end
 
 -- rows shown right now: capacity-capped and, when the caller told us how
@@ -611,8 +605,7 @@ function LuiTable:_layout_rows()
             row.control:SetVisible(i <= shown)
         end
         -- the last shown row has no line: the external border closes it
-        row.bottom_sep:SetVisible(self._inner_border_w > 0
-            and self._horizontal_lines == true
+        row.bottom_sep:SetVisible(self._h_border_w > 0
             and (self._mode ~= "paged" or i < shown))
     end
 end
@@ -625,8 +618,8 @@ function LuiTable:_layout()
     self.header:SetPosition(bw, bw)
     self.header:SetSize(inner_w, self._header_h)
 
-    -- the external border also separates the header from the body
-    local body_y = bw + self._header_h + bw
+    -- the header underline separates the title bar from the body
+    local body_y = bw + self._header_h + self._header_border_w
     self.body:SetPosition(bw, body_y)
     self.body:SetSize(inner_w, math.max(1, h - body_y - bw))
 
@@ -647,7 +640,7 @@ function LuiTable:_layout()
     end
     for i = 1, #self._header_seps do
         self._header_seps[i]:SetPosition(self._resolved[i].x + self._resolved[i].w, 0)
-        self._header_seps[i]:SetSize(self._inner_border_w, self._header_h)
+        self._header_seps[i]:SetSize(self._v_border_w, self._header_h)
     end
 
     self:_layout_rows()
@@ -660,8 +653,8 @@ function LuiTable:_sync_auto_height()
     if self._auto_height ~= true or self._mode ~= "paged" then
         return
     end
-    local target_h = (3 * self._border_w) + self._header_h
-        + (self:_shown_rows() * self._row_h)
+    local target_h = (2 * self._border_w) + self._header_border_w
+        + self._header_h + (self:_shown_rows() * self._row_h)
     if target_h ~= self:GetHeight() then
         Turbine.UI.Control.SetSize(self, self:GetWidth(), target_h)
         self:_layout()

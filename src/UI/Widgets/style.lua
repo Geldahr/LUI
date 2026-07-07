@@ -67,6 +67,18 @@ local DEFAULTS = {
     BORDER_WIDTH_THIN = 1,
     BORDER_WIDTH_LARGE = 2,
 
+    -- LuiTable chrome. Colors reuse the generic tokens (CONTROL_BORDER
+    -- frame, SEPARATOR grid, PANEL/ALTERNATE_BACKGROUND rows,
+    -- CONTROL_BACKGROUND header); only the widths and the row-striping
+    -- toggle are table-specific. Horizontal width 0 = no row lines
+    -- (alternating rows carry the separation); single-background fans
+    -- disable TABLE_ALTERNATE_ROWS and raise the horizontal width.
+    TABLE_BORDER_WIDTH = 1,
+    TABLE_HEADER_BORDER_WIDTH = 1,
+    TABLE_VERTICAL_BORDER_WIDTH = 2,
+    TABLE_HORIZONTAL_BORDER_WIDTH = 0,
+    TABLE_ALTERNATE_ROWS = true,
+
     CONTROL_FONT_NAME = "Verdana",
     CONTROL_FONT_SIZE = 12,
     WINDOW_TITLE_FONT_NAME = "Verdana",
@@ -126,6 +138,7 @@ local DEFAULTS = {
 }
 
 local FALLBACKS = {
+    TABLE_HEADER_BORDER_WIDTH = "TABLE_BORDER_WIDTH",
     CONTROL_BACKGROUND_HOVER = "CONTROL_BACKGROUND",
     CONTROL_BACKGROUND_PRESSED = "CONTROL_BACKGROUND",
     CONTROL_BACKGROUND_ACTIVE = "SELECTION_BACKGROUND",

@@ -232,6 +232,31 @@ local function _add_style_number(page, settings_getter, key, label)
     return entry
 end
 
+local function _add_style_checkbox(page, settings_getter, key, label)
+    local entry = page:add_checkbox(_style_control_key(key), label)
+    page:bind(entry,
+        function(value)
+            if entry._loaded_direct ~= true and value == entry._loaded_value then
+                return
+            end
+
+            local style = _style_settings(settings_getter())
+            if (value == true) == (_style_inherited_value(settings_getter(), key) == true) then
+                style[key] = nil
+            else
+                style[key] = value == true
+            end
+        end,
+        function()
+            local value, direct = _style_value(settings_getter(), key)
+            entry._loaded_value = value == true
+            entry._loaded_direct = direct == true
+            entry._style_default_value = Style.DEFAULTS[key] == true
+            return value == true
+        end)
+    return entry
+end
+
 local function _add_style_font_name(page, settings_getter, key, label)
     local entry = page:add_dropdown(_style_control_key(key), label, STYLE_FONT_NAME_LABELS, STYLE_FONT_NAME_VALUES)
     page:bind(entry,
@@ -439,6 +464,14 @@ local function _new_ui_page(window, settings_getter)
     _add_style_number(layout, style_settings_getter, "BORDER_WIDTH", TR["Border width"])
     _add_style_number(layout, style_settings_getter, "BORDER_WIDTH_THIN", TR["Thin border width"])
     _add_style_number(layout, style_settings_getter, "BORDER_WIDTH_LARGE", TR["Large border width"])
+    layout:add_row_break()
+    _add_style_number(layout, style_settings_getter, "TABLE_BORDER_WIDTH", TR["Table border width"])
+    _add_style_number(layout, style_settings_getter, "TABLE_HEADER_BORDER_WIDTH", TR["Table title border width"])
+    layout:add_row_break()
+    _add_style_number(layout, style_settings_getter, "TABLE_VERTICAL_BORDER_WIDTH", TR["Table vertical lines width"])
+    _add_style_number(layout, style_settings_getter, "TABLE_HORIZONTAL_BORDER_WIDTH", TR["Table horizontal lines width"])
+    layout:add_row_break()
+    _add_style_checkbox(layout, style_settings_getter, "TABLE_ALTERNATE_ROWS", TR["Alternating table rows"])
     page:add_tab(TR["Layout"], "layout", layout)
 
     page:add_tab(TR["Colors"], "colors", _new_ui_colors_section(window, style_settings_getter))

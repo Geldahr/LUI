@@ -374,14 +374,11 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
         -- the traceries list is a LuiTable (paged mode, pagination stays
         -- in this panel's footer); rows are a pooled set of cell widgets
         -- updated in place per page
+        -- chrome comes entirely from the shared style (TABLE_* tokens +
+        -- the generic colors), so player settings reach it untouched
         self.table = UI.Widgets.LuiTable()
         self.table:SetParent(self)
-        self.table:set_border(1, Style.CONTROL_BORDER)
-        self.table:set_inner_border(2, Style.SEPARATOR)
-        -- alternating rows separate lines well enough on their own
-        self.table:set_horizontal_lines(false)
         self.table:set_auto_height(true)
-        self.table:set_row_colors(Style.PANEL_BACKGROUND, Style.CONTROL_BACKGROUND)
         self.table:set_columns({
             { title = "", width = 40 },
             { title = TR["Name"] },
