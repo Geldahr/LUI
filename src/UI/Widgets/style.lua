@@ -43,6 +43,10 @@ local DEFAULTS = {
     ALTERNATE_BACKGROUND = Turbine.UI.Color(1, 0.06, 0.06, 0.06),
     ALTERNATE_FOREGROUND = Turbine.UI.Color(0.88, 0.88, 0.88),
     SUBTLE_FOREGROUND = Turbine.UI.Color(1, 0.28, 0.28, 0.28),
+    -- subtle interior lines (table grids, list separators); deliberately
+    -- independent from CONTROL_BORDER so frames can pop without the
+    -- interior turning flashy
+    SEPARATOR = Turbine.UI.Color(1, 0.20, 0.20, 0.20),
 
     CONTROL_BACKGROUND = Turbine.UI.Color(1, 0.15, 0.15, 0.15),
     CONTROL_BACKGROUND_HOVER = Turbine.UI.Color(1, 0.18, 0.24, 0.34),

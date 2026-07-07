@@ -158,27 +158,12 @@ function ItemBrowserRow:set_row(ordinal)
     self.name_label:SetText(name)
 
     local meta = Items.class_name(ordinal)
-    if self.is_tracery == true then
-        -- traceries: player class, usable character-level band, then the
-        -- base iLvl with its enhancement cap
-        local min_il, max_il, _, tr_class, char_max = Lore.Traceries.info(ordinal)
-        local pclass = Lore.Traceries.class_label(tr_class)
-        if pclass ~= nil then
-            meta = meta ~= nil and (meta .. "  " .. pclass) or pclass
-        end
-        local char_min = Items.min_level(ordinal)
-        if char_min ~= nil then
-            meta = meta .. "  " .. TR["Level"] .. " " .. tostring(char_min) .. "-" .. tostring(char_max)
-        end
-        meta = meta .. "  iLvl " .. tostring(min_il) .. " (max " .. tostring(max_il) .. ")"
-    else
-        -- "Level" is the equipable/required character level; the packed
-        -- `level` field is the item level and must not show here
-        local level = Items.min_level(ordinal)
-        if level ~= nil then
-            local level_text = TR["Level"] .. " " .. tostring(level)
-            meta = meta ~= nil and (meta .. "  " .. level_text) or level_text
-        end
+    -- "Level" is the equipable/required character level; the packed
+    -- `level` field is the item level and must not show here
+    local level = Items.min_level(ordinal)
+    if level ~= nil then
+        local level_text = TR["Level"] .. " " .. tostring(level)
+        meta = meta ~= nil and (meta .. "  " .. level_text) or level_text
     end
     self.meta_label:SetText(meta or "")
 
@@ -236,9 +221,7 @@ function ItemBrowserRow:layout_row(width, height)
     self.craft_button:SetPosition(width - gap - btn_side - gap - btn_side, btn_y)
     self.craft_button:SetSize(btn_side, btn_side)
 
-    -- tracery meta carries type + class + Level band + iLvl/cap: needs
-    -- the extra room so localized labels never truncate
-    local meta_w = scaled_int(self.is_tracery == true and 390 or 220)
+    local meta_w = scaled_int(220)
     local name_x = gap + icon_side + gap
     local meta_x = width - gap - btn_side - gap - btn_side - gap - meta_w
     self.name_label:SetPosition(name_x, 0)
@@ -387,6 +370,28 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
         self.ilvl_max_box.TextChanged = function()
             self:_on_filters_changed()
         end
+
+        -- the traceries list is a LuiTable (paged mode, pagination stays
+        -- in this panel's footer); rows are a pooled set of cell widgets
+        -- updated in place per page
+        self.table = UI.Widgets.LuiTable()
+        self.table:SetParent(self)
+        self.table:set_border(1, Style.CONTROL_BORDER)
+        self.table:set_inner_border(2, Style.SEPARATOR)
+        -- alternating rows separate lines well enough on their own
+        self.table:set_horizontal_lines(false)
+        self.table:set_auto_height(true)
+        self.table:set_row_colors(Style.PANEL_BACKGROUND, Style.CONTROL_BACKGROUND)
+        self.table:set_columns({
+            { title = "", width = 40 },
+            { title = TR["Name"] },
+            { title = TR["Type"], width = 140 },
+            { title = TR["Class"], width = 110 },
+            { title = TR["Level"], width = 76 },
+            { title = "iLvl", width = 46 },
+            { title = TR["Limit"], width = 46 },
+        })
+        self._table_cells = {}
     end
 
     self.level_label = UI.Widgets.LuiLabel()
@@ -522,6 +527,13 @@ function ItemBrowserPanel:apply_fonts()
         self.ilvl_min_box:SetFont(font)
         self.ilvl_dash_label:SetFont(font)
         self.ilvl_max_box:SetFont(font)
+        self.table:set_header_font(font)
+        for slot = 1, #self._table_cells do
+            local cells = self._table_cells[slot]
+            for _, key in ipairs({ "name", "type", "class", "level", "ilvl", "limit" }) do
+                cells[key]:SetFont(font)
+            end
+        end
     end
     self.level_label:SetFont(font)
     self.level_min_box:SetFont(font)
@@ -705,6 +717,9 @@ function ItemBrowserPanel:_rebuild_filtered()
 end
 
 function ItemBrowserPanel:_page_capacity()
+    if self.table ~= nil then
+        return math.max(1, self.table:visible_capacity()), 0
+    end
     local row_h = _even_int(scaled_int(BASE_ROW_H))
     local _, host_h = self.list_host:GetSize()
     return math.max(1, math.floor(host_h / (row_h + scaled_int(2)))), row_h
@@ -718,36 +733,122 @@ function ItemBrowserPanel:_page_count()
     return math.max(1, math.ceil(#self._filtered / capacity))
 end
 
+-- one pooled row of cell widgets for the traceries table; updated in
+-- place per page, never recreated
+function ItemBrowserPanel:_ensure_table_row(slot)
+    if self._table_cells[slot] ~= nil then
+        return self._table_cells[slot]
+    end
+
+    local cells = {}
+    -- the icon keeps its native 32px side inside the cell rect the table
+    -- assigns; centering runs explicitly at render time (no SizeChanged:
+    -- internal-widget size events fire every frame during window resizes)
+    cells.icon_host = Turbine.UI.Control()
+    cells.icon_host:SetMouseVisible(false)
+    cells.icon = UI.Widgets.LuiItemIcon()
+    cells.icon:set_side(32)
+    cells.icon:SetParent(cells.icon_host)
+    cells.center_icon = function()
+        local w, h = cells.icon_host:GetSize()
+        cells.icon:SetPosition(math.max(0, math.floor((w - 32) / 2)),
+            math.max(0, math.floor((h - 32) / 2)))
+    end
+    cells.name = UI.Widgets.LuiLabel()
+    cells.name:SetMouseVisible(false)
+    cells.name:SetSelectable(false)
+    cells.name:SetMultiline(true)
+    cells.name:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    for _, key in ipairs({ "type", "class", "level", "ilvl", "limit" }) do
+        local label = UI.Widgets.LuiLabel()
+        label:SetMouseVisible(false)
+        label:SetSelectable(false)
+        label:SetMultiline(false)
+        label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        cells[key] = label
+    end
+
+    local font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
+    for _, key in ipairs({ "name", "type", "class", "level", "ilvl", "limit" }) do
+        cells[key]:SetFont(font)
+        cells[key]:SetForeColor(Style.FOREGROUND)
+    end
+
+    self.table:append_row({ cells.icon_host, cells.name, cells.type, cells.class,
+        cells.level, cells.ilvl, cells.limit })
+    self._table_cells[slot] = cells
+    return cells
+end
+
+function ItemBrowserPanel:_render_table_page(capacity, first)
+    local Items = Lore.Items
+    local Tr = Lore.Traceries
+    -- the table ends on the last filled row (auto height)
+    self.table:set_visible_rows(math.max(0, math.min(capacity, #self._filtered - first)))
+    for slot = 1, math.max(capacity, self.table:row_count()) do
+        local cells = self:_ensure_table_row(slot)
+        local ordinal = self._filtered[first + slot]
+        if ordinal ~= nil and slot <= capacity then
+            local icon_id, background_id = Items.icon_layers(ordinal)
+            cells.icon:bind(icon_id, background_id, Items.id_of(ordinal))
+            cells.center_icon()
+            cells.name:SetText(Items.label(ordinal))
+            local min_il, max_il, _, tr_class, char_max = Tr.info(ordinal)
+            cells.type:SetText(Items.class_name(ordinal))
+            -- unrestricted traceries (heraldic/power/craft) have no class
+            cells.class:SetText(Tr.class_label(tr_class) or "-")
+            local char_min = Items.min_level(ordinal)
+            cells.level:SetText(char_min ~= nil
+                and (tostring(char_min) .. " - " .. tostring(char_max)) or "-")
+            cells.ilvl:SetText(tostring(min_il))
+            cells.limit:SetText(tostring(max_il))
+            self.table:set_row_data(slot, ordinal)
+        else
+            cells.icon:bind(nil, nil, nil)
+            cells.name:SetText("")
+            cells.type:SetText("")
+            cells.class:SetText("")
+            cells.level:SetText("")
+            cells.ilvl:SetText("")
+            cells.limit:SetText("")
+            self.table:set_row_data(slot, nil)
+        end
+    end
+end
+
 function ItemBrowserPanel:_render_page()
     local capacity, row_h = self:_page_capacity()
-    local host_w = self.list_host:GetWidth()
     local pages = self:_page_count()
     if self._page > pages then
         self._page = pages
     end
     local first = (self._page - 1) * capacity
 
-    for slot = 1, capacity do
-        local row = self._rows[slot]
-        if row == nil then
-            row = ItemBrowserRow()
-            row.is_tracery = self._bucket == "tracery"
-            row:SetParent(self.list_host)
-            row:apply_fonts()
-            self._rows[slot] = row
+    if self.table ~= nil then
+        self:_render_table_page(capacity, first)
+    else
+        local host_w = self.list_host:GetWidth()
+        for slot = 1, capacity do
+            local row = self._rows[slot]
+            if row == nil then
+                row = ItemBrowserRow()
+                row:SetParent(self.list_host)
+                row:apply_fonts()
+                self._rows[slot] = row
+            end
+            local ordinal = self._filtered[first + slot]
+            if ordinal ~= nil then
+                row:SetVisible(true)
+                row:layout_row(host_w, row_h)
+                row:SetPosition(0, (slot - 1) * (row_h + scaled_int(2)))
+                row:set_row(ordinal)
+            else
+                row:SetVisible(false)
+            end
         end
-        local ordinal = self._filtered[first + slot]
-        if ordinal ~= nil then
-            row:SetVisible(true)
-            row:layout_row(host_w, row_h)
-            row:SetPosition(0, (slot - 1) * (row_h + scaled_int(2)))
-            row:set_row(ordinal)
-        else
-            row:SetVisible(false)
+        for slot = capacity + 1, #self._rows do
+            self._rows[slot]:SetVisible(false)
         end
-    end
-    for slot = capacity + 1, #self._rows do
-        self._rows[slot]:SetVisible(false)
     end
 
     self.page_label:SetText(tostring(self._page) .. " / " .. tostring(pages))
@@ -890,9 +991,24 @@ function ItemBrowserPanel:layout()
     self.results_label:SetSize(results_w, page_bar_h)
 
     local list_top = search_y + bar_h + gap
+    local list_w = math.max(1, width - margin_l - margin_r)
+    local list_h = math.max(1, footer_y - gap - list_top)
     self.list_host:SetPosition(margin_l, list_top)
-    self.list_host:SetSize(math.max(1, width - margin_l - margin_r),
-        math.max(1, footer_y - gap - list_top))
+    self.list_host:SetSize(list_w, list_h)
+
+    if self.table ~= nil then
+        self.list_host:SetVisible(false)
+        self.table:set_header_height(scaled_int(20))
+        self.table:set_row_height(_even_int(scaled_int(38)))
+        self.table:set_column_width(1, scaled_int(40))
+        self.table:set_column_width(3, scaled_int(140))
+        self.table:set_column_width(4, scaled_int(110))
+        self.table:set_column_width(5, scaled_int(76))
+        self.table:set_column_width(6, scaled_int(46))
+        self.table:set_column_width(7, scaled_int(46))
+        self.table:SetPosition(margin_l, list_top)
+        self.table:SetSize(list_w, list_h)
+    end
 
     self:_refresh_list()
 end

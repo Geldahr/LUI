@@ -276,6 +276,7 @@ local function _new_ui_colors_section(window, settings_getter)
     _add_style_color(frame, settings_getter, "CONTROL_BORDER_ACTIVE", TR["Active border color"])
     frame:add_row_break()
     _add_style_color(frame, settings_getter, "CONTROL_BORDER_DISABLED", TR["Disabled border color"])
+    _add_style_color(frame, settings_getter, "SEPARATOR", TR["Separator color"])
 
     local backgrounds = ConfigContent(window, 3)
     _add_style_color(backgrounds, settings_getter, "BACKGROUND", TR["Window background"])

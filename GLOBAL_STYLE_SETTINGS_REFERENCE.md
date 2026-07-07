@@ -33,6 +33,7 @@ Style changes are applied after a plugin reload.
 | Hover border color | `CONTROL_BORDER_HOVER` | Border color used when shared interactive controls are hovered, such as buttons, text inputs, checkbox boxes, tabs, and similar controls. |
 | Active border color | `CONTROL_BORDER_ACTIVE` | Border color for active or selected shared controls, such as active buttons, selected tabs, focused text inputs, and focused/active framed controls where supported. |
 | Disabled border color | `CONTROL_BORDER_DISABLED` | Border color for disabled shared controls, including disabled text inputs. |
+| Separator color | `SEPARATOR` | Subtle interior lines such as table grid lines and list separators. Deliberately independent from the border color so frames can stand out while interior lines stay quiet. |
 
 ## Global > UI > Colors > Backgrounds
 
