@@ -27,6 +27,7 @@
 ### Removed
 
 - Removed the ready-ratio (`0/3`) status text from the crafting recipe details; per-ingredient readiness and the plan/queue ratios carry that information.
+- Removed the Encyclopedia's `Order` title-bar menu (formerly the Bestiary order controls); bestiary results always list A-Z, matching the item tabs.
 
 ## v1.3.0
 

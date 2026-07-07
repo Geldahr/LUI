@@ -77,10 +77,6 @@ local BASE_COLUMN_W = 600
 local AREA_COMPASS_ICON = "LUI/assets/ui/compass_64.tga"
 local AREA_COMPASS_HOVER_ICON = "LUI/assets/ui/compass_hover_64.tga"
 
-local SORT_NAME_ASC = "name_asc"
-local SORT_NAME_DESC = "name_desc"
-local SORT_LEVEL_ASC = "level_asc"
-local SORT_LEVEL_DESC = "level_desc"
 
 local FILTER_ALL = "__all"
 local FILTER_NONE = "__none"
@@ -644,35 +640,10 @@ local function _match_record_query(record, groups)
     return query_ok, matched
 end
 
-local function _compare_records(sort_mode, left, right)
-    if sort_mode == SORT_LEVEL_ASC then
-        if left.level_min ~= right.level_min then
-            return left.level_min < right.level_min
-        end
-        if left.level_max ~= right.level_max then
-            return left.level_max < right.level_max
-        end
-    elseif sort_mode == SORT_LEVEL_DESC then
-        if left.level_max ~= right.level_max then
-            return left.level_max > right.level_max
-        end
-        if left.level_min ~= right.level_min then
-            return left.level_min > right.level_min
-        end
-    elseif sort_mode == SORT_NAME_DESC then
-        local left_name = _lower_text(left.name)
-        local right_name = _lower_text(right.name)
-        if left_name ~= right_name then
-            return left_name > right_name
-        end
-    else
-        local left_name = _lower_text(left.name)
-        local right_name = _lower_text(right.name)
-        if left_name ~= right_name then
-            return left_name < right_name
-        end
-    end
-
+-- bestiary results list in fixed name order, matching the item tabs'
+-- baked label-sorted permutations (the Order menu was removed: title-bar
+-- menus should not exist unless every tab participates)
+local function _compare_records(left, right)
     return _lower_text(left.name) < _lower_text(right.name)
 end
 
@@ -1153,7 +1124,6 @@ function EncyclopediaWindow:Constructor()
     self._suppress_area_text_changed = false
     self._suppress_level_text_changed = false
 
-    self.sort_mode = SORT_NAME_ASC
     self.query_state = SearchQuery.parse("", BESTIARY_QUERY_TOKENS)
     self.query_level_min = nil
     self.query_level_max = nil
@@ -1221,45 +1191,6 @@ function EncyclopediaWindow:Constructor()
 
     self.nav_bar = Turbine.UI.Control()
     self.nav_bar:SetParent(self.bestiary_host)
-
-    local menu_bar = self:get_menu_bar()
-    self.order_menu = menu_bar:add_menu(TR["Order"])
-    self.sort_name_asc_action = self.order_menu:add_action({
-        text = TR["A-Z"],
-        checkable = true,
-        checked = self.sort_mode == SORT_NAME_ASC,
-        action = function()
-            self:set_sort_mode(SORT_NAME_ASC)
-            self:_sync_menu_actions()
-        end,
-    })
-    self.sort_name_desc_action = self.order_menu:add_action({
-        text = TR["Z-A"],
-        checkable = true,
-        checked = self.sort_mode == SORT_NAME_DESC,
-        action = function()
-            self:set_sort_mode(SORT_NAME_DESC)
-            self:_sync_menu_actions()
-        end,
-    })
-    self.sort_level_asc_action = self.order_menu:add_action({
-        text = TR["Lvl <"],
-        checkable = true,
-        checked = self.sort_mode == SORT_LEVEL_ASC,
-        action = function()
-            self:set_sort_mode(SORT_LEVEL_ASC)
-            self:_sync_menu_actions()
-        end,
-    })
-    self.sort_level_desc_action = self.order_menu:add_action({
-        text = TR["Lvl >"],
-        checkable = true,
-        checked = self.sort_mode == SORT_LEVEL_DESC,
-        action = function()
-            self:set_sort_mode(SORT_LEVEL_DESC)
-            self:_sync_menu_actions()
-        end,
-    })
 
     self.page_bar = Turbine.UI.Control()
     self.page_bar:SetParent(self.bestiary_host)
@@ -1587,7 +1518,6 @@ function EncyclopediaWindow:apply_settings()
     self:set_minimum_size(min_w, min_h)
 
     local button_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
-    self:_sync_menu_actions()
     self.prev_button:set_font(button_font)
     self.page_label:SetFont(button_font)
     self.next_button:set_font(button_font)
@@ -1963,27 +1893,6 @@ function EncyclopediaWindow:set_subcategory_filter(value)
     self.subcategory_filter = value
     self.page_index = 1
     self:apply_view()
-end
-
-function EncyclopediaWindow:set_sort_mode(mode)
-    if mode ~= SORT_NAME_ASC and mode ~= SORT_NAME_DESC and mode ~= SORT_LEVEL_ASC and mode ~= SORT_LEVEL_DESC then
-        mode = SORT_NAME_ASC
-    end
-    if self.sort_mode == mode then
-        return
-    end
-
-    self.sort_mode = mode
-    self.page_index = 1
-    self:_sync_menu_actions()
-    self:apply_view()
-end
-
-function EncyclopediaWindow:_sync_menu_actions()
-    self.sort_name_asc_action:set_checked(self.sort_mode == SORT_NAME_ASC)
-    self.sort_name_desc_action:set_checked(self.sort_mode == SORT_NAME_DESC)
-    self.sort_level_asc_action:set_checked(self.sort_mode == SORT_LEVEL_ASC)
-    self.sort_level_desc_action:set_checked(self.sort_mode == SORT_LEVEL_DESC)
 end
 
 function EncyclopediaWindow:set_page(index)
@@ -2419,7 +2328,7 @@ function EncyclopediaWindow:apply_view()
     end
 
     table.sort(filtered, function(left, right)
-        return _compare_records(self.sort_mode, left, right)
+        return _compare_records(left, right)
     end)
 
     self.records = filtered

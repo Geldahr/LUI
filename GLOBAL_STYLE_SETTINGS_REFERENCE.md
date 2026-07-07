@@ -24,9 +24,7 @@ Style changes are applied after a plugin reload.
 | Border width | `BORDER_WIDTH` | Default border thickness for shared LUI chrome, including standard windows, buttons, tabs, dropdown popups, checkboxes, framed sections, and other common controls that use the normal border size. |
 | Thin border width | `BORDER_WIDTH_THIN` | Thin border thickness for subtle chrome, such as tooltips, small separators, fine resize/edge details, and compact framed elements that intentionally use a lighter border. |
 | Large border width | `BORDER_WIDTH_LARGE` | Large border thickness for emphasized chrome, when a control or window needs a stronger frame than the normal border. |
-| Table border width | `TABLE_BORDER_WIDTH` | Outer frame thickness of LuiTable lists (Encyclopedia Traceries and future table views). |
-| Table title border width | `TABLE_HEADER_BORDER_WIDTH` | Thickness of the line closing the table title bar off from the rows. Follows the table border width unless set. |
-| Table vertical lines width | `TABLE_VERTICAL_BORDER_WIDTH` | Column grid lines (they run through the title bar). 0 removes them. |
+| Table vertical lines width | `TABLE_VERTICAL_BORDER_WIDTH` | Column grid lines of LuiTable lists (they run through the title bar). 0 removes them. The table frame and title underline are not separate settings: they follow the shared Border width and Border color like every other widget. |
 | Table horizontal lines width | `TABLE_HORIZONTAL_BORDER_WIDTH` | Row separator lines. 0 removes them (default: alternating row colors carry the separation instead). |
 | Alternating table rows | `TABLE_ALTERNATE_ROWS` | Alternate table row backgrounds between the panel and alternate background colors. Disable for a single background, typically together with a horizontal line width. |
 
