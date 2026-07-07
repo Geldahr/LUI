@@ -520,6 +520,7 @@ function CraftingStore:Constructor()
     self.known_recipes_by_result = {}
     self.recipes_by_ingredient = {}
     self.recipes_by_result = {}
+    self.recipes_by_scroll = {}
     self.recipe_tiers = {}
     self.recipe_tiers_version = 0
     self._live_inventory_counts = nil
@@ -1008,6 +1009,15 @@ function CraftingStore:first_recipe_producing_name(item_name)
     return records[1]
 end
 
+-- the recipe a scroll/recipe item teaches, by the scroll's game item id
+function CraftingStore:recipe_taught_by_item_id(item_id)
+    return self.recipes_by_scroll[item_id]
+end
+
+function CraftingStore:recipe_result_display_name(recipe)
+    return self.items[recipe.result_key].name
+end
+
 function CraftingStore:_stock_for_source_keys(source_keys)
     local stock = {}
     local normalized = _normalize_source_keys(source_keys)
@@ -1467,6 +1477,7 @@ function CraftingStore:_start_recipe_load(current_character)
     self.known_recipes_by_result = {}
     self.recipes_by_ingredient = {}
     self.recipes_by_result = {}
+    self.recipes_by_scroll = {}
     self.recipe_tiers = {}
     self.recipe_tiers_version = 0
     self.profession_option_labels = profession_labels
@@ -1547,6 +1558,12 @@ function CraftingStore:_register_recipe_record(record)
             end
             result_list[#result_list + 1] = record
         end
+    end
+
+    -- scroll item -> the recipe it teaches: Encyclopedia recipe-scroll
+    -- rows resolve their anvil link here
+    if record.scroll_item_id ~= nil then
+        self.recipes_by_scroll[record.scroll_item_id] = record
     end
 
     -- distinct tiers, maintained incrementally so the rank dropdown never
@@ -1875,6 +1892,7 @@ function CraftingStore:_build_db_recipe_record(ordinal, profession)
         critical_result_item_id = critical_result_item_id,
         ingredients = ingredients,
         variants = variants,
+        scroll_item_id = rec.scroll,
     }
 
     -- hot paths read prepared values: search and sort must stay allocation-

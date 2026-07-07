@@ -288,6 +288,12 @@ function Lore.load_items()
     Items.NM = Data["Items.names_" .. lang]
     Items.CLASSES = Data["Items.classes"].CLASSES[lang]
     Items.BUCKET_CLASSES = Data["Items.classes"].BUCKET_CLASSES
+    -- per-tier recipe scroll classes, grouped into one Type filter entry
+    Items.RECIPE_CLASS_SET = {}
+    local recipe_classes = Data["Items.classes"].RECIPE_CLASSES
+    for k = 1, #recipe_classes do
+        Items.RECIPE_CLASS_SET[recipe_classes[k]] = true
+    end
     Items.FOLD = Data["Items.classes"].FOLD
     Items.QUALITY_LABELS = Data["Items.classes"].QUALITIES[lang]
     Items.BK = Data["Items.buckets_" .. lang]

@@ -38,6 +38,8 @@ local BASE_CLASS_W = 190
 local BASE_LEVEL_W = 44
 
 local FILTER_ALL_CODE = 0
+-- grouped Type entry matching every per-tier recipe class (Items.RECIPE_CLASS_SET)
+local FILTER_RECIPES_CODE = -1
 
 local function _scaled_font(name, size)
     return FONT_TO_LOTRO(name, size * State.settings.global.scale)
@@ -106,7 +108,7 @@ function ItemBrowserRow:Constructor()
     _apply_link_icon(self.craft_button, CRAFT_ACTION_ICON)
     self.craft_button:SetVisible(false)
     self.craft_button.Click = function()
-        Shortcuts.open_crafting_item_search(self._link_name, self._link_recipe_id)
+        Shortcuts.open_crafting_item_search(self._craft_search_name, self._link_recipe_id)
     end
 
     -- "which mobs drop this": bestiary search by drop name, shown only
@@ -149,14 +151,30 @@ function ItemBrowserRow:set_row(ordinal)
     -- O(1) name probes decide the crafting-link button; the store is nil
     -- only while the crafting feature is disabled
     local store = Crafting.get_shared_store()
-    local producing = nil
     local linkable = false
+    local craft_search_name = name
+    local craft_recipe_id = nil
     if store ~= nil then
-        producing = store:first_recipe_producing_name(name)
+        local producing = store:first_recipe_producing_name(name)
         linkable = producing ~= nil or store:has_recipes_using_name(name) == true
+        if producing ~= nil then
+            craft_recipe_id = producing.id
+        end
+        if linkable ~= true then
+            -- recipe scrolls: the anvil opens the recipe the scroll
+            -- teaches, searched by the recipe's result name (the scroll
+            -- name itself is not in the crafting search haystack)
+            local taught = store:recipe_taught_by_item_id(Items.id_of(ordinal))
+            if taught ~= nil then
+                linkable = true
+                craft_recipe_id = taught.id
+                craft_search_name = store:recipe_result_display_name(taught)
+            end
+        end
     end
     self._link_name = name
-    self._link_recipe_id = producing ~= nil and producing.id or nil
+    self._craft_search_name = craft_search_name
+    self._link_recipe_id = craft_recipe_id
     self.craft_button:SetVisible(linkable == true)
     self.bestiary_button:SetVisible(Bestiary.has_droppable_item(name) == true)
 end
@@ -356,12 +374,22 @@ function ItemBrowserPanel:_class_options()
     local Items = Lore.Items
     local codes = Items.BUCKET_CLASSES[self._bucket]
     local sortable = {}
+    local has_recipe_classes = false
     for i = 1, #codes do
         local code = codes[i]
-        local label = Items.CLASSES[code]
-        if label ~= nil then
-            sortable[#sortable + 1] = { code = code, label = label }
+        if Items.RECIPE_CLASS_SET[code] == true then
+            -- ~100 "Recipe: <profession> Tier n" classes collapse into one
+            -- grouped dropdown entry; rows keep their real class as meta
+            has_recipe_classes = true
+        else
+            local label = Items.CLASSES[code]
+            if label ~= nil then
+                sortable[#sortable + 1] = { code = code, label = label }
+            end
         end
+    end
+    if has_recipe_classes == true then
+        sortable[#sortable + 1] = { code = FILTER_RECIPES_CODE, label = TR["Recipes"] }
     end
     table.sort(sortable, function(left, right)
         return left.label < right.label
@@ -496,6 +524,7 @@ function ItemBrowserPanel:_rebuild_filtered()
     local search_set = _search_set_for_query(query)
     local quality = self._quality_filter
     local class_code = self._class_filter
+    local recipe_class_set = class_code == FILTER_RECIPES_CODE and Items.RECIPE_CLASS_SET or nil
     local level_min = self._level_min
     local level_max = self._level_max
     local list = Items.bucket_list(self._bucket)
@@ -504,7 +533,9 @@ function ItemBrowserPanel:_rebuild_filtered()
         local ordinal = list[i]
         if search_set == nil or search_set[ordinal] == true then
             if quality == FILTER_ALL_CODE or Items.quality_code(ordinal) == quality then
-                if class_code == FILTER_ALL_CODE or Items.class_code(ordinal) == class_code then
+                if class_code == FILTER_ALL_CODE
+                    or (recipe_class_set ~= nil and recipe_class_set[Items.class_code(ordinal)] == true)
+                    or Items.class_code(ordinal) == class_code then
                     local ok = true
                     if level_min ~= nil or level_max ~= nil then
                         local level = Items.level(ordinal)

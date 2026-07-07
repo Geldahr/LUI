@@ -1193,7 +1193,7 @@ function BestiaryWindow:Constructor()
     self.encyclopedia_tabs = UI.Widgets.LuiTabBar()
     self.encyclopedia_tabs:SetParent(content_host)
     self.encyclopedia_tabs:add_tab(TR["Bestiary"], self.bestiary_host)
-    for tab = 2, 4 do
+    for tab = 2, 5 do
         local host = Turbine.UI.Control()
         host:SetMouseVisible(true)
         self._item_tab_hosts[tab] = host
@@ -1201,6 +1201,7 @@ function BestiaryWindow:Constructor()
     self.encyclopedia_tabs:add_tab(TR["Equipment"], self._item_tab_hosts[2])
     self.encyclopedia_tabs:add_tab(TR["Resources"], self._item_tab_hosts[3])
     self.encyclopedia_tabs:add_tab(TR["Consumables"], self._item_tab_hosts[4])
+    self.encyclopedia_tabs:add_tab(TR["Housing"], self._item_tab_hosts[5])
     self.encyclopedia_tabs.on_tab_changed = function(index)
         self:_set_encyclopedia_tab(index)
     end
@@ -2179,11 +2180,11 @@ end
 
 -- tab 1 = bestiary (this window's own content); tabs 2-4 are item browser
 -- panels laid over the content area, created on first activation
-local ENCYCLOPEDIA_TAB_BUCKETS = { nil, "equipment", "resource", "consumable" }
+local ENCYCLOPEDIA_TAB_BUCKETS = { nil, "equipment", "resource", "consumable", "housing" }
 
 -- converter bucket codes (1=equipment 2=consumable 3=resource, 0=other) to
 -- encyclopedia tab index; "other" items have no tab and are not linkable
-local BUCKET_TAB_BY_CODE = { [1] = 2, [2] = 4, [3] = 3 }
+local BUCKET_TAB_BY_CODE = { [1] = 2, [2] = 4, [3] = 3, [4] = 5 }
 
 -- Which encyclopedia tab shows this item name; nil when the name is not a
 -- browsable item (unknown name or bucket "other"). Shared probe for every
