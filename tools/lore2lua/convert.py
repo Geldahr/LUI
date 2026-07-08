@@ -1032,10 +1032,298 @@ def convert_recipes(data_dir, out_dir, langs, records=None, aux=None):
     print_report(baked_report, missing_en, sizes, langs, count, t0)
 
 
+# ------------------------------------------------------ quests + deeds ----
+
+def convert_quests(out_dir, langs, records, aux):
+    """Pack quests + deeds (game-extracted records): variable-length
+    numeric records (levels, category, rewards, chains, flags),
+    per-language labels/names/search blobs, per-language content blobs
+    (description / objective texts / bestower dialog texts) and localized
+    category tables."""
+    t0 = time.time()
+    ids = sorted(records)
+    count = len(ids)
+    print("packing %d quest/deed records" % count)
+
+    def quest_off(qid):
+        if qid == 0:
+            return 0
+        off = qid - ITEM_BASE
+        if off <= 0:
+            raise AssertionError("quest id %d below base" % qid)
+        return off
+
+    # width maxes over the whole domain
+    mx = {"level": 0, "category": 0, "tier": 0, "flags": 0, "times": 0,
+          "lock": 0, "ref": 0, "qty": 0, "n": 0, "event": 0, "count": 0}
+    for r in records.values():
+        mx["level"] = max(mx["level"], r["level"], r["minLevel"])
+        mx["category"] = max(mx["category"], r["category"])
+        mx["tier"] = max(mx["tier"], r["expTier"], r["goldTier"],
+                         r["virtueXpTier"])
+        mx["flags"] = max(mx["flags"], r["flags"])
+        mx["times"] = max(mx["times"], r["maxTimes"])
+        mx["lock"] = max(mx["lock"], r["lockType"])
+        mx["ref"] = max(mx["ref"], quest_off(r["nextQuest"]),
+                        max((quest_off(q) for q in r["prereqs"]), default=0),
+                        max((quest_off(i) for i, _q in r["rewards"]), default=0),
+                        max((quest_off(n) for _o, _a, n in r["dialogNpcs"] if n),
+                            default=0))
+        mx["qty"] = max(mx["qty"], max((q for _i, q in r["rewards"]),
+                                       default=0))
+        mx["n"] = max(mx["n"], len(r["prereqs"]), len(r["rewards"]),
+                      len(r["dialogNpcs"]), len(r["objectiveConds"]),
+                      max((len(c) for c in r["objectiveConds"]), default=0),
+                      max((o for o, _a, _n in r["dialogNpcs"]), default=0),
+                      max((a for _o, a, _n in r["dialogNpcs"]), default=0))
+        for conds in r["objectiveConds"]:
+            for cond_event, cond_count in conds:
+                mx["event"] = max(mx["event"], cond_event)
+                mx["count"] = max(mx["count"], cond_count)
+
+    W = {key: width_for(value) for key, value in mx.items()}
+    W["deed"] = 1
+
+    def encode(r):
+        parts = [
+            b93(1 if r["kind"] == "deed" else 0, W["deed"]),
+            b93(r["level"], W["level"]),
+            b93(r["minLevel"], W["level"]),
+            b93(r["category"], W["category"]),
+            b93(r["expTier"], W["tier"]),
+            b93(r["goldTier"], W["tier"]),
+            b93(r["virtueXpTier"], W["tier"]),
+            b93(r["flags"], W["flags"]),
+            b93(r["maxTimes"], W["times"]),
+            b93(r["lockType"], W["lock"]),
+            b93(quest_off(r["nextQuest"]), W["ref"]),
+            b93(len(r["prereqs"]), W["n"]),
+            b93(len(r["rewards"]), W["n"]),
+            b93(len(r["dialogNpcs"]), W["n"]),
+        ]
+        for q in r["prereqs"]:
+            parts.append(b93(quest_off(q), W["ref"]))
+        for item, qty in r["rewards"]:
+            parts.append(b93(quest_off(item), W["ref"]) + b93(qty, W["qty"]))
+        for obj_idx, action, npc in r["dialogNpcs"]:
+            parts.append(b93(obj_idx, W["n"]) + b93(action, W["n"])
+                         + b93(quest_off(npc), W["ref"]))
+        parts.append(b93(len(r["objectiveConds"]), W["n"]))
+        for conds in r["objectiveConds"]:
+            parts.append(b93(len(conds), W["n"]))
+            for event, count in conds:
+                parts.append(b93(event, W["event"]) + b93(count, W["count"]))
+        return "".join(parts)
+
+    encoded = [encode(records[i]) for i in ids]
+    data_blob = "".join(encoded)
+    offs, p = [], 1
+    for e in encoded:
+        offs.append(p)
+        p += len(e)
+    offs.append(p)
+    off_width = width_for(p)
+    off_blob = "".join(b93(x, off_width) for x in offs)
+
+    base_id = ids[0]
+    id_width = width_for(ids[-1] - base_id)
+    ids_blob = "".join(b93(i - base_id, id_width) for i in ids)
+
+    # round-trip: decode everything back and compare
+    def decode(pos):
+        def take(w):
+            nonlocal pos
+            v = u93(data_blob, pos, w)
+            pos += w
+            return v
+        out = {}
+        out["kind"] = "deed" if take(W["deed"]) else "quest"
+        out["level"] = take(W["level"])
+        out["minLevel"] = take(W["level"])
+        out["category"] = take(W["category"])
+        out["expTier"] = take(W["tier"])
+        out["goldTier"] = take(W["tier"])
+        out["virtueXpTier"] = take(W["tier"])
+        out["flags"] = take(W["flags"])
+        out["maxTimes"] = take(W["times"])
+        out["lockType"] = take(W["lock"])
+        ref = take(W["ref"])
+        out["nextQuest"] = ref and ref + ITEM_BASE or 0
+        np_, nr, nd = take(W["n"]), take(W["n"]), take(W["n"])
+        out["prereqs"] = [take(W["ref"]) + ITEM_BASE for _ in range(np_)]
+        out["rewards"] = [(take(W["ref"]) + ITEM_BASE, take(W["qty"]))
+                          for _ in range(nr)]
+        out["dialogNpcs"] = []
+        for _ in range(nd):
+            obj_idx = take(W["n"])
+            action = take(W["n"])
+            ref = take(W["ref"])
+            out["dialogNpcs"].append((obj_idx, action,
+                                      ref and ref + ITEM_BASE or 0))
+        out["objectiveConds"] = []
+        for _ in range(take(W["n"])):
+            out["objectiveConds"].append(
+                [(take(W["event"]), take(W["count"]))
+                 for _ in range(take(W["n"]))])
+        return out
+
+    for n, i in enumerate(ids):
+        got = decode(offs[n] - 1)
+        src = records[i]
+        for key in got:
+            if got[key] != src[key]:
+                raise AssertionError("round-trip mismatch %d field %s" % (i, key))
+    print("round-trip: all %d records verified" % count)
+
+    os.makedirs(out_dir, exist_ok=True)
+    sizes = {}
+    sizes["records.lua"] = write_file(out_dir, "records.lua", [
+        emit_blob("IDS", ids_blob),
+        emit_blob("OFF", off_blob),
+        emit_blob("DATA", data_blob),
+    ])
+
+    # per-language content blobs: one entry per record;
+    # sections (description / objectives / dialogs) separated by \\30,
+    # texts within a section by \\31; within one objective the
+    # description and its condition texts are separated by \\29
+    SECTION_SEP = "\x1e"
+    TEXT_SEP = "\x1f"
+    SUB_SEP = "\x1d"
+    for lang in langs:
+        entries = []
+        for i in ids:
+            desc, objective_texts, dialog_texts = records[i]["text_" + lang]
+            entries.append(SECTION_SEP.join([
+                desc,
+                TEXT_SEP.join(SUB_SEP.join(entry)
+                              for entry in objective_texts),
+                TEXT_SEP.join(dialog_texts)]))
+        blob = "".join(entries)
+        toffs, p = [], 1
+        for e in entries:
+            toffs.append(p)
+            p += byte_len(e)
+        toffs.append(p)
+        toff_width = width_for(p)
+        toff_blob = "".join(b93(x, toff_width) for x in toffs)
+        sizes["texts_%s.lua" % lang] = write_file(
+            out_dir, "texts_%s.lua" % lang, [
+                "D.toff_width = %d\n" % toff_width,
+                emit_blob("TXT", blob),
+                emit_blob("TOFF", toff_blob),
+            ])
+
+    json_names = {i: {k[5:]: v for k, v in records[i].items()
+                      if k.startswith("name_")} for i in ids}
+    en_fallback = [records[i]["name"] for i in ids]
+    names_by_lang, baked_report, missing_en = build_names_by_lang_records(
+        json_names, langs, ids, en_fallback)
+    lang_sizes, _ = emit_lang_files(out_dir, ids, names_by_lang, langs)
+    sizes.update(lang_sizes)
+
+    # localized category tables (used codes only), per kind
+    used = {"quest": set(), "deed": set()}
+    for i in ids:
+        used[records[i]["kind"]].add(records[i]["category"])
+    cat_parts = []
+    for label_key, table_name in (("quest_category_labels", "QUEST_CATS"),
+                                  ("deed_category_labels", "DEED_CATS")):
+        labels = aux[label_key]
+        kind = "quest" if table_name == "QUEST_CATS" else "deed"
+        cat_parts.append("D.%s = {\n" % table_name)
+        for lang in langs:
+            entries = []
+            for code in sorted(used[kind]):
+                value = labels[lang].get(code) or labels["en"].get(code)
+                if value is not None:
+                    entries.append("[%d]=%s" % (code, lua_string(value)))
+            cat_parts.append("%s = { %s },\n" % (lang, ", ".join(entries)))
+        cat_parts.append("}\n")
+    sizes["categories.lua"] = write_file(out_dir, "categories.lua", cat_parts)
+
+    sizes["manifest.lua"] = write_file(out_dir, "manifest.lua", [
+        "D.count = %d\n" % count,
+        "D.base_id = %d\n" % base_id,
+        "D.id_width = %d\n" % id_width,
+        "D.off_width = %d\n" % off_width,
+        "D.ref_base = %d\n" % ITEM_BASE,
+        "D.widths = { %s }\n" % ", ".join(
+            "%s = %d" % (k, W[k]) for k in sorted(W)),
+        # maxTimes: 0 = not repeatable, 1 = unlimited, n+1 = n times
+        "D.section_sep = %s\n" % lua_string(SECTION_SEP),
+        "D.text_sep = %s\n" % lua_string(TEXT_SEP),
+        "D.sub_sep = %s\n" % lua_string(SUB_SEP),
+        "D.langs = { %s }\n" % ", ".join(lua_string(v) for v in langs),
+    ])
+    print_report(baked_report, missing_en, sizes, langs, count, t0)
+
+
+# ----------------------------------------------------------------- npcs ----
+
+def convert_npcs(out_dir, langs, records):
+    """Pack NPC id -> localized "name \\31 title" lookup blobs."""
+    t0 = time.time()
+    ids = sorted(records)
+    count = len(ids)
+    print("packing %d NPC records" % count)
+
+    base_id = ids[0]
+    id_width = width_for(ids[-1] - base_id)
+    ids_blob = "".join(b93(i - base_id, id_width) for i in ids)
+
+    os.makedirs(out_dir, exist_ok=True)
+    sizes = {}
+    sizes["records.lua"] = write_file(out_dir, "records.lua", [
+        emit_blob("IDS", ids_blob),
+    ])
+
+    TEXT_SEP = "\x1f"
+    for lang in langs:
+        suffix = "" if lang == "en" else "_" + lang
+        entries = []
+        for i in ids:
+            r = records[i]
+            name = r["name" + suffix] if lang != "en" else r["name"]
+            title = r["title" + suffix] if lang != "en" else r["title"]
+            if not name:
+                name = r["name"]  # en fallback
+            entries.append(name + (TEXT_SEP + title if title else ""))
+        blob = "".join(entries)
+        offs, p = [], 1
+        for e in entries:
+            offs.append(p)
+            p += byte_len(e)
+        offs.append(p)
+        off_width = width_for(p)
+        off_blob = "".join(b93(x, off_width) for x in offs)
+        sizes["labels_%s.lua" % lang] = write_file(
+            out_dir, "labels_%s.lua" % lang, [
+                "D.loff_width = %d\n" % off_width,
+                emit_blob("LBL", blob),
+                emit_blob("LOFF", off_blob),
+            ])
+
+    sizes["manifest.lua"] = write_file(out_dir, "manifest.lua", [
+        "D.count = %d\n" % count,
+        "D.base_id = %d\n" % base_id,
+        "D.id_width = %d\n" % id_width,
+        "D.text_sep = %s\n" % lua_string(TEXT_SEP),
+        "D.langs = { %s }\n" % ", ".join(lua_string(v) for v in langs),
+    ])
+    total = 0
+    print("emitted files:")
+    for name in sorted(sizes):
+        total += sizes[name]
+        print("  %-18s %8.2f MB" % (name, sizes[name] / 1e6))
+    print("  %-18s %8.2f MB" % ("TOTAL", total / 1e6))
+    print("done in %.1fs\n" % (time.time() - t0))
+
+
 # ------------------------------------------------------------- bestiary ----
 # Packs the wiki bestiary (src/Encyclopedia/data.lua, dumped to JSON by
-# tools/lore2lua/bestiary_dump.lua) into blobs. The decode layer reproduces
-# the raw data.lua entry shape exactly; lookup/group indexes replicate the
+# bestiary_dump.lua) into blobs. The decode layer reproduces the raw
+# data.lua entry shape exactly; lookup/group indexes replicate the
 # semantics of src/Encyclopedia/data_access.lua and are baked at build time.
 
 B_SCALARS = ["n", "bn", "tl", "v", "g", "s", "sp", "r", "a", "i", "t"]

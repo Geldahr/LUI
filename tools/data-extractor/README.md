@@ -12,9 +12,29 @@ client's `.dat` archives. Pure Python 3 stdlib, no intermediate files:
 python3 tools/data-extractor/extract.py "G:\The Lord of the Rings Online"
 ```
 
-Defaults: `--out src/Data --langs de,en,fr --db items,recipes`.
+Defaults: `--out src/Data --langs de,en,fr --db items,recipes,quests,npcs`.
 Windows and WSL paths both work. Runtime ~2.5 min. `--json <path>`
 optionally dumps the raw records for inspection.
+
+The quests db covers quests **and** deeds (20,480 records, ~95 MB raw
+/ ~26 MB zipped). Numeric records: kind, challenge level, min level,
+category, XP/gold/virtue-XP tiers, flags (instance/shareable/
+fellowship/small-fellowship/monster-play/session/raid), repeatability
+(0 = once, 1 = unlimited, n+1 = n times), lock type, next-quest link,
+prerequisite quest ids, reward items (id + quantity), dialog NPC ids,
+and per-objective completion conditions (event type code + count,
+aligned with the condition texts). Dialog entries are
+(objective index, action, NPC): action 6 at objective 0 is the
+quest giver (bestower), action 5 the end/turn-in dialog, others attach
+to their objective. The `npcs` db (`src/Data/Npcs`, ~0.5 MB) maps the
+NPC ids referenced by quest dialogs (8,526 of them) to localized
+"name \\31 title" labels. Per-language content blobs
+(`texts_<lang>.lua`): description, objectives and bestower dialogs per
+record — sections split by \\30, objectives by \\31, and within one
+objective the description + its \"how to complete\" condition texts
+(progress/lore strings) by \\29. Localized name/search blobs and
+quest/deed category tables as usual.
+No runtime loader consumes `src/Data/Quests` yet.
 
 Localized names come from the client's locale archives
 (`client_local_English/DE/FR.dat`) — keep all three languages installed

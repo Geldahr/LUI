@@ -30,6 +30,8 @@ ITEM_TYPES = {2097, 2814, 799, 798, 797, 796, 795, 794, 804, 805, 802,
               3663, 803, 815, 1722, 3924, 4178}
 
 RECIPE_WSTATE_CLASS = 1024
+ACCOMPLISHMENT_WSTATE_CLASS = 1398  # quests + deeds
+NPC_WSTATE_CLASS = 1724
 
 # equipment-category codes that are armour (incl. shields)
 ARMOUR_CODES = {11, 17, 40, 9, 10, 18, 31}
@@ -345,6 +347,8 @@ class Scan:
         self.consumable_ids = set()
         self.recipe_dids = []
         self.recipe_scrolls = {}  # recipe id -> scroll item id
+        self.quest_dids = []      # quests + deeds
+        self.npc_dids = []
 
 
 def scan(facade, langs):
@@ -368,6 +372,10 @@ def scan(facade, langs):
         wstate_class = int.from_bytes(data[4:8], "little")
         if wstate_class == RECIPE_WSTATE_CLASS:
             out.recipe_dids.append(did)
+        elif wstate_class == ACCOMPLISHMENT_WSTATE_CLASS:
+            out.quest_dids.append(did)
+        elif wstate_class == NPC_WSTATE_CLASS:
+            out.npc_dids.append(did)
         if wstate_class not in ITEM_TYPES:
             continue
         scanned += 1
@@ -635,6 +643,189 @@ def extract_recipes(facade, langs, scan_result):
     return recipes
 
 
+# ------------------------------------------------------ quests + deeds ----
+
+# quest boolean flags -> bit positions in the packed flags field
+QUEST_FLAGS = (
+    ("Quest_IsInstanceQuest", 1),
+    ("Quest_IsShareable", 2),
+    ("Quest_IsFellowshipRecommended", 4),
+    ("Quest_IsSmallFellowshipRecommended", 8),
+    ("Quest_IsMonsterPlayQuest", 16),
+    ("Quest_IsSessionQuest", 32),
+    ("Quest_ShowRaidInJournal", 64),
+)
+
+
+def extract_quests(facade, langs, scan_result):
+    """Decode all quests and deeds (accomplishment entries) into records,
+    including description, objectives, bestower dialogs, rewards, chains
+    and flags."""
+    langs = [l for l in langs if l in facade.locales]
+    decoder_langs = [l for l in langs if l != "en"]
+
+    quests = {}
+    t0 = time.time()
+    for did in scan_result.quest_dids:
+        props = facade.load_object_properties(did)
+        if props is None:
+            continue
+        name_info = props.get("Quest_Name")
+        name = localized(facade, name_info, "en")
+        if name is None or not use_item(did, name, 0):  # same test filters
+            continue
+        is_deed = props.get("Quest_IsAccomplishment") == 1
+
+        flags = 0
+        for prop, bit in QUEST_FLAGS:
+            if props.get(prop) == 1:
+                flags |= bit
+        max_times = props.get("Quest_MaxTimesCompletable")
+
+        prereqs = []
+        for entry in props.get("Quest_QuestsToComplete") or ():
+            if isinstance(entry, int):
+                prereqs.append(entry)
+
+        rewards = []
+        virtue_xp = 0
+        treasure = props.get("Quest_QuestTreasureDID")
+        if treasure:
+            tprops = facade.load_object_properties(treasure)
+            if tprops is not None:
+                for entry in tprops.get("QuestTreasure_FixedItemArray") or ():
+                    item = entry.get("QuestTreasure_Item")
+                    if item:
+                        qty = entry.get("QuestTreasure_ItemQuantity")
+                        rewards.append((item, 1 if qty is None else qty))
+                virtue_xp = tprops.get("QuestTreasure_Virtue_XP_Tier") or 0
+
+        objectives = props.get("Quest_ObjectiveArray") or ()
+        objectives = sorted(objectives,
+                            key=lambda o: o.get("Quest_ObjectiveIndex") or 0)
+        # completion conditions per objective; entries may be nested
+        # OR-groups (lists), flatten them
+        conditions = []
+        for o in objectives:
+            flat = []
+            for c in o.get("Quest_CompletionConditionArray") or ():
+                if isinstance(c, list):
+                    flat.extend(x for x in c if isinstance(x, dict))
+                elif isinstance(c, dict):
+                    flat.append(c)
+            conditions.append(flat)
+        objective_conds = [[(max(c.get("QuestEvent_ID") or 0, 0),
+                             max(c.get("QuestEvent_Number") or 0, 0))
+                            for c in flat] for flat in conditions]
+        roles = props.get("Quest_RoleArray") or ()
+        # action 6 @ objective 0 = bestower (quest giver); action 5 =
+        # end/turn-in dialog; others belong to their objective
+        dialogs = [(r.get("Quest_ObjectiveIndex") or 0,
+                    r.get("QuestDispenser_Action") or 0,
+                    r.get("QuestDispenser_NPC") or 0)
+                   for r in roles]
+
+        record = {
+            "kind": "deed" if is_deed else "quest",
+            "name": name,
+            "level": props.get("Quest_ChallengeLevel") or 0,
+            "minLevel": props.get("Accomplishment_MinLevelToStart") or 0,
+            "category": (props.get("Accomplishment_Category") if is_deed
+                         else props.get("Quest_Category")) or 0,
+            "expTier": props.get("Quest_ExpTier") or 0,
+            "goldTier": props.get("Quest_GoldTier") or 0,
+            "flags": flags,
+            # 0 = not repeatable, 1 = unlimited, n+1 = n times
+            "maxTimes": (0 if max_times is None
+                         else 1 if max_times < 0 else max_times + 1),
+            "lockType": props.get("Quest_LockType") or 0,
+            "nextQuest": props.get("Quest_NextQuest") or 0,
+            "prereqs": prereqs,
+            "rewards": rewards,
+            "virtueXpTier": virtue_xp,
+            "dialogNpcs": dialogs,
+            "objectiveConds": objective_conds,
+        }
+        for lang in langs:
+            desc = localized(facade, props.get("Quest_Description"), lang)
+            objective_texts = []
+            for o, flat in zip(objectives, conditions):
+                entry = [localized(facade,
+                                   o.get("Quest_ObjectiveDescription"),
+                                   lang) or ""]
+                for c in flat:
+                    # "how to complete": progress text, else deed lore
+                    text = localized(facade,
+                                     c.get("QuestEvent_ProgressOverride"),
+                                     lang)
+                    if text is None:
+                        text = localized(facade,
+                                         c.get("Accomplishment_LoreInfo"),
+                                         lang)
+                    entry.append(text or "")
+                objective_texts.append(entry)
+            dialog_texts = [
+                localized(facade, r.get("QuestDispenser_RoleSuccessText"),
+                          lang) or ""
+                for r in roles]
+            record["text_" + lang] = (desc or "", objective_texts,
+                                      dialog_texts)
+            if lang != "en":
+                record["name_" + lang] = localized(facade, name_info, lang)
+        quests[did] = record
+        if len(quests) % 5000 == 0:
+            print("... %d quests/deeds (%.0fs)" % (len(quests),
+                                                   time.time() - t0),
+                  flush=True)
+    counts = {"quest": 0, "deed": 0}
+    for r in quests.values():
+        counts[r["kind"]] += 1
+    print("decoded %d quests + %d deeds (%.0fs)" % (
+        counts["quest"], counts["deed"], time.time() - t0))
+    return quests
+
+
+# --------------------------------------------------------------- npcs ----
+
+def quest_npc_ids(quests):
+    """NPC ids referenced by quest/deed dialogs."""
+    referenced = set()
+    for r in quests.values():
+        for _obj_idx, _action, npc in r["dialogNpcs"]:
+            if npc:
+                referenced.add(npc)
+    return referenced
+
+
+def extract_npcs(facade, langs, scan_result, referenced):
+    """id -> localized name + occupation title, only for NPCs that are
+    referenced by quest/deed dialogs."""
+    langs = [l for l in langs if l in facade.locales]
+    npcs = {}
+    t0 = time.time()
+    for did in scan_result.npc_dids:
+        if did not in referenced:
+            continue
+        props = facade.load_object_properties(did)
+        if props is None:
+            continue
+        name_info = props.get("Name")
+        name = localized(facade, name_info, "en")
+        if name is None or not use_item(did, name, 0):
+            continue
+        title_info = props.get("OccupationTitle")
+        record = {}
+        for lang in langs:
+            record["name_" + lang] = localized(facade, name_info, lang) or ""
+            record["title_" + lang] = localized(facade, title_info, lang) or ""
+        record["name"] = record.pop("name_en")
+        record["title"] = record.pop("title_en")
+        npcs[did] = record
+    print("decoded %d quest-linked NPCs (of %d referenced, %.0fs)" % (
+        len(npcs), len(referenced), time.time() - t0))
+    return npcs
+
+
 # ------------------------------------------------------------------ main ----
 
 _REPO_ROOT = os.path.abspath(os.path.join(_HERE, os.pardir, os.pardir))
@@ -659,7 +850,7 @@ def main():
                     help="Lua output dir (Items/ + Recipes/ inside)")
     ap.add_argument("--langs", default="de,en,fr",
                     help="languages to emit (client locales)")
-    ap.add_argument("--db", default="items,recipes")
+    ap.add_argument("--db", default="items,recipes,quests,npcs")
     ap.add_argument("--json", help="also dump raw records for inspection")
     args = ap.parse_args()
     game_dir = normalize_game_dir(args.game_dir)
@@ -671,8 +862,15 @@ def main():
     if missing:
         raise SystemExit("client is missing locale(s): %s" % ",".join(missing))
 
+    if "npcs" in dbs and "quests" not in dbs:
+        raise SystemExit("--db npcs requires quests (NPCs are filtered to"
+                         " the ones quest dialogs reference)")
     scan_result = scan(facade, langs)
     recipes = extract_recipes(facade, langs, scan_result)
+    quests = (extract_quests(facade, langs, scan_result)
+              if "quests" in dbs else {})
+    npcs = (extract_npcs(facade, langs, scan_result, quest_npc_ids(quests))
+            if "npcs" in dbs else {})
 
     class_labels = enum_labels(facade, "Item_Class", langs)
     for lang in langs:
@@ -699,11 +897,15 @@ def main():
                        lang)
                    for did, key in PROFESSION_KEYS.items()}
             for lang in langs},
+        "quest_category_labels": enum_labels(facade, "Quest_Category", langs),
+        "deed_category_labels": enum_labels(facade, "Accomplishment_Category",
+                                            langs),
     }
 
     if args.json:
         with open(args.json, "w", encoding="utf-8") as f:
-            json.dump({"items": scan_result.items, "recipes": recipes},
+            json.dump({"items": scan_result.items, "recipes": recipes,
+                       "quests": quests},
                       f, ensure_ascii=False, default=list)
         print("dumped records to %s" % args.json)
 
@@ -713,6 +915,11 @@ def main():
     if "recipes" in dbs:
         lore2lua.convert_recipes(None, os.path.join(args.out, "Recipes"),
                                  langs, records=recipes, aux=aux)
+    if "quests" in dbs:
+        lore2lua.convert_quests(os.path.join(args.out, "Quests"), langs,
+                                quests, aux)
+    if "npcs" in dbs:
+        lore2lua.convert_npcs(os.path.join(args.out, "Npcs"), langs, npcs)
     facade.close()
 
 
