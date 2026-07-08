@@ -463,41 +463,40 @@ local function _search_set_for_query(query)
     end
 
     local Items = Lore.Items
-    local result, total = {}, 0
+    local result = {}
     for group_index = 1, #groups do
+        -- longest term first: it is the most selective seed, and every
+        -- other term then probes only the surviving candidates instead of
+        -- scanning the whole blob ("earring of c" must not pay a global
+        -- scan for "of" or "c")
         local group = groups[group_index]
-        local term_sets = {}
+        local terms = {}
         for term_index = 1, #group do
-            local set, count = Items.search(group[term_index])
-            if set ~= nil then
-                term_sets[#term_sets + 1] = { set = set, count = count }
-            end
+            terms[term_index] = group[term_index]
+        end
+        table.sort(terms, function(left, right)
+            return #left > #right
+        end)
+
+        -- a seed of one letter matches most of the database; treat the
+        -- query as "no filter yet" (still typing the first word)
+        if #Items.fold_needle(terms[1]) < 2 then
+            return nil
         end
 
-        if #term_sets > 0 then
-            table.sort(term_sets, function(left, right)
-                return left.count < right.count
-            end)
-            local smallest = term_sets[1].set
-            for ordinal in pairs(smallest) do
-                if result[ordinal] == nil then
-                    local hit = true
-                    for k = 2, #term_sets do
-                        if term_sets[k].set[ordinal] ~= true then
-                            hit = false
-                            break
-                        end
-                    end
-                    if hit == true then
-                        result[ordinal] = true
-                        total = total + 1
-                    end
-                end
+        local set, count = Items.search(terms[1])
+        for term_index = 2, #terms do
+            if count == 0 then
+                break
             end
+            set, count = Items.search_within(terms[term_index], set)
+        end
+        for ordinal in pairs(set) do
+            result[ordinal] = true
         end
     end
 
-    return result, total
+    return result
 end
 
 function ItemBrowserPanel:_rebuild_filtered()

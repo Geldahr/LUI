@@ -460,10 +460,9 @@ function Items.search(query)
         for ordinal in pairs(parent.set) do
             local from = soff(ordinal)
             local to = soff(ordinal + 1) - 2
-            local s = find(S.SRCH, needle, from, true)
-            -- a hit starting inside the entry cannot cross the trailing
-            -- newline (needles never contain one)
-            if s ~= nil and s <= to then
+            -- probe the extracted entry: find() with only a start position
+            -- would scan the whole blob to the next occurrence on a miss
+            if find(sub(S.SRCH, from, to), needle, 1, true) ~= nil then
                 set[ordinal] = true
                 count = count + 1
             end
@@ -483,6 +482,38 @@ function Items.search(query)
     end
 
     Items._search_cache[needle] = { set = set, count = count }
+    return set, count
+end
+
+-- evaluate a needle over an explicit candidate set only: one bounded probe
+-- per candidate instead of a global blob scan. Used for the second and
+-- later terms of AND queries, where the running result is already small;
+-- results are query-conditional so nothing enters the session cache.
+function Items.search_within(query, candidates)
+    local needle = Items.fold_needle(query)
+    local set, count = {}, 0
+    local cached = Items._search_cache[needle]
+    if cached ~= nil then
+        for ordinal in pairs(candidates) do
+            if cached.set[ordinal] == true then
+                set[ordinal] = true
+                count = count + 1
+            end
+        end
+        return set, count
+    end
+    local S = Items.S
+    local sw = S.soff_width
+    for ordinal in pairs(candidates) do
+        local from = u(S.SOFF, (ordinal - 1) * sw + 1, sw)
+        local to = u(S.SOFF, ordinal * sw + 1, sw) - 2
+        -- probe the extracted entry: find() with only a start position
+        -- would scan the whole blob to the next occurrence on a miss
+        if find(sub(S.SRCH, from, to), needle, 1, true) ~= nil then
+            set[ordinal] = true
+            count = count + 1
+        end
+    end
     return set, count
 end
 
