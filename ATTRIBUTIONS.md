@@ -31,25 +31,6 @@ Middle-earth Enterprises, or Lotro-Wiki.com.
 The Lord of the Rings Online, LOTRO, and related names, places, items,
 characters, and trademarks are the property of their respective owners.
 
-## LOTRO Companion Data
-
-The Items and Recipes databases in `src/Data/Items/` and `src/Data/Recipes/`
-are generated from the LOTRO Companion "lotro-data" XML dumps, published as
-SourceForge packages:
-
-- https://sourceforge.net/projects/lotrocompanion/
-- https://sourceforge.net/projects/lotrocompanion/files/16/packages/
-
-LOTRO Companion is a project by the LotroCompanion team. The SourceForge
-project declares the Apache License 2.0 (the project's GitHub repositories
-carry no license file, so this attribution relies on the SourceForge
-declaration). A copy of the Apache License 2.0 is included at
-`LICENSES/Apache-2.0.txt`.
-
-The XML data has been extracted, transformed, and repacked for plugin use.
-Underlying game content remains the property of Standing Stone Games and
-other rights holders (see the "Unofficial Fan Project" section above).
-
 ## TravelWindowII Data
 
 `src/Travel/travel_data.lua` uses a travel skill dataset adapted from
