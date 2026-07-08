@@ -8,7 +8,7 @@ D.off_width = 3
 D.item_base = 1879000000
 D.widths = { bonus = 2, category = 2, cooldown = 3, crit = 1, flags = 1, item = 3, n = 1, pack_count = 1, profession = 1, qty = 2, tier = 1, xp = 2 }
 D.enums = { profession = { "COOK", "FARMER", "FORESTER", "JEWELLER", "METALSMITH", "PROSPECTOR", "SCHOLAR", "TAILOR", "WEAPONSMITH", "WOODWORKER" } }
-D.langs = { "de", "en", "es", "fr", "ru" }
+D.langs = { "de", "en", "fr" }
 _G.LoreData = _G.LoreData or {}
 _G.LoreData["Recipes.manifest"] = D
 return D

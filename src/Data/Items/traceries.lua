@@ -12,9 +12,7 @@ D.T_REC = [=[
 D.CLASSES = {
 de = { "Beorninger", "Schurke", "Hauptmann", "Waffenmeister", "Wächter", "Jäger", "Kundiger", "Barde", "Runenbewahrer", "Schläger", "Hüter", "Seefahrer" },
 en = { "Beorning", "Burglar", "Captain", "Champion", "Guardian", "Hunter", "Lore-master", "Minstrel", "Rune-keeper", "Brawler", "Warden", "Mariner" },
-es = { "Beórnida", "Saqueador", "Capitán", "Campeón", "Guardián", "Cazador", "Sabio", "Juglar", "Maestro rúnico", "Luchador", "Vigilante", "Marinero" },
 fr = { "Beornide", "Cambrioleur", "Capitaine", "Champion", "Gardien", "Chasseur", "Maître du savoir", "Ménestrel", "Gardien des runes", "Bagarreur", "Sentinelle", "Marin" },
-ru = { "Беорнинг", "Взломщик", "Рыцарь", "Воитель", "Страж", "Охотник", "Хранитель мудрости", "Менестрель", "Хранитель рун", "Задира", "Защитник", "Мореход" },
 }
 _G.LoreData = _G.LoreData or {}
 _G.LoreData["Items.traceries"] = D
