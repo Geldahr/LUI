@@ -626,6 +626,32 @@ local function _resolve_key(source, index, name)
     return type(index) == "table" and index.first_key_by_base_lower[lowered] or nil
 end
 
+-- localized target names translate to the English canonical base name
+-- before resolution; unmatched names pass through unchanged (English
+-- clients, already-canonical names, and the bridge's 4% misses)
+function Encyclopedia.DataAccess.to_canonical(name)
+    local bridge = Encyclopedia.NameBridge
+    if bridge == nil or type(name) ~= "string" then
+        return name
+    end
+    local normalized = _normalize_name(name)
+    if normalized == nil or normalized == "" then
+        return name
+    end
+    return bridge[string.lower(normalized)] or name
+end
+
+-- render-time inverse of to_canonical: English base name -> localized
+-- display name (translation fallback: names without a localized label
+-- stay English). Keys, caches and lookups stay English underneath.
+function Encyclopedia.DataAccess.display_name(name)
+    local display = Encyclopedia.NameDisplay
+    if display == nil or type(name) ~= "string" then
+        return name
+    end
+    return display[name] or name
+end
+
 function Encyclopedia.DataAccess.resolve_entry(source, index, name)
     local resolved_key = _resolve_key(source, index, name)
     if type(resolved_key) ~= "string" then

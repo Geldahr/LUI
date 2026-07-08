@@ -1050,7 +1050,7 @@ function BestiaryRow:bind(record, width)
     local height = _to_number(record._view_height, pad_y + line_h + row_gap_y + line_h + row_gap_y + meta_line_extra + drop_h + pad_y + separator_h)
 
     self._record = record
-    self.name_label:SetText(record.name)
+    self.name_label:SetText(DATA_ACCESS.display_name(record.name))
     self.level_label:SetText(record.level_text)
     self.morale_label:SetText(record.morale_text)
     self.power_label:SetText(record.power_text)

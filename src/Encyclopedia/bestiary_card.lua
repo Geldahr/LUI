@@ -147,6 +147,8 @@ local function _normalize_bestiary_name(name)
 end
 
 local function _merged_entry_for_name(name)
+    -- localized clients: bridge the target name to the English canonical
+    name = DATA_ACCESS.to_canonical(name)
     local normalized = _normalize_bestiary_name(name)
     if normalized == nil then
         return nil
@@ -1305,9 +1307,9 @@ function BestiaryCard:_apply_selected_variant()
     self.current_record = record
 
     if self:_variant_tabs_visible() == true then
-        self:set_title(self.current_group_name or record.base_name or record.name or record.key or TR["Bestiary"])
+        self:set_title(DATA_ACCESS.display_name(self.current_group_name or record.base_name or record.name or record.key) or TR["Bestiary"])
     else
-        self:set_title(record.name or record.key or TR["Bestiary"])
+        self:set_title(DATA_ACCESS.display_name(record.name or record.key) or TR["Bestiary"])
     end
 
     self:_apply_record(record)

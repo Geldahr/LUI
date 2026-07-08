@@ -40,17 +40,33 @@ local RS = { "cr", "so", "ta", "ph" }
 local MI = { "co", "ad", "fi", "be", "li", "we", "sh", "fr", "lt" }
 local LISTS = { "ab", "qi", "di", "w", "cw" }
 
+-- localized string pool: pool_<lang> mirrors pool.lua entry-for-entry with
+-- translated strings where the packer had a game-data label (names stay
+-- English by design). Optional localized pack, English fallback.
+local function _import_pool()
+    if Bestiary._pool_key ~= nil then
+        return
+    end
+    local lang = Lore.language()
+    if lang ~= "en" and pcall(import, "LUI.src.Data.Bestiary.pool_" .. lang) == true then
+        Bestiary._pool_key = "Bestiary.pool_" .. lang
+        return
+    end
+    import("LUI.src.Data.Bestiary.pool")
+    Bestiary._pool_key = "Bestiary.pool"
+end
+
 function Lore.load_bestiary()
     if Bestiary.loaded == true then
         return
     end
     import("LUI.src.Data.Bestiary.manifest")
-    import("LUI.src.Data.Bestiary.pool")
+    _import_pool()
     import("LUI.src.Data.Bestiary.records")
     import("LUI.src.Data.Bestiary.index")
     local Data = _G.LoreData
     Bestiary.M = Data["Bestiary.manifest"]
-    Bestiary.P = Data["Bestiary.pool"]
+    Bestiary.P = Data[Bestiary._pool_key]
     Bestiary.R = Data["Bestiary.records"]
     Bestiary.I = Data["Bestiary.index"]
     Bestiary.count = Bestiary.M.count
@@ -63,7 +79,7 @@ end
 
 local function _pool_string(ref)
     local P = Bestiary.P
-    local w = Bestiary.M.poff_width
+    local w = P.poff_width
     return sub(P.POOL, u(P.POFF, (ref - 1) * w + 1, w), u(P.POFF, ref * w + 1, w) - 1)
 end
 
@@ -338,17 +354,17 @@ local PREWARM_BATCH = 300
 local PREWARM_EVERY = 0.2
 
 local IMPORT_PLAN = {
-    "LUI.src.Data.Bestiary.manifest",
-    "LUI.src.Data.Bestiary.pool",
-    "LUI.src.Data.Bestiary.records",
-    "LUI.src.Data.Bestiary.index",
+    function() import("LUI.src.Data.Bestiary.manifest") end,
+    _import_pool,
+    function() import("LUI.src.Data.Bestiary.records") end,
+    function() import("LUI.src.Data.Bestiary.index") end,
 }
 
 -- returns true when imports and full decode are complete
 function Bestiary.prewarm_step()
     if Bestiary.loaded ~= true then
         local index = Bestiary._import_index or 1
-        import(IMPORT_PLAN[index])
+        IMPORT_PLAN[index]()
         Bestiary._import_index = index + 1
         if Bestiary._import_index > #IMPORT_PLAN then
             Lore.load_bestiary()

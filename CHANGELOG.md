@@ -15,6 +15,7 @@
 
 ### Changed
 
+- The bestiary now works on French and German clients: localized creature names are bridged to the English bestiary data at pack time (~97% of entries; unmatched names find nothing), so target double-click cards and `/lui card` resolve localized targets. Bestiary content is displayed translated where the game data provides a label — creature names, taxonomy, tiers, locations, drops, quests, deeds, and abilities — with untranslated strings kept in English (ratings such as `Feeble` stay English). Search and chat capture stay English-only.
 - The bestiary database now loads from packed local data with a background pre-warm instead of parsing a large Lua table at login, making plugin load and Encyclopedia opening faster.
 - Crafting ingredient, plan, and queue rows derive their height from the item icon plus padding so icons fit exactly at every UI scale, and rows with only a name center their text vertically.
 - Cross-window link buttons now always select the matching window tab (Recipes tab in crafting, Bestiary tab in the Encyclopedia).

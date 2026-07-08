@@ -6,7 +6,6 @@ D.ref_width = 3
 D.ord_width = 3
 D.off_width = 4
 D.koff_width = 3
-D.poff_width = 3
 D.loff_width = 3
 D.goff_width = 3
 D.l_width = 2

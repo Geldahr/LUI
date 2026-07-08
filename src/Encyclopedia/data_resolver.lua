@@ -123,13 +123,28 @@ if requested_locale ~= "en" then
     _ensure_drop_table(requested_locale)
 end
 
+-- localized target-name bridge: per-language {localized -> English base
+-- name} maps joined from mobs.xml at pack time, plus the inverse display
+-- map for render-time name translation (optional localized pack)
+Encyclopedia.NameBridge = nil
+Encyclopedia.NameDisplay = nil
+if requested_locale ~= "en" then
+    if pcall(import, "LUI.src.Data.Bestiary.names_" .. requested_locale) == true then
+        local pack = _G.LoreData["Bestiary.names_" .. requested_locale]
+        Encyclopedia.NameBridge = pack.map
+        Encyclopedia.NameDisplay = pack.display
+    end
+end
+
 Encyclopedia.RequestedLocale = requested_locale
 Encyclopedia.Data, Encyclopedia.DataLocale = _resolve_locale_table(requested_locale, "bestiary")
 Encyclopedia.DropTable, Encyclopedia.DropTableLocale = _resolve_locale_table(requested_locale, "drop_table")
 
 function Encyclopedia.supports_target_name_lookup()
     local requested = Encyclopedia.RequestedLocale or "en"
-    return Encyclopedia.DataLocale == requested
+    -- the name bridge translates localized target names to the English
+    -- canonical names, so lookup works even over English-only data
+    return Encyclopedia.DataLocale == requested or Encyclopedia.NameBridge ~= nil
 end
 
 function Encyclopedia.supports_drop_name_lookup()
