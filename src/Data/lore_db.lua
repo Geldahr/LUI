@@ -405,35 +405,36 @@ end
 
 -- fold a typed needle exactly like the build-time search blobs: ASCII
 -- lowering plus the generated accent map
-function Items.fold_needle(text)
+local function _fold_needle(fold, text)
     local folded = string.lower(text)
-    for from, to in pairs(Items.FOLD) do
+    for from, to in pairs(fold) do
         folded = folded:gsub(from, to)
     end
     return folded
 end
 
--- type-ahead search over the folded name blob: one C-speed scan per novel
--- query, refinement for extensions, session cache for repeats/backspace.
--- Returns a set { ordinal = true } plus its size; nil means "no filter"
--- (empty query).
-function Items.search(query)
-    local needle = Items.fold_needle(query)
+-- type-ahead search over a domain's folded name blob (domain carries FOLD,
+-- S, count and _search_cache; shared by Items and Quests): one C-speed
+-- scan per novel query, refinement for extensions, session cache for
+-- repeats/backspace. Returns a set { ordinal = true } plus its size; nil
+-- means "no filter" (empty query).
+local function _domain_search(domain, query)
+    local needle = _fold_needle(domain.FOLD, query)
     if needle == "" then
         return nil, 0
     end
-    local cached = Items._search_cache[needle]
+    local cached = domain._search_cache[needle]
     if cached ~= nil then
         return cached.set, cached.count
     end
 
-    local S = Items.S
+    local S = domain.S
     local sw = S.soff_width
     local function soff(k)
         return u(S.SOFF, (k - 1) * sw + 1, sw)
     end
     local function entry_at(pos)
-        local lo, hi = 1, Items.count
+        local lo, hi = 1, domain.count
         while lo < hi do
             local mid = floor((lo + hi + 1) / 2)
             if soff(mid) <= pos then
@@ -448,7 +449,7 @@ function Items.search(query)
     -- refine from the longest cached prefix if one exists
     local parent = nil
     for k = #needle - 1, 1, -1 do
-        local candidate = Items._search_cache[string.sub(needle, 1, k)]
+        local candidate = domain._search_cache[string.sub(needle, 1, k)]
         if candidate ~= nil then
             parent = candidate
             break
@@ -481,7 +482,7 @@ function Items.search(query)
         end
     end
 
-    Items._search_cache[needle] = { set = set, count = count }
+    domain._search_cache[needle] = { set = set, count = count }
     return set, count
 end
 
@@ -489,10 +490,10 @@ end
 -- per candidate instead of a global blob scan. Used for the second and
 -- later terms of AND queries, where the running result is already small;
 -- results are query-conditional so nothing enters the session cache.
-function Items.search_within(query, candidates)
-    local needle = Items.fold_needle(query)
+local function _domain_search_within(domain, query, candidates)
+    local needle = _fold_needle(domain.FOLD, query)
     local set, count = {}, 0
-    local cached = Items._search_cache[needle]
+    local cached = domain._search_cache[needle]
     if cached ~= nil then
         for ordinal in pairs(candidates) do
             if cached.set[ordinal] == true then
@@ -502,7 +503,7 @@ function Items.search_within(query, candidates)
         end
         return set, count
     end
-    local S = Items.S
+    local S = domain.S
     local sw = S.soff_width
     for ordinal in pairs(candidates) do
         local from = u(S.SOFF, (ordinal - 1) * sw + 1, sw)
@@ -515,6 +516,18 @@ function Items.search_within(query, candidates)
         end
     end
     return set, count
+end
+
+function Items.fold_needle(text)
+    return _fold_needle(Items.FOLD, text)
+end
+
+function Items.search(query)
+    return _domain_search(Items, query)
+end
+
+function Items.search_within(query, candidates)
+    return _domain_search_within(Items, query, candidates)
 end
 
 -- composite icon "main-background-shadow-underlay": up to 4 numeric layers
@@ -635,4 +648,379 @@ end
 -- 3-layer badge icon (game asset ids) for a profession tier
 function Nodes.badge_layers(key, tier)
     return Nodes.ICONS[key][tier]
+end
+
+-- -------------------------------------------------------------- Quests ----
+-- Quests + deeds extracted straight from the game client (data-extractor
+-- --db quests): packed numeric records (levels, category, reward items,
+-- chains, flags), per-language label/name/search blobs and localized
+-- category tables. The heavy description/objective/dialog texts live in
+-- texts_<lang>.lua (tens of MB) and are only imported on demand.
+
+Lore.Quests = Lore.Quests or {}
+local Quests = Lore.Quests
+
+function Lore.load_quests()
+    if Quests.loaded == true then
+        return
+    end
+    local lang = Lore.language()
+    import("LUI.src.Data.Quests.manifest")
+    import("LUI.src.Data.Quests.records")
+    import("LUI.src.Data.Quests.labels_" .. lang)
+    import("LUI.src.Data.Quests.names_" .. lang)
+    import("LUI.src.Data.Quests.search_" .. lang)
+    import("LUI.src.Data.Quests.categories")
+    -- the accent fold map is shared with the items domain
+    import("LUI.src.Data.Items.classes")
+    local Data = _G.LoreData
+    Quests.M = Data["Quests.manifest"]
+    Quests.R = Data["Quests.records"]
+    Quests.L = Data["Quests.labels_" .. lang]
+    Quests.NM = Data["Quests.names_" .. lang]
+    Quests.S = Data["Quests.search_" .. lang]
+    Quests.QUEST_CATS = Data["Quests.categories"].QUEST_CATS[lang]
+    Quests.DEED_CATS = Data["Quests.categories"].DEED_CATS[lang]
+    Quests.FOLD = Data["Items.classes"].FOLD
+    Quests.count = Quests.M.count
+    Quests._search_cache = {}
+    Quests._record_cache = {}
+    Quests.loaded = true
+end
+
+-- staged import list for hitch-free loading (one import per tick)
+function Lore.quests_import_plan()
+    local lang = Lore.language()
+    return {
+        "LUI.src.Data.Quests.manifest",
+        "LUI.src.Data.Quests.records",
+        "LUI.src.Data.Quests.labels_" .. lang,
+        "LUI.src.Data.Quests.names_" .. lang,
+        "LUI.src.Data.Quests.search_" .. lang,
+        "LUI.src.Data.Quests.categories",
+        "LUI.src.Data.Items.classes",
+    }
+end
+
+function Quests.find_ordinals(name)
+    return _find_ordinals(Quests.NM, name)
+end
+
+function Quests.id_of(ordinal)
+    local M = Quests.M
+    return M.base_id + u(Quests.R.IDS, (ordinal - 1) * M.id_width + 1, M.id_width)
+end
+
+-- exact-id binary search over the sorted IDS blob
+function Quests.ordinal_of(id)
+    local M = Quests.M
+    local target = id - M.base_id
+    local IDS, w = Quests.R.IDS, M.id_width
+    local lo, hi = 1, Quests.count
+    while lo <= hi do
+        local mid = floor((lo + hi) / 2)
+        local v = u(IDS, (mid - 1) * w + 1, w)
+        if v == target then
+            return mid
+        elseif v < target then
+            lo = mid + 1
+        else
+            hi = mid - 1
+        end
+    end
+    return nil
+end
+
+function Quests.label(ordinal)
+    local L = Quests.L
+    local w = L.loff_width
+    return sub(L.LBL, u(L.LOFF, (ordinal - 1) * w + 1, w), u(L.LOFF, ordinal * w + 1, w) - 1)
+end
+
+-- full record decode, cached (the browser touches rows repeatedly)
+function Quests.decode(ordinal)
+    local cached = Quests._record_cache[ordinal]
+    if cached ~= nil then
+        return cached
+    end
+    local M = Quests.M
+    local R = Quests.R
+    local W = M.widths
+    local p = u(R.OFF, (ordinal - 1) * M.off_width + 1, M.off_width)
+    local DATA = R.DATA
+
+    local function take(w)
+        local v = u(DATA, p, w)
+        p = p + w
+        return v
+    end
+    local function ref()
+        local v = take(W.ref)
+        if v == 0 then
+            return nil
+        end
+        return M.ref_base + v
+    end
+
+    local r = {}
+    r.is_deed = take(W.deed) == 1
+    r.level = take(W.level)
+    r.min_level = take(W.level)
+    r.category = take(W.category)
+    r.exp_tier = take(W.tier)
+    r.gold_tier = take(W.tier)
+    r.virtue_xp_tier = take(W.tier)
+    r.flags = take(W.flags)
+    -- 0 = not repeatable, 1 = unlimited, n+1 = n times
+    r.max_times = take(W.times)
+    r.lock_type = take(W.lock)
+    r.next_quest = ref()
+    local n_prereqs = take(W.n)
+    local n_rewards = take(W.n)
+    local n_dialogs = take(W.n)
+    r.prereqs = {}
+    for k = 1, n_prereqs do
+        r.prereqs[k] = ref()
+    end
+    r.rewards = {}
+    for k = 1, n_rewards do
+        local item = ref()
+        r.rewards[k] = { item = item, quantity = take(W.qty) }
+    end
+    r.dialog_npcs = {}
+    for k = 1, n_dialogs do
+        r.dialog_npcs[k] = { objective = take(W.n), action = take(W.n), npc = ref() }
+    end
+    r.objectives = {}
+    for k = 1, take(W.n) do
+        local conds = {}
+        for c = 1, take(W.n) do
+            conds[c] = { event = take(W.event), count = take(W.count) }
+        end
+        r.objectives[k] = conds
+    end
+
+    Quests._record_cache[ordinal] = r
+    return r
+end
+
+-- cheap fixed-offset reads of the leading record fields (kind, level,
+-- min level, category): filtering 20k records must not pay full decodes
+function Quests.brief(ordinal)
+    local M = Quests.M
+    local W = M.widths
+    local R = Quests.R
+    local p = u(R.OFF, (ordinal - 1) * M.off_width + 1, M.off_width)
+    local is_deed = u(R.DATA, p, W.deed) == 1
+    p = p + W.deed
+    local level = u(R.DATA, p, W.level)
+    p = p + W.level
+    local min_level = u(R.DATA, p, W.level)
+    p = p + W.level
+    local category = u(R.DATA, p, W.category)
+    return is_deed, level, min_level, category
+end
+
+-- ordinals of one kind ("quest" or "deed"), in label-sorted (= ordinal)
+-- order; built once per session from the kind byte of every record
+function Quests.kind_list(kind)
+    Quests._kind_lists = Quests._kind_lists or {}
+    local cached = Quests._kind_lists[kind]
+    if cached ~= nil then
+        return cached
+    end
+    local want_deed = kind == "deed"
+    local M = Quests.M
+    local R = Quests.R
+    local w = M.widths.deed
+    local list, n = {}, 0
+    for ordinal = 1, Quests.count do
+        local p = u(R.OFF, (ordinal - 1) * M.off_width + 1, M.off_width)
+        if (u(R.DATA, p, w) == 1) == want_deed then
+            n = n + 1
+            list[n] = ordinal
+        end
+    end
+    Quests._kind_lists[kind] = list
+    return list
+end
+
+-- quest flag bits (tools/data-extractor QUEST_FLAGS)
+Quests.FLAG_INSTANCE = 1
+Quests.FLAG_SHAREABLE = 2
+Quests.FLAG_FELLOWSHIP = 4
+Quests.FLAG_SMALL_FELLOWSHIP = 8
+Quests.FLAG_MONSTER_PLAY = 16
+Quests.FLAG_SESSION = 32
+Quests.FLAG_RAID = 64
+
+-- dialog entry actions: 6 at objective 0 = quest giver (bestower),
+-- 5 = end/turn-in dialog, others attach to their objective
+Quests.ACTION_TURN_IN = 5
+Quests.ACTION_BESTOW = 6
+
+function Quests.bestower_npc(record)
+    local dialogs = record.dialog_npcs
+    for k = 1, #dialogs do
+        local entry = dialogs[k]
+        if entry.action == Quests.ACTION_BESTOW and entry.objective == 0 then
+            return entry.npc
+        end
+    end
+    return nil
+end
+
+-- the NPC the quest ends at: the role on the highest objective index.
+-- The explicit action-5 end dialog always names the bestower in the game
+-- data, so the last objective's NPC is the real turn-in target (delivery
+-- quests end at a different NPC than they start from).
+function Quests.turn_in_npc(record)
+    local dialogs = record.dialog_npcs
+    local best, best_obj = nil, -1
+    for k = 1, #dialogs do
+        local entry = dialogs[k]
+        -- strict >: on a tied objective the first listed role is the
+        -- actual talk target, later ones are follow-up dialogs
+        if entry.npc ~= nil
+            and not (entry.action == Quests.ACTION_BESTOW and entry.objective == 0)
+            and entry.objective > best_obj then
+            best, best_obj = entry.npc, entry.objective
+        end
+    end
+    return best
+end
+
+function Quests.category_name(record)
+    local cats = record.is_deed and Quests.DEED_CATS or Quests.QUEST_CATS
+    return cats[record.category]
+end
+
+function Quests.fold_needle(text)
+    return _fold_needle(Quests.FOLD, text)
+end
+
+function Quests.search(query)
+    return _domain_search(Quests, query)
+end
+
+function Quests.search_within(query, candidates)
+    return _domain_search_within(Quests, query, candidates)
+end
+
+-- ---- texts (lazy) ----
+-- per-record content: description / objectives / bestower dialogs.
+-- Sections separated by manifest.section_sep, texts within a section by
+-- text_sep, objective description vs its per-condition texts by sub_sep.
+
+local function _split(text, sep)
+    local parts, start = {}, 1
+    while true do
+        local at = find(text, sep, start, true)
+        if at == nil then
+            parts[#parts + 1] = sub(text, start)
+            return parts
+        end
+        parts[#parts + 1] = sub(text, start, at - 1)
+        start = at + 1
+    end
+end
+
+function Quests.load_texts()
+    if Quests.T ~= nil then
+        return
+    end
+    local lang = Lore.language()
+    import("LUI.src.Data.Quests.texts_" .. lang)
+    Quests.T = _G.LoreData["Quests.texts_" .. lang]
+end
+
+function Quests.texts(ordinal)
+    Quests.load_texts()
+    local T = Quests.T
+    local w = T.toff_width
+    local entry = sub(T.TXT, u(T.TOFF, (ordinal - 1) * w + 1, w), u(T.TOFF, ordinal * w + 1, w) - 1)
+    local M = Quests.M
+    local sections = _split(entry, M.section_sep)
+    local objectives = {}
+    if sections[2] ~= "" then
+        local objective_entries = _split(sections[2], M.text_sep)
+        for k = 1, #objective_entries do
+            local parts = _split(objective_entries[k], M.sub_sep)
+            local conds = {}
+            for c = 2, #parts do
+                conds[c - 1] = parts[c]
+            end
+            objectives[k] = { text = parts[1], conds = conds }
+        end
+    end
+    local dialogs = {}
+    if sections[3] ~= "" then
+        dialogs = _split(sections[3], M.text_sep)
+    end
+    return { description = sections[1], objectives = objectives, dialogs = dialogs }
+end
+
+-- ---------------------------------------------------------------- Npcs ----
+-- Localized names + titles for the NPCs referenced by quest dialogs
+-- (small: only quest NPCs). Labels are "name \31 title" per record,
+-- aligned with the sorted IDS blob.
+
+Lore.Npcs = Lore.Npcs or {}
+local Npcs = Lore.Npcs
+
+function Lore.load_npcs()
+    if Npcs.loaded == true then
+        return
+    end
+    local lang = Lore.language()
+    import("LUI.src.Data.Npcs.manifest")
+    import("LUI.src.Data.Npcs.records")
+    import("LUI.src.Data.Npcs.labels_" .. lang)
+    local Data = _G.LoreData
+    Npcs.M = Data["Npcs.manifest"]
+    Npcs.R = Data["Npcs.records"]
+    Npcs.L = Data["Npcs.labels_" .. lang]
+    Npcs.count = Npcs.M.count
+    Npcs.loaded = true
+end
+
+-- exact-id binary search over the sorted IDS blob
+function Npcs.ordinal_of(id)
+    local M = Npcs.M
+    local target = id - M.base_id
+    local IDS, w = Npcs.R.IDS, M.id_width
+    local lo, hi = 1, Npcs.count
+    while lo <= hi do
+        local mid = floor((lo + hi) / 2)
+        local v = u(IDS, (mid - 1) * w + 1, w)
+        if v == target then
+            return mid
+        elseif v < target then
+            lo = mid + 1
+        else
+            hi = mid - 1
+        end
+    end
+    return nil
+end
+
+-- name, title for an NPC id; nil when the id is not a quest NPC
+function Npcs.name(id)
+    Lore.load_npcs()
+    local ordinal = Npcs.ordinal_of(id)
+    if ordinal == nil then
+        return nil, nil
+    end
+    local L = Npcs.L
+    local w = L.loff_width
+    local label = sub(L.LBL, u(L.LOFF, (ordinal - 1) * w + 1, w), u(L.LOFF, ordinal * w + 1, w) - 1)
+    local at = find(label, Npcs.M.text_sep, 1, true)
+    if at == nil then
+        return label, nil
+    end
+    local title = sub(label, at + 1)
+    if title == "" then
+        title = nil
+    end
+    return sub(label, 1, at - 1), title
 end

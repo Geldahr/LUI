@@ -458,6 +458,7 @@ Flags.crafting_display_mode_active = State.settings.crafting.display_mode
 
 Windows.bestiary_card = Encyclopedia.BestiaryCard()
 Windows.resource_card = Encyclopedia.ResourceCard()
+Windows.quest_card = Encyclopedia.QuestCard()
 
 -- Initialize target vitals first: self vitals depend on them for current target state.
 Windows.target_vital = UI.TargetVitals(nil)
@@ -558,6 +559,11 @@ Plugins["LUI"].Unload = function()
     if Windows.resource_card ~= nil then
         Windows.resource_card:SetVisible(false)
         Windows.resource_card = nil
+    end
+
+    if Windows.quest_card ~= nil then
+        Windows.quest_card:SetVisible(false)
+        Windows.quest_card = nil
     end
 
     if Windows.companion_vital ~= nil then

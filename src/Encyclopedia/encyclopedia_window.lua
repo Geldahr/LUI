@@ -1163,7 +1163,7 @@ function EncyclopediaWindow:Constructor()
     self.encyclopedia_tabs = UI.Widgets.LuiTabBar()
     self.encyclopedia_tabs:SetParent(content_host)
     self.encyclopedia_tabs:add_tab(TR["Bestiary"], self.bestiary_host)
-    for tab = 2, 6 do
+    for tab = 2, 7 do
         local host = Turbine.UI.Control()
         host:SetMouseVisible(true)
         self._item_tab_hosts[tab] = host
@@ -1173,6 +1173,7 @@ function EncyclopediaWindow:Constructor()
     self.encyclopedia_tabs:add_tab(TR["Consumables"], self._item_tab_hosts[4])
     self.encyclopedia_tabs:add_tab(TR["Housing"], self._item_tab_hosts[5])
     self.encyclopedia_tabs:add_tab(TR["Traceries"], self._item_tab_hosts[6])
+    self.encyclopedia_tabs:add_tab(TR["Quests"], self._item_tab_hosts[7])
     self.encyclopedia_tabs.on_tab_changed = function(index)
         self:_set_encyclopedia_tab(index)
     end
@@ -2091,6 +2092,7 @@ end
 -- tab 1 = bestiary (this window's own content); tabs 2-4 are item browser
 -- panels laid over the content area, created on first activation
 local ENCYCLOPEDIA_TAB_BUCKETS = { nil, "equipment", "resource", "consumable", "housing", "tracery" }
+local QUESTS_TAB_INDEX = 7
 
 -- converter bucket codes (1=equipment 2=consumable 3=resource, 0=other) to
 -- encyclopedia tab index; "other" items have no tab and are not linkable
@@ -2117,10 +2119,18 @@ end
 
 function EncyclopediaWindow:_set_encyclopedia_tab(index)
     self._active_encyclopedia_tab = index
-    -- the tab bar shows/hides the tab hosts itself; item panels are only
+    -- the tab bar shows/hides the tab hosts itself; panels are only
     -- created lazily inside their host on first activation
     if index ~= 1 and self._item_panels[index] == nil then
-        local panel = Encyclopedia.ItemBrowserPanel(ENCYCLOPEDIA_TAB_BUCKETS[index], self)
+        local panel
+        if index == QUESTS_TAB_INDEX then
+            panel = Encyclopedia.QuestsTabPanel(self)
+            panel.on_quest_open = function(ordinal)
+                Windows.quest_card:show_for_ordinal(ordinal, self)
+            end
+        else
+            panel = Encyclopedia.ItemBrowserPanel(ENCYCLOPEDIA_TAB_BUCKETS[index], self)
+        end
         panel:SetParent(self._item_tab_hosts[index])
         self._item_panels[index] = panel
     end

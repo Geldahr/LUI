@@ -192,6 +192,48 @@ function SearchQuery.matches_groups(groups, haystack_lower)
     return false
 end
 
+-- Evaluate parsed text groups against a searchable domain (a table with
+-- fold_needle / search / search_within, e.g. Lore.Items or Lore.Quests):
+-- terms inside a group AND together, groups OR together. The longest
+-- term seeds each group globally (cached, most selective); every other
+-- term probes only the surviving candidates. A group whose longest term
+-- is a single letter matches most of the database and applies no filter
+-- yet (still typing). Returns { ordinal = true }, or nil for "no filter".
+function SearchQuery.evaluate_domain(groups, domain)
+    if groups == nil or #groups == 0 then
+        return nil
+    end
+
+    local result = {}
+    for group_index = 1, #groups do
+        local group = groups[group_index]
+        local terms = {}
+        for term_index = 1, #group do
+            terms[term_index] = group[term_index]
+        end
+        table.sort(terms, function(left, right)
+            return #left > #right
+        end)
+
+        if #domain.fold_needle(terms[1]) < 2 then
+            return nil
+        end
+
+        local set, count = domain.search(terms[1])
+        for term_index = 2, #terms do
+            if count == 0 then
+                break
+            end
+            set, count = domain.search_within(terms[term_index], set)
+        end
+        for ordinal in pairs(set) do
+            result[ordinal] = true
+        end
+    end
+
+    return result
+end
+
 function SearchQuery.parse(query, token_keys)
     if type(query) ~= "string" then
         error("SearchQuery.parse requires query string")

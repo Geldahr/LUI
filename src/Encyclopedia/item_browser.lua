@@ -457,46 +457,7 @@ end
 -- group, union the groups. nil means "no search filter".
 local function _search_set_for_query(query)
     local state = SearchQuery.parse(query, {})
-    local groups = state.normalized_groups
-    if #groups == 0 then
-        return nil
-    end
-
-    local Items = Lore.Items
-    local result = {}
-    for group_index = 1, #groups do
-        -- longest term first: it is the most selective seed, and every
-        -- other term then probes only the surviving candidates instead of
-        -- scanning the whole blob ("earring of c" must not pay a global
-        -- scan for "of" or "c")
-        local group = groups[group_index]
-        local terms = {}
-        for term_index = 1, #group do
-            terms[term_index] = group[term_index]
-        end
-        table.sort(terms, function(left, right)
-            return #left > #right
-        end)
-
-        -- a seed of one letter matches most of the database; treat the
-        -- query as "no filter yet" (still typing the first word)
-        if #Items.fold_needle(terms[1]) < 2 then
-            return nil
-        end
-
-        local set, count = Items.search(terms[1])
-        for term_index = 2, #terms do
-            if count == 0 then
-                break
-            end
-            set, count = Items.search_within(terms[term_index], set)
-        end
-        for ordinal in pairs(set) do
-            result[ordinal] = true
-        end
-    end
-
-    return result
+    return SearchQuery.evaluate_domain(state.normalized_groups, Lore.Items)
 end
 
 function ItemBrowserPanel:_rebuild_filtered()

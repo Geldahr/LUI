@@ -2192,6 +2192,10 @@ _G.LUI.Settings.Defaults.Schema =
 			["left"] = 1791.000000,
 			["top"] = 515.000000,
 		},
+		["quest_card_window"] = {
+			["left"] = 1791.000000,
+			["top"] = 515.000000,
+		},
 	},
 	["status_bar"] = {
 		["layout"] = {
