@@ -360,7 +360,7 @@ local IMPORT_PLAN = {
     function() import("LUI.src.Data.Bestiary.index") end,
 }
 
--- returns true when imports and full decode are complete
+-- returns true when imports, the full decode and the quests staging are done
 function Bestiary.prewarm_step()
     if Bestiary.loaded ~= true then
         local index = Bestiary._import_index or 1
@@ -373,15 +373,39 @@ function Bestiary.prewarm_step()
     end
 
     local next_ordinal = Bestiary._prewarm_next or 1
-    local last = next_ordinal + PREWARM_BATCH - 1
-    if last > Bestiary.count then
-        last = Bestiary.count
+    if next_ordinal <= Bestiary.count then
+        local last = next_ordinal + PREWARM_BATCH - 1
+        if last > Bestiary.count then
+            last = Bestiary.count
+        end
+        for ordinal = next_ordinal, last do
+            Bestiary.decode(ordinal)
+        end
+        Bestiary._prewarm_next = last + 1
+        return false
     end
-    for ordinal = next_ordinal, last do
-        Bestiary.decode(ordinal)
+
+    -- bestiary done: stage the quests + npcs domain through the same pump
+    -- (one file import per step), so the first Quests tab open pays no
+    -- synchronous multi-MB import (the texts_<lang> blob stays lazy)
+    if Bestiary._quests_plan == nil then
+        local plan = Lore.quests_import_plan()
+        local lang = Lore.language()
+        plan[#plan + 1] = "LUI.src.Data.Npcs.manifest"
+        plan[#plan + 1] = "LUI.src.Data.Npcs.records"
+        plan[#plan + 1] = "LUI.src.Data.Npcs.labels_" .. lang
+        Bestiary._quests_plan = plan
+        Bestiary._quests_import_index = 1
     end
-    Bestiary._prewarm_next = last + 1
-    return Bestiary._prewarm_next > Bestiary.count
+    local index = Bestiary._quests_import_index
+    if index <= #Bestiary._quests_plan then
+        import(Bestiary._quests_plan[index])
+        Bestiary._quests_import_index = index + 1
+        return false
+    end
+    Lore.load_quests()
+    Lore.load_npcs()
+    return true
 end
 
 function Bestiary.start_prewarm()

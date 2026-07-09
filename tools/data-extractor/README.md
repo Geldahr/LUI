@@ -33,7 +33,12 @@ NPC ids referenced by quest dialogs (8,526 of them) to localized
 record — sections split by \\30, objectives by \\31, and within one
 objective the description + its \"how to complete\" condition texts
 (progress/lore strings) by \\29. Localized name/search blobs and
-quest/deed category tables as usual. Records are stored in display
+quest/deed category tables as usual. Every `search_<lang>.lua`
+(items/quests/recipes) also carries `D.STOP2`: the 2-char folded needles
+matching >5% of the domain's entries, which the runtime query layer
+treats as "still typing" instead of paying a tens-of-ms cold blob scan
+(the current checked-in files were patched to match the emitter; the
+next regeneration reproduces them). Records are stored in display
 order — level ascending, then folded en name — so category/level
 filters list correctly with zero runtime sorting; non-en languages get
 an `order_<lang>.lua` ordinal permutation with the same level order but

@@ -72,6 +72,9 @@ local BASE_TAXONOMY_CHAR_W = 5.8
 local BASE_TAXONOMY_PAD_X = 5
 local BASE_RESIZE_REFRESH_DELAY = 0.10
 local BASE_RESIZE_REFLOW_MIN_INTERVAL = 0.50
+-- kill/observation events bump the cache generation many times per second
+-- in combat; a full 12k-record rebuild per bump would stutter every kill
+local BASE_STORE_REFRESH_MIN_INTERVAL = 2.0
 local BASE_COLUMN_W = 600
 
 local AREA_COMPASS_ICON = "LUI/assets/ui/compass_64.tga"
@@ -292,29 +295,7 @@ local function _format_range(min_value, max_value)
 end
 
 local function _format_number(value)
-    local n = math.floor(_to_number(value, 0) + 0.5)
-    local text = tostring(math.abs(n))
-    local out = {}
-    local count = 0
-    for i = #text, 1, -1 do
-        count = count + 1
-        out[#out + 1] = string.sub(text, i, i)
-        if count == 3 and i > 1 then
-            out[#out + 1] = " "
-            count = 0
-        end
-    end
-
-    local reversed = {}
-    for i = #out, 1, -1 do
-        reversed[#reversed + 1] = out[i]
-    end
-
-    local joined = table.concat(reversed)
-    if n < 0 then
-        return "-" .. joined
-    end
-    return joined
+    return Encyclopedia.CardWidgets.format_number(_to_number(value, 0))
 end
 
 local function _format_number_range(min_value, max_value)
@@ -337,19 +318,7 @@ local function _format_number_range(min_value, max_value)
 end
 
 local function _format_percent(percent)
-    local value = _to_number(percent, 0)
-    local text
-    if value >= 10 then
-        text = string.format("%.1f", value)
-    elseif value >= 1 then
-        text = string.format("%.1f", value)
-    else
-        text = string.format("%.2f", value)
-    end
-
-    text = text:gsub("(%..-)0+$", "%1")
-    text = text:gsub("%.$", "")
-    return text .. "%"
+    return Encyclopedia.CardWidgets.format_percent(_to_number(percent, 0))
 end
 
 local function _parse_level_filter_value(text)
@@ -1112,7 +1081,10 @@ function EncyclopediaWindow:Constructor()
     self:SetWantsUpdates(false)
 
     self.last_update_at = 0
-    self.update_every = 0.5
+    -- content only changes on kill events and debounced resizes; this
+    -- window has no reason to tick at the vitals refresh rate
+    self.update_every = 0.25
+    self._last_store_refresh_at = 0
     self._last_generation = nil
     self._suppress_size_changed = false
     self._resize_dirty = false
@@ -1439,6 +1411,7 @@ function EncyclopediaWindow:Constructor()
             local tracker = Windows.bestiary_tracker
             tracker:flush_pending()
             self.last_update_at = 0
+            self:ensure_area_shortcut()
             self:bring_to_front()
             -- generation-gated: flush_pending above bumps the cache
             -- generation when new kills landed, so an unchanged bestiary
@@ -1516,7 +1489,6 @@ end
 
 function EncyclopediaWindow:apply_settings()
     UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
-    self.update_every = 1.0 / math.max(1, _to_number(State.settings.global.refresh_rate, 30))
     local min_w, min_h = self:_minimum_window_size()
     self:set_minimum_size(min_w, min_h)
 
@@ -1566,8 +1538,24 @@ function EncyclopediaWindow:apply_settings()
         self:set_geometry(window)
     end
 
+    -- chip/row metrics are scale-dependent: drop every cached row layout
+    -- (apply_view alone must not, so typing keystrokes reuse the cache)
+    self:_invalidate_row_layouts()
     self:layout()
     self:apply_view()
+end
+
+function EncyclopediaWindow:_invalidate_row_layouts()
+    for i = 1, #self.all_records do
+        local record = self.all_records[i]
+        record._layout_width = nil
+        record._chip_layout = nil
+        record._drop_height = nil
+        record._view_height = nil
+    end
+    self._prepared_content_w = 0
+    self._prepared_content_h = 0
+    self._prepared_record_key = 0
 end
 
 function EncyclopediaWindow:Update()
@@ -1586,7 +1574,6 @@ function EncyclopediaWindow:Update()
     end
     self.last_update_at = now
 
-    self:ensure_area_shortcut()
     self:sync_area_filter_query()
     self:apply_current_area_filter(false)
 
@@ -1594,7 +1581,8 @@ function EncyclopediaWindow:Update()
     tracker:flush_expired()
 
     local generation = BestiaryCache.generation or 0
-    if self._last_generation ~= generation then
+    if self._last_generation ~= generation
+        and (now - self._last_store_refresh_at) >= BASE_STORE_REFRESH_MIN_INTERVAL then
         self:refresh_from_store(true)
     elseif self._resize_dirty == true
         and (now - self._last_resize_at) >= BASE_RESIZE_REFRESH_DELAY
@@ -1687,6 +1675,13 @@ function EncyclopediaWindow:apply_current_area_filter(force)
         return
     end
 
+    -- the periodic Update call is only a safety net: an already-applied
+    -- area must not re-parse the query text every tick (user edits clear
+    -- current_area via TextChanged, so divergence cannot happen silently)
+    if force ~= true and query == self._applied_area_raw then
+        return
+    end
+
     local location_parts = _parse_location_token_value(query)
     if location_parts == nil then
         error("Invalid bestiary area filter query")
@@ -1699,11 +1694,13 @@ function EncyclopediaWindow:apply_current_area_filter(force)
 
     local state = SearchQuery.parse(self.filter_tb:GetText() or "", BESTIARY_QUERY_TOKENS)
     if force ~= true and self.last_applied_area_query == location_value and state.token_map.loc == location_value then
+        self._applied_area_raw = query
         return
     end
 
     self.query_state = state
     self.last_applied_area_query = location_value
+    self._applied_area_raw = query
     self:_apply_location_query_value(location_value)
 end
 
@@ -2004,9 +2001,7 @@ function EncyclopediaWindow:layout()
     self.next_button:SetPosition(nav_w + gap + page_w + gap, 0)
     self.next_button:SetSize(nav_w, bar_h)
 
-    local level_label_w = math.max(
-        _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
-    )
+    local level_label_w = _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
     local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)
     local level_dash_w = _scaled_int(10)
     local level_block_w = level_label_w + gap + level_input_w + gap + level_dash_w + gap + level_input_w
@@ -2145,6 +2140,7 @@ function EncyclopediaWindow:refresh_from_store(force)
         return
     end
 
+    self._last_store_refresh_at = Turbine.Engine.GetGameTime()
     self._last_generation = generation
     self.all_records = _build_records()
     self._prepared_content_w = 0
@@ -2344,9 +2340,8 @@ function EncyclopediaWindow:apply_view()
     end)
 
     self.records = filtered
-    self._prepared_content_w = 0
-    self._prepared_content_h = 0
-    self._prepared_record_key = 0
+    -- row layouts stay cached (width-keyed): a filter/search keystroke
+    -- changes which records show, never how a record lays out
     self:refresh_layout_view(true)
 end
 

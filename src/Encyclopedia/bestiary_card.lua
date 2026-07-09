@@ -178,29 +178,7 @@ local function _merged_entry_for_name(name)
 end
 
 local function _format_number(value)
-    local n = math.floor(_to_number(value, 0) + 0.5)
-    local text = tostring(math.abs(n))
-    local out = {}
-    local count = 0
-    for i = #text, 1, -1 do
-        count = count + 1
-        out[#out + 1] = string.sub(text, i, i)
-        if count == 3 and i > 1 then
-            out[#out + 1] = " "
-            count = 0
-        end
-    end
-
-    local reversed = {}
-    for i = #out, 1, -1 do
-        reversed[#reversed + 1] = out[i]
-    end
-
-    local joined = table.concat(reversed)
-    if n < 0 then
-        return "-" .. joined
-    end
-    return joined
+    return CW.format_number(_to_number(value, 0))
 end
 
 local function _format_range(min_value, max_value)
@@ -584,17 +562,7 @@ local function _display_text(value)
 end
 
 local function _format_percent(percent)
-    local value = _to_number(percent, 0)
-    local text
-    if value >= 1 then
-        text = string.format("%.1f", value)
-    else
-        text = string.format("%.2f", value)
-    end
-
-    text = text:gsub("(%..-)0+$", "%1")
-    text = text:gsub("%.$", "")
-    return text .. "%"
+    return CW.format_percent(_to_number(percent, 0))
 end
 
 local function _has_visible_range(min_value, max_value)

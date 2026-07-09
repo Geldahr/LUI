@@ -132,6 +132,47 @@ function CardWidgets.estimate_text_width(text, base_char_w)
     return math.floor((string.len(text or "") * base_char_w * State.settings.global.scale) + 0.5)
 end
 
+-- shared number/percent rendering for bestiary rows, cards and chips
+-- (thousands grouped with spaces; percents trimmed to their precision)
+function CardWidgets.format_number(value)
+    local n = math.floor(value + 0.5)
+    local text = tostring(math.abs(n))
+    local out = {}
+    local count = 0
+    for i = #text, 1, -1 do
+        count = count + 1
+        out[#out + 1] = string.sub(text, i, i)
+        if count == 3 and i > 1 then
+            out[#out + 1] = " "
+            count = 0
+        end
+    end
+
+    local reversed = {}
+    for i = #out, 1, -1 do
+        reversed[#reversed + 1] = out[i]
+    end
+
+    local joined = table.concat(reversed)
+    if n < 0 then
+        return "-" .. joined
+    end
+    return joined
+end
+
+function CardWidgets.format_percent(value)
+    local text
+    if value >= 1 then
+        text = string.format("%.1f", value)
+    else
+        text = string.format("%.2f", value)
+    end
+
+    text = text:gsub("(%..-)0+$", "%1")
+    text = text:gsub("%.$", "")
+    return text .. "%"
+end
+
 function CardWidgets.estimate_chip_width(text)
     local pad_x = CardWidgets.scaled_int(BASE.CHIP_PAD_X)
     local border_w = CardWidgets.scaled_int(BASE.CHIP_BORDER)

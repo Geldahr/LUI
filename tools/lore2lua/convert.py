@@ -143,6 +143,11 @@ def build_names_by_lang(data_dir, db, langs, ids, en_fallback):
     return names_by_lang, baked_report, missing_en
 
 
+# a 2-char needle matching more than this share of a domain's entries is
+# baked into D.STOP2 and treated as "still typing" by the runtime
+STOP2_SHARE = 0.05
+
+
 def emit_lang_files(out_dir, ids, names_by_lang, langs, search_mask=None):
     """labels_<lang> (LBL/LOFF), names_<lang> (NAME/NOFF, sorted) and search_<lang> (SRCH/SOFF) per language.
 
@@ -202,10 +207,30 @@ def emit_lang_files(out_dir, ids, names_by_lang, langs, search_mask=None):
         soff.append(p)
         soff_width = width_for(p)
         soff_blob = "".join(b93(x, soff_width) for x in soff)
+        # stop bigrams: 2-char needles matching more than STOP2_SHARE of
+        # the entries. A cold runtime seed scan for one of those costs
+        # tens of ms and filters out nearly nothing, so evaluate_domain
+        # treats them as "still typing" instead of scanning
+        bigram_hits = {}
+        for text in folded:
+            entry_bigrams = set()
+            data = text.encode("utf-8")
+            for k in range(len(data) - 1):
+                pair = data[k:k + 2]
+                # printable ASCII only: multi-byte pairs never get close
+                # to the share threshold and would need encoding care
+                if 32 <= pair[0] <= 126 and 32 <= pair[1] <= 126:
+                    entry_bigrams.add(pair)
+            for bigram in entry_bigrams:
+                bigram_hits[bigram] = bigram_hits.get(bigram, 0) + 1
+        threshold = len(folded) * STOP2_SHARE
+        stop2 = sorted(b for b, hits in bigram_hits.items() if hits > threshold)
         sizes["search_%s.lua" % lang] = write_file(out_dir, "search_%s.lua" % lang, [
             "D.soff_width = %d\n" % soff_width,
             emit_blob("SRCH", srch_blob),
             emit_blob("SOFF", soff_blob),
+            "D.STOP2 = { %s }\n" % ", ".join(
+                "[%s]=true" % lua_string(b.decode("ascii")) for b in stop2),
         ])
 
     return sizes, ord_width

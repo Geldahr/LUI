@@ -458,7 +458,14 @@ function QuestBrowserPanel:layout()
     self.results_label:SetPosition(margin_l + inner_w - results_w, footer_y)
     self.results_label:SetSize(results_w, page_bar_h)
 
-    self:_refresh_list()
+    -- SizeChanged fires every frame during a drag resize: resize frames
+    -- only move controls; rows re-render only when the page capacity
+    -- actually changed (filter edits re-render via _on_filters_changed)
+    local capacity = self:_page_capacity()
+    if capacity ~= self._layout_capacity then
+        self._layout_capacity = capacity
+        self:_refresh_list()
+    end
 end
 
 -- ---- Quests tab host: nested sub-tab bar (Quests / Deeds) ----------------

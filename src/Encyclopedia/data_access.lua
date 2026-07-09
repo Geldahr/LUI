@@ -194,6 +194,26 @@ local function _normalize_cache_table(cache)
         end
     end
 
+    -- entries with no kills and no drops are dead weight: the removed
+    -- live stat capture created one for every mob ever targeted. They
+    -- can never gain content anymore, so drop them from the saved cache
+    local dead = {}
+    for name, entry in pairs(cache) do
+        local alive = type(entry) == "table"
+            and (_to_number(entry.k, 0) > 0
+                or (type(entry.d) == "table" and next(entry.d) ~= nil))
+        if alive ~= true then
+            dead[#dead + 1] = name
+        end
+    end
+    for i = 1, #dead do
+        cache[dead[i]] = nil
+        changed = true
+    end
+    if changed == true then
+        BestiaryCache.dirty = true
+    end
+
     return cache, changed
 end
 
@@ -700,14 +720,27 @@ function Encyclopedia.DataAccess.is_alias_entry(entry)
     return _is_alias_entry(entry)
 end
 
+-- legacy-name normalization is a one-time migration pass, not a per-access
+-- cost: runtime writes only insert already-normalized names, so the scan
+-- runs once per cache table plus once more after the async disk load
+-- merges historical entries in (ensure_cache sits on the combat hot path
+-- via the tracker's morale/power callbacks)
+local CACHE_NORMALIZED_FOR = nil
+local CACHE_NORMALIZED_LOADED = false
+
 function Encyclopedia.DataAccess.ensure_cache()
     local cache = Persistence.ensure_bestiary_cache()
 
-    local changed = false
-    cache, changed = _normalize_cache_table(cache)
-    if changed == true then
-        CACHE_INDEX = nil
-        CACHE_GENERATION = nil
+    local loaded = BestiaryCache.loaded == true
+    if CACHE_NORMALIZED_FOR ~= cache or (loaded == true and CACHE_NORMALIZED_LOADED ~= true) then
+        local changed = false
+        cache, changed = _normalize_cache_table(cache)
+        if changed == true then
+            CACHE_INDEX = nil
+            CACHE_GENERATION = nil
+        end
+        CACHE_NORMALIZED_FOR = cache
+        CACHE_NORMALIZED_LOADED = loaded
     end
 
     return cache

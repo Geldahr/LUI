@@ -11,7 +11,6 @@ local Locale = _G.LUI.Locale
 local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Windows = _G.LUI.Runtime.Windows
 local class = _G.LUI.Core.class
-import "Turbine.Gameplay"
 
 import "LUI.src.Utils.callbacks"
 import "LUI.src.Utils.coords"
@@ -198,24 +197,14 @@ local function _parse_drop_name(message)
     return _trim(string.sub(bracketed, 2, -2))
 end
 
+-- Chat-based kill/drop capture only: the target's morale/power cannot be
+-- read reliably at selection time (entity data streams in late), so live
+-- stat observation was dropped entirely - the packed wiki bestiary
+-- already carries the morale/power ranges the cards display.
 function Encyclopedia.Collector:Constructor()
-    self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    self.player_name = nil
     self.enabled = false
-    self._cb_target = nil
     self._cb_chat = nil
-    self._tracked_target = nil
-    self._tracked_target_attrs = nil
-    self._cb_target_morale = nil
-    self._cb_target_max_morale = nil
-    self._cb_target_power = nil
-    self._cb_target_max_power = nil
-    self._cb_target_wrath = nil
     self._pending_kills = {}
-
-    if self.player ~= nil and self.player.GetName ~= nil then
-        self.player_name = self.player:GetName()
-    end
 end
 
 function Encyclopedia.Collector:is_enabled()
@@ -233,12 +222,8 @@ function Encyclopedia.Collector:apply_settings()
 
     self:_bind()
 
-    if should_enable == true then
-        self:_track_current_target()
-    else
+    if should_enable ~= true then
         self:_flush_pending_kills(true)
-        self:_unbind_target_events()
-        self:_unbind_player_events()
     end
 end
 
@@ -261,21 +246,6 @@ function Encyclopedia.Collector:destroy()
 end
 
 function Encyclopedia.Collector:_bind()
-    if self.player == nil then
-        self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
-        if self.player ~= nil and self.player.GetName ~= nil then
-            self.player_name = self.player:GetName()
-        end
-    end
-
-    if self.enabled == true and self._cb_target == nil and self.player ~= nil then
-        self._cb_target = add_callback(self.player, "TargetChanged", function()
-            self:_on_target_changed()
-        end)
-    elseif self.enabled ~= true and self._cb_target ~= nil then
-        self:_unbind_player_events()
-    end
-
     if self._cb_chat == nil then
         self._cb_chat = add_callback(Turbine.Chat, "Received", function(_, args)
             self:_on_chat_received(args)
@@ -283,149 +253,10 @@ function Encyclopedia.Collector:_bind()
     end
 end
 
-function Encyclopedia.Collector:_unbind_player_events()
-    if self._cb_target ~= nil and self.player ~= nil then
-        remove_callback(self.player, "TargetChanged", self._cb_target)
-    end
-    self._cb_target = nil
-end
-
-function Encyclopedia.Collector:_unbind_target_events()
-    if self._tracked_target ~= nil then
-        if self._cb_target_morale ~= nil then
-            remove_callback(self._tracked_target, "MoraleChanged", self._cb_target_morale)
-            self._cb_target_morale = nil
-        end
-        if self._cb_target_max_morale ~= nil then
-            remove_callback(self._tracked_target, "MaxMoraleChanged", self._cb_target_max_morale)
-            self._cb_target_max_morale = nil
-        end
-        if self._cb_target_power ~= nil then
-            remove_callback(self._tracked_target, "PowerChanged", self._cb_target_power)
-            self._cb_target_power = nil
-        end
-        if self._cb_target_max_power ~= nil then
-            remove_callback(self._tracked_target, "MaxPowerChanged", self._cb_target_max_power)
-            self._cb_target_max_power = nil
-        end
-    end
-
-    if self._tracked_target_attrs ~= nil and self._cb_target_wrath ~= nil then
-        remove_callback(self._tracked_target_attrs, "WrathChanged", self._cb_target_wrath)
-        self._cb_target_wrath = nil
-    end
-
-    self._tracked_target = nil
-    self._tracked_target_attrs = nil
-end
-
 function Encyclopedia.Collector:_unbind()
-    self:_unbind_target_events()
-    self:_unbind_player_events()
-
     if self._cb_chat ~= nil then
         remove_callback(Turbine.Chat, "Received", self._cb_chat)
         self._cb_chat = nil
-    end
-end
-
-function Encyclopedia.Collector:_track_current_target()
-    if self.player == nil or self.player.GetTarget == nil then
-        self:_unbind_target_events()
-        return
-    end
-
-    self:_track_target(self.player:GetTarget())
-end
-
-function Encyclopedia.Collector:_track_target(target)
-    if target == self._tracked_target then
-        return
-    end
-
-    self:_unbind_target_events()
-
-    if self.enabled ~= true or target == nil then
-        return
-    end
-    if target.GetName == nil or target.GetLevel == nil or target.GetMaxMorale == nil then
-        return
-    end
-    if target.IsLocalPlayer ~= nil and target:IsLocalPlayer() == true then
-        return
-    end
-
-    self._tracked_target = target
-    self._cb_target_morale = add_callback(target, "MoraleChanged", function()
-        self:_record_target(target)
-    end)
-    self._cb_target_max_morale = add_callback(target, "MaxMoraleChanged", function()
-        self:_record_target(target)
-    end)
-
-    if target.GetMaxPower ~= nil then
-        self._cb_target_power = add_callback(target, "PowerChanged", function()
-            self:_record_target(target)
-        end)
-        self._cb_target_max_power = add_callback(target, "MaxPowerChanged", function()
-            self:_record_target(target)
-        end)
-    end
-
-    if target.GetClassAttributes ~= nil then
-        local attrs = target:GetClassAttributes()
-        if attrs ~= nil and attrs.GetWrath ~= nil then
-            self._tracked_target_attrs = attrs
-            self._cb_target_wrath = add_callback(attrs, "WrathChanged", function()
-                self:_record_target(target)
-            end)
-        end
-    end
-end
-
-function Encyclopedia.Collector:_record_target(target)
-    if self.enabled ~= true or target == nil then
-        return
-    end
-    if target.GetName == nil or target.GetLevel == nil or target.GetMaxMorale == nil then
-        return
-    end
-    if target.IsLocalPlayer ~= nil and target:IsLocalPlayer() == true then
-        return
-    end
-
-    local name = _normalize_kill_name(target:GetName())
-    local level = _to_number(target:GetLevel(), 0)
-    local max_morale = _to_number(target:GetMaxMorale(), 0)
-    if name == nil or level <= 0 or max_morale <= 0 then
-        return
-    end
-
-    local max_power = 0
-    if target.GetMaxPower ~= nil then
-        max_power = _to_number(target:GetMaxPower(), 0)
-    end
-
-    local entry = _ensure_entry(name)
-    local changed = false
-
-    local level_entry = entry.levels[level]
-    if type(level_entry) ~= "table" then
-        entry.levels[level] = { m = max_morale, p = max_power }
-        changed = true
-    else
-        if max_morale > _to_number(level_entry.m, 0) then
-            level_entry.m = max_morale
-            changed = true
-        end
-        if max_power > _to_number(level_entry.p, 0) then
-            level_entry.p = max_power
-            changed = true
-        end
-    end
-
-    if changed then
-        _touch_generation()
     end
 end
 
@@ -462,14 +293,6 @@ function Encyclopedia.Collector:_flush_pending_kills(flush_all)
         table.remove(self._pending_kills, 1)
         self:_commit_kill(record)
     end
-end
-
-function Encyclopedia.Collector:_on_target_changed()
-    if self.enabled ~= true then
-        return
-    end
-
-    self:_track_current_target()
 end
 
 function Encyclopedia.Collector:_on_chat_received(args)

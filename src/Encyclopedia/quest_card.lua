@@ -482,14 +482,17 @@ local function _texts_block(texts)
 end
 
 -- wrapped-line estimate for the objectives box height (~66 chars/line at
--- the card's width and text size); the box scrolls when it falls short
+-- the card's width and text size); the box scrolls when it falls short.
+-- Length counts characters, not bytes: accented fr/de text is multi-byte
+-- and would otherwise overestimate by up to ~15%
 local function _estimate_lines(text)
     if text == "" then
         return 0
     end
     local lines = 0
     for line in string.gmatch(text .. "\n", "([^\n]*)\n") do
-        lines = lines + math.max(1, math.ceil(#line / 66))
+        local _, continuation_bytes = string.gsub(line, "[\128-\191]", "")
+        lines = lines + math.max(1, math.ceil((#line - continuation_bytes) / 66))
     end
     return lines
 end

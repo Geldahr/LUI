@@ -301,6 +301,10 @@ function Lore.load_items()
     Items.QUALITY_LABELS = Data["Items.classes"].QUALITIES[lang]
     Items.BK = Data["Items.buckets_" .. lang]
     Items.S = Data["Items.search_" .. lang]
+    -- baked ultra-common 2-char needles: a cold seed scan for these would
+    -- match >5% of the domain (tens of ms) while filtering out nearly
+    -- nothing, so the query layer treats them as "still typing"
+    Items.STOP2 = Items.S.STOP2
     Items._bucket_lists = {}
     Items._search_cache = {}
     Items.QUALITY_NAMES = Items.M.enums.quality
@@ -688,6 +692,8 @@ function Lore.load_quests()
     Quests.L = Data["Quests.labels_" .. lang]
     Quests.NM = Data["Quests.names_" .. lang]
     Quests.S = Data["Quests.search_" .. lang]
+    -- ultra-common 2-char needles, same contract as Items.STOP2
+    Quests.STOP2 = Quests.S.STOP2
     Quests.ORD = lang ~= "en" and Data["Quests.order_" .. lang] or nil
     Quests.QUEST_CATS = Data["Quests.categories"].QUEST_CATS[lang]
     Quests.DEED_CATS = Data["Quests.categories"].DEED_CATS[lang]
@@ -845,34 +851,36 @@ end
 -- ordinals of one kind ("quest" or "deed"), in display order: level
 -- ascending, then folded name. For en that is the record (= ordinal)
 -- order; other languages iterate their baked ORD permutation, which
--- keeps the level order but tie-breaks on the local name. Built once
--- per session from the kind byte of every record
+-- keeps the level order but tie-breaks on the local name. Both lists are
+-- built in one pass over the kind byte of every record, once per session
 function Quests.kind_list(kind)
-    Quests._kind_lists = Quests._kind_lists or {}
-    local cached = Quests._kind_lists[kind]
-    if cached ~= nil then
-        return cached
-    end
-    local want_deed = kind == "deed"
-    local M = Quests.M
-    local R = Quests.R
-    local ORD = Quests.ORD
-    local ow = ORD ~= nil and ORD.ord_width or 0
-    local w = M.widths.deed
-    local list, n = {}, 0
-    for k = 1, Quests.count do
-        local ordinal = k
-        if ORD ~= nil then
-            ordinal = u(ORD.ORD, (k - 1) * ow + 1, ow)
+    local lists = Quests._kind_lists
+    if lists == nil then
+        local M = Quests.M
+        local R = Quests.R
+        local ORD = Quests.ORD
+        local ow = ORD ~= nil and ORD.ord_width or 0
+        local w = M.widths.deed
+        local quests_list, nq = {}, 0
+        local deeds_list, nd = {}, 0
+        for k = 1, Quests.count do
+            local ordinal = k
+            if ORD ~= nil then
+                ordinal = u(ORD.ORD, (k - 1) * ow + 1, ow)
+            end
+            local p = u(R.OFF, (ordinal - 1) * M.off_width + 1, M.off_width)
+            if u(R.DATA, p, w) == 1 then
+                nd = nd + 1
+                deeds_list[nd] = ordinal
+            else
+                nq = nq + 1
+                quests_list[nq] = ordinal
+            end
         end
-        local p = u(R.OFF, (ordinal - 1) * M.off_width + 1, M.off_width)
-        if (u(R.DATA, p, w) == 1) == want_deed then
-            n = n + 1
-            list[n] = ordinal
-        end
+        lists = { quest = quests_list, deed = deeds_list }
+        Quests._kind_lists = lists
     end
-    Quests._kind_lists[kind] = list
-    return list
+    return lists[kind]
 end
 
 -- quest flag bits (tools/data-extractor QUEST_FLAGS)
