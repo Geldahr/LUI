@@ -48,6 +48,20 @@ def fold(name):
     return unicodedata.normalize("NFC", "".join(out))
 
 
+_TEMPLATE_REF = re.compile(r"\$\{([^}:|]*)(?::([^}|]*)[^}]*)?\}")
+_GENDER_TAGS = re.compile(r"\[[^\]]*\]")
+
+
+def display_sort_text(label):
+    """Collation text for a display label: gender templates ${VAR:a|b}
+    sort as their first variant, bare ${VAR} refs as nothing ('$' would
+    otherwise clump every templated name before all plain names)."""
+    if "${" not in label:
+        return label
+    text = _TEMPLATE_REF.sub(lambda m: m.group(2) or "", label)
+    return _GENDER_TAGS.sub("", text)
+
+
 def parse_labels(data_dir, lang, db, raw_keys=False):
     path = os.path.join(data_dir, "labels", lang, db + ".xml")
     labels = {}
@@ -545,6 +559,27 @@ def convert_items(data_dir, out_dir, langs, records=None, aux=None):
     cls_parts.append("D.RECIPE_CLASSES = { %s }\n" % ", ".join(
         str(c) for c in recipe_class_codes))
 
+    # per-language, per-bucket class-code order for the Type dropdown,
+    # sorted by the localized label (recipe classes excluded: the
+    # browser inserts their grouped entry itself; unlabeled codes
+    # excluded: the dropdown never shows them)
+    recipe_class_set = set(recipe_class_codes)
+    cls_parts.append("D.CLASS_ORDER = {\n")
+    for lang in langs:
+        def class_label(code):
+            return class_labels[lang].get(code) or en_class_label.get(code)
+        bucket_parts = []
+        for b in range(1, len(BUCKETS) + 1):
+            codes = [c for c in bucket_classes[b]
+                     if c and c not in recipe_class_set
+                     and class_label(c) is not None]
+            codes.sort(key=lambda c: (fold(display_sort_text(class_label(c))),
+                                      class_label(c), c))
+            bucket_parts.append("%s = { %s }" % (
+                BUCKETS[b - 1], ", ".join(str(c) for c in codes)))
+        cls_parts.append("%s = { %s },\n" % (lang, ", ".join(bucket_parts)))
+    cls_parts.append("}\n")
+
     # runtime fold map: non-ASCII chars -> folded ascii, so typed needles
     # fold exactly like the build-time search blobs
     fold_pairs = {}
@@ -569,7 +604,8 @@ def convert_items(data_dir, out_dir, langs, records=None, aux=None):
         parts = ["D.ord_width = %d\n" % bucket_ord_w]
         for b in range(1, len(BUCKETS) + 1):
             ordinals = [n + 1 for n, i in enumerate(ids) if bucket_by_id[i] == b]
-            ordinals.sort(key=lambda o: (fold(names[o - 1]), names[o - 1]))
+            ordinals.sort(key=lambda o: (fold(display_sort_text(names[o - 1])),
+                                         names[o - 1]))
             parts.append(emit_blob("B_" + BUCKETS[b - 1].upper(),
                                    "".join(b93(o, bucket_ord_w) for o in ordinals)))
         sizes["buckets_%s.lua" % lang] = write_file(out_dir, "buckets_%s.lua" % lang, parts)
@@ -1041,7 +1077,13 @@ def convert_quests(out_dir, langs, records, aux):
     (description / objective texts / bestower dialog texts) and localized
     category tables."""
     t0 = time.time()
-    ids = sorted(records)
+    # record order = display order: level, then folded EN name. Category
+    # (zone) filters iterate records in file order and come out sorted by
+    # level then name with zero runtime sorting; the search bar uses the
+    # per-language alphabetical names blobs instead.
+    ids = sorted(records, key=lambda i: (records[i]["level"],
+                                         fold(display_sort_text(records[i]["name"])),
+                                         records[i]["name"], i))
     count = len(ids)
     print("packing %d quest/deed records" % count)
 
@@ -1125,9 +1167,22 @@ def convert_quests(out_dir, langs, records, aux):
     off_width = width_for(p)
     off_blob = "".join(b93(x, off_width) for x in offs)
 
-    base_id = ids[0]
-    id_width = width_for(ids[-1] - base_id)
+    base_id = min(ids)
+    id_width = width_for(max(ids) - base_id)
     ids_blob = "".join(b93(i - base_id, id_width) for i in ids)
+
+    # id lookup index: ids ascending (IDX) with the matching ordinal
+    # (IDO) — records themselves are in display order, so ordinal_of
+    # binary-searches these instead of IDS
+    ord_width = width_for(count)
+    by_id = sorted(range(count), key=lambda n: ids[n])
+    idx_blob = "".join(b93(ids[n] - base_id, id_width) for n in by_id)
+    ido_blob = "".join(b93(n + 1, ord_width) for n in by_id)
+    for k in range(count):
+        rid = u93(idx_blob, k * id_width, id_width) + base_id
+        o = u93(ido_blob, k * ord_width, ord_width)
+        if ids[o - 1] != rid:
+            raise AssertionError("id index mismatch at position %d" % k)
 
     # round-trip: decode everything back and compare
     def decode(pos):
@@ -1179,6 +1234,8 @@ def convert_quests(out_dir, langs, records, aux):
     sizes = {}
     sizes["records.lua"] = write_file(out_dir, "records.lua", [
         emit_blob("IDS", ids_blob),
+        emit_blob("IDX", idx_blob),
+        emit_blob("IDO", ido_blob),
         emit_blob("OFF", off_blob),
         emit_blob("DATA", data_blob),
     ])
@@ -1222,6 +1279,25 @@ def convert_quests(out_dir, langs, records, aux):
     lang_sizes, _ = emit_lang_files(out_dir, ids, names_by_lang, langs)
     sizes.update(lang_sizes)
 
+    # per-language display-order permutations: the record order is
+    # (level, folded en name), so en listings iterate ordinals directly;
+    # de/fr get the same level order but their own name tie-break via an
+    # ordinal permutation sorted by (level, folded local label)
+    for lang in langs:
+        if lang == "en":
+            continue
+        names = names_by_lang[lang]
+        order = sorted(range(count),
+                       key=lambda n: (records[ids[n]]["level"],
+                                      fold(display_sort_text(names[n])),
+                                      names[n], n))
+        sizes["order_%s.lua" % lang] = write_file(
+            out_dir, "order_%s.lua" % lang, [
+                "D.ord_width = %d\n" % ord_width,
+                emit_blob("ORD", "".join(b93(n + 1, ord_width)
+                                         for n in order)),
+            ])
+
     # localized category tables (used codes only), per kind
     used = {"quest": set(), "deed": set()}
     for i in ids:
@@ -1240,14 +1316,26 @@ def convert_quests(out_dir, langs, records, aux):
                     entries.append("[%d]=%s" % (code, lua_string(value)))
             cat_parts.append("%s = { %s },\n" % (lang, ", ".join(entries)))
         cat_parts.append("}\n")
+        # dropdown code order per language, sorted by localized label
+        cat_parts.append("D.%s_ORDER = {\n" % table_name)
+        for lang in langs:
+            def cat_label(code):
+                return labels[lang].get(code) or labels["en"].get(code)
+            codes = [c for c in sorted(used[kind]) if cat_label(c) is not None]
+            codes.sort(key=lambda c: (fold(cat_label(c)), cat_label(c), c))
+            cat_parts.append("%s = { %s },\n" % (
+                lang, ", ".join(str(c) for c in codes)))
+        cat_parts.append("}\n")
     sizes["categories.lua"] = write_file(out_dir, "categories.lua", cat_parts)
 
     sizes["manifest.lua"] = write_file(out_dir, "manifest.lua", [
         "D.count = %d\n" % count,
         "D.base_id = %d\n" % base_id,
         "D.id_width = %d\n" % id_width,
+        "D.ord_width = %d\n" % ord_width,
         "D.off_width = %d\n" % off_width,
         "D.ref_base = %d\n" % ITEM_BASE,
+        "-- record order: level ascending, then folded en name\n",
         "D.widths = { %s }\n" % ", ".join(
             "%s = %d" % (k, W[k]) for k in sorted(W)),
         # maxTimes: 0 = not repeatable, 1 = unlimited, n+1 = n times

@@ -288,6 +288,9 @@ function Lore.load_items()
     Items.NM = Data["Items.names_" .. lang]
     Items.CLASSES = Data["Items.classes"].CLASSES[lang]
     Items.BUCKET_CLASSES = Data["Items.classes"].BUCKET_CLASSES
+    -- Type-dropdown class codes per bucket, label-sorted for this
+    -- language at pack time (no runtime sorting)
+    Items.CLASS_ORDER = Data["Items.classes"].CLASS_ORDER[lang]
     -- per-tier recipe scroll classes, grouped into one Type filter entry
     Items.RECIPE_CLASS_SET = {}
     local recipe_classes = Data["Items.classes"].RECIPE_CLASSES
@@ -671,6 +674,12 @@ function Lore.load_quests()
     import("LUI.src.Data.Quests.names_" .. lang)
     import("LUI.src.Data.Quests.search_" .. lang)
     import("LUI.src.Data.Quests.categories")
+    -- non-en display order: record order is (level, folded en name);
+    -- other languages carry a baked ordinal permutation with their own
+    -- name tie-break
+    if lang ~= "en" then
+        import("LUI.src.Data.Quests.order_" .. lang)
+    end
     -- the accent fold map is shared with the items domain
     import("LUI.src.Data.Items.classes")
     local Data = _G.LoreData
@@ -679,8 +688,13 @@ function Lore.load_quests()
     Quests.L = Data["Quests.labels_" .. lang]
     Quests.NM = Data["Quests.names_" .. lang]
     Quests.S = Data["Quests.search_" .. lang]
+    Quests.ORD = lang ~= "en" and Data["Quests.order_" .. lang] or nil
     Quests.QUEST_CATS = Data["Quests.categories"].QUEST_CATS[lang]
     Quests.DEED_CATS = Data["Quests.categories"].DEED_CATS[lang]
+    -- category dropdown code order, label-sorted for this language at
+    -- pack time (no runtime sorting)
+    Quests.QUEST_CATS_ORDER = Data["Quests.categories"].QUEST_CATS_ORDER[lang]
+    Quests.DEED_CATS_ORDER = Data["Quests.categories"].DEED_CATS_ORDER[lang]
     Quests.FOLD = Data["Items.classes"].FOLD
     Quests.count = Quests.M.count
     Quests._search_cache = {}
@@ -691,7 +705,7 @@ end
 -- staged import list for hitch-free loading (one import per tick)
 function Lore.quests_import_plan()
     local lang = Lore.language()
-    return {
+    local plan = {
         "LUI.src.Data.Quests.manifest",
         "LUI.src.Data.Quests.records",
         "LUI.src.Data.Quests.labels_" .. lang,
@@ -700,6 +714,10 @@ function Lore.quests_import_plan()
         "LUI.src.Data.Quests.categories",
         "LUI.src.Data.Items.classes",
     }
+    if lang ~= "en" then
+        plan[#plan + 1] = "LUI.src.Data.Quests.order_" .. lang
+    end
+    return plan
 end
 
 function Quests.find_ordinals(name)
@@ -711,17 +729,20 @@ function Quests.id_of(ordinal)
     return M.base_id + u(Quests.R.IDS, (ordinal - 1) * M.id_width + 1, M.id_width)
 end
 
--- exact-id binary search over the sorted IDS blob
+-- exact-id binary search over the id-sorted index (IDX ascending ids,
+-- IDO the matching ordinal): records themselves are in display order
+-- (level, then folded en name), so IDS is not searchable directly
 function Quests.ordinal_of(id)
     local M = Quests.M
     local target = id - M.base_id
-    local IDS, w = Quests.R.IDS, M.id_width
+    local R = Quests.R
+    local w = M.id_width
     local lo, hi = 1, Quests.count
     while lo <= hi do
         local mid = floor((lo + hi) / 2)
-        local v = u(IDS, (mid - 1) * w + 1, w)
+        local v = u(R.IDX, (mid - 1) * w + 1, w)
         if v == target then
-            return mid
+            return u(R.IDO, (mid - 1) * M.ord_width + 1, M.ord_width)
         elseif v < target then
             lo = mid + 1
         else
@@ -821,8 +842,11 @@ function Quests.brief(ordinal)
     return is_deed, level, min_level, category
 end
 
--- ordinals of one kind ("quest" or "deed"), in label-sorted (= ordinal)
--- order; built once per session from the kind byte of every record
+-- ordinals of one kind ("quest" or "deed"), in display order: level
+-- ascending, then folded name. For en that is the record (= ordinal)
+-- order; other languages iterate their baked ORD permutation, which
+-- keeps the level order but tie-breaks on the local name. Built once
+-- per session from the kind byte of every record
 function Quests.kind_list(kind)
     Quests._kind_lists = Quests._kind_lists or {}
     local cached = Quests._kind_lists[kind]
@@ -832,9 +856,15 @@ function Quests.kind_list(kind)
     local want_deed = kind == "deed"
     local M = Quests.M
     local R = Quests.R
+    local ORD = Quests.ORD
+    local ow = ORD ~= nil and ORD.ord_width or 0
     local w = M.widths.deed
     local list, n = {}, 0
-    for ordinal = 1, Quests.count do
+    for k = 1, Quests.count do
+        local ordinal = k
+        if ORD ~= nil then
+            ordinal = u(ORD.ORD, (k - 1) * ow + 1, ow)
+        end
         local p = u(R.OFF, (ordinal - 1) * M.off_width + 1, M.off_width)
         if (u(R.DATA, p, w) == 1) == want_deed then
             n = n + 1

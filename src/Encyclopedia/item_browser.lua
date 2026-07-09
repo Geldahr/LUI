@@ -343,32 +343,35 @@ end
 
 function ItemBrowserPanel:_class_options()
     local Items = Lore.Items
-    local codes = Items.BUCKET_CLASSES[self._bucket]
-    local sortable = {}
-    local has_recipe_classes = false
-    for i = 1, #codes do
-        local code = codes[i]
-        if Items.RECIPE_CLASS_SET[code] == true then
-            -- ~100 "Recipe: <profession> Tier n" classes collapse into one
-            -- grouped dropdown entry; rows keep their real class as meta
-            has_recipe_classes = true
-        else
-            local label = Items.CLASSES[code]
-            if label ~= nil then
-                sortable[#sortable + 1] = { code = code, label = label }
-            end
-        end
-    end
-    if has_recipe_classes == true then
-        sortable[#sortable + 1] = { code = FILTER_RECIPES_CODE, label = TR["Recipes"] }
-    end
-    table.sort(sortable, function(left, right)
-        return left.label < right.label
-    end)
+    -- label-sorted class codes baked per language by the extractor
+    -- (recipe classes excluded there); no runtime sorting
+    local order = Items.CLASS_ORDER[self._bucket]
     local labels, values = { TR["All"] }, { FILTER_ALL_CODE }
-    for i = 1, #sortable do
-        labels[#labels + 1] = sortable[i].label
-        values[#values + 1] = sortable[i].code
+    for i = 1, #order do
+        local code = order[i]
+        labels[#labels + 1] = Items.CLASSES[code]
+        values[#values + 1] = code
+    end
+    -- ~100 "Recipe: <profession> Tier n" classes collapse into one
+    -- grouped dropdown entry (rows keep their real class as meta); the
+    -- baked order cannot know its plugin-locale label, so place the one
+    -- entry with a single ordered insertion scan
+    local codes = Items.BUCKET_CLASSES[self._bucket]
+    for i = 1, #codes do
+        if Items.RECIPE_CLASS_SET[codes[i]] == true then
+            local recipes_label = TR["Recipes"]
+            local needle = string.lower(recipes_label)
+            local insert_at = #labels + 1
+            for k = 2, #labels do -- position 1 is "All"
+                if needle < string.lower(labels[k]) then
+                    insert_at = k
+                    break
+                end
+            end
+            table.insert(labels, insert_at, recipes_label)
+            table.insert(values, insert_at, FILTER_RECIPES_CODE)
+            break
+        end
     end
     return labels, values
 end

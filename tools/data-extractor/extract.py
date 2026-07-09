@@ -16,6 +16,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import sys
 import time
 
@@ -91,8 +92,8 @@ def remove_marks(text):
 
 
 def cleanup_string(text):
-    """Unescape newlines and trim."""
-    return text.replace("\\n", "\n").strip()
+    """Unescape newlines and \\q quotes (plain ASCII \"), trim."""
+    return text.replace("\\n", "\n").replace("\\q", '"').strip()
 
 
 def fix_name(text):
@@ -252,7 +253,7 @@ def use_item(item_id, name, item_class):
             return False
     if "Test of Will" in name:
         return True
-    if name.startswith("Test "):
+    if name.startswith("Test ") or name.startswith("Test:"):
         return False
     return True
 
@@ -645,6 +646,38 @@ def extract_recipes(facade, langs, scan_result):
 
 # ------------------------------------------------------ quests + deeds ----
 
+# dev placeholder strings baked into the client, dropped so the quest
+# card never renders them. NOTE: string-table tokens cannot identify
+# these — a token is a field slot (0x05A3CED1 is "first objective
+# description" in every quest's table), so only the resolved text can
+# be matched, per language: the exact template sentences (en + their
+# de/fr translations) and the TBD/DNT dev markers
+PLACEHOLDER_SENTENCES = {
+    "This is your objective description.",
+    "Dies ist Eure Zielbeschreibung.",
+    "Voici la description de votre objectif.",
+    "This is a comment from a role constraint",
+}
+PLACEHOLDER_TEXT = re.compile(r"\bTBD\b|\bDNT\b")
+
+# dev quests the game never shows in the journal: the quest category
+# labeled "Test" (dev tests + internal mechanic trackers), the
+# "HIDING CONTENT - ..." world-phasing quests and the content-hiding
+# tracker quest that sits in a regular zone category
+TEST_QUEST_CATEGORY = 16
+HIDING_CONTENT_QUEST_ID = 1879049597
+
+
+def quest_text(facade, info, lang):
+    """localized() that drops known dev-placeholder strings."""
+    text = localized(facade, info, lang)
+    if text is None:
+        return None
+    if text in PLACEHOLDER_SENTENCES or PLACEHOLDER_TEXT.search(text):
+        return None
+    return text
+
+
 # quest boolean flags -> bit positions in the packed flags field
 QUEST_FLAGS = (
     ("Quest_IsInstanceQuest", 1),
@@ -674,7 +707,11 @@ def extract_quests(facade, langs, scan_result):
         name = localized(facade, name_info, "en")
         if name is None or not use_item(did, name, 0):  # same test filters
             continue
+        if name.startswith("HIDING CONTENT") or did == HIDING_CONTENT_QUEST_ID:
+            continue
         is_deed = props.get("Quest_IsAccomplishment") == 1
+        if not is_deed and props.get("Quest_Category") == TEST_QUEST_CATEGORY:
+            continue
 
         flags = 0
         for prop, bit in QUEST_FLAGS:
@@ -747,31 +784,31 @@ def extract_quests(facade, langs, scan_result):
             "objectiveConds": objective_conds,
         }
         for lang in langs:
-            desc = localized(facade, props.get("Quest_Description"), lang)
+            desc = quest_text(facade, props.get("Quest_Description"), lang)
             objective_texts = []
             for o, flat in zip(objectives, conditions):
-                entry = [localized(facade,
-                                   o.get("Quest_ObjectiveDescription"),
-                                   lang) or ""]
+                entry = [quest_text(facade,
+                                    o.get("Quest_ObjectiveDescription"),
+                                    lang) or ""]
                 for c in flat:
                     # "how to complete": progress text, else deed lore
-                    text = localized(facade,
-                                     c.get("QuestEvent_ProgressOverride"),
-                                     lang)
+                    text = quest_text(facade,
+                                      c.get("QuestEvent_ProgressOverride"),
+                                      lang)
                     if text is None:
-                        text = localized(facade,
-                                         c.get("Accomplishment_LoreInfo"),
-                                         lang)
+                        text = quest_text(facade,
+                                          c.get("Accomplishment_LoreInfo"),
+                                          lang)
                     entry.append(text or "")
                 objective_texts.append(entry)
             dialog_texts = [
-                localized(facade, r.get("QuestDispenser_RoleSuccessText"),
-                          lang) or ""
+                quest_text(facade, r.get("QuestDispenser_RoleSuccessText"),
+                           lang) or ""
                 for r in roles]
             record["text_" + lang] = (desc or "", objective_texts,
                                       dialog_texts)
             if lang != "en":
-                record["name_" + lang] = localized(facade, name_info, lang)
+                record["name_" + lang] = quest_text(facade, name_info, lang)
         quests[did] = record
         if len(quests) % 5000 == 0:
             print("... %d quests/deeds (%.0fs)" % (len(quests),

@@ -33,7 +33,17 @@ NPC ids referenced by quest dialogs (8,526 of them) to localized
 record — sections split by \\30, objectives by \\31, and within one
 objective the description + its \"how to complete\" condition texts
 (progress/lore strings) by \\29. Localized name/search blobs and
-quest/deed category tables as usual.
+quest/deed category tables as usual. Records are stored in display
+order — level ascending, then folded en name — so category/level
+filters list correctly with zero runtime sorting; non-en languages get
+an `order_<lang>.lua` ordinal permutation with the same level order but
+their own name tie-break; id lookups go through the id-sorted IDX/IDO
+index blobs instead of IDS. Dev placeholder
+strings baked into the client (`TBD`/`DNT` markers, the
+"This is your objective description." template in all languages) are
+dropped at extraction, as are the dev quests the game never shows in
+the journal (the "Test" quest category, the "HIDING CONTENT" phasing
+quests and the content-hiding tracker quest).
 No runtime loader consumes `src/Data/Quests` yet.
 
 Localized names come from the client's locale archives

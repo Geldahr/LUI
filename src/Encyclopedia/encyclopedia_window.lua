@@ -516,6 +516,7 @@ local function _build_records()
         out[#out + 1] = {
             key = name,
             name = display_name,
+            sort_name = _lower_text(DATA_ACCESS.display_name(display_name)),
             genus = entry.genus,
             subcategory = entry.subcategory,
             species = entry.species,
@@ -643,8 +644,9 @@ end
 -- bestiary results list in fixed name order, matching the item tabs'
 -- baked label-sorted permutations (the Order menu was removed: title-bar
 -- menus should not exist unless every tab participates)
+-- sort by the localized name the row displays, not the English key
 local function _compare_records(left, right)
-    return _lower_text(left.name) < _lower_text(right.name)
+    return left.sort_name < right.sort_name
 end
 
 local function _estimate_chip_width(text)

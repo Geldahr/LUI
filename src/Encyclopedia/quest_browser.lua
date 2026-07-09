@@ -5,8 +5,8 @@
 -- Encyclopedia Quests tab: nested sub-tabs (Quests / Deeds), each a paged,
 -- searchable, filterable listing over the packed quests domain. Search is
 -- the shared type-ahead grammar; filters are cheap fixed-offset byte
--- probes (kind / level / category); the listing order is the per-language
--- label-sorted permutation baked by the extractor.
+-- probes (kind / level / category); the listing order is the record order
+-- baked by the extractor: level ascending, then folded en name.
 
 local TR = _G.LUI.Locale.TR
 local State = _G.LUI.Settings.State
@@ -194,20 +194,17 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
     self:apply_fonts()
 end
 
--- All + the categories used by this kind, sorted by localized label
+-- All + the categories used by this kind, in the label order baked per
+-- language by the extractor (no runtime sorting)
 function QuestBrowserPanel:_category_options()
-    local cats = self._kind == "deed" and Lore.Quests.DEED_CATS or Lore.Quests.QUEST_CATS
-    local entries = {}
-    for code, label in pairs(cats) do
-        entries[#entries + 1] = { code = code, label = label }
-    end
-    table.sort(entries, function(left, right)
-        return left.label < right.label
-    end)
+    local Quests = Lore.Quests
+    local cats = self._kind == "deed" and Quests.DEED_CATS or Quests.QUEST_CATS
+    local order = self._kind == "deed" and Quests.DEED_CATS_ORDER or Quests.QUEST_CATS_ORDER
     local labels, values = { TR["All"] }, { FILTER_ALL_CODE }
-    for i = 1, #entries do
-        labels[#labels + 1] = entries[i].label
-        values[#values + 1] = entries[i].code
+    for i = 1, #order do
+        local code = order[i]
+        labels[#labels + 1] = cats[code]
+        values[#values + 1] = code
     end
     return labels, values
 end

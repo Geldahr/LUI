@@ -149,8 +149,10 @@ def _parse_parts(text):
 
 
 def render_entry(parts, variable_ids):
-    """Join label parts, resolving inline #N:{a[m]|b[f]} variable
-    references into ${VAR:a[m]|b[f]} templates."""
+    """Join label parts. Bare variable references render as ${VAR}
+    placeholders; gender/race variant references #N:{a[m]|b[f]} render
+    as the readable "a/b" form (stored order = male first, tags
+    dropped, duplicate variants collapsed)."""
     decoded = [_parse_parts(part) if part else [("lit", "")] for part in parts]
     has_variables = any(node[0] == "var" for nodes in decoded for node in nodes)
 
@@ -188,12 +190,10 @@ def render_entry(parts, variable_ids):
                     out.append("${%s}" % names[number])
                 continue
             rendered = []
-            for text, tags in options:
-                if tags:
-                    rendered.append("%s[%s]" % (text, ",".join(tags)))
-                else:
+            for text, _tags in options:
+                if text != "" and text not in rendered:
                     rendered.append(text)
-            out.append("${%s:%s}" % (names[number], "|".join(rendered)))
+            out.append("/".join(rendered))
     return "".join(out)
 
 
