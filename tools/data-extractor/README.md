@@ -51,6 +51,14 @@ the journal (the "Test" quest category, the "HIDING CONTENT" phasing
 quests and the content-hiding tracker quest).
 No runtime loader consumes `src/Data/Quests` yet.
 
+Stackable items (`Inventory_MaxQuantity > 1`) also get their localized
+plural display name (the `PluralName` item property — the form loot
+messages use, "Hides"/"Felle"/"Peaux"): plurals that differ from the
+singular display name are packed into `Items/names_<lang>.lua` as a
+sorted PNAM/PNOFF lookup (plural text → record ordinals, same entry
+format as NAME/NOFF), so "[3 Hides]" can resolve to the item record
+and icon with the same binary search the singular names use.
+
 Localized names come from the client's locale archives
 (`client_local_English/DE/FR.dat`) — keep all three languages installed
 and patched. Label tables (item classes, qualities, crafting

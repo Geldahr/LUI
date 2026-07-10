@@ -4,6 +4,7 @@
 
 local SearchQuery = _G.LUI.Utils.SearchQuery
 local Coords = _G.LUI.Utils.Coords
+local Lore = _G.LUI.Data.Lore
 local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
 local Persistence = _G.LUI.Settings.Persistence
 local State = _G.LUI.Settings.State
@@ -194,7 +195,31 @@ local function _parse_drop_name(message)
         return nil
     end
 
-    return _trim(string.sub(bracketed, 2, -2))
+    local name = _trim(string.sub(bracketed, 2, -2))
+    if name == nil then
+        return nil
+    end
+
+    -- stacked drops carry the count inside the bracket ("[5 Hides]") and
+    -- print the plural display name; strip the count and store the singular
+    -- label so cache keys stay uniform. A plural equal to the display name
+    -- is not indexed - the stripped name already is the record's name then.
+    local stacked_name = name:match("^%d+%s+(.+)$")
+    if stacked_name == nil then
+        return name
+    end
+    if Lore.Items.loaded == true then
+        -- a leading number can be part of the item name ("100 Virtue XP")
+        if Lore.Items.find_ordinals(name) ~= nil then
+            return name
+        end
+        local ordinals = Lore.Items.find_plural_ordinals(stacked_name)
+        if ordinals ~= nil then
+            return Lore.Items.label(ordinals[1])
+        end
+    end
+
+    return stacked_name
 end
 
 -- Chat-based kill/drop capture only: the target's morale/power cannot be

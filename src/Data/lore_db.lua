@@ -51,18 +51,16 @@ local function _bsearch_id(IDS, id_width, count, target)
     return nil
 end
 
--- name -> ordinals over a sorted NAME/NOFF index; nil means "not in DB".
+-- name -> ordinals over a sorted name/offset index; nil means "not in DB".
 -- The index is sorted bytewise, so the probe compares bytes in place: no
 -- substring allocation per probe, and Lua 5.1's `<` (locale strcoll) is
 -- never trusted for the ordering.
-local function _find_ordinals(NM, name)
-    local blob = NM.NAME
-    local nw, ow = NM.noff_width, NM.ord_width
+local function _find_in_index(blob, OFF, nw, entry_count, ow, name)
     local name_len = #name
-    local lo, hi = 1, NM.entry_count
+    local lo, hi = 1, entry_count
     while lo <= hi do
         local mid = floor((lo + hi) / 2)
-        local p = u(NM.NOFF, (mid - 1) * nw + 1, nw)
+        local p = u(OFF, (mid - 1) * nw + 1, nw)
         local q = find(blob, "\t", p + 1, true)
         local entry_len = q - p - 1
 
@@ -95,6 +93,11 @@ local function _find_ordinals(NM, name)
         end
     end
     return nil
+end
+
+local function _find_ordinals(NM, name)
+    return _find_in_index(NM.NAME, NM.NOFF, NM.noff_width, NM.entry_count,
+        NM.ord_width, name)
 end
 
 -- Ordered package list for everything the crafting domains need. Consumers
@@ -330,6 +333,16 @@ end
 
 function Items.find_ordinals(name)
     return _find_ordinals(Items.NM, name)
+end
+
+-- plural display name -> ordinals (stacked loot prints the plural form:
+-- "[3 Hides]"). Only plurals that differ from the display name are packed,
+-- so a miss here means "retry the same text with find_ordinals" — that
+-- covers invariant plurals and items authored with a plural display name.
+function Items.find_plural_ordinals(name)
+    local NM = Items.NM
+    return _find_in_index(NM.PNAM, NM.PNOFF, NM.pnoff_width, NM.plural_count,
+        NM.ord_width, name)
 end
 
 function Items.ordinal_of(id)

@@ -360,7 +360,8 @@ local IMPORT_PLAN = {
     function() import("LUI.src.Data.Bestiary.index") end,
 }
 
--- returns true when imports, the full decode and the quests staging are done
+-- returns true when imports, the full decode and the quests + npcs +
+-- items staging are done
 function Bestiary.prewarm_step()
     if Bestiary.loaded ~= true then
         local index = Bestiary._import_index or 1
@@ -403,8 +404,26 @@ function Bestiary.prewarm_step()
         Bestiary._quests_import_index = index + 1
         return false
     end
-    Lore.load_quests()
-    Lore.load_npcs()
+
+    -- quests + npcs done: chain the items domain through the pump too -
+    -- the bestiary tracker canonicalizes stacked loot names through the
+    -- plural index, and the Items tab's synchronous load_items() becomes
+    -- a no-op once everything is staged (a no-op chain when crafting or
+    -- the drops window already loaded the domain)
+    if Bestiary._items_plan == nil then
+        Lore.load_quests()
+        Lore.load_npcs()
+        Bestiary._items_plan = Lore.items_import_plan()
+        Bestiary._items_import_index = 1
+        return false
+    end
+    local items_index = Bestiary._items_import_index
+    if items_index <= #Bestiary._items_plan then
+        import(Bestiary._items_plan[items_index])
+        Bestiary._items_import_index = items_index + 1
+        return false
+    end
+    Lore.load_items()
     return true
 end
 

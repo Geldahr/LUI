@@ -457,6 +457,12 @@ def scan(facade, langs):
         }
         for lang in decoder_langs:
             record["name_" + lang] = localized(facade, name_info, lang)
+        max_quantity = props.get("Inventory_MaxQuantity")
+        if max_quantity is not None and max_quantity > 1:
+            plural_info = props.get("PluralName")
+            record["plural_en"] = localized(facade, plural_info, "en")
+            for lang in decoder_langs:
+                record["plural_" + lang] = localized(facade, plural_info, lang)
         items[did] = record
         if len(items) % 20000 == 0:
             print("... %d items (%.0fs)" % (len(items), time.time() - t0),

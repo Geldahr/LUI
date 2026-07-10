@@ -148,12 +148,23 @@ def build_names_by_lang(data_dir, db, langs, ids, en_fallback):
 STOP2_SHARE = 0.05
 
 
-def emit_lang_files(out_dir, ids, names_by_lang, langs, search_mask=None):
+def is_placeholder_name(s):
+    """Dev-only records (all-dot names, "DNT ..." markers) never appear in
+    loot messages; keep them out of the plural lookup."""
+    return s.strip(".") == "" or "DNT" in s
+
+
+def emit_lang_files(out_dir, ids, names_by_lang, langs, search_mask=None,
+                    plurals_by_lang=None):
     """labels_<lang> (LBL/LOFF), names_<lang> (NAME/NOFF, sorted) and search_<lang> (SRCH/SOFF) per language.
 
     search_mask: optional list of booleans aligned to ids; False entries get
     empty folded search text (offsets stay aligned, the entry just never
-    matches). Used to keep never-searched records out of the search blobs."""
+    matches). Used to keep never-searched records out of the search blobs.
+
+    plurals_by_lang: optional {lang: [plural or ""]} aligned to ids; entries
+    that differ from the display name go into a PNAM/PNOFF sorted lookup in
+    names_<lang>.lua (plural text -> ordinals, same format as NAME/NOFF)."""
     count = len(ids)
     ord_width = width_for(count)
     sizes = {}
@@ -188,13 +199,39 @@ def emit_lang_files(out_dir, ids, names_by_lang, langs, search_mask=None):
         name_blob = "".join(parts) + "\n"
         noff_width = width_for(p)
         noff_blob = "".join(b93(x, noff_width) for x in noffs)
-        sizes["names_%s.lua" % lang] = write_file(out_dir, "names_%s.lua" % lang, [
+        name_file_parts = [
             "D.ord_width = %d\n" % ord_width,
             "D.noff_width = %d\n" % noff_width,
             "D.entry_count = %d\n" % len(sorted_names),
             emit_blob("NAME", name_blob),
             emit_blob("NOFF", noff_blob),
-        ])
+        ]
+        if plurals_by_lang is not None:
+            by_plural = {}
+            for n, v in enumerate(plurals_by_lang[lang]):
+                if v and v != names[n] and "\t" not in v and "\n" not in v \
+                        and not is_placeholder_name(v) \
+                        and not is_placeholder_name(names[n]):
+                    by_plural.setdefault(v, []).append(n + 1)
+            sorted_plurals = sorted(by_plural)
+            parts, pnoffs, p = [], [], 1
+            for v in sorted_plurals:
+                entry = "\n%s\t%s" % (
+                    v, "".join(b93(o, ord_width) for o in by_plural[v]))
+                pnoffs.append(p)
+                parts.append(entry)
+                p += byte_len(entry)
+            pnam_blob = "".join(parts) + "\n"
+            pnoff_width = width_for(p)
+            pnoff_blob = "".join(b93(x, pnoff_width) for x in pnoffs)
+            name_file_parts += [
+                "D.pnoff_width = %d\n" % pnoff_width,
+                "D.plural_count = %d\n" % len(sorted_plurals),
+                emit_blob("PNAM", pnam_blob),
+                emit_blob("PNOFF", pnoff_blob),
+            ]
+        sizes["names_%s.lua" % lang] = write_file(out_dir, "names_%s.lua" % lang,
+                                                  name_file_parts)
 
         # type-ahead search blob: folded names in ordinal order + offsets
         folded = [fold(v) if search_mask is None or search_mask[n] else ""
@@ -279,8 +316,9 @@ def parse_items(data_dir):
 def items_from_records(records):
     """Game-extracted item records ({id: {field: value}}, from
     tools/data-extractor/extract_items.py): same tuples as parse_items,
-    plus per-language names ({id: {lang: name}})."""
-    items, names = {}, {}
+    plus per-language names and plural names ({id: {lang: name}};
+    plurals only for stackable items)."""
+    items, names, plurals = {}, {}, {}
     for key, v in records.items():
         items[int(key)] = (
             v.get("quality"),
@@ -296,7 +334,11 @@ def items_from_records(records):
         )
         names[int(key)] = {k[5:]: val for k, val in v.items()
                            if k.startswith("name_")}
-    return items, names
+        record_plurals = {k[7:]: val for k, val in v.items()
+                          if k.startswith("plural_") and val}
+        if record_plurals:
+            plurals[int(key)] = record_plurals
+    return items, names, plurals
 
 
 def build_names_by_lang_records(json_names, langs, ids, en_fallback):
@@ -418,9 +460,9 @@ def convert_items(data_dir, out_dir, langs, records=None, aux=None):
     """records/aux: in-memory game-extracted data (tools/data-extractor);
     when None, the legacy XML dumps from data_dir are used."""
     t0 = time.time()
-    json_names = None
+    json_names, json_plurals = None, None
     if records is not None:
-        items, json_names = items_from_records(records)
+        items, json_names, json_plurals = items_from_records(records)
     else:
         items = parse_items(data_dir)
     ids = sorted(items)
@@ -497,11 +539,32 @@ def convert_items(data_dir, out_dir, langs, records=None, aux=None):
     else:
         names_by_lang, baked_report, missing_en = build_names_by_lang(
             data_dir, "items", langs, ids, en_fallback)
+    # plural display names (stackable items only — the loot-message
+    # "[3 Hides]" form), aligned to ids; the EN plural is used only where
+    # the display name also fell back to EN (the client prints EN text for
+    # those records, so the EN plural is what loot messages show)
+    plurals_by_lang = None
+    if json_plurals is not None:
+        plurals_by_lang = {}
+        en_names = names_by_lang["en"]
+        for lang in langs:
+            values = []
+            lang_names = names_by_lang[lang]
+            for n, i in enumerate(ids):
+                pl = json_plurals.get(i)
+                v = ""
+                if pl is not None:
+                    v = pl.get(lang) or ""
+                    if v == "" and lang_names[n] == en_names[n]:
+                        v = pl.get("en") or ""
+                values.append(v)
+            plurals_by_lang[lang] = values
     # bucket-0 ("other") items are never text-searched: the Encyclopedia
     # searches within the browsable bucket lists only, so their folded
     # search text is dead weight (~35% of the blob)
     search_mask = [bucket_by_id[i] != 0 for i in ids]
-    lang_sizes, _ = emit_lang_files(out_dir, ids, names_by_lang, langs, search_mask)
+    lang_sizes, _ = emit_lang_files(out_dir, ids, names_by_lang, langs, search_mask,
+                                    plurals_by_lang)
     sizes.update(lang_sizes)
 
     # localized ItemClass names (used codes only) + per-bucket class lists

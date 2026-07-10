@@ -516,7 +516,8 @@ function DropsWindow:_queue_chat_drop(name, quantity, now)
     end
     if record.live_item == nil then
         -- carry-all loot: no live item ever appears, resolve from the DB
-        record.db_icon_id, record.db_background_id = self:_db_icon_for(name, normalized_name)
+        record.db_icon_id, record.db_background_id =
+            self:_db_icon_for(name, normalized_name, record.quantity)
     end
 
     self._pending_chat_drops[#self._pending_chat_drops + 1] = record
@@ -675,7 +676,7 @@ function DropsWindow:_promote_pending_chat_drops(now)
         end
         if record.live_item == nil and record.db_icon_id == nil then
             record.db_icon_id, record.db_background_id =
-                self:_db_icon_for(record.name, record.normalized_name)
+                self:_db_icon_for(record.name, record.normalized_name, record.quantity)
         end
         record.entry = self:_acquire_entry()
         record.entry:apply_settings()
@@ -707,12 +708,22 @@ end
 
 -- lore-DB icon fallback, cached per item name; false = known miss (item
 -- newer than the data drop, or a chat string that is not an item name)
-function DropsWindow:_db_icon_for(name, normalized_name)
+function DropsWindow:_db_icon_for(name, normalized_name, quantity)
     if Lore.Items.loaded ~= true then
         return nil, nil
     end
 
-    local cached = self._db_icon_cache[normalized_name]
+    -- a parsed quantity > 1 means the bracket carried a count, so the
+    -- printed name is the plural form (gathered lines: "[5 Bones]" arrives
+    -- count-stripped as "Bones"); resolution depends on this bit, so it is
+    -- part of the cache key ("\t" cannot appear in item names)
+    local plural_likely = quantity ~= nil and quantity > 1
+    local cache_key = normalized_name
+    if plural_likely then
+        cache_key = "#p\t" .. normalized_name
+    end
+
+    local cached = self._db_icon_cache[cache_key]
     if cached == false then
         return nil, nil
     end
@@ -720,17 +731,43 @@ function DropsWindow:_db_icon_for(name, normalized_name)
         return cached[1], cached[2]
     end
 
-    local ordinals = Lore.Items.find_ordinals(name)
+    -- resolution order: for known stacks the plural index wins over a
+    -- literal name collision ("Bones" the plural of "Bone" vs "Bones" the
+    -- item); otherwise exact display name first (also covers items whose
+    -- name starts with a number, "100 Virtue XP"). Then the in-bracket
+    -- stacked form of acquired lines ("[5 Hides]") with the count removed -
+    -- plural first, and singular for plurals equal to the display name
+    local ordinals
+    if plural_likely then
+        ordinals = Lore.Items.find_plural_ordinals(name)
+        if ordinals == nil then
+            ordinals = Lore.Items.find_ordinals(name)
+        end
+    else
+        ordinals = Lore.Items.find_ordinals(name)
+        if ordinals == nil then
+            ordinals = Lore.Items.find_plural_ordinals(name)
+        end
+    end
     if ordinals == nil then
-        self._db_icon_cache[normalized_name] = false
+        local stacked_name = name:match("^%d+%s+(.+)$")
+        if stacked_name ~= nil then
+            ordinals = Lore.Items.find_plural_ordinals(stacked_name)
+            if ordinals == nil then
+                ordinals = Lore.Items.find_ordinals(stacked_name)
+            end
+        end
+    end
+    if ordinals == nil then
+        self._db_icon_cache[cache_key] = false
         return nil, nil
     end
     local icon_id, background_id = Lore.Items.icon_layers(ordinals[1])
     if icon_id == nil then
-        self._db_icon_cache[normalized_name] = false
+        self._db_icon_cache[cache_key] = false
         return nil, nil
     end
-    self._db_icon_cache[normalized_name] = { icon_id, background_id }
+    self._db_icon_cache[cache_key] = { icon_id, background_id }
     return icon_id, background_id
 end
 
