@@ -152,6 +152,60 @@ local function _parse_drop_message(message)
     return name, quantity
 end
 
+-- resolve the printed loot name against the Items DB: stacked drops print
+-- the plural display name, singles the exact name. Returns the canonical
+-- display name, quantity, and the resolved ordinals; on DB-not-loaded or
+-- unknown item the inputs pass through unchanged (ordinals nil) - only
+-- what the DB confirms is rewritten, so a not-yet-in-DB item named with a
+-- leading count ("100 Virtue XP" is one item, not a stack) is never split.
+local function _canonicalize_drop(name, quantity)
+    if Lore.Items.loaded ~= true then
+        return name, quantity, nil
+    end
+
+    local ordinals
+    if quantity > 1 then
+        -- gathered stacks arrive count-stripped with the quantity parsed:
+        -- the name is a plural form, so the plural index outranks a
+        -- literal name collision ("Bones" the plural vs "Bones" the item)
+        ordinals = Lore.Items.find_plural_ordinals(name)
+        if ordinals ~= nil then
+            return Lore.Items.label(ordinals[1]), quantity, ordinals
+        end
+        return name, quantity, Lore.Items.find_ordinals(name)
+    end
+
+    ordinals = Lore.Items.find_ordinals(name)
+    if ordinals ~= nil then
+        return name, quantity, ordinals
+    end
+    -- acquired stacks keep the count in the bracket ("[5 Hides]"): split,
+    -- resolve the remainder plural-first, singular for names authored in
+    -- plural form ("200 Figments of Splendour"); a full miss keeps the
+    -- printed name
+    local count, rest = name:match("^(%d+)%s+(.+)$")
+    if count ~= nil then
+        ordinals = Lore.Items.find_plural_ordinals(rest)
+        if ordinals ~= nil then
+            return Lore.Items.label(ordinals[1]), tonumber(count), ordinals
+        end
+        ordinals = Lore.Items.find_ordinals(rest)
+        if ordinals ~= nil then
+            return rest, tonumber(count), ordinals
+        end
+        return name, quantity, nil
+    end
+    return name, quantity, Lore.Items.find_plural_ordinals(name)
+end
+
+local function _visible_duration()
+    local duration = tonumber(State.settings.drops.visible_duration) or 4
+    if duration <= 0 then
+        duration = 4
+    end
+    return duration
+end
+
 local function _safe_item_name(item)
     if item == nil then
         return nil
@@ -478,16 +532,51 @@ function DropsWindow:_on_chat_received(args)
     self:_queue_chat_drop(item_name, quantity, now)
 end
 
+-- fold a new drop into a live row of the same item: quantities add up,
+-- fresh loot keeps the row alive, the row never moves. Rows already
+-- fading out are left alone - the new drop starts a fresh row.
+function DropsWindow:_merge_into_existing(normalized_name, quantity, now)
+    for i = 1, #self._pending_chat_drops do
+        local record = self._pending_chat_drops[i]
+        if record ~= nil and record.normalized_name == normalized_name then
+            record.quantity = record.quantity + quantity
+            return true
+        end
+    end
+
+    for i = 1, #self._active_drops do
+        local record = self._active_drops[i]
+        if record ~= nil and record.removing ~= true
+            and record.normalized_name == normalized_name then
+            record.quantity = record.quantity + quantity
+            record.expire_at = now + _visible_duration()
+            record.entry:set_record(record)
+            return true
+        end
+    end
+
+    return false
+end
+
 function DropsWindow:_queue_chat_drop(name, quantity, now)
+    quantity = tonumber(quantity) or 1
+    local ordinals
+    name, quantity, ordinals = _canonicalize_drop(name, quantity)
+
     local normalized_name = _normalize_item_name(name)
     if normalized_name == nil then
+        return
+    end
+
+    if State.settings.drops.merge_similar == true
+        and self:_merge_into_existing(normalized_name, quantity, now) then
         return
     end
 
     local record = {
         name = name,
         normalized_name = normalized_name,
-        quantity = tonumber(quantity) or 1,
+        quantity = quantity,
         chat_at = now,
         display_after = now + CHAT_DISPLAY_DELAY,
         upgrade_until = now + ITEM_MATCH_WINDOW,
@@ -515,9 +604,14 @@ function DropsWindow:_queue_chat_drop(name, quantity, now)
         record.live_item = _find_backpack_item_by_name(self.backpack, normalized_name)
     end
     if record.live_item == nil then
-        -- carry-all loot: no live item ever appears, resolve from the DB
-        record.db_icon_id, record.db_background_id =
-            self:_db_icon_for(name, normalized_name, record.quantity)
+        -- carry-all loot: no live item ever appears, resolve from the DB;
+        -- canonicalization already found the record, so reuse its ordinals
+        if ordinals ~= nil then
+            record.db_icon_id, record.db_background_id = Lore.Items.icon_layers(ordinals[1])
+        else
+            record.db_icon_id, record.db_background_id =
+                self:_db_icon_for(name, normalized_name, record.quantity)
+        end
     end
 
     self._pending_chat_drops[#self._pending_chat_drops + 1] = record
@@ -649,10 +743,7 @@ function DropsWindow:_expire_pending_item_events(now)
 end
 
 function DropsWindow:_promote_pending_chat_drops(now)
-    local duration = tonumber(State.settings.drops.visible_duration) or 4
-    if duration <= 0 then
-        duration = 4
-    end
+    local duration = _visible_duration()
 
     local matured = {}
     for i = #self._pending_chat_drops, 1, -1 do

@@ -269,7 +269,13 @@ function DropEntry:_apply_record()
 
     self:SetVisible(true)
     self.name_label:SetText(record.name)
-    self.qty_label:SetText(tostring(record.quantity or 1))
+    -- counts only matter from 2 up: "[Hide]" for singles, "[Hide  5]"
+    -- for stacks (merged rows re-enter here via set_record)
+    if record.quantity >= 2 then
+        self.qty_label:SetText(tostring(record.quantity))
+    else
+        self.qty_label:SetText("")
+    end
     self:set_opacity(self._opacity)
     self:_apply_item()
 end

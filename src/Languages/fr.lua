@@ -590,6 +590,7 @@ LUI.src.Languages.fr.FR = {
     ["Move duration (ms)"] = "Durée du déplacement (ms)", -- NOTE: new!
     ["Large (30)"] = "Grand (30)", -- NOTE: new!
     ["Visible duration (s)"] = "Durée visible (s)", -- NOTE: new!
+    ["Merge similar drops"] = "Fusionner les butins similaires", -- NOTE: new!
     ["Animations"] = "Animations", -- NOTE: new!
     ["Animation mode"] = "Mode d'animation", -- NOTE: new!
     ["Fade then collapse"] = "Fondu puis repli", -- NOTE: new!

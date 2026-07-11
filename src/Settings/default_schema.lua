@@ -2137,6 +2137,7 @@ _G.LUI.Settings.Defaults.Schema =
 			},
 			["background_opacity"] = 0.300000,
 		},
+		["merge_similar"] = true,
 		["move_duration"] = 500.000000,
 		["rows"] = 4.000000,
 		["visible_duration"] = 4.000000,

@@ -590,6 +590,7 @@ LUI.src.Languages.de.DE = {
     ["Move duration (ms)"] = "Bewegungsdauer (ms)", -- NOTE: new!
     ["Large (30)"] = "Groß (30)", -- NOTE: new!
     ["Visible duration (s)"] = "Sichtbare Dauer (s)", -- NOTE: new!
+    ["Merge similar drops"] = "Ähnliche Beute zusammenführen", -- NOTE: new!
     ["Animations"] = "Animationen", -- NOTE: new!
     ["Animation mode"] = "Animationsmodus", -- NOTE: new!
     ["Fade then collapse"] = "Ausblenden, dann zusammenziehen", -- NOTE: new!
