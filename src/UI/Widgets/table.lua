@@ -98,6 +98,13 @@ end
 -- fire SizeChanged for programmatic SetSize, and relying on it made the
 -- ceiling collapse to the shrunken height (capacity ratcheting to zero).
 function LuiTable:SetSize(w, h)
+    -- callers re-assert geometry every layout pass (drag-resize runs one
+    -- per frame); unchanged inputs must not pay a full relayout. The
+    -- actual height is derived (auto-height may shrink below the ceiling),
+    -- so only the external inputs are compared
+    if self._max_h == h and self:GetWidth() == w then
+        return
+    end
     self._max_h = h
     Turbine.UI.Control.SetSize(self, w, h)
     self:_layout()
@@ -174,6 +181,9 @@ end
 -- how many leading rows actually hold content this page; nil = all.
 -- Auto height sizes down to this count.
 function LuiTable:set_visible_rows(count)
+    if self._visible_rows == count then
+        return
+    end
     self._visible_rows = count
     self:_layout()
     self:_sync_auto_height()
@@ -234,6 +244,9 @@ function LuiTable:set_columns(columns)
 end
 
 function LuiTable:set_column_width(col, width)
+    if self._columns[col].width == width then
+        return
+    end
     self._columns[col].width = width
     self:_layout()
 end
@@ -243,6 +256,9 @@ function LuiTable:column_count()
 end
 
 function LuiTable:set_header_height(h)
+    if self._header_h == h then
+        return
+    end
     self._header_h = h
     self:_layout()
     self:_sync_auto_height()
@@ -416,14 +432,54 @@ function LuiTable:insert_row(index, cells)
         else
             self:_rebuild_list_items()
         end
-    else
-        row.control:SetParent(self.body)
+        self:_reindex(index)
+        self:_layout()
+        return index
     end
+
+    row.control:SetParent(self.body)
     self:_reindex(index)
-    self:_layout()
-    -- auto height must grow with the row count
-    self:_sync_auto_height()
+    if index == #self._rows and self._resolved ~= nil then
+        -- append fast path: fresh pages pool rows one append at a time, so
+        -- a full relayout per insert costs O(n^2) cell placements; only
+        -- the new row, the previous row's closing line, and the auto
+        -- height need touching
+        self:_layout_appended_row(row, index)
+    else
+        self:_layout()
+        -- auto height must grow with the row count
+        self:_sync_auto_height()
+    end
     return index
+end
+
+function LuiTable:_layout_appended_row(row, index)
+    local shown = self:_shown_rows()
+    self:_layout_row(row)
+    row.control:SetPosition(0, (index - 1) * self._row_h)
+    row.control:SetVisible(index <= shown)
+    row.bottom_sep:SetVisible(self._h_border_w > 0 and index < shown)
+    if index > 1 then
+        -- the previously-last row regains its line unless it still closes
+        -- the shown range
+        local prev = self._rows[index - 1]
+        prev.bottom_sep:SetVisible(self._h_border_w > 0 and (index - 1) < shown)
+    end
+
+    -- auto height, sans the full relayout _sync_auto_height would run: row
+    -- geometry never depends on the frame height, so growing the frame and
+    -- the body underneath it is enough
+    if self._auto_height == true then
+        local target_h = (3 * self:_frame_border())
+            + self._header_h + (shown * self._row_h)
+        if target_h ~= self:GetHeight() then
+            Turbine.UI.Control.SetSize(self, self:GetWidth(), target_h)
+            local bw = self:_frame_border()
+            local body_y = bw + self._header_h + bw
+            self.body:SetSize(math.max(1, self:GetWidth() - (2 * bw)),
+                math.max(1, target_h - body_y - bw))
+        end
+    end
 end
 
 function LuiTable:set_row(index, cells)
@@ -497,6 +553,9 @@ function LuiTable:row_count()
 end
 
 function LuiTable:set_row_height(h)
+    if self._row_h == h then
+        return
+    end
     self._row_h = h
     self:_layout()
     self:_sync_auto_height()
@@ -643,7 +702,7 @@ function LuiTable:_layout()
     self.body:SetPosition(bw, body_y)
     self.body:SetSize(inner_w, math.max(1, h - body_y - bw))
 
-    if self._mode == "scroll" and self._list ~= nil then
+    if self._mode == "scroll" then
         local list_w = math.max(1, inner_w - SCROLL_SIZE - SCROLL_GAP)
         local body_h = self.body:GetHeight()
         self._list:SetPosition(0, 0)

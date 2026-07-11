@@ -137,7 +137,9 @@ if requested_locale ~= "en" then
 end
 
 Encyclopedia.RequestedLocale = requested_locale
-Encyclopedia.Data, Encyclopedia.DataLocale = _resolve_locale_table(requested_locale, "bestiary")
+-- the resolved bestiary table itself is unused (consumers bind the packed
+-- point-lookup proxy through DataAccess); only the locale outcome matters
+Encyclopedia.DataLocale = select(2, _resolve_locale_table(requested_locale, "bestiary"))
 Encyclopedia.DropTable, Encyclopedia.DropTableLocale = _resolve_locale_table(requested_locale, "drop_table")
 
 function Encyclopedia.supports_target_name_lookup()

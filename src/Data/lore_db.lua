@@ -124,8 +124,12 @@ end
 
 -- the Items files are the heavy ones (records + labels + name index +
 -- search + buckets, several MB each); consumers stage exactly these across
--- ticks so the load_items finalizer only wires already-imported files
+-- ticks so the load_items finalizer only wires already-imported files.
+-- Empty once the domain is loaded, so every staging driver skips for free.
 function Lore.items_import_plan()
+    if Lore.Items.loaded == true then
+        return {}
+    end
     local lang = Lore.language()
     return {
         "LUI.src.Data.Items.manifest",
@@ -272,6 +276,19 @@ end
 Lore.Items = Lore.Items or {}
 local Items = Lore.Items
 
+-- one-shot listeners fired when the Items domain finishes loading (an
+-- already-loaded registration fires immediately); UI surfaces use this to
+-- refresh probes that reported "not yet" while the domain was staging
+Items._on_loaded = {}
+
+function Items.notify_loaded(callback)
+    if Items.loaded == true then
+        callback()
+        return
+    end
+    Items._on_loaded[#Items._on_loaded + 1] = callback
+end
+
 function Lore.load_items()
     if Items.loaded == true then
         return
@@ -329,6 +346,12 @@ function Lore.load_items()
         Items._field_w[M.fields[k]] = M.widths[k]
     end
     Items.loaded = true
+
+    local listeners = Items._on_loaded
+    Items._on_loaded = {}
+    for k = 1, #listeners do
+        listeners[k]()
+    end
 end
 
 function Items.find_ordinals(name)
@@ -363,6 +386,60 @@ function Items.label(ordinal)
     local L = Items.L
     local w = L.loff_width
     return sub(L.LBL, u(L.LOFF, (ordinal - 1) * w + 1, w), u(L.LOFF, ordinal * w + 1, w) - 1)
+end
+
+-- resolve a printed loot name against the DB: stacked drops print the
+-- plural display name, singles the exact name; quantity > 1 means the
+-- count was parsed outside the bracket (gathered lines). Returns the
+-- canonical display name, quantity, and ordinals. Only what the DB
+-- confirms is rewritten - on DB-not-loaded or a full miss the inputs pass
+-- through unchanged (ordinals nil), so a not-yet-in-DB item named with a
+-- leading count ("100 Virtue XP" is one item, not a stack) is never
+-- split. The single shared policy: the bestiary tracker persists these
+-- names as cache keys and the drops window displays them, so both must
+-- resolve identically.
+function Items.canonicalize_drop(name, quantity)
+    if Items.loaded ~= true then
+        return name, quantity, nil
+    end
+
+    local ordinals
+    if quantity ~= nil and quantity > 1 then
+        -- the printed name is a plural form, and the plural index outranks
+        -- a literal name collision ("Bones" the plural vs "Bones" the item)
+        ordinals = Items.find_plural_ordinals(name)
+        if ordinals ~= nil then
+            return Items.label(ordinals[1]), quantity, ordinals
+        end
+        ordinals = Items.find_ordinals(name)
+    else
+        -- exact display name first (also covers names with a leading
+        -- count), plural forms authored as-is second
+        ordinals = Items.find_ordinals(name)
+        if ordinals == nil and name:match("^%d") == nil then
+            ordinals = Items.find_plural_ordinals(name)
+        end
+    end
+    if ordinals ~= nil then
+        return name, quantity, ordinals
+    end
+
+    -- acquired stacks keep the count in the bracket ("[5 Hides]"): split,
+    -- resolve the remainder plural-first, singular for names authored in
+    -- plural form ("200 Figments of Splendour"); a full miss keeps the
+    -- printed name unchanged
+    local count, rest = name:match("^(%d+)%s+(.+)$")
+    if count ~= nil then
+        ordinals = Items.find_plural_ordinals(rest)
+        if ordinals ~= nil then
+            return Items.label(ordinals[1]), tonumber(count), ordinals
+        end
+        ordinals = Items.find_ordinals(rest)
+        if ordinals ~= nil then
+            return rest, tonumber(count), ordinals
+        end
+    end
+    return name, quantity, nil
 end
 
 local function _item_field(ordinal, field)

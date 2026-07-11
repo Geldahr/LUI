@@ -1549,6 +1549,9 @@ def _lua_normalized_lower(name):
 # D.display is the inverse ({English base name -> localized}) for the
 # render-time name swap; keys/cache/index stay English underneath.
 def _emit_bestiary_name_bridge(data_dir, out_dir, entries):
+    """Emits names_<lang>.lua; returns {lang: display_map} so the order
+    permutations can replicate the runtime's localized display lookup."""
+    display_maps = {}
     mob_ids_by_name = {}
     for m in re.finditer(r'<mob id="(\d+)" name="([^"]*)"',
                          open(os.path.join(data_dir, "mobs.xml"), encoding="utf-8").read()):
@@ -1596,8 +1599,10 @@ def _emit_bestiary_name_bridge(data_dir, out_dir, entries):
             parts.append("[%s] = %s,\n" % (lua_string(bn), lua_string(display[bn])))
         parts.append("}\n")
         write_file(out_dir, "names_%s.lua" % lang, parts)
+        display_maps[lang] = display
         print("bestiary name bridge %s: %d matched, %d bridged, %d display, %d collisions dropped"
               % (lang, matched, len(mapping), len(display), collisions))
+    return display_maps
 
 
 # localized string pools: pool_fr/pool_de mirror pool.lua entry-for-entry
@@ -1923,10 +1928,35 @@ def convert_bestiary(json_path, out_dir, data_dir=None):
     print("round-trip: all %d records verified (+%d aliases)" % (count, len(aliases)))
     os.makedirs(out_dir, exist_ok=True)
     sizes = {}
+    display_maps = {}
     if data_dir:
-        _emit_bestiary_name_bridge(data_dir, out_dir, entries)
+        display_maps = _emit_bestiary_name_bridge(data_dir, out_dir, entries)
         sizes.update(_emit_bestiary_localized_pools(
             data_dir, out_dir, entries, record_keys, pool, pool_ref))
+
+    # per-language display-order permutations (order_<lang>, en included):
+    # the runtime listing sorts by Lua string.lower(localized display name)
+    # bytewise, but the record order must stay bytewise English key order
+    # for the exact-key binary search - so every language gets an ORD
+    # permutation and the encyclopedia window never sorts at runtime.
+    # Replicates the runtime exactly: display = NameDisplay[n or key] or
+    # (n or key); string.lower touches only A-Z; comparison is bytewise.
+    def _lua_string_lower(s):
+        return "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in s)
+
+    for lang in sorted(set(["en"]) | set(display_maps)):
+        dmap = display_maps.get(lang, {})
+
+        def display_key(n, _dmap=dmap):
+            key = record_keys[n]
+            name = entries[key].get("n") or key
+            return _lua_string_lower(_dmap.get(name, name)).encode("utf-8")
+
+        order = sorted(range(count), key=lambda n: (display_key(n), n))
+        sizes["order_%s.lua" % lang] = write_file(out_dir, "order_%s.lua" % lang, [
+            "D.ord_width = %d\n" % ord_w,
+            emit_blob("ORD", "".join(b93(n + 1, ord_w) for n in order)),
+        ])
     sizes["records.lua"] = write_file(out_dir, "records.lua", [
         emit_blob("DATA", data_blob),
         emit_blob("OFF", off_blob),

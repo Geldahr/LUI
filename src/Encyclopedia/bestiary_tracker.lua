@@ -126,9 +126,18 @@ local function _ensure_bestiary_cache()
     return DATA_ACCESS.ensure_cache()
 end
 
-local function _touch_generation()
+local function _touch_generation(name)
     BestiaryCache.generation = (BestiaryCache.generation or 0) + 1
     BestiaryCache.dirty = true
+    -- names whose cache entry changed since consumers last rebuilt; the
+    -- encyclopedia patches just these records instead of re-decoding the
+    -- whole packed bestiary on every committed kill
+    local dirty = BestiaryCache.dirty_names
+    if dirty == nil then
+        dirty = {}
+        BestiaryCache.dirty_names = dirty
+    end
+    dirty[name] = true
 end
 
 local function _ensure_entry(name)
@@ -154,7 +163,7 @@ local function _ensure_entry(name)
     entry.lmin = nil
     entry.lmax = nil
 
-    return entry
+    return entry, name
 end
 
 local function _strip_timestamp(message)
@@ -184,10 +193,14 @@ end
 
 local function _parse_drop_name(message)
     local bracketed = nil
+    local prefix_quantity = 1
     if string.find(message, "You have acquired:", 1, true) == 1 then
         bracketed = message:match("%b[]")
     elseif string.find(message, "Gathered ", 1, true) == 1
         and string.find(message, " into the ", 1, true) ~= nil then
+        -- gathered lines carry the stack count outside the bracket
+        -- ("Gathered 5 [Hides] into the ...")
+        prefix_quantity = tonumber(message:match("^Gathered%s+(%d+)%s")) or 1
         bracketed = message:match("%b[]")
     end
 
@@ -200,26 +213,23 @@ local function _parse_drop_name(message)
         return nil
     end
 
-    -- stacked drops carry the count inside the bracket ("[5 Hides]") and
-    -- print the plural display name; strip the count and store the singular
-    -- label so cache keys stay uniform. A plural equal to the display name
-    -- is not indexed - the stripped name already is the record's name then.
-    local stacked_name = name:match("^%d+%s+(.+)$")
-    if stacked_name == nil then
+    -- stacked drops print a plural display name with the count inside the
+    -- bracket ("[5 Hides]") or, on gathered lines, in front of it; the
+    -- shared resolver rewrites only what the DB confirms, so an item named
+    -- with a leading number ("100 Virtue XP" is one item, not a stack) is
+    -- never split, and the key matches what the drops window displays.
+    -- This is the bestiary statistics DB only - the drops window shows
+    -- every drop regardless. Before the Items DB is staged a stacked-
+    -- looking name cannot be confirmed either way, so it is not recorded
+    -- rather than persisting a junk key per stack size ("5 Hides").
+    if Lore.Items.loaded ~= true then
+        if prefix_quantity > 1 or name:match("^%d+%s") ~= nil then
+            return nil
+        end
         return name
     end
-    if Lore.Items.loaded == true then
-        -- a leading number can be part of the item name ("100 Virtue XP")
-        if Lore.Items.find_ordinals(name) ~= nil then
-            return name
-        end
-        local ordinals = Lore.Items.find_plural_ordinals(stacked_name)
-        if ordinals ~= nil then
-            return Lore.Items.label(ordinals[1])
-        end
-    end
 
-    return stacked_name
+    return (Lore.Items.canonicalize_drop(name, prefix_quantity))
 end
 
 -- Chat-based kill/drop capture only: the target's morale/power cannot be
@@ -295,7 +305,7 @@ function Encyclopedia.Collector:_commit_kill(record)
         return
     end
 
-    local entry = _ensure_entry(name)
+    local entry, entry_name = _ensure_entry(name)
     entry.k = _to_number(entry.k, 0) + 1
 
     for item_name, count in pairs(record.drops or {}) do
@@ -304,7 +314,7 @@ function Encyclopedia.Collector:_commit_kill(record)
         end
     end
 
-    _touch_generation()
+    _touch_generation(entry_name)
 end
 
 function Encyclopedia.Collector:_flush_pending_kills(flush_all)

@@ -7,7 +7,9 @@ local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Persistence = _G.LUI.Settings.Persistence
 Encyclopedia.DataAccess = Encyclopedia.DataAccess or {}
 
-local BUILTIN_BESTIARY = Encyclopedia.Data or {}
+-- packed builtin bestiary: read-only point-lookup proxy registered by
+-- src/Data/bestiary_db.lua (full iteration must go through count/key_at)
+local BUILTIN_BESTIARY = _G.LUI.Data.Bestiary.DB.en.bestiary
 
 local function _trim(text)
     if type(text) ~= "string" then
@@ -194,14 +196,16 @@ local function _normalize_cache_table(cache)
         end
     end
 
-    -- entries with no kills and no drops are dead weight: the removed
-    -- live stat capture created one for every mob ever targeted. They
-    -- can never gain content anymore, so drop them from the saved cache
+    -- entries with no kills, no drops, and no observed stats are dead
+    -- weight: the removed live stat capture created one for every mob
+    -- ever targeted. Entries with observed morale/power levels stay:
+    -- cards still render them and the data cannot be recaptured
     local dead = {}
     for name, entry in pairs(cache) do
         local alive = type(entry) == "table"
             and (_to_number(entry.k, 0) > 0
-                or (type(entry.d) == "table" and next(entry.d) ~= nil))
+                or (type(entry.d) == "table" and next(entry.d) ~= nil)
+                or (type(entry.levels) == "table" and next(entry.levels) ~= nil))
         if alive ~= true then
             dead[#dead + 1] = name
         end
@@ -598,6 +602,12 @@ local CACHE_GENERATION = nil
 function Encyclopedia.DataAccess.get_builtin_index()
     -- baked at pack time; same shape _build_source_index produces
     return _G.LUI.Data.Lore.Bestiary.builtin_index()
+end
+
+-- single owner of the packed builtin source binding; consumers must not
+-- bind the deep global themselves
+function Encyclopedia.DataAccess.builtin_source()
+    return BUILTIN_BESTIARY
 end
 
 function Encyclopedia.DataAccess.get_cache_index()

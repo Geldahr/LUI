@@ -548,7 +548,6 @@ function CraftingStore:Constructor()
     self._recipe_load_next = 1
     self._recipe_load_done = 0
     self._recipe_load_total = 0
-    self._known_loose_matches = 0
     self._foreground_loading = false
     self._pending_loaded_result_keys = {}
     self._live_inventory_token = ""
@@ -1485,7 +1484,8 @@ function CraftingStore:_start_recipe_load(current_character)
     self:_reset_status_caches()
     self._recipe_token = tostring(current_character or "")
     self._recipes_initialized = true
-    -- phase 1: stage the heavy Items imports, one file per tick
+    -- phase 1: stage the heavy Items imports, one file per tick (the plan
+    -- is empty when another feature already loaded the domain)
     self._import_queue = Lore.items_import_plan()
     self._import_index = 1
     self._import_total = #self._import_queue
@@ -1499,14 +1499,16 @@ function CraftingStore:_start_recipe_load(current_character)
     -- phase 3: background known-tagging over the in-game book
     self._known_queue = known_queue
     self._known_loading = false
-    self._known_loose_matches = 0
     self._pending_loaded_result_keys = {}
 end
 
 function CraftingStore:_step_import()
-    Lore.import_step(self._import_queue[self._import_index])
-    self._import_index = self._import_index + 1
-    self._import_done = self._import_done + 1
+    -- check-first: an already-loaded domain yields an empty plan
+    if self._import_index <= self._import_total then
+        Lore.import_step(self._import_queue[self._import_index])
+        self._import_index = self._import_index + 1
+        self._import_done = self._import_done + 1
+    end
     if self._import_index > self._import_total then
         self._import_queue = nil
         Lore.load_items()
@@ -1723,9 +1725,6 @@ function CraftingStore:_step_known_pass()
                         best = level
                     end
                 end
-                if best == 1 and n > 0 then
-                    self._known_loose_matches = self._known_loose_matches + 1
-                end
                 for k = 1, n do
                     if levels[k] == best then
                         -- loose matches stay out of the expansion index
@@ -1749,13 +1748,6 @@ function CraftingStore:_step_known_pass()
         -- craftability can change now that known recipes may expand
         -- material trees; recompute statuses on demand
         self:_reset_status_caches()
-        -- drift alarm (the shipped DB is probably older than the game),
-        -- silenced for now: a handful of loose matches is normal and the
-        -- chat line worried users more than it helped
-        -- if self._known_loose_matches > 0 then
-        --     Turbine.Shell.WriteLine("[LUI] " .. tostring(self._known_loose_matches) .. " " ..
-        --         TR["recipes matched loosely - the crafting database may be older than the game."])
-        -- end
         return true
     end
     -- report every batch so the window refreshes progressively while the

@@ -152,52 +152,6 @@ local function _parse_drop_message(message)
     return name, quantity
 end
 
--- resolve the printed loot name against the Items DB: stacked drops print
--- the plural display name, singles the exact name. Returns the canonical
--- display name, quantity, and the resolved ordinals; on DB-not-loaded or
--- unknown item the inputs pass through unchanged (ordinals nil) - only
--- what the DB confirms is rewritten, so a not-yet-in-DB item named with a
--- leading count ("100 Virtue XP" is one item, not a stack) is never split.
-local function _canonicalize_drop(name, quantity)
-    if Lore.Items.loaded ~= true then
-        return name, quantity, nil
-    end
-
-    local ordinals
-    if quantity > 1 then
-        -- gathered stacks arrive count-stripped with the quantity parsed:
-        -- the name is a plural form, so the plural index outranks a
-        -- literal name collision ("Bones" the plural vs "Bones" the item)
-        ordinals = Lore.Items.find_plural_ordinals(name)
-        if ordinals ~= nil then
-            return Lore.Items.label(ordinals[1]), quantity, ordinals
-        end
-        return name, quantity, Lore.Items.find_ordinals(name)
-    end
-
-    ordinals = Lore.Items.find_ordinals(name)
-    if ordinals ~= nil then
-        return name, quantity, ordinals
-    end
-    -- acquired stacks keep the count in the bracket ("[5 Hides]"): split,
-    -- resolve the remainder plural-first, singular for names authored in
-    -- plural form ("200 Figments of Splendour"); a full miss keeps the
-    -- printed name
-    local count, rest = name:match("^(%d+)%s+(.+)$")
-    if count ~= nil then
-        ordinals = Lore.Items.find_plural_ordinals(rest)
-        if ordinals ~= nil then
-            return Lore.Items.label(ordinals[1]), tonumber(count), ordinals
-        end
-        ordinals = Lore.Items.find_ordinals(rest)
-        if ordinals ~= nil then
-            return rest, tonumber(count), ordinals
-        end
-        return name, quantity, nil
-    end
-    return name, quantity, Lore.Items.find_plural_ordinals(name)
-end
-
 local function _visible_duration()
     local duration = tonumber(State.settings.drops.visible_duration) or 4
     if duration <= 0 then
@@ -275,7 +229,6 @@ function DropBackgroundWindow:Constructor()
 
     self:SetVisible(false)
     self:SetMouseVisible(false)
-    self:SetZOrder(0)
     _set_alpha_backdrop(self)
 end
 
@@ -311,8 +264,6 @@ function DropsWindow:Constructor()
     self._pending_item_events = {}
     self._active_drops = {}
     self._entry_pool = {}
-    self._lore_import_plan = nil
-    self._lore_import_index = 1
     self._db_icon_cache = {}
 
     if self.player ~= nil and self.player.GetName ~= nil then
@@ -321,7 +272,6 @@ function DropsWindow:Constructor()
 
     self:SetWantsUpdates(true)
     self:SetVisible(false)
-    self:SetZOrder(0)
 
     self.background = Turbine.UI.Control()
     self.background:SetParent(self)
@@ -421,8 +371,6 @@ function DropsWindow:Update()
         return
     end
     self.last_update_at = now
-
-    self:_step_lore_import()
 
     if self:is_move_mode() == true then
         self:_refresh_background(true)
@@ -561,7 +509,7 @@ end
 function DropsWindow:_queue_chat_drop(name, quantity, now)
     quantity = tonumber(quantity) or 1
     local ordinals
-    name, quantity, ordinals = _canonicalize_drop(name, quantity)
+    name, quantity, ordinals = Lore.Items.canonicalize_drop(name, quantity)
 
     local normalized_name = _normalize_item_name(name)
     if normalized_name == nil then
@@ -778,24 +726,10 @@ function DropsWindow:_promote_pending_chat_drops(now)
     end
 end
 
--- stage the lore Items DB one file per tick so carry-all loot (which never
--- surfaces a live backpack item) can resolve icons by name; a no-op once
--- another feature (crafting) has already loaded the domain
-function DropsWindow:_step_lore_import()
-    if Lore.Items.loaded == true then
-        return
-    end
-    if self._lore_import_plan == nil then
-        self._lore_import_plan = Lore.items_import_plan()
-        self._lore_import_index = 1
-    end
-    if self._lore_import_index <= #self._lore_import_plan then
-        Lore.import_step(self._lore_import_plan[self._lore_import_index])
-        self._lore_import_index = self._lore_import_index + 1
-        return
-    end
-    Lore.load_items()
-end
+-- The lore Items DB is staged in the background by the bestiary prewarm
+-- pump (src/Data/bestiary_db.lua); this window never imports it itself.
+-- Until it is staged, carry-all loot shows without an icon and matures
+-- one via the pending/_db_icon_for retry once the domain loads.
 
 -- lore-DB icon fallback, cached per item name; false = known miss (item
 -- newer than the data drop, or a chat string that is not an item name)
@@ -822,33 +756,7 @@ function DropsWindow:_db_icon_for(name, normalized_name, quantity)
         return cached[1], cached[2]
     end
 
-    -- resolution order: for known stacks the plural index wins over a
-    -- literal name collision ("Bones" the plural of "Bone" vs "Bones" the
-    -- item); otherwise exact display name first (also covers items whose
-    -- name starts with a number, "100 Virtue XP"). Then the in-bracket
-    -- stacked form of acquired lines ("[5 Hides]") with the count removed -
-    -- plural first, and singular for plurals equal to the display name
-    local ordinals
-    if plural_likely then
-        ordinals = Lore.Items.find_plural_ordinals(name)
-        if ordinals == nil then
-            ordinals = Lore.Items.find_ordinals(name)
-        end
-    else
-        ordinals = Lore.Items.find_ordinals(name)
-        if ordinals == nil then
-            ordinals = Lore.Items.find_plural_ordinals(name)
-        end
-    end
-    if ordinals == nil then
-        local stacked_name = name:match("^%d+%s+(.+)$")
-        if stacked_name ~= nil then
-            ordinals = Lore.Items.find_plural_ordinals(stacked_name)
-            if ordinals == nil then
-                ordinals = Lore.Items.find_ordinals(stacked_name)
-            end
-        end
-    end
+    local _, _, ordinals = Lore.Items.canonicalize_drop(name, quantity)
     if ordinals == nil then
         self._db_icon_cache[cache_key] = false
         return nil, nil

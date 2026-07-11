@@ -64,11 +64,13 @@ function Lore.load_bestiary()
     _import_pool()
     import("LUI.src.Data.Bestiary.records")
     import("LUI.src.Data.Bestiary.index")
+    import("LUI.src.Data.Bestiary.order_" .. Lore.language())
     local Data = _G.LoreData
     Bestiary.M = Data["Bestiary.manifest"]
     Bestiary.P = Data[Bestiary._pool_key]
     Bestiary.R = Data["Bestiary.records"]
     Bestiary.I = Data["Bestiary.index"]
+    Bestiary.ORD = Data["Bestiary.order_" .. Lore.language()]
     Bestiary.count = Bestiary.M.count
     -- strong caches by design: query/open speed outranks memory here, and
     -- decoded entries are the bestiary window's working set
@@ -87,6 +89,15 @@ function Bestiary.key_at(ordinal)
     local R = Bestiary.R
     local w = Bestiary.M.koff_width
     return sub(R.KEYS, u(R.KOFF, (ordinal - 1) * w + 1, w), u(R.KOFF, ordinal * w + 1, w) - 1)
+end
+
+-- baked display-order permutation (order_<lang>, every language including
+-- en): position i in the A-Z listing -> record ordinal. The record order
+-- itself stays bytewise English key order, which the exact-key binary
+-- search depends on, so listings never sort at runtime.
+function Bestiary.display_ordinal(i)
+    local ORD = Bestiary.ORD
+    return u(ORD.ORD, (i - 1) * ORD.ord_width + 1, ORD.ord_width)
 end
 
 -- exact-key binary search over the sorted KEYS blob (bytewise, in place)
@@ -358,6 +369,7 @@ local IMPORT_PLAN = {
     _import_pool,
     function() import("LUI.src.Data.Bestiary.records") end,
     function() import("LUI.src.Data.Bestiary.index") end,
+    function() import("LUI.src.Data.Bestiary.order_" .. Lore.language()) end,
 }
 
 -- returns true when imports, the full decode and the quests + npcs +

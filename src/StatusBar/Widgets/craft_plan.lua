@@ -116,6 +116,9 @@ function CraftPlanItemSlot:Constructor(forward_target)
     self.quickslot = nil
     self._quickslot_active = false
     self._item_id = nil
+    -- pre-layout size: a chip's first bind_resource can create the quickslot
+    -- before the first set_side (store already loaded when the chip is built)
+    self._side = 0
 
     local function _forward(name, args)
         local target = self._forward_target

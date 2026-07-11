@@ -21,7 +21,6 @@ import "LUI.src.Inventory.filter"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.search_query"
 
-local BUILTIN_BESTIARY = Encyclopedia.Data or {}
 local DATA_ACCESS = Encyclopedia.DataAccess
 local Style = UI.Widgets.Style
 
@@ -241,43 +240,6 @@ local function _contains_value(list, value)
     return false
 end
 
-local function _merged_bestiary()
-    local merged = {}
-    local function merge_source(source)
-        if type(source) ~= "table" then
-            return
-        end
-
-        for name, entry in pairs(source) do
-            if type(name) == "string" and type(entry) == "table" then
-                if DATA_ACCESS.is_alias_entry(entry) ~= true then
-                    if type(merged[name]) ~= "table" then
-                        merged[name] = DATA_ACCESS.new_merged_entry(name)
-                    end
-
-                    DATA_ACCESS.merge_entry(merged[name], entry, name)
-                end
-            end
-        end
-    end
-
-    -- the packed builtin DB iterates by ordinal (its proxy table only
-    -- serves point lookups); alias entries are not records, so no alias
-    -- filtering is needed here
-    local LoreBestiary = _G.LUI.Data.Lore.Bestiary
-    _G.LUI.Data.Lore.load_bestiary()
-    for ordinal = 1, LoreBestiary.count do
-        local name = LoreBestiary.key_at(ordinal)
-        merged[name] = DATA_ACCESS.new_merged_entry(name)
-        DATA_ACCESS.merge_entry(merged[name], LoreBestiary.decode(ordinal), name)
-    end
-
-    local cache = DATA_ACCESS.ensure_cache()
-    merge_source(cache)
-
-    return merged
-end
-
 local function _format_range(min_value, max_value)
     if min_value <= 0 and max_value <= 0 then
         return "-"
@@ -409,106 +371,167 @@ local function _collect_unique_record_values(records, field_name, genus_filter)
     return out
 end
 
+-- merged view of a single name: builtin first, session cache on top -
+-- the same order _merged_bestiary applies to the whole set. Nil when the
+-- name exists in neither source.
+local function _merged_entry_for(name)
+    local builtin = DATA_ACCESS.builtin_source()[name]
+    local cache_entry = DATA_ACCESS.ensure_cache()[name]
+    if type(cache_entry) ~= "table" or DATA_ACCESS.is_alias_entry(cache_entry) == true then
+        cache_entry = nil
+    end
+    if type(builtin) ~= "table" and cache_entry == nil then
+        return nil
+    end
+
+    local merged = DATA_ACCESS.new_merged_entry(name)
+    if type(builtin) == "table" then
+        DATA_ACCESS.merge_entry(merged, builtin, name)
+    end
+    if cache_entry ~= nil then
+        DATA_ACCESS.merge_entry(merged, cache_entry, name)
+    end
+    return merged
+end
+
+local function _build_record(name, entry)
+    local morale_min = 0
+    local morale_max = 0
+    local power_min = 0
+    local power_max = 0
+    local level_min = 0
+    local level_max = 0
+
+    if type(entry.static_levels) == "table" then
+        level_min = _to_number(entry.static_levels[1], 0)
+        level_max = _to_number(entry.static_levels[2], level_min)
+    end
+    if type(entry.static_morale) == "table" then
+        morale_min = _to_number(entry.static_morale[1], 0)
+        morale_max = _to_number(entry.static_morale[2], morale_min)
+    end
+    if type(entry.static_power) == "table" then
+        power_min = _to_number(entry.static_power[1], 0)
+        power_max = _to_number(entry.static_power[2], power_min)
+    end
+
+    if type(entry.levels) == "table" then
+        for level, info in pairs(entry.levels) do
+            local level_n = _to_number(level, 0)
+            if level_n > 0 then
+                if level_min <= 0 or level_n < level_min then level_min = level_n end
+                if level_n > level_max then level_max = level_n end
+            end
+
+            if type(info) == "table" then
+                local morale = _to_number(info.m, 0)
+                local power = _to_number(info.p, 0)
+                if morale > 0 and (morale_min <= 0 or morale < morale_min) then morale_min = morale end
+                if morale > morale_max then morale_max = morale end
+                if power > 0 and (power_min <= 0 or power < power_min) then power_min = power end
+                if power > power_max then power_max = power end
+            end
+        end
+    end
+
+    local drop_records = DATA_ACCESS.build_drop_records(entry)
+    local display_name = type(entry.display_name) == "string" and entry.display_name or name
+    local filter_parts = {
+        _lower_text(name),
+        _lower_text(display_name),
+        _lower_text(entry.genus),
+        _lower_text(entry.subcategory),
+        _lower_text(entry.species),
+        _lower_text(entry.region),
+        _lower_text(entry.area),
+        _lower_text(entry.instance),
+        _lower_text(entry.monster_type),
+    }
+    for i = 1, #drop_records do
+        local drop = drop_records[i]
+        local drop_name_lower = _lower_text(drop ~= nil and drop.name or nil)
+        if type(drop) == "table" then
+            drop._name_lower = drop_name_lower
+            drop._match_key = drop_name_lower ~= "" and ((drop.chest == true and "c:" or "d:") .. drop_name_lower) or nil
+        end
+        filter_parts[#filter_parts + 1] = drop_name_lower
+    end
+    _append_filter_values(filter_parts, entry.combat_effectiveness)
+    _append_filter_values(filter_parts, entry.resistances)
+    _append_filter_values(filter_parts, entry.mitigation)
+    _append_filter_values(filter_parts, entry.abilities)
+    _append_filter_values(filter_parts, entry.quest_involvement)
+    _append_filter_values(filter_parts, entry.deed_involvement)
+
+    return {
+        key = name,
+        name = display_name,
+        sort_name = _lower_text(DATA_ACCESS.display_name(display_name)),
+        genus = entry.genus,
+        subcategory = entry.subcategory,
+        species = entry.species,
+        region = entry.region,
+        area = entry.area,
+        instance = entry.instance,
+        type = entry.monster_type,
+        level_min = level_min,
+        level_max = level_max,
+        morale_min = morale_min,
+        morale_max = morale_max,
+        power_min = power_min,
+        power_max = power_max,
+        combat_effectiveness = entry.combat_effectiveness,
+        resistances = entry.resistances,
+        mitigation = entry.mitigation,
+        abilities = entry.abilities,
+        quest_involvement = entry.quest_involvement,
+        deed_involvement = entry.deed_involvement,
+        kills = _to_number(entry.k, 0),
+        drops = drop_records,
+        haystack_lower = table.concat(filter_parts, "\n"),
+    }
+end
+
+-- Records come out already in display order: the packed DB bakes a
+-- per-language A-Z permutation (order_<lang>), so no runtime sort runs.
+-- Session-captured mobs missing from the packed DB (few) are the only
+-- insertions.
 local function _build_records()
-    local merged = _merged_bestiary()
+    local Lore = _G.LUI.Data.Lore
+    local LoreBestiary = Lore.Bestiary
+    Lore.load_bestiary()
+    local cache = DATA_ACCESS.ensure_cache()
+
     local out = {}
-
-    for name, entry in pairs(merged) do
-        local morale_min = 0
-        local morale_max = 0
-        local power_min = 0
-        local power_max = 0
-        local level_min = 0
-        local level_max = 0
-
-        if type(entry.static_levels) == "table" then
-            level_min = _to_number(entry.static_levels[1], 0)
-            level_max = _to_number(entry.static_levels[2], level_min)
+    local seen = {}
+    for i = 1, LoreBestiary.count do
+        local ordinal = LoreBestiary.display_ordinal(i)
+        local name = LoreBestiary.key_at(ordinal)
+        local merged = DATA_ACCESS.new_merged_entry(name)
+        DATA_ACCESS.merge_entry(merged, LoreBestiary.decode(ordinal), name)
+        local cached = cache[name]
+        if type(cached) == "table" and DATA_ACCESS.is_alias_entry(cached) ~= true then
+            DATA_ACCESS.merge_entry(merged, cached, name)
         end
-        if type(entry.static_morale) == "table" then
-            morale_min = _to_number(entry.static_morale[1], 0)
-            morale_max = _to_number(entry.static_morale[2], morale_min)
-        end
-        if type(entry.static_power) == "table" then
-            power_min = _to_number(entry.static_power[1], 0)
-            power_max = _to_number(entry.static_power[2], power_min)
-        end
+        seen[name] = true
+        out[#out + 1] = _build_record(name, merged)
+    end
 
-        if type(entry.levels) == "table" then
-            for level, info in pairs(entry.levels) do
-                local level_n = _to_number(level, 0)
-                if level_n > 0 then
-                    if level_min <= 0 or level_n < level_min then level_min = level_n end
-                    if level_n > level_max then level_max = level_n end
-                end
-
-                if type(info) == "table" then
-                    local morale = _to_number(info.m, 0)
-                    local power = _to_number(info.p, 0)
-                    if morale > 0 and (morale_min <= 0 or morale < morale_min) then morale_min = morale end
-                    if morale > morale_max then morale_max = morale end
-                    if power >= 0 and (power_min <= 0 or power < power_min) then power_min = power end
-                    if power > power_max then power_max = power end
+    for name, cached in pairs(cache) do
+        if seen[name] ~= true and type(name) == "string" and type(cached) == "table"
+            and DATA_ACCESS.is_alias_entry(cached) ~= true then
+            local merged = DATA_ACCESS.new_merged_entry(name)
+            DATA_ACCESS.merge_entry(merged, cached, name)
+            local record = _build_record(name, merged)
+            local pos = #out + 1
+            for k = 1, #out do
+                if record.sort_name < out[k].sort_name then
+                    pos = k
+                    break
                 end
             end
+            table.insert(out, pos, record)
         end
-
-        local drop_records = DATA_ACCESS.build_drop_records(entry)
-        local display_name = type(entry.display_name) == "string" and entry.display_name or name
-        local filter_parts = {
-            _lower_text(name),
-            _lower_text(display_name),
-            _lower_text(entry.genus),
-            _lower_text(entry.subcategory),
-            _lower_text(entry.species),
-            _lower_text(entry.region),
-            _lower_text(entry.area),
-            _lower_text(entry.instance),
-            _lower_text(entry.monster_type),
-        }
-        for i = 1, #drop_records do
-            local drop = drop_records[i]
-            local drop_name_lower = _lower_text(drop ~= nil and drop.name or nil)
-            if type(drop) == "table" then
-                drop._name_lower = drop_name_lower
-                drop._match_key = drop_name_lower ~= "" and ((drop.chest == true and "c:" or "d:") .. drop_name_lower) or nil
-            end
-            filter_parts[#filter_parts + 1] = drop_name_lower
-        end
-        _append_filter_values(filter_parts, entry.combat_effectiveness)
-        _append_filter_values(filter_parts, entry.resistances)
-        _append_filter_values(filter_parts, entry.mitigation)
-        _append_filter_values(filter_parts, entry.abilities)
-        _append_filter_values(filter_parts, entry.quest_involvement)
-        _append_filter_values(filter_parts, entry.deed_involvement)
-
-        out[#out + 1] = {
-            key = name,
-            name = display_name,
-            sort_name = _lower_text(DATA_ACCESS.display_name(display_name)),
-            genus = entry.genus,
-            subcategory = entry.subcategory,
-            species = entry.species,
-            region = entry.region,
-            area = entry.area,
-            instance = entry.instance,
-            type = entry.monster_type,
-            level_min = level_min,
-            level_max = level_max,
-            morale_min = morale_min,
-            morale_max = morale_max,
-            power_min = power_min,
-            power_max = power_max,
-            combat_effectiveness = entry.combat_effectiveness,
-            resistances = entry.resistances,
-            mitigation = entry.mitigation,
-            abilities = entry.abilities,
-            quest_involvement = entry.quest_involvement,
-            deed_involvement = entry.deed_involvement,
-            kills = _to_number(entry.k, 0),
-            drops = drop_records,
-            haystack_lower = table.concat(filter_parts, "\n"),
-        }
     end
 
     return out
@@ -2100,7 +2123,13 @@ local BUCKET_TAB_BY_CODE = { [1] = 2, [2] = 4, [3] = 3, [4] = 5, [5] = 6 }
 -- surface that decides whether an item link makes sense.
 function Encyclopedia.encyclopedia_tab_for_item(item_name)
     local Lore = _G.LUI.Data.Lore
-    Lore.load_items()
+    -- the items DB is staged in the background by the bestiary prewarm
+    -- pump; a link probe must never pay the full synchronous import
+    -- (bestiary cards bind chips on target double-click, combat-adjacent).
+    -- Pre-staging probes report "no link" and callers re-probe later.
+    if Lore.Items.loaded ~= true then
+        return nil
+    end
     local ordinals = Lore.Items.find_ordinals(item_name)
     if ordinals == nil then
         return nil
@@ -2142,12 +2171,69 @@ function EncyclopediaWindow:refresh_from_store(force)
 
     self._last_store_refresh_at = Turbine.Engine.GetGameTime()
     self._last_generation = generation
+
+    -- consume the tracker's dirty bookkeeping: when every change since the
+    -- last rebuild is named, patch those records in place instead of
+    -- re-decoding and re-measuring all ~12k packed entries on each kill
+    local dirty_names = BestiaryCache.dirty_names
+    BestiaryCache.dirty_names = nil
+    local dirty_all = BestiaryCache.dirty_all == true
+    BestiaryCache.dirty_all = nil
+
+    if dirty_all ~= true and dirty_names ~= nil and self.all_records ~= nil then
+        self:_refresh_dirty_records(dirty_names)
+        self:apply_view()
+        return
+    end
+
     self.all_records = _build_records()
+    self:_rebuild_record_index()
     self._prepared_content_w = 0
     self._prepared_content_h = 0
     self._prepared_record_key = 0
     self:refresh_taxonomy_filters()
     self:apply_view()
+end
+
+function EncyclopediaWindow:_rebuild_record_index()
+    local by_key = {}
+    for i = 1, #self.all_records do
+        by_key[self.all_records[i].key] = i
+    end
+    self._record_index_by_key = by_key
+end
+
+function EncyclopediaWindow:_refresh_dirty_records(dirty_names)
+    local inserted = false
+    for name in pairs(dirty_names) do
+        local entry = _merged_entry_for(name)
+        if entry ~= nil then
+            local record = _build_record(name, entry)
+            local index = self._record_index_by_key[name]
+            if index ~= nil then
+                -- kills and drops never change the sort key, so an
+                -- in-place swap keeps all_records sorted
+                self.all_records[index] = record
+            else
+                -- first capture of a mob outside the packed DB: insert at
+                -- its sorted position
+                local pos = #self.all_records + 1
+                for i = 1, #self.all_records do
+                    if _compare_records(record, self.all_records[i]) == true then
+                        pos = i
+                        break
+                    end
+                end
+                table.insert(self.all_records, pos, record)
+                inserted = true
+            end
+        end
+    end
+
+    if inserted == true then
+        self:_rebuild_record_index()
+        self:refresh_taxonomy_filters()
+    end
 end
 
 function EncyclopediaWindow:_prepare_records(records)
@@ -2335,10 +2421,8 @@ function EncyclopediaWindow:apply_view()
         end
     end
 
-    table.sort(filtered, function(left, right)
-        return _compare_records(left, right)
-    end)
-
+    -- all_records is kept sorted (refresh_from_store), and the filter loop
+    -- appends in array order, so the filtered view is already sorted
     self.records = filtered
     -- row layouts stay cached (width-keyed): a filter/search keystroke
     -- changes which records show, never how a record lays out

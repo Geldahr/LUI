@@ -16,8 +16,10 @@ import "LUI.src.UI.Widgets"
 
 local Style = UI.Widgets.Style
 
-local BUILTIN_BESTIARY = Encyclopedia.Data or {}
 local DATA_ACCESS = Encyclopedia.DataAccess
+-- packed builtin bestiary proxy, owned by DataAccess (full iteration must
+-- go through count/key_at)
+local BUILTIN_BESTIARY = DATA_ACCESS.builtin_source()
 local CW = Encyclopedia.CardWidgets
 
 -- shared card style tokens live in card_widgets.lua; card-specific
@@ -956,10 +958,24 @@ local function _drop_link_name(name)
     local known = _drop_link_known[name]
     if known == nil then
         known = Encyclopedia.encyclopedia_tab_for_item(name) ~= nil
-        _drop_link_known[name] = known
+        -- pre-staging probes always miss; don't memoize them or links
+        -- would never appear once the items DB finishes staging
+        if _G.LUI.Data.Lore.Items.loaded == true then
+            _drop_link_known[name] = known
+        end
     end
     return known == true and name or nil
 end
+
+-- chips bound while the Items DB was still staging carry no links (the
+-- probe reports "no link" pre-staging); re-bind the open card once the
+-- domain lands so links appear without closing and reopening the card
+_G.LUI.Data.Lore.Items.notify_loaded(function()
+    local card = _G.LUI.Runtime.Windows.bestiary_card
+    if card ~= nil and card:IsVisible() == true then
+        card:apply_settings()
+    end
+end)
 
 local DropChip = CW.DropChip
 

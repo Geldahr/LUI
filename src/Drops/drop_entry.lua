@@ -91,7 +91,6 @@ function DropEntry:Constructor()
     self._qty_width = 0
     self._width = 0
 
-    self:SetZOrder(0)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetMouseVisible(false)

@@ -12,6 +12,7 @@ pcall(import, "LUI.src.Encyclopedia.drop_table_fr")
 import "LUI.src.Encyclopedia.data_resolver"
 import "LUI.src.Encyclopedia.data_access"
 import "LUI.src.Encyclopedia.card_widgets"
+import "LUI.src.Encyclopedia.browser_shared"
 import "LUI.src.Encyclopedia.bestiary_card"
 import "LUI.src.Encyclopedia.resource_card"
 import "LUI.src.Encyclopedia.bestiary_tracker"

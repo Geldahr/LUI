@@ -91,7 +91,6 @@ function ExpiringEffectsWindow:Constructor(opts)
     self:SetWantsUpdates(true)
     self:SetVisible(false)
     self:SetMouseVisible(false)
-    self:SetZOrder(20)
 
     self:apply_settings()
 end

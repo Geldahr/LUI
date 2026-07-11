@@ -301,3 +301,152 @@ function DropChip:bind(text, width, height)
     self.label:SetText(text or "")
     self:SetVisible(true)
 end
+
+-- ------------------------------------------------ shared card behaviors ----
+-- The quest and resource cards share their chip-panel math, chip binding
+-- and window position persistence; both must resolve them identically, so
+-- the single implementation lives here (the bestiary card keeps its own
+-- variant: it also persists size and clamps flush to the screen edges).
+
+-- panel height wrapping its chip layout; nil layout (hidden) when empty
+function CardWidgets.measure_chip_panel(texts, content_w)
+    if #texts == 0 then
+        return nil, 0, 0
+    end
+
+    local body_pad_x = CardWidgets.scaled_int(BASE.PANEL_BODY_PAD_X)
+    local body_pad_t = CardWidgets.scaled_int(BASE.PANEL_BODY_PAD_TOP)
+    local body_pad_b = CardWidgets.scaled_int(BASE.PANEL_BODY_PAD_BOTTOM)
+    local header_h = CardWidgets.scaled_int(BASE.PANEL_HEADER_H)
+    local usable_w = math.max(1, content_w - 2 - (2 * body_pad_x))
+    local layout, chip_content_h = CardWidgets.build_chip_layout(texts, usable_w)
+    return layout, chip_content_h, header_h + 2 + body_pad_t + body_pad_b + chip_content_h
+end
+
+function CardWidgets.bind_chip_row(chips, parent, layout, link_flags)
+    local chip_h = CardWidgets.scaled_int(BASE.CHIP_H)
+    while #chips < #layout do
+        local chip = CardWidgets.DropChip()
+        chip:SetParent(parent)
+        chip:SetVisible(false)
+        chips[#chips + 1] = chip
+    end
+    for i = 1, #layout do
+        local chip_info = layout[i]
+        local chip = chips[i]
+        -- link state first: apply_settings picks the border color from it
+        chip:set_link(link_flags[chip_info.name] == true and chip_info.name or nil)
+        chip:apply_settings(chip_info.chest == true)
+        chip:SetPosition(chip_info.x, chip_info.y)
+        chip:bind(chip_info.text, chip_info.w, chip_h)
+    end
+    for i = #layout + 1, #chips do
+        chips[i]:SetVisible(false)
+    end
+end
+
+-- saved-geometry bucket for a card window, keyed under settings.encyclopedia
+function CardWidgets.card_window_settings(key, create)
+    local root = State.loaded_settings
+    if type(root) ~= "table" then
+        return nil
+    end
+
+    if type(root.encyclopedia) ~= "table" then
+        if create ~= true then
+            return nil
+        end
+        root.encyclopedia = {}
+    end
+
+    if type(root.encyclopedia[key]) ~= "table" then
+        if create ~= true then
+            return nil
+        end
+        root.encyclopedia[key] = {}
+    end
+
+    return root.encyclopedia[key]
+end
+
+function CardWidgets.persist_card_position(card, key)
+    local window = CardWidgets.card_window_settings(key, true)
+    if type(window) ~= "table" then
+        return
+    end
+
+    local left, top = card:GetPosition()
+    window.left = left
+    window.top = top
+end
+
+function CardWidgets.restore_card_position(card, key)
+    local window = CardWidgets.card_window_settings(key, false)
+    if type(window) ~= "table" then
+        return false
+    end
+
+    local left = window.left
+    local top = window.top
+    if type(left) ~= "number" or type(top) ~= "number" then
+        return false
+    end
+
+    card._suppress_position_persist = true
+    card:SetPosition(left, top)
+    card._suppress_position_persist = false
+    return true
+end
+
+function CardWidgets.clamp_card_to_display(card)
+    local display_w, display_h = Turbine.UI.Display.GetSize()
+    local left, top = card:GetPosition()
+    local width, height = card:GetSize()
+    local offset = CardWidgets.scaled_int(BASE.OFFSET)
+
+    if left + width > display_w then
+        left = display_w - width - offset
+    end
+    if top + height > display_h then
+        top = display_h - height - offset
+    end
+    if left < 0 then
+        left = 0
+    end
+    if top < 0 then
+        top = 0
+    end
+
+    card._suppress_position_persist = true
+    card:SetPosition(left, top)
+    card._suppress_position_persist = false
+end
+
+function CardWidgets.position_card_near_anchor(card, anchor)
+    local display_w, display_h = Turbine.UI.Display.GetSize()
+    local left = math.floor((display_w - card:GetWidth()) / 2)
+    local top = math.floor((display_h - card:GetHeight()) / 2)
+    local offset = CardWidgets.scaled_int(BASE.OFFSET)
+
+    -- anchor is optional by design: nil centers the card on screen
+    if anchor ~= nil then
+        local ax, ay = anchor:GetPosition()
+        local aw = anchor:GetSize()
+        left = ax + aw + offset
+        top = ay
+    end
+
+    card._suppress_position_persist = true
+    card:SetPosition(left, top)
+    card._suppress_position_persist = false
+end
+
+function CardWidgets.prepare_card_position(card, key, anchor)
+    if CardWidgets.restore_card_position(card, key) ~= true and card.sticky_position ~= true then
+        CardWidgets.position_card_near_anchor(card, anchor)
+    end
+
+    CardWidgets.clamp_card_to_display(card)
+    CardWidgets.persist_card_position(card, key)
+    card.sticky_position = true
+end

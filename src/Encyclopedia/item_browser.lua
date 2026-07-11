@@ -12,7 +12,6 @@ local TR = _G.LUI.Locale.TR
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Style = UI.Widgets.Style
-local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
 local scaled_int = UI.NativeScaling.scaled_int
 local class = _G.LUI.Core.class
 local Lore = _G.LUI.Data.Lore
@@ -38,28 +37,16 @@ local FILTER_ALL_CODE = 0
 -- grouped Type entry matching every per-tier recipe class (Items.RECIPE_CLASS_SET)
 local FILTER_RECIPES_CODE = -1
 
--- filter dropdowns size to their longest option (estimate, same approach
--- as the card chips): byte length x char width + arrow/padding, clamped
-local BASE_FILTER_CHAR_W = 6.2
-local BASE_DROPDOWN_PAD = 26
-local BASE_DROPDOWN_MIN_W = 70
+-- shared browser scaffolding (browser_shared.lua); the dropdown max clamp
+-- is this tab's only variation
+local BrowserShared = Encyclopedia.BrowserShared
 local BASE_DROPDOWN_MAX_W = 190
 
 local function _dropdown_base_w(labels)
-    local longest = 0
-    for i = 1, #labels do
-        local n = string.len(labels[i] or "")
-        if n > longest then
-            longest = n
-        end
-    end
-    local w = (longest * BASE_FILTER_CHAR_W) + BASE_DROPDOWN_PAD
-    return math.min(BASE_DROPDOWN_MAX_W, math.max(BASE_DROPDOWN_MIN_W, w))
+    return BrowserShared.dropdown_base_w(labels, BASE_DROPDOWN_MAX_W)
 end
 
-local function _scaled_font(name, size)
-    return FONT_TO_LOTRO(name, size * State.settings.global.scale)
-end
+local _scaled_font = BrowserShared.scaled_font
 
 -- link action icons: identical treatment to the crafting window's
 -- bestiary button on drop resources (16px icon in a 22px square button)
@@ -418,15 +405,7 @@ function ItemBrowserPanel:apply_fonts()
 end
 
 function ItemBrowserPanel:_parse_level(text)
-    local value = tonumber(text)
-    if value == nil then
-        return nil
-    end
-    value = math.floor(value)
-    if value <= 0 then
-        return nil
-    end
-    return value
+    return BrowserShared.parse_level(text)
 end
 
 function ItemBrowserPanel:_on_filters_changed()
@@ -466,8 +445,7 @@ end
 function ItemBrowserPanel:_rebuild_filtered()
     local Items = Lore.Items
     local query = self.search_box:GetText() or ""
-    local signature = table.concat({
-        query,
+    local filter_sig = table.concat({
         tostring(self._quality_filter),
         tostring(self._class_filter),
         tostring(self._pclass_filter or ""),
@@ -476,10 +454,44 @@ function ItemBrowserPanel:_rebuild_filtered()
         tostring(self._ilvl_min or ""),
         tostring(self._ilvl_max or ""),
     }, "\30")
+    local signature = query .. "\30" .. filter_sig
     if signature == self._signature and self._filtered ~= nil then
         return
     end
+
+    -- keystroke fast path: appending to a '|'-free query only narrows the
+    -- match set (terms grow, none are removed, no OR group appears), so
+    -- the previous result is re-filtered by the new search set instead of
+    -- rescanning the whole bucket on every character typed
+    local previous = self._filtered
+    local can_refine = previous ~= nil
+        and self._filter_sig == filter_sig
+        and type(self._query) == "string"
+        and #query > #self._query
+        and query:sub(1, #self._query) == self._query
+        and query:find("|", 1, true) == nil
     self._signature = signature
+    self._query = query
+    self._filter_sig = filter_sig
+
+    if can_refine == true then
+        local search_set = _search_set_for_query(query)
+        if search_set ~= nil then
+            local filtered, n = {}, 0
+            for i = 1, #previous do
+                local ordinal = previous[i]
+                if search_set[ordinal] == true then
+                    n = n + 1
+                    filtered[n] = ordinal
+                end
+            end
+            self._filtered = filtered
+        end
+        -- a nil set means the appended text is still below the seed
+        -- threshold ("still typing"): search applies no filter, so the
+        -- previous result already is the exact answer
+        return
+    end
 
     local search_set = _search_set_for_query(query)
     local quality = self._quality_filter

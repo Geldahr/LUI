@@ -146,121 +146,30 @@ function QuestCard:Constructor()
 end
 
 -- ------------------------------------------------- position persistence ----
+-- shared with the resource card (card_widgets.lua); only the settings key
+-- differs
 
-local function _card_window_settings(create)
-    local root = State.loaded_settings
-    if type(root) ~= "table" then
-        return nil
-    end
-
-    if type(root.encyclopedia) ~= "table" then
-        if create ~= true then
-            return nil
-        end
-        root.encyclopedia = {}
-    end
-
-    if type(root.encyclopedia.quest_card_window) ~= "table" then
-        if create ~= true then
-            return nil
-        end
-        root.encyclopedia.quest_card_window = {}
-    end
-
-    return root.encyclopedia.quest_card_window
-end
+local SETTINGS_KEY = "quest_card_window"
 
 function QuestCard:_persist_current_position()
-    local window = _card_window_settings(true)
-    if type(window) ~= "table" then
-        return
-    end
-
-    local left, top = self:GetPosition()
-    window.left = left
-    window.top = top
+    CW.persist_card_position(self, SETTINGS_KEY)
 end
 
 function QuestCard:_restore_saved_position()
-    local window = _card_window_settings(false)
-    if type(window) ~= "table" then
-        return false
-    end
-
-    local left = window.left
-    local top = window.top
-    if type(left) ~= "number" or type(top) ~= "number" then
-        return false
-    end
-
-    self._suppress_position_persist = true
-    self:SetPosition(left, top)
-    self._suppress_position_persist = false
-    return true
+    return CW.restore_card_position(self, SETTINGS_KEY)
 end
 
 function QuestCard:_clamp_to_display()
-    local display_w, display_h = Turbine.UI.Display.GetSize()
-    local left, top = self:GetPosition()
-    local width, height = self:GetSize()
-    local offset = _scaled_int(CW.BASE.OFFSET)
-
-    if left + width > display_w then
-        left = display_w - width - offset
-    end
-    if top + height > display_h then
-        top = display_h - height - offset
-    end
-    if left < 0 then
-        left = 0
-    end
-    if top < 0 then
-        top = 0
-    end
-
-    self._suppress_position_persist = true
-    self:SetPosition(left, top)
-    self._suppress_position_persist = false
+    CW.clamp_card_to_display(self)
 end
 
 function QuestCard:_prepare_position(anchor)
-    if self:_restore_saved_position() ~= true and self.sticky_position ~= true then
-        local display_w, display_h = Turbine.UI.Display.GetSize()
-        local left = math.floor((display_w - self:GetWidth()) / 2)
-        local top = math.floor((display_h - self:GetHeight()) / 2)
-        local offset = _scaled_int(CW.BASE.OFFSET)
-        if anchor ~= nil and anchor.GetPosition ~= nil and anchor.GetSize ~= nil then
-            local ax, ay = anchor:GetPosition()
-            local aw = anchor:GetSize()
-            left = ax + aw + offset
-            top = ay
-        end
-        self._suppress_position_persist = true
-        self:SetPosition(left, top)
-        self._suppress_position_persist = false
-    end
-
-    self:_clamp_to_display()
-    self:_persist_current_position()
-    self.sticky_position = true
+    CW.prepare_card_position(self, SETTINGS_KEY, anchor)
 end
 
 -- ---------------------------------------------------------------- layout ----
 
--- panel height wrapping its chip layout; 0-height (hidden) when empty
-local function _measure_chip_panel(texts, content_w)
-    if #texts == 0 then
-        return nil, 0, 0
-    end
-
-    local body_pad_x = _scaled_int(CW.BASE.PANEL_BODY_PAD_X)
-    local body_pad_t = _scaled_int(CW.BASE.PANEL_BODY_PAD_TOP)
-    local body_pad_b = _scaled_int(CW.BASE.PANEL_BODY_PAD_BOTTOM)
-    local header_h = _scaled_int(CW.BASE.PANEL_HEADER_H)
-    local usable_w = math.max(1, content_w - 2 - (2 * body_pad_x))
-    local layout, chip_content_h = CW.build_chip_layout(texts, usable_w)
-    return layout, chip_content_h, header_h + 2 + body_pad_t + body_pad_b + chip_content_h
-end
+local _measure_chip_panel = CW.measure_chip_panel
 
 function QuestCard:_measure_content_height()
     local gap = _scaled_int(CW.BASE.SECTION_GAP)
@@ -312,26 +221,7 @@ function QuestCard:_fit_window_height()
     self:_clamp_to_display()
 end
 
-local function _bind_chip_row(chips, parent, layout, link_flags)
-    local chip_h = _scaled_int(CW.BASE.CHIP_H)
-    while #chips < #layout do
-        local chip = CW.DropChip()
-        chip:SetParent(parent)
-        chip:SetVisible(false)
-        chips[#chips + 1] = chip
-    end
-    for i = 1, #layout do
-        local chip_info = layout[i]
-        local chip = chips[i]
-        chip:set_link(link_flags[chip_info.name] == true and chip_info.name or nil)
-        chip:apply_settings(chip_info.chest == true)
-        chip:SetPosition(chip_info.x, chip_info.y)
-        chip:bind(chip_info.text, chip_info.w, chip_h)
-    end
-    for i = #layout + 1, #chips do
-        chips[i]:SetVisible(false)
-    end
-end
+local _bind_chip_row = CW.bind_chip_row
 
 function QuestCard:_layout_content()
     local margin = _scaled_int(12)
