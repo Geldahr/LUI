@@ -806,16 +806,19 @@ function CraftingRecipeRow:set_data(recipe, status, result_item, required_level,
     self.recipe = recipe
     self.status = status
 
+    -- "Jeweller - Artisan - Level 35": profession and rank describe the
+    -- crafter, the level is the result item's equip level, so it comes
+    -- last. The category is dropped (it only repeated the level).
     local title = result_item ~= nil and result_item.name or ""
     local subtitle_parts = {}
     if recipe ~= nil and recipe.profession_name ~= "" then
         subtitle_parts[#subtitle_parts + 1] = recipe.profession_name
     end
+    if recipe ~= nil and recipe.tier > 0 then
+        subtitle_parts[#subtitle_parts + 1] = _craft_rank_name(recipe.tier)
+    end
     if required_level ~= nil then
         subtitle_parts[#subtitle_parts + 1] = TR["Level"] .. " " .. _format_count(required_level)
-    end
-    if recipe ~= nil and recipe.category_name ~= "" then
-        subtitle_parts[#subtitle_parts + 1] = recipe.category_name
     end
     if recipe ~= nil and _trim(recipe.recipe_name or "") ~= "" and _lower(recipe.recipe_name) ~= _lower(title) then
         subtitle_parts[#subtitle_parts + 1] = recipe.recipe_name
@@ -3758,7 +3761,6 @@ function CraftingWindow:refresh_selected_recipe()
     else
         result_name = self:_recipe_result_name(recipe)
     end
-    local required_level = self:_recipe_required_level(recipe)
     self.detail_empty:SetVisible(false)
     self:_refresh_critical_result_detail(recipe, variant)
     self.variant_pos_label:SetText(tostring(self._selected_variant_index + 1) .. "/" ..
@@ -3772,15 +3774,11 @@ function CraftingWindow:refresh_selected_recipe()
     )
 
     self.detail_title:SetText(result_name)
+    -- same short form as the list rows ("Jeweller - Artisan"): the level
+    -- and the category (which repeats the level) added nothing but noise
     local meta_parts = {}
     if recipe.profession_name ~= "" then
         meta_parts[#meta_parts + 1] = recipe.profession_name
-    end
-    if required_level ~= nil then
-        meta_parts[#meta_parts + 1] = TR["Level"] .. " " .. _format_count(required_level)
-    end
-    if recipe.category_name ~= "" then
-        meta_parts[#meta_parts + 1] = recipe.category_name
     end
     if recipe.tier > 0 then
         meta_parts[#meta_parts + 1] = _craft_rank_name(recipe.tier)

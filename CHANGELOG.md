@@ -22,6 +22,7 @@
 - Crafting ingredient, plan, and queue rows derive their height from the item icon plus padding so icons fit exactly at every UI scale, and rows with only a name center their text vertically.
 - Cross-window link buttons now always select the matching window tab (Recipes tab in crafting, Bestiary tab in the Encyclopedia).
 - Stacked drops in the Drops window now show the real item: `[5 Hides]` displays as `Hide` with a count of 5, the item's icon, and its tooltip, instead of an unresolved plural line. Items whose name starts with a number (`100 Virtue XP`) are never mistaken for stacks.
+- Crafting recipe lines are shorter: list rows read `Jeweller - Artisan - Level 35` (the level is the result's equip level) and the recipe details read `Jeweller - Artisan`, dropping the category that only repeated the level.
 
 ### Fixed
 
