@@ -777,9 +777,9 @@ function AssetsWindow:Constructor()
             window = Crafting.CraftingWindow()
             Windows.crafting = window
         end
-        if window ~= nil then
-            window:open_from_asset_materials(nil)
-        end
+        -- the active assets search carries over, so the recipe list shows
+        -- exactly what the button counted
+        window:open_from_asset_materials(self.filter_tb:GetText())
     end
 
     self.content = Turbine.UI.Control()
@@ -1693,13 +1693,37 @@ function AssetsWindow:_refresh_recipes_button()
         if loading ~= true then
             -- only the character's known recipes: the store now holds the
             -- full DB catalog, and evaluating status across all of it is a
-            -- frame-freezing sweep with a meaningless count
-            for i = 1, #store.recipes do
-                local recipe = store.recipes[i]
-                if recipe.known == true then
-                    local status = store:get_recipe_status(recipe, "server")
-                    if status.craftable == true then
-                        count = count + 1
+            -- frame-freezing sweep with a meaningless count. Craftability
+            -- spans every source, matching what clicking the button opens.
+            local scope = store:scope_key_from_sources(store:get_all_source_keys())
+            if #self.records ~= (self.total_record_count or 0) then
+                -- a filter narrows the view: count only recipes consuming
+                -- at least one visible asset, so the number mirrors what
+                -- the click-through search will list
+                local counted = {}
+                for i = 1, #self.records do
+                    local list = store:get_recipes_using_name(self.records[i].name)
+                    if list ~= nil then
+                        for k = 1, #list do
+                            local recipe = list[k]
+                            if counted[recipe.id] == nil then
+                                counted[recipe.id] = true
+                                if recipe.known == true and
+                                    store:get_recipe_status(recipe, scope).craftable == true then
+                                    count = count + 1
+                                end
+                            end
+                        end
+                    end
+                end
+            else
+                for i = 1, #store.recipes do
+                    local recipe = store.recipes[i]
+                    if recipe.known == true then
+                        local status = store:get_recipe_status(recipe, scope)
+                        if status.craftable == true then
+                            count = count + 1
+                        end
                     end
                 end
             end

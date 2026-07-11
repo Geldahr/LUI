@@ -2801,15 +2801,21 @@ function CraftingWindow:open()
     self:refresh_from_store(true)
 end
 
-function CraftingWindow:open_from_asset_materials(_)
+function CraftingWindow:open_from_asset_materials(material_keyword)
     self.profession_filter = FILTER_ALL
     self.rank_filter = FILTER_ALL
     self:set_scope_sources(self.store:get_all_source_keys(), false)
-    self.show_filter = { [AVAILABILITY_READY] = true }
+    -- Ready AND Known: the assets Recipes counter counts known craftable
+    -- recipes, so the opened list must apply both axes or the full
+    -- catalog's ready-but-unlearned recipes flood past the counted number
+    self.show_filter = { [AVAILABILITY_READY] = true, [AVAILABILITY_KNOWN] = true }
     self.level_min_filter = nil
     self.level_max_filter = nil
     self.recipe_page_index = 1
-    self:_apply_search_query("")
+    -- the assets window's search keyword carries over: recipe search also
+    -- matches ingredient names, so "light hide" lists the ready recipes
+    -- consuming the filtered materials
+    self:_apply_search_query(material_keyword)
     self:_invalidate_recipe_list()
 
     if self.profession_dropdown ~= nil then
@@ -2833,6 +2839,9 @@ function CraftingWindow:open_from_asset_materials(_)
 
     self:open()
     self:show_recipe_tab()
+    -- text set while the window was hidden does not repaint until the box
+    -- is interacted with (same workaround as open_item_search)
+    self.search_box:refresh_text_async()
 end
 
 -- Cross-window link entry (Encyclopedia rows, bestiary card drops): open on

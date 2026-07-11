@@ -984,6 +984,11 @@ function CraftingStore:has_recipes_using_name(item_name)
     return self.recipes_by_ingredient[_normalize_name(item_name)] ~= nil
 end
 
+-- recipe records consuming this item as an ingredient (nil when none)
+function CraftingStore:get_recipes_using_name(item_name)
+    return self.recipes_by_ingredient[_normalize_name(item_name)]
+end
+
 -- Which output of a recipe an item name refers to: 0 for the main result
 -- (or its crit), 1..n for a variant (or its crit).
 function CraftingStore:variant_index_for_result_name(recipe, item_name)
