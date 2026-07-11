@@ -6,7 +6,8 @@ local TR = _G.LUI.Locale.TR
 local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
 local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
 local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
-local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_timed_row_vertical_time_label_rect = _G.LUI.Utils.lui_timed_row_vertical_time_label_rect
+local lui_timed_row_resolve_item_footprint = _G.LUI.Utils.lui_timed_row_resolve_item_footprint
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
 local ConfigWindow = _G.LUI.Settings.ConfigWindow
 local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
@@ -219,13 +220,17 @@ function ConfigWindow:update_cooldowns_preview()
     if border < 0 then border = 0 end
 
     local icon_side = _require_control_enum(self.controls, "cd_icon_side")
-    local icon_left = LUI_ENUMS.side_is_left[icon_side] == true
+    local icon_near = LUI_ENUMS.side_is_left[icon_side] == true
 
     local bar_expire_towards = _require_control_enum(self.controls, "cd_bar_expire_towards")
 
     local bar_mode = _require_control_enum(self.controls, "cd_bar_mode")
 
     local time_format = _require_control_enum(self.controls, "cd_time_format")
+
+    local orientation = _require_control_enum(self.controls, "cd_orientation")
+    local vertical = orientation == LUI_ENUMS.orientation.VERTICAL
+    local show_time = self.controls.cd_show_time.cb:IsChecked() == true
 
     local raw_text_margin = _require_control_number(self.controls, "cd_text_margin")
     local text_margin = scaled_int(raw_text_margin)
@@ -249,27 +254,42 @@ function ConfigWindow:update_cooldowns_preview()
         error("Invalid cooldown preview threshold: " .. tostring(threshold))
     end
 
+    -- item_w is the bar length (main axis) and item_h the thickness (cross
+    -- axis) in both orientations.
     local raw_item_w = _require_control_number(self.controls, "cd_item_w")
-    local min_item_w = lui_cooldown_min_item_width(
-        item_h,
-        border,
-        text_margin,
-        font_name,
-        font_size,
-        threshold,
-        time_format
+    local item_len = scaled_int(raw_item_w)
+    if item_len < 10 then item_len = 10 end
+
+    -- On vertical bars the resolver shrinks the time font to fit the
+    -- thickness and downgrades show_time when even the smallest size does
+    -- not fit.
+    local item_w, time_font_size
+    item_w, item_h, show_time, time_font_size = lui_timed_row_resolve_item_footprint(
+        vertical, show_time,
+        item_len, item_h,
+        border, text_margin,
+        font_name, font_size,
+        threshold, time_format
     )
-    local item_w = scaled_int(raw_item_w)
-    if item_w < 10 then item_w = 10 end
-    if item_w < min_item_w then
-        item_w = min_item_w
-    end
 
     local row = self.cooldowns_preview.row
     local p = self.cooldowns_preview
 
     local outer_bw = p.preview_border_thickness
     if outer_bw < 1 then outer_bw = 1 end
+
+    -- The page layout bounds the holder against its own minimum tab-content
+    -- height, so no explicit cap is needed here.
+    local holder = self.controls.cooldowns_preview
+    local desired_holder_h = 52
+    if vertical then
+        desired_holder_h = item_h + (2 * outer_bw) + 8
+        if desired_holder_h < 52 then desired_holder_h = 52 end
+    end
+    if holder.height ~= desired_holder_h then
+        holder.height = desired_holder_h
+        holder.on_height_changed()
+    end
 
     local pw, ph = p.container:GetSize()
 
@@ -336,49 +356,66 @@ function ConfigWindow:update_cooldowns_preview()
     row.entry:SetPosition(inner_x, inner_y)
     row.entry:SetSize(inner_w, inner_h)
 
-    local sep_w = bw_draw
-    if sep_w < 0 then sep_w = 0 end
-    if sep_w >= inner_w then sep_w = inner_w - 1 end
-    if sep_w < 0 then sep_w = 0 end
+    local inner_main = vertical and inner_h or inner_w
+    local inner_cross = vertical and inner_w or inner_h
 
-    local icon_size = inner_h
-    local max_icon = inner_w - sep_w - 1
+    local sep = bw_draw
+    if sep < 0 then sep = 0 end
+    if sep >= inner_main then sep = inner_main - 1 end
+    if sep < 0 then sep = 0 end
+
+    local icon_size = inner_cross
+    local max_icon = inner_main - sep - 1
     if max_icon < 1 then max_icon = 1 end
     if icon_size > max_icon then
         icon_size = max_icon
     end
 
-    local bar_width = inner_w - icon_size - sep_w
-    if bar_width < 1 then bar_width = 1 end
+    local bar_len = inner_main - icon_size - sep
+    if bar_len < 1 then bar_len = 1 end
 
     row.separator:SetBackColor(border_color)
-    row.separator:SetVisible(sep_w > 0)
+    row.separator:SetVisible(sep > 0)
 
-    if icon_left then
-        row.icon_background:SetPosition(0, 0)
-        row.icon_background:SetSize(icon_size, icon_size)
-        row.icon_background:SetBackColor(icon_bg)
+    if vertical then
+        if icon_near then
+            row.icon_background:SetPosition(0, 0)
 
-        row.separator:SetPosition(icon_size, 0)
-        row.separator:SetSize(sep_w, inner_h)
+            row.separator:SetPosition(0, icon_size)
+            row.separator:SetSize(inner_w, sep)
 
-        row.bar_background:SetPosition(icon_size + sep_w, 0)
+            row.bar_background:SetPosition(0, icon_size + sep)
+        else
+            row.bar_background:SetPosition(0, 0)
+
+            row.separator:SetPosition(0, bar_len)
+            row.separator:SetSize(inner_w, sep)
+
+            row.icon_background:SetPosition(0, bar_len + sep)
+        end
+        row.bar_background:SetSize(inner_cross, bar_len)
     else
-        row.bar_background:SetPosition(0, 0)
+        if icon_near then
+            row.icon_background:SetPosition(0, 0)
 
-        row.separator:SetPosition(bar_width, 0)
-        row.separator:SetSize(sep_w, inner_h)
+            row.separator:SetPosition(icon_size, 0)
+            row.separator:SetSize(sep, inner_h)
 
-        row.icon_background:SetPosition(bar_width + sep_w, 0)
-        row.icon_background:SetSize(icon_size, icon_size)
-        row.icon_background:SetBackColor(icon_bg)
+            row.bar_background:SetPosition(icon_size + sep, 0)
+        else
+            row.bar_background:SetPosition(0, 0)
+
+            row.separator:SetPosition(bar_len, 0)
+            row.separator:SetSize(sep, inner_h)
+
+            row.icon_background:SetPosition(bar_len + sep, 0)
+        end
+        row.bar_background:SetSize(bar_len, inner_cross)
     end
 
-    row.bar_background:SetSize(bar_width, inner_h)
+    row.icon_background:SetSize(icon_size, icon_size)
+    row.icon_background:SetBackColor(icon_bg)
     row.bar_background:SetBackColor(bar_bg)
-
-    local bar_inner_w = bar_width
-    local bar_inner_h = inner_h
 
     local total = threshold * 1.4
     if total < 3 then total = 3 end
@@ -398,52 +435,87 @@ function ConfigWindow:update_cooldowns_preview()
         percent = 1 - ratio
     end
 
-    local fill_width = math.floor(bar_inner_w * percent + 0.5)
-    if fill_width < 0 then fill_width = 0 end
-    if fill_width > bar_inner_w then fill_width = bar_inner_w end
+    local fill_len = math.floor(bar_len * percent + 0.5)
+    if fill_len < 0 then fill_len = 0 end
+    if fill_len > bar_len then fill_len = bar_len end
 
-    local towards_right = bar_expire_towards == LUI_ENUMS.side.RIGHT
-    local anchor_right = towards_right
+    -- side RIGHT means right when horizontal, bottom when vertical.
+    local towards_far = bar_expire_towards == LUI_ENUMS.side.RIGHT
+    local anchor_far = towards_far
     if bar_mode == LUI_ENUMS.bar_mode.LOAD then
-        anchor_right = towards_right ~= true
+        anchor_far = towards_far ~= true
     end
 
-    if anchor_right then
-        row.bar_fill:SetPosition(bar_inner_w - fill_width, 0)
+    if vertical then
+        if anchor_far then
+            row.bar_fill:SetPosition(0, bar_len - fill_len)
+        else
+            row.bar_fill:SetPosition(0, 0)
+        end
+        row.bar_fill:SetSize(inner_cross, fill_len)
     else
-        row.bar_fill:SetPosition(0, 0)
+        if anchor_far then
+            row.bar_fill:SetPosition(bar_len - fill_len, 0)
+        else
+            row.bar_fill:SetPosition(0, 0)
+        end
+        row.bar_fill:SetSize(fill_len, inner_cross)
     end
-    row.bar_fill:SetSize(fill_width, bar_inner_h)
     row.bar_fill:SetBackColor(bar_fill)
 
-    local time_width = lui_cooldown_time_label_width(font_name, font_size, threshold, time_format)
-    local text_gap = lui_cooldown_text_gap(font_size)
-    local title_width = inner_w - icon_size - sep_w - (2 * text_margin) - time_width - text_gap
-    if title_width < 1 then
-        title_width = 1
+    row.name_label:SetVisible(vertical ~= true)
+    row.time_label:SetVisible(show_time)
+
+    if vertical then
+        if show_time then
+            local time_x, time_y, time_w, time_h = lui_timed_row_vertical_time_label_rect(
+                font_name, time_font_size, bar_len, inner_cross, icon_near)
+
+            row.time_label:SetFont(_require_font(font_name, time_font_size))
+            row.time_label:SetFontStyle(font_style_lotro)
+            row.time_label:SetForeColor(font_color)
+            row.time_label:SetOutlineColor(outline_color)
+            row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+            row.time_label:SetPosition(time_x, time_y)
+            row.time_label:SetSize(time_w, time_h)
+            row.time_label:SetText(lui_format_cooldown_time(remaining, time_format))
+        end
+    else
+        local time_width = 0
+        local text_gap = 0
+        if show_time then
+            time_width = lui_cooldown_time_label_width(font_name, font_size, threshold, time_format)
+            text_gap = lui_cooldown_text_gap(font_size)
+        end
+        local title_width = inner_w - icon_size - sep - (2 * text_margin) - time_width - text_gap
+        if title_width < 1 then
+            title_width = 1
+        end
+        local time_x = text_margin + title_width + text_gap
+
+        row.name_label:SetFont(font)
+        row.name_label:SetFontStyle(font_style_lotro)
+        row.name_label:SetForeColor(font_color)
+        row.name_label:SetOutlineColor(outline_color)
+        row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        row.name_label:SetPosition(text_margin, 0)
+        row.name_label:SetSize(title_width, inner_h)
+
+        local example_name = table.concat({ TR["Example skill"], TR["Example skill"], TR["Example skill"] }, " ")
+        row.name_label:SetText(_truncate_name(example_name, name_max_chars))
+
+        if show_time then
+            row.time_label:SetFont(font)
+            row.time_label:SetFontStyle(font_style_lotro)
+            row.time_label:SetForeColor(font_color)
+            row.time_label:SetOutlineColor(outline_color)
+            row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+            row.time_label:SetPosition(time_x, 0)
+            row.time_label:SetSize(time_width, inner_h)
+            row.time_label:SetText(lui_format_cooldown_time(remaining, time_format))
+        end
     end
-    local time_x = text_margin + title_width + text_gap
-
-    row.name_label:SetFont(font)
-    row.name_label:SetFontStyle(font_style_lotro)
-    row.name_label:SetForeColor(font_color)
-    row.name_label:SetOutlineColor(outline_color)
-    row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    row.name_label:SetPosition(text_margin, 0)
-    row.name_label:SetSize(title_width, inner_h)
-
-    row.time_label:SetFont(font)
-    row.time_label:SetFontStyle(font_style_lotro)
-    row.time_label:SetForeColor(font_color)
-    row.time_label:SetOutlineColor(outline_color)
-    row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-    row.time_label:SetPosition(time_x, 0)
-    row.time_label:SetSize(time_width, inner_h)
 
     row.icon:SetPosition(0, 0)
     row.icon:SetSize(icon_size, icon_size)
-
-    local example_name = table.concat({ TR["Example skill"], TR["Example skill"], TR["Example skill"] }, " ")
-    row.name_label:SetText(_truncate_name(example_name, name_max_chars))
-    row.time_label:SetText(lui_format_cooldown_time(remaining, time_format))
 end

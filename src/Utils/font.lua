@@ -55,6 +55,9 @@ local function _lotro_font(base_name, size)
     return Turbine.UI.Lotro.Font[base_name .. tostring(size)];
 end
 
+-- The per-family size lists below must stay in sync with AVAILABLE_FONT_SIZES
+-- in src/Utils/timed_row_layout.lua: the vertical time-font fit measures text
+-- at sizes from that table and renders them through this function.
 Utils.FONT_TO_LOTRO = function(name, size)
     local normalized_name = _normalize_font_name(name);
 

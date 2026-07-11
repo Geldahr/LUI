@@ -2,9 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-local lui_timed_row_time_format = _G.LUI.Utils.lui_timed_row_time_format
 local TR = _G.LUI.Locale.TR
-local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
 local ExpiringEffects = _G.LUI.Features.ExpiringEffects
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
@@ -156,21 +154,10 @@ function ExpiringEffectsWindow:apply_settings()
     local rows = s.rows
     local spacing = s.spacing
 
-    local bar_width = s.bar_width
-    local min_bar_width = lui_timed_row_min_timed_bar_width(
-        s.border_width,
-        3,
-        s.font.name,
-        s.font.size,
-        s.threshold,
-        lui_timed_row_time_format.AUTO
-    )
-    if bar_width < min_bar_width then
-        bar_width = min_bar_width
-    end
-
-    local entry_width = bar_width + s.bar_height
-    local entry_height = s.bar_height
+    -- Entry footprint resolved once per Settings.rebuild(); see
+    -- rebuild_settings.lua.
+    local entry_width = s.resolved.entry_width
+    local entry_height = s.resolved.entry_height
 
     local width = (cols * entry_width) + ((cols - 1) * spacing)
     local height = (rows * entry_height) + ((rows - 1) * spacing)

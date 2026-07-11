@@ -124,6 +124,11 @@ e.bar_mode = {
     UNLOAD = 2,
 }
 
+e.orientation = {
+    HORIZONTAL = 1,
+    VERTICAL = 2,
+}
+
 e.list_flow = {
     TOP_TO_BOTTOM = 1,
     BOTTOM_TO_TOP = 2,

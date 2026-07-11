@@ -5,7 +5,7 @@
 local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
 local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
 local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
-local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_timed_row_vertical_time_label_rect = _G.LUI.Utils.lui_timed_row_vertical_time_label_rect
 local lui_dim_color = _G.LUI.Utils.lui_dim_color
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
 local Cooldowns = _G.LUI.Features.Cooldowns
@@ -75,8 +75,10 @@ function CooldownEntry:Constructor()
     self.skill = nil
     self.expired_event = nil
     self._expired_sent = false
-    self.bar_inner_w = 0
-    self.bar_anchor_right = false
+    self.bar_inner_len = 0
+    self.bar_anchor_far = false
+    self.vertical = false
+    self.show_time = true
     self._icon_size = nil
 
     self:SetMouseVisible(false)
@@ -145,16 +147,14 @@ end
 function CooldownEntry:apply_settings()
     local s = State.settings.self.cooldowns
     local bw = s.border_width
+    local vertical = s.orientation == LUI_ENUMS.orientation.VERTICAL
 
-    local w = s.item_w
-    local h = s.item_h
-    if w < 1 then w = 1 end
-    if h < 1 then h = 1 end
-
-    local min_w = lui_cooldown_min_item_width(h, bw, s.text_margin, s.font.name, s.font.size, s.threshold, s.time_format)
-    if w < min_w then
-        w = min_w
-    end
+    -- Footprint, effective show_time, and the fitted vertical time font are
+    -- resolved once per Settings.rebuild(); see rebuild_settings.lua.
+    local resolved = s.resolved
+    local show_time = resolved.show_time
+    local w = resolved.width
+    local h = resolved.height
 
     self:SetSize(w, h)
 
@@ -188,81 +188,133 @@ function CooldownEntry:apply_settings()
     if inner_w < 1 then inner_w = 1 end
     if inner_h < 1 then inner_h = 1 end
 
-    local sep_w = border
-    if sep_w < 0 then sep_w = 0 end
-    if sep_w >= inner_w then sep_w = inner_w - 1 end
-    if sep_w < 0 then sep_w = 0 end
+    local inner_main = vertical and inner_h or inner_w
+    local inner_cross = vertical and inner_w or inner_h
 
-    local icon_size = inner_h
-    local max_icon = inner_w - sep_w - 1
+    local sep = border
+    if sep < 0 then sep = 0 end
+    if sep >= inner_main then sep = inner_main - 1 end
+    if sep < 0 then sep = 0 end
+
+    local icon_size = inner_cross
+    local max_icon = inner_main - sep - 1
     if max_icon < 1 then max_icon = 1 end
     if icon_size > max_icon then
         icon_size = max_icon
     end
     self._icon_size = icon_size
 
-    local bar_width = inner_w - icon_size - sep_w
-    if bar_width < 1 then bar_width = 1 end
-    self.bar_inner_w = bar_width
+    local bar_len = inner_main - icon_size - sep
+    if bar_len < 1 then bar_len = 1 end
+    self.bar_inner_len = bar_len
+    self.vertical = vertical
+    self.show_time = show_time
 
-    local icon_left = LUI_ENUMS.side_is_left[s.icon_side] == true
+    -- side LEFT means left when horizontal, top when vertical.
+    local icon_near = LUI_ENUMS.side_is_left[s.icon_side] == true
 
     local back = _icon_background_color(s)
     local bar_back = _bar_background_color(s)
     self.separator:SetBackColor(s.color.border)
-    self.separator:SetVisible(sep_w > 0)
+    self.separator:SetVisible(sep > 0)
 
-    if icon_left then
-        self.icon_background:SetPosition(border, border)
-        self.icon_background:SetSize(icon_size, icon_size)
-        self.icon_background:SetBackColor(back)
+    if vertical then
+        if icon_near then
+            self.icon_background:SetPosition(border, border)
 
-        self.separator:SetPosition(border + icon_size, border)
-        self.separator:SetSize(sep_w, inner_h)
+            self.separator:SetPosition(border, border + icon_size)
+            self.separator:SetSize(inner_w, sep)
 
-        self.bar_background:SetPosition(border + icon_size + sep_w, border)
+            self.bar_background:SetPosition(border, border + icon_size + sep)
+        else
+            self.bar_background:SetPosition(border, border)
+
+            self.separator:SetPosition(border, border + bar_len)
+            self.separator:SetSize(inner_w, sep)
+
+            self.icon_background:SetPosition(border, border + bar_len + sep)
+        end
+        self.bar_background:SetSize(inner_w, bar_len)
     else
-        self.bar_background:SetPosition(border, border)
-        self.separator:SetPosition(border + bar_width, border)
-        self.separator:SetSize(sep_w, inner_h)
+        if icon_near then
+            self.icon_background:SetPosition(border, border)
 
-        self.icon_background:SetPosition(border + bar_width + sep_w, border)
-        self.icon_background:SetSize(icon_size, icon_size)
-        self.icon_background:SetBackColor(back)
+            self.separator:SetPosition(border + icon_size, border)
+            self.separator:SetSize(sep, inner_h)
+
+            self.bar_background:SetPosition(border + icon_size + sep, border)
+        else
+            self.bar_background:SetPosition(border, border)
+
+            self.separator:SetPosition(border + bar_len, border)
+            self.separator:SetSize(sep, inner_h)
+
+            self.icon_background:SetPosition(border + bar_len + sep, border)
+        end
+        self.bar_background:SetSize(bar_len, inner_h)
     end
 
-    self.bar_background:SetSize(bar_width, inner_h)
+    self.icon_background:SetSize(icon_size, icon_size)
+    self.icon_background:SetBackColor(back)
     self.bar_background:SetBackColor(bar_back)
 
     -- The background should be exactly the content size (no extra inner border).
     self.bar_fill:SetPosition(0, 0)
-    self.bar_fill:SetSize(bar_width, inner_h)
+    if vertical then
+        self.bar_fill:SetSize(inner_cross, bar_len)
+    else
+        self.bar_fill:SetSize(bar_len, inner_cross)
+    end
     self.bar_fill:SetBackColor(lui_apply_opacity_to_color(s.color.bar, s.bar_opacity))
 
     local pad = s.text_margin
-    local time_width = lui_cooldown_time_label_width(s.font.name, s.font.size, s.threshold, s.time_format)
-    local text_gap = lui_cooldown_text_gap(s.font.size)
-    local title_width = inner_w - icon_size - sep_w - (2 * pad) - time_width - text_gap
-    if title_width < 1 then
-        title_width = 1
-    end
-    local time_x = pad + title_width + text_gap
+    local font_style = LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None
 
-    self.name_label:SetPosition(pad, 0)
-    self.name_label:SetSize(title_width, inner_h)
     self.name_label:SetFont(s.font.lotro)
-    self.name_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
-    self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.name_label:SetFontStyle(font_style)
     self.name_label:SetOutlineColor(s.font.outline_color)
     self.name_label:SetForeColor(s.font.color)
-
-    self.time_label:SetPosition(time_x, 0)
-    self.time_label:SetSize(time_width, inner_h)
     self.time_label:SetFont(s.font.lotro)
-    self.time_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
-    self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.time_label:SetFontStyle(font_style)
     self.time_label:SetOutlineColor(s.font.outline_color)
     self.time_label:SetForeColor(s.font.color)
+
+    self.name_label:SetVisible(vertical ~= true)
+    self.time_label:SetVisible(show_time)
+
+    if vertical then
+        if show_time then
+            local time_x, time_y, time_w, time_h = lui_timed_row_vertical_time_label_rect(
+                s.font.name, resolved.time_font_size, bar_len, inner_cross, icon_near)
+
+            self.time_label:SetFont(resolved.time_font)
+            self.time_label:SetPosition(time_x, time_y)
+            self.time_label:SetSize(time_w, time_h)
+            self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        end
+    else
+        local time_width = 0
+        local text_gap = 0
+        if show_time then
+            time_width = lui_cooldown_time_label_width(s.font.name, s.font.size, s.threshold, s.time_format)
+            text_gap = lui_cooldown_text_gap(s.font.size)
+        end
+        local title_width = inner_w - icon_size - sep - (2 * pad) - time_width - text_gap
+        if title_width < 1 then
+            title_width = 1
+        end
+        local time_x = pad + title_width + text_gap
+
+        self.name_label:SetPosition(pad, 0)
+        self.name_label:SetSize(title_width, inner_h)
+        self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+
+        if show_time then
+            self.time_label:SetPosition(time_x, 0)
+            self.time_label:SetSize(time_width, inner_h)
+            self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        end
+    end
 
     self.icon:SetPosition(0, 0)
     self.icon:set_size(icon_size, icon_size)
@@ -270,11 +322,12 @@ function CooldownEntry:apply_settings()
         self.icon:set_icon(self.skill.icon, icon_size, icon_size)
     end
 
-    local towards_right = s.bar_expire_towards == LUI_ENUMS.side.RIGHT
+    -- side RIGHT means right when horizontal, bottom when vertical.
+    local towards_far = s.bar_expire_towards == LUI_ENUMS.side.RIGHT
     if s.bar_mode == LUI_ENUMS.bar_mode.LOAD then
-        self.bar_anchor_right = towards_right ~= true
+        self.bar_anchor_far = towards_far ~= true
     else
-        self.bar_anchor_right = towards_right
+        self.bar_anchor_far = towards_far
     end
 end
 
@@ -290,7 +343,12 @@ function CooldownEntry:set_skill(skill)
         self.icon:SetVisible(false)
         self.name_label:SetText("")
         self.time_label:SetText("")
-        self.bar_fill:SetWidth(0)
+        -- Zero only the fill axis so the cross size from apply_settings survives.
+        if self.vertical then
+            self.bar_fill:SetHeight(0)
+        else
+            self.bar_fill:SetWidth(0)
+        end
         self:SetVisible(false)
         return
     end
@@ -326,7 +384,11 @@ function CooldownEntry:update_remaining(remaining_seconds, base_seconds)
     if self.skill == nil then
         self.name_label:SetText("")
         self.time_label:SetText("")
-        self.bar_fill:SetWidth(0)
+        if self.vertical then
+            self.bar_fill:SetHeight(0)
+        else
+            self.bar_fill:SetWidth(0)
+        end
         return
     end
 
@@ -341,7 +403,7 @@ function CooldownEntry:update_remaining(remaining_seconds, base_seconds)
         self._expired_sent = false
     end
 
-    local inner_width = self.bar_inner_w
+    local inner_len = self.bar_inner_len
 
     local base = base_seconds
     if base <= 0 then
@@ -357,18 +419,32 @@ function CooldownEntry:update_remaining(remaining_seconds, base_seconds)
         percent = 1 - ratio
     end
 
-    local fill_width = math.floor(inner_width * percent + 0.5)
-    if fill_width < 0 then fill_width = 0 end
-    if fill_width > inner_width then fill_width = inner_width end
+    local fill_len = math.floor(inner_len * percent + 0.5)
+    if fill_len < 0 then fill_len = 0 end
+    if fill_len > inner_len then fill_len = inner_len end
 
-    if self.bar_anchor_right then
-        self.bar_fill:SetPosition(inner_width - fill_width, 0)
+    -- The cross axis is fixed by apply_settings; only touch the fill axis.
+    if self.vertical then
+        if self.bar_anchor_far then
+            self.bar_fill:SetPosition(0, inner_len - fill_len)
+        else
+            self.bar_fill:SetPosition(0, 0)
+        end
+        self.bar_fill:SetHeight(fill_len)
     else
-        self.bar_fill:SetPosition(0, 0)
+        if self.bar_anchor_far then
+            self.bar_fill:SetPosition(inner_len - fill_len, 0)
+        else
+            self.bar_fill:SetPosition(0, 0)
+        end
+        self.bar_fill:SetWidth(fill_len)
     end
-    self.bar_fill:SetWidth(fill_width)
 
-    local name = _truncate_name(self.skill.name or "", s.name_max_chars)
-    self.name_label:SetText(name)
-    self.time_label:SetText(lui_format_cooldown_time(remaining_seconds, s.time_format))
+    if self.vertical ~= true then
+        local name = _truncate_name(self.skill.name or "", s.name_max_chars)
+        self.name_label:SetText(name)
+    end
+    if self.show_time then
+        self.time_label:SetText(lui_format_cooldown_time(remaining_seconds, s.time_format))
+    end
 end

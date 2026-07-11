@@ -4,9 +4,16 @@
 
 ### Added
 
+- Added an `Orientation` setting (Horizontal / Vertical) to the Cooldowns window and both Expiring Effects windows (Self and Target). Vertical bars keep the icon at the chosen end (the side dropdowns now read `Left/Top` and `Right/Bottom`) and fill along the vertical axis; the remaining-time text is drawn horizontally across the bar in the same format as on horizontal bars; on thin bars it first steps the font down through the same family's smaller sizes to fit, and is dropped only when even the smallest size cannot fit — the configured thickness is never widened. The effect/skill name is hidden on vertical bars. The size settings are now axis-independent (`Item length`/`Item thickness` for cooldowns, `Bar length`/`Bar thickness` for effects), so switching orientation rotates the bars without re-entering sizes.
+- Added a `Display time` setting to the Cooldowns and Expiring Effects windows to show or hide the remaining-time text on the bars (enabled by default).
+
 ### Changed
 
+- Timer bars now reserve the time-text width from a widest-digit template whose leading digit is capped by the threshold (e.g. `1:08` for a 90s threshold) instead of measuring every possible countdown value; the reserved area can be marginally wider than strictly necessary but never narrower.
+
 ### Fixed
+
+- Timer countdowns no longer show a `10.0s` frame when crossing the 10-second boundary: the decimal is now truncated instead of rounded, so the text reads `10s` and then `9.9s`, `9.8s`, ... (same fix for the unitless countdown on effect icons).
 
 ### Removed
 

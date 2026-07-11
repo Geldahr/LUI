@@ -3,7 +3,6 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 local TR = _G.LUI.Locale.TR
-local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
 local Cooldowns = _G.LUI.Features.Cooldowns
 local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
@@ -243,22 +242,10 @@ function CooldownsWindow:apply_settings()
     local rows = s.rows
     local spacing = s.spacing
 
-    local entry_width = s.item_w
-    local entry_height = s.item_h
-    if entry_width < 1 then entry_width = 1 end
-    if entry_height < 1 then entry_height = 1 end
-    local min_entry_width = lui_cooldown_min_item_width(
-        entry_height,
-        s.border_width,
-        s.text_margin,
-        s.font.name,
-        s.font.size,
-        s.threshold,
-        s.time_format
-    )
-    if entry_width < min_entry_width then
-        entry_width = min_entry_width
-    end
+    -- Entry footprint resolved once per Settings.rebuild(); see
+    -- rebuild_settings.lua.
+    local entry_width = s.resolved.width
+    local entry_height = s.resolved.height
 
     local width = (cols * entry_width) + ((cols - 1) * spacing)
     local height = (rows * entry_height) + ((rows - 1) * spacing)

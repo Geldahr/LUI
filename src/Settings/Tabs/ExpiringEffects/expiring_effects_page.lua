@@ -144,6 +144,10 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
     local page = ConfigSectionPage(window, preview_key, preview_height, refresh_preview_fn)
     local bar_mode_labels = { TR["Load"], TR["Unload"] }
     local bar_mode_values = { LUI_ENUMS.bar_mode.LOAD, LUI_ENUMS.bar_mode.UNLOAD }
+    local orientation_labels = { TR["Horizontal"], TR["Vertical"] }
+    local orientation_values = { LUI_ENUMS.orientation.HORIZONTAL, LUI_ENUMS.orientation.VERTICAL }
+    local side_labels = { TR["Left/Top"], TR["Right/Bottom"] }
+    local side_values = { LUI_ENUMS.side.LEFT, LUI_ENUMS.side.RIGHT }
 
     local general = ConfigContent(window, 4, page.refresh_preview)
     general:add_checkbox(prefix .. "_enabled", TR["Enabled"],
@@ -189,7 +193,15 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
     page:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4, page.refresh_preview)
-    layout:add_line_edit(prefix .. "_bar_width", TR["Bar Width"],
+    layout:add_dropdown(prefix .. "_orientation", TR["Orientation"], orientation_labels, orientation_values,
+        function(value)
+            settings_getter().orientation = value
+        end,
+        function()
+            return settings_getter().orientation
+        end)
+    layout:add_row_break()
+    layout:add_line_edit(prefix .. "_bar_width", TR["Bar length"],
         function(value)
             local bar_width = tonumber(value)
             if bar_width ~= nil then
@@ -199,7 +211,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function()
             return tostring(settings_getter().bar_width)
         end)
-    layout:add_line_edit(prefix .. "_bar_height", TR["Bar Height"],
+    layout:add_line_edit(prefix .. "_bar_height", TR["Bar thickness"],
         function(value)
             local bar_height = tonumber(value)
             if bar_height ~= nil then
@@ -250,7 +262,7 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
             return tostring(settings_getter().spacing)
         end)
     layout:add_row_break()
-    layout:add_dropdown(prefix .. "_icon_side", TR["Icon position"], layout.side_labels, layout.side_values,
+    layout:add_dropdown(prefix .. "_icon_side", TR["Icon position"], side_labels, side_values,
         function(value)
             settings_getter().icon_side = value
         end,
@@ -264,8 +276,8 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
         function()
             return settings_getter().bar_mode
         end)
-    layout:add_dropdown(prefix .. "_bar_expire_towards", TR["Bar expires towards"], layout.side_labels,
-        layout.side_values,
+    layout:add_dropdown(prefix .. "_bar_expire_towards", TR["Bar expires towards"], side_labels,
+        side_values,
         function(value)
             settings_getter().bar_expire_towards = value
         end,
@@ -278,6 +290,13 @@ local function _new_actor_page(window, preview_key, preview_height, refresh_prev
     page:add_tab(TR["Colors"], "colors", colors)
 
     local text = ConfigContent(window, 4, page.refresh_preview)
+    text:add_checkbox(prefix .. "_show_time", TR["Display time"],
+        function(value)
+            settings_getter().show_time = value == true
+        end,
+        function()
+            return settings_getter().show_time == true
+        end)
     text:add_line_edit(prefix .. "_name_max_chars", TR["Max name characters"],
         function(value)
             local name_max_chars = tonumber(value)
