@@ -1152,3 +1152,78 @@ function Npcs.name(id)
     end
     return sub(label, 1, at - 1), title
 end
+
+-- -------------------------------------------------------------- Skills ----
+-- Skill -> visible buff table (tools/data-extractor extract_skills): per
+-- skill the localized name and the buff effects it applies (localized name,
+-- icon id, base duration). Consumed by the Upkeep bar to watch the buffs a
+-- quickslotted skill maintains.
+
+Lore.Skills = Lore.Skills or {}
+local Skills = Lore.Skills
+
+function Lore.load_skills()
+    if Skills.loaded == true then
+        return
+    end
+    local lang = Lore.language()
+    import("LUI.src.Data.Skills.manifest")
+    import("LUI.src.Data.Skills.records")
+    import("LUI.src.Data.Skills.labels_" .. lang)
+    local Data = _G.LoreData
+    Skills.M = Data["Skills.manifest"]
+    Skills.R = Data["Skills.records"]
+    Skills.L = Data["Skills.labels_" .. lang]
+    Skills.count = Skills.M.count
+    Skills.loaded = true
+end
+
+function Skills.ordinal_of(id)
+    local M = Skills.M
+    return _bsearch_id(Skills.R.IDS, M.id_width, Skills.count, id - M.base_id)
+end
+
+function Skills.label(ordinal)
+    local L = Skills.L
+    local w = L.loff_width
+    return sub(L.LBL, u(L.LOFF, (ordinal - 1) * w + 1, w), u(L.LOFF, ordinal * w + 1, w) - 1)
+end
+
+function Skills.buff_label(buff_ordinal)
+    local L = Skills.L
+    local w = L.eloff_width
+    return sub(L.ELBL, u(L.ELOFF, (buff_ordinal - 1) * w + 1, w), u(L.ELOFF, buff_ordinal * w + 1, w) - 1)
+end
+
+-- decoded record for a skill id: { id, name, effects = { { id, name, icon,
+-- duration }, ... } } with duration in seconds (0 = no constant duration,
+-- e.g. toggles); nil when the skill applies no visible buff
+function Skills.buffs_of(id)
+    Lore.load_skills()
+    local ordinal = Skills.ordinal_of(id)
+    if ordinal == nil then
+        return nil
+    end
+
+    local M = Skills.M
+    local R = Skills.R
+    local rec = {
+        id = id,
+        name = Skills.label(ordinal),
+        effects = {},
+    }
+    local a = u(R.ROFF, (ordinal - 1) * M.roff_width + 1, M.roff_width)
+    local b = u(R.ROFF, ordinal * M.roff_width + 1, M.roff_width)
+    local n = 0
+    for k = a, b - 1, M.eff_ord_width do
+        local o = u(R.REF, k, M.eff_ord_width)
+        n = n + 1
+        rec.effects[n] = {
+            id = M.e_base_id + u(R.EIDS, (o - 1) * M.e_id_width + 1, M.e_id_width),
+            name = Skills.buff_label(o),
+            icon = u(R.EICON, (o - 1) * M.icon_width + 1, M.icon_width),
+            duration = u(R.EDUR, (o - 1) * M.dur_width + 1, M.dur_width) / 10,
+        }
+    end
+    return rec
+end

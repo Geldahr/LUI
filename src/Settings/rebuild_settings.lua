@@ -160,6 +160,7 @@ function Settings.rebuild()
             },
             expiring_effects = { font = {}, color = {} },
             cooldowns = { font = {}, color = {} },
+            upkeep = { font = {} },
             drops = { hud = {}, item = {} },
         },
         target = {
@@ -810,6 +811,43 @@ function Settings.rebuild()
         cd_resolved.time_font = FONT_TO_LOTRO(cd.font.name, cd_resolved.time_font_size)
     end
     cd.resolved = cd_resolved
+
+    local raw_uk = raw.self.upkeep
+    local uk = State.settings.self.upkeep
+    uk.enabled = raw_uk.enabled
+    local uk_count = math.floor(raw_uk.count + 0.5)
+    if uk_count < 1 then uk_count = 1 end
+    if uk_count > 12 then uk_count = 12 end
+    uk.count = uk_count
+    -- even sides pair with even containers for exact pixel centering
+    local uk_icon = scaled_int(raw_uk.icon_size)
+    if uk_icon % 2 ~= 0 then
+        uk_icon = uk_icon - 1
+    end
+    if uk_icon < 8 then uk_icon = 8 end
+    uk.icon_size = uk_icon
+    uk.spacing = scaled_int(raw_uk.spacing)
+    uk.orientation = raw_uk.orientation
+    uk.slots = raw_uk.slots
+    uk.show_time = raw_uk.show_time
+    uk.drain_enabled = raw_uk.drain_enabled
+    uk.drain_color = raw_uk.drain_color
+    uk.drain_opacity = raw_uk.drain_opacity
+    uk.cd_shade = raw_uk.cd_shade
+    uk.cd_shade_color = raw_uk.cd_shade_color
+    uk.cd_shade_opacity = raw_uk.cd_shade_opacity
+    uk.cd_transparent = raw_uk.cd_transparent
+    uk.cd_transparent_opacity = raw_uk.cd_transparent_opacity
+    uk.cd_show_time = raw_uk.cd_show_time
+    uk.time_format = raw_uk.time_format
+    uk.active_text_color = raw_uk.active_text_color
+    uk.cooldown_text_color = raw_uk.cooldown_text_color
+
+    uk.font.name = raw_uk.font.name
+    uk.font.size = scaled_number(raw_uk.font.size)
+    uk.font.lotro = FONT_TO_LOTRO(uk.font.name, uk.font.size)
+    uk.font.style = raw_uk.font.style
+    uk.font.outline_color = raw_uk.font.outline_color
 
     local raw_drops = raw.drops
     local drops = State.settings.drops

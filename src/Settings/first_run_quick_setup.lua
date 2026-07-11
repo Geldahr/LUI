@@ -382,6 +382,9 @@ local function _apply_runtime_settings()
         if Windows.cooldowns ~= nil and Windows.cooldowns.set_move_mode ~= nil then
             Windows.cooldowns:set_move_mode(true)
         end
+        if Windows.upkeep ~= nil and Windows.upkeep.set_move_mode ~= nil then
+            Windows.upkeep:set_move_mode(true)
+        end
         if Windows.launcher ~= nil then
             Windows.launcher:set_move_mode(true)
         end

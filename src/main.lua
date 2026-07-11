@@ -31,6 +31,7 @@ local Crafting = Features.Crafting
 local Drops = Features.Drops
 local ExpiringEffects = Features.ExpiringEffects
 local Travel = Features.Travel
+local Upkeep = Features.Upkeep
 local StatusBar = Features.StatusBar
 
 import "LUI.src.Utils"
@@ -41,6 +42,7 @@ import "LUI.src.Settings.default_layouts"
 import "LUI.src.UI"
 import "LUI.src.ExpiringEffects"
 import "LUI.src.Cooldowns"
+import "LUI.src.Upkeep"
 import "LUI.src.Drops"
 import "LUI.src.Assets"
 import "LUI.src.Encyclopedia"
@@ -371,6 +373,20 @@ function Apply.cooldowns_settings()
     end
 end
 
+function Apply.upkeep_settings()
+    local uk = State.settings.self.upkeep
+    if uk.enabled == true then
+        if Windows.upkeep == nil then
+            Windows.upkeep = Upkeep.UpkeepWindow()
+        end
+    else
+        if Windows.upkeep ~= nil then
+            Windows.upkeep:destroy()
+        end
+        Windows.upkeep = nil
+    end
+end
+
 function Apply.drops_settings()
     local drops = State.settings.drops
     if drops.enabled == true then
@@ -475,6 +491,7 @@ Stores.assets = nil
 Windows.assets = nil
 Windows.status_bar = nil
 Windows.cooldowns = nil
+Windows.upkeep = nil
 Windows.drops = nil
 Windows.encyclopedia = nil
 Windows.crafting = nil
@@ -486,6 +503,7 @@ Apply.inventory_settings()
 Apply.assets_settings()
 Apply.status_bar_settings()
 Apply.cooldowns_settings()
+Apply.upkeep_settings()
 Apply.drops_settings()
 Apply.crafting_settings()
 Apply.travel_settings()
