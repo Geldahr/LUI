@@ -6,7 +6,9 @@ local lui_timed_row_time_format = _G.LUI.Utils.lui_timed_row_time_format
 local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
 local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
 local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
-local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_time_label_height = _G.LUI.Utils.lui_timed_row_time_label_height
+local lui_timed_row_resolve_bar_size = _G.LUI.Utils.lui_timed_row_resolve_bar_size
+local VERTICAL_TIME_PAD = _G.LUI.Utils.lui_timed_row_vertical_time_pad
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
 local ConfigWindow = _G.LUI.Settings.ConfigWindow
 local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
@@ -24,7 +26,7 @@ local _require_positive_scale = Common.require_positive_scale
 local _preview_bar_background = Common.preview_resource_background
 local _sync_preview_holder_height = Common.sync_preview_holder_height
 
-local LABEL_PAD = 3
+local LABEL_PAD = _G.LUI.Utils.lui_timed_row_label_pad
 local EFFECT_TIME_FORMAT = lui_timed_row_time_format.AUTO
 
 local function _truncate_name(name, max_chars)
@@ -207,13 +209,18 @@ function ConfigWindow:update_expiring_target_effects_preview()
     local bar_bg_dimming = _require_control_number(self.controls, "expiring_target_effects_bar_background_dimming")
 
     local icon_side = _require_control_enum(self.controls, "expiring_target_effects_icon_side")
-    local icon_left = LUI_ENUMS.side_is_left[icon_side] == true
+    local icon_near = LUI_ENUMS.side_is_left[icon_side] == true
 
+    local orientation = _require_control_enum(self.controls, "expiring_target_effects_orientation")
+    local vertical = orientation == LUI_ENUMS.orientation.VERTICAL
+    local show_time = self.controls.expiring_target_effects_show_time.cb:IsChecked() == true
+
+    -- side RIGHT means right when horizontal, bottom when vertical.
     local bar_expire_towards = _require_control_enum(self.controls, "expiring_target_effects_bar_expire_towards")
     local bar_mode = _require_control_enum(self.controls, "expiring_target_effects_bar_mode")
-    local anchor_right = bar_expire_towards == LUI_ENUMS.side.RIGHT
+    local anchor_far = bar_expire_towards == LUI_ENUMS.side.RIGHT
     if bar_mode == LUI_ENUMS.bar_mode.LOAD then
-        anchor_right = anchor_right ~= true
+        anchor_far = anchor_far ~= true
     end
 
     local name_max_chars = _require_control_number(self.controls, "expiring_target_effects_name_max_chars")
@@ -241,24 +248,34 @@ function ConfigWindow:update_expiring_target_effects_preview()
 
     local threshold = raw_threshold
 
-    local min_bar_width = lui_timed_row_min_timed_bar_width(
-        border,
-        LABEL_PAD,
-        font_name,
-        font_size,
-        threshold,
-        EFFECT_TIME_FORMAT
+    -- bar_width is the bar length (main axis) and bar_height the thickness
+    -- (cross axis, also the icon size) in both orientations. On vertical bars
+    -- the resolver shrinks the time font to fit the thickness and downgrades
+    -- show_time when even the smallest size does not fit.
+    local time_font_size
+    bar_width, bar_height, show_time, time_font_size = lui_timed_row_resolve_bar_size(
+        vertical, show_time,
+        bar_width, bar_height,
+        border, LABEL_PAD,
+        font_name, font_size,
+        threshold, EFFECT_TIME_FORMAT
     )
-    if bar_width < min_bar_width then
-        bar_width = min_bar_width
-    end
 
     local p = self.expiring_target_effects_preview
 
     local icon_size = bar_height
+    local entry_width
+    local entry_height
+    if vertical then
+        entry_width = bar_height
+        entry_height = bar_width + icon_size
+    else
+        entry_width = bar_width + icon_size
+        entry_height = bar_height
+    end
     local preview_border = 1
-    local bw = bar_width + icon_size + (2 * preview_border)
-    local bh = bar_height + (2 * preview_border)
+    local bw = entry_width + (2 * preview_border)
+    local bh = entry_height + (2 * preview_border)
 
     local row_spacing = scaled_int(6, 6)
 
@@ -270,7 +287,7 @@ function ConfigWindow:update_expiring_target_effects_preview()
         row.border:SetPosition(x, y)
 
         row.entry:SetPosition(preview_border, preview_border)
-        row.entry:SetSize(bar_width + icon_size, bar_height)
+        row.entry:SetSize(entry_width, entry_height)
 
         row.border_top:SetPosition(0, 0)
         row.border_top:SetSize(bw, preview_border)
@@ -281,67 +298,123 @@ function ConfigWindow:update_expiring_target_effects_preview()
         row.border_right:SetPosition(bw - preview_border, 0)
         row.border_right:SetSize(preview_border, bh)
 
-        row.bar_border:SetPosition(icon_left and icon_size or 0, 0)
-        row.bar_border:SetSize(bar_width, bar_height)
-        row.bar_border:SetBackColor(border_color)
+        if vertical then
+            row.bar_border:SetPosition(0, icon_near and icon_size or 0)
+            row.bar_border:SetSize(bar_height, bar_width)
 
-        row.icon_border:SetPosition(icon_left and 0 or bar_width, 0)
+            row.icon_border:SetPosition(0, icon_near and 0 or bar_width)
+        else
+            row.bar_border:SetPosition(icon_near and icon_size or 0, 0)
+            row.bar_border:SetSize(bar_width, bar_height)
+
+            row.icon_border:SetPosition(icon_near and 0 or bar_width, 0)
+        end
+        row.bar_border:SetBackColor(border_color)
         row.icon_border:SetSize(icon_size, icon_size)
         row.icon_border:SetBackColor(border_color)
 
-        local inner_width = bar_width - (2 * border)
-        local inner_height = bar_height - (2 * border)
-        if inner_width < 1 then inner_width = 1 end
-        if inner_height < 1 then inner_height = 1 end
+        local inner_len = bar_width - (2 * border)
+        local inner_cross = bar_height - (2 * border)
+        if inner_len < 1 then inner_len = 1 end
+        if inner_cross < 1 then inner_cross = 1 end
 
-        local bar_inner_w = bar_width - border
-        if bar_inner_w < 1 then bar_inner_w = 1 end
+        local bar_inner_len = bar_width - border
+        if bar_inner_len < 1 then bar_inner_len = 1 end
 
         local preview_percent = 0.6
         if bar_mode == LUI_ENUMS.bar_mode.LOAD then
             preview_percent = 1 - preview_percent
         end
 
-        local preview_fill_width = math.floor(inner_width * preview_percent + 0.5)
-        if preview_fill_width < 0 then preview_fill_width = 0 end
-        if preview_fill_width > inner_width then preview_fill_width = inner_width end
-        local bar_bg_x = icon_left and 0 or border
-        row.bar_background:SetPosition(bar_bg_x, border)
-        row.bar_background:SetSize(bar_inner_w, inner_height)
+        local preview_fill_len = math.floor(inner_len * preview_percent + 0.5)
+        if preview_fill_len < 0 then preview_fill_len = 0 end
+        if preview_fill_len > inner_len then preview_fill_len = inner_len end
+
         row.bar_background:SetBackColor(lui_apply_opacity_to_color(
             _preview_bar_background(bar_bg_matches_fill, bar_bg_dimming, background_color, row_bar_color),
             background_opacity
         ))
-
-        if anchor_right then
-            row.bar_fill:SetPosition(bar_inner_w - preview_fill_width, 0)
-        else
-            row.bar_fill:SetPosition(0, 0)
-        end
-        row.bar_fill:SetSize(preview_fill_width, inner_height)
         row.bar_fill:SetBackColor(lui_apply_opacity_to_color(row_bar_color, bar_opacity))
 
-        local title_width = bar_inner_w - (2 * LABEL_PAD) - time_width - text_gap
-        if title_width < 1 then title_width = 1 end
-        local time_x = LABEL_PAD + title_width + text_gap
+        if vertical then
+            row.bar_background:SetPosition(border, icon_near and 0 or border)
+            row.bar_background:SetSize(inner_cross, bar_inner_len)
 
-        row.name_label:SetPosition(LABEL_PAD, 0)
-        row.name_label:SetSize(title_width, inner_height)
-        row.name_label:SetFont(font)
-        row.name_label:SetFontStyle(font_style)
-        row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-        row.name_label:SetForeColor(font_color)
-        row.name_label:SetOutlineColor(outline_color)
-        row.name_label:SetText(_truncate_name(effect_name, name_max_chars))
+            if anchor_far then
+                row.bar_fill:SetPosition(0, bar_inner_len - preview_fill_len)
+            else
+                row.bar_fill:SetPosition(0, 0)
+            end
+            row.bar_fill:SetSize(inner_cross, preview_fill_len)
+        else
+            row.bar_background:SetPosition(icon_near and 0 or border, border)
+            row.bar_background:SetSize(bar_inner_len, inner_cross)
 
-        row.time_label:SetPosition(time_x, 0)
-        row.time_label:SetSize(time_width, inner_height)
-        row.time_label:SetFont(font)
-        row.time_label:SetFontStyle(font_style)
-        row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-        row.time_label:SetForeColor(font_color)
-        row.time_label:SetOutlineColor(outline_color)
-        row.time_label:SetText(lui_timed_row_format_time(remaining, EFFECT_TIME_FORMAT))
+            if anchor_far then
+                row.bar_fill:SetPosition(bar_inner_len - preview_fill_len, 0)
+            else
+                row.bar_fill:SetPosition(0, 0)
+            end
+            row.bar_fill:SetSize(preview_fill_len, inner_cross)
+        end
+
+        row.name_label:SetVisible(vertical ~= true)
+        row.time_label:SetVisible(show_time)
+
+        if vertical then
+            if show_time then
+                local time_h = lui_timed_row_time_label_height(font_name, time_font_size)
+                if time_h > bar_inner_len then time_h = bar_inner_len end
+                local time_w = inner_cross - (2 * VERTICAL_TIME_PAD)
+                if time_w < 1 then time_w = 1 end
+                local time_y
+                if icon_near then
+                    time_y = bar_inner_len - VERTICAL_TIME_PAD - time_h
+                else
+                    time_y = VERTICAL_TIME_PAD
+                end
+                if time_y < 0 then time_y = 0 end
+
+                row.time_label:SetPosition(VERTICAL_TIME_PAD, time_y)
+                row.time_label:SetSize(time_w, time_h)
+                row.time_label:SetFont(_require_font(font_name, time_font_size))
+                row.time_label:SetFontStyle(font_style)
+                row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+                row.time_label:SetForeColor(font_color)
+                row.time_label:SetOutlineColor(outline_color)
+                row.time_label:SetText(lui_timed_row_format_time(remaining, EFFECT_TIME_FORMAT))
+            end
+        else
+            local row_time_width = 0
+            local row_text_gap = 0
+            if show_time then
+                row_time_width = time_width
+                row_text_gap = text_gap
+            end
+            local title_width = bar_inner_len - (2 * LABEL_PAD) - row_time_width - row_text_gap
+            if title_width < 1 then title_width = 1 end
+            local time_x = LABEL_PAD + title_width + row_text_gap
+
+            row.name_label:SetPosition(LABEL_PAD, 0)
+            row.name_label:SetSize(title_width, inner_cross)
+            row.name_label:SetFont(font)
+            row.name_label:SetFontStyle(font_style)
+            row.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+            row.name_label:SetForeColor(font_color)
+            row.name_label:SetOutlineColor(outline_color)
+            row.name_label:SetText(_truncate_name(effect_name, name_max_chars))
+
+            if show_time then
+                row.time_label:SetPosition(time_x, 0)
+                row.time_label:SetSize(row_time_width, inner_cross)
+                row.time_label:SetFont(font)
+                row.time_label:SetFontStyle(font_style)
+                row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+                row.time_label:SetForeColor(font_color)
+                row.time_label:SetOutlineColor(outline_color)
+                row.time_label:SetText(lui_timed_row_format_time(remaining, EFFECT_TIME_FORMAT))
+            end
+        end
 
         local icon_inner = icon_size - (2 * border)
         if icon_inner < 1 then icon_inner = 1 end
@@ -354,18 +427,37 @@ function ConfigWindow:update_expiring_target_effects_preview()
     end
 
     local holder = self.controls.expiring_target_effects_preview
-    local desired_height = (3 * bh) + (2 * row_spacing) + 12
+    local desired_height
+    if vertical then
+        desired_height = bh + 12
+    else
+        desired_height = (3 * bh) + (2 * row_spacing) + 12
+    end
     if desired_height < 96 then desired_height = 96 end
     _sync_preview_holder_height(self, holder, desired_height)
 
     local cw, ch = p.container:GetSize()
-    local group_height = (3 * bh) + (2 * row_spacing)
-    local x = math.floor((cw - bw) / 2)
-    if x < 0 then x = 0 end
-    local y = math.floor((ch - group_height) / 2)
-    if y < 0 then y = 0 end
+    if vertical then
+        local group_width = (3 * bw) + (2 * row_spacing)
+        local x = math.floor((cw - group_width) / 2)
+        if x < 0 then x = 0 end
+        local y = math.floor((ch - bh) / 2)
+        if y < 0 then y = 0 end
 
-    apply_row(p.buff, x, y, "Buff", buff_bar_color)
-    apply_row(p.debuff_curable, x, y + bh + row_spacing, "Curable Debuff", debuff_curable_bar_color)
-    apply_row(p.debuff_noncurable, x, y + (2 * (bh + row_spacing)), "Non-curable Debuff", debuff_noncurable_bar_color)
+        apply_row(p.buff, x, y, "Buff", buff_bar_color)
+        apply_row(p.debuff_curable, x + bw + row_spacing, y, "Curable Debuff", debuff_curable_bar_color)
+        apply_row(p.debuff_noncurable, x + (2 * (bw + row_spacing)), y, "Non-curable Debuff",
+            debuff_noncurable_bar_color)
+    else
+        local group_height = (3 * bh) + (2 * row_spacing)
+        local x = math.floor((cw - bw) / 2)
+        if x < 0 then x = 0 end
+        local y = math.floor((ch - group_height) / 2)
+        if y < 0 then y = 0 end
+
+        apply_row(p.buff, x, y, "Buff", buff_bar_color)
+        apply_row(p.debuff_curable, x, y + bh + row_spacing, "Curable Debuff", debuff_curable_bar_color)
+        apply_row(p.debuff_noncurable, x, y + (2 * (bh + row_spacing)), "Non-curable Debuff",
+            debuff_noncurable_bar_color)
+    end
 end

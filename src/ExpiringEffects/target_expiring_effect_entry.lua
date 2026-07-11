@@ -6,7 +6,10 @@ local lui_timed_row_time_format = _G.LUI.Utils.lui_timed_row_time_format
 local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
 local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
 local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
-local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_time_label_height = _G.LUI.Utils.lui_timed_row_time_label_height
+local lui_timed_row_resolve_bar_size = _G.LUI.Utils.lui_timed_row_resolve_bar_size
+local VERTICAL_TIME_PAD = _G.LUI.Utils.lui_timed_row_vertical_time_pad
+local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
 local lui_dim_color = _G.LUI.Utils.lui_dim_color
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
 local ExpiringEffects = _G.LUI.Features.ExpiringEffects
@@ -22,7 +25,7 @@ import "LUI.src.Settings.enums"
 import "LUI.src.Utils.timed_row_layout"
 import "LUI.src.Utils.color"
 
-local LABEL_PAD = 3
+local LABEL_PAD = _G.LUI.Utils.lui_timed_row_label_pad
 local EFFECT_TIME_FORMAT = lui_timed_row_time_format.AUTO
 
 local function _stable_effect_key(effect)
@@ -75,8 +78,10 @@ function TargetExpiringEffectEntry:Constructor()
 
     self.effect = nil
     self.effect_key = 0
-    self.bar_inner_w = 0
-    self.bar_anchor_right = false
+    self.bar_inner_len = 0
+    self.bar_anchor_far = false
+    self.vertical = false
+    self.show_time = true
 
     self:SetMouseVisible(false)
 
@@ -135,79 +140,133 @@ function TargetExpiringEffectEntry:apply_settings()
     local border = s.border_width
     local border_color = s.color.border
     local back = lui_apply_opacity_to_color(s.color.background, s.background_opacity)
+    local vertical = s.orientation == LUI_ENUMS.orientation.VERTICAL
+    local show_time = s.show_time == true
 
-    local height = s.bar_height
-    local bar_width = s.bar_width
-    local min_bar_width = lui_timed_row_min_timed_bar_width(
-        border,
-        LABEL_PAD,
-        s.font.name,
-        s.font.size,
-        s.threshold,
-        EFFECT_TIME_FORMAT
+    -- bar_width is the bar length (main axis) and bar_height the thickness
+    -- (cross axis, also the icon size) in both orientations. On vertical bars
+    -- the resolver shrinks the time font to fit the thickness and downgrades
+    -- show_time when even the smallest size does not fit.
+    local bar_len, thickness, time_font_size
+    bar_len, thickness, show_time, time_font_size = lui_timed_row_resolve_bar_size(
+        vertical, show_time,
+        s.bar_width, s.bar_height,
+        border, LABEL_PAD,
+        s.font.name, s.font.size,
+        s.threshold, EFFECT_TIME_FORMAT
     )
-    if bar_width < min_bar_width then
-        bar_width = min_bar_width
+    local icon_size = thickness
+
+    -- side LEFT means left when horizontal, top when vertical.
+    local icon_near = LUI_ENUMS.side_is_left[s.icon_side] == true
+
+    if vertical then
+        self:SetSize(thickness, bar_len + icon_size)
+
+        self.bar_border:SetPosition(0, icon_near and icon_size or 0)
+        self.bar_border:SetSize(thickness, bar_len)
+
+        self.icon_border:SetPosition(0, icon_near and 0 or bar_len)
+    else
+        self:SetSize(bar_len + icon_size, thickness)
+
+        self.bar_border:SetPosition(icon_near and icon_size or 0, 0)
+        self.bar_border:SetSize(bar_len, thickness)
+
+        self.icon_border:SetPosition(icon_near and 0 or bar_len, 0)
     end
-    local icon_size = height
-
-    self:SetSize(bar_width + icon_size, height)
-
-    local icon_left = LUI_ENUMS.side_is_left[s.icon_side] == true
-    self.bar_border:SetPosition(icon_left and icon_size or 0, 0)
-    self.bar_border:SetSize(bar_width, height)
     self.bar_border:SetBackColor(border_color)
-
-    self.icon_border:SetPosition(icon_left and 0 or bar_width, 0)
     self.icon_border:SetSize(icon_size, icon_size)
     self.icon_border:SetBackColor(border_color)
 
     if border < 0 then border = 0 end
-    local max_border = math.floor(math.min(bar_width, height) / 2)
+    local max_border = math.floor(math.min(bar_len, thickness) / 2)
     if border > max_border then border = max_border end
-    local inner_height = height - (2 * border)
-    if inner_height < 1 then inner_height = 1 end
+    local inner_cross = thickness - (2 * border)
+    if inner_cross < 1 then inner_cross = 1 end
 
     -- Avoid a double border between bar and icon:
     -- keep the separator from the icon border, and extend the bar background to cover its adjacent border.
-    local bar_inner_w = bar_width - border
-    if bar_inner_w < 1 then bar_inner_w = 1 end
-    self.bar_inner_w = bar_inner_w
+    local bar_inner_len = bar_len - border
+    if bar_inner_len < 1 then bar_inner_len = 1 end
+    self.bar_inner_len = bar_inner_len
+    self.vertical = vertical
+    self.show_time = show_time
 
-    local bar_bg_x = icon_left and 0 or border
-    self.bar_background:SetPosition(bar_bg_x, border)
-    self.bar_background:SetSize(bar_inner_w, inner_height)
+    if vertical then
+        self.bar_background:SetPosition(border, icon_near and 0 or border)
+        self.bar_background:SetSize(inner_cross, bar_inner_len)
 
-    self.bar_fill:SetPosition(0, 0)
-    self.bar_fill:SetSize(bar_inner_w, inner_height)
+        self.bar_fill:SetPosition(0, 0)
+        self.bar_fill:SetSize(inner_cross, bar_inner_len)
+    else
+        self.bar_background:SetPosition(icon_near and 0 or border, border)
+        self.bar_background:SetSize(bar_inner_len, inner_cross)
+
+        self.bar_fill:SetPosition(0, 0)
+        self.bar_fill:SetSize(bar_inner_len, inner_cross)
+    end
     self:_apply_bar_colors()
 
-    local time_width = lui_timed_row_time_label_width(
-        s.font.name,
-        s.font.size,
-        s.threshold,
-        EFFECT_TIME_FORMAT
-    )
-    local text_gap = lui_timed_row_text_gap(s.font.size)
-    local title_width = bar_inner_w - (2 * LABEL_PAD) - time_width - text_gap
-    if title_width < 1 then title_width = 1 end
-    local time_x = LABEL_PAD + title_width + text_gap
+    local font_style = LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None
 
-    self.name_label:SetPosition(LABEL_PAD, 0)
-    self.name_label:SetSize(title_width, inner_height)
     self.name_label:SetFont(s.font.lotro)
-    self.name_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
-    self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.name_label:SetFontStyle(font_style)
     self.name_label:SetOutlineColor(s.font.outline_color)
     self.name_label:SetForeColor(s.font.color)
-
-    self.time_label:SetPosition(time_x, 0)
-    self.time_label:SetSize(time_width, inner_height)
     self.time_label:SetFont(s.font.lotro)
-    self.time_label:SetFontStyle(LUI_TO_LOTRO.font_style[s.font.style] or Turbine.UI.FontStyle.None)
-    self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.time_label:SetFontStyle(font_style)
     self.time_label:SetOutlineColor(s.font.outline_color)
     self.time_label:SetForeColor(s.font.color)
+
+    self.name_label:SetVisible(vertical ~= true)
+    self.time_label:SetVisible(show_time)
+
+    if vertical then
+        if show_time then
+            local time_h = lui_timed_row_time_label_height(s.font.name, time_font_size)
+            if time_h > bar_inner_len then time_h = bar_inner_len end
+            local time_w = inner_cross - (2 * VERTICAL_TIME_PAD)
+            if time_w < 1 then time_w = 1 end
+            local time_y
+            if icon_near then
+                time_y = bar_inner_len - VERTICAL_TIME_PAD - time_h
+            else
+                time_y = VERTICAL_TIME_PAD
+            end
+            if time_y < 0 then time_y = 0 end
+
+            self.time_label:SetFont(FONT_TO_LOTRO(s.font.name, time_font_size))
+            self.time_label:SetPosition(VERTICAL_TIME_PAD, time_y)
+            self.time_label:SetSize(time_w, time_h)
+            self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        end
+    else
+        local time_width = 0
+        local text_gap = 0
+        if show_time then
+            time_width = lui_timed_row_time_label_width(
+                s.font.name,
+                s.font.size,
+                s.threshold,
+                EFFECT_TIME_FORMAT
+            )
+            text_gap = lui_timed_row_text_gap(s.font.size)
+        end
+        local title_width = bar_inner_len - (2 * LABEL_PAD) - time_width - text_gap
+        if title_width < 1 then title_width = 1 end
+        local time_x = LABEL_PAD + title_width + text_gap
+
+        self.name_label:SetPosition(LABEL_PAD, 0)
+        self.name_label:SetSize(title_width, inner_cross)
+        self.name_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+
+        if show_time then
+            self.time_label:SetPosition(time_x, 0)
+            self.time_label:SetSize(time_width, inner_cross)
+            self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        end
+    end
 
     local icon_inner = icon_size
     if icon_inner < 1 then icon_inner = 1 end
@@ -218,11 +277,12 @@ function TargetExpiringEffectEntry:apply_settings()
     self.icon:SetPosition(0, 0)
     self.icon:SetSize(icon_inner, icon_inner)
 
-    local towards_right = s.bar_expire_towards == LUI_ENUMS.side.RIGHT
+    -- side RIGHT means right when horizontal, bottom when vertical.
+    local towards_far = s.bar_expire_towards == LUI_ENUMS.side.RIGHT
     if s.bar_mode == LUI_ENUMS.bar_mode.LOAD then
-        self.bar_anchor_right = towards_right ~= true
+        self.bar_anchor_far = towards_far ~= true
     else
-        self.bar_anchor_right = towards_right
+        self.bar_anchor_far = towards_far
     end
 end
 
@@ -259,19 +319,30 @@ function TargetExpiringEffectEntry:update_remaining(remaining_seconds, initial_s
     if self.effect == nil then
         self.name_label:SetText("")
         self.time_label:SetText("")
-        self.bar_fill:SetWidth(0)
+        -- Zero only the fill axis so the cross size from apply_settings survives.
+        if self.vertical then
+            self.bar_fill:SetHeight(0)
+        else
+            self.bar_fill:SetWidth(0)
+        end
         return
     end
 
     local s = State.settings.target.expiring_effects
-    local inner_width = self.bar_inner_w
+    local inner_len = self.bar_inner_len
 
     if type(remaining_seconds) ~= "number" then
         self.bar_fill:SetPosition(0, 0)
-        self.bar_fill:SetWidth(inner_width)
-        local name = _truncate_name(tostring(self.effect:GetName() or ""), s.name_max_chars)
-        self.name_label:SetText(name)
-        self.time_label:SetText("")
+        if self.vertical then
+            self.bar_fill:SetHeight(inner_len)
+        else
+            local name = _truncate_name(tostring(self.effect:GetName() or ""), s.name_max_chars)
+            self.name_label:SetText(name)
+            self.bar_fill:SetWidth(inner_len)
+        end
+        if self.show_time then
+            self.time_label:SetText("")
+        end
         return
     end
 
@@ -290,20 +361,34 @@ function TargetExpiringEffectEntry:update_remaining(remaining_seconds, initial_s
         percent = 1 - percent
     end
 
-    local fill_width = math.floor(inner_width * percent + 0.5)
-    if fill_width < 0 then fill_width = 0 end
-    if fill_width > inner_width then fill_width = inner_width end
+    local fill_len = math.floor(inner_len * percent + 0.5)
+    if fill_len < 0 then fill_len = 0 end
+    if fill_len > inner_len then fill_len = inner_len end
 
-    if self.bar_anchor_right then
-        self.bar_fill:SetPosition(inner_width - fill_width, 0)
+    -- The cross axis is fixed by apply_settings; only touch the fill axis.
+    if self.vertical then
+        if self.bar_anchor_far then
+            self.bar_fill:SetPosition(0, inner_len - fill_len)
+        else
+            self.bar_fill:SetPosition(0, 0)
+        end
+        self.bar_fill:SetHeight(fill_len)
     else
-        self.bar_fill:SetPosition(0, 0)
+        if self.bar_anchor_far then
+            self.bar_fill:SetPosition(inner_len - fill_len, 0)
+        else
+            self.bar_fill:SetPosition(0, 0)
+        end
+        self.bar_fill:SetWidth(fill_len)
     end
-    self.bar_fill:SetWidth(fill_width)
 
-    local name = _truncate_name(tostring(self.effect:GetName() or ""), s.name_max_chars)
-    self.name_label:SetText(name)
-    self.time_label:SetText(lui_timed_row_format_time(remaining_seconds, EFFECT_TIME_FORMAT))
+    if self.vertical ~= true then
+        local name = _truncate_name(tostring(self.effect:GetName() or ""), s.name_max_chars)
+        self.name_label:SetText(name)
+    end
+    if self.show_time then
+        self.time_label:SetText(lui_timed_row_format_time(remaining_seconds, EFFECT_TIME_FORMAT))
+    end
 end
 
 ---------------------------------------------------------------------

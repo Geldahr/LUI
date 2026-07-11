@@ -3,7 +3,7 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 local TR = _G.LUI.Locale.TR
-local lui_cooldown_min_item_width = _G.LUI.Utils.lui_cooldown_min_item_width
+local lui_timed_row_resolve_item_footprint = _G.LUI.Utils.lui_timed_row_resolve_item_footprint
 local Cooldowns = _G.LUI.Features.Cooldowns
 local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
@@ -243,12 +243,13 @@ function CooldownsWindow:apply_settings()
     local rows = s.rows
     local spacing = s.spacing
 
-    local entry_width = s.item_w
-    local entry_height = s.item_h
-    if entry_width < 1 then entry_width = 1 end
-    if entry_height < 1 then entry_height = 1 end
-    local min_entry_width = lui_cooldown_min_item_width(
-        entry_height,
+    -- item_w is the bar length (main axis) and item_h the thickness (cross
+    -- axis) in both orientations; vertical simply rotates the footprint.
+    local entry_width, entry_height = lui_timed_row_resolve_item_footprint(
+        s.orientation == LUI_ENUMS.orientation.VERTICAL,
+        s.show_time,
+        s.item_w,
+        s.item_h,
         s.border_width,
         s.text_margin,
         s.font.name,
@@ -256,9 +257,6 @@ function CooldownsWindow:apply_settings()
         s.threshold,
         s.time_format
     )
-    if entry_width < min_entry_width then
-        entry_width = min_entry_width
-    end
 
     local width = (cols * entry_width) + ((cols - 1) * spacing)
     local height = (rows * entry_height) + ((rows - 1) * spacing)

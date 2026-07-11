@@ -19,7 +19,9 @@ local function lui_format_timeout(seconds)
         return _format_m_ss(seconds)
     end
     if seconds < 10 then
-        return string.format("%.1fs", seconds)
+        -- Truncate instead of rounding: the countdown reads 10s -> 9.9s -> ...
+        -- and never shows a "10.0s" frame.
+        return string.format("%.1fs", math.floor(seconds * 10) / 10)
     end
     return string.format("%ds", math.floor(seconds))
 end
@@ -35,7 +37,8 @@ local function lui_format_icon_timeout(seconds)
         return _format_m_ss(seconds)
     end
     if seconds < 10 then
-        return string.format("%.1f", seconds)
+        -- Truncate instead of rounding: 10 -> 9.9 -> ... with no "10.0" frame.
+        return string.format("%.1f", math.floor(seconds * 10) / 10)
     end
     return string.format("%d", math.floor(seconds))
 end

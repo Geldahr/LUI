@@ -4,8 +4,10 @@
 
 local lui_timed_row_time_format = _G.LUI.Utils.lui_timed_row_time_format
 local TR = _G.LUI.Locale.TR
-local lui_timed_row_min_timed_bar_width = _G.LUI.Utils.lui_timed_row_min_timed_bar_width
+local lui_timed_row_resolve_bar_size = _G.LUI.Utils.lui_timed_row_resolve_bar_size
+local LABEL_PAD = _G.LUI.Utils.lui_timed_row_label_pad
 local ExpiringEffects = _G.LUI.Features.ExpiringEffects
+local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local class = _G.LUI.Core.class
@@ -156,21 +158,26 @@ function ExpiringEffectsWindow:apply_settings()
     local rows = s.rows
     local spacing = s.spacing
 
-    local bar_width = s.bar_width
-    local min_bar_width = lui_timed_row_min_timed_bar_width(
-        s.border_width,
-        3,
-        s.font.name,
-        s.font.size,
-        s.threshold,
-        lui_timed_row_time_format.AUTO
+    -- bar_width is the bar length (main axis) and bar_height the thickness
+    -- (cross axis, also the icon size) in both orientations.
+    local vertical = s.orientation == LUI_ENUMS.orientation.VERTICAL
+    local bar_len, thickness = lui_timed_row_resolve_bar_size(
+        vertical, s.show_time,
+        s.bar_width, s.bar_height,
+        s.border_width, LABEL_PAD,
+        s.font.name, s.font.size,
+        s.threshold, lui_timed_row_time_format.AUTO
     )
-    if bar_width < min_bar_width then
-        bar_width = min_bar_width
-    end
 
-    local entry_width = bar_width + s.bar_height
-    local entry_height = s.bar_height
+    local entry_width
+    local entry_height
+    if vertical then
+        entry_width = thickness
+        entry_height = bar_len + thickness
+    else
+        entry_width = bar_len + thickness
+        entry_height = thickness
+    end
 
     local width = (cols * entry_width) + ((cols - 1) * spacing)
     local height = (rows * entry_height) + ((rows - 1) * spacing)

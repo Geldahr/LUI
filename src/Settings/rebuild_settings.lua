@@ -557,6 +557,8 @@ function Settings.rebuild()
     self_ee.icon_side = raw_self_ee.icon_side
     self_ee.bar_expire_towards = raw_self_ee.bar_expire_towards
     self_ee.bar_mode = raw_self_ee.bar_mode
+    self_ee.orientation = raw_self_ee.orientation
+    self_ee.show_time = raw_self_ee.show_time
     self_ee.name_max_chars = raw_self_ee.name_max_chars
     self_ee.threshold = raw_self_ee.threshold
     self_ee.columns = raw_self_ee.columns
@@ -587,6 +589,8 @@ function Settings.rebuild()
     target_ee.icon_side = raw_expiring_target_effects.icon_side
     target_ee.bar_expire_towards = raw_expiring_target_effects.bar_expire_towards
     target_ee.bar_mode = raw_expiring_target_effects.bar_mode
+    target_ee.orientation = raw_expiring_target_effects.orientation
+    target_ee.show_time = raw_expiring_target_effects.show_time
     target_ee.name_max_chars = raw_expiring_target_effects.name_max_chars
     target_ee.threshold = raw_expiring_target_effects.threshold
     target_ee.columns = raw_expiring_target_effects.columns
@@ -731,6 +735,8 @@ function Settings.rebuild()
     cd.icon_side = raw_cd.icon_side
     cd.bar_expire_towards = raw_cd.bar_expire_towards
     cd.bar_mode = raw_cd.bar_mode
+    cd.orientation = raw_cd.orientation
+    cd.show_time = raw_cd.show_time
     cd.time_format = raw_cd.time_format
     cd.text_margin = scaled_int(raw_cd.text_margin)
     cd.name_max_chars = raw_cd.name_max_chars

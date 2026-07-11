@@ -204,6 +204,10 @@ function CooldownsFeaturePage:Constructor(window)
     local flow_values = { LUI_ENUMS.list_flow.TOP_TO_BOTTOM, LUI_ENUMS.list_flow.BOTTOM_TO_TOP }
     local bar_mode_labels = { TR["Load"], TR["Unload"] }
     local bar_mode_values = { LUI_ENUMS.bar_mode.LOAD, LUI_ENUMS.bar_mode.UNLOAD }
+    local orientation_labels = { TR["Horizontal"], TR["Vertical"] }
+    local orientation_values = { LUI_ENUMS.orientation.HORIZONTAL, LUI_ENUMS.orientation.VERTICAL }
+    local side_labels = { TR["Left/Top"], TR["Right/Bottom"] }
+    local side_values = { LUI_ENUMS.side.LEFT, LUI_ENUMS.side.RIGHT }
     local time_format_labels = { TR["Auto precision"], TR["Whole seconds"] }
     local time_format_values = {
         LUI_ENUMS.cooldown_time_format.AUTO,
@@ -250,7 +254,15 @@ function CooldownsFeaturePage:Constructor(window)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4, refresh_preview)
-    layout:add_line_edit("cd_item_w", TR["Item width"],
+    layout:add_dropdown("cd_orientation", TR["Orientation"], orientation_labels, orientation_values,
+        function(value)
+            settings_getter().orientation = value
+        end,
+        function()
+            return settings_getter().orientation
+        end)
+    layout:add_row_break()
+    layout:add_line_edit("cd_item_w", TR["Item length"],
         function(value)
             local item_w = tonumber(value)
             if item_w ~= nil then
@@ -260,7 +272,7 @@ function CooldownsFeaturePage:Constructor(window)
         function()
             return tostring(settings_getter().item_w)
         end)
-    layout:add_line_edit("cd_item_h", TR["Item height"],
+    layout:add_line_edit("cd_item_h", TR["Item thickness"],
         function(value)
             local item_h = tonumber(value)
             if item_h ~= nil then
@@ -318,7 +330,7 @@ function CooldownsFeaturePage:Constructor(window)
         function()
             return settings_getter().flow
         end)
-    layout:add_dropdown("cd_icon_side", TR["Icon position"], layout.side_labels, layout.side_values,
+    layout:add_dropdown("cd_icon_side", TR["Icon position"], side_labels, side_values,
         function(value)
             settings_getter().icon_side = value
         end,
@@ -333,7 +345,7 @@ function CooldownsFeaturePage:Constructor(window)
         function()
             return settings_getter().bar_mode
         end)
-    layout:add_dropdown("cd_bar_expire_towards", TR["Bar movement towards"], layout.side_labels, layout.side_values,
+    layout:add_dropdown("cd_bar_expire_towards", TR["Bar movement towards"], side_labels, side_values,
         function(value)
             settings_getter().bar_expire_towards = value
         end,
@@ -346,6 +358,13 @@ function CooldownsFeaturePage:Constructor(window)
     self:add_tab(TR["Colors"], "colors", colors)
 
     local text = ConfigContent(window, 4, refresh_preview)
+    text:add_checkbox("cd_show_time", TR["Display time"],
+        function(value)
+            settings_getter().show_time = value == true
+        end,
+        function()
+            return settings_getter().show_time == true
+        end)
     text:add_dropdown("cd_time_format", TR["Time format"], time_format_labels, time_format_values,
         function(value)
             settings_getter().time_format = value
@@ -428,6 +447,9 @@ function CooldownsFeaturePage:Constructor(window)
     self.preview_holder.control = Turbine.UI.Control()
     self.preview_holder.control:SetParent(self)
     self.preview_holder.control:SetMouseVisible(false)
+    self.preview_holder.on_height_changed = function()
+        self:layout()
+    end
     self.controls.cooldowns_preview = self.preview_holder
 
     _bind_outline_visibility(self, colors_text, "cd_font_style", "cd_font_outline_color")
