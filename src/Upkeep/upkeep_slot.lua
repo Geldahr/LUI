@@ -8,7 +8,6 @@ local add_callback = _G.LUI.Utils.add_callback
 local remove_callback = _G.LUI.Utils.remove_callback
 local Upkeep = _G.LUI.Features.Upkeep
 local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
-local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local class = _G.LUI.Core.class
@@ -191,6 +190,12 @@ function UpkeepSlot:place(x, y)
     self:SetPosition(x, y)
     self.shade:SetPosition(x, y)
     self.time_label:SetPosition(x, y)
+    -- the drain position depends on its current height; carry it along
+    -- (update() only rewrites it when the height changes)
+    local drain_h = self._last_drain_h
+    if drain_h ~= nil and drain_h > 0 then
+        self.drain:SetPosition(x, y + self._size - drain_h)
+    end
 end
 
 function UpkeepSlot:set_binding(did_text, record)
@@ -300,7 +305,9 @@ end
 -- recast. 0 = act now; permanent/toggle buffs and unbound or untracked
 -- slots never need attention and sort last.
 function UpkeepSlot:urgency(now)
-    if self.did_text == nil then
+    -- unbound, or bound but untracked (skill missing from the skills DB):
+    -- nothing to watch, never urgent
+    if self.did_text == nil or self.binding == nil then
         return math.huge
     end
 

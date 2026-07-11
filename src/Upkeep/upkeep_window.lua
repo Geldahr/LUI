@@ -113,6 +113,7 @@ function UpkeepWindow:destroy()
     end
     self.overlay:destroy()
     self:SetWantsUpdates(false)
+    self:SetVisible(false)
     self:SetParent(nil)
 end
 
