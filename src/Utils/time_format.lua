@@ -4,6 +4,11 @@
 
 local Utils = _G.LUI.Utils
 
+-- The output shapes of these timeout formatters (d.ds / ds / dds / m:ss) are
+-- mirrored by the width template in _max_time_width_sample
+-- (src/Utils/timed_row_layout.lua). Changing any format here — decimals,
+-- units, padding, an hours form — requires updating that template, or timer
+-- bars will silently under-reserve their time-label width.
 local function _format_m_ss(total_seconds)
     local total = math.floor(total_seconds)
     local minutes = math.floor(total / 60)

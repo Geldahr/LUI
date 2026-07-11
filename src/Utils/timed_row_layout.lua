@@ -223,6 +223,9 @@ end
 
 -- Widest possible label text for the threshold, built per display shape from
 -- the font's widest digits instead of enumerating every displayable value.
+-- The shapes must stay in sync with the timeout formatters in
+-- src/Utils/time_format.lua (lui_format_timeout / lui_format_timeout_seconds /
+-- _format_m_ss), which emit exactly d.ds / ds / dds / m:ss.
 -- The leading position of each shape is capped by the threshold (threshold 5
 -- can only lead with 0-5, threshold 90 only allows one minute), the remaining
 -- positions use the widest digit outright. Never under-reserves; may
@@ -235,7 +238,7 @@ local function _max_time_width_sample(limit, normalized_font_name, time_format)
         if limit >= 10 then
             -- "48s": tens capped by the threshold, ones free.
             local tens = _widest_digit_in_range(normalized_font_name, 1,
-                math.min(5, math.floor(math.min(limit, 59) / 10)))
+                math.min(5, math.floor(limit / 10)))
             widest = tens .. d .. "s"
         else
             -- "5s": the single digit is capped by the threshold.
@@ -247,7 +250,7 @@ local function _max_time_width_sample(limit, normalized_font_name, time_format)
         widest = lead .. "." .. d .. "s"
         if limit >= 10 then
             local tens = _widest_digit_in_range(normalized_font_name, 1,
-                math.min(5, math.floor(math.min(limit, 59) / 10)))
+                math.min(5, math.floor(limit / 10)))
             widest = _wider_text(widest, tens .. d .. "s", normalized_font_name)
         end
     end
