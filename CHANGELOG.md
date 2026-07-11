@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v2.0.0
+
+### Added
+
 - The Bestiary window is now the Encyclopedia: the bestiary became its first tab, joined by Equipment, Resources, Consumables, Housing, and Traceries item tabs with type/rarity/level filters, the shared search grammar (space = and, `|` = or, quotes = exact phrase), and result counts. Item tabs list as tables with icon, name, type, and level columns plus the link buttons. Consumables also covers recipe scrolls (grouped under a single `Recipes` type filter), stat tomes, boosters, and pipe-weed. New `/lui encyclopedia` and `/lui ency` commands open it; the old `/lui bestiary`, `/lui beast`, and `/lui b` aliases keep working.
 - Added a Quests tab to the Encyclopedia with Quests and Deeds sub-tabs: 14,968 quests and 5,390 deeds extracted straight from the game client, listed with name, category, and level, searchable with the shared grammar plus category and level-range filters, fully localized (English, French, German). Clicking a row opens a quest card with the level and category, the bestowing NPC, the description, objectives, and dialog texts, and the reward items as clickable chips that link into the Encyclopedia item tabs.
 - The Traceries tab covers the legendary item system: filter by tracery type, player class, usable character level (`Level` range, matched against the tracery's level band), and base item level (`iLvl` range, matched against the tracery's base — `450-499` shows the 450 tier only, never lower tiers whose enhancement cap covers it). The list is a real table with columns: icon, name, type, class, level band, base iLvl, and the enhancement limit.
