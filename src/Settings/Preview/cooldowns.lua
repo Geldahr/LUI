@@ -6,9 +6,8 @@ local TR = _G.LUI.Locale.TR
 local lui_format_cooldown_time = _G.LUI.Utils.lui_format_cooldown_time
 local lui_cooldown_text_gap = _G.LUI.Utils.lui_cooldown_text_gap
 local lui_cooldown_time_label_width = _G.LUI.Utils.lui_cooldown_time_label_width
-local lui_timed_row_time_label_height = _G.LUI.Utils.lui_timed_row_time_label_height
+local lui_timed_row_vertical_time_label_rect = _G.LUI.Utils.lui_timed_row_vertical_time_label_rect
 local lui_timed_row_resolve_item_footprint = _G.LUI.Utils.lui_timed_row_resolve_item_footprint
-local VERTICAL_TIME_PAD = _G.LUI.Utils.lui_timed_row_vertical_time_pad
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
 local ConfigWindow = _G.LUI.Settings.ConfigWindow
 local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
@@ -469,24 +468,15 @@ function ConfigWindow:update_cooldowns_preview()
 
     if vertical then
         if show_time then
-            local time_h = lui_timed_row_time_label_height(font_name, time_font_size)
-            if time_h > bar_len then time_h = bar_len end
-            local time_w = inner_cross - (2 * VERTICAL_TIME_PAD)
-            if time_w < 1 then time_w = 1 end
-            local time_y
-            if icon_near then
-                time_y = bar_len - VERTICAL_TIME_PAD - time_h
-            else
-                time_y = VERTICAL_TIME_PAD
-            end
-            if time_y < 0 then time_y = 0 end
+            local time_x, time_y, time_w, time_h = lui_timed_row_vertical_time_label_rect(
+                font_name, time_font_size, bar_len, inner_cross, icon_near)
 
             row.time_label:SetFont(_require_font(font_name, time_font_size))
             row.time_label:SetFontStyle(font_style_lotro)
             row.time_label:SetForeColor(font_color)
             row.time_label:SetOutlineColor(outline_color)
             row.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-            row.time_label:SetPosition(VERTICAL_TIME_PAD, time_y)
+            row.time_label:SetPosition(time_x, time_y)
             row.time_label:SetSize(time_w, time_h)
             row.time_label:SetText(lui_format_cooldown_time(remaining, time_format))
         end

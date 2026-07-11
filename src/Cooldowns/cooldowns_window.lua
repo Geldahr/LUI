@@ -3,7 +3,6 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 local TR = _G.LUI.Locale.TR
-local lui_timed_row_resolve_item_footprint = _G.LUI.Utils.lui_timed_row_resolve_item_footprint
 local Cooldowns = _G.LUI.Features.Cooldowns
 local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
@@ -243,20 +242,10 @@ function CooldownsWindow:apply_settings()
     local rows = s.rows
     local spacing = s.spacing
 
-    -- item_w is the bar length (main axis) and item_h the thickness (cross
-    -- axis) in both orientations; vertical simply rotates the footprint.
-    local entry_width, entry_height = lui_timed_row_resolve_item_footprint(
-        s.orientation == LUI_ENUMS.orientation.VERTICAL,
-        s.show_time,
-        s.item_w,
-        s.item_h,
-        s.border_width,
-        s.text_margin,
-        s.font.name,
-        s.font.size,
-        s.threshold,
-        s.time_format
-    )
+    -- Entry footprint resolved once per Settings.rebuild(); see
+    -- rebuild_settings.lua.
+    local entry_width = s.resolved.width
+    local entry_height = s.resolved.height
 
     local width = (cols * entry_width) + ((cols - 1) * spacing)
     local height = (rows * entry_height) + ((rows - 1) * spacing)

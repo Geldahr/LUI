@@ -6,6 +6,7 @@ local lui_tokenize_format = _G.LUI.Utils.lui_tokenize_format
 import "Turbine.UI"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.token_format"
+import "LUI.src.Utils.timed_row_layout"
 import "LUI.src.Settings.enums"
 import "LUI.src.StatusBar.common"
 import "LUI.src.UI.native_scaling"
@@ -18,6 +19,39 @@ local ToLotro = Settings.ToLotro
 local LUI_ENUMS = Settings.Enums
 local S = LUI.Features.StatusBar.Common
 local FONT_TO_LOTRO = LUI.Utils.FONT_TO_LOTRO
+local lui_timed_row_resolve_item_footprint = LUI.Utils.lui_timed_row_resolve_item_footprint
+local lui_timed_row_resolve_bar_size = LUI.Utils.lui_timed_row_resolve_bar_size
+local lui_timed_row_time_format = LUI.Utils.lui_timed_row_time_format
+local TIMED_ROW_LABEL_PAD = LUI.Utils.lui_timed_row_label_pad
+
+-- Resolve an expiring-effects surface once per rebuild: clamped bar size,
+-- entry footprint, effective show_time, and the fitted vertical time font.
+-- Windows and entries read this instead of re-running the fit per slot.
+local function build_expiring_effects_resolved(dst)
+    local vertical = dst.orientation == LUI_ENUMS.orientation.VERTICAL
+    local r = {}
+    r.bar_length, r.thickness, r.show_time, r.time_font_size = lui_timed_row_resolve_bar_size(
+        vertical, dst.show_time,
+        dst.bar_width, dst.bar_height,
+        dst.border_width, TIMED_ROW_LABEL_PAD,
+        dst.font.name, dst.font.size,
+        dst.threshold, lui_timed_row_time_format.AUTO
+    )
+
+    if vertical then
+        r.entry_width = r.thickness
+        r.entry_height = r.bar_length + r.thickness
+    else
+        r.entry_width = r.bar_length + r.thickness
+        r.entry_height = r.thickness
+    end
+
+    if r.time_font_size ~= nil then
+        r.time_font = FONT_TO_LOTRO(dst.font.name, r.time_font_size)
+    end
+
+    return r
+end
 
 function Settings.rebuild()
     local raw = State.loaded_settings
@@ -580,6 +614,8 @@ function Settings.rebuild()
     self_ee.font.color = build_color(raw_self_ee.font.color)
     self_ee.font.outline_color = build_color(raw_self_ee.font.outline_color)
 
+    self_ee.resolved = build_expiring_effects_resolved(self_ee)
+
     local raw_expiring_target_effects = raw.target.expiring_effects
     local target_ee = State.settings.target.expiring_effects
     target_ee.enabled = raw_expiring_target_effects.enabled
@@ -611,6 +647,8 @@ function Settings.rebuild()
     target_ee.font.style = raw_expiring_target_effects.font.style
     target_ee.font.color = build_color(raw_expiring_target_effects.font.color)
     target_ee.font.outline_color = build_color(raw_expiring_target_effects.font.outline_color)
+
+    target_ee.resolved = build_expiring_effects_resolved(target_ee)
 
     local raw_abbrev = raw.global.number_abbrev
     State.settings.global.number_abbrev.enabled = raw_abbrev.enabled
@@ -754,6 +792,24 @@ function Settings.rebuild()
     cd.font.style = raw_cd.font.style
     cd.font.color = raw_cd.font.color
     cd.font.outline_color = raw_cd.font.outline_color
+
+    -- Resolve the entry footprint, effective show_time, and the fitted
+    -- vertical time font once per rebuild; the window and entries read this
+    -- instead of re-running the fit per slot.
+    local cd_resolved = {}
+    cd_resolved.width, cd_resolved.height, cd_resolved.show_time, cd_resolved.time_font_size =
+        lui_timed_row_resolve_item_footprint(
+            cd.orientation == LUI_ENUMS.orientation.VERTICAL,
+            cd.show_time,
+            cd.item_w, cd.item_h,
+            cd.border_width, cd.text_margin,
+            cd.font.name, cd.font.size,
+            cd.threshold, cd.time_format
+        )
+    if cd_resolved.time_font_size ~= nil then
+        cd_resolved.time_font = FONT_TO_LOTRO(cd.font.name, cd_resolved.time_font_size)
+    end
+    cd.resolved = cd_resolved
 
     local raw_drops = raw.drops
     local drops = State.settings.drops

@@ -6,10 +6,7 @@ local lui_timed_row_time_format = _G.LUI.Utils.lui_timed_row_time_format
 local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
 local lui_timed_row_text_gap = _G.LUI.Utils.lui_timed_row_text_gap
 local lui_timed_row_time_label_width = _G.LUI.Utils.lui_timed_row_time_label_width
-local lui_timed_row_time_label_height = _G.LUI.Utils.lui_timed_row_time_label_height
-local lui_timed_row_resolve_bar_size = _G.LUI.Utils.lui_timed_row_resolve_bar_size
-local VERTICAL_TIME_PAD = _G.LUI.Utils.lui_timed_row_vertical_time_pad
-local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local lui_timed_row_vertical_time_label_rect = _G.LUI.Utils.lui_timed_row_vertical_time_label_rect
 local lui_dim_color = _G.LUI.Utils.lui_dim_color
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
 local ExpiringEffects = _G.LUI.Features.ExpiringEffects
@@ -141,20 +138,13 @@ function SelfExpiringEffectEntry:apply_settings()
     local border_color = s.color.border
     local back = lui_apply_opacity_to_color(s.color.background, s.background_opacity)
     local vertical = s.orientation == LUI_ENUMS.orientation.VERTICAL
-    local show_time = s.show_time == true
 
-    -- bar_width is the bar length (main axis) and bar_height the thickness
-    -- (cross axis, also the icon size) in both orientations. On vertical bars
-    -- the resolver shrinks the time font to fit the thickness and downgrades
-    -- show_time when even the smallest size does not fit.
-    local bar_len, thickness, time_font_size
-    bar_len, thickness, show_time, time_font_size = lui_timed_row_resolve_bar_size(
-        vertical, show_time,
-        s.bar_width, s.bar_height,
-        border, LABEL_PAD,
-        s.font.name, s.font.size,
-        s.threshold, EFFECT_TIME_FORMAT
-    )
+    -- Bar size, effective show_time, and the fitted vertical time font are
+    -- resolved once per Settings.rebuild(); see rebuild_settings.lua.
+    local resolved = s.resolved
+    local show_time = resolved.show_time
+    local bar_len = resolved.bar_length
+    local thickness = resolved.thickness
     local icon_size = thickness
 
     -- side LEFT means left when horizontal, top when vertical.
@@ -224,20 +214,11 @@ function SelfExpiringEffectEntry:apply_settings()
 
     if vertical then
         if show_time then
-            local time_h = lui_timed_row_time_label_height(s.font.name, time_font_size)
-            if time_h > bar_inner_len then time_h = bar_inner_len end
-            local time_w = inner_cross - (2 * VERTICAL_TIME_PAD)
-            if time_w < 1 then time_w = 1 end
-            local time_y
-            if icon_near then
-                time_y = bar_inner_len - VERTICAL_TIME_PAD - time_h
-            else
-                time_y = VERTICAL_TIME_PAD
-            end
-            if time_y < 0 then time_y = 0 end
+            local time_x, time_y, time_w, time_h = lui_timed_row_vertical_time_label_rect(
+                s.font.name, resolved.time_font_size, bar_inner_len, inner_cross, icon_near)
 
-            self.time_label:SetFont(FONT_TO_LOTRO(s.font.name, time_font_size))
-            self.time_label:SetPosition(VERTICAL_TIME_PAD, time_y)
+            self.time_label:SetFont(resolved.time_font)
+            self.time_label:SetPosition(time_x, time_y)
             self.time_label:SetSize(time_w, time_h)
             self.time_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
         end

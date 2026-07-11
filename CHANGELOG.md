@@ -9,6 +9,8 @@
 
 ### Changed
 
+- Timer bars now reserve the time-text width from a widest-digit template whose leading digit is capped by the threshold (e.g. `1:08` for a 90s threshold) instead of measuring every possible countdown value; the reserved area can be marginally wider than strictly necessary but never narrower.
+
 ### Fixed
 
 - Timer countdowns no longer show a `10.0s` frame when crossing the 10-second boundary: the decimal is now truncated instead of rounded, so the text reads `10s` and then `9.9s`, `9.8s`, ... (same fix for the unitless countdown on effect icons).
