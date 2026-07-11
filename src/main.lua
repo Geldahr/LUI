@@ -25,7 +25,7 @@ local BestiaryCache = Runtime.Caches.Bestiary
 local Shortcuts = UI.Shortcuts
 local Features = LUI.Features
 local Assets = Features.Assets
-local Bestiary = Features.Bestiary
+local Encyclopedia = Features.Encyclopedia
 local Cooldowns = Features.Cooldowns
 local Crafting = Features.Crafting
 local Drops = Features.Drops
@@ -43,7 +43,7 @@ import "LUI.src.ExpiringEffects"
 import "LUI.src.Cooldowns"
 import "LUI.src.Drops"
 import "LUI.src.Assets"
-import "LUI.src.Bestiary"
+import "LUI.src.Encyclopedia"
 import "LUI.src.Crafting"
 import "LUI.src.Travel"
 import "LUI.src.StatusBar.api_chat_bridge"
@@ -122,11 +122,11 @@ function Apply.lotro_vitals_handoff()
     )
 end
 
-local function _ensure_bestiary_window()
-    local window = Windows.bestiary
+local function _ensure_encyclopedia_window()
+    local window = Windows.encyclopedia
     if window == nil then
-        window = Bestiary.BestiaryWindow()
-        Windows.bestiary = window
+        window = Encyclopedia.EncyclopediaWindow()
+        Windows.encyclopedia = window
     end
     return window
 end
@@ -200,8 +200,8 @@ function Shortcuts.toggle_inventory()
     Windows.inventory:toggle()
 end
 
-function Shortcuts.toggle_bestiary()
-    local window = _ensure_bestiary_window()
+function Shortcuts.toggle_encyclopedia()
+    local window = _ensure_encyclopedia_window()
     if window == nil then
         return
     end
@@ -215,16 +215,31 @@ function Shortcuts.toggle_bestiary()
 end
 
 function Shortcuts.open_bestiary_item_search(item_name)
-    local window = _ensure_bestiary_window()
+    local window = _ensure_encyclopedia_window()
     window:open_item_search(item_name)
 
     return true
 end
 
 function Shortcuts.open_bestiary_query_search(query)
-    local window = _ensure_bestiary_window()
+    local window = _ensure_encyclopedia_window()
     window:open_query_search(query)
 
+    return true
+end
+
+function Shortcuts.open_encyclopedia_item_search(item_name)
+    local window = _ensure_encyclopedia_window()
+    return window:open_encyclopedia_item_search(item_name)
+end
+
+function Shortcuts.open_crafting_item_search(item_name, select_recipe_id)
+    local window = _ensure_crafting_window()
+    if window == nil then
+        return false
+    end
+
+    window:open_item_search(item_name, select_recipe_id)
     return true
 end
 
@@ -441,7 +456,9 @@ end
 Apply.saved_global_style()
 Flags.crafting_display_mode_active = State.settings.crafting.display_mode
 
-Windows.bestiary_card = Bestiary.BestiaryCard()
+Windows.bestiary_card = Encyclopedia.BestiaryCard()
+Windows.resource_card = Encyclopedia.ResourceCard()
+Windows.quest_card = Encyclopedia.QuestCard()
 
 -- Initialize target vitals first: self vitals depend on them for current target state.
 Windows.target_vital = UI.TargetVitals(nil)
@@ -459,11 +476,11 @@ Windows.assets = nil
 Windows.status_bar = nil
 Windows.cooldowns = nil
 Windows.drops = nil
-Windows.bestiary = nil
+Windows.encyclopedia = nil
 Windows.crafting = nil
 Windows.travel = nil
 Windows.launcher = nil
-Windows.bestiary_tracker = Bestiary.Collector()
+Windows.bestiary_tracker = Encyclopedia.Collector()
 
 Apply.inventory_settings()
 Apply.assets_settings()
@@ -528,15 +545,25 @@ Plugins["LUI"].Unload = function()
         Windows.assets = nil
     end
 
-    if Windows.bestiary ~= nil then
-        Windows.bestiary:SetWantsUpdates(false)
-        Windows.bestiary:SetVisible(false)
-        Windows.bestiary = nil
+    if Windows.encyclopedia ~= nil then
+        Windows.encyclopedia:SetWantsUpdates(false)
+        Windows.encyclopedia:SetVisible(false)
+        Windows.encyclopedia = nil
     end
 
     if Windows.bestiary_card ~= nil then
         Windows.bestiary_card:SetVisible(false)
         Windows.bestiary_card = nil
+    end
+
+    if Windows.resource_card ~= nil then
+        Windows.resource_card:SetVisible(false)
+        Windows.resource_card = nil
+    end
+
+    if Windows.quest_card ~= nil then
+        Windows.quest_card:SetVisible(false)
+        Windows.quest_card = nil
     end
 
     if Windows.companion_vital ~= nil then

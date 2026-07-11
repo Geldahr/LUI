@@ -8,6 +8,7 @@ local Stores = _G.LUI.Runtime.Stores
 local State = _G.LUI.Settings.State
 local Crafting = _G.LUI.Features.Crafting
 
+import "LUI.src.Data.__init__"
 import "LUI.src.Crafting.crafting_store"
 import "LUI.src.Crafting.crafting_window"
 

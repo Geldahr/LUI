@@ -7,7 +7,6 @@ local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Windows = _G.LUI.Runtime.Windows
 local Crafting = _G.LUI.Features.Crafting
-local Bestiary = _G.LUI.Features.Bestiary
 import "Turbine.UI"
 
 import "LUI.src.UI.assets"
@@ -78,16 +77,16 @@ function Shortcuts.get_state(shortcut_key)
     elseif shortcut_key == "inventory" then
         return Windows.inventory ~= nil, _window_is_visible(Windows.inventory)
     elseif shortcut_key == "craft" then
-        local enabled = Crafting.is_enabled() == true
-        local can_open = enabled == true and (Windows.crafting ~= nil or Crafting.CraftingWindow ~= nil)
-        return can_open, _window_is_visible(Windows.crafting)
+        -- the window is created on demand from the imported constructor,
+        -- so the toggle can always open it while crafting is enabled
+        return Crafting.is_enabled() == true, _window_is_visible(Windows.crafting)
     elseif shortcut_key == "travel" then
         return State.settings.travel.enabled == true, _window_is_visible(Windows.travel)
     elseif shortcut_key == "assets" then
         return Windows.assets ~= nil, _window_is_visible(Windows.assets)
     elseif shortcut_key == "bestiary" then
-        local can_open = Windows.bestiary ~= nil or Bestiary.BestiaryWindow ~= nil
-        return can_open, _window_is_visible(Windows.bestiary)
+        -- created on demand from the imported constructor; always openable
+        return true, _window_is_visible(Windows.encyclopedia)
     end
     return false, false
 end
@@ -104,6 +103,6 @@ function Shortcuts.activate(shortcut_key)
     elseif shortcut_key == "assets" then
         Shortcuts.toggle_assets()
     elseif shortcut_key == "bestiary" then
-        Shortcuts.toggle_bestiary()
+        Shortcuts.toggle_encyclopedia()
     end
 end

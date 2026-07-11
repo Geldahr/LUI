@@ -254,6 +254,9 @@ local function _encode_style_value(value)
     if value_type == "number" then
         return _encode_number(value)
     end
+    if value_type == "boolean" then
+        return _encode_bool(value)
+    end
     if value_type == "string" then
         return value
     end
@@ -270,6 +273,9 @@ local function _decode_style_value(value)
     end
     if string.match(value, "^number:<.+>$") ~= nil then
         return _decode_number(value)
+    end
+    if string.match(value, "^bool:<.+>$") ~= nil then
+        return _decode_bool(value)
     end
     if string.match(value, "^color:<.+>$") ~= nil then
         return _decode_color(value)
@@ -426,6 +432,8 @@ local function _recipe_identity_schema(include_count)
 
     if include_count == true then
         fields.q = NUMBER
+        -- alternate-output choice for plan entries (0/absent = main output)
+        fields.v = NUMBER
     end
 
     return _table_schema(fields)

@@ -21,7 +21,7 @@ function StatusBarPage.build_layout_help()
         TR["  %craft% - toggle crafting window"],
         TR["  %craft.plan% - tracked crafting plan resources"],
         TR["  %travel% - toggle travel window"],
-        TR["  %bestiary% - toggle bestiary window"],
+        TR["  %bestiary% - toggle encyclopedia window"],
         TR["  %assets% - toggle assets window"],
     }
 

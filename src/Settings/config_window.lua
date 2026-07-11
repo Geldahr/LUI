@@ -679,11 +679,17 @@ function ConfigWindow:refresh_runtime_settings()
     if Windows.drops ~= nil then
         Windows.drops:apply_settings()
     end
-    if Windows.bestiary ~= nil then
-        Windows.bestiary:apply_settings()
+    if Windows.encyclopedia ~= nil then
+        Windows.encyclopedia:apply_settings()
     end
     if Windows.bestiary_card ~= nil then
         Windows.bestiary_card:apply_settings()
+    end
+    if Windows.resource_card ~= nil then
+        Windows.resource_card:apply_settings()
+    end
+    if Windows.quest_card ~= nil then
+        Windows.quest_card:apply_settings()
     end
     if Windows.crafting ~= nil then
         Windows.crafting:apply_settings()
@@ -712,9 +718,7 @@ function ConfigWindow:apply_changes(close_after)
         end)
     end
 
-    if Persistence.capture_runtime_geometry ~= nil then
-        Persistence.capture_runtime_geometry()
-    end
+    Persistence.capture_runtime_geometry()
 
     self:refresh_runtime_settings()
 

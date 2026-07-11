@@ -10,7 +10,7 @@ local Flags = _G.LUI.Runtime.Flags
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Crafting = _G.LUI.Features.Crafting
-local Bestiary = _G.LUI.Features.Bestiary
+local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Shortcuts = UI.Shortcuts
 local class = _G.LUI.Core.class
 local CraftingWindow
@@ -24,9 +24,15 @@ import "LUI.src.Utils.search_query"
 local Style = UI.Widgets.Style
 
 local FILTER_ALL = "__all"
-local AVAILABILITY_ALL = "all"
+local FILTER_MINE = "__mine"
+local RANK_MINE = "__mine"
+-- scroll (non-paged) mode renders real row widgets; cap them so a broad
+-- filter over the full catalog cannot construct thousands in one frame
+local SCROLL_RENDER_CAP = 500
 local AVAILABILITY_READY = "ready"
-local AVAILABILITY_MISSING = "missing"
+local AVAILABILITY_KNOWN = "known"
+local AVAILABILITY_UNLEARNED = "unlearned"
+local SHOW_VALUES = { AVAILABILITY_READY, AVAILABILITY_KNOWN, AVAILABILITY_UNLEARNED }
 local DISPLAY_PAGES = "pages"
 local DISPLAY_SCROLL = "scroll"
 local CRAFTING_QUERY_TOKENS = {
@@ -114,8 +120,6 @@ local BASE_MIN_W = 940
 local BASE_MIN_H = 620
 local BASE_RIGHT_W = 340
 local BASE_RECIPE_ROW_H = 46
-local BASE_INGREDIENT_ROW_H = 38
-local BASE_PLAN_ROW_H = 38
 local BASE_CRITICAL_RESULT_ROW_H = 34
 local BASE_ICON_SIDE = 32
 local BASE_SCROLL_W = 10
@@ -123,6 +127,8 @@ local BASE_PAGE_LABEL_W = 52
 local BASE_PAGE_BUTTON_MARGIN = 4
 local BASE_PANEL_BORDER = 1
 local BASE_DETAIL_HEADER_H = 78
+local BASE_VARIANT_BAR_H = 22
+local BASE_VARIANT_NAV_W = 12
 local BASE_PLAN_HEADER_H = 24
 local BASE_PLAN_CONTROLS_W = 72
 local BASE_SMALL_BUTTON_W = 22
@@ -141,8 +147,6 @@ local BASE_SOURCE_TOOLTIP_MAX_H = 132
 local BASE_SOURCE_TOOLTIP_PAD_X = 12
 local BASE_SOURCE_TOOLTIP_PAD_Y = 9
 local BASE_SOURCE_TOOLTIP_LINE_H = 12
-local ITEM_INFO_CONTROL_OFFSET = -3
-local ITEM_INFO_CONTROL_EXTRA = 3
 local BESTIARY_ACTION_ICON = UI.AssetIds.book_orange_cover
 
 local STATUS_READY = Turbine.UI.Color(1.00, 0.31, 0.78, 0.43)
@@ -259,6 +263,27 @@ local function _fixed_int(value)
     return math.floor(value + 0.5)
 end
 
+-- icon sides and the containers that center them snap to even pixel counts:
+-- (container - icon) stays even, so floor((container - icon) / 2) is a
+-- perfect center at every UI scale
+local function _even_int(value)
+    local out = math.floor(value + 0.5)
+    if out % 2 ~= 0 then
+        out = out - 1
+    end
+    if out < 0 then
+        out = 0
+    end
+    return out
+end
+
+-- material/plan rows derive their height from the fixed 32px item art
+-- (never scaled) plus 2 scaled pixels of padding each side, so the icon
+-- fits exactly at every UI scale
+local function _material_row_height()
+    return _even_int(_fixed_int(BASE_ICON_SIDE) + (2 * _scaled_int(2)))
+end
+
 local function _safe_string(value, fallback)
     if value == nil then
         return fallback or ""
@@ -288,6 +313,7 @@ local function _saved_plan_entry_signature(entry)
         tostring(entry.n or ""),
         tostring(entry.c or ""),
         tostring(entry.q or ""),
+        tostring(entry.v or ""),
     }, "\31")
 end
 
@@ -369,26 +395,49 @@ local function _source_hint_color(source_key)
 end
 
 local function _format_percent(value)
+    -- critical_chance is an integer percent straight from the lore DB
+    -- (1 means 1%); no fraction heuristic
     local percent = tonumber(value)
     if percent == nil then
         return nil
     end
-    if percent > 0 and percent <= 1 then
-        percent = percent * 100
-    end
     return _format_count(percent) .. "%"
 end
 
-local function _normalize_availability_filter(value)
-    if value == AVAILABILITY_READY then
-        return AVAILABILITY_READY
+-- "Show" is a faceted multi-select: materials axis (Craftable) and book
+-- axis (Known / Not known). Selections are stored as a set keyed by the
+-- AVAILABILITY_* values; the empty set means "All".
+local function _normalize_show_selection(values)
+    local selection = {}
+    for i = 1, #values do
+        local value = values[i]
+        if value == AVAILABILITY_READY or value == AVAILABILITY_KNOWN or value == AVAILABILITY_UNLEARNED then
+            selection[value] = true
+        end
     end
-    return AVAILABILITY_ALL
+    return selection
+end
+
+local function _show_selection_values(selection)
+    local out = {}
+    for i = 1, #SHOW_VALUES do
+        if selection[SHOW_VALUES[i]] == true then
+            out[#out + 1] = SHOW_VALUES[i]
+        end
+    end
+    return out
+end
+
+local function _show_selection_signature(selection)
+    return table.concat(_show_selection_values(selection), ",")
 end
 
 local function _normalize_rank_filter_value(value)
     if value == FILTER_ALL then
         return FILTER_ALL
+    end
+    if value == RANK_MINE then
+        return RANK_MINE
     end
 
     local tier = tonumber(value)
@@ -435,6 +484,11 @@ local function _parse_rank_query_value(value)
     end
     if normalized == "all" then
         return FILTER_ALL, true
+    end
+    if normalized == "mine" or normalized == "my" or normalized == "myrank" or
+        normalized == "unlocked" or
+        normalized == _normalize_rank_match_value(TR["Unlocked ranks"]) then
+        return RANK_MINE, true
     end
 
     local numeric_tier = tonumber(normalized)
@@ -497,15 +551,25 @@ end
 local function _parse_availability_query_value(value)
     local normalized = _lower(_trim(value))
     if normalized == "" then
-        return AVAILABILITY_ALL, false
+        return {}, false
     end
     if normalized == "all" or normalized == _lower(TR["All"]) then
-        return AVAILABILITY_ALL, true
+        return {}, true
     end
-    if normalized == "craftable" or normalized == _lower(TR["Craftable"]) then
-        return AVAILABILITY_READY, true
+    local selection = {}
+    for part in string.gmatch(normalized, "[^,]+") do
+        part = _trim(part)
+        if part == "craftable" or part == _lower(TR["Craftable"]) then
+            selection[AVAILABILITY_READY] = true
+        elseif part == "known" or part == _lower(TR["Known"]) then
+            selection[AVAILABILITY_KNOWN] = true
+        elseif part == "unlearned" or part == _lower(TR["Not known"]) then
+            selection[AVAILABILITY_UNLEARNED] = true
+        else
+            return {}, false
+        end
     end
-    return AVAILABILITY_ALL, false
+    return selection, true
 end
 
 local function _parse_favorite_query_value(value)
@@ -528,23 +592,6 @@ local function _normalize_display_mode(value)
         return DISPLAY_SCROLL
     end
     return DISPLAY_PAGES
-end
-
-local function _top_level_progress(evaluation)
-    if type(evaluation) ~= "table" or type(evaluation.ingredients) ~= "table" then
-        return 0, 0
-    end
-
-    local ready = 0
-    local total = #evaluation.ingredients
-    for index = 1, total do
-        local ingredient = evaluation.ingredients[index]
-        if type(ingredient) == "table" and ingredient.satisfied == true then
-            ready = ready + 1
-        end
-    end
-
-    return ready, total
 end
 
 local function _parse_level_value(text)
@@ -634,117 +681,9 @@ local function _set_stretch_mode_zero(control)
     end
 end
 
-local CraftingItemIcon = class(Turbine.UI.Control)
-
-function CraftingItemIcon:Constructor(on_click, on_hover_change)
-    Turbine.UI.Control.Constructor(self)
-
-    self._on_click = on_click
-    self._on_hover_change = on_hover_change
-    self._side = _fixed_int(BASE_ICON_SIDE)
-
-    self:SetMouseVisible(true)
-
-    self.background = UI.Widgets.Image()
-    self.background:SetParent(self)
-    self.background:SetMouseVisible(false)
-    _set_stretch_mode_zero(self.background)
-
-    self.foreground = UI.Widgets.Image()
-    self.foreground:SetParent(self)
-    self.foreground:SetMouseVisible(false)
-    _set_stretch_mode_zero(self.foreground)
-
-    self.item_info_control = Turbine.UI.Lotro.ItemInfoControl()
-    self.item_info_control:SetParent(self)
-    self.item_info_control:SetMouseVisible(false)
-    self.item_info_control:SetVisible(false)
-    if self.item_info_control.SetBlendMode ~= nil then
-        self.item_info_control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
-    end
-    if self.item_info_control.SetStretchMode ~= nil then
-        self.item_info_control:SetStretchMode(0)
-    end
-
-    local function forward_hover(hovering)
-        if type(self._on_hover_change) == "function" then
-            self._on_hover_change(hovering == true)
-        end
-    end
-
-    local function forward_click(_, args)
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        if type(self._on_click) == "function" then
-            self._on_click()
-        end
-    end
-
-    self.MouseEnter = function()
-        forward_hover(true)
-    end
-    self.MouseClick = forward_click
-    self.item_info_control.MouseEnter = function()
-        forward_hover(true)
-    end
-    self.item_info_control.MouseClick = forward_click
-
-    self:set_side(self._side)
-    self:bind_item(nil, nil, nil)
-end
-
-function CraftingItemIcon:set_side(side)
-    side = math.max(0, _fixed_int(side or BASE_ICON_SIDE))
-    self._side = side
-
-    self:SetSize(side, side)
-    self.background:SetPosition(0, 0)
-    self.background:set_size(side, side)
-    self.foreground:SetPosition(0, 0)
-    self.foreground:set_size(side, side)
-    self.item_info_control:SetPosition(ITEM_INFO_CONTROL_OFFSET, ITEM_INFO_CONTROL_OFFSET)
-    self.item_info_control:SetSize(side + ITEM_INFO_CONTROL_EXTRA, side + ITEM_INFO_CONTROL_EXTRA)
-end
-
-function CraftingItemIcon:bind_item(item_info, icon_id, background_image_id)
-    local has_visual = item_info ~= nil or icon_id ~= nil or background_image_id ~= nil
-    local use_item_info = item_info ~= nil and self.item_info_control.SetItemInfo ~= nil
-    self:SetVisible(has_visual)
-
-    if use_item_info == true then
-        self.background:set_icon(nil, self._side)
-    else
-        self.background:set_icon(background_image_id, self._side)
-    end
-    self.background:SetVisible(use_item_info ~= true and background_image_id ~= nil)
-    _set_stretch_mode_zero(self.background)
-
-    if use_item_info == true then
-        self.foreground:set_icon(nil, self._side)
-    else
-        self.foreground:set_icon(icon_id, self._side)
-    end
-    self.foreground:SetVisible(use_item_info ~= true and icon_id ~= nil)
-    _set_stretch_mode_zero(self.foreground)
-
-    if self.item_info_control.SetItemInfo ~= nil then
-        self.item_info_control:SetItemInfo(item_info)
-    end
-    self.item_info_control:SetVisible(use_item_info == true)
-    self.item_info_control:SetMouseVisible(use_item_info == true)
-    _set_stretch_mode_zero(self.item_info_control)
-end
-
-function CraftingItemIcon:destroy()
-    self:bind_item(nil, nil, nil)
-    self:SetVisible(false)
-end
-
-function CraftingItemIcon:prepare_for_list_clear()
-    self:bind_item(nil, nil, nil)
-    self:SetVisible(false)
-end
+-- item icons (layered images + native tooltip from the lore-DB item id)
+-- come from the shared widget
+local CraftingItemIcon = UI.Widgets.LuiItemIcon
 
 local CraftingRecipeRow = class(Turbine.UI.Control)
 
@@ -790,6 +729,15 @@ function CraftingRecipeRow:Constructor(on_click, on_favorite_toggle)
     self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.title:SetForeColor(Style.FOREGROUND)
 
+    -- middle line, only for multi-output recipes: "+2 variants"
+    self._variant_count = 0
+    self.variants_label = UI.Widgets.LuiLabel()
+    self.variants_label:SetParent(self)
+    self.variants_label:SetMouseVisible(false)
+    self.variants_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self.variants_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
+    self.variants_label:SetVisible(false)
+
     self.subtitle = UI.Widgets.LuiLabel()
     self.subtitle:SetParent(self)
     self.subtitle:SetMouseVisible(false)
@@ -832,6 +780,7 @@ end
 function CraftingRecipeRow:set_scale(scale)
     self._scale = scale
     self.title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.variants_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.subtitle:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.status_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.favorite_button:set_scale(1)
@@ -839,7 +788,7 @@ function CraftingRecipeRow:set_scale(scale)
 end
 
 function CraftingRecipeRow:set_width(width)
-    self:SetSize(width, _scaled_int(BASE_RECIPE_ROW_H))
+    self:SetSize(width, _even_int(_scaled_int(BASE_RECIPE_ROW_H)))
     self:_layout()
 end
 
@@ -874,17 +823,24 @@ function CraftingRecipeRow:set_data(recipe, status, result_item, required_level,
 
     self.title:SetText(title)
     self.subtitle:SetText(table.concat(subtitle_parts, " - "))
+    self._variant_count = recipe ~= nil and #recipe.variants or 0
+    if self._variant_count > 0 then
+        self.variants_label:SetText("+" .. tostring(self._variant_count) .. " " .. TR["variants"])
+    else
+        self.variants_label:SetText("")
+    end
     self.status_label:SetText(CraftingWindow._recipe_status_text(nil, status))
     self.status_label:SetForeColor(CraftingWindow._status_color(nil, status))
 
     if result_item ~= nil then
-        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id)
+        self.icon:bind(result_item.icon_id, result_item.background_image_id, result_item.item_id)
     else
-        self.icon:bind_item(nil, nil, nil)
+        self.icon:bind(nil, nil, nil)
     end
 
     self:set_favorite(favorite)
     self:_refresh_visual()
+    self:_layout()
 end
 
 function CraftingRecipeRow:_refresh_visual()
@@ -908,17 +864,24 @@ function CraftingRecipeRow:_layout()
     if icon_side > max_icon_side then
         icon_side = max_icon_side
     end
-    if icon_side < 0 then
-        icon_side = 0
-    end
+    icon_side = _even_int(icon_side)
     local status_w = _scaled_int(BASE_STATUS_W)
     local favorite_w = _favorite_icon_size()
     local text_left = strip_w + gap + icon_side + gap
     local status_x = width - status_w - gap
     local favorite_x = status_x - gap - favorite_w
     local text_w = favorite_x - text_left - gap
-    local title_h = math.floor(height * 0.55)
-    local subtitle_h = height - title_h
+    -- three compact lines when the recipe has variants (name / +x variants
+    -- / profession meta), the usual two lines otherwise
+    local title_h, variants_h
+    if self._variant_count > 0 then
+        title_h = math.floor(height * 0.42)
+        variants_h = math.floor(height * 0.29)
+    else
+        title_h = math.floor(height * 0.55)
+        variants_h = 0
+    end
+    local subtitle_h = height - title_h - variants_h
 
     self.status_strip:SetPosition(0, 0)
     self.status_strip:SetSize(strip_w, height)
@@ -928,7 +891,10 @@ function CraftingRecipeRow:_layout()
 
     self.title:SetPosition(text_left, 0)
     self.title:SetSize(math.max(0, text_w), title_h)
-    self.subtitle:SetPosition(text_left, title_h)
+    self.variants_label:SetVisible(self._variant_count > 0)
+    self.variants_label:SetPosition(text_left, title_h)
+    self.variants_label:SetSize(math.max(0, text_w), variants_h)
+    self.subtitle:SetPosition(text_left, title_h + variants_h)
     self.subtitle:SetSize(math.max(0, text_w), subtitle_h)
 
     self.favorite_button:SetPosition(favorite_x, math.max(0, math.floor((height - favorite_w) / 2)))
@@ -1041,16 +1007,16 @@ function CraftingIngredientRow:set_scale(scale)
 end
 
 function CraftingIngredientRow:set_width(width)
-    self:SetSize(width, _scaled_int(BASE_INGREDIENT_ROW_H))
+    self:SetSize(width, _material_row_height())
     self:_layout()
 end
 
-function CraftingIngredientRow:set_data(item_info, icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level, source_hint_text, source_hint_color)
+function CraftingIngredientRow:set_data(icon_id, background_image_id, label_text, detail_text, amount_text, color, indent_level, source_hint_text, source_hint_color, item_id)
     self._indent_level = math.max(0, math.floor((tonumber(indent_level) or 0) + 0.5))
     self._detail_text = detail_text or ""
     self._source_hint_text = source_hint_text or ""
     self._source_hint_color = source_hint_color or Style.ALTERNATE_FOREGROUND
-    self.icon:bind_item(item_info, icon_id, background_image_id)
+    self.icon:bind(icon_id, background_image_id, item_id)
     self.name:SetText(label_text or "")
     self.detail:SetText(self._detail_text)
     self.source_hint:SetText(self._source_hint_text)
@@ -1088,9 +1054,7 @@ function CraftingIngredientRow:_layout()
     if icon_side > max_icon_side then
         icon_side = max_icon_side
     end
-    if icon_side < 0 then
-        icon_side = 0
-    end
+    icon_side = _even_int(icon_side)
     local left = strip_w + gap + indent_w + icon_side + gap
     local amount_x = width - amount_w - gap
     local text_right = amount_x - gap
@@ -1112,6 +1076,12 @@ function CraftingIngredientRow:_layout()
             source_hint_w = text_w
             detail_w = 0
         end
+    end
+
+    -- name-only rows: the title spans the full height so the text centers
+    -- vertically instead of hugging the top line of the two-line split
+    if has_detail_text ~= true and source_hint_visible ~= true then
+        title_h = height
     end
 
     self.status_strip:SetPosition(0, 0)
@@ -1205,12 +1175,12 @@ function CraftingResultInfoRow:set_scale(scale)
 end
 
 function CraftingResultInfoRow:set_width(width)
-    self:SetSize(width, _scaled_int(BASE_CRITICAL_RESULT_ROW_H))
+    self:SetSize(width, _even_int(_scaled_int(BASE_CRITICAL_RESULT_ROW_H)))
     self:_layout()
 end
 
-function CraftingResultInfoRow:set_data(item_info, icon_id, background_image_id, title, detail, color)
-    self.icon:bind_item(item_info, icon_id, background_image_id)
+function CraftingResultInfoRow:set_data(icon_id, background_image_id, title, detail, color, item_id)
+    self.icon:bind(icon_id, background_image_id, item_id)
     self.title:SetText(title or "")
     self.detail:SetText(detail or "")
     self.status_strip:SetBackColor(color or Style.ALTERNATE_FOREGROUND)
@@ -1228,9 +1198,7 @@ function CraftingResultInfoRow:_layout()
     if icon_side > max_icon_side then
         icon_side = max_icon_side
     end
-    if icon_side < 0 then
-        icon_side = 0
-    end
+    icon_side = _even_int(icon_side)
 
     local text_left = strip_w + gap + icon_side + gap
     local text_w = width - text_left - gap
@@ -1319,7 +1287,7 @@ function CraftingPlanRow:set_scale(scale)
 end
 
 function CraftingPlanRow:set_width(width)
-    self:SetSize(width, _scaled_int(BASE_PLAN_ROW_H))
+    self:SetSize(width, _material_row_height())
     self:_layout()
 end
 
@@ -1331,9 +1299,9 @@ end
 function CraftingPlanRow:set_data(recipe, result_item, result_name, plan_count, evaluation, craftable_count)
     self.recipe = recipe
     if result_item ~= nil then
-        self.icon:bind_item(result_item.item_info, result_item.icon_id, result_item.background_image_id)
+        self.icon:bind(result_item.icon_id, result_item.background_image_id, result_item.item_id)
     else
-        self.icon:bind_item(nil, nil, nil)
+        self.icon:bind(nil, nil, nil)
     end
     self.name:SetText(result_name or "")
     self.count_box:set_value(plan_count, false)
@@ -1350,7 +1318,7 @@ end
 
 function CraftingPlanRow:set_placeholder_data(label_text, plan_count, loading)
     self.recipe = nil
-    self.icon:bind_item(nil, nil, nil)
+    self.icon:bind(nil, nil, nil)
     self.name:SetText(label_text or "")
     self.count_box:set_value(plan_count, false)
     self.count_box:set_enabled(false)
@@ -1370,9 +1338,7 @@ function CraftingPlanRow:_layout()
     if icon_side > max_icon_side then
         icon_side = max_icon_side
     end
-    if icon_side < 0 then
-        icon_side = 0
-    end
+    icon_side = _even_int(icon_side)
     local button_w = _scaled_int(BASE_SMALL_BUTTON_W)
     local count_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local control_h = _scaled_int(BASE_BAR_H)
@@ -1460,13 +1426,13 @@ function CraftingWindow:Constructor()
     self.search_query_state = SearchQuery.parse("", CRAFTING_QUERY_TOKENS)
     self.scope_source_keys = self.store:get_default_source_keys()
     self.scope_key = self.store:scope_key_from_sources(self.scope_source_keys)
-    self.profession_filter = FILTER_ALL
-    self.rank_filter = FILTER_ALL
-    self.availability_filter = AVAILABILITY_ALL
+    self.profession_filter = FILTER_MINE
+    self.rank_filter = RANK_MINE
+    self.show_filter = { [AVAILABILITY_KNOWN] = true }
     self.favorite_filter_active = false
     self.query_profession_filter = FILTER_ALL
     self.query_rank_filter = FILTER_ALL
-    self.query_availability_filter = AVAILABILITY_ALL
+    self.query_availability_filter = {}
     self.query_favorite_filter_active = false
     self.query_profession_filter_active = false
     self.query_rank_filter_active = false
@@ -1492,6 +1458,7 @@ function CraftingWindow:Constructor()
     self.recipe_page_count = 1
     self.plan_order = {}
     self.plan_counts = {}
+    self.plan_variants = {}
     self._plan_dirty = false
     self._plan_user_changed = false
     self._suppress_search_text_changed = false
@@ -1508,6 +1475,9 @@ function CraftingWindow:Constructor()
     self._selected_recipe_watch_keys = {}
     self._plan_recipe_watch_keys = {}
     self._critical_result_visible = false
+    self._variant_selector_visible = false
+    self._selected_variant_index = 0
+    self._variant_recipe_id = nil
 
     self.top_bar = Turbine.UI.Control()
     self.top_bar:SetParent(content_host)
@@ -1605,19 +1575,33 @@ function CraftingWindow:Constructor()
     self.availability_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.availability_label:SetText(TR["Show"])
 
-    self.availability_dropdown = UI.Widgets.LuiDropdown()
+    self.availability_dropdown = UI.Widgets.LuiCheckDropdown()
     self.availability_dropdown:SetParent(self.top_bar)
     self.availability_dropdown:SetPopupHost(self)
     self.availability_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.availability_dropdown:SetMappedOptions(
-        { TR["All"], TR["Craftable"] },
-        { AVAILABILITY_ALL, AVAILABILITY_READY }
+        { TR["Craftable"], TR["Known"], TR["Not known"] },
+        { AVAILABILITY_READY, AVAILABILITY_KNOWN, AVAILABILITY_UNLEARNED }
     )
-    self.availability_dropdown.ValueChanged = function(_, value)
-        self.availability_filter = _normalize_availability_filter(value)
+    self.availability_dropdown:SetSummaryFormatter(function(selected_values, labels, values)
+        if #selected_values == 0 then
+            return TR["All"]
+        end
+        if #selected_values == 1 then
+            for i = 1, #values do
+                if values[i] == selected_values[1] then
+                    return labels[i]
+                end
+            end
+        end
+        return _format_count(#selected_values) .. " " .. TR["filters"]
+    end)
+    self.availability_dropdown.SelectedValuesChanged = function(_, values)
+        self.show_filter = _normalize_show_selection(values)
         self.recipe_page_index = 1
         self:refresh_recipe_list()
     end
+    self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
 
     self.level_label = UI.Widgets.LuiLabel()
     self.level_label:SetParent(self.top_bar)
@@ -1753,14 +1737,61 @@ function CraftingWindow:Constructor()
     self.detail_meta:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self.detail_meta:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
-    self.detail_status = UI.Widgets.LuiLabel()
-    self.detail_status:SetParent(self.detail_panel.inner)
-    self.detail_status:SetMouseVisible(false)
-    self.detail_status:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-
     self.critical_result_row = CraftingResultInfoRow()
     self.critical_result_row:SetParent(self.detail_panel.inner)
     self.critical_result_row:SetVisible(false)
+
+    -- variant selector, only for multi-output recipes: Variant [<] n/x [>]
+    self.variant_label = UI.Widgets.LuiLabel()
+    self.variant_label:SetParent(self.detail_panel.inner)
+    self.variant_label:SetMouseVisible(false)
+    self.variant_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
+    self.variant_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+    self.variant_label:SetText(TR["Variant"] .. ":")
+    self.variant_label:SetVisible(false)
+
+    self.variant_prev_button = UI.Widgets.LuiButton()
+    self.variant_prev_button:SetParent(self.detail_panel.inner)
+    self.variant_prev_button:set_text("")
+    self.variant_prev_button:set_padding(2)
+    self.variant_prev_button:set_icon(
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_white,
+        UI.AssetIds.arrow_l_transparent,
+        BASE_VARIANT_NAV_W,
+        nil,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
+    self.variant_prev_button:SetVisible(false)
+    self.variant_prev_button.Click = function()
+        self:_step_variant(-1)
+    end
+
+    self.variant_pos_label = UI.Widgets.LuiLabel()
+    self.variant_pos_label:SetParent(self.detail_panel.inner)
+    self.variant_pos_label:SetMouseVisible(false)
+    self.variant_pos_label:SetForeColor(Style.FOREGROUND)
+    self.variant_pos_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.variant_pos_label:SetVisible(false)
+
+    self.variant_next_button = UI.Widgets.LuiButton()
+    self.variant_next_button:SetParent(self.detail_panel.inner)
+    self.variant_next_button:set_text("")
+    self.variant_next_button:set_padding(2)
+    self.variant_next_button:set_icon(
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_white,
+        UI.AssetIds.arrow_r_transparent,
+        BASE_VARIANT_NAV_W,
+        nil,
+        UI.Widgets.LuiButton.icon_position.LEFT
+    )
+    self.variant_next_button:SetVisible(false)
+    self.variant_next_button.Click = function()
+        self:_step_variant(1)
+    end
 
     self.plan_label = UI.Widgets.LuiLabel()
     self.plan_label:SetParent(self.detail_panel.inner)
@@ -2057,7 +2088,7 @@ function CraftingWindow:_source_breakdown_for_item(item_key, required)
 end
 
 function CraftingWindow:_can_open_bestiary_for_item(item_key)
-    return Bestiary.has_droppable_item(item_key) == true
+    return Encyclopedia.has_droppable_item(item_key) == true
 end
 
 function CraftingWindow:_bind_bestiary_action(row, item_key, item_name)
@@ -2300,7 +2331,12 @@ function CraftingWindow:_recipe_result_name(recipe)
 end
 
 function CraftingWindow:_recipe_critical_result_item(recipe)
-    return self:_item(recipe ~= nil and recipe.critical_result_key or nil)
+    -- resolved by real item id: same-named crit upgrades would otherwise
+    -- display the base item's icon and tooltip
+    if recipe == nil or recipe.critical_result_item_id == nil then
+        return nil
+    end
+    return self.store:item_display_by_id(recipe.critical_result_item_id)
 end
 
 function CraftingWindow:_recipe_required_level(recipe)
@@ -2320,19 +2356,6 @@ function CraftingWindow:_critical_result_detail(recipe)
         parts[#parts + 1] = TR["Base crit"] .. " " .. critical_chance
     end
     return table.concat(parts, " - ")
-end
-
-function CraftingWindow._status_text(_, evaluation)
-    if evaluation == nil then
-        return ""
-    end
-
-    local ready, total = _top_level_progress(evaluation)
-    if total <= 0 then
-        return ""
-    end
-
-    return _ratio_text(ready, total)
 end
 
 function CraftingWindow._recipe_status_text(_, status)
@@ -2531,6 +2554,7 @@ end
 function CraftingWindow:_set_runtime_plan_entries(plan_entries)
     self.plan_order = {}
     self.plan_counts = {}
+    self.plan_variants = {}
 
     if type(plan_entries) ~= "table" then
         return
@@ -2544,6 +2568,10 @@ function CraftingWindow:_set_runtime_plan_entries(plan_entries)
         if recipe_id ~= nil and count > 0 then
             self.plan_order[#self.plan_order + 1] = recipe_id
             self.plan_counts[recipe_id] = count
+            local variant = math.floor((tonumber(entry.variant) or 0) + 0.5)
+            if variant > 0 then
+                self.plan_variants[recipe_id] = variant
+            end
         end
     end
 end
@@ -2565,7 +2593,8 @@ function CraftingWindow:_sync_draft_plan_from_tracked()
             local left = current_entries[i]
             local right = next_entries[i]
             if left == nil or right == nil or left.recipe_id ~= right.recipe_id or
-                (tonumber(left.count) or 0) ~= (tonumber(right.count) or 0) then
+                (tonumber(left.count) or 0) ~= (tonumber(right.count) or 0) or
+                (tonumber(left.variant) or 0) ~= (tonumber(right.variant) or 0) then
                 same = false
                 break
             end
@@ -2672,12 +2701,13 @@ function CraftingWindow:_refresh_rank_options()
     local values = { FILTER_ALL }
     local seen = {}
 
-    for index = 1, #self.store.recipes do
-        local recipe = self.store.recipes[index]
-        local tier = recipe ~= nil and _normalize_rank_filter_value(recipe.tier) or FILTER_ALL
-        if tier ~= FILTER_ALL and seen[tier] ~= true then
-            seen[tier] = true
-            values[#values + 1] = tier
+    -- the store maintains the distinct-tier set incrementally; never rescan
+    -- the whole catalog here
+    for tier in pairs(self.store.recipe_tiers) do
+        local normalized = _normalize_rank_filter_value(tier)
+        if normalized ~= FILTER_ALL and seen[normalized] ~= true then
+            seen[normalized] = true
+            values[#values + 1] = normalized
         end
     end
 
@@ -2691,8 +2721,13 @@ function CraftingWindow:_refresh_rank_options()
         return left < right
     end)
 
+    table.insert(values, 2, RANK_MINE)
     for index = 2, #values do
-        labels[#labels + 1] = _craft_rank_name(values[index])
+        if values[index] == RANK_MINE then
+            labels[#labels + 1] = TR["Unlocked ranks"]
+        else
+            labels[#labels + 1] = _craft_rank_name(values[index])
+        end
     end
 
     local options_signature = _option_list_signature(labels, values)
@@ -2770,7 +2805,7 @@ function CraftingWindow:open_from_asset_materials(_)
     self.profession_filter = FILTER_ALL
     self.rank_filter = FILTER_ALL
     self:set_scope_sources(self.store:get_all_source_keys(), false)
-    self.availability_filter = AVAILABILITY_READY
+    self.show_filter = { [AVAILABILITY_READY] = true }
     self.level_min_filter = nil
     self.level_max_filter = nil
     self.recipe_page_index = 1
@@ -2787,7 +2822,7 @@ function CraftingWindow:open_from_asset_materials(_)
         self.scope_dropdown:SetSelectedValues(self.scope_source_keys, false)
     end
     if self.availability_dropdown ~= nil then
-        self.availability_dropdown:SetValue(self.availability_filter)
+        self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
     end
     if self.level_min_box ~= nil then
         self.level_min_box:SetText("")
@@ -2798,6 +2833,53 @@ function CraftingWindow:open_from_asset_materials(_)
 
     self:open()
     self:show_recipe_tab()
+end
+
+-- Cross-window link entry (Encyclopedia rows, bestiary card drops): open on
+-- an exact item-name search over the full catalog. Filters that could hide
+-- matches reset to "All"; select_recipe_id preselects the producing recipe
+-- for "how to craft" links.
+function CraftingWindow:open_item_search(item_name, select_recipe_id)
+    local query = _trim(item_name)
+    if query == "" then
+        return
+    end
+    if string.find(query, "\"", 1, true) == nil then
+        query = "\"" .. query .. "\""
+    end
+
+    -- window first, text after: the Lotro TextBox does not repaint text
+    -- set while its window is hidden until it is interacted with
+    self:open()
+    self:show_recipe_tab()
+
+    self.profession_filter = FILTER_ALL
+    self.rank_filter = FILTER_ALL
+    self.show_filter = {}
+    self.level_min_filter = nil
+    self.level_max_filter = nil
+    self.recipe_page_index = 1
+    if select_recipe_id ~= nil then
+        self.selected_recipe_id = tostring(select_recipe_id)
+        -- land the variant selector on the output that was asked for
+        local recipe = self.store.recipe_by_id[self.selected_recipe_id]
+        if recipe ~= nil then
+            self._variant_recipe_id = recipe.id
+            self._selected_variant_index = self.store:variant_index_for_result_name(recipe, item_name)
+        end
+    end
+    self:_apply_search_query(query)
+    self.search_box:refresh_text_async()
+
+    self.profession_dropdown:SetValue(self.profession_filter)
+    self.rank_dropdown:SetValue(self.rank_filter)
+    self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
+    self.level_min_box:SetText("")
+    self.level_max_box:SetText("")
+
+    self:_invalidate_recipe_list()
+    self:refresh_recipe_list()
+    self:refresh_selected_recipe()
 end
 
 function CraftingWindow:open_plan()
@@ -2879,8 +2961,11 @@ function CraftingWindow:apply_settings()
     self.right_tab_bar:set_scale(State.settings.global.scale)
     self.detail_title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 2))
     self.detail_meta:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.detail_status:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.critical_result_row:set_scale(State.settings.global.scale)
+    self.variant_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.variant_pos_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.variant_prev_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.variant_next_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.plan_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.plan_spin_box:set_scale(State.settings.global.scale)
     self.plan_spin_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
@@ -2906,8 +2991,7 @@ function CraftingWindow:apply_settings()
     self:_set_scope_dropdown_options()
     self:_load_favorites()
     self:_refresh_favorite_filter_button()
-    self.availability_filter = _normalize_availability_filter(self.availability_filter)
-    self.availability_dropdown:SetValue(self.availability_filter)
+    self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
 
     self:_load_geometry()
     self:refresh_from_store(true)
@@ -3079,7 +3163,7 @@ function CraftingWindow:_ensure_selected_visible_recipe()
     self.selected_recipe_id = self.visible_recipes[1] ~= nil and self.visible_recipes[1].id or nil
 end
 
-function CraftingWindow:_recipe_matches_filters(recipe, status)
+function CraftingWindow:_recipe_matches_filters(recipe)
     if recipe == nil then
         return false
     end
@@ -3101,11 +3185,23 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
 
     local profession_filter = self.query_profession_filter_active == true and
         self.query_profession_filter or self.profession_filter
-    if profession_filter ~= FILTER_ALL and recipe.profession_key ~= profession_filter then
+    if profession_filter == FILTER_MINE then
+        if self.store.owned_profession_keys[recipe.profession_key] ~= true then
+            return false
+        end
+    elseif profession_filter ~= FILTER_ALL and recipe.profession_key ~= profession_filter then
         return false
     end
     local required_rank = self.query_rank_filter_active == true and self.query_rank_filter or self.rank_filter
-    if required_rank ~= FILTER_ALL and tonumber(recipe.tier) ~= required_rank then
+    if required_rank == RANK_MINE then
+        -- "up to my rank": Beginner through the profession's current rank,
+        -- each recipe measured against its own profession; unowned
+        -- professions have rank 0 and never match
+        local profession = self.store.profession_by_key[recipe.profession_key]
+        if tonumber(recipe.tier) > profession.proficiency_level then
+            return false
+        end
+    elseif required_rank ~= FILTER_ALL and tonumber(recipe.tier) ~= required_rank then
         return false
     end
     if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
@@ -3138,12 +3234,34 @@ function CraftingWindow:_recipe_matches_filters(recipe, status)
         end
     end
 
-    local availability_filter = self.query_availability_filter_active == true and
-        self.query_availability_filter or self.availability_filter
-    if availability_filter == AVAILABILITY_READY then
-        return status ~= nil and status.craftable == true
-    elseif availability_filter == AVAILABILITY_MISSING then
-        return status ~= nil and status.craftable ~= true
+    local show = self.query_availability_filter_active == true and
+        self.query_availability_filter or self.show_filter
+    if show[AVAILABILITY_READY] == true then
+        -- fetched lazily, only for recipes that survived the cheap filters:
+        -- status evaluation walks material trees and must never run for the
+        -- whole 7.7k-recipe catalog up front
+        local status = self.store:get_recipe_status(recipe, self.scope_key)
+        if status.craftable ~= true then
+            return false
+        end
+    end
+    local want_known = show[AVAILABILITY_KNOWN] == true
+    local want_unlearned = show[AVAILABILITY_UNLEARNED] == true
+    if want_known or want_unlearned then
+        -- the book axis only means something for professions the character
+        -- has; applying the restriction to the whole axis keeps
+        -- Known + Not known == the exact union of the two selections
+        if self.store.owned_profession_keys[recipe.profession_key] ~= true then
+            return false
+        end
+        if want_known ~= want_unlearned then
+            if want_known and recipe.known ~= true then
+                return false
+            end
+            if want_unlearned and recipe.known == true then
+                return false
+            end
+        end
     end
 
     return true
@@ -3164,12 +3282,24 @@ function CraftingWindow:_recipe_filter_signature()
         _safe_string(self.scope_key, ""),
         _safe_string(self.profession_filter, ""),
         _safe_string(self.rank_filter, ""),
-        _safe_string(self.availability_filter, ""),
+        _show_selection_signature(self.show_filter),
         self.favorite_filter_active == true and "favorites" or "",
         _safe_string(self.level_min_filter, ""),
         _safe_string(self.level_max_filter, ""),
         _safe_string(self.search_box ~= nil and self.search_box:GetText() or "", ""),
     }, "\30")
+end
+
+function CraftingWindow:_append_scroll_cap_notice(shown, total)
+    local notice = UI.Widgets.LuiLabel()
+    notice:SetMouseVisible(false)
+    notice:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    notice:SetForeColor(Style.ALTERNATE_FOREGROUND)
+    notice:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    notice:SetText(_format_count(shown) .. " / " .. _format_count(total) .. " - " ..
+        TR["Refine filters or use pages mode to see more."])
+    notice:SetSize(self:_current_recipe_list_width(), _scaled_int(24))
+    self.recipe_list:AddItem(notice)
 end
 
 function CraftingWindow:_append_recipe_row(recipe, row_w)
@@ -3178,6 +3308,10 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
     end
 
     local status = self.store:get_recipe_status(recipe, self.scope_key)
+    if status.craftable == true then
+        -- materialize the lazy craft count only for rows actually rendered
+        self.store:get_recipe_craftable_count(recipe, self.scope_key)
+    end
     local result_item = self:_recipe_result_item(recipe)
     local required_level = self:_recipe_required_level(recipe)
     local row = CraftingRecipeRow(
@@ -3199,15 +3333,9 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
 end
 
 function CraftingWindow:_recipe_page_capacity()
-    local row_h = math.max(1, _scaled_int(BASE_RECIPE_ROW_H))
+    local row_h = math.max(2, _even_int(_scaled_int(BASE_RECIPE_ROW_H)))
     local list_h = math.max(0, self.recipe_list:GetHeight())
     return math.max(1, math.floor(list_h / row_h))
-end
-
-function CraftingWindow:_recipe_filter_needs_status()
-    local availability_filter = self.query_availability_filter_active == true and
-        self.query_availability_filter or self.availability_filter
-    return availability_filter == AVAILABILITY_READY or availability_filter == AVAILABILITY_MISSING
 end
 
 function CraftingWindow:_refresh_recipe_page_controls()
@@ -3276,7 +3404,6 @@ function CraftingWindow:refresh_recipe_list(options)
     local loaded_count = #self.store.recipes
     local pages_mode = self.display_mode == DISPLAY_PAGES
     local page_size = pages_mode == true and self:_recipe_page_capacity() or 0
-    local needs_status = self:_recipe_filter_needs_status()
     local state = {
         selection_changed = false,
         rows_changed = false,
@@ -3293,8 +3420,7 @@ function CraftingWindow:refresh_recipe_list(options)
         self.visible_recipes = {}
         for i = 1, loaded_count do
             local recipe = self.store.recipes[i]
-            local status = needs_status == true and self.store:get_recipe_status(recipe, self.scope_key) or nil
-            if self:_recipe_matches_filters(recipe, status) == true then
+            if self:_recipe_matches_filters(recipe) == true then
                 self.visible_recipes[#self.visible_recipes + 1] = recipe
             end
         end
@@ -3304,8 +3430,12 @@ function CraftingWindow:refresh_recipe_list(options)
             self:_refresh_recipe_page_rows(row_w)
         else
             _clear_list_box(self.recipe_list)
-            for i = 1, #self.visible_recipes do
+            local render_count = math.min(#self.visible_recipes, SCROLL_RENDER_CAP)
+            for i = 1, render_count do
                 self:_append_recipe_row(self.visible_recipes[i], row_w)
+            end
+            if #self.visible_recipes > SCROLL_RENDER_CAP then
+                self:_append_scroll_cap_notice(render_count, #self.visible_recipes)
             end
         end
         state.rows_changed = true
@@ -3314,13 +3444,12 @@ function CraftingWindow:refresh_recipe_list(options)
         local visible_count_before = #self.visible_recipes
         for i = self._recipe_list_loaded_count + 1, loaded_count do
             local recipe = self.store.recipes[i]
-            local status = needs_status == true and self.store:get_recipe_status(recipe, self.scope_key) or nil
-            if self:_recipe_matches_filters(recipe, status) == true then
+            if self:_recipe_matches_filters(recipe) == true then
                 self.visible_recipes[#self.visible_recipes + 1] = recipe
                 if self.selected_recipe_id == nil then
                     self.selected_recipe_id = recipe.id
                 end
-                if pages_mode ~= true then
+                if pages_mode ~= true and #self.visible_recipes <= SCROLL_RENDER_CAP then
                     self:_append_recipe_row(recipe, row_w)
                     state.rows_changed = true
                 end
@@ -3360,6 +3489,10 @@ function CraftingWindow:refresh_recipe_list(options)
                 TR["Loading recipes"] .. " " ..
                 _format_count(progress.loaded) .. " / " .. _format_count(progress.total)
             )
+        elseif self.store:is_known_pass_running() == true then
+            -- default view filters on Known; the background pass is still
+            -- tagging the book, so "no matches" would be a lie
+            self.recipe_empty:SetText(TR["Matching known recipes..."])
         else
             self.recipe_empty:SetText(TR["No matching recipes."])
         end
@@ -3433,7 +3566,6 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
     row:set_scale(State.settings.global.scale)
     row:set_width(row_w)
     row:set_data(
-        item ~= nil and item.item_info or nil,
         item ~= nil and item.icon_id or nil,
         item ~= nil and item.background_image_id or nil,
         item ~= nil and item.name or node.key,
@@ -3442,7 +3574,8 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
         self:_node_status_color(node),
         indent_level,
         source_hint_text,
-        source_hint_color
+        source_hint_color,
+        item ~= nil and item.item_id or nil
     )
     row:set_source_breakdown(
         source_breakdown,
@@ -3490,33 +3623,84 @@ function CraftingWindow:_append_node_rows(list_box, row_w, node, indent_level, o
     end
 end
 
+-- The alternate output currently chosen in the detail selector; nil means
+-- the main (version 1) output.
+function CraftingWindow:_display_variant(recipe)
+    if recipe == nil or self._selected_variant_index <= 0 then
+        return nil
+    end
+    return recipe.variants[self._selected_variant_index]
+end
+
+-- The alternate output recorded for a plan entry; nil means main output.
+function CraftingWindow:_plan_entry_variant(recipe)
+    local index = self.plan_variants[recipe.id]
+    if index == nil or index <= 0 then
+        return nil
+    end
+    return recipe.variants[index]
+end
+
+function CraftingWindow:_step_variant(delta)
+    local recipe = self:_selected_recipe()
+    if recipe == nil or #recipe.variants == 0 then
+        return
+    end
+
+    local total = #recipe.variants + 1
+    local index = (self._selected_variant_index + delta) % total
+    if index == self._selected_variant_index then
+        return
+    end
+    self._selected_variant_index = index
+
+    -- a planned recipe follows the selector: the plan entry now produces
+    -- the chosen variant
+    if self.plan_counts[recipe.id] ~= nil and (self.plan_variants[recipe.id] or 0) ~= index then
+        self.plan_variants[recipe.id] = index
+        self._plan_user_changed = true
+        self:_refresh_plan_dirty_state()
+        self:refresh_plan()
+    end
+
+    self:refresh_selected_recipe()
+end
+
 function CraftingWindow:_clear_critical_result_detail()
     self._critical_result_visible = false
     if self.critical_result_row ~= nil then
-        self.critical_result_row:set_data(nil, nil, nil, "", "", Style.ALTERNATE_FOREGROUND)
+        self.critical_result_row:set_data(nil, nil, "", "", Style.ALTERNATE_FOREGROUND)
         self.critical_result_row:SetVisible(false)
     end
 end
 
-function CraftingWindow:_refresh_critical_result_detail(recipe)
+function CraftingWindow:_refresh_critical_result_detail(recipe, variant)
     self:_clear_critical_result_detail()
     if type(recipe) ~= "table" then
         return
     end
 
     local row_w = math.max(0, self.detail_panel.inner:GetWidth())
-    local critical_item = self:_recipe_critical_result_item(recipe)
+    local critical_item
+    if variant ~= nil then
+        critical_item = variant.critical_result_item_id ~= nil
+            and self.store:item_display_by_id(variant.critical_result_item_id) or nil
+    else
+        critical_item = self:_recipe_critical_result_item(recipe)
+    end
     if critical_item ~= nil then
         self._critical_result_visible = true
         self.critical_result_row:set_scale(State.settings.global.scale)
         self.critical_result_row:set_width(row_w)
         self.critical_result_row:set_data(
-            critical_item.item_info,
             critical_item.icon_id,
             critical_item.background_image_id,
             critical_item.name,
-            self:_critical_result_detail(recipe),
-            STATUS_AUTO
+            -- variants carry their own crit quantity/chance fields, so the
+            -- detail formatter reads either source
+            self:_critical_result_detail(variant ~= nil and variant or recipe),
+            STATUS_AUTO,
+            critical_item.item_id
         )
         self.critical_result_row:SetVisible(true)
     end
@@ -3530,12 +3714,13 @@ function CraftingWindow:refresh_selected_recipe()
     local recipe = self:_selected_recipe()
     if recipe == nil then
         self:_clear_critical_result_detail()
+        self._variant_selector_visible = false
+        self._variant_recipe_id = nil
         self:layout()
         self.detail_empty:SetVisible(true)
-        self.detail_icon:bind_item(nil, nil, nil)
+        self.detail_icon:bind(nil, nil, nil)
         self.detail_title:SetText("")
         self.detail_meta:SetText("")
-        self.detail_status:SetText("")
         self.plan_spin_box:set_enabled(false)
         self.plan_spin_box:set_value(0, false)
         self.ingredients_list:SetVisible(false)
@@ -3543,18 +3728,38 @@ function CraftingWindow:refresh_selected_recipe()
         return
     end
 
+    -- variant selection: adopt the plan's recorded variant when the
+    -- selection moves to a new recipe, clamp against the catalog
+    if self._variant_recipe_id ~= recipe.id then
+        self._variant_recipe_id = recipe.id
+        self._selected_variant_index = self.plan_variants[recipe.id] or 0
+    end
+    if self._selected_variant_index > #recipe.variants then
+        self._selected_variant_index = 0
+    end
+    self._variant_selector_visible = #recipe.variants > 0
+    local variant = self:_display_variant(recipe)
+
     local evaluation = self.store:evaluate_recipe(recipe, self.scope_key, 1)
-    local result_item = self:_recipe_result_item(recipe)
-    local result_name = self:_recipe_result_name(recipe)
+    local result_item = variant ~= nil and self.store:item_display_by_id(variant.result_item_id)
+        or self:_recipe_result_item(recipe)
+    local result_name
+    if variant ~= nil then
+        result_name = result_item ~= nil and result_item.name or ""
+    else
+        result_name = self:_recipe_result_name(recipe)
+    end
     local required_level = self:_recipe_required_level(recipe)
     self.detail_empty:SetVisible(false)
-    self:_refresh_critical_result_detail(recipe)
+    self:_refresh_critical_result_detail(recipe, variant)
+    self.variant_pos_label:SetText(tostring(self._selected_variant_index + 1) .. "/" ..
+        tostring(#recipe.variants + 1))
     self:layout()
 
-    self.detail_icon:bind_item(
-        result_item ~= nil and result_item.item_info or nil,
+    self.detail_icon:bind(
         result_item ~= nil and result_item.icon_id or nil,
-        result_item ~= nil and result_item.background_image_id or nil
+        result_item ~= nil and result_item.background_image_id or nil,
+        result_item ~= nil and result_item.item_id or nil
     )
 
     self.detail_title:SetText(result_name)
@@ -3571,12 +3776,11 @@ function CraftingWindow:refresh_selected_recipe()
     if recipe.tier > 0 then
         meta_parts[#meta_parts + 1] = _craft_rank_name(recipe.tier)
     end
-    if recipe.result_quantity > 1 then
-        meta_parts[#meta_parts + 1] = TR["Makes x"] .. _format_count(recipe.result_quantity)
+    local result_quantity = variant ~= nil and variant.result_quantity or recipe.result_quantity
+    if result_quantity > 1 then
+        meta_parts[#meta_parts + 1] = TR["Makes x"] .. _format_count(result_quantity)
     end
     self.detail_meta:SetText(table.concat(meta_parts, " - "))
-    self.detail_status:SetText(self:_status_text(evaluation))
-    self.detail_status:SetForeColor(self:_status_color(evaluation))
     self.plan_spin_box:set_enabled(true)
     self.plan_spin_box:set_value(self.plan_counts[recipe.id] or 0, false)
 
@@ -3609,6 +3813,7 @@ function CraftingWindow:_build_plan_entries()
             entries[#entries + 1] = {
                 recipe_id = recipe_id,
                 count = count,
+                variant = self.plan_variants[recipe_id] or 0,
             }
         end
     end
@@ -3669,10 +3874,19 @@ function CraftingWindow:refresh_plan()
         )
         queue_row:set_scale(State.settings.global.scale)
         queue_row:set_width(queue_w)
+        local queue_variant = self:_plan_entry_variant(entry.recipe)
+        local queue_item = queue_variant ~= nil and self.store:item_display_by_id(queue_variant.result_item_id)
+            or self:_recipe_result_item(entry.recipe)
+        local queue_name
+        if queue_variant ~= nil then
+            queue_name = queue_item ~= nil and queue_item.name or ""
+        else
+            queue_name = self:_recipe_result_name(entry.recipe)
+        end
         queue_row:set_data(
             entry.recipe,
-            self:_recipe_result_item(entry.recipe),
-            self:_recipe_result_name(entry.recipe),
+            queue_item,
+            queue_name,
             entry.count,
             entry.evaluation,
             entry.craftable_count
@@ -3707,10 +3921,19 @@ function CraftingWindow:refresh_plan()
         plan_row:set_scale(State.settings.global.scale)
         plan_row:set_width(row_w)
         plan_row:set_read_only(true)
+        local plan_variant = self:_plan_entry_variant(entry.recipe)
+        local plan_item = plan_variant ~= nil and self.store:item_display_by_id(plan_variant.result_item_id)
+            or self:_recipe_result_item(entry.recipe)
+        local plan_name
+        if plan_variant ~= nil then
+            plan_name = plan_item ~= nil and plan_item.name or ""
+        else
+            plan_name = self:_recipe_result_name(entry.recipe)
+        end
         plan_row:set_data(
             entry.recipe,
-            self:_recipe_result_item(entry.recipe),
-            self:_recipe_result_name(entry.recipe),
+            plan_item,
+            plan_name,
             entry.count,
             entry.evaluation,
             entry.craftable_count
@@ -3760,7 +3983,6 @@ function CraftingWindow:refresh_plan()
         row:set_scale(State.settings.global.scale)
         row:set_width(missing_w)
         row:set_data(
-            entry.item_info,
             entry.icon_id,
             entry.background_image_id,
             entry.name,
@@ -3769,7 +3991,8 @@ function CraftingWindow:refresh_plan()
             entry.complete == true and STATUS_READY or STATUS_MISSING,
             0,
             source_hint_text,
-            source_hint_color
+            source_hint_color,
+            entry.item_id
         )
         row:set_source_breakdown(
             source_breakdown,
@@ -3826,6 +4049,7 @@ function CraftingWindow:set_plan_count(recipe_id, count)
 
     if next_count == 0 then
         self.plan_counts[recipe_id] = nil
+        self.plan_variants[recipe_id] = nil
         for i = #self.plan_order, 1, -1 do
             if self.plan_order[i] == recipe_id then
                 table.remove(self.plan_order, i)
@@ -3836,6 +4060,12 @@ function CraftingWindow:set_plan_count(recipe_id, count)
             self.plan_order[#self.plan_order + 1] = recipe_id
         end
         self.plan_counts[recipe_id] = next_count
+        -- the detail selector's variant travels into the plan entry, but
+        -- only for the recipe currently shown: count edits made from
+        -- plan/queue rows must not clobber their recorded variant
+        if recipe_id == self.selected_recipe_id then
+            self.plan_variants[recipe_id] = self._selected_variant_index
+        end
     end
 
     self._plan_user_changed = true
@@ -3867,6 +4097,7 @@ end
 function CraftingWindow:clear_plan()
     self.plan_order = {}
     self.plan_counts = {}
+    self.plan_variants = {}
     Crafting.set_tracked_plan_entries({}, true)
     self._plan_user_changed = false
     self._plan_dirty = false
@@ -3939,8 +4170,14 @@ function CraftingWindow:layout()
     local scroll_w = _fixed_int(BASE_SCROLL_W)
     local plan_header_h = _scaled_int(BASE_PLAN_HEADER_H)
     local section_bar_h = plan_header_h
-    local detail_top_h = math.max(0, _scaled_int(BASE_DETAIL_HEADER_H) - section_bar_h)
-    local critical_result_h = self._critical_result_visible == true and _scaled_int(BASE_CRITICAL_RESULT_ROW_H) or 0
+    -- when the variant selector line (y 48) is shown, the header grows so
+    -- the opaque critical-result row cannot cover it
+    local detail_top_h = _even_int(math.max(0, _scaled_int(BASE_DETAIL_HEADER_H) - section_bar_h))
+    if self._variant_selector_visible == true then
+        detail_top_h = _even_int(math.max(detail_top_h,
+            _scaled_int(48) + _even_int(_scaled_int(BASE_VARIANT_BAR_H)) + _scaled_int(2)))
+    end
+    local critical_result_h = self._critical_result_visible == true and _even_int(_scaled_int(BASE_CRITICAL_RESULT_ROW_H)) or 0
     local detail_header_h = detail_top_h + critical_result_h + section_bar_h
     local plan_controls_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local loading_track_h = _scaled_int(BASE_LOADING_TRACK_H)
@@ -4091,22 +4328,51 @@ function CraftingWindow:layout()
     self.recipe_split_border:SetSize(recipe_page_w, split_gap)
 
     local detail_inner = self.detail_panel.inner
-    local icon_side = _fixed_int(BASE_ICON_SIDE)
-    local detail_icon_y = math.max(0, math.floor((detail_top_h - icon_side) / 2))
+    local icon_side = _even_int(_fixed_int(BASE_ICON_SIDE))
+    -- center on the title + meta block (y 6..48), not the whole header:
+    -- the variant selector line must not drag the icon down
+    local detail_icon_top = _scaled_int(6)
+    local detail_icon_span = _scaled_int(48) - detail_icon_top
+    local detail_icon_y = detail_icon_top + math.max(0, math.floor((detail_icon_span - icon_side) / 2))
     self.detail_icon:SetPosition(_scaled_int(8), detail_icon_y)
     self.detail_icon:set_side(icon_side)
     self.detail_title:SetPosition(_scaled_int(8) + icon_side + gap, _scaled_int(6))
     self.detail_title:SetSize(detail_inner:GetWidth() - icon_side - _scaled_int(16) - gap, _scaled_int(24))
     self.detail_meta:SetPosition(_scaled_int(8) + icon_side + gap, _scaled_int(28))
     self.detail_meta:SetSize(detail_inner:GetWidth() - icon_side - _scaled_int(16) - gap, _scaled_int(20))
-    self.detail_status:SetPosition(_scaled_int(8), _scaled_int(48))
-    self.detail_status:SetSize(detail_inner:GetWidth() - _scaled_int(16) - plan_controls_w, _scaled_int(22))
 
     local plan_controls_x = detail_inner:GetWidth() - plan_controls_w
     self.plan_label:SetPosition(plan_controls_x, _scaled_int(6))
     self.plan_label:SetSize(plan_controls_w, _scaled_int(16))
     self.plan_spin_box:SetPosition(plan_controls_x, _scaled_int(24))
     self.plan_spin_box:SetSize(plan_controls_w, bar_h)
+
+    -- variant selector: right-aligned under the Build plan controls, on
+    -- the same line as the ready-ratio status text
+    local selector_visible = self._variant_selector_visible == true
+    local selector_h = _even_int(_scaled_int(BASE_VARIANT_BAR_H))
+    local selector_y = _scaled_int(48)
+    local variant_label_w = _scaled_int(52)
+    local variant_nav_w = _even_int(_scaled_int(BASE_VARIANT_NAV_W))
+    local variant_pos_w = _scaled_int(40)
+    local variant_label_gap = 2 * gap
+    local variant_block_w = variant_label_w + variant_label_gap + variant_nav_w + gap + variant_pos_w + gap + variant_nav_w
+    local selector_x = detail_inner:GetWidth() - _scaled_int(8) - variant_block_w
+    local variant_nav_y = selector_y + math.max(0, math.floor((selector_h - variant_nav_w) / 2))
+    self.variant_label:SetPosition(selector_x, selector_y)
+    self.variant_label:SetSize(variant_label_w, selector_h)
+    self.variant_prev_button:SetPosition(selector_x + variant_label_w + variant_label_gap, variant_nav_y)
+    self.variant_prev_button:SetSize(variant_nav_w, variant_nav_w)
+    self.variant_pos_label:SetPosition(selector_x + variant_label_w + variant_label_gap + variant_nav_w + gap, selector_y)
+    self.variant_pos_label:SetSize(variant_pos_w, selector_h)
+    self.variant_next_button:SetPosition(
+        selector_x + variant_label_w + variant_label_gap + variant_nav_w + gap + variant_pos_w + gap,
+        variant_nav_y)
+    self.variant_next_button:SetSize(variant_nav_w, variant_nav_w)
+    self.variant_label:SetVisible(selector_visible)
+    self.variant_prev_button:SetVisible(selector_visible)
+    self.variant_pos_label:SetVisible(selector_visible)
+    self.variant_next_button:SetVisible(selector_visible)
 
     if self.critical_result_row ~= nil then
         self.critical_result_row:SetPosition(0, detail_top_h)

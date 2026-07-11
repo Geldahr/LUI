@@ -443,6 +443,9 @@ function Persistence.ensure_bestiary_cache()
             if BestiaryCache.dirty ~= true then
                 BestiaryCache.dirty = false
             end
+            -- a whole-cache merge invalidates every record, not a named
+            -- few; consumers must rebuild instead of patching dirty names
+            BestiaryCache.dirty_all = true
             BestiaryCache.generation = (BestiaryCache.generation or 0) + 1
         end)
         if loaded ~= nil then
@@ -624,9 +627,7 @@ function Persistence.save_settings()
     Persistence.ensure_account_settings()
     Persistence.ensure_character_settings()
 
-    if Persistence.capture_runtime_geometry ~= nil then
-        Persistence.capture_runtime_geometry()
-    end
+    Persistence.capture_runtime_geometry()
 
     _sync_current_profile_settings()
     _stamp_account_settings_version(State.account_settings)
@@ -636,48 +637,28 @@ function Persistence.save_settings()
 end
 
 function Persistence.capture_runtime_geometry()
-    if Windows.config ~= nil and Windows.config.update_saved_geometry ~= nil then
+    if Windows.config ~= nil then
         Windows.config:update_saved_geometry()
     end
 
     if Windows.inventory ~= nil then
-        if Windows.inventory.capture_geometry ~= nil then
-            Windows.inventory:capture_geometry()
-        elseif Windows.inventory.persist_geometry ~= nil then
-            Windows.inventory:persist_geometry()
-        end
+        Windows.inventory:capture_geometry()
     end
 
     if Windows.assets ~= nil then
-        if Windows.assets.capture_geometry ~= nil then
-            Windows.assets:capture_geometry()
-        elseif Windows.assets.persist_geometry ~= nil then
-            Windows.assets:persist_geometry()
-        end
+        Windows.assets:capture_geometry()
     end
 
-    if Windows.bestiary ~= nil then
-        if Windows.bestiary.capture_geometry ~= nil then
-            Windows.bestiary:capture_geometry()
-        elseif Windows.bestiary.persist_geometry ~= nil then
-            Windows.bestiary:persist_geometry()
-        end
+    if Windows.encyclopedia ~= nil then
+        Windows.encyclopedia:capture_geometry()
     end
 
     if Flags.is_unloading ~= true and Windows.crafting ~= nil then
-        if Windows.crafting.capture_geometry ~= nil then
-            Windows.crafting:capture_geometry()
-        elseif Windows.crafting.persist_geometry ~= nil then
-            Windows.crafting:persist_geometry()
-        end
+        Windows.crafting:capture_geometry()
     end
 
     if Flags.is_unloading ~= true and Windows.travel ~= nil then
-        if Windows.travel.capture_geometry ~= nil then
-            Windows.travel:capture_geometry()
-        elseif Windows.travel.persist_geometry ~= nil then
-            Windows.travel:persist_geometry()
-        end
+        Windows.travel:capture_geometry()
     end
 end
 

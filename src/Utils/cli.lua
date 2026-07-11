@@ -51,7 +51,9 @@ local function display_help()
     _write_help_command("/lui craft", "  /lui craft      - Toggle crafting window")
     _write_help_command("/lui travel", "  /lui travel     - Toggle travel window")
     _write_help_command("/lui trav", "  /lui trav       - Short alias for /lui travel")
-    _write_help_command("/lui bestiary", "  /lui bestiary   - Toggle bestiary window")
+    _write_help_command("/lui encyclopedia", "  /lui encyclopedia - Toggle encyclopedia window")
+    _write_help_command("/lui ency", "  /lui ency       - Alias for /lui encyclopedia")
+    _write_help_command("/lui bestiary", "  /lui bestiary   - Alias for /lui encyclopedia")
     _write_help_command("/lui beast", "  /lui beast      - Alias for /lui bestiary")
     _write_help_command("/lui b", "  /lui b          - Short alias for /lui bestiary")
     _write_help_command("/lui card [monster name]", "  /lui card [monster name] - Open the bestiary card for a monster")
@@ -104,10 +106,10 @@ function command:Execute(_, str)
         Shortcuts.toggle_crafting()
     elseif cmd == "travel" or cmd == "trav" then
         Shortcuts.toggle_travel()
-    elseif cmd == "bestiary" or cmd == "beast" or cmd == "b" then
+    elseif cmd == "encyclopedia" or cmd == "ency" or cmd == "bestiary" or cmd == "beast" or cmd == "b" then
         local action = list[2] ~= nil and string.lower(list[2]) or nil
         if action == nil then
-            Shortcuts.toggle_bestiary()
+            Shortcuts.toggle_encyclopedia()
         else
             display_help()
         end

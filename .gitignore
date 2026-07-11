@@ -11,5 +11,4 @@ lsp/
 __pycache__/
 lotro-api/
 .doc/
-tools/
 mockups/

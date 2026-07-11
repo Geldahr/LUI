@@ -197,7 +197,6 @@ function CooldownsWindow:Constructor()
     self:SetWantsUpdates(true)
     self:SetVisible(false)
     self:SetMouseVisible(false)
-    self:SetZOrder(20)
 
     self:apply_settings()
 end

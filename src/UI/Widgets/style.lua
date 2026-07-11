@@ -43,6 +43,10 @@ local DEFAULTS = {
     ALTERNATE_BACKGROUND = Turbine.UI.Color(1, 0.06, 0.06, 0.06),
     ALTERNATE_FOREGROUND = Turbine.UI.Color(0.88, 0.88, 0.88),
     SUBTLE_FOREGROUND = Turbine.UI.Color(1, 0.28, 0.28, 0.28),
+    -- subtle interior lines (table grids, list separators); deliberately
+    -- independent from CONTROL_BORDER so frames can pop without the
+    -- interior turning flashy
+    SEPARATOR = Turbine.UI.Color(1, 0.20, 0.20, 0.20),
 
     CONTROL_BACKGROUND = Turbine.UI.Color(1, 0.15, 0.15, 0.15),
     CONTROL_BACKGROUND_HOVER = Turbine.UI.Color(1, 0.18, 0.24, 0.34),
@@ -62,6 +66,17 @@ local DEFAULTS = {
     BORDER_WIDTH = 1.5,
     BORDER_WIDTH_THIN = 1,
     BORDER_WIDTH_LARGE = 2,
+
+    -- LuiTable interior. The frame and header underline follow the shared
+    -- BORDER_WIDTH/CONTROL_BORDER like every widget; colors reuse the
+    -- generic tokens (SEPARATOR grid, PANEL/ALTERNATE_BACKGROUND rows,
+    -- CONTROL_BACKGROUND header). Only the grid widths and the
+    -- row-striping toggle are table-specific: horizontal width 0 = no row
+    -- lines (alternating rows carry the separation); single-background
+    -- fans disable TABLE_ALTERNATE_ROWS and raise the horizontal width.
+    TABLE_VERTICAL_BORDER_WIDTH = 2,
+    TABLE_HORIZONTAL_BORDER_WIDTH = 0,
+    TABLE_ALTERNATE_ROWS = true,
 
     CONTROL_FONT_NAME = "Verdana",
     CONTROL_FONT_SIZE = 12,

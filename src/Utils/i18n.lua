@@ -74,3 +74,7 @@ Locale.TR = _load_translations()
 function Locale.is_english_language()
     return _detect_language_code() == "en"
 end
+
+function Locale.language_code()
+    return _detect_language_code()
+end

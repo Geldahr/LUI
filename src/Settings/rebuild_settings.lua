@@ -760,6 +760,7 @@ function Settings.rebuild()
     drops.align = raw_drops.align
     drops.icon_side = raw_drops.icon_side
     drops.animations_enabled = raw_drops.animations_enabled
+    drops.merge_similar = raw_drops.merge_similar
     drops.move_duration = raw_drops.move_duration
     drops.hud.background_opacity = raw_drops.hud.background_opacity
     drops.hud.background_color = raw_drops.hud.background_color

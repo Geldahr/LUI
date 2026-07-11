@@ -719,6 +719,28 @@ function LuiTabBar:get_show_border_left()
     return self._show_border_left == true
 end
 
+-- tab-cap visibility independent of the content-frame borders (the border
+-- setters above also flip the matching cap for backward compatibility)
+function LuiTabBar:set_show_tab_cap_top(show)
+    self._show_tab_cap_top = _show_value(show)
+    self:_layout()
+end
+
+function LuiTabBar:set_show_tab_cap_right(show)
+    self._show_tab_cap_right = _show_value(show)
+    self:_layout()
+end
+
+function LuiTabBar:set_show_tab_cap_bottom(show)
+    self._show_tab_cap_bottom = _show_value(show)
+    self:_layout()
+end
+
+function LuiTabBar:set_show_tab_cap_left(show)
+    self._show_tab_cap_left = _show_value(show)
+    self:_layout()
+end
+
 function LuiTabBar:add_tab(text, widget)
     local entry = {}
     entry.text = tostring(text or "")

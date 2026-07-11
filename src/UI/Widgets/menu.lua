@@ -389,6 +389,8 @@ function LuiMenu:Constructor()
     self._scroll_enabled = false
     self._max_visible = DEFAULT_MAX_VISIBLE
     self._scroll_options = nil
+    self._context_x = nil
+    self._context_y = nil
 
     self.button = LuiButton()
     self.button:SetParent(self)
@@ -624,7 +626,22 @@ function LuiMenu:open()
     end
 end
 
+-- Open as a standalone context menu at a screen point: no menu bar, no
+-- sibling hover chaining; the popup anchors to the given point instead of
+-- the menu button.
+function LuiMenu:open_at_screen(screen_x, screen_y)
+    self._context_x = screen_x
+    self._context_y = screen_y
+    self:open()
+    if self:is_open() ~= true then
+        self._context_x = nil
+        self._context_y = nil
+    end
+end
+
 function LuiMenu:close()
+    self._context_x = nil
+    self._context_y = nil
     if self._popup_overlay ~= nil then
         self._popup_overlay:SetVisible(false)
         self._popup_overlay = nil
@@ -690,6 +707,10 @@ end
 
 function LuiMenu:_open_sibling_at_screen_point(screen_x, screen_y)
     local menu_bar = self:GetParent()
+    if menu_bar == nil or menu_bar._menus == nil then
+        -- standalone context menus have no menu-bar siblings
+        return false
+    end
     for i = 1, #menu_bar._menus do
         local menu = menu_bar._menus[i]
         local menu_x, menu_y = menu:PointToScreen(0, 0)
@@ -819,7 +840,9 @@ function LuiMenu:_position_popup()
     local x, y
     local gap = _scaled_int(self._scale, BASE_OPEN_GAP)
 
-    if self._parent_action ~= nil then
+    if self._context_x ~= nil then
+        x, y = self._context_x, self._context_y
+    elseif self._parent_action ~= nil then
         x, y = self._parent_action:PointToScreen(self._parent_action:GetWidth(), 0)
     else
         x, y = self:PointToScreen(0, self:GetHeight() + gap)

@@ -4,11 +4,35 @@
 
 ### Added
 
+- The Bestiary window is now the Encyclopedia: the bestiary became its first tab, joined by Equipment, Resources, Consumables, Housing, and Traceries item tabs with type/rarity/level filters, the shared search grammar (space = and, `|` = or, quotes = exact phrase), and result counts. Item tabs list as tables with icon, name, type, and level columns plus the link buttons. Consumables also covers recipe scrolls (grouped under a single `Recipes` type filter), stat tomes, boosters, and pipe-weed. New `/lui encyclopedia` and `/lui ency` commands open it; the old `/lui bestiary`, `/lui beast`, and `/lui b` aliases keep working.
+- Added a Quests tab to the Encyclopedia with Quests and Deeds sub-tabs: 14,968 quests and 5,390 deeds extracted straight from the game client, listed with name, category, and level, searchable with the shared grammar plus category and level-range filters, fully localized (English, French, German). Clicking a row opens a quest card with the level and category, the bestowing NPC, the description, objectives, and dialog texts, and the reward items as clickable chips that link into the Encyclopedia item tabs.
+- The Traceries tab covers the legendary item system: filter by tracery type, player class, usable character level (`Level` range, matched against the tracery's level band), and base item level (`iLvl` range, matched against the tracery's base — `450-499` shows the 450 tier only, never lower tiers whose enhancement cap covers it). The list is a real table with columns: icon, name, type, class, level band, base iLvl, and the enhancement limit.
+- Added cross-window link buttons to Encyclopedia item rows: an anvil button opens the crafting window searched on the item (preselecting the producing recipe when it is craftable; on a recipe scroll it opens the recipe the scroll teaches), and a book button searches the bestiary for creatures dropping it (shown only for known drop names).
+- Bestiary card drops that match a real item are now clickable, marked with a distinct border color: left click opens the item in the Encyclopedia on its matching tab, right click opens a context menu with `Open in Encyclopedia`, `How to craft this`, and `Show crafts using this` entries when they apply.
+- Added a `Variant` selector to the crafting recipe details for multi-output recipes (choose which of the recipe's outputs to display), a `+x variants` line on their recipe list rows, and variant-aware build plans: the plan and queue show the chosen output, and the choice is saved with tracked plans.
+- The crafting search and the Encyclopedia crafting links now cover critical results and alternate recipe outputs (for example `Adamant Earring of Combat` or `Carved Combat Bow`), which were previously unreachable.
+- Added a `Separator color` setting under `Global > UI > Colors` for subtle interior lines such as table grid lines, independent from the border color, plus table style settings under `Global > UI > Layout`: vertical and horizontal grid line widths and an `Alternating table rows` toggle (disable it and raise the horizontal line width for a single-background look with row separators).
+- Added a Resource card: double-clicking a targeted harvest node (ore deposits, branches, crop fields, scholar artifacts) opens a card showing the node's profession and tier with the in-game tier badge, what it always contains with quantity ranges (for example `Chunk of Gold Ore x1-3`), and what it may contain, with rare finds in the gold chest styling. Yield chips are clickable like bestiary card drops: left click opens the item in the Encyclopedia, right click offers the Encyclopedia and crafting actions. Node lookup is localized, so it also works on French and German clients.
+- Added a `Merge similar drops` setting to the Drops window (enabled by default): picking up the same item again while its drop line is still showing adds to that line's count in place instead of stacking a duplicate line, and refreshes how long it stays visible.
+
 ### Changed
+
+- The bestiary now works on French and German clients: localized creature names are bridged to the English bestiary data at pack time (~97% of entries; unmatched names find nothing), so target double-click cards and `/lui card` resolve localized targets. Bestiary content is displayed translated where the game data provides a label — creature names, taxonomy, tiers, locations, drops, quests, deeds, and abilities — with untranslated strings kept in English (ratings such as `Feeble` stay English). Search and chat capture stay English-only.
+- The bestiary database now loads from packed local data with a background pre-warm instead of parsing a large Lua table at login, making plugin load and Encyclopedia opening faster.
+- Crafting ingredient, plan, and queue rows derive their height from the item icon plus padding so icons fit exactly at every UI scale, and rows with only a name center their text vertically.
+- Cross-window link buttons now always select the matching window tab (Recipes tab in crafting, Bestiary tab in the Encyclopedia).
+- Stacked drops in the Drops window now show the real item: `[5 Hides]` displays as `Hide` with a count of 5, the item's icon, and its tooltip, instead of an unresolved plural line. Items whose name starts with a number (`100 Virtue XP`) are never mistaken for stacks.
 
 ### Fixed
 
+- Fixed the crafting critical-result row showing the normal item's icon and tooltip when the critical result is a different item with the same name (Heraldry recipes and similar); recipe lists always show the normal result.
+- Fixed search text set by cross-window link buttons being invisible until the input box was clicked.
+- HUD windows (cooldowns, expiring effects, drops, launcher) no longer set a window z-order, so they stop floating above every other window.
+
 ### Removed
+
+- Removed the ready-ratio (`0/3`) status text from the crafting recipe details; per-ingredient readiness and the plan/queue ratios carry that information.
+- Removed the Encyclopedia's `Order` title-bar menu (formerly the Bestiary order controls); bestiary results always list A-Z, matching the item tabs.
 
 ## v1.3.0
 

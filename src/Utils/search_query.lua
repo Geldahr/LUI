@@ -192,6 +192,61 @@ function SearchQuery.matches_groups(groups, haystack_lower)
     return false
 end
 
+-- Evaluate parsed text groups against a searchable domain (a table with
+-- fold_needle / search / search_within / STOP2, e.g. Lore.Items or
+-- Lore.Quests): terms inside a group AND together, groups OR together.
+-- The longest usable term seeds each group globally (cached, most
+-- selective); every other term probes only the surviving candidates.
+-- Not usable as a seed: terms under 2 chars and baked stop bigrams
+-- (2-char needles matching >5% of the domain - a cold scan for those
+-- costs tens of ms and filters out nearly nothing). A group with no
+-- usable seed applies no filter yet (still typing). Returns
+-- { ordinal = true }, or nil for "no filter".
+function SearchQuery.evaluate_domain(groups, domain)
+    if groups == nil or #groups == 0 then
+        return nil
+    end
+
+    local result = {}
+    for group_index = 1, #groups do
+        local group = groups[group_index]
+        local terms = {}
+        for term_index = 1, #group do
+            terms[term_index] = group[term_index]
+        end
+        table.sort(terms, function(left, right)
+            return #left > #right
+        end)
+
+        local seed_index = nil
+        for term_index = 1, #terms do
+            local needle = domain.fold_needle(terms[term_index])
+            if #needle > 2 or (#needle == 2 and domain.STOP2[needle] ~= true) then
+                seed_index = term_index
+                break
+            end
+        end
+        if seed_index == nil then
+            return nil
+        end
+
+        local set, count = domain.search(terms[seed_index])
+        for term_index = 1, #terms do
+            if count == 0 then
+                break
+            end
+            if term_index ~= seed_index then
+                set, count = domain.search_within(terms[term_index], set)
+            end
+        end
+        for ordinal in pairs(set) do
+            result[ordinal] = true
+        end
+    end
+
+    return result
+end
+
 function SearchQuery.parse(query, token_keys)
     if type(query) ~= "string" then
         error("SearchQuery.parse requires query string")

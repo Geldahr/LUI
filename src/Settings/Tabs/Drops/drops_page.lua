@@ -117,6 +117,14 @@ function DropsPage:Constructor(window)
         function()
             return tostring(settings_getter().visible_duration)
         end)
+    general:add_row_break()
+    general:add_checkbox("drops_merge_similar", TR["Merge similar drops"],
+        function(value)
+            settings_getter().merge_similar = value == true
+        end,
+        function()
+            return settings_getter().merge_similar == true
+        end, true)
     general:add_info(
         TR["Carry-alls may bypass inventory item events. Those drops can appear without icon or hover and will be shown as text only."],
         42)

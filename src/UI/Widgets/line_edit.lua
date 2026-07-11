@@ -308,6 +308,21 @@ function LuiLineEdit:SetText(text)
     self:_refresh_placeholder()
 end
 
+-- Re-apply the current text on the next frame. The Lotro TextBox does not
+-- paint text that was set while its window was hidden, and re-setting it
+-- in the same call stack that shows the window is still too early; the
+-- config pages fix the same quirk with SetText(GetText()) once the page
+-- is actually on screen.
+function LuiLineEdit:refresh_text_async()
+    self.Update = function()
+        self:SetWantsUpdates(false)
+        self.Update = nil
+        self.text_box:SetText(self.text_box:GetText())
+        self:_refresh_placeholder()
+    end
+    self:SetWantsUpdates(true)
+end
+
 function LuiLineEdit:GetText()
     return self.text_box:GetText()
 end

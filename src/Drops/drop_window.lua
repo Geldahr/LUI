@@ -6,6 +6,7 @@ local TR = _G.LUI.Locale.TR
 local Drops = _G.LUI.Features.Drops
 local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
+local Lore = _G.LUI.Data.Lore
 local UI = _G.LUI.UI
 local scaled_int = UI.NativeScaling.scaled_int
 local class = _G.LUI.Core.class
@@ -151,6 +152,14 @@ local function _parse_drop_message(message)
     return name, quantity
 end
 
+local function _visible_duration()
+    local duration = tonumber(State.settings.drops.visible_duration) or 4
+    if duration <= 0 then
+        duration = 4
+    end
+    return duration
+end
+
 local function _safe_item_name(item)
     if item == nil then
         return nil
@@ -220,7 +229,6 @@ function DropBackgroundWindow:Constructor()
 
     self:SetVisible(false)
     self:SetMouseVisible(false)
-    self:SetZOrder(0)
     _set_alpha_backdrop(self)
 end
 
@@ -256,6 +264,7 @@ function DropsWindow:Constructor()
     self._pending_item_events = {}
     self._active_drops = {}
     self._entry_pool = {}
+    self._db_icon_cache = {}
 
     if self.player ~= nil and self.player.GetName ~= nil then
         self.player_name = self.player:GetName()
@@ -263,7 +272,6 @@ function DropsWindow:Constructor()
 
     self:SetWantsUpdates(true)
     self:SetVisible(false)
-    self:SetZOrder(0)
 
     self.background = Turbine.UI.Control()
     self.background:SetParent(self)
@@ -472,16 +480,51 @@ function DropsWindow:_on_chat_received(args)
     self:_queue_chat_drop(item_name, quantity, now)
 end
 
+-- fold a new drop into a live row of the same item: quantities add up,
+-- fresh loot keeps the row alive, the row never moves. Rows already
+-- fading out are left alone - the new drop starts a fresh row.
+function DropsWindow:_merge_into_existing(normalized_name, quantity, now)
+    for i = 1, #self._pending_chat_drops do
+        local record = self._pending_chat_drops[i]
+        if record ~= nil and record.normalized_name == normalized_name then
+            record.quantity = record.quantity + quantity
+            return true
+        end
+    end
+
+    for i = 1, #self._active_drops do
+        local record = self._active_drops[i]
+        if record ~= nil and record.removing ~= true
+            and record.normalized_name == normalized_name then
+            record.quantity = record.quantity + quantity
+            record.expire_at = now + _visible_duration()
+            record.entry:set_record(record)
+            return true
+        end
+    end
+
+    return false
+end
+
 function DropsWindow:_queue_chat_drop(name, quantity, now)
+    quantity = tonumber(quantity) or 1
+    local ordinals
+    name, quantity, ordinals = Lore.Items.canonicalize_drop(name, quantity)
+
     local normalized_name = _normalize_item_name(name)
     if normalized_name == nil then
+        return
+    end
+
+    if State.settings.drops.merge_similar == true
+        and self:_merge_into_existing(normalized_name, quantity, now) then
         return
     end
 
     local record = {
         name = name,
         normalized_name = normalized_name,
-        quantity = tonumber(quantity) or 1,
+        quantity = quantity,
         chat_at = now,
         display_after = now + CHAT_DISPLAY_DELAY,
         upgrade_until = now + ITEM_MATCH_WINDOW,
@@ -507,6 +550,16 @@ function DropsWindow:_queue_chat_drop(name, quantity, now)
         record.live_item = pending_item.item
     elseif self.backpack ~= nil then
         record.live_item = _find_backpack_item_by_name(self.backpack, normalized_name)
+    end
+    if record.live_item == nil then
+        -- carry-all loot: no live item ever appears, resolve from the DB;
+        -- canonicalization already found the record, so reuse its ordinals
+        if ordinals ~= nil then
+            record.db_icon_id, record.db_background_id = Lore.Items.icon_layers(ordinals[1])
+        else
+            record.db_icon_id, record.db_background_id =
+                self:_db_icon_for(name, normalized_name, record.quantity)
+        end
     end
 
     self._pending_chat_drops[#self._pending_chat_drops + 1] = record
@@ -638,10 +691,7 @@ function DropsWindow:_expire_pending_item_events(now)
 end
 
 function DropsWindow:_promote_pending_chat_drops(now)
-    local duration = tonumber(State.settings.drops.visible_duration) or 4
-    if duration <= 0 then
-        duration = 4
-    end
+    local duration = _visible_duration()
 
     local matured = {}
     for i = #self._pending_chat_drops, 1, -1 do
@@ -663,6 +713,10 @@ function DropsWindow:_promote_pending_chat_drops(now)
         if record.live_item == nil and self.backpack ~= nil then
             record.live_item = _find_backpack_item_by_name(self.backpack, record.normalized_name)
         end
+        if record.live_item == nil and record.db_icon_id == nil then
+            record.db_icon_id, record.db_background_id =
+                self:_db_icon_for(record.name, record.normalized_name, record.quantity)
+        end
         record.entry = self:_acquire_entry()
         record.entry:apply_settings()
         record.entry:set_record(record)
@@ -670,6 +724,50 @@ function DropsWindow:_promote_pending_chat_drops(now)
         self._active_drops[#self._active_drops + 1] = record
         self:_layout_active_drops(now, false)
     end
+end
+
+-- The lore Items DB is staged in the background by the bestiary prewarm
+-- pump (src/Data/bestiary_db.lua); this window never imports it itself.
+-- Until it is staged, carry-all loot shows without an icon and matures
+-- one via the pending/_db_icon_for retry once the domain loads.
+
+-- lore-DB icon fallback, cached per item name; false = known miss (item
+-- newer than the data drop, or a chat string that is not an item name)
+function DropsWindow:_db_icon_for(name, normalized_name, quantity)
+    if Lore.Items.loaded ~= true then
+        return nil, nil
+    end
+
+    -- a parsed quantity > 1 means the bracket carried a count, so the
+    -- printed name is the plural form (gathered lines: "[5 Bones]" arrives
+    -- count-stripped as "Bones"); resolution depends on this bit, so it is
+    -- part of the cache key ("\t" cannot appear in item names)
+    local plural_likely = quantity ~= nil and quantity > 1
+    local cache_key = normalized_name
+    if plural_likely then
+        cache_key = "#p\t" .. normalized_name
+    end
+
+    local cached = self._db_icon_cache[cache_key]
+    if cached == false then
+        return nil, nil
+    end
+    if cached ~= nil then
+        return cached[1], cached[2]
+    end
+
+    local _, _, ordinals = Lore.Items.canonicalize_drop(name, quantity)
+    if ordinals == nil then
+        self._db_icon_cache[cache_key] = false
+        return nil, nil
+    end
+    local icon_id, background_id = Lore.Items.icon_layers(ordinals[1])
+    if icon_id == nil then
+        self._db_icon_cache[cache_key] = false
+        return nil, nil
+    end
+    self._db_icon_cache[cache_key] = { icon_id, background_id }
+    return icon_id, background_id
 end
 
 function DropsWindow:_rows_capacity()

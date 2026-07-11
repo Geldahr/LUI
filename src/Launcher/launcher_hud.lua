@@ -65,7 +65,6 @@ function LauncherMenu:Constructor()
     _set_alpha_blend(self)
     self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self:SetMouseVisible(true)
-    self:SetZOrder(35)
     self:SetWantsUpdates(true)
 
     self.logo_button = self:_new_button(LOGO_BUTTON_ICON)
