@@ -28,6 +28,7 @@
 - Fixed the crafting critical-result row showing the normal item's icon and tooltip when the critical result is a different item with the same name (Heraldry recipes and similar); recipe lists always show the normal result.
 - Fixed search text set by cross-window link buttons being invisible until the input box was clicked.
 - HUD windows (cooldowns, expiring effects, drops, launcher) no longer set a window z-order, so they stop floating above every other window.
+- Fixed the Recipes button in the Assets browser; it now shows properly how many known recipes can be crafted relatively to the filter applied in assets.
 
 ### Removed
 
