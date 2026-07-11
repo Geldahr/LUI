@@ -828,6 +828,8 @@ function Settings.rebuild()
     uk.icon_size = uk_icon
     uk.spacing = scaled_int(raw_uk.spacing)
     uk.orientation = raw_uk.orientation
+    uk.auto_order = raw_uk.auto_order
+    uk.auto_order_anchor = raw_uk.auto_order_anchor
     uk.slots = raw_uk.slots
     uk.show_time = raw_uk.show_time
     uk.drain_enabled = raw_uk.drain_enabled

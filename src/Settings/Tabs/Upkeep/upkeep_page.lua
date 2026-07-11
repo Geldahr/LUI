@@ -304,6 +304,22 @@ function UpkeepPage:Constructor(window)
         function()
             return tostring(settings_getter().spacing)
         end)
+    general:add_row_break()
+    general:add_checkbox("uk_auto_order", TR["Auto order by next activation"],
+        function(value)
+            settings_getter().auto_order = value == true
+        end,
+        function()
+            return settings_getter().auto_order == true
+        end)
+    general:add_dropdown("uk_auto_order_anchor", TR["Next skill at"],
+        { TR["Left/Top"], TR["Right/Bottom"] }, { LUI_ENUMS.side.LEFT, LUI_ENUMS.side.RIGHT },
+        function(value)
+            settings_getter().auto_order_anchor = value
+        end,
+        function()
+            return settings_getter().auto_order_anchor
+        end)
     self:add_tab(TR["General"], "general", general)
 
     local get_count = function()

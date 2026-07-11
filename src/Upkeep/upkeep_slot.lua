@@ -296,6 +296,38 @@ function UpkeepSlot:clear_active()
     self.active_count = 0
 end
 
+-- auto-order sort key: seconds until this skill both needs and can be
+-- recast. 0 = act now; permanent/toggle buffs and unbound or untracked
+-- slots never need attention and sort last.
+function UpkeepSlot:urgency(now)
+    if self.did_text == nil then
+        return math.huge
+    end
+
+    local buff_remaining = 0
+    for _, rec in pairs(self.active) do
+        if rec.ending == nil then
+            return math.huge
+        end
+        if rec.ending > now then
+            local remaining = rec.ending - now
+            if remaining > buff_remaining then
+                buff_remaining = remaining
+            end
+        end
+    end
+
+    local cd_remaining = 0
+    if self.reset_time ~= nil and self.reset_time > now then
+        cd_remaining = self.reset_time - now
+    end
+
+    if cd_remaining > buff_remaining then
+        return cd_remaining
+    end
+    return buff_remaining
+end
+
 function UpkeepSlot:set_move_mode(enabled)
     self._move_mode = enabled == true
     self:refresh_visibility()

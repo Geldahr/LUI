@@ -421,6 +421,8 @@ _G.LUI.Settings.Defaults.Schema =
 			["icon_size"] = 48.000000,
 			["spacing"] = 16.000000,
 			["orientation"] = 1.000000,
+			["auto_order"] = false,
+			["auto_order_anchor"] = 1.000000,
 			["slots"] = {
 			},
 			["show_time"] = true,

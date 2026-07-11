@@ -66,6 +66,10 @@ function UpkeepWindow:Constructor()
     self._bound_count = 0
     -- localized buff name -> array of slot indexes watching it
     self._watch = {}
+    -- auto-order working buffers (slot index per display position)
+    self._display_order = {}
+    self._order_buf = {}
+    self._urgency_buf = {}
     self.last_update_at = 0
     self.update_every = 1.0 / State.settings.global.refresh_rate
     self._skill_discover_due_at = 0
@@ -174,11 +178,10 @@ function UpkeepWindow:apply_settings()
     for i = 1, count do
         local slot = self.slots[i]
         slot:apply_settings()
-        if vertical then
-            slot:place(0, (i - 1) * (size + spacing))
-        else
-            slot:place((i - 1) * (size + spacing), 0)
-        end
+        self:_place_slot(slot, i)
+        -- invalidate the cached order so auto order re-places (with its
+        -- anchor applied) on the next tick
+        self._display_order[i] = 0
 
         local did_text = s.slots[i]
         local record = nil
@@ -255,11 +258,68 @@ function UpkeepWindow:Update()
     for i = 1, self._capacity do
         self.slots[i]:update(now)
     end
+
+    if s.auto_order == true then
+        self:_apply_auto_order(now)
+    end
 end
 
 ---------------------------------------------------------------------
 -- Private functions
 ---------------------------------------------------------------------
+
+-- cell geometry for one display position (1-based, from the start of the bar)
+function UpkeepWindow:_place_slot(slot, position)
+    local s = self:get_settings()
+    local offset = (position - 1) * (s.icon_size + s.spacing)
+    if s.orientation == LUI_ENUMS.orientation.VERTICAL then
+        slot:place(0, offset)
+    else
+        slot:place(offset, 0)
+    end
+end
+
+-- auto order: sort the slots by urgency (next skill to reactivate first)
+-- and re-place them when the order changes; the anchor picks which end of
+-- the bar holds the most urgent slot
+function UpkeepWindow:_apply_auto_order(now)
+    local count = self._capacity
+    local order = self._order_buf
+    local urgency = self._urgency_buf
+    for i = 1, count do
+        order[i] = i
+        urgency[i] = self.slots[i]:urgency(now)
+    end
+    for i = count + 1, #order do
+        order[i] = nil
+        urgency[i] = nil
+    end
+    table.sort(order, function(a, b)
+        if urgency[a] ~= urgency[b] then
+            return urgency[a] < urgency[b]
+        end
+        return a < b
+    end)
+
+    local changed = false
+    for k = 1, count do
+        if self._display_order[k] ~= order[k] then
+            changed = true
+            break
+        end
+    end
+    if changed ~= true then
+        return
+    end
+
+    local reverse = self:get_settings().auto_order_anchor == LUI_ENUMS.side.RIGHT
+    for k = 1, count do
+        self._display_order[k] = order[k]
+        local position = reverse and (count - k + 1) or k
+        self:_place_slot(self.slots[order[k]], position)
+    end
+    self:_sync_companion_positions()
+end
 
 -- the icon windows sit at the HUD position plus their cell offset; the
 -- decoration overlay covers the whole bar
