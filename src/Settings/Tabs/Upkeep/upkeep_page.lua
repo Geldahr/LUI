@@ -322,7 +322,9 @@ function UpkeepPage:Constructor(window)
     end
 
     local skills = ConfigContent(window, 1)
-    skills:add_info(TR["Drag skills from the game's Skills panel onto the slots below."], 20)
+    skills:add_info(
+        TR["Drag and drop a skill icon from the game's Skills panel (or an action bar) into a slot below to bind it. Clear removes the binding."],
+        34)
     local editor = _create_slots_editor(skills, window, get_count)
     skills:bind(editor,
         function(value)
@@ -425,6 +427,14 @@ function UpkeepPage:Constructor(window)
         function()
             return tostring(settings_getter().cd_shade_opacity)
         end)
+    cooldown:add_row_break()
+    cooldown:add_checkbox("uk_cd_during_active", TR["Show cooldown while the buff is active"],
+        function(value)
+            settings_getter().cd_during_active = value == true
+        end,
+        function()
+            return settings_getter().cd_during_active == true
+        end, true)
     cooldown:add_row_break()
     cooldown:add_checkbox("uk_cd_transparent", TR["Transparent"],
         function(value)

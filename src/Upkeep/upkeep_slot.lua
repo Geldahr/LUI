@@ -342,28 +342,44 @@ function UpkeepSlot:update(now)
     local time_text = ""
     local time_color = nil
     local drain_h = 0
-    local shade_visible = false
+    local shade_h = 0
     local icon_opacity = 1
 
     if is_active then
+        local buff_fill = nil
         if best_remaining ~= nil then
             if s.show_time == true then
                 time_text = lui_timed_row_format_time(best_remaining, s.time_format)
                 time_color = s.active_text_color
             end
-            if s.drain_enabled == true and best_duration ~= nil then
+            if best_duration ~= nil then
                 local ratio = best_remaining / best_duration
                 if ratio > 1 then ratio = 1 end
-                drain_h = math.floor((self._size * ratio) + 0.5)
+                buff_fill = math.floor((self._size * ratio) + 0.5)
             end
-        elseif s.drain_enabled == true and has_permanent then
-            -- toggle/permanent buff: full overlay signals "running"
-            drain_h = self._size
+        elseif has_permanent then
+            -- toggle/permanent buff: full fill signals "running"
+            buff_fill = self._size
+        end
+
+        if s.drain_enabled == true and buff_fill ~= nil then
+            drain_h = buff_fill
+        end
+
+        -- optional: while the skill still recovers, the consumed part of
+        -- the buff (the space above the drain) is shaded; the moment the
+        -- cooldown ends the shade vanishes and only the drain remains
+        local reset_time = self.reset_time
+        if s.cd_shade == true and s.cd_during_active == true and
+            buff_fill ~= nil and reset_time ~= nil and reset_time > now then
+            shade_h = self._size - buff_fill
         end
     else
         local reset_time = self.reset_time
         if reset_time ~= nil and reset_time > now then
-            shade_visible = s.cd_shade == true
+            if s.cd_shade == true then
+                shade_h = self._size
+            end
             if s.cd_transparent == true then
                 -- the setting IS the icon's opacity on cooldown:
                 -- 0.2 = heavily faded into the background
@@ -401,9 +417,16 @@ function UpkeepSlot:update(now)
             self.drain:SetVisible(false)
         end
     end
-    if shade_visible ~= self._last_shade_visible then
-        self._last_shade_visible = shade_visible
-        self.shade:SetVisible(shade_visible)
+    if shade_h ~= self._last_shade_h then
+        self._last_shade_h = shade_h
+        if shade_h > 0 then
+            -- anchored top, shrinking upward-to-done (the drain is
+            -- anchored bottom, so the two fills stay distinguishable)
+            self.shade:SetSize(self._size, shade_h)
+            self.shade:SetVisible(true)
+        else
+            self.shade:SetVisible(false)
+        end
     end
     if icon_opacity ~= self._last_icon_opacity then
         self._last_icon_opacity = icon_opacity
@@ -422,6 +445,6 @@ function UpkeepSlot:_reset_write_cache()
     self._last_time_text = nil
     self._last_time_color = nil
     self._last_drain_h = nil
-    self._last_shade_visible = nil
+    self._last_shade_h = nil
     self._last_icon_opacity = nil
 end

@@ -834,6 +834,7 @@ function Settings.rebuild()
     uk.drain_color = raw_uk.drain_color
     uk.drain_opacity = raw_uk.drain_opacity
     uk.cd_shade = raw_uk.cd_shade
+    uk.cd_during_active = raw_uk.cd_during_active
     uk.cd_shade_color = raw_uk.cd_shade_color
     uk.cd_shade_opacity = raw_uk.cd_shade_opacity
     uk.cd_transparent = raw_uk.cd_transparent
