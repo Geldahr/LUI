@@ -78,6 +78,9 @@ function LuiItemIcon:Constructor(on_click, on_hover_change)
     end
     self.MouseLeave = function()
         self:_rearm_quickslot()
+        if type(self._on_hover_change) == "function" then
+            self._on_hover_change(false)
+        end
     end
 
     self:set_side(self._side)
@@ -118,6 +121,11 @@ function LuiItemIcon:_ensure_quickslot()
     end
     quickslot.MouseUp = function()
         self:_rearm_quickslot()
+    end
+    quickslot.MouseLeave = function()
+        if type(self._on_hover_change) == "function" then
+            self._on_hover_change(false)
+        end
     end
     quickslot.MouseClick = function(_, args)
         if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then

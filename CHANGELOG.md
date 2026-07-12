@@ -11,6 +11,8 @@
 
 ### Changed
 
+- The crafting recipe list is now a real table, like the Encyclopedia item tabs: a thin craftable-status color strip, the item icon, and Name, Profession, Rank, Level, and Craftable columns, plus the favorite star. Multi-output recipes append their variant count to the name (`(+2)`) instead of using a separate line, and the Craftable column shows how many crafts the current materials scope allows together with the per-craft batch size (`3 (x25)`), colored by status like the strip. Rows are single-line and denser than the old two-line rows (long names and counts wrap to a second line instead of clipping), highlight on mouse-over, and clicking a recipe no longer rebuilds the whole list. Both display modes (pages and scroll) keep working as before.
+
 - Timer bars now reserve the time-text width from a widest-digit template whose leading digit is capped by the threshold (e.g. `1:08` for a 90s threshold) instead of measuring every possible countdown value; the reserved area can be marginally wider than strictly necessary but never narrower.
 
 ### Fixed

@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- LuiTable: a simplified QTableWidget-style list. A header bar with column
+-- LuiTable: a simplified column-based list. A header bar with column
 -- captions above rows of widget cells. Two modes: "paged" (default, plain
 -- body, the caller owns pagination and swaps row contents; no scroll
 -- viewport so scaled icons cannot escape clipping) and "scroll" (ListBox +
@@ -11,7 +11,9 @@
 --
 -- Columns: fixed pixel widths, or nil for the single stretch column that
 -- absorbs the remaining width (first nil wins; with none, the last column
--- stretches). Cells are widgets; strings become internal labels.
+-- stretches). Cells are widgets; strings become internal labels. Content
+-- is inset by CELL_PAD_X; the cell background (set_cell_background) is a
+-- cell property and fills the full cell region up to the grid lines.
 
 local class = _G.LUI.Core.class
 import "Turbine.UI"
@@ -70,6 +72,8 @@ function LuiTable:Constructor()
     self._font = nil
     self._header_font = nil
     self._selected_index = nil
+    self._hover_enabled = false
+    self._hover_index = nil
     self.on_row_clicked = nil
     self.on_row_double_clicked = nil
 
@@ -343,6 +347,16 @@ function LuiTable:_create_row()
             table_widget.on_row_double_clicked(row.index, args)
         end
     end
+    row.control.MouseEnter = function()
+        if table_widget._hover_enabled == true then
+            table_widget:_set_hover_index(row.index)
+        end
+    end
+    row.control.MouseLeave = function()
+        if table_widget._hover_enabled == true and table_widget._hover_index == row.index then
+            table_widget:_set_hover_index(nil)
+        end
+    end
 
     -- one vertical separator per inner column boundary + a bottom line;
     -- created once, repositioned on layout, shown only with inner borders
@@ -371,6 +385,8 @@ end
 function LuiTable:_apply_row_background(row)
     if row.index == self._selected_index then
         row.control:SetBackColor(Style.SELECTION_BACKGROUND)
+    elseif self._hover_enabled == true and row.index == self._hover_index then
+        row.control:SetBackColor(Style.CONTROL_BACKGROUND_HOVER)
     elseif self._row_color_b ~= nil and row.index % 2 == 0 then
         row.control:SetBackColor(self._row_color_b)
     else
@@ -429,10 +445,21 @@ function LuiTable:insert_row(index, cells)
         -- ListBox owns stacking; mid-list inserts rebuild the item list
         if index == #self._rows then
             self._list:AddItem(row.control)
+            self:_reindex(index)
+            -- append fast path (mirrors the paged one): scroll callers
+            -- render row by row, so a full relayout per insert costs
+            -- O(n^2) cell placements; the new row only needs its own
+            -- geometry - the ListBox stacks it, and scroll mode never
+            -- hides bottom separators
+            if self._resolved ~= nil then
+                self:_layout_row(row)
+                row.bottom_sep:SetVisible(self._h_border_w > 0)
+                return index
+            end
         else
             self:_rebuild_list_items()
+            self:_reindex(index)
         end
-        self:_reindex(index)
         self:_layout()
         return index
     end
@@ -476,8 +503,12 @@ function LuiTable:_layout_appended_row(row, index)
             Turbine.UI.Control.SetSize(self, self:GetWidth(), target_h)
             local bw = self:_frame_border()
             local body_y = bw + self._header_h + bw
+            local body_h = math.max(0, target_h - body_y - bw)
             self.body:SetSize(math.max(1, self:GetWidth() - (2 * bw)),
-                math.max(1, target_h - body_y - bw))
+                math.max(1, body_h))
+            -- the body may have been hidden by an empty-table layout; the
+            -- append fast path skips _layout, so re-show it here
+            self.body:SetVisible(body_h > 0)
         end
     end
 end
@@ -512,6 +543,36 @@ function LuiTable:get_cell(row_index, col)
     return self._rows[row_index].cells[col]
 end
 
+-- cell background: fills the whole cell region -
+-- column width x row height, no content padding - behind the content,
+-- ending at the grid lines. nil clears. Bands survive set_row/set_cell,
+-- so pooled pages re-assert the color alongside the cell values.
+function LuiTable:set_cell_background(row_index, col, color)
+    local row = self._rows[row_index]
+    if color == nil then
+        if row.bands ~= nil and row.bands[col] ~= nil then
+            row.bands[col]:SetVisible(false)
+        end
+        return
+    end
+
+    if row.bands == nil then
+        row.bands = {}
+    end
+    local band = row.bands[col]
+    if band == nil then
+        band = Turbine.UI.Control()
+        band:SetParent(row.control)
+        band:SetMouseVisible(false)
+        -- under the content cells and the separators (both default 0)
+        band:SetZOrder(-1)
+        row.bands[col] = band
+        self:_layout_band(row, col)
+    end
+    band:SetBackColor(color)
+    band:SetVisible(true)
+end
+
 function LuiTable:remove_row(index)
     local row = table.remove(self._rows, index)
     for c = 1, #row.cells do
@@ -525,6 +586,11 @@ function LuiTable:remove_row(index)
         self._selected_index = nil
     elseif self._selected_index ~= nil and self._selected_index > index then
         self._selected_index = self._selected_index - 1
+    end
+    if self._hover_index == index then
+        self._hover_index = nil
+    elseif self._hover_index ~= nil and self._hover_index > index then
+        self._hover_index = self._hover_index - 1
     end
     self:_reindex(index)
     self:_layout()
@@ -541,6 +607,7 @@ function LuiTable:clear()
     end
     self._rows = {}
     self._selected_index = nil
+    self._hover_index = nil
     if self._list ~= nil then
         self._list:ClearItems()
     end
@@ -570,6 +637,43 @@ function LuiTable:row_data(index)
 end
 
 -- ------------------------------------------------------------ selection ----
+
+-- row hover highlight (opt-in): rows tint on mouse-over. Selection wins
+-- over hover, hover over the alternating row colors.
+function LuiTable:set_row_hover(enabled)
+    self._hover_enabled = enabled == true
+    if self._hover_enabled ~= true then
+        self:_set_hover_index(nil)
+    end
+end
+
+-- mouse-visible cell widgets (icons, buttons) intercept the row's
+-- MouseEnter/MouseLeave; their own hover callbacks re-assert row hover
+-- through this so the highlight does not flicker while crossing them
+function LuiTable:hover_row(index, hovering)
+    if self._hover_enabled ~= true then
+        return
+    end
+    if hovering == true then
+        self:_set_hover_index(index)
+    elseif self._hover_index == index then
+        self:_set_hover_index(nil)
+    end
+end
+
+function LuiTable:_set_hover_index(index)
+    if self._hover_index == index then
+        return
+    end
+    local previous = self._hover_index
+    self._hover_index = index
+    if previous ~= nil and self._rows[previous] ~= nil then
+        self:_apply_row_background(self._rows[previous])
+    end
+    if index ~= nil then
+        self:_apply_row_background(self._rows[index])
+    end
+end
 
 function LuiTable:set_selected_index(index)
     local previous = self._selected_index
@@ -637,6 +741,15 @@ function LuiTable:_row_content_width()
     return inner_w
 end
 
+function LuiTable:_layout_band(row, col)
+    local resolved = self._resolved
+    if resolved == nil then
+        return
+    end
+    row.bands[col]:SetPosition(resolved[col].x, 0)
+    row.bands[col]:SetSize(resolved[col].w, self._row_h)
+end
+
 function LuiTable:_layout_row(row)
     local resolved = self._resolved
     if resolved == nil then
@@ -647,6 +760,11 @@ function LuiTable:_layout_row(row)
         local col = resolved[c]
         row.cells[c]:SetPosition(col.x + CELL_PAD_X, 0)
         row.cells[c]:SetSize(math.max(1, col.w - (2 * CELL_PAD_X)), self._row_h)
+    end
+    if row.bands ~= nil then
+        for c in pairs(row.bands) do
+            self:_layout_band(row, c)
+        end
     end
     for c = 1, #row.seps do
         row.seps[c]:SetPosition(resolved[c].x + resolved[c].w, 0)
@@ -699,8 +817,13 @@ function LuiTable:_layout()
 
     -- the header underline separates the title bar from the body
     local body_y = bw + self._header_h + bw
+    local body_h = math.max(0, h - body_y - bw)
     self.body:SetPosition(bw, body_y)
-    self.body:SetSize(inner_w, math.max(1, h - body_y - bw))
+    -- an empty auto-height table closes right under the header: the body
+    -- must disappear entirely, or its clamped 1px row-colored line paints
+    -- over the bottom border (a 2px border then reads as 1px)
+    self.body:SetSize(inner_w, math.max(1, body_h))
+    self.body:SetVisible(body_h > 0)
 
     if self._mode == "scroll" then
         local list_w = math.max(1, inner_w - SCROLL_SIZE - SCROLL_GAP)

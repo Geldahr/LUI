@@ -119,7 +119,7 @@ local BASE_CLEAR_W = 56
 local BASE_MIN_W = 940
 local BASE_MIN_H = 620
 local BASE_RIGHT_W = 340
-local BASE_RECIPE_ROW_H = 46
+local BASE_RECIPE_ROW_H = 38
 local BASE_CRITICAL_RESULT_ROW_H = 34
 local BASE_ICON_SIDE = 32
 local BASE_SCROLL_W = 10
@@ -132,7 +132,6 @@ local BASE_VARIANT_NAV_W = 12
 local BASE_PLAN_HEADER_H = 24
 local BASE_PLAN_CONTROLS_W = 72
 local BASE_SMALL_BUTTON_W = 22
-local BASE_STATUS_W = 120
 local BASE_PLAN_STATUS_W = 48
 local BASE_TREE_INDENT_W = 16
 local BASE_LEVEL_BOX_W = 44
@@ -685,241 +684,6 @@ end
 -- come from the shared widget
 local CraftingItemIcon = UI.Widgets.LuiItemIcon
 
-local CraftingRecipeRow = class(Turbine.UI.Control)
-
-function CraftingRecipeRow:Constructor(on_click, on_favorite_toggle)
-    Turbine.UI.Control.Constructor(self)
-
-    self._scale = 1
-    self._selected = false
-    self._hover = false
-    self._favorite = false
-    self._on_click = on_click
-    self._on_favorite_toggle = on_favorite_toggle
-    self.recipe = nil
-    self.status = nil
-
-    self:SetMouseVisible(true)
-    self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
-
-    self.status_strip = Turbine.UI.Control()
-    self.status_strip:SetParent(self)
-    self.status_strip:SetMouseVisible(false)
-
-    local function select_recipe()
-        if type(self._on_click) == "function" and self.recipe ~= nil then
-            self._on_click(self.recipe)
-        end
-    end
-
-    self.icon = CraftingItemIcon(
-        function()
-            select_recipe()
-        end,
-        function(hovering)
-            self._hover = hovering == true
-            self:_refresh_visual()
-        end
-    )
-    self.icon:SetParent(self)
-
-    self.title = UI.Widgets.LuiLabel()
-    self.title:SetParent(self)
-    self.title:SetMouseVisible(false)
-    self.title:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.title:SetForeColor(Style.FOREGROUND)
-
-    -- middle line, only for multi-output recipes: "+2 variants"
-    self._variant_count = 0
-    self.variants_label = UI.Widgets.LuiLabel()
-    self.variants_label:SetParent(self)
-    self.variants_label:SetMouseVisible(false)
-    self.variants_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.variants_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
-    self.variants_label:SetVisible(false)
-
-    self.subtitle = UI.Widgets.LuiLabel()
-    self.subtitle:SetParent(self)
-    self.subtitle:SetMouseVisible(false)
-    self.subtitle:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.subtitle:SetForeColor(Style.ALTERNATE_FOREGROUND)
-
-    self.status_label = UI.Widgets.LuiLabel()
-    self.status_label:SetParent(self)
-    self.status_label:SetMouseVisible(false)
-    self.status_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
-
-    self.favorite_button = UI.Widgets.LuiButton()
-    self.favorite_button:SetParent(self)
-    self.favorite_button:set_padding(0)
-    self.favorite_button:set_scale(1)
-    UI.Widgets.Style.apply_transparent_button(self.favorite_button)
-    _apply_favorite_icon(self.favorite_button, false)
-    self.favorite_button.Click = function()
-        if self.recipe ~= nil and type(self._on_favorite_toggle) == "function" then
-            self._on_favorite_toggle(self.recipe)
-        end
-    end
-
-    self.MouseEnter = function()
-        self._hover = true
-        self:_refresh_visual()
-    end
-    self.MouseLeave = function()
-        self._hover = false
-        self:_refresh_visual()
-    end
-    self.MouseClick = function(_, args)
-        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
-            return
-        end
-        select_recipe()
-    end
-end
-
-function CraftingRecipeRow:set_scale(scale)
-    self._scale = scale
-    self.title:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
-    self.variants_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.subtitle:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.status_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.favorite_button:set_scale(1)
-    _apply_favorite_icon(self.favorite_button, self._favorite)
-end
-
-function CraftingRecipeRow:set_width(width)
-    self:SetSize(width, _even_int(_scaled_int(BASE_RECIPE_ROW_H)))
-    self:_layout()
-end
-
-function CraftingRecipeRow:set_selected(selected)
-    self._selected = selected == true
-    self:_refresh_visual()
-end
-
-function CraftingRecipeRow:set_favorite(favorite)
-    self._favorite = favorite == true
-    _apply_favorite_icon(self.favorite_button, self._favorite)
-end
-
-function CraftingRecipeRow:set_data(recipe, status, result_item, required_level, favorite)
-    self.recipe = recipe
-    self.status = status
-
-    -- "Jeweller - Artisan - Level 35": profession and rank describe the
-    -- crafter, the level is the result item's equip level, so it comes
-    -- last. The category is dropped (it only repeated the level).
-    local title = result_item ~= nil and result_item.name or ""
-    local subtitle_parts = {}
-    if recipe ~= nil and recipe.profession_name ~= "" then
-        subtitle_parts[#subtitle_parts + 1] = recipe.profession_name
-    end
-    if recipe ~= nil and recipe.tier > 0 then
-        subtitle_parts[#subtitle_parts + 1] = _craft_rank_name(recipe.tier)
-    end
-    if required_level ~= nil then
-        subtitle_parts[#subtitle_parts + 1] = TR["Level"] .. " " .. _format_count(required_level)
-    end
-    if recipe ~= nil and _trim(recipe.recipe_name or "") ~= "" and _lower(recipe.recipe_name) ~= _lower(title) then
-        subtitle_parts[#subtitle_parts + 1] = recipe.recipe_name
-    end
-
-    self.title:SetText(title)
-    self.subtitle:SetText(table.concat(subtitle_parts, " - "))
-    self._variant_count = recipe ~= nil and #recipe.variants or 0
-    if self._variant_count > 0 then
-        self.variants_label:SetText("+" .. tostring(self._variant_count) .. " " .. TR["variants"])
-    else
-        self.variants_label:SetText("")
-    end
-    self.status_label:SetText(CraftingWindow._recipe_status_text(nil, status))
-    self.status_label:SetForeColor(CraftingWindow._status_color(nil, status))
-
-    if result_item ~= nil then
-        self.icon:bind(result_item.icon_id, result_item.background_image_id, result_item.item_id)
-    else
-        self.icon:bind(nil, nil, nil)
-    end
-
-    self:set_favorite(favorite)
-    self:_refresh_visual()
-    self:_layout()
-end
-
-function CraftingRecipeRow:_refresh_visual()
-    if self._selected == true then
-        self:SetBackColor(Style.SELECTION_BACKGROUND)
-    elseif self._hover == true then
-        self:SetBackColor(Style.CONTROL_BACKGROUND_HOVER)
-    else
-        self:SetBackColor(Style.PANEL_INNER_BACKGROUND)
-    end
-
-    self.status_strip:SetBackColor(CraftingWindow._status_color(nil, self.status))
-end
-
-function CraftingRecipeRow:_layout()
-    local width, height = self:GetSize()
-    local gap = _scaled_int(BASE_GAP)
-    local strip_w = _scaled_int(4)
-    local icon_side = _fixed_int(BASE_ICON_SIDE)
-    local max_icon_side = height - (gap * 2)
-    if icon_side > max_icon_side then
-        icon_side = max_icon_side
-    end
-    icon_side = _even_int(icon_side)
-    local status_w = _scaled_int(BASE_STATUS_W)
-    local favorite_w = _favorite_icon_size()
-    local text_left = strip_w + gap + icon_side + gap
-    local status_x = width - status_w - gap
-    local favorite_x = status_x - gap - favorite_w
-    local text_w = favorite_x - text_left - gap
-    -- three compact lines when the recipe has variants (name / +x variants
-    -- / profession meta), the usual two lines otherwise
-    local title_h, variants_h
-    if self._variant_count > 0 then
-        title_h = math.floor(height * 0.42)
-        variants_h = math.floor(height * 0.29)
-    else
-        title_h = math.floor(height * 0.55)
-        variants_h = 0
-    end
-    local subtitle_h = height - title_h - variants_h
-
-    self.status_strip:SetPosition(0, 0)
-    self.status_strip:SetSize(strip_w, height)
-
-    self.icon:SetPosition(strip_w + gap, math.max(0, math.floor((height - icon_side) / 2)))
-    self.icon:set_side(icon_side)
-
-    self.title:SetPosition(text_left, 0)
-    self.title:SetSize(math.max(0, text_w), title_h)
-    self.variants_label:SetVisible(self._variant_count > 0)
-    self.variants_label:SetPosition(text_left, title_h)
-    self.variants_label:SetSize(math.max(0, text_w), variants_h)
-    self.subtitle:SetPosition(text_left, title_h + variants_h)
-    self.subtitle:SetSize(math.max(0, text_w), subtitle_h)
-
-    self.favorite_button:SetPosition(favorite_x, math.max(0, math.floor((height - favorite_w) / 2)))
-    self.favorite_button:SetSize(favorite_w, favorite_w)
-
-    self.status_label:SetPosition(status_x, 0)
-    self.status_label:SetSize(status_w, height)
-end
-
-function CraftingRecipeRow:destroy()
-    _destroy_control(self.icon)
-    _destroy_control(self.favorite_button)
-    self:SetVisible(false)
-end
-
-function CraftingRecipeRow:prepare_for_list_clear()
-    if self.icon ~= nil and self.icon.prepare_for_list_clear ~= nil then
-        self.icon:prepare_for_list_clear()
-    end
-    self:SetVisible(false)
-end
-
 local CraftingIngredientRow = class(Turbine.UI.Control)
 
 function CraftingIngredientRow:Constructor()
@@ -1468,7 +1232,6 @@ function CraftingWindow:Constructor()
     self._recipe_list_signature = nil
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
-    self._recipe_list_row_width = 0
     self._recipe_list_page_size = 0
     self._recipe_page_rendered_start = 1
     self._recipe_page_rendered_end = 0
@@ -1634,18 +1397,50 @@ function CraftingWindow:Constructor()
         self:update_level_filter()
     end
 
+    -- no panel border: the table draws its own frame, and stacking the two
+    -- read as a 3px border around the list
     self.left_panel = Turbine.UI.Control()
     self.left_panel:SetParent(content_host)
-    _set_control_border(self.left_panel, Style.CONTROL_BORDER, Style.BACKGROUND)
+    _set_control_fill(self.left_panel, Style.BACKGROUND)
 
-    self.recipe_list = Turbine.UI.ListBox()
-    self.recipe_list:SetParent(self.left_panel.inner)
-    self.recipe_list:SetOrientation(Turbine.UI.Orientation.Vertical)
+    -- one recipe per table row; the display mode is fixed for the window's
+    -- lifetime (Flags.crafting_display_mode_active is read once), so the
+    -- table mode never has to switch on a populated table
+    self.recipe_table = UI.Widgets.LuiTable()
+    self.recipe_table:SetParent(self.left_panel.inner)
+    if self.display_mode == DISPLAY_SCROLL then
+        self.recipe_table:set_mode("scroll")
+    else
+        self.recipe_table:set_auto_height(true)
+    end
+    self.recipe_table:set_columns({
+        { title = "", width = 4 },
+        { title = "", width = 40 },
+        { title = TR["Name"] },
+        { title = TR["Profession"], width = 100 },
+        { title = TR["Rank"], width = 96 },
+        { title = TR["Level"], width = 48 },
+        { title = TR["Craftable"], width = 52 },
+        { title = "", width = 28 },
+    })
+    self.recipe_table:set_row_hover(true)
+    self.recipe_table.on_row_clicked = function(index, args)
+        if args ~= nil and args.Button ~= Turbine.UI.MouseButton.Left then
+            return
+        end
+        self:_select_recipe_row(index, self.recipe_table:row_data(index))
+    end
+    self._recipe_cells = {}
+    self._recipe_scroll_capped = false
 
-    self.recipe_scroll = Turbine.UI.Lotro.ScrollBar()
-    self.recipe_scroll:SetParent(self.left_panel.inner)
-    self.recipe_scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
-    self.recipe_list:SetVerticalScrollBar(self.recipe_scroll)
+    -- scroll mode renders at most SCROLL_RENDER_CAP rows; the notice sits
+    -- under the table when the cap hides results
+    self.recipe_cap_label = UI.Widgets.LuiLabel()
+    self.recipe_cap_label:SetParent(self.left_panel.inner)
+    self.recipe_cap_label:SetMouseVisible(false)
+    self.recipe_cap_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+    self.recipe_cap_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
+    self.recipe_cap_label:SetVisible(false)
 
     self.recipe_page_bar = Turbine.UI.Control()
     self.recipe_page_bar:SetParent(self.left_panel.inner)
@@ -2967,6 +2762,18 @@ function CraftingWindow:apply_settings()
     self.level_dash_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.level_max_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.recipe_page_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.recipe_table:set_header_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
+    self.recipe_cap_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    for slot = 1, #self._recipe_cells do
+        local cells = self._recipe_cells[slot]
+        self:_apply_recipe_cell_fonts(cells)
+        cells.favorite:set_scale(1)
+        local favorite = false
+        if cells.recipe ~= nil then
+            favorite = self:_is_recipe_favorite(cells.recipe)
+        end
+        _apply_favorite_icon(cells.favorite, favorite)
+    end
 
     self.recipe_empty:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.right_tab_bar:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
@@ -3130,10 +2937,6 @@ function CraftingWindow:_selected_recipe()
     return self.store.recipe_by_id[self.selected_recipe_id]
 end
 
-function CraftingWindow:_current_recipe_list_width()
-    return math.max(0, self.recipe_list:GetWidth() - _scaled_int(2))
-end
-
 function CraftingWindow:set_recipe_page(index)
     local page = math.max(1, math.min(self.recipe_page_count, tonumber(index) or 1))
     if page == self.recipe_page_index then
@@ -3142,8 +2945,17 @@ function CraftingWindow:set_recipe_page(index)
 
     self.recipe_page_index = page
     if self.display_mode == DISPLAY_PAGES then
-        self:_refresh_recipe_page_rows(self:_current_recipe_list_width())
+        self:_render_recipe_page_rows()
     end
+end
+
+function CraftingWindow:_select_recipe_row(index, recipe)
+    if recipe.id == self.selected_recipe_id then
+        return
+    end
+    self.selected_recipe_id = recipe.id
+    self.recipe_table:set_selected_index(index)
+    self:refresh_selected_recipe()
 end
 
 function CraftingWindow:_current_detail_list_width()
@@ -3283,7 +3095,6 @@ function CraftingWindow:_invalidate_recipe_list()
     self._recipe_list_signature = nil
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
-    self._recipe_list_row_width = 0
     self._recipe_list_page_size = 0
     self._recipe_page_rendered_start = 1
     self._recipe_page_rendered_end = 0
@@ -3302,23 +3113,108 @@ function CraftingWindow:_recipe_filter_signature()
     }, "\30")
 end
 
-function CraftingWindow:_append_scroll_cap_notice(shown, total)
-    local notice = UI.Widgets.LuiLabel()
-    notice:SetMouseVisible(false)
-    notice:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    notice:SetForeColor(Style.ALTERNATE_FOREGROUND)
-    notice:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    notice:SetText(_format_count(shown) .. " / " .. _format_count(total) .. " - " ..
-        TR["Refine filters or use pages mode to see more."])
-    notice:SetSize(self:_current_recipe_list_width(), _scaled_int(24))
-    self.recipe_list:AddItem(notice)
-end
-
-function CraftingWindow:_append_recipe_row(recipe, row_w)
-    if recipe == nil then
-        return
+-- one pooled set of cell widgets per row slot; created once, updated in
+-- place per render, re-parented by the table when scroll mode re-appends
+function CraftingWindow:_ensure_recipe_row_cells(slot)
+    local cells = self._recipe_cells[slot]
+    if cells ~= nil then
+        return cells
     end
 
+    cells = { recipe = nil }
+    -- the craftable indicator cell: the color is the full-bleed cell
+    -- background, the content itself stays empty
+    cells.indicator = Turbine.UI.Control()
+    cells.indicator:SetMouseVisible(false)
+
+    -- explicit centering at render time (no SizeChanged on internal
+    -- widgets); the icon and favorite columns are fixed-width, so the
+    -- hosts only change size when the UI scale changes, and that path
+    -- re-renders every row
+    cells.icon_host = Turbine.UI.Control()
+    cells.icon_host:SetMouseVisible(false)
+    cells.icon = CraftingItemIcon(
+        function()
+            self:_select_recipe_row(slot, cells.recipe)
+        end,
+        function(hovering)
+            self.recipe_table:hover_row(slot, hovering)
+        end
+    )
+    cells.icon:set_side(_fixed_int(BASE_ICON_SIDE))
+    cells.icon:SetParent(cells.icon_host)
+    cells.center_icon = function()
+        local w, h = cells.icon_host:GetSize()
+        local side = _fixed_int(BASE_ICON_SIDE)
+        cells.icon:SetPosition(math.max(0, math.floor((w - side) / 2)),
+            math.max(0, math.floor((h - side) / 2)))
+    end
+
+    cells.label_keys = { "name", "profession", "rank", "level", "craftable" }
+    for _, key in ipairs(cells.label_keys) do
+        local label = UI.Widgets.LuiLabel()
+        label:SetMouseVisible(false)
+        label:SetSelectable(false)
+        label:SetMultiline(false)
+        label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+        label:SetForeColor(Style.FOREGROUND)
+        cells[key] = label
+    end
+    -- names longer than the stretch column wrap over the full row height
+    -- instead of clipping at the column edge; the craftable cell breaks
+    -- "1000 (x25)" onto two lines the same way
+    cells.name:SetMultiline(true)
+    cells.craftable:SetMultiline(true)
+    cells.craftable:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+
+    cells.fav_host = Turbine.UI.Control()
+    cells.fav_host:SetMouseVisible(false)
+    cells.favorite = UI.Widgets.LuiButton()
+    cells.favorite:SetParent(cells.fav_host)
+    cells.favorite:set_padding(0)
+    cells.favorite:set_scale(1)
+    UI.Widgets.Style.apply_transparent_button(cells.favorite)
+    _apply_favorite_icon(cells.favorite, false)
+    cells.favorite.Click = function()
+        self:toggle_recipe_favorite(cells.recipe)
+    end
+    cells.layout_favorite = function()
+        local w, h = cells.fav_host:GetSize()
+        local side = _favorite_icon_size()
+        cells.favorite:SetSize(side, side)
+        cells.favorite:SetPosition(math.max(0, math.floor((w - side) / 2)),
+            math.max(0, math.floor((h - side) / 2)))
+    end
+
+    self:_apply_recipe_cell_fonts(cells)
+    self._recipe_cells[slot] = cells
+    return cells
+end
+
+function CraftingWindow:_apply_recipe_cell_fonts(cells)
+    cells.name:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    local meta_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
+    cells.profession:SetFont(meta_font)
+    cells.rank:SetFont(meta_font)
+    cells.level:SetFont(meta_font)
+    cells.craftable:SetFont(meta_font)
+end
+
+function CraftingWindow:_recipe_row_cell_list(cells)
+    return { cells.indicator, cells.icon_host, cells.name, cells.profession,
+        cells.rank, cells.level, cells.craftable, cells.fav_host }
+end
+
+-- paged mode keeps a persistent pooled row per slot; append on demand
+function CraftingWindow:_ensure_recipe_table_rows(count)
+    for slot = self.recipe_table:row_count() + 1, count do
+        local cells = self:_ensure_recipe_row_cells(slot)
+        self.recipe_table:append_row(self:_recipe_row_cell_list(cells))
+        self.recipe_table:set_row_data(slot, nil)
+    end
+end
+
+function CraftingWindow:_bind_recipe_row(slot, cells, recipe)
     local status = self.store:get_recipe_status(recipe, self.scope_key)
     if status.craftable == true then
         -- materialize the lazy craft count only for rows actually rendered
@@ -3326,28 +3222,67 @@ function CraftingWindow:_append_recipe_row(recipe, row_w)
     end
     local result_item = self:_recipe_result_item(recipe)
     local required_level = self:_recipe_required_level(recipe)
-    local row = CraftingRecipeRow(
-        function(selected_recipe)
-            self.selected_recipe_id = selected_recipe.id
-            self:_invalidate_recipe_list()
-            self:refresh_recipe_list()
-            self:refresh_selected_recipe()
-        end,
-        function(selected_recipe)
-            self:toggle_recipe_favorite(selected_recipe)
+    local status_color = CraftingWindow._status_color(nil, status)
+
+    cells.recipe = recipe
+    local name = result_item ~= nil and result_item.name or ""
+    local variant_count = #recipe.variants
+    if variant_count > 0 then
+        name = name .. " (+" .. tostring(variant_count) .. ")"
+    end
+    cells.name:SetText(name)
+    cells.profession:SetText(recipe.profession_name)
+    cells.rank:SetText(_craft_rank_name(recipe.tier))
+    -- no required level is a valid recipe state, not missing data
+    cells.level:SetText(required_level ~= nil and _format_count(required_level) or "")
+    -- craftable crafts + the per-craft batch size: "3 (x25)"
+    cells.craftable:SetText(CraftingWindow._recipe_status_text(nil, status) ..
+        " (x" .. _format_count(recipe.result_quantity) .. ")")
+    cells.craftable:SetForeColor(status_color)
+    self.recipe_table:set_cell_background(slot, 1, status_color)
+
+    if result_item ~= nil then
+        cells.icon:bind(result_item.icon_id, result_item.background_image_id, result_item.item_id)
+    else
+        cells.icon:bind(nil, nil, nil)
+    end
+    cells.center_icon()
+
+    _apply_favorite_icon(cells.favorite, self:_is_recipe_favorite(recipe))
+    cells.fav_host:SetVisible(true)
+    cells.layout_favorite()
+    self.recipe_table:set_row_data(slot, recipe)
+end
+
+function CraftingWindow:_clear_recipe_row(slot, cells)
+    cells.recipe = nil
+    cells.icon:bind(nil, nil, nil)
+    for _, key in ipairs(cells.label_keys) do
+        cells[key]:SetText("")
+    end
+    cells.fav_host:SetVisible(false)
+    self.recipe_table:set_cell_background(slot, 1, nil)
+    self.recipe_table:set_row_data(slot, nil)
+end
+
+-- selection is an index into the rendered rows; resolve it from row data
+-- after any render that may have moved or replaced rows
+function CraftingWindow:_sync_recipe_selection_index()
+    local selected = nil
+    if self.selected_recipe_id ~= nil then
+        for i = 1, self.recipe_table:row_count() do
+            local recipe = self.recipe_table:row_data(i)
+            if recipe ~= nil and recipe.id == self.selected_recipe_id then
+                selected = i
+                break
+            end
         end
-    )
-    row:set_scale(State.settings.global.scale)
-    row:set_width(row_w)
-    row:set_data(recipe, status, result_item, required_level, self:_is_recipe_favorite(recipe))
-    row:set_selected(recipe.id == self.selected_recipe_id)
-    self.recipe_list:AddItem(row)
+    end
+    self.recipe_table:set_selected_index(selected)
 end
 
 function CraftingWindow:_recipe_page_capacity()
-    local row_h = math.max(2, _even_int(_scaled_int(BASE_RECIPE_ROW_H)))
-    local list_h = math.max(0, self.recipe_list:GetHeight())
-    return math.max(1, math.floor(list_h / row_h))
+    return math.max(1, self.recipe_table:visible_capacity())
 end
 
 function CraftingWindow:_refresh_recipe_page_controls()
@@ -3365,52 +3300,79 @@ function CraftingWindow:_refresh_recipe_page_controls()
     self.recipe_next_button:set_enabled(self.recipe_page_index < self.recipe_page_count)
 end
 
-function CraftingWindow:_refresh_recipe_page_rows(row_w)
+function CraftingWindow:_render_recipe_page_rows()
     self:_refresh_recipe_page_controls()
-    _clear_list_box(self.recipe_list)
 
-    local start_index = ((self.recipe_page_index - 1) * self.recipe_page_size) + 1
-    local end_index = math.min(#self.visible_recipes, start_index + self.recipe_page_size - 1)
-    for i = start_index, end_index do
-        self:_append_recipe_row(self.visible_recipes[i], row_w)
+    local capacity = self.recipe_page_size
+    local first = (self.recipe_page_index - 1) * capacity
+    local filled = math.max(0, math.min(capacity, #self.visible_recipes - first))
+    self:_ensure_recipe_table_rows(math.min(capacity, math.max(1, filled)))
+    self.recipe_table:set_visible_rows(filled)
+
+    -- slots beyond the fill (and beyond a shrunken capacity) are hidden by
+    -- the table, but still cleared so pooled icons release their tooltips
+    for slot = 1, math.max(capacity, self.recipe_table:row_count()) do
+        local recipe = self.visible_recipes[first + slot]
+        if recipe ~= nil and slot <= capacity then
+            self:_bind_recipe_row(slot, self:_ensure_recipe_row_cells(slot), recipe)
+        elseif slot <= self.recipe_table:row_count() then
+            self:_clear_recipe_row(slot, self:_ensure_recipe_row_cells(slot))
+        end
     end
+    self:_sync_recipe_selection_index()
 
-    self._recipe_page_rendered_start = start_index
-    self._recipe_page_rendered_end = end_index
-    self._recipe_list_page_size = self.recipe_page_size
+    self._recipe_page_rendered_start = first + 1
+    self._recipe_page_rendered_end = first + filled
+    self._recipe_list_page_size = capacity
 end
 
-function CraftingWindow:_append_recipe_page_rows_until_full(row_w)
-    self:_refresh_recipe_page_controls()
-
+-- loading tick, pages mode: re-render only when new visible recipes landed
+-- inside the current page's range. The page capacity is stable here (a
+-- capacity change breaks the incremental signature and forces the full
+-- path), so the skip check can run on the current page size; only the
+-- pager label needs to track the growing total.
+function CraftingWindow:_append_recipe_page_rows_until_full()
     local start_index = ((self.recipe_page_index - 1) * self.recipe_page_size) + 1
     local end_index = math.min(#self.visible_recipes, start_index + self.recipe_page_size - 1)
-    if self._recipe_page_rendered_start ~= start_index then
-        self:_refresh_recipe_page_rows(row_w)
-        return true
-    end
-
-    local rendered_end = tonumber(self._recipe_page_rendered_end) or (start_index - 1)
-    if rendered_end < start_index - 1 then
-        rendered_end = start_index - 1
-    end
-    if rendered_end >= end_index then
-        self._recipe_list_page_size = self.recipe_page_size
+    if self._recipe_page_rendered_start == start_index and
+        self._recipe_page_rendered_end >= end_index then
+        self:_refresh_recipe_page_controls()
         return false
     end
 
-    for i = rendered_end + 1, end_index do
-        self:_append_recipe_row(self.visible_recipes[i], row_w)
-    end
-    self._recipe_page_rendered_end = end_index
-    self._recipe_list_page_size = self.recipe_page_size
+    self:_render_recipe_page_rows()
     return true
+end
+
+-- scroll mode: append rows from from_index through the render cap; a full
+-- render clears the table first and passes 1
+function CraftingWindow:_render_recipe_scroll_rows(from_index)
+    local render_count = math.min(#self.visible_recipes, SCROLL_RENDER_CAP)
+    for i = from_index, render_count do
+        local cells = self:_ensure_recipe_row_cells(i)
+        self.recipe_table:append_row(self:_recipe_row_cell_list(cells))
+        self:_bind_recipe_row(i, cells, self.visible_recipes[i])
+    end
+end
+
+function CraftingWindow:_refresh_recipe_scroll_cap()
+    local capped = self.display_mode == DISPLAY_SCROLL and
+        #self.visible_recipes > SCROLL_RENDER_CAP
+    if capped == true then
+        self.recipe_cap_label:SetText(
+            _format_count(SCROLL_RENDER_CAP) .. " / " .. _format_count(#self.visible_recipes) ..
+            " - " .. TR["Refine filters or use pages mode to see more."])
+    end
+    if capped == self._recipe_scroll_capped then
+        return
+    end
+    self._recipe_scroll_capped = capped
+    self:_layout_recipe_panel()
 end
 
 function CraftingWindow:refresh_recipe_list(options)
     local should_refresh_selected = type(options) ~= "table" or options.refresh_selected ~= false
     local previous_selected = self.selected_recipe_id
-    local row_w = self:_current_recipe_list_width()
     local loading = self.store:is_loading() == true
     local signature = self:_recipe_filter_signature()
     local loaded_count = #self.store.recipes
@@ -3421,10 +3383,12 @@ function CraftingWindow:refresh_recipe_list(options)
         rows_changed = false,
         full_refresh = false,
     }
+    -- width is deliberately not part of the check: rendering is
+    -- width-independent (the table relayouts cells itself) and resizes
+    -- invalidate the list through SizeChanged anyway
     local can_incremental = loading == true and
         self._recipe_list_loading == true and
         self._recipe_list_signature == signature and
-        self._recipe_list_row_width == row_w and
         (pages_mode ~= true or self._recipe_list_page_size == page_size) and
         loaded_count >= self._recipe_list_loaded_count
 
@@ -3439,16 +3403,10 @@ function CraftingWindow:refresh_recipe_list(options)
 
         self:_ensure_selected_visible_recipe()
         if pages_mode == true then
-            self:_refresh_recipe_page_rows(row_w)
+            self:_render_recipe_page_rows()
         else
-            _clear_list_box(self.recipe_list)
-            local render_count = math.min(#self.visible_recipes, SCROLL_RENDER_CAP)
-            for i = 1, render_count do
-                self:_append_recipe_row(self.visible_recipes[i], row_w)
-            end
-            if #self.visible_recipes > SCROLL_RENDER_CAP then
-                self:_append_scroll_cap_notice(render_count, #self.visible_recipes)
-            end
+            self.recipe_table:clear()
+            self:_render_recipe_scroll_rows(1)
         end
         state.rows_changed = true
         state.full_refresh = true
@@ -3462,14 +3420,14 @@ function CraftingWindow:refresh_recipe_list(options)
                     self.selected_recipe_id = recipe.id
                 end
                 if pages_mode ~= true and #self.visible_recipes <= SCROLL_RENDER_CAP then
-                    self:_append_recipe_row(recipe, row_w)
+                    self:_render_recipe_scroll_rows(#self.visible_recipes)
                     state.rows_changed = true
                 end
             end
         end
         if pages_mode == true then
             if #self.visible_recipes > visible_count_before then
-                state.rows_changed = self:_append_recipe_page_rows_until_full(row_w) == true or state.rows_changed
+                state.rows_changed = self:_append_recipe_page_rows_until_full() == true or state.rows_changed
             else
                 self:_refresh_recipe_page_controls()
                 self._recipe_list_page_size = self.recipe_page_size
@@ -3479,19 +3437,22 @@ function CraftingWindow:refresh_recipe_list(options)
 
     local selection_changed = previous_selected ~= self.selected_recipe_id
     state.selection_changed = selection_changed
+    if state.rows_changed == true or selection_changed == true then
+        self:_sync_recipe_selection_index()
+    end
+    self:_refresh_recipe_scroll_cap()
     self._recipe_list_signature = signature
     self._recipe_list_loaded_count = loaded_count
     self._recipe_list_loading = loading
-    self._recipe_list_row_width = row_w
     if pages_mode ~= true then
         self._recipe_list_page_size = 0
         self._recipe_page_rendered_start = 1
         self._recipe_page_rendered_end = 0
     end
 
+    -- the table stays visible with zero rows: the header (column captions)
+    -- keeps framing the list while the empty label explains the state
     local has_items = #self.visible_recipes > 0
-    self.recipe_list:SetVisible(has_items)
-    self.recipe_scroll:SetVisible(has_items and pages_mode ~= true)
     self.recipe_page_bar:SetVisible(pages_mode == true)
     self.recipe_empty:SetVisible(has_items ~= true)
     if has_items ~= true then
@@ -4147,6 +4108,71 @@ function CraftingWindow:refresh_loading_state()
     return visibility_changed
 end
 
+-- recipe list area inside the left panel: the table, the scroll-cap
+-- notice under it, the pages-mode pager bar, and the empty label. Runs
+-- from layout() and again when the scroll cap toggles mid-refresh.
+function CraftingWindow:_layout_recipe_panel()
+    local gap = _scaled_int(BASE_GAP)
+    local bar_h = _scaled_int(BASE_BAR_H)
+    local pages_mode = self.display_mode == DISPLAY_PAGES
+    local recipe_inner_w = self.left_panel.inner:GetWidth()
+    local recipe_inner_h = self.left_panel.inner:GetHeight()
+    local page_button_margin = pages_mode == true and _scaled_int(BASE_PAGE_BUTTON_MARGIN) or 0
+    local page_h = pages_mode == true and bar_h + (page_button_margin * 2) or 0
+    local page_gap = pages_mode == true and gap or 0
+    local cap_h = self._recipe_scroll_capped == true and _scaled_int(24) or 0
+    local cap_gap = cap_h > 0 and gap or 0
+    local recipe_list_h = recipe_inner_h - page_h - page_gap - cap_h - cap_gap
+    if recipe_list_h < 0 then
+        recipe_list_h = 0
+    end
+
+    local header_h = _scaled_int(20)
+    self.recipe_table:set_header_height(header_h)
+    self.recipe_table:set_row_height(_even_int(_scaled_int(BASE_RECIPE_ROW_H)))
+    self.recipe_table:set_column_width(1, _scaled_int(4))
+    self.recipe_table:set_column_width(2, _scaled_int(40))
+    self.recipe_table:set_column_width(4, _scaled_int(100))
+    self.recipe_table:set_column_width(5, _scaled_int(96))
+    self.recipe_table:set_column_width(6, _scaled_int(48))
+    self.recipe_table:set_column_width(7, _scaled_int(52))
+    self.recipe_table:set_column_width(8, _favorite_icon_size() + _scaled_int(12))
+    self.recipe_table:SetPosition(0, 0)
+    self.recipe_table:SetSize(recipe_inner_w, recipe_list_h)
+
+    self.recipe_cap_label:SetVisible(self._recipe_scroll_capped == true)
+    if cap_h > 0 then
+        self.recipe_cap_label:SetPosition(0, recipe_list_h + cap_gap)
+        self.recipe_cap_label:SetSize(recipe_inner_w, cap_h)
+    end
+
+    self.recipe_page_bar:SetPosition(0, recipe_list_h + page_gap)
+    self.recipe_page_bar:SetSize(recipe_inner_w, page_h)
+    self.recipe_page_bar:SetVisible(pages_mode == true)
+    if pages_mode == true then
+        local page_label_w = _scaled_int(BASE_PAGE_LABEL_W)
+        local nav_w = bar_h
+        local pager_w = (nav_w * 2) + page_label_w + (gap * 2)
+        local pager_x = math.floor((recipe_inner_w - pager_w) / 2)
+        if pager_x < 0 then
+            pager_x = 0
+        end
+        self.recipe_prev_button:SetPosition(pager_x, page_button_margin)
+        self.recipe_prev_button:SetSize(nav_w, bar_h)
+        self.recipe_page_label:SetPosition(pager_x + nav_w + gap, page_button_margin)
+        self.recipe_page_label:SetSize(page_label_w, bar_h)
+        self.recipe_next_button:SetPosition(pager_x + nav_w + gap + page_label_w + gap, page_button_margin)
+        self.recipe_next_button:SetSize(nav_w, bar_h)
+    end
+    -- below the always-visible table header, over the (empty) body area
+    local empty_y = header_h + _scaled_int(8)
+    self.recipe_empty:SetPosition(_scaled_int(8), empty_y)
+    self.recipe_empty:SetSize(
+        math.max(0, recipe_inner_w - _scaled_int(16)),
+        math.max(0, recipe_list_h - empty_y - _scaled_int(8))
+    )
+end
+
 function CraftingWindow:layout()
     local width, height = self:central_widget():GetSize()
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)
@@ -4188,7 +4214,6 @@ function CraftingWindow:layout()
     local detail_header_h = detail_top_h + critical_result_h + section_bar_h
     local plan_controls_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local loading_track_h = _scaled_int(BASE_LOADING_TRACK_H)
-    local pages_mode = self.display_mode == DISPLAY_PAGES
 
     self.top_bar:SetPosition(margin_left, margin_top)
     self.top_bar:SetSize(width - margin_left - margin_right, top_bar_h)
@@ -4258,51 +4283,7 @@ function CraftingWindow:layout()
     self.left_panel:SetSize(left_w, content_h)
     _fit_inner_border(self.left_panel)
 
-    local recipe_inner_w = self.left_panel.inner:GetWidth()
-    local recipe_inner_h = self.left_panel.inner:GetHeight()
-    local page_button_margin = pages_mode == true and _scaled_int(BASE_PAGE_BUTTON_MARGIN) or 0
-    local page_h = pages_mode == true and bar_h + (page_button_margin * 2) or 0
-    local page_gap = pages_mode == true and gap or 0
-    local recipe_list_h = recipe_inner_h - page_h - page_gap
-    if recipe_list_h < 0 then
-        recipe_list_h = 0
-    end
-
-    if pages_mode == true then
-        self.recipe_scroll:SetPosition(recipe_inner_w, 0)
-        self.recipe_scroll:SetSize(0, 0)
-        self.recipe_list:SetPosition(0, 0)
-        self.recipe_list:SetSize(recipe_inner_w, recipe_list_h)
-    else
-        self.recipe_scroll:SetPosition(recipe_inner_w - scroll_w, 0)
-        self.recipe_scroll:SetSize(scroll_w, recipe_inner_h)
-        self.recipe_list:SetPosition(0, 0)
-        self.recipe_list:SetSize(recipe_inner_w - scroll_w, recipe_inner_h)
-    end
-
-    self.recipe_page_bar:SetPosition(0, recipe_list_h + page_gap)
-    self.recipe_page_bar:SetSize(recipe_inner_w, page_h)
-    self.recipe_page_bar:SetVisible(pages_mode == true)
-    if pages_mode == true then
-        local page_label_w = _scaled_int(BASE_PAGE_LABEL_W)
-        local nav_w = bar_h
-        local pager_w = (nav_w * 2) + page_label_w + (gap * 2)
-        local pager_x = math.floor((recipe_inner_w - pager_w) / 2)
-        if pager_x < 0 then
-            pager_x = 0
-        end
-        self.recipe_prev_button:SetPosition(pager_x, page_button_margin)
-        self.recipe_prev_button:SetSize(nav_w, bar_h)
-        self.recipe_page_label:SetPosition(pager_x + nav_w + gap, page_button_margin)
-        self.recipe_page_label:SetSize(page_label_w, bar_h)
-        self.recipe_next_button:SetPosition(pager_x + nav_w + gap + page_label_w + gap, page_button_margin)
-        self.recipe_next_button:SetSize(nav_w, bar_h)
-    end
-    self.recipe_empty:SetPosition(_scaled_int(8), _scaled_int(8))
-    self.recipe_empty:SetSize(
-        math.max(0, recipe_inner_w - _scaled_int(16)),
-        math.max(0, recipe_list_h - _scaled_int(16))
-    )
+    self:_layout_recipe_panel()
 
     self.right_panel:SetPosition(margin_left + left_w + gap, content_top)
     self.right_panel:SetSize(right_w, content_h)
