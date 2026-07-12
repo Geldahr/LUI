@@ -51,6 +51,22 @@ the journal (the "Test" quest category, the "HIDING CONTENT" phasing
 quests and the content-hiding tracker quest).
 No runtime loader consumes `src/Data/Quests` yet.
 
+The skills db (`src/Data/Skills`) is the flattened **skill → visible
+buff** table: every skill (WState class 827) resolved to the buff
+effects it applies, following direct effect lists, `Effect_Combo_*`
+add-chains and genesis → summoned-hotspot lists. Only leaves the
+player can see are kept — a real localized name (no `DNT`/`TBD`) and
+`Effect_UIVisible == 1` — and condition lists (required/barring/
+consumed/presence checks) are never treated as granted. Skills with no
+visible buff are dropped. `records.lua` holds skill ids + category
+codes + per-skill buff ordinal lists and the buff table (effect ids,
+icon ids, base durations in tenths of seconds, 0 = none);
+`labels_<lang>.lua` the localized skill and buff names;
+`categories.lua` the localized skill-category labels. The mapping is
+many-to-many: trait-rank variants are distinct skill ids sharing one
+name, one skill can grant several buffs, and monster/NPC skills are
+included (debuff sourcing). No runtime loader consumes it yet.
+
 Stackable items (`Inventory_MaxQuantity > 1`) also get their localized
 plural display name (the `PluralName` item property — the form loot
 messages use, "Hides"/"Felle"/"Peaux"): plurals that differ from the

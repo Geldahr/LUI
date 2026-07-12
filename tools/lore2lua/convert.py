@@ -1496,6 +1496,147 @@ def convert_npcs(out_dir, langs, records):
     print("done in %.1fs\n" % (time.time() - t0))
 
 
+# --------------------------------------------------------------- skills ----
+
+def convert_skills(out_dir, langs, skills, buffs, aux):
+    """Pack the flattened skill -> visible buff table
+    (tools/data-extractor extract_skills).
+
+    records.lua: skill IDS + CAT category codes + per-skill buff ordinal
+    slots (REF, offsets in ROFF); buff EIDS + EICON icon ids + EDUR base
+    durations in tenths of seconds (0 = no constant duration).
+    labels_<lang>.lua: skill names (LBL/LOFF) + buff names (ELBL/ELOFF),
+    aligned to the id-sorted ordinals, en fallback.
+    categories.lua: localized skill category tables (used codes only)."""
+    t0 = time.time()
+    ids = sorted(skills)
+    eids = sorted(buffs)
+    count, buff_count = len(ids), len(eids)
+    print("packing %d skills -> %d buff effects" % (count, buff_count))
+
+    base_id = ids[0]
+    id_width = width_for(ids[-1] - base_id)
+    ids_blob = "".join(b93(i - base_id, id_width) for i in ids)
+
+    e_base_id = eids[0]
+    e_id_width = width_for(eids[-1] - e_base_id)
+    eids_blob = "".join(b93(e - e_base_id, e_id_width) for e in eids)
+
+    # category code 0 = skill without a category (raw codes, no recode)
+    cat_width = width_for(max(skills[i]["category"] or 0 for i in ids))
+    cat_blob = "".join(b93(skills[i]["category"] or 0, cat_width) for i in ids)
+
+    ordinal = {e: n + 1 for n, e in enumerate(eids)}
+    eff_ord_width = width_for(buff_count)
+    ref_parts, roffs, p = [], [], 1
+    for i in ids:
+        slots = "".join(b93(ordinal[e], eff_ord_width)
+                        for e in skills[i]["effects"])
+        roffs.append(p)
+        ref_parts.append(slots)
+        p += len(slots)
+    roffs.append(p)
+    roff_width = width_for(p)
+    ref_blob = "".join(ref_parts)
+    roff_blob = "".join(b93(x, roff_width) for x in roffs)
+
+    icon_width = width_for(max(buffs[e]["icon"] or 0 for e in eids))
+    icon_blob = "".join(b93(buffs[e]["icon"] or 0, icon_width) for e in eids)
+    # tenths of seconds; 0 = no constant duration on the effect
+    def tenths(value):
+        return int(round(value * 10)) if value is not None else 0
+    dur_width = width_for(max(tenths(buffs[e]["duration"]) for e in eids))
+    dur_blob = "".join(b93(tenths(buffs[e]["duration"]), dur_width)
+                       for e in eids)
+
+    for n, i in enumerate(ids):
+        if u93(ids_blob, n * id_width, id_width) != i - base_id:
+            raise AssertionError("round-trip mismatch in IDS at %d" % i)
+        start = u93(roff_blob, n * roff_width, roff_width)
+        stop = u93(roff_blob, (n + 1) * roff_width, roff_width)
+        got = [u93(ref_blob, k, eff_ord_width)
+               for k in range(start - 1, stop - 1, eff_ord_width)]
+        if got != [ordinal[e] for e in skills[i]["effects"]]:
+            raise AssertionError("round-trip mismatch in REF for %d" % i)
+    for n, e in enumerate(eids):
+        if u93(eids_blob, n * e_id_width, e_id_width) != e - e_base_id:
+            raise AssertionError("round-trip mismatch in EIDS at %d" % e)
+    print("round-trip: all %d skills verified" % count)
+
+    os.makedirs(out_dir, exist_ok=True)
+    sizes = {}
+    sizes["records.lua"] = write_file(out_dir, "records.lua", [
+        emit_blob("IDS", ids_blob),
+        emit_blob("CAT", cat_blob),
+        emit_blob("REF", ref_blob),
+        emit_blob("ROFF", roff_blob),
+        emit_blob("EIDS", eids_blob),
+        emit_blob("EICON", icon_blob),
+        emit_blob("EDUR", dur_blob),
+    ])
+
+    for lang in langs:
+        parts = []
+        for prefix, records, keys, en_key in (
+                ("", skills, ids, "name"), ("E", buffs, eids, "name")):
+            names = []
+            for i in keys:
+                r = records[i]
+                name = r["name"] if lang == "en" else r.get("name_" + lang)
+                if not name:
+                    name = r[en_key]  # en fallback
+                names.append(name)
+            blob = "".join(names)
+            offs, p = [], 1
+            for v in names:
+                offs.append(p)
+                p += byte_len(v)
+            offs.append(p)
+            off_width = width_for(p)
+            parts.append("D.%sloff_width = %d\n" % (prefix.lower(), off_width))
+            parts.append(emit_blob(prefix + "LBL", blob))
+            parts.append(emit_blob(prefix + "LOFF",
+                                   "".join(b93(x, off_width) for x in offs)))
+        sizes["labels_%s.lua" % lang] = write_file(
+            out_dir, "labels_%s.lua" % lang, parts)
+
+    used_cats = sorted({skills[i]["category"] for i in ids
+                        if skills[i]["category"] is not None})
+    labels = aux["skill_category_labels"]
+    cat_parts = ["D.CATS = {\n"]
+    for lang in langs:
+        entries = []
+        for code in used_cats:
+            value = labels[lang].get(code) or labels["en"].get(code)
+            if value is not None:
+                entries.append("[%d]=%s" % (code, lua_string(value)))
+        cat_parts.append("%s = { %s },\n" % (lang, ", ".join(entries)))
+    cat_parts.append("}\n")
+    sizes["categories.lua"] = write_file(out_dir, "categories.lua", cat_parts)
+
+    sizes["manifest.lua"] = write_file(out_dir, "manifest.lua", [
+        "D.count = %d\n" % count,
+        "D.buff_count = %d\n" % buff_count,
+        "D.base_id = %d\n" % base_id,
+        "D.id_width = %d\n" % id_width,
+        "D.e_base_id = %d\n" % e_base_id,
+        "D.e_id_width = %d\n" % e_id_width,
+        "D.cat_width = %d\n" % cat_width,
+        "D.eff_ord_width = %d\n" % eff_ord_width,
+        "D.roff_width = %d\n" % roff_width,
+        "D.icon_width = %d\n" % icon_width,
+        "D.dur_width = %d\n" % dur_width,
+        "D.langs = { %s }\n" % ", ".join(lua_string(v) for v in langs),
+    ])
+    total = 0
+    print("emitted files:")
+    for name in sorted(sizes):
+        total += sizes[name]
+        print("  %-18s %8.2f MB" % (name, sizes[name] / 1e6))
+    print("  %-18s %8.2f MB" % ("TOTAL", total / 1e6))
+    print("done in %.1fs\n" % (time.time() - t0))
+
+
 # ------------------------------------------------------------- bestiary ----
 # Packs the wiki bestiary (src/Encyclopedia/data.lua, dumped to JSON by
 # bestiary_dump.lua) into blobs. The decode layer reproduces the raw

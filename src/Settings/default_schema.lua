@@ -415,6 +415,62 @@ _G.LUI.Settings.Defaults.Schema =
 			["time_format"] = 1.000000,
 			["whitelist"] = "",
 		},
+		["upkeep"] = {
+			["enabled"] = false,
+			["count"] = 3.000000,
+			["icon_size"] = 48.000000,
+			["spacing"] = 16.000000,
+			["orientation"] = 1.000000,
+			["auto_order"] = false,
+			["auto_order_anchor"] = 1.000000,
+			["slots"] = {
+			},
+			["show_time"] = true,
+			["drain_enabled"] = true,
+			["drain_color"] = {
+				["A"] = 1.000000,
+				["R"] = 0.180392,
+				["G"] = 0.545098,
+				["B"] = 0.341176,
+			},
+			["drain_opacity"] = 0.400000,
+			["cd_shade"] = true,
+			["cd_during_active"] = true,
+			["cd_shade_color"] = {
+				["A"] = 1.000000,
+				["R"] = 0.000000,
+				["G"] = 0.000000,
+				["B"] = 0.000000,
+			},
+			["cd_shade_opacity"] = 0.300000,
+			["cd_transparent"] = true,
+			["cd_transparent_opacity"] = 0.400000,
+			["cd_show_time"] = true,
+			["time_format"] = 1.000000,
+			["active_text_color"] = {
+				["A"] = 1.000000,
+				["R"] = 1.000000,
+				["G"] = 1.000000,
+				["B"] = 1.000000,
+			},
+			["cooldown_text_color"] = {
+				["A"] = 1.000000,
+				["R"] = 1.000000,
+				["G"] = 1.000000,
+				["B"] = 1.000000,
+			},
+			["font"] = {
+				["name"] = 1.000000,
+				["outline_color"] = {
+					["A"] = 1.000000,
+					["R"] = 0.000000,
+					["G"] = 0.000000,
+					["B"] = 0.000000,
+				},
+				["style"] = 2.000000,
+				["size"] = 16.000000,
+			},
+		},
 	},
 	["target"] = {
 		["vitals"] = {
@@ -2345,6 +2401,10 @@ _G.LUI.Settings.Defaults.Schema =
 			["cooldowns"] = {
 				["left"] = 453.000000,
 				["top"] = 1054.000000,
+			},
+			["upkeep"] = {
+				["left"] = 453.000000,
+				["top"] = 1000.000000,
 			},
 			["fellowship_vitals"] = {
 				["left"] = 0.000000,

@@ -153,4 +153,15 @@ function Colors.fix_colors()
             cd.font.outline_color = to_color(cd.font.outline_color)
         end
     end
+
+    local uk = s.self.upkeep
+    if uk ~= nil then
+        uk.drain_color = to_color(uk.drain_color)
+        uk.cd_shade_color = to_color(uk.cd_shade_color)
+        uk.active_text_color = to_color(uk.active_text_color)
+        uk.cooldown_text_color = to_color(uk.cooldown_text_color)
+        if uk.font ~= nil then
+            uk.font.outline_color = to_color(uk.font.outline_color)
+        end
+    end
 end

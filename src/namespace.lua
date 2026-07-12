@@ -79,6 +79,7 @@ LUI.Features.StatusBar.APICommandParser = ensure(LUI.Features.StatusBar, "APICom
 LUI.Features.StatusBar.APIItems = ensure(LUI.Features.StatusBar, "APIItems")
 LUI.Features.StatusBar.Widgets = ensure(LUI.Features.StatusBar, "Widgets")
 LUI.Features.Travel = ensure(LUI.Features, "Travel")
+LUI.Features.Upkeep = ensure(LUI.Features, "Upkeep")
 LUI.Features.Vitals = ensure(LUI.Features, "Vitals")
 LUI.Features.Vitals.GroupLayout = ensure(LUI.Features.Vitals, "GroupLayout")
 LUI.Features.Vitals.GroupOrdering = ensure(LUI.Features.Vitals, "GroupOrdering")

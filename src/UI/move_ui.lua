@@ -480,6 +480,9 @@ function MoveMode.set_mode(enabled, return_to_config, cancel_changes, show_done_
     if Windows.cooldowns ~= nil then
         Windows.cooldowns:set_move_mode(enabled)
     end
+    if Windows.upkeep ~= nil then
+        Windows.upkeep:set_move_mode(enabled)
+    end
     if Windows.drops ~= nil then
         Windows.drops:set_move_mode(enabled)
     end

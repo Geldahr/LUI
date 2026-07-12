@@ -33,6 +33,7 @@ ITEM_TYPES = {2097, 2814, 799, 798, 797, 796, 795, 794, 804, 805, 802,
 RECIPE_WSTATE_CLASS = 1024
 ACCOMPLISHMENT_WSTATE_CLASS = 1398  # quests + deeds
 NPC_WSTATE_CLASS = 1724
+SKILL_WSTATE_CLASS = 827
 
 # equipment-category codes that are armour (incl. shields)
 ARMOUR_CODES = {11, 17, 40, 9, 10, 18, 31}
@@ -350,6 +351,7 @@ class Scan:
         self.recipe_scrolls = {}  # recipe id -> scroll item id
         self.quest_dids = []      # quests + deeds
         self.npc_dids = []
+        self.skill_dids = []
 
 
 def scan(facade, langs):
@@ -377,6 +379,8 @@ def scan(facade, langs):
             out.quest_dids.append(did)
         elif wstate_class == NPC_WSTATE_CLASS:
             out.npc_dids.append(did)
+        elif wstate_class == SKILL_WSTATE_CLASS:
+            out.skill_dids.append(did)
         if wstate_class not in ITEM_TYPES:
             continue
         scanned += 1
@@ -869,6 +873,138 @@ def extract_npcs(facade, langs, scan_result, referenced):
     return npcs
 
 
+# ---------------------------------------------------------------- skills ----
+
+# keys whose int value is an effect the skill (or a chained effect) APPLIES
+SKILL_APPLY_KEYS = {
+    "Skill_Effect", "Skill_Toggle_Effect", "EffectGenerator_EffectID",
+    "Effect_Combo_EffectToAddIfNotPresent", "Effect_Combo_EffectToAddIfPresent",
+    "Effect_Applied_Effect",
+}
+# condition/check lists: presence tests, never applications
+SKILL_CONDITION_KEYS = {
+    "Effect_Combo_EffectPresentList", "Effect_Protection_ByEffectList",
+    "Skill_RequiredEffectList", "Skill_BarringEffectList",
+    "Skill_PreSkillRequiredEffectList", "Skill_PreSkillBarringEffectList",
+    "Skill_ExecutionRequiredEffectList", "Skill_ExecutionBarringEffectList",
+    "Skill_ConsumedEffectList",
+}
+GAMELOGIC_DID_MIN = 0x70000000
+
+
+def collect_effect_refs(value, out, in_condition=False):
+    """Applied-effect DIDs anywhere in a property tree, skipping the
+    condition lists (they gate skills, they are not granted by them)."""
+    if isinstance(value, dict):
+        for key, child in value.items():
+            condition = in_condition or key in SKILL_CONDITION_KEYS
+            if (not condition and key in SKILL_APPLY_KEYS
+                    and isinstance(child, int) and child >= GAMELOGIC_DID_MIN):
+                out.append(child)
+            else:
+                collect_effect_refs(child, out, condition)
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            collect_effect_refs(child, out, in_condition)
+
+
+def extract_skills(facade, langs, scan_result):
+    """Skills flattened to the visible buffs they apply.
+
+    Follows the three link shapes: direct effect lists, Effect_Combo_*
+    add-chains and genesis -> summoned hotspot lists. A buff is a leaf
+    effect with a real localized name (no DNT/TBD) and
+    Effect_UIVisible == 1 (what the in-game buff bar shows). Skills
+    without any visible buff are dropped.
+    Returns (skills, effects): skill id -> record with effect id list,
+    effect id -> shared buff record (names, icon, base duration)."""
+    langs = [l for l in langs if l in facade.locales]
+    decoder_langs = [l for l in langs if l != "en"]
+    t0 = time.time()
+    effect_cache = {}  # effect id -> (refs, is_leaf)
+    effects = {}       # effect id -> record (leaves only)
+
+    def effect_node(eid):
+        cached = effect_cache.get(eid)
+        if cached is not None:
+            return cached
+        props = facade.load_object_properties(eid)
+        if props is None:
+            cached = ((), False)
+            effect_cache[eid] = cached
+            return cached
+        name = localized(facade, props.get("Effect_Name"), "en")
+        is_leaf = (name is not None and name != ""
+                   and not PLACEHOLDER_TEXT.search(name)
+                   and props.get("Effect_UIVisible") == 1)
+        if is_leaf and eid not in effects:
+            duration = props.get("Effect_Duration_ConstantInterval")
+            record = {
+                "name": name,
+                "icon": props.get("Effect_Icon"),
+                "duration": duration,
+            }
+            for lang in decoder_langs:
+                record["name_" + lang] = localized(
+                    facade, props.get("Effect_Name"), lang)
+            effects[eid] = record
+        refs = []
+        collect_effect_refs(props, refs)
+        summoned = props.get("Effect_Genesis_SummonedObject")
+        if summoned:
+            summoned_props = facade.load_object_properties(summoned)
+            if summoned_props is not None:
+                collect_effect_refs(
+                    summoned_props.get("EffectGenerator_HotspotEffectList"), refs)
+                collect_effect_refs(
+                    summoned_props.get("EffectGenerator_UsageEffectList"), refs)
+        cached = (tuple(refs), is_leaf)
+        effect_cache[eid] = cached
+        return cached
+
+    def visible_leaves(eid, seen, depth):
+        if eid in seen or depth > 6:
+            return []
+        seen.add(eid)
+        refs, is_leaf = effect_node(eid)
+        out = [eid] if is_leaf else []
+        for ref in refs:
+            out.extend(visible_leaves(ref, seen, depth + 1))
+        return out
+
+    skills = {}
+    for did in scan_result.skill_dids:
+        props = facade.load_object_properties(did)
+        if props is None:
+            continue
+        name_info = props.get("Skill_Name")
+        name = localized(facade, name_info, "en")
+        if name is None or name == "" or PLACEHOLDER_TEXT.search(name):
+            continue
+        refs = []
+        collect_effect_refs(props, refs)
+        leaves, seen = [], set()
+        for ref in refs:
+            leaves.extend(visible_leaves(ref, seen, 0))
+        deduped = []
+        for eid in leaves:
+            if eid not in deduped:
+                deduped.append(eid)
+        if not deduped:
+            continue
+        record = {
+            "name": name,
+            "category": props.get("Skill_Category"),
+            "effects": deduped,
+        }
+        for lang in decoder_langs:
+            record["name_" + lang] = localized(facade, name_info, lang)
+        skills[did] = record
+    print("decoded %d skills with visible buffs (%d buff effects, %.0fs)" % (
+        len(skills), len(effects), time.time() - t0))
+    return skills, effects
+
+
 # ------------------------------------------------------------------ main ----
 
 _REPO_ROOT = os.path.abspath(os.path.join(_HERE, os.pardir, os.pardir))
@@ -893,7 +1029,7 @@ def main():
                     help="Lua output dir (Items/ + Recipes/ inside)")
     ap.add_argument("--langs", default="de,en,fr",
                     help="languages to emit (client locales)")
-    ap.add_argument("--db", default="items,recipes,quests,npcs")
+    ap.add_argument("--db", default="items,recipes,quests,npcs,skills")
     ap.add_argument("--json", help="also dump raw records for inspection")
     args = ap.parse_args()
     game_dir = normalize_game_dir(args.game_dir)
@@ -914,6 +1050,8 @@ def main():
               if "quests" in dbs else {})
     npcs = (extract_npcs(facade, langs, scan_result, quest_npc_ids(quests))
             if "npcs" in dbs else {})
+    skills, skill_buffs = (extract_skills(facade, langs, scan_result)
+                           if "skills" in dbs else ({}, {}))
 
     class_labels = enum_labels(facade, "Item_Class", langs)
     for lang in langs:
@@ -943,6 +1081,7 @@ def main():
         "quest_category_labels": enum_labels(facade, "Quest_Category", langs),
         "deed_category_labels": enum_labels(facade, "Accomplishment_Category",
                                             langs),
+        "skill_category_labels": enum_labels(facade, "Skill_Category", langs),
     }
 
     if args.json:
@@ -963,6 +1102,9 @@ def main():
                                 quests, aux)
     if "npcs" in dbs:
         lore2lua.convert_npcs(os.path.join(args.out, "Npcs"), langs, npcs)
+    if "skills" in dbs:
+        lore2lua.convert_skills(os.path.join(args.out, "Skills"), langs,
+                                skills, skill_buffs, aux)
     facade.close()
 
 

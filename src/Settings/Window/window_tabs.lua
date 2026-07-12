@@ -9,6 +9,7 @@ import "LUI.src.Settings.Tabs.Global.global_page"
 import "LUI.src.Settings.Tabs.Vitals.vitals_page"
 import "LUI.src.Settings.Tabs.ExpiringEffects.expiring_effects_page"
 import "LUI.src.Settings.Tabs.Cooldowns.cooldowns_page"
+import "LUI.src.Settings.Tabs.Upkeep.upkeep_page"
 import "LUI.src.Settings.Tabs.Drops.drops_page"
 import "LUI.src.Settings.Tabs.Inventory.inventory_page"
 import "LUI.src.Settings.Tabs.Crafting.crafting_page"
@@ -23,6 +24,7 @@ local GlobalPage = Pages.GlobalPage
 local VitalsPage = Pages.VitalsPage
 local ExpiringEffectsPage = Pages.ExpiringEffectsPage
 local CooldownsFeaturePage = Pages.CooldownsFeaturePage
+local UpkeepPage = Pages.UpkeepPage
 local DropsPage = Pages.DropsPage
 local InventoryPage = Pages.InventoryPage
 local CraftingPage = Pages.CraftingPage
@@ -142,6 +144,10 @@ function ConfigWindow:build_tabs()
     local cooldowns_page = CooldownsFeaturePage(self)
     cooldowns_page._tab_key = "cooldowns"
     self.main_tab_bar:add_tab(TR["Cooldowns"], cooldowns_page)
+
+    local upkeep_page = UpkeepPage(self)
+    upkeep_page._tab_key = "upkeep"
+    self.main_tab_bar:add_tab(TR["Upkeep"], upkeep_page)
 
     local drops_page = DropsPage(self)
     drops_page._tab_key = "drops"

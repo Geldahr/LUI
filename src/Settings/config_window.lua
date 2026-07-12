@@ -632,6 +632,7 @@ function ConfigWindow:refresh_runtime_settings()
     Apply.assets_settings()
     Apply.status_bar_settings()
     Apply.cooldowns_settings()
+    Apply.upkeep_settings()
     Apply.drops_settings()
     Apply.crafting_settings()
     Apply.travel_settings()
@@ -675,6 +676,9 @@ function ConfigWindow:refresh_runtime_settings()
     end
     if Windows.cooldowns ~= nil then
         Windows.cooldowns:apply_settings()
+    end
+    if Windows.upkeep ~= nil then
+        Windows.upkeep:apply_settings()
     end
     if Windows.drops ~= nil then
         Windows.drops:apply_settings()

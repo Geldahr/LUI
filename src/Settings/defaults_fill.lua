@@ -106,6 +106,11 @@ local function _preserve_user_arrays(loaded, source)
     if source_launcher ~= nil and type(source_launcher.buttons) == "table" then
         _ensure_table(loaded, "launcher").buttons = _copy_table(source_launcher.buttons)
     end
+
+    local source_upkeep = _optional_table_child(_optional_table_child(source, "self"), "upkeep")
+    if source_upkeep ~= nil and type(source_upkeep.slots) == "table" then
+        _ensure_table(_ensure_table(loaded, "self"), "upkeep").slots = _copy_table(source_upkeep.slots)
+    end
 end
 
 local function _apply_missing_values(target, defaults)
