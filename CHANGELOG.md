@@ -8,6 +8,7 @@
 
 - Added an `Orientation` setting (Horizontal / Vertical) to the Cooldowns window and both Expiring Effects windows (Self and Target). Vertical bars keep the icon at the chosen end (the side dropdowns now read `Left/Top` and `Right/Bottom`) and fill along the vertical axis; the remaining-time text is drawn horizontally across the bar in the same format as on horizontal bars; on thin bars it first steps the font down through the same family's smaller sizes to fit, and is dropped only when even the smallest size cannot fit — the configured thickness is never widened. The effect/skill name is hidden on vertical bars. The size settings are now axis-independent (`Item length`/`Item thickness` for cooldowns, `Bar length`/`Bar thickness` for effects), so switching orientation rotates the bars without re-entering sizes.
 - Added a `Display time` setting to the Cooldowns and Expiring Effects windows to show or hide the remaining-time text on the bars (enabled by default).
+- Page bars can now jump straight to a page: the current page number is an input box — click it, type the page, press Enter. It only accepts digits and clamps to the valid page range; clicking away without Enter reverts. All paged windows share the same pager control: the Encyclopedia tabs (bestiary, items, quests), the Assets browser, and the crafting recipe list in pages mode.
 
 ### Changed
 
