@@ -24,7 +24,7 @@ local BASE_BAR_H = 21
 local BASE_GAP = 4
 local BASE_NAV_W = 22
 local BASE_PAGE_BAR_H = 21
-local BASE_PAGE_W = 120
+local BASE_PAGE_W = 74
 local BASE_LEVEL_W = 44
 
 local FILTER_ALL_CODE = 0
@@ -48,7 +48,6 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
 
     self._kind = kind
     self._popup_host = popup_host
-    self._page = 1
     self._filtered = nil
     self._signature = nil
     self._category_filter = FILTER_ALL_CODE
@@ -134,44 +133,11 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
         end
     end
 
-    self.prev_button = UI.Widgets.LuiButton()
-    self.prev_button:SetParent(self)
-    self.prev_button:set_text("")
-    self.prev_button:set_padding(2)
-    self.prev_button:set_icon(
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_transparent,
-        BASE_NAV_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
-    self.prev_button.Click = function()
-        self:_set_page(self._page - 1)
+    self.pager = UI.Widgets.LuiPager()
+    self.pager:SetParent(self)
+    self.pager.changed = function()
+        self:_render_page()
     end
-
-    self.next_button = UI.Widgets.LuiButton()
-    self.next_button:SetParent(self)
-    self.next_button:set_text("")
-    self.next_button:set_padding(2)
-    self.next_button:set_icon(
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_transparent,
-        BASE_NAV_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
-    self.next_button.Click = function()
-        self:_set_page(self._page + 1)
-    end
-
-    self.page_label = UI.Widgets.LuiLabel()
-    self.page_label:SetParent(self)
-    self.page_label:SetMouseVisible(false)
-    self.page_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 
     self.results_label = UI.Widgets.LuiLabel()
     self.results_label:SetParent(self)
@@ -214,10 +180,9 @@ function QuestBrowserPanel:apply_fonts()
     self.level_min_box:SetFont(font)
     self.level_dash_label:SetFont(font)
     self.level_max_box:SetFont(font)
-    self.page_label:SetFont(font)
+    self.pager:set_font(font)
+    self.pager:set_scale(State.settings.global.scale)
     self.results_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.prev_button:set_font(font)
-    self.next_button:set_font(font)
 end
 
 function QuestBrowserPanel:_parse_level(text)
@@ -227,22 +192,8 @@ end
 function QuestBrowserPanel:_on_filters_changed()
     self._level_min = self:_parse_level(self.level_min_box:GetText())
     self._level_max = self:_parse_level(self.level_max_box:GetText())
-    self._page = 1
+    self.pager:set_page(1)
     self:_refresh_list()
-end
-
-function QuestBrowserPanel:_set_page(page)
-    local pages = self:_page_count()
-    if page < 1 then
-        page = 1
-    elseif page > pages then
-        page = pages
-    end
-    if page == self._page then
-        return
-    end
-    self._page = page
-    self:_render_page()
 end
 
 function QuestBrowserPanel:_rebuild_filtered()
@@ -385,22 +336,16 @@ end
 
 function QuestBrowserPanel:_render_page()
     local capacity = self:_page_capacity()
-    local pages = self:_page_count()
-    if self._page > pages then
-        self._page = pages
-    end
-    local first = (self._page - 1) * capacity
+    local first = (self.pager:get_page() - 1) * capacity
 
     self:_render_table_page(capacity, first)
 
-    self.page_label:SetText(tostring(self._page) .. " / " .. tostring(pages))
     self.results_label:SetText(tostring(#self._filtered) .. " " .. TR["results"])
-    self.prev_button:set_enabled(self._page > 1)
-    self.next_button:set_enabled(self._page < pages)
 end
 
 function QuestBrowserPanel:_refresh_list()
     self:_rebuild_filtered()
+    self.pager:set_page_count(self:_page_count())
     self:_render_page()
 end
 
@@ -461,12 +406,9 @@ function QuestBrowserPanel:layout()
     local footer_y = height - margin_b - page_bar_h
     local pager_w = (2 * nav_w) + page_w + (2 * gap)
     local pager_x = margin_l + math.max(0, math.floor((inner_w - pager_w) / 2))
-    self.prev_button:SetPosition(pager_x, footer_y)
-    self.prev_button:SetSize(nav_w, page_bar_h)
-    self.page_label:SetPosition(pager_x + nav_w + gap, footer_y)
-    self.page_label:SetSize(page_w, page_bar_h)
-    self.next_button:SetPosition(pager_x + nav_w + gap + page_w + gap, footer_y)
-    self.next_button:SetSize(nav_w, page_bar_h)
+    self.pager:set_metrics(nav_w, gap)
+    self.pager:SetPosition(pager_x, footer_y)
+    self.pager:SetSize(pager_w, page_bar_h)
 
     local results_w = scaled_int(140)
     self.results_label:SetPosition(margin_l + inner_w - results_w, footer_y)

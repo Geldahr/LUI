@@ -21,6 +21,7 @@ import "LUI.src.UI.Widgets.table"
 import "LUI.src.UI.Widgets.timer"
 import "LUI.src.UI.Widgets.spin_box"
 import "LUI.src.UI.Widgets.line_edit"
+import "LUI.src.UI.Widgets.pager"
 import "LUI.src.UI.Widgets.window"
 import "LUI.src.UI.Widgets.hud"
 

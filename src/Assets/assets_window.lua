@@ -630,43 +630,11 @@ function AssetsWindow:Constructor()
     self.page_bar = Turbine.UI.Control()
     self.page_bar:SetParent(content_host)
 
-    self.prev_button = UI.Widgets.LuiButton()
-    self.prev_button:SetParent(self.page_bar)
-    self.prev_button:set_text("")
-    self.prev_button:set_padding(2)
-    self.prev_button:set_icon(
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_transparent,
-        BASE_NAV_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
-    self.prev_button.Click = function()
-        self:set_page(self.page_index - 1)
-    end
-
-    self.page_label = UI.Widgets.LuiLabel()
-    self.page_label:SetParent(self.page_bar)
-    self.page_label:SetMouseVisible(false)
-    self.page_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-
-    self.next_button = UI.Widgets.LuiButton()
-    self.next_button:SetParent(self.page_bar)
-    self.next_button:set_text("")
-    self.next_button:set_padding(2)
-    self.next_button:set_icon(
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_transparent,
-        BASE_NAV_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.RIGHT
-    )
-    self.next_button.Click = function()
-        self:set_page(self.page_index + 1)
+    self.pager = UI.Widgets.LuiPager()
+    self.pager:SetParent(self.page_bar)
+    self.pager.changed = function(new_page)
+        self.page_index = new_page
+        self:refresh_page(true)
     end
 
     self.filter_bar = Turbine.UI.Control()
@@ -897,7 +865,7 @@ function AssetsWindow:set_view_mode(mode, persist)
     State.settings.assets.view_mode = mode
     State.loaded_settings.assets.view_mode = mode
 
-    self.page_index = 1
+    self.pager:set_page(1)
     self:_apply_layout_for_mode(mode)
     if self:is_tiled() == true then
         local geometry = self:get_geometry()
@@ -912,16 +880,6 @@ function AssetsWindow:set_view_mode(mode, persist)
     self:_sync_menu_actions()
     self:layout()
     self:refresh_from_store(true)
-end
-
-function AssetsWindow:set_page(index)
-    local page = _clamp(index, 1, self.page_count)
-    if page == self.page_index then
-        return
-    end
-
-    self.page_index = page
-    self:refresh_page(true)
 end
 
 function AssetsWindow:update_filter()
@@ -1014,8 +972,8 @@ function AssetsWindow:apply_settings()
     self.tile_size = self:_get_mode_tile_size(self.view_mode)
 
     local button_font = _scaled_control_font(Style.CONTROL_FONT_SIZE - 1)
-    self.prev_button:set_font(button_font)
-    self.next_button:set_font(button_font)
+    self.pager:set_font(button_font)
+    self.pager:set_scale(State.settings.global.scale)
     self.clear_button:set_font(button_font)
     self.filter_tb:SetFont(button_font)
     self.owner_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
@@ -1028,7 +986,6 @@ function AssetsWindow:apply_settings()
     self.storage_dropdown:SetValue(self.storage_filter)
     self:_sync_menu_actions()
 
-    self.page_label:SetFont(button_font)
     self.summary_text:SetFont(button_font)
     self.recipes_button:set_font(button_font)
     self.hint_label:SetFont(_scaled_help_font(Style.CONTENT_SMALL_FONT_SIZE))
@@ -1665,7 +1622,7 @@ function AssetsWindow:_apply_record_view(reset_page)
     self.total_record_count = total_record_count
     self.records = filtered
     if reset_page == true then
-        self.page_index = 1
+        self.pager:set_page(1)
     end
 
     self:_refresh_recipes_button()
@@ -1970,14 +1927,9 @@ function AssetsWindow:layout()
         pager_x = 0
     end
 
-    self.prev_button:SetPosition(pager_x, 0)
-    self.prev_button:SetSize(nav_w, page_h)
-
-    self.page_label:SetPosition(pager_x + nav_w + gap, 0)
-    self.page_label:SetSize(page_w, page_h)
-
-    self.next_button:SetPosition(pager_x + nav_w + gap + page_w + gap, 0)
-    self.next_button:SetSize(nav_w, page_h)
+    self.pager:set_metrics(nav_w, gap)
+    self.pager:SetPosition(pager_x, 0)
+    self.pager:SetSize(pager_w, page_h)
 
     local content_top = summary_top + summary_h + gap
     local content_h = footer_top - gap - content_top
@@ -2014,12 +1966,7 @@ function AssetsWindow:refresh_page(force_bind)
     local metrics = self:_get_content_metrics()
     self.page_size = metrics.page_size
     self.page_count = math.max(1, math.ceil(#self.records / self.page_size))
-    if self.page_index > self.page_count then
-        self.page_index = self.page_count
-    end
-    if self.page_index < 1 then
-        self.page_index = 1
-    end
+    self.pager:set_page_count(self.page_count)
 
     self:_ensure_entries(self.page_size)
 
@@ -2056,9 +2003,6 @@ function AssetsWindow:refresh_page(force_bind)
     end
 
     self.empty_label:SetVisible(#self.records == 0)
-    self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(self.page_count))
-    self.prev_button:set_enabled(self.page_index > 1)
-    self.next_button:set_enabled(self.page_index < self.page_count)
     self:_refresh_summary(visible_count, page_start_index)
 
     self:_set_hint(nil)

@@ -1193,50 +1193,18 @@ function EncyclopediaWindow:Constructor()
     self.page_bar = Turbine.UI.Control()
     self.page_bar:SetParent(self.bestiary_host)
 
-    self.prev_button = UI.Widgets.LuiButton()
-    self.prev_button:SetParent(self.page_bar)
-    self.prev_button:set_text("")
-    self.prev_button:set_padding(2)
-    self.prev_button:set_icon(
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_transparent,
-        BASE_NAV_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
-    self.prev_button.Click = function()
-        self:set_page(self.page_index - 1)
+    self.pager = UI.Widgets.LuiPager()
+    self.pager:SetParent(self.page_bar)
+    self.pager.changed = function(new_page)
+        self.page_index = new_page
+        self:render_page()
     end
-
-    self.page_label = UI.Widgets.LuiLabel()
-    self.page_label:SetParent(self.page_bar)
-    self.page_label:SetMouseVisible(false)
-    self.page_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 
     self.results_label = UI.Widgets.LuiLabel()
     self.results_label:SetParent(self.bestiary_host)
     self.results_label:SetMouseVisible(false)
     self.results_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.results_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
-
-    self.next_button = UI.Widgets.LuiButton()
-    self.next_button:SetParent(self.page_bar)
-    self.next_button:set_text("")
-    self.next_button:set_padding(2)
-    self.next_button:set_icon(
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_transparent,
-        BASE_NAV_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.RIGHT
-    )
-    self.next_button.Click = function()
-        self:set_page(self.page_index + 1)
-    end
 
     self.filter_bar = Turbine.UI.Control()
     self.filter_bar:SetParent(self.bestiary_host)
@@ -1283,7 +1251,7 @@ function EncyclopediaWindow:Constructor()
             self._suppress_level_text_changed = false
         end
 
-        self.page_index = 1
+        self.pager:set_page(1)
         self:apply_view()
     end
 
@@ -1516,9 +1484,8 @@ function EncyclopediaWindow:apply_settings()
     self:set_minimum_size(min_w, min_h)
 
     local button_font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
-    self.prev_button:set_font(button_font)
-    self.page_label:SetFont(button_font)
-    self.next_button:set_font(button_font)
+    self.pager:set_font(button_font)
+    self.pager:set_scale(State.settings.global.scale)
     self.results_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.level_label:SetFont(button_font)
     self.level_min_box:SetFont(button_font)
@@ -1655,7 +1622,7 @@ function EncyclopediaWindow:update_filter()
     self.query_location_filter_active = state.token_map.loc ~= nil
     self.query_location_filter_valid = location_parts ~= nil
     self.query_location_parts = location_parts
-    self.page_index = 1
+    self.pager:set_page(1)
     self:apply_view()
 end
 
@@ -1883,7 +1850,7 @@ function EncyclopediaWindow:set_taxonomy_filters(genus_value, subcategory_value)
     self.genus_filter = genus_value
     self.subcategory_filter = subcategory_value
     self:refresh_taxonomy_filters()
-    self.page_index = 1
+    self.pager:set_page(1)
     self:apply_view()
 end
 
@@ -1898,7 +1865,7 @@ function EncyclopediaWindow:set_genus_filter(value)
     self.genus_filter = value
     self.subcategory_filter = value == FILTER_ALL and FILTER_NONE or FILTER_ALL
     self:refresh_taxonomy_filters()
-    self.page_index = 1
+    self.pager:set_page(1)
     self:apply_view()
 end
 
@@ -1914,23 +1881,8 @@ function EncyclopediaWindow:set_subcategory_filter(value)
     end
 
     self.subcategory_filter = value
-    self.page_index = 1
+    self.pager:set_page(1)
     self:apply_view()
-end
-
-function EncyclopediaWindow:set_page(index)
-    local count = #self.pages
-    if count < 1 then
-        count = 1
-    end
-    if index < 1 then index = 1 end
-    if index > count then index = count end
-    if index == self.page_index then
-        return
-    end
-
-    self.page_index = index
-    self:render_page()
 end
 
 function EncyclopediaWindow:open_card_for_record(record, anchor)
@@ -2017,12 +1969,9 @@ function EncyclopediaWindow:layout()
         host_h - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h)
     self.results_label:SetSize(results_w, bar_h)
 
-    self.prev_button:SetPosition(0, 0)
-    self.prev_button:SetSize(nav_w, bar_h)
-    self.page_label:SetPosition(nav_w + gap, 0)
-    self.page_label:SetSize(page_w, bar_h)
-    self.next_button:SetPosition(nav_w + gap + page_w + gap, 0)
-    self.next_button:SetSize(nav_w, bar_h)
+    self.pager:set_metrics(nav_w, gap)
+    self.pager:SetPosition(0, 0)
+    self.pager:SetSize(self.page_bar:GetSize())
 
     local level_label_w = _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
     local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)
@@ -2289,14 +2238,7 @@ function EncyclopediaWindow:refresh_layout_view(force)
         self:_prepare_records(self.records)
     end
     self.pages = self:_build_pages(self.records)
-
-    if #self.pages == 0 then
-        self.page_index = 1
-    elseif self.page_index > #self.pages then
-        self.page_index = #self.pages
-    elseif self.page_index < 1 then
-        self.page_index = 1
-    end
+    self.pager:set_page_count(#self.pages)
 
     self:render_page()
 end
@@ -2513,18 +2455,13 @@ function EncyclopediaWindow:refresh_visible_page_layout()
         return
     end
 
-    self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, #self.pages)))
     self.results_label:SetText(tostring(#self.records) .. " " .. TR["results"])
     local column_count, content_w = self:_column_metrics()
     self:_apply_page_layout(page, column_count, content_w)
 end
 
 function EncyclopediaWindow:render_page()
-    local page_count = #self.pages
-    self.page_label:SetText(tostring(self.page_index) .. " / " .. tostring(math.max(1, page_count)))
     self.results_label:SetText(tostring(#self.records) .. " " .. TR["results"])
-    self.prev_button:set_enabled(page_count > 0 and self.page_index > 1)
-    self.next_button:set_enabled(page_count > 0 and self.page_index < page_count)
 
     if #self.records == 0 then
         if #self.all_records == 0 then

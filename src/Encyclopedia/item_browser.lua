@@ -30,7 +30,7 @@ local BASE_GAP = 4
 -- page bar matches the bestiary tab exactly (22x21 square nav buttons)
 local BASE_NAV_W = 22
 local BASE_PAGE_BAR_H = 21
-local BASE_PAGE_W = 120
+local BASE_PAGE_W = 74
 local BASE_LEVEL_W = 44
 
 local FILTER_ALL_CODE = 0
@@ -86,7 +86,6 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
 
     self._bucket = bucket_name
     self._popup_host = popup_host
-    self._page = 1
     self._filtered = nil
     self._signature = nil
     self._quality_filter = FILTER_ALL_CODE
@@ -278,45 +277,12 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
         self:_on_filters_changed()
     end
 
-    -- same arrow nav buttons as the bestiary page bar
-    self.prev_button = UI.Widgets.LuiButton()
-    self.prev_button:SetParent(self)
-    self.prev_button:set_text("")
-    self.prev_button:set_padding(2)
-    self.prev_button:set_icon(
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_transparent,
-        BASE_NAV_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
-    self.prev_button.Click = function()
-        self:_set_page(self._page - 1)
+    -- same pager as the bestiary page bar
+    self.pager = UI.Widgets.LuiPager()
+    self.pager:SetParent(self)
+    self.pager.changed = function()
+        self:_render_page()
     end
-
-    self.next_button = UI.Widgets.LuiButton()
-    self.next_button:SetParent(self)
-    self.next_button:set_text("")
-    self.next_button:set_padding(2)
-    self.next_button:set_icon(
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_transparent,
-        BASE_NAV_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
-    self.next_button.Click = function()
-        self:_set_page(self._page + 1)
-    end
-
-    self.page_label = UI.Widgets.LuiLabel()
-    self.page_label:SetParent(self)
-    self.page_label:SetMouseVisible(false)
-    self.page_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 
     self.results_label = UI.Widgets.LuiLabel()
     self.results_label:SetParent(self)
@@ -398,10 +364,9 @@ function ItemBrowserPanel:apply_fonts()
     self.level_min_box:SetFont(font)
     self.level_dash_label:SetFont(font)
     self.level_max_box:SetFont(font)
-    self.page_label:SetFont(font)
+    self.pager:set_font(font)
+    self.pager:set_scale(State.settings.global.scale)
     self.results_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self.prev_button:set_font(font)
-    self.next_button:set_font(font)
 end
 
 function ItemBrowserPanel:_parse_level(text)
@@ -415,23 +380,8 @@ function ItemBrowserPanel:_on_filters_changed()
         self._ilvl_min = self:_parse_level(self.ilvl_min_box:GetText())
         self._ilvl_max = self:_parse_level(self.ilvl_max_box:GetText())
     end
-    self._page = 1
+    self.pager:set_page(1)
     self:_refresh_list()
-end
-
-function ItemBrowserPanel:_set_page(page)
-    local pages = self:_page_count()
-    if page < 1 then
-        page = 1
-    end
-    if page > pages then
-        page = pages
-    end
-    if page == self._page then
-        return
-    end
-    self._page = page
-    self:_render_page()
 end
 
 -- shared query grammar (space = AND, | = OR, quotes = literal phrase),
@@ -737,22 +687,16 @@ end
 
 function ItemBrowserPanel:_render_page()
     local capacity = self:_page_capacity()
-    local pages = self:_page_count()
-    if self._page > pages then
-        self._page = pages
-    end
-    local first = (self._page - 1) * capacity
+    local first = (self.pager:get_page() - 1) * capacity
 
     self:_render_table_page(capacity, first)
 
-    self.page_label:SetText(tostring(self._page) .. " / " .. tostring(pages))
     self.results_label:SetText(tostring(#self._filtered) .. " " .. TR["results"])
-    self.prev_button:set_enabled(self._page > 1)
-    self.next_button:set_enabled(self._page < pages)
 end
 
 function ItemBrowserPanel:_refresh_list()
     self:_rebuild_filtered()
+    self.pager:set_page_count(self:_page_count())
     self:_render_page()
 end
 
@@ -873,12 +817,9 @@ function ItemBrowserPanel:layout()
     local footer_y = height - margin_b - page_bar_h
     local footer_total = (2 * nav_w) + page_w + (2 * gap)
     local footer_x = math.max(0, math.floor((width - footer_total) / 2))
-    self.prev_button:SetPosition(footer_x, footer_y)
-    self.prev_button:SetSize(nav_w, page_bar_h)
-    self.page_label:SetPosition(footer_x + nav_w + gap, footer_y)
-    self.page_label:SetSize(page_w, page_bar_h)
-    self.next_button:SetPosition(footer_x + nav_w + gap + page_w + gap, footer_y)
-    self.next_button:SetSize(nav_w, page_bar_h)
+    self.pager:set_metrics(nav_w, gap)
+    self.pager:SetPosition(footer_x, footer_y)
+    self.pager:SetSize(footer_total, page_bar_h)
 
     local results_w = scaled_int(140)
     self.results_label:SetPosition(width - margin_r - results_w, footer_y)
