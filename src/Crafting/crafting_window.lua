@@ -1220,9 +1220,7 @@ function CraftingWindow:Constructor()
     self.query_level_filter_valid = false
     self.selected_recipe_id = nil
     self.visible_recipes = {}
-    self.recipe_page_index = 1
     self.recipe_page_size = 1
-    self.recipe_page_count = 1
     self.plan_order = {}
     self.plan_counts = {}
     self.plan_variants = {}
@@ -1257,7 +1255,7 @@ function CraftingWindow:Constructor()
             return
         end
         self:_sync_search_query_state()
-        self.recipe_page_index = 1
+        self:_sync_recipe_pager(1)
         self:_invalidate_recipe_list()
         self:refresh_recipe_list()
     end
@@ -1267,7 +1265,7 @@ function CraftingWindow:Constructor()
     self.clear_button:set_text(TR["Clear"])
     self.clear_button.Click = function()
         self:_apply_search_query("")
-        self.recipe_page_index = 1
+        self:_sync_recipe_pager(1)
         self:_invalidate_recipe_list()
         self:refresh_recipe_list()
         self.search_box:Focus()
@@ -1314,7 +1312,7 @@ function CraftingWindow:Constructor()
     self.profession_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.profession_dropdown.ValueChanged = function(_, value)
         self.profession_filter = value or FILTER_ALL
-        self.recipe_page_index = 1
+        self:_sync_recipe_pager(1)
         self:refresh_recipe_list()
     end
 
@@ -1364,7 +1362,7 @@ function CraftingWindow:Constructor()
     end)
     self.availability_dropdown.SelectedValuesChanged = function(_, values)
         self.show_filter = _normalize_show_selection(values)
-        self.recipe_page_index = 1
+        self:_sync_recipe_pager(1)
         self:refresh_recipe_list()
     end
     self.availability_dropdown:SetSelectedValues(_show_selection_values(self.show_filter), false)
@@ -1445,43 +1443,14 @@ function CraftingWindow:Constructor()
     self.recipe_page_bar = Turbine.UI.Control()
     self.recipe_page_bar:SetParent(self.left_panel.inner)
 
-    self.recipe_prev_button = UI.Widgets.LuiButton()
-    self.recipe_prev_button:SetParent(self.recipe_page_bar)
-    self.recipe_prev_button:set_text("")
-    self.recipe_prev_button:set_padding(2)
-    self.recipe_prev_button:set_icon(
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_transparent,
-        BASE_SMALL_BUTTON_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
-    self.recipe_prev_button.Click = function()
-        self:set_recipe_page(self.recipe_page_index - 1)
-    end
-
-    self.recipe_page_label = UI.Widgets.LuiLabel()
-    self.recipe_page_label:SetParent(self.recipe_page_bar)
-    self.recipe_page_label:SetMouseVisible(false)
-    self.recipe_page_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-
-    self.recipe_next_button = UI.Widgets.LuiButton()
-    self.recipe_next_button:SetParent(self.recipe_page_bar)
-    self.recipe_next_button:set_text("")
-    self.recipe_next_button:set_padding(2)
-    self.recipe_next_button:set_icon(
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_transparent,
-        BASE_SMALL_BUTTON_W,
-        nil,
-        UI.Widgets.LuiButton.icon_position.RIGHT
-    )
-    self.recipe_next_button.Click = function()
-        self:set_recipe_page(self.recipe_page_index + 1)
+    -- during _sync_recipe_pager the caller renders right after, so the
+    -- callback skips its own render
+    self.recipe_pager = UI.Widgets.LuiPager()
+    self.recipe_pager:SetParent(self.recipe_page_bar)
+    self.recipe_pager.changed = function()
+        if self._pager_syncing ~= true and self.display_mode == DISPLAY_PAGES then
+            self:_render_recipe_page_rows()
+        end
     end
 
     self.recipe_empty = UI.Widgets.LuiLabel()
@@ -2332,7 +2301,7 @@ end
 function CraftingWindow:set_favorite_filter(active)
     self.favorite_filter_active = active == true
     self:_refresh_favorite_filter_button()
-    self.recipe_page_index = 1
+    self:_sync_recipe_pager(1)
     self:_invalidate_recipe_list()
     self:refresh_recipe_list()
     self:refresh_selected_recipe()
@@ -2345,7 +2314,7 @@ function CraftingWindow:set_rank_filter(value)
     end
 
     self.rank_filter = normalized
-    self.recipe_page_index = 1
+    self:_sync_recipe_pager(1)
     self:refresh_recipe_list()
 end
 
@@ -2580,7 +2549,7 @@ function CraftingWindow:set_scope_sources(source_keys, refresh)
         return
     end
 
-    self.recipe_page_index = 1
+    self:_sync_recipe_pager(1)
     self:_invalidate_recipe_list()
     self:refresh_recipe_list()
     self:refresh_selected_recipe()
@@ -2609,7 +2578,7 @@ function CraftingWindow:open_from_asset_materials(material_keyword)
     self.show_filter = { [AVAILABILITY_READY] = true, [AVAILABILITY_KNOWN] = true }
     self.level_min_filter = nil
     self.level_max_filter = nil
-    self.recipe_page_index = 1
+    self:_sync_recipe_pager(1)
     -- the assets window's search keyword carries over: recipe search also
     -- matches ingredient names, so "light hide" lists the ready recipes
     -- consuming the filtered materials
@@ -2665,7 +2634,7 @@ function CraftingWindow:open_item_search(item_name, select_recipe_id)
     self.show_filter = {}
     self.level_min_filter = nil
     self.level_max_filter = nil
-    self.recipe_page_index = 1
+    self:_sync_recipe_pager(1)
     if select_recipe_id ~= nil then
         self.selected_recipe_id = tostring(select_recipe_id)
         -- land the variant selector on the output that was asked for
@@ -2761,7 +2730,8 @@ function CraftingWindow:apply_settings()
     self.level_min_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
     self.level_dash_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.level_max_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
-    self.recipe_page_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.recipe_pager:set_font(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
+    self.recipe_pager:set_scale(State.settings.global.scale)
     self.recipe_table:set_header_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
     self.recipe_cap_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     for slot = 1, #self._recipe_cells do
@@ -2927,7 +2897,7 @@ function CraftingWindow:update_level_filter()
 
     self.level_min_filter = filter_min
     self.level_max_filter = filter_max
-    self.recipe_page_index = 1
+    self:_sync_recipe_pager(1)
     self:_invalidate_recipe_list()
     self:refresh_recipe_list()
     self:refresh_selected_recipe()
@@ -2935,18 +2905,6 @@ end
 
 function CraftingWindow:_selected_recipe()
     return self.store.recipe_by_id[self.selected_recipe_id]
-end
-
-function CraftingWindow:set_recipe_page(index)
-    local page = math.max(1, math.min(self.recipe_page_count, tonumber(index) or 1))
-    if page == self.recipe_page_index then
-        return
-    end
-
-    self.recipe_page_index = page
-    if self.display_mode == DISPLAY_PAGES then
-        self:_render_recipe_page_rows()
-    end
 end
 
 function CraftingWindow:_select_recipe_row(index, recipe)
@@ -3287,24 +3245,27 @@ end
 
 function CraftingWindow:_refresh_recipe_page_controls()
     self.recipe_page_size = self:_recipe_page_capacity()
-    self.recipe_page_count = math.max(1, math.ceil(#self.visible_recipes / self.recipe_page_size))
-    if self.recipe_page_index > self.recipe_page_count then
-        self.recipe_page_index = self.recipe_page_count
-    end
-    if self.recipe_page_index < 1 then
-        self.recipe_page_index = 1
-    end
+    self:_sync_recipe_pager(nil, math.max(1, math.ceil(#self.visible_recipes / self.recipe_page_size)))
+end
 
-    self.recipe_page_label:SetText(tostring(self.recipe_page_index) .. " / " .. tostring(self.recipe_page_count))
-    self.recipe_prev_button:set_enabled(self.recipe_page_index > 1)
-    self.recipe_next_button:set_enabled(self.recipe_page_index < self.recipe_page_count)
+-- programmatic pager updates inside a refresh flow: the flow renders once
+-- itself, so the pager's changed callback must not render again
+function CraftingWindow:_sync_recipe_pager(page, page_count)
+    self._pager_syncing = true
+    if page ~= nil then
+        self.recipe_pager:set_page(page)
+    end
+    if page_count ~= nil then
+        self.recipe_pager:set_page_count(page_count)
+    end
+    self._pager_syncing = false
 end
 
 function CraftingWindow:_render_recipe_page_rows()
     self:_refresh_recipe_page_controls()
 
     local capacity = self.recipe_page_size
-    local first = (self.recipe_page_index - 1) * capacity
+    local first = (self.recipe_pager:get_page() - 1) * capacity
     local filled = math.max(0, math.min(capacity, #self.visible_recipes - first))
     self:_ensure_recipe_table_rows(math.min(capacity, math.max(1, filled)))
     self.recipe_table:set_visible_rows(filled)
@@ -3332,7 +3293,7 @@ end
 -- path), so the skip check can run on the current page size; only the
 -- pager label needs to track the growing total.
 function CraftingWindow:_append_recipe_page_rows_until_full()
-    local start_index = ((self.recipe_page_index - 1) * self.recipe_page_size) + 1
+    local start_index = ((self.recipe_pager:get_page() - 1) * self.recipe_page_size) + 1
     local end_index = math.min(#self.visible_recipes, start_index + self.recipe_page_size - 1)
     if self._recipe_page_rendered_start == start_index and
         self._recipe_page_rendered_end >= end_index then
@@ -3468,11 +3429,6 @@ function CraftingWindow:refresh_recipe_list(options)
             self.recipe_empty:SetText(TR["Matching known recipes..."])
         else
             self.recipe_empty:SetText(TR["No matching recipes."])
-        end
-        if pages_mode == true then
-            self.recipe_page_label:SetText("1 / 1")
-            self.recipe_prev_button:set_enabled(false)
-            self.recipe_next_button:set_enabled(false)
         end
     end
 
@@ -4150,19 +4106,14 @@ function CraftingWindow:_layout_recipe_panel()
     self.recipe_page_bar:SetSize(recipe_inner_w, page_h)
     self.recipe_page_bar:SetVisible(pages_mode == true)
     if pages_mode == true then
-        local page_label_w = _scaled_int(BASE_PAGE_LABEL_W)
-        local nav_w = bar_h
-        local pager_w = (nav_w * 2) + page_label_w + (gap * 2)
+        self.recipe_pager:set_metrics(bar_h, gap)
+        local pager_w = self.recipe_pager:preferred_width(_scaled_int(BASE_PAGE_LABEL_W))
         local pager_x = math.floor((recipe_inner_w - pager_w) / 2)
         if pager_x < 0 then
             pager_x = 0
         end
-        self.recipe_prev_button:SetPosition(pager_x, page_button_margin)
-        self.recipe_prev_button:SetSize(nav_w, bar_h)
-        self.recipe_page_label:SetPosition(pager_x + nav_w + gap, page_button_margin)
-        self.recipe_page_label:SetSize(page_label_w, bar_h)
-        self.recipe_next_button:SetPosition(pager_x + nav_w + gap + page_label_w + gap, page_button_margin)
-        self.recipe_next_button:SetSize(nav_w, bar_h)
+        self.recipe_pager:SetPosition(pager_x, page_button_margin)
+        self.recipe_pager:SetSize(pager_w, bar_h)
     end
     -- below the always-visible table header, over the (empty) body area
     local empty_y = header_h + _scaled_int(8)
