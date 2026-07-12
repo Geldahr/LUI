@@ -70,6 +70,11 @@ function UpkeepWindow:Constructor()
     self._display_order = {}
     self._order_buf = {}
     self._urgency_buf = {}
+    self._rank_buf = {}
+    -- urgencies all count down at the same rate, so the sort order can
+    -- only change on discrete events (effect added/removed, cooldown
+    -- reset time changed); those mark it dirty via invalidate_order()
+    self._order_dirty = true
     self.last_update_at = 0
     self.update_every = 1.0 / State.settings.global.refresh_rate
     self._skill_discover_due_at = 0
@@ -125,6 +130,12 @@ function UpkeepWindow:get_settings()
     return State.settings.self.upkeep
 end
 
+-- an urgency input changed (effect set, cooldown reset time); auto order
+-- re-sorts on the next tick
+function UpkeepWindow:invalidate_order()
+    self._order_dirty = true
+end
+
 function UpkeepWindow:set_move_mode(enabled)
     UI.Widgets.LuiHUD.set_move_mode(self, enabled)
     for i = 1, self._capacity do
@@ -158,7 +169,7 @@ function UpkeepWindow:apply_settings()
 
     for i = 1, count do
         if self.slots[i] == nil then
-            local slot = Upkeep.UpkeepSlot(self.overlay)
+            local slot = Upkeep.UpkeepSlot(self.overlay, self)
             slot:SetParent(self)
             slot:SetVisible(false)
             self.slots[i] = slot
@@ -212,6 +223,7 @@ function UpkeepWindow:apply_settings()
     end
 
     self:_sync_companion_positions()
+    self:invalidate_order()
     self:_rescan_effects()
     self:_discover_skills(true)
     self:refresh_visibility()
@@ -260,7 +272,7 @@ function UpkeepWindow:Update()
         self.slots[i]:update(now)
     end
 
-    if s.auto_order == true then
+    if s.auto_order == true and self._order_dirty == true then
         self:_apply_auto_order(now)
     end
 end
@@ -282,24 +294,39 @@ end
 
 -- auto order: sort the slots by urgency (next skill to reactivate first)
 -- and re-place them when the order changes; the anchor picks which end of
--- the bar holds the most urgent slot
+-- the bar holds the most urgent slot. Runs only on ticks where an urgency
+-- input changed (see invalidate_order), never on quiet ticks.
 function UpkeepWindow:_apply_auto_order(now)
+    self._order_dirty = false
     local count = self._capacity
     local order = self._order_buf
     local urgency = self._urgency_buf
+    local rank = self._rank_buf
     for i = 1, count do
         order[i] = i
         urgency[i] = self.slots[i]:urgency(now)
+        rank[i] = i
     end
     for i = count + 1, #order do
         order[i] = nil
         urgency[i] = nil
+        rank[i] = nil
+    end
+    -- ties keep their current on-screen position instead of snapping to
+    -- binding order, so ready slots (urgency 0) don't reshuffle as each
+    -- cooldown ends; right after apply_settings the cached order is
+    -- invalidated (all 0) and the rank falls back to the slot index
+    for k = 1, count do
+        local slot_index = self._display_order[k]
+        if slot_index ~= 0 then
+            rank[slot_index] = k
+        end
     end
     table.sort(order, function(a, b)
         if urgency[a] ~= urgency[b] then
             return urgency[a] < urgency[b]
         end
-        return a < b
+        return rank[a] < rank[b]
     end)
 
     local changed = false
@@ -391,11 +418,18 @@ function UpkeepWindow:_on_effect_added(effect)
     for i = 1, #targets do
         self.slots[targets[i]]:add_active(effect, now)
     end
+    self:invalidate_order()
 end
 
 function UpkeepWindow:_on_effect_removed(id)
+    local removed = false
     for i = 1, self._capacity do
-        self.slots[i]:remove_active(id)
+        if self.slots[i]:remove_active(id) then
+            removed = true
+        end
+    end
+    if removed then
+        self:invalidate_order()
     end
 end
 
@@ -403,6 +437,7 @@ function UpkeepWindow:_rescan_effects()
     for i = 1, self._capacity do
         self.slots[i]:clear_active()
     end
+    self:invalidate_order()
 
     local list = self._effects_list
     if list == nil or list.GetCount == nil then

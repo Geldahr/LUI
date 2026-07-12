@@ -64,9 +64,11 @@ end
 -- Constructor
 ---------------------------------------------------------------------
 
-function UpkeepSlot:Constructor(overlay_parent)
+function UpkeepSlot:Constructor(overlay_parent, window)
     Turbine.UI.Control.Constructor(self)
 
+    -- owning UpkeepWindow, notified when this slot's urgency inputs change
+    self.window = window
     -- binding: decoded skills-DB record ({ id, name, effects }) or nil when
     -- the dropped skill applies no packed visible buff (degraded slot).
     self.binding = nil
@@ -260,12 +262,16 @@ function UpkeepSlot:set_skill(skill)
 end
 
 function UpkeepSlot:refresh_cooldown()
+    local previous = self.reset_time
     local skill = self.skill
     if skill == nil or skill.GetResetTime == nil then
         self.reset_time = nil
-        return
+    else
+        self.reset_time = skill:GetResetTime()
     end
-    self.reset_time = skill:GetResetTime()
+    if self.reset_time ~= previous then
+        self.window:invalidate_order()
+    end
 end
 
 function UpkeepSlot:add_active(effect, now)
@@ -288,12 +294,15 @@ function UpkeepSlot:add_active(effect, now)
     self.active[id] = { ending = ending, duration = duration }
 end
 
+-- returns whether the effect was actually tracked here (the caller only
+-- re-sorts when a watched effect went away)
 function UpkeepSlot:remove_active(id)
     if self.active[id] == nil then
-        return
+        return false
     end
     self.active[id] = nil
     self.active_count = self.active_count - 1
+    return true
 end
 
 function UpkeepSlot:clear_active()
