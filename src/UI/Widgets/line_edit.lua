@@ -45,6 +45,8 @@ function LuiLineEdit:Constructor()
     self._back_color = Style.BACKGROUND
     self._back_color_custom = false
     self._text_color = Style.CONTROL_FOREGROUND
+    self._digits_only = false
+    self._digits_updating = false
 
     self:SetMouseVisible(true)
     _set_alpha_blend(self)
@@ -80,6 +82,23 @@ function LuiLineEdit:Constructor()
         end
     end
     self.text_box.TextChanged = function(sender, args)
+        if self._digits_only == true and self._digits_updating ~= true then
+            -- the Lotro TextBox is multiline: Enter inserts a newline, so a
+            -- stripped newline doubles as the submit signal (same trick as
+            -- LuiSpinBox)
+            local text = self.text_box:GetText() or ""
+            local submitted = string.find(text, "\n", 1, true) ~= nil
+            local digits = string.gsub(text, "%D", "")
+            if digits ~= text then
+                self._digits_updating = true
+                self.text_box:SetText(digits)
+                self._digits_updating = false
+                if submitted == true and type(self.Submitted) == "function" then
+                    self.Submitted(self, digits)
+                end
+                return
+            end
+        end
         self:_refresh_placeholder()
         if type(self.TextChanged) == "function" then
             self.TextChanged(self, args)
@@ -325,6 +344,13 @@ end
 
 function LuiLineEdit:GetText()
     return self.text_box:GetText()
+end
+
+-- Digits-only mode: typed/pasted non-digits are stripped as they arrive,
+-- and Enter fires the optional Submitted(self, digits) callback instead of
+-- TextChanged.
+function LuiLineEdit:set_digits_only(digits_only)
+    self._digits_only = digits_only == true
 end
 
 function LuiLineEdit:SetWantsKeyEvents(wants_key_events)

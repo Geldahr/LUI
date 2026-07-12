@@ -133,10 +133,14 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
         end
     end
 
+    -- during _sync_pager the caller renders right after, so the callback
+    -- skips its own render
     self.pager = UI.Widgets.LuiPager()
     self.pager:SetParent(self)
     self.pager.changed = function()
-        self:_render_page()
+        if self._pager_syncing ~= true then
+            self:_render_page()
+        end
     end
 
     self.results_label = UI.Widgets.LuiLabel()
@@ -192,8 +196,21 @@ end
 function QuestBrowserPanel:_on_filters_changed()
     self._level_min = self:_parse_level(self.level_min_box:GetText())
     self._level_max = self:_parse_level(self.level_max_box:GetText())
-    self.pager:set_page(1)
+    self:_sync_pager(1)
     self:_refresh_list()
+end
+
+-- programmatic pager updates inside a refresh flow: the flow renders once
+-- itself, so the pager's changed callback must not render again
+function QuestBrowserPanel:_sync_pager(page, page_count)
+    self._pager_syncing = true
+    if page ~= nil then
+        self.pager:set_page(page)
+    end
+    if page_count ~= nil then
+        self.pager:set_page_count(page_count)
+    end
+    self._pager_syncing = false
 end
 
 function QuestBrowserPanel:_rebuild_filtered()
@@ -345,7 +362,7 @@ end
 
 function QuestBrowserPanel:_refresh_list()
     self:_rebuild_filtered()
-    self.pager:set_page_count(self:_page_count())
+    self:_sync_pager(nil, self:_page_count())
     self:_render_page()
 end
 
@@ -401,12 +418,11 @@ function QuestBrowserPanel:layout()
     self.table:SetPosition(margin_l, table_y)
     self.table:SetSize(inner_w, math.max(1, table_h))
 
-    local nav_w = scaled_int(BASE_NAV_W)
     local page_w = scaled_int(BASE_PAGE_W)
     local footer_y = height - margin_b - page_bar_h
-    local pager_w = (2 * nav_w) + page_w + (2 * gap)
+    self.pager:set_metrics(scaled_int(BASE_NAV_W), gap)
+    local pager_w = self.pager:preferred_width(page_w)
     local pager_x = margin_l + math.max(0, math.floor((inner_w - pager_w) / 2))
-    self.pager:set_metrics(nav_w, gap)
     self.pager:SetPosition(pager_x, footer_y)
     self.pager:SetSize(pager_w, page_bar_h)
 

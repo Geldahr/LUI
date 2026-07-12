@@ -1141,7 +1141,6 @@ function EncyclopediaWindow:Constructor()
     self.all_records = {}
     self.records = {}
     self.pages = {}
-    self.page_index = 1
     self.entries = {}
     self.column_separators = {}
     local content_host = Turbine.UI.Control()
@@ -1193,11 +1192,14 @@ function EncyclopediaWindow:Constructor()
     self.page_bar = Turbine.UI.Control()
     self.page_bar:SetParent(self.bestiary_host)
 
+    -- during _sync_pager the caller renders right after, so the callback
+    -- skips its own render
     self.pager = UI.Widgets.LuiPager()
     self.pager:SetParent(self.page_bar)
-    self.pager.changed = function(new_page)
-        self.page_index = new_page
-        self:render_page()
+    self.pager.changed = function()
+        if self._pager_syncing ~= true then
+            self:render_page()
+        end
     end
 
     self.results_label = UI.Widgets.LuiLabel()
@@ -1251,7 +1253,7 @@ function EncyclopediaWindow:Constructor()
             self._suppress_level_text_changed = false
         end
 
-        self.pager:set_page(1)
+        self:_sync_pager(1)
         self:apply_view()
     end
 
@@ -1622,7 +1624,7 @@ function EncyclopediaWindow:update_filter()
     self.query_location_filter_active = state.token_map.loc ~= nil
     self.query_location_filter_valid = location_parts ~= nil
     self.query_location_parts = location_parts
-    self.pager:set_page(1)
+    self:_sync_pager(1)
     self:apply_view()
 end
 
@@ -1850,7 +1852,7 @@ function EncyclopediaWindow:set_taxonomy_filters(genus_value, subcategory_value)
     self.genus_filter = genus_value
     self.subcategory_filter = subcategory_value
     self:refresh_taxonomy_filters()
-    self.pager:set_page(1)
+    self:_sync_pager(1)
     self:apply_view()
 end
 
@@ -1865,7 +1867,7 @@ function EncyclopediaWindow:set_genus_filter(value)
     self.genus_filter = value
     self.subcategory_filter = value == FILTER_ALL and FILTER_NONE or FILTER_ALL
     self:refresh_taxonomy_filters()
-    self.pager:set_page(1)
+    self:_sync_pager(1)
     self:apply_view()
 end
 
@@ -1881,7 +1883,7 @@ function EncyclopediaWindow:set_subcategory_filter(value)
     end
 
     self.subcategory_filter = value
-    self.pager:set_page(1)
+    self:_sync_pager(1)
     self:apply_view()
 end
 
@@ -1954,10 +1956,8 @@ function EncyclopediaWindow:layout()
     self.nav_bar:SetPosition(margin_left, margin_top)
     self.nav_bar:SetSize(inner_w, bar_h)
 
-    local nav_w = _scaled_int(BASE_NAV_W)
-    local page_w = _scaled_int(BASE_PAGE_W)
-
-    self.page_bar:SetSize((2 * nav_w) + page_w + (2 * gap), bar_h)
+    self.pager:set_metrics(_scaled_int(BASE_NAV_W), gap)
+    self.page_bar:SetSize(self.pager:preferred_width(_scaled_int(BASE_PAGE_W)), bar_h)
     local _, host_h = self.bestiary_host:GetSize()
     self.page_bar:SetPosition(
         margin_left + math.max(0, math.floor((inner_w - self.page_bar:GetWidth()) / 2)),
@@ -1969,7 +1969,6 @@ function EncyclopediaWindow:layout()
         host_h - _scaled_int(BASE_MARGIN_BOTTOM) - bar_h)
     self.results_label:SetSize(results_w, bar_h)
 
-    self.pager:set_metrics(nav_w, gap)
     self.pager:SetPosition(0, 0)
     self.pager:SetSize(self.page_bar:GetSize())
 
@@ -2238,9 +2237,22 @@ function EncyclopediaWindow:refresh_layout_view(force)
         self:_prepare_records(self.records)
     end
     self.pages = self:_build_pages(self.records)
-    self.pager:set_page_count(#self.pages)
+    self:_sync_pager(nil, #self.pages)
 
     self:render_page()
+end
+
+-- programmatic pager updates inside a refresh flow: the flow renders once
+-- itself, so the pager's changed callback must not render again
+function EncyclopediaWindow:_sync_pager(page, page_count)
+    self._pager_syncing = true
+    if page ~= nil then
+        self.pager:set_page(page)
+    end
+    if page_count ~= nil then
+        self.pager:set_page_count(page_count)
+    end
+    self._pager_syncing = false
 end
 
 function EncyclopediaWindow:_build_pages(records)
@@ -2449,7 +2461,7 @@ function EncyclopediaWindow:refresh_visible_page_layout()
         return
     end
 
-    local page = self.pages[self.page_index]
+    local page = self.pages[self.pager:get_page()]
     if page == nil then
         self:render_page()
         return
@@ -2481,7 +2493,7 @@ function EncyclopediaWindow:render_page()
 
     self.empty_label:SetVisible(false)
 
-    local page = self.pages[self.page_index]
+    local page = self.pages[self.pager:get_page()]
     if page == nil then
         for i = 1, #self.column_separators do
             self.column_separators[i]:SetVisible(false)

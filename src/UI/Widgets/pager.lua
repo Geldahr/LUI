@@ -19,7 +19,6 @@ local LuiLabel = Widgets.LuiLabel
 local LuiLineEdit = Widgets.LuiLineEdit
 
 local BASE_NAV_W = 22
-local BASE_GAP = 4
 local BASE_SLASH_W = 12
 
 local function _scaled_int(scale, value)
@@ -52,7 +51,8 @@ function LuiPager:Constructor()
     self._scale = 1
     self._nav_w = nil
     self._gap = nil
-    self._updating_text = false
+    self._synced_page = nil
+    self._synced_count = nil
 
     self.prev_button = LuiButton()
     self.prev_button:SetParent(self)
@@ -93,28 +93,13 @@ function LuiPager:Constructor()
     self.page_edit:SetParent(self)
     self.page_edit:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.page_edit:SetWantsKeyEvents(true)
-    self.page_edit.TextChanged = function()
-        if self._updating_text == true then
-            return
-        end
-        local text = self.page_edit:GetText() or ""
-        -- Enter in the (multiline by default) Lotro TextBox inserts a
-        -- newline: treat it as submit, same trick as LuiSpinBox
-        local submitted = string.find(text, "\n", 1, true) ~= nil
-        local digits = string.gsub(text, "%D", "")
-        if submitted == true then
-            self:_commit_edit(digits)
-            return
-        end
-        if digits ~= text then
-            self._updating_text = true
-            self.page_edit:SetText(digits)
-            self._updating_text = false
-        end
+    self.page_edit:set_digits_only(true)
+    self.page_edit.Submitted = function(_, digits)
+        self:_commit_edit(digits)
     end
     self.page_edit.FocusLost = function()
         -- clicking away reverts; Enter is the explicit jump
-        self:_sync_display()
+        self:_sync_display(true)
     end
 
     -- three-part middle: page edit | centered "/" | total pages
@@ -139,10 +124,13 @@ function LuiPager:_max_page()
     return self._page_count
 end
 
-function LuiPager:_sync_display()
-    self._updating_text = true
+function LuiPager:_sync_display(force)
+    if force ~= true and self._page == self._synced_page and self._page_count == self._synced_count then
+        return
+    end
+    self._synced_page = self._page
+    self._synced_count = self._page_count
     self.page_edit:SetText(tostring(self._page))
-    self._updating_text = false
     self.total_label:SetText(tostring(self:_max_page()))
     self.prev_button:set_enabled(self._page_count > 0 and self._page > 1)
     self.next_button:set_enabled(self._page_count > 0 and self._page < self._page_count)
@@ -170,9 +158,12 @@ function LuiPager:_commit_edit(digits)
     local page = tonumber(digits)
     if page == nil then
         -- empty submit: keep the current page
-        self:_sync_display()
+        self:_sync_display(true)
         return
     end
+    -- the typed text must be replaced even when the commit clamps back to
+    -- the same page ("999" on the last page), so invalidate the sync cache
+    self._synced_page = nil
     self:_set_page_internal(page, true)
 end
 
@@ -202,12 +193,18 @@ function LuiPager:set_font(font)
     self.next_button:set_font(font)
 end
 
--- scaled pixel widths for the arrow buttons and the button/text gaps, so
--- callers keep their existing pager width math exactly
+-- scaled pixel widths for the arrow buttons and the button/text gaps.
+-- Store-only: callers set metrics (and scale) first, then SetSize runs the
+-- one layout pass. Metrics are required before the first SetSize.
 function LuiPager:set_metrics(nav_w, gap)
     self._nav_w = nav_w
     self._gap = gap
-    self:_layout()
+end
+
+-- total widget width for a given middle (page area) width, so callers
+-- never restate the internal spacing formula
+function LuiPager:preferred_width(page_w)
+    return (2 * (self._nav_w + self._gap)) + page_w
 end
 
 function LuiPager:set_scale(scale)
@@ -218,7 +215,6 @@ function LuiPager:set_scale(scale)
         scale = 1
     end
     self._scale = scale
-    self:_layout()
 end
 
 function LuiPager:SetSize(w, h)
@@ -229,13 +225,7 @@ end
 function LuiPager:_layout()
     local w, h = self:GetSize()
     local nav_w = self._nav_w
-    if nav_w == nil then
-        nav_w = _scaled_int(self._scale, BASE_NAV_W)
-    end
     local gap = self._gap
-    if gap == nil then
-        gap = _scaled_int(self._scale, BASE_GAP)
-    end
 
     self.prev_button:SetPosition(0, 0)
     self.prev_button:SetSize(nav_w, h)

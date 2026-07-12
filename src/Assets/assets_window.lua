@@ -502,9 +502,7 @@ function AssetsWindow:Constructor()
     }
     self.tile_size = 40
     self.view_mode = LUI_ENUMS.assets_view_mode.DETAILS
-    self.page_index = 1
     self.page_size = 1
-    self.page_count = 1
     self.all_records = {}
     self.records = {}
     self.filter_groups = {}
@@ -630,11 +628,14 @@ function AssetsWindow:Constructor()
     self.page_bar = Turbine.UI.Control()
     self.page_bar:SetParent(content_host)
 
+    -- during _sync_pager the caller renders right after, so the callback
+    -- skips its own render
     self.pager = UI.Widgets.LuiPager()
     self.pager:SetParent(self.page_bar)
-    self.pager.changed = function(new_page)
-        self.page_index = new_page
-        self:refresh_page(true)
+    self.pager.changed = function()
+        if self._pager_syncing ~= true then
+            self:refresh_page(true)
+        end
     end
 
     self.filter_bar = Turbine.UI.Control()
@@ -865,7 +866,7 @@ function AssetsWindow:set_view_mode(mode, persist)
     State.settings.assets.view_mode = mode
     State.loaded_settings.assets.view_mode = mode
 
-    self.pager:set_page(1)
+    self:_sync_pager(1)
     self:_apply_layout_for_mode(mode)
     if self:is_tiled() == true then
         local geometry = self:get_geometry()
@@ -880,6 +881,19 @@ function AssetsWindow:set_view_mode(mode, persist)
     self:_sync_menu_actions()
     self:layout()
     self:refresh_from_store(true)
+end
+
+-- programmatic pager updates inside a refresh flow: the flow renders once
+-- itself, so the pager's changed callback must not render again
+function AssetsWindow:_sync_pager(page, page_count)
+    self._pager_syncing = true
+    if page ~= nil then
+        self.pager:set_page(page)
+    end
+    if page_count ~= nil then
+        self.pager:set_page_count(page_count)
+    end
+    self._pager_syncing = false
 end
 
 function AssetsWindow:update_filter()
@@ -1622,7 +1636,7 @@ function AssetsWindow:_apply_record_view(reset_page)
     self.total_record_count = total_record_count
     self.records = filtered
     if reset_page == true then
-        self.pager:set_page(1)
+        self:_sync_pager(1)
     end
 
     self:_refresh_recipes_button()
@@ -1921,13 +1935,13 @@ function AssetsWindow:layout()
     self.page_bar:SetPosition(margin_left, footer_top)
     self.page_bar:SetSize(inner_w, page_h)
 
-    local pager_w = (nav_w * 2) + page_w + (gap * 2)
+    self.pager:set_metrics(nav_w, gap)
+    local pager_w = self.pager:preferred_width(page_w)
     local pager_x = math.floor((inner_w - pager_w) / 2)
     if pager_x < 0 then
         pager_x = 0
     end
 
-    self.pager:set_metrics(nav_w, gap)
     self.pager:SetPosition(pager_x, 0)
     self.pager:SetSize(pager_w, page_h)
 
@@ -1965,12 +1979,11 @@ end
 function AssetsWindow:refresh_page(force_bind)
     local metrics = self:_get_content_metrics()
     self.page_size = metrics.page_size
-    self.page_count = math.max(1, math.ceil(#self.records / self.page_size))
-    self.pager:set_page_count(self.page_count)
+    self:_sync_pager(nil, math.max(1, math.ceil(#self.records / self.page_size)))
 
     self:_ensure_entries(self.page_size)
 
-    local start_index = ((self.page_index - 1) * self.page_size) + 1
+    local start_index = ((self.pager:get_page() - 1) * self.page_size) + 1
     local page_start_index = start_index - 1
     local visible_count = #self.records - start_index + 1
     if visible_count < 0 then
