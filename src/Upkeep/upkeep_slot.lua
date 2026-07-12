@@ -313,6 +313,13 @@ end
 -- auto-order sort key: seconds until this skill both needs and can be
 -- recast. 0 = act now; permanent/toggle buffs and unbound or untracked
 -- slots never need attention and sort last.
+--
+-- CONTRACT: this must stay a plain countdown -- max(deadline - now, 0)
+-- or math.huge -- so every slot's key falls at the same rate and the
+-- relative order can only change on a discrete event. The event-driven
+-- re-sort (_order_dirty in upkeep_window) skips quiet ticks on exactly
+-- that basis; any non-linear shaping here (thresholds, tiers, bucketing)
+-- would let the order change with no event and go silently stale.
 function UpkeepSlot:urgency(now)
     -- unbound, or bound but untracked (skill missing from the skills DB):
     -- nothing to watch, never urgent

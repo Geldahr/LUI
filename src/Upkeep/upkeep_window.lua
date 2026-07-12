@@ -75,6 +75,16 @@ function UpkeepWindow:Constructor()
     -- only change on discrete events (effect added/removed, cooldown
     -- reset time changed); those mark it dirty via invalidate_order()
     self._order_dirty = true
+    -- built once so table.sort does not allocate a fresh closure per
+    -- re-sort; reads the buffers in place (they are never reassigned)
+    local urgency = self._urgency_buf
+    local rank = self._rank_buf
+    self._order_compare = function(a, b)
+        if urgency[a] ~= urgency[b] then
+            return urgency[a] < urgency[b]
+        end
+        return rank[a] < rank[b]
+    end
     self.last_update_at = 0
     self.update_every = 1.0 / State.settings.global.refresh_rate
     self._skill_discover_due_at = 0
@@ -223,7 +233,7 @@ function UpkeepWindow:apply_settings()
     end
 
     self:_sync_companion_positions()
-    self:invalidate_order()
+    -- _rescan_effects invalidates the auto order, no separate call needed
     self:_rescan_effects()
     self:_discover_skills(true)
     self:refresh_visibility()
@@ -322,12 +332,7 @@ function UpkeepWindow:_apply_auto_order(now)
             rank[slot_index] = k
         end
     end
-    table.sort(order, function(a, b)
-        if urgency[a] ~= urgency[b] then
-            return urgency[a] < urgency[b]
-        end
-        return rank[a] < rank[b]
-    end)
+    table.sort(order, self._order_compare)
 
     local changed = false
     for k = 1, count do
