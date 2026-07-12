@@ -1232,7 +1232,6 @@ function CraftingWindow:Constructor()
     self._recipe_list_signature = nil
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
-    self._recipe_list_row_width = 0
     self._recipe_list_page_size = 0
     self._recipe_page_rendered_start = 1
     self._recipe_page_rendered_end = 0
@@ -2938,10 +2937,6 @@ function CraftingWindow:_selected_recipe()
     return self.store.recipe_by_id[self.selected_recipe_id]
 end
 
-function CraftingWindow:_current_recipe_list_width()
-    return self.recipe_table:GetWidth()
-end
-
 function CraftingWindow:set_recipe_page(index)
     local page = math.max(1, math.min(self.recipe_page_count, tonumber(index) or 1))
     if page == self.recipe_page_index then
@@ -3100,7 +3095,6 @@ function CraftingWindow:_invalidate_recipe_list()
     self._recipe_list_signature = nil
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
-    self._recipe_list_row_width = 0
     self._recipe_list_page_size = 0
     self._recipe_page_rendered_start = 1
     self._recipe_page_rendered_end = 0
@@ -3139,9 +3133,14 @@ function CraftingWindow:_ensure_recipe_row_cells(slot)
     -- re-renders every row
     cells.icon_host = Turbine.UI.Control()
     cells.icon_host:SetMouseVisible(false)
-    cells.icon = CraftingItemIcon(function()
-        self:_select_recipe_row(slot, cells.recipe)
-    end)
+    cells.icon = CraftingItemIcon(
+        function()
+            self:_select_recipe_row(slot, cells.recipe)
+        end,
+        function(hovering)
+            self.recipe_table:hover_row(slot, hovering)
+        end
+    )
     cells.icon:set_side(_fixed_int(BASE_ICON_SIDE))
     cells.icon:SetParent(cells.icon_host)
     cells.center_icon = function()
@@ -3328,15 +3327,16 @@ function CraftingWindow:_render_recipe_page_rows()
 end
 
 -- loading tick, pages mode: re-render only when new visible recipes landed
--- inside the current page's range (in-place label updates, no rebuilds)
+-- inside the current page's range. The page capacity is stable here (a
+-- capacity change breaks the incremental signature and forces the full
+-- path), so the skip check can run on the current page size; only the
+-- pager label needs to track the growing total.
 function CraftingWindow:_append_recipe_page_rows_until_full()
-    self:_refresh_recipe_page_controls()
-
     local start_index = ((self.recipe_page_index - 1) * self.recipe_page_size) + 1
     local end_index = math.min(#self.visible_recipes, start_index + self.recipe_page_size - 1)
     if self._recipe_page_rendered_start == start_index and
         self._recipe_page_rendered_end >= end_index then
-        self._recipe_list_page_size = self.recipe_page_size
+        self:_refresh_recipe_page_controls()
         return false
     end
 
@@ -3373,7 +3373,6 @@ end
 function CraftingWindow:refresh_recipe_list(options)
     local should_refresh_selected = type(options) ~= "table" or options.refresh_selected ~= false
     local previous_selected = self.selected_recipe_id
-    local row_w = self:_current_recipe_list_width()
     local loading = self.store:is_loading() == true
     local signature = self:_recipe_filter_signature()
     local loaded_count = #self.store.recipes
@@ -3384,10 +3383,12 @@ function CraftingWindow:refresh_recipe_list(options)
         rows_changed = false,
         full_refresh = false,
     }
+    -- width is deliberately not part of the check: rendering is
+    -- width-independent (the table relayouts cells itself) and resizes
+    -- invalidate the list through SizeChanged anyway
     local can_incremental = loading == true and
         self._recipe_list_loading == true and
         self._recipe_list_signature == signature and
-        self._recipe_list_row_width == row_w and
         (pages_mode ~= true or self._recipe_list_page_size == page_size) and
         loaded_count >= self._recipe_list_loaded_count
 
@@ -3443,15 +3444,15 @@ function CraftingWindow:refresh_recipe_list(options)
     self._recipe_list_signature = signature
     self._recipe_list_loaded_count = loaded_count
     self._recipe_list_loading = loading
-    self._recipe_list_row_width = row_w
     if pages_mode ~= true then
         self._recipe_list_page_size = 0
         self._recipe_page_rendered_start = 1
         self._recipe_page_rendered_end = 0
     end
 
+    -- the table stays visible with zero rows: the header (column captions)
+    -- keeps framing the list while the empty label explains the state
     local has_items = #self.visible_recipes > 0
-    self.recipe_table:SetVisible(has_items)
     self.recipe_page_bar:SetVisible(pages_mode == true)
     self.recipe_empty:SetVisible(has_items ~= true)
     if has_items ~= true then
@@ -4126,7 +4127,8 @@ function CraftingWindow:_layout_recipe_panel()
         recipe_list_h = 0
     end
 
-    self.recipe_table:set_header_height(_scaled_int(20))
+    local header_h = _scaled_int(20)
+    self.recipe_table:set_header_height(header_h)
     self.recipe_table:set_row_height(_even_int(_scaled_int(BASE_RECIPE_ROW_H)))
     self.recipe_table:set_column_width(1, _scaled_int(4))
     self.recipe_table:set_column_width(2, _scaled_int(40))
@@ -4162,10 +4164,12 @@ function CraftingWindow:_layout_recipe_panel()
         self.recipe_next_button:SetPosition(pager_x + nav_w + gap + page_label_w + gap, page_button_margin)
         self.recipe_next_button:SetSize(nav_w, bar_h)
     end
-    self.recipe_empty:SetPosition(_scaled_int(8), _scaled_int(8))
+    -- below the always-visible table header, over the (empty) body area
+    local empty_y = header_h + _scaled_int(8)
+    self.recipe_empty:SetPosition(_scaled_int(8), empty_y)
     self.recipe_empty:SetSize(
         math.max(0, recipe_inner_w - _scaled_int(16)),
-        math.max(0, recipe_list_h - _scaled_int(16))
+        math.max(0, recipe_list_h - empty_y - _scaled_int(8))
     )
 end
 
@@ -4210,7 +4214,6 @@ function CraftingWindow:layout()
     local detail_header_h = detail_top_h + critical_result_h + section_bar_h
     local plan_controls_w = _scaled_int(BASE_PLAN_CONTROLS_W)
     local loading_track_h = _scaled_int(BASE_LOADING_TRACK_H)
-    local pages_mode = self.display_mode == DISPLAY_PAGES
 
     self.top_bar:SetPosition(margin_left, margin_top)
     self.top_bar:SetSize(width - margin_left - margin_right, top_bar_h)

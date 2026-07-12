@@ -445,10 +445,21 @@ function LuiTable:insert_row(index, cells)
         -- ListBox owns stacking; mid-list inserts rebuild the item list
         if index == #self._rows then
             self._list:AddItem(row.control)
+            self:_reindex(index)
+            -- append fast path (mirrors the paged one): scroll callers
+            -- render row by row, so a full relayout per insert costs
+            -- O(n^2) cell placements; the new row only needs its own
+            -- geometry - the ListBox stacks it, and scroll mode never
+            -- hides bottom separators
+            if self._resolved ~= nil then
+                self:_layout_row(row)
+                row.bottom_sep:SetVisible(self._h_border_w > 0)
+                return index
+            end
         else
             self:_rebuild_list_items()
+            self:_reindex(index)
         end
-        self:_reindex(index)
         self:_layout()
         return index
     end
@@ -628,6 +639,20 @@ end
 function LuiTable:set_row_hover(enabled)
     self._hover_enabled = enabled == true
     if self._hover_enabled ~= true then
+        self:_set_hover_index(nil)
+    end
+end
+
+-- mouse-visible cell widgets (icons, buttons) intercept the row's
+-- MouseEnter/MouseLeave; their own hover callbacks re-assert row hover
+-- through this so the highlight does not flicker while crossing them
+function LuiTable:hover_row(index, hovering)
+    if self._hover_enabled ~= true then
+        return
+    end
+    if hovering == true then
+        self:_set_hover_index(index)
+    elseif self._hover_index == index then
         self:_set_hover_index(nil)
     end
 end
