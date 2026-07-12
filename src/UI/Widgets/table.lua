@@ -503,8 +503,12 @@ function LuiTable:_layout_appended_row(row, index)
             Turbine.UI.Control.SetSize(self, self:GetWidth(), target_h)
             local bw = self:_frame_border()
             local body_y = bw + self._header_h + bw
+            local body_h = math.max(0, target_h - body_y - bw)
             self.body:SetSize(math.max(1, self:GetWidth() - (2 * bw)),
-                math.max(1, target_h - body_y - bw))
+                math.max(1, body_h))
+            -- the body may have been hidden by an empty-table layout; the
+            -- append fast path skips _layout, so re-show it here
+            self.body:SetVisible(body_h > 0)
         end
     end
 end
@@ -813,8 +817,13 @@ function LuiTable:_layout()
 
     -- the header underline separates the title bar from the body
     local body_y = bw + self._header_h + bw
+    local body_h = math.max(0, h - body_y - bw)
     self.body:SetPosition(bw, body_y)
-    self.body:SetSize(inner_w, math.max(1, h - body_y - bw))
+    -- an empty auto-height table closes right under the header: the body
+    -- must disappear entirely, or its clamped 1px row-colored line paints
+    -- over the bottom border (a 2px border then reads as 1px)
+    self.body:SetSize(inner_w, math.max(1, body_h))
+    self.body:SetVisible(body_h > 0)
 
     if self._mode == "scroll" then
         local list_w = math.max(1, inner_w - SCROLL_SIZE - SCROLL_GAP)
