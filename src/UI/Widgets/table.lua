@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- LuiTable: a simplified QTableWidget-style list. A header bar with column
+-- LuiTable: a simplified column-based list. A header bar with column
 -- captions above rows of widget cells. Two modes: "paged" (default, plain
 -- body, the caller owns pagination and swaps row contents; no scroll
 -- viewport so scaled icons cannot escape clipping) and "scroll" (ListBox +
@@ -11,7 +11,9 @@
 --
 -- Columns: fixed pixel widths, or nil for the single stretch column that
 -- absorbs the remaining width (first nil wins; with none, the last column
--- stretches). Cells are widgets; strings become internal labels.
+-- stretches). Cells are widgets; strings become internal labels. Content
+-- is inset by CELL_PAD_X; the cell background (set_cell_background) is a
+-- cell property and fills the full cell region up to the grid lines.
 
 local class = _G.LUI.Core.class
 import "Turbine.UI"
@@ -512,6 +514,36 @@ function LuiTable:get_cell(row_index, col)
     return self._rows[row_index].cells[col]
 end
 
+-- cell background: fills the whole cell region -
+-- column width x row height, no content padding - behind the content,
+-- ending at the grid lines. nil clears. Bands survive set_row/set_cell,
+-- so pooled pages re-assert the color alongside the cell values.
+function LuiTable:set_cell_background(row_index, col, color)
+    local row = self._rows[row_index]
+    if color == nil then
+        if row.bands ~= nil and row.bands[col] ~= nil then
+            row.bands[col]:SetVisible(false)
+        end
+        return
+    end
+
+    if row.bands == nil then
+        row.bands = {}
+    end
+    local band = row.bands[col]
+    if band == nil then
+        band = Turbine.UI.Control()
+        band:SetParent(row.control)
+        band:SetMouseVisible(false)
+        -- under the content cells and the separators (both default 0)
+        band:SetZOrder(-1)
+        row.bands[col] = band
+        self:_layout_band(row, col)
+    end
+    band:SetBackColor(color)
+    band:SetVisible(true)
+end
+
 function LuiTable:remove_row(index)
     local row = table.remove(self._rows, index)
     for c = 1, #row.cells do
@@ -637,6 +669,15 @@ function LuiTable:_row_content_width()
     return inner_w
 end
 
+function LuiTable:_layout_band(row, col)
+    local resolved = self._resolved
+    if resolved == nil then
+        return
+    end
+    row.bands[col]:SetPosition(resolved[col].x, 0)
+    row.bands[col]:SetSize(resolved[col].w, self._row_h)
+end
+
 function LuiTable:_layout_row(row)
     local resolved = self._resolved
     if resolved == nil then
@@ -647,6 +688,11 @@ function LuiTable:_layout_row(row)
         local col = resolved[c]
         row.cells[c]:SetPosition(col.x + CELL_PAD_X, 0)
         row.cells[c]:SetSize(math.max(1, col.w - (2 * CELL_PAD_X)), self._row_h)
+    end
+    if row.bands ~= nil then
+        for c in pairs(row.bands) do
+            self:_layout_band(row, c)
+        end
     end
     for c = 1, #row.seps do
         row.seps[c]:SetPosition(resolved[c].x + resolved[c].w, 0)
