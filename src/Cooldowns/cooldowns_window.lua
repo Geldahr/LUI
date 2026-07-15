@@ -13,12 +13,14 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.Cooldowns.cooldown_entry"
+import "LUI.src.Cooldowns.cooldown_groups"
 import "LUI.src.Cooldowns.time_display"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
 
 local add_callback = _G.LUI.Utils.add_callback
 local remove_callback = _G.LUI.Utils.remove_callback
+local SKILL_GROUPS = Cooldowns.SKILL_GROUPS
 ---@class RecoveringSkill
 ---@field key string
 ---@field name string
@@ -46,10 +48,56 @@ function RecoveringSkill:Constructor(skill, name_key, name, white_listed)
     self.cb_reset = nil
 end
 
+---@class RecoveringGroup
+---@field channel number
+---@field members RecoveringSkill[]
+---@field face RecoveringSkill
+---@field name string
+---@field name_key string
+---@field is_white boolean
+---@field icon Turbine.UI.Graphic
+---@field reset_time number
+---@field enter_at number
+---@field rotate_at number
+---@field rotate_index number
+local RecoveringGroup = class()
+Cooldowns.RecoveringGroup = RecoveringGroup
+
+function RecoveringGroup:Constructor(channel)
+    self.channel = channel
+    self.members = {}
+    self.face = nil
+    self.name = nil
+    self.name_key = nil
+    self.is_white = false
+    self.icon = nil
+    self.reset_time = nil
+    self.enter_at = nil
+    self.rotate_at = 0
+    self.rotate_index = 0
+end
+
 local CooldownsWindow = class(UI.Widgets.LuiHUD)
 Cooldowns.CooldownsWindow = CooldownsWindow
 
 local SKILL_DISCOVER_EVERY = 30.0
+local GROUP_ROTATE_EVERY = 2.0
+
+-- Whitelisted members lead, then the shortest name (the base skill
+-- rather than its cosmetic variants).
+local function _compare_members(a, b)
+    if a.is_white ~= b.is_white then
+        return a.is_white
+    end
+
+    local l1 = #a.name
+    local l2 = #b.name
+    if l1 ~= l2 then
+        return l1 < l2
+    end
+
+    return a.name_key < b.name_key
+end
 
 local function _trim(s)
     if type(s) ~= "string" then
@@ -180,6 +228,7 @@ function CooldownsWindow:Constructor()
 
     self._skill_discover_due_at = 0
     self._skills = {}
+    self._groups = {}
     self._active_white = {}
     self._active_other = {}
     self._active_order = {}
@@ -318,6 +367,7 @@ function CooldownsWindow:_draw_entries(now, threshold)
     local s = self:get_settings()
     local capacity = s.columns * s.rows
     local invert = s.flow == LUI_ENUMS.list_flow.BOTTOM_TO_TOP
+    local rotate = s.group_display == LUI_ENUMS.cooldown_group_display.ROTATE
 
     self._is_updating_entries = true
     for i = 1, capacity do
@@ -326,8 +376,18 @@ function CooldownsWindow:_draw_entries(now, threshold)
         local rec = self._active_order[i]
 
         if rec ~= nil then
+            if rotate and rec.members ~= nil then
+                self:_rotate_group(rec, now)
+            end
             local remaining = rec.reset_time - now
-            local base_seconds = rec.cooldown_seconds
+            -- A group's bar scales by the displayed member's own base
+            -- cooldown so the fill matches the shown skill.
+            local base_seconds
+            if rec.face ~= nil then
+                base_seconds = rec.face.cooldown_seconds
+            else
+                base_seconds = rec.cooldown_seconds
+            end
             if base_seconds <= 0 then
                 base_seconds = remaining
             end
@@ -469,6 +529,23 @@ function CooldownsWindow:_insert_pending_skill(rec, threshold)
     _insert_sorted(self._pending, rec, _compare_pending)
 end
 
+-- Insert a recovering record into the active or pending list depending
+-- on the remaining time; returns true when the record was placed.
+function CooldownsWindow:_place_record(rec, threshold, now)
+    local remaining = rec.reset_time - now
+    if remaining <= 0 then
+        return false
+    end
+
+    if remaining <= threshold then
+        self:_insert_active_skill(rec)
+    else
+        self:_insert_pending_skill(rec, threshold)
+    end
+
+    return true
+end
+
 function CooldownsWindow:_update_skill_runtime(rec)
     if rec == nil then
         return
@@ -478,14 +555,7 @@ function CooldownsWindow:_update_skill_runtime(rec)
 
     local threshold = self:get_settings().threshold
     if threshold > 0 and rec.reset_time ~= nil then
-        local now = Turbine.Engine.GetGameTime()
-        local remaining = rec.reset_time - now
-        if remaining > 0 then
-            if remaining <= threshold then
-                self:_insert_active_skill(rec)
-            else
-                self:_insert_pending_skill(rec, threshold)
-            end
+        if self:_place_record(rec, threshold, Turbine.Engine.GetGameTime()) then
             changed = true
         end
     end
@@ -523,14 +593,7 @@ function CooldownsWindow:_process_structure_changes(now)
                 rec.enter_at = nil
 
                 if rec.reset_time ~= nil then
-                    local remaining = rec.reset_time - now
-                    if remaining > 0 then
-                        if remaining <= threshold then
-                            self:_insert_active_skill(rec)
-                        else
-                            self:_insert_pending_skill(rec, threshold)
-                        end
-                    end
+                    self:_place_record(rec, threshold, now)
                 end
 
                 changed = true
@@ -617,6 +680,8 @@ function CooldownsWindow:_discover_skills(force)
     self:_clear_skill_callbacks()
     self:_clear_runtime_lists()
     self._skills = {}
+    local previous_groups = self._groups
+    self._groups = {}
 
     local wl = self._wl_set
     local wl_prefixes = self._wl_prefixes
@@ -674,21 +739,38 @@ function CooldownsWindow:_discover_skills(force)
 
                             self:_refresh_skill_state(rec)
 
-                            if threshold > 0 and rec.reset_time ~= nil then
-                                local remaining = rec.reset_time - now
-                                if remaining > 0 then
-                                    if remaining <= threshold then
-                                        self:_insert_active_skill(rec)
-                                    else
-                                        self:_insert_pending_skill(rec, threshold)
-                                    end
+                            local channel = SKILL_GROUPS[name_key]
+                            if channel ~= nil then
+                                -- Shared-cooldown channel: the group record
+                                -- enters the lists, not the member.
+                                local group = self._groups[channel]
+                                if group == nil then
+                                    group = Cooldowns.RecoveringGroup(channel)
+                                    self._groups[channel] = group
                                 end
-                            end
+                                group.members[#group.members + 1] = rec
 
-                            rec.cb_reset = add_callback(skill, "ResetTimeChanged", function()
-                                self:_refresh_skill_state(rec)
-                                self:_update_skill_runtime(rec)
-                            end)
+                                rec.cb_reset = add_callback(skill, "ResetTimeChanged", function()
+                                    self:_refresh_skill_state(rec)
+                                    -- A channel reset fires every member's
+                                    -- event; only a change of the group's
+                                    -- aggregate re-places it in the lists.
+                                    local previous_reset = group.reset_time
+                                    self:_refresh_group(group)
+                                    if group.reset_time ~= previous_reset then
+                                        self:_update_skill_runtime(group)
+                                    end
+                                end)
+                            else
+                                if threshold > 0 and rec.reset_time ~= nil then
+                                    self:_place_record(rec, threshold, now)
+                                end
+
+                                rec.cb_reset = add_callback(skill, "ResetTimeChanged", function()
+                                    self:_refresh_skill_state(rec)
+                                    self:_update_skill_runtime(rec)
+                                end)
+                            end
 
                             out[out_len] = rec
                         end
@@ -699,5 +781,72 @@ function CooldownsWindow:_discover_skills(force)
     end
 
     self._skills = out
+
+    local rotate = settings.group_display == LUI_ENUMS.cooldown_group_display.ROTATE
+    for channel, group in pairs(self._groups) do
+        table.sort(group.members, _compare_members)
+        local rep = group.members[1]
+        group.name_key = rep.name_key
+        group.is_white = rep.is_white == true
+
+        -- Rediscovery must not restart a running rotation: carry the
+        -- rotation state over and keep showing the same member. The
+        -- carried index falls back to the representative when the
+        -- membership shrank in between.
+        local face = rep
+        if rotate then
+            local previous = previous_groups[channel]
+            if previous ~= nil then
+                group.rotate_at = previous.rotate_at
+                group.rotate_index = previous.rotate_index
+                face = group.members[group.rotate_index] or rep
+            end
+        end
+        group.face = face
+        group.name = face.name
+        group.icon = face.icon
+
+        self:_refresh_group(group)
+
+        if threshold > 0 and group.reset_time ~= nil then
+            self:_place_record(group, threshold, now)
+        end
+    end
+
     self:_rebuild_active_order()
+end
+
+function CooldownsWindow:_refresh_group(group)
+    local reset_time = nil
+
+    local members = group.members
+    for i = 1, #members do
+        local m = members[i]
+        if m.reset_time ~= nil and (reset_time == nil or m.reset_time > reset_time) then
+            reset_time = m.reset_time
+        end
+    end
+
+    group.reset_time = reset_time
+end
+
+function CooldownsWindow:_rotate_group(group, now)
+    if now < group.rotate_at then
+        return
+    end
+    group.rotate_at = now + GROUP_ROTATE_EVERY
+
+    local members = group.members
+    local count = #members
+    for _ = 1, count do
+        local index = (group.rotate_index % count) + 1
+        group.rotate_index = index
+        local m = members[index]
+        if m.reset_time ~= nil and m.reset_time > now then
+            group.face = m
+            group.name = m.name
+            group.icon = m.icon
+            return
+        end
+    end
 end

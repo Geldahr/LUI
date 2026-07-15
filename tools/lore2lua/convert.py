@@ -1637,6 +1637,56 @@ def convert_skills(out_dir, langs, skills, buffs, aux):
     print("done in %.1fs\n" % (time.time() - t0))
 
 
+def convert_cooldown_groups(out_dir, langs, records):
+    """Pack skill cooldown-channel groups (tools/data-extractor
+    extract_cooldown_channels) into per-language name -> channel maps.
+
+    cooldown_groups_<lang>.lua: D.GROUPS = { [name] = channel }, where
+    name is the localized skill name lowered exactly like the runtime's
+    string.lower() (en fallback for missing translations). Names that
+    map to more than one channel are dropped (ambiguous at runtime),
+    then channels left with fewer than two distinct names (nothing to
+    group)."""
+    t0 = time.time()
+    sizes = {}
+    for lang in langs:
+        by_name = {}
+        conflicts = set()
+        for did in sorted(records):
+            rec = records[did]
+            name = rec["name"] if lang == "en" else rec.get("name_" + lang)
+            if not name:
+                name = rec["name"]  # en fallback
+            key = _lua_lower(name)
+            channel = rec["channel"]
+            previous = by_name.get(key)
+            if previous is not None and previous != channel:
+                conflicts.add(key)
+            by_name[key] = channel
+        for key in conflicts:
+            del by_name[key]
+
+        members = {}
+        for channel in by_name.values():
+            members[channel] = members.get(channel, 0) + 1
+        groups = {key: channel for key, channel in by_name.items()
+                  if members[channel] >= 2}
+
+        parts = ["D.GROUPS = {\n"]
+        for key in sorted(groups):
+            parts.append("[%s]=%d,\n" % (lua_string(key), groups[key]))
+        parts.append("}\n")
+        name = "cooldown_groups_%s.lua" % lang
+        sizes[name] = write_file(out_dir, name, parts)
+        print("%s: %d names in %d channels (%d ambiguous dropped,"
+              " %d single-name dropped)" % (
+                  name, len(groups), len(set(groups.values())),
+                  len(conflicts), len(by_name) - len(groups)))
+    total = sum(sizes.values())
+    print("cooldown groups done in %.1fs (%.0f kB total)\n" % (
+        time.time() - t0, total / 1e3))
+
+
 # ------------------------------------------------------------- bestiary ----
 # Packs the wiki bestiary (src/Encyclopedia/data.lua, dumped to JSON by
 # bestiary_dump.lua) into blobs. The decode layer reproduces the raw

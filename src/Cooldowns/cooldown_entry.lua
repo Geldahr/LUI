@@ -75,6 +75,7 @@ function CooldownEntry:Constructor()
     self.skill = nil
     self.expired_event = nil
     self._expired_sent = false
+    self._shown_icon = nil
     self.bar_inner_len = 0
     self.bar_anchor_far = false
     self.vertical = false
@@ -319,6 +320,7 @@ function CooldownEntry:apply_settings()
     self.icon:SetPosition(0, 0)
     self.icon:set_size(icon_size, icon_size)
     if self.skill ~= nil and self.skill.icon ~= nil then
+        self._shown_icon = self.skill.icon
         self.icon:set_icon(self.skill.icon, icon_size, icon_size)
     end
 
@@ -335,6 +337,7 @@ function CooldownEntry:set_skill(skill)
     if skill == nil then
         self.skill = nil
         self._expired_sent = false
+        self._shown_icon = nil
         if self._icon_size ~= nil then
             self.icon:set_icon(nil, self._icon_size, self._icon_size)
         else
@@ -353,19 +356,28 @@ function CooldownEntry:set_skill(skill)
         return
     end
 
+    -- A group record keeps its identity while its displayed member
+    -- rotates, so the icon can change without the record changing.
     if skill == self.skill then
+        if skill.icon ~= self._shown_icon then
+            self:_apply_icon(skill.icon)
+        end
         return
     end
 
     self.skill = skill
     self._expired_sent = false
     self:SetVisible(true)
+    self:_apply_icon(skill.icon)
+end
 
-    if skill.icon ~= nil then
+function CooldownEntry:_apply_icon(icon)
+    self._shown_icon = icon
+    if icon ~= nil then
         if self._icon_size ~= nil then
-            self.icon:set_icon(skill.icon, self._icon_size, self._icon_size)
+            self.icon:set_icon(icon, self._icon_size, self._icon_size)
         else
-            self.icon:set_icon(skill.icon)
+            self.icon:set_icon(icon)
         end
         self.icon:SetVisible(true)
     else

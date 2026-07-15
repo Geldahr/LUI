@@ -401,6 +401,7 @@ _G.LUI.Settings.Defaults.Schema =
 			["blacklist"] = "",
 			["columns"] = 1.000000,
 			["flow"] = 2.000000,
+			["group_display"] = 1.000000,
 			["icon_side"] = 2.000000,
 			["item_h"] = 26.000000,
 			["item_w"] = 150.000000,
