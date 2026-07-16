@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v2.1.0
+
+### Added
+
 - Added the Upkeep bar: a configurable row (or column) of skill icons that tracks maintenance buffs. Bind skills by dragging them onto the slot editor in the new `Upkeep` settings tab; the bar then shows one of three states per slot — buff active (remaining buff time plus an optional draining color overlay), buff down while the skill recovers (shaded and/or faded icon with the remaining cooldown, each style with its own color/strength), and ready to recast (plain icon). While the buff is running, an optional shade can fill the already-consumed part of the icon until the skill's cooldown ends, so a slot reads "ready to refresh" at a glance the moment recasting is possible. An optional auto order re-arranges the slots by urgency (the next skill to reactivate at the chosen end of the bar). Skills are resolved to the buffs they apply through a table extracted from the game client (5,993 skills → 6,276 buffs, localized in English, French, and German), so it also works for the many skills whose buff name differs from the skill name; toggle buffs without a duration show as active without a countdown. The bar is a pure tracker (recast from the action bars): each slot is LUI's own drawing of the skill icon, so it scales and centers exactly. Slot count (1–12), icon size, spacing, orientation, per-state timers and colors, and the timer font are configurable.
 
 - Added an `Orientation` setting (Horizontal / Vertical) to the Cooldowns window and both Expiring Effects windows (Self and Target). Vertical bars keep the icon at the chosen end (the side dropdowns now read `Left/Top` and `Right/Bottom`) and fill along the vertical axis; the remaining-time text is drawn horizontally across the bar in the same format as on horizontal bars; on thin bars it first steps the font down through the same family's smaller sizes to fit, and is dropped only when even the smallest size cannot fit — the configured thickness is never widened. The effect/skill name is hidden on vertical bars. The size settings are now axis-independent (`Item length`/`Item thickness` for cooldowns, `Bar length`/`Bar thickness` for effects), so switching orientation rotates the bars without re-entering sizes.
@@ -20,8 +30,6 @@
 ### Fixed
 
 - Timer countdowns no longer show a `10.0s` frame when crossing the 10-second boundary: the decimal is now truncated instead of rounded, so the text reads `10s` and then `9.9s`, `9.8s`, ... (same fix for the unitless countdown on effect icons).
-
-### Removed
 
 ## v2.0.0
 
