@@ -1,20 +1,29 @@
 # data-extractor — LOTRO game data → packed Lua
 
-Builds the LUI Items and Recipes databases directly from the LOTRO
-client's `.dat` archives. Pure Python 3 stdlib, no intermediate files:
-`extract.py` scans the client data once and calls
-`tools/lore2lua/convert.py` in-process to emit the packed Lua under
-`src/Data`.
+Builds the LUI game-data databases (items, recipes, quests + deeds,
+NPCs, skills, cooldown groups) directly from the LOTRO client's `.dat`
+archives. Pure Python 3 stdlib, no intermediate files: `extract.py`
+scans the client data once and calls `tools/lore2lua/convert.py`
+in-process to emit the packed Lua under `src/Data`.
 
 ## Usage
+
+One command, run from the repo root, regenerates **all** databases
+under `src/Data`; the game directory is the only required argument
+(Windows and WSL paths both work):
 
 ```
 python3 tools/data-extractor/extract.py "G:\The Lord of the Rings Online"
 ```
 
-Defaults: `--out src/Data --langs de,en,fr --db items,recipes,quests,npcs`.
-Windows and WSL paths both work. Runtime ~2.5 min. `--json <path>`
-optionally dumps the raw records for inspection.
+Defaults: `--out src/Data --langs de,en,fr` and
+`--db items,recipes,quests,npcs,skills,cooldown_groups` — every
+database this pipeline produces. Pass `--db` with a comma-separated
+subset to regenerate only some of them. Runtime ~2.5 min.
+`--json <path>` optionally dumps the raw records for inspection.
+Review the `src/Data` diff and commit the regenerated files like any
+other change. Nodes and Bestiary data are not produced by this
+pipeline yet — see Pending below.
 
 The quests db covers quests **and** deeds (20,480 records, ~95 MB raw
 / ~26 MB zipped). Numeric records: kind, challenge level, min level,
@@ -66,6 +75,15 @@ icon ids, base durations in tenths of seconds, 0 = none);
 many-to-many: trait-rank variants are distinct skill ids sharing one
 name, one skill can grant several buffs, and monster/NPC skills are
 included (debuff sourcing). No runtime loader consumes it yet.
+
+The cooldown-groups db (`src/Data/Skills/cooldown_groups_<lang>.lua`)
+maps lowercased localized skill names to their shared-cooldown channel
+(the `Skill_RecoveryChannel` property): skills on one channel recover
+together, and the Cooldowns window uses this table to collapse them
+into a single entry. Dev-marker names (`DNT`/`TBD`), names that map to
+more than one channel (ambiguous at runtime, where the name is the
+only join key), and channels left with fewer than two distinct names
+are dropped at pack time.
 
 Stackable items (`Inventory_MaxQuantity > 1`) also get their localized
 plural display name (the `PluralName` item property — the form loot
