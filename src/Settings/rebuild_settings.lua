@@ -764,6 +764,7 @@ function Settings.rebuild()
     cd.enabled = raw_cd.enabled
     cd.threshold = raw_cd.threshold
     cd.min_base_cooldown = raw_cd.min_base_cooldown
+    cd.group_display = raw_cd.group_display
     cd.columns = raw_cd.columns
     cd.rows = raw_cd.rows
     cd.flow = raw_cd.flow

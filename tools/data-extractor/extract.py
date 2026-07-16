@@ -1005,6 +1005,34 @@ def extract_skills(facade, langs, scan_result):
     return skills, effects
 
 
+def extract_cooldown_channels(facade, langs, scan_result):
+    """Skill_RecoveryChannel per skill: the game's shared-cooldown
+    channels (all skills on one channel recover together, e.g. the
+    Captain summons and their cosmetic variants)."""
+    langs = [l for l in langs if l in facade.locales]
+    decoder_langs = [l for l in langs if l != "en"]
+    t0 = time.time()
+    out = {}
+    for did in scan_result.skill_dids:
+        props = facade.load_object_properties(did)
+        if props is None:
+            continue
+        channel = props.get("Skill_RecoveryChannel")
+        if channel is None:
+            continue
+        name_info = props.get("Skill_Name")
+        name = localized(facade, name_info, "en")
+        if name is None or name == "" or PLACEHOLDER_TEXT.search(name):
+            continue
+        rec = {"channel": channel, "name": name}
+        for lang in decoder_langs:
+            rec["name_" + lang] = localized(facade, name_info, lang)
+        out[did] = rec
+    print("decoded %d cooldown-channel skills (%.0fs)" % (
+        len(out), time.time() - t0))
+    return out
+
+
 # ------------------------------------------------------------------ main ----
 
 _REPO_ROOT = os.path.abspath(os.path.join(_HERE, os.pardir, os.pardir))
@@ -1029,7 +1057,8 @@ def main():
                     help="Lua output dir (Items/ + Recipes/ inside)")
     ap.add_argument("--langs", default="de,en,fr",
                     help="languages to emit (client locales)")
-    ap.add_argument("--db", default="items,recipes,quests,npcs,skills")
+    ap.add_argument("--db",
+                    default="items,recipes,quests,npcs,skills,cooldown_groups")
     ap.add_argument("--json", help="also dump raw records for inspection")
     args = ap.parse_args()
     game_dir = normalize_game_dir(args.game_dir)
@@ -1045,13 +1074,16 @@ def main():
         raise SystemExit("--db npcs requires quests (NPCs are filtered to"
                          " the ones quest dialogs reference)")
     scan_result = scan(facade, langs)
-    recipes = extract_recipes(facade, langs, scan_result)
+    recipes = (extract_recipes(facade, langs, scan_result)
+               if "items" in dbs or "recipes" in dbs else {})
     quests = (extract_quests(facade, langs, scan_result)
               if "quests" in dbs else {})
     npcs = (extract_npcs(facade, langs, scan_result, quest_npc_ids(quests))
             if "npcs" in dbs else {})
     skills, skill_buffs = (extract_skills(facade, langs, scan_result)
                            if "skills" in dbs else ({}, {}))
+    cooldown_groups = (extract_cooldown_channels(facade, langs, scan_result)
+                       if "cooldown_groups" in dbs else {})
 
     class_labels = enum_labels(facade, "Item_Class", langs)
     for lang in langs:
@@ -1105,6 +1137,9 @@ def main():
     if "skills" in dbs:
         lore2lua.convert_skills(os.path.join(args.out, "Skills"), langs,
                                 skills, skill_buffs, aux)
+    if "cooldown_groups" in dbs:
+        lore2lua.convert_cooldown_groups(os.path.join(args.out, "Skills"),
+                                         langs, cooldown_groups)
     facade.close()
 
 

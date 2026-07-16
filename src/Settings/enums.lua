@@ -63,6 +63,11 @@ e.cooldown_time_format = {
     WHOLE_SECONDS = 2,
 }
 
+e.cooldown_group_display = {
+    STABLE = 1,
+    ROTATE = 2,
+}
+
 e.font_style = {
     NONE = 1,
     OUTLINE = 2,

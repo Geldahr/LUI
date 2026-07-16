@@ -213,6 +213,13 @@ function CooldownsFeaturePage:Constructor(window)
         LUI_ENUMS.cooldown_time_format.AUTO,
         LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS,
     }
+    local group_display_labels = { TR["Fixed skill"], TR["Rotating skills"] }
+    local group_display_values = {
+        LUI_ENUMS.cooldown_group_display.STABLE,
+        LUI_ENUMS.cooldown_group_display.ROTATE,
+    }
+    local group_display_help =
+        TR["Skills sharing one cooldown are shown as a single entry. It can show one fixed skill or rotate through the affected skills."]
     local min_base_help = TR["Skills whose base cooldown is below this value are ignored."]
     local list_help = TR["One skill name per line or comma-separated. Case-insensitive. Exact match or prefix with trailing *."]
     local refresh_preview = function()
@@ -251,6 +258,15 @@ function CooldownsFeaturePage:Constructor(window)
         function()
             return tostring(settings_getter().min_base_cooldown)
         end, min_base_help)
+    general:add_row_break()
+    general:add_dropdown("cd_group_display", TR["Shared cooldowns"],
+        group_display_labels, group_display_values,
+        function(value)
+            settings_getter().group_display = value
+        end,
+        function()
+            return settings_getter().group_display
+        end, group_display_help)
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4, refresh_preview)
