@@ -13,6 +13,8 @@
 
 ### Fixed
 
+- The skill slots on the `Upkeep` settings tab now draw a visible drop frame, with the bound skill icon centered inside it.
+
 ### Removed
 
 ## v2.1.0
