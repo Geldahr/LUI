@@ -3,9 +3,12 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
 -- Runtime access layer for the packed wiki bestiary (tools/lore2lua,
--- --db bestiary). Decoded entries reproduce the raw data.lua shape exactly
+-- --db bestiary, source .data/lore/bestiary.json). Decoded entries reproduce
+-- the raw source entry shape exactly
 -- (n/bn/tl/v/g/s/sp/r/a/i/t/l/m/p/ce/rs/mi/ab/qi/di/w/cw), so the existing
--- data_access/window/card/tracker code consumes them unchanged.
+-- data_access/window/card/tracker code consumes them unchanged. di is a
+-- list of deed game ids (quests-domain id space); the other lists are
+-- pool strings.
 -- _G.LUI.Data.Bestiary.DB.en.bestiary becomes an __index proxy over this
 -- module: point lookups by entry key work as before; full-table iteration
 -- is served by count/key_at instead.
@@ -39,6 +42,7 @@ local CE = { "f", "fm", "sm", "rt" }
 local RS = { "cr", "so", "ta", "ph" }
 local MI = { "co", "ad", "fi", "be", "li", "we", "sh", "fr", "lt" }
 local LISTS = { "ab", "qi", "di", "w", "cw" }
+local LIST_DI = 3 -- LISTS[3] = "di": deed game ids, not pool refs
 
 -- localized string pool: pool_<lang> mirrors pool.lua entry-for-entry with
 -- translated strings where the packer had a game-data label (names stay
@@ -190,8 +194,16 @@ function Bestiary.decode(ordinal)
         local n = take(1)
         if n > 0 then
             local list = {}
-            for li = 1, n do
-                list[li] = _pool_string(take(ref_w))
+            if k == LIST_DI then
+                local di_base = M.di_base
+                local di_w = M.di_width
+                for li = 1, n do
+                    list[li] = di_base + take(di_w)
+                end
+            else
+                for li = 1, n do
+                    list[li] = _pool_string(take(ref_w))
+                end
             end
             entry[LISTS[k]] = list
         end
@@ -472,7 +484,7 @@ function Bestiary.start_prewarm()
     Bestiary._prewarm_pump = pump
 end
 
--- register the proxy where data.lua used to put the table
+-- register the proxy where the legacy in-plugin bestiary table used to live
 _G.LUI.Data.Bestiary.DB = _G.LUI.Data.Bestiary.DB or {}
 local DB = _G.LUI.Data.Bestiary.DB
 DB.en = DB.en or {}

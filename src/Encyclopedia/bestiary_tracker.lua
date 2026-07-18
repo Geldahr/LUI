@@ -244,11 +244,11 @@ end
 
 function Encyclopedia.Collector:is_enabled()
     local settings = State.settings
-    if type(settings) ~= "table" or type(settings.global) ~= "table" then
+    if type(settings) ~= "table" or type(settings.encyclopedia) ~= "table" then
         return false
     end
 
-    return settings.global.bestiary_capture == true and _is_english_client() == true
+    return settings.encyclopedia.bestiary_capture == true and _is_english_client() == true
 end
 
 function Encyclopedia.Collector:apply_settings()

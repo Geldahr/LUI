@@ -442,6 +442,9 @@ end
 local settings_schema = _schema_from_default(Defaults.Schema)
 settings_schema.fields.version = STRING
 settings_schema.fields.global.fields.style = _map_schema(STYLE_VALUE)
+-- legacy carrier: bestiary_capture lived under global up to v2.1.0; kept
+-- decodable so defaults_fill can move old saves' value into encyclopedia
+settings_schema.fields.global.fields.bestiary_capture = BOOL
 settings_schema.fields.launcher.fields.buttons = _array_schema(STRING)
 settings_schema.fields.self.fields.upkeep.fields.slots = _array_schema(STRING)
 settings_schema.fields.status_bar.fields.item_registry = _map_schema(NUMBER)

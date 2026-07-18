@@ -4,7 +4,12 @@
 
 ### Added
 
+- Deed names on bestiary cards are now properly translated on French and German clients.
+
 ### Changed
+
+- Encyclopedia settings now live in their own `Encyclopedia` settings tab: the bestiary capture toggle moved there from `Global > General` (existing saves keep their value).
+- The plugin is about 6.5 MB smaller on disk.
 
 ### Fixed
 
@@ -14,58 +19,56 @@
 
 ### Added
 
-- Added the Upkeep bar: a configurable row (or column) of skill icons that tracks maintenance buffs. Bind skills by dragging them onto the slot editor in the new `Upkeep` settings tab; the bar then shows one of three states per slot — buff active (remaining buff time plus an optional draining color overlay), buff down while the skill recovers (shaded and/or faded icon with the remaining cooldown, each style with its own color/strength), and ready to recast (plain icon). While the buff is running, an optional shade can fill the already-consumed part of the icon until the skill's cooldown ends, so a slot reads "ready to refresh" at a glance the moment recasting is possible. An optional auto order re-arranges the slots by urgency (the next skill to reactivate at the chosen end of the bar). Skills are resolved to the buffs they apply through a table extracted from the game client (5,993 skills → 6,276 buffs, localized in English, French, and German), so it also works for the many skills whose buff name differs from the skill name; toggle buffs without a duration show as active without a countdown. The bar is a pure tracker (recast from the action bars): each slot is LUI's own drawing of the skill icon, so it scales and centers exactly. Slot count (1–12), icon size, spacing, orientation, per-state timers and colors, and the timer font are configurable.
-
-- Added an `Orientation` setting (Horizontal / Vertical) to the Cooldowns window and both Expiring Effects windows (Self and Target). Vertical bars keep the icon at the chosen end (the side dropdowns now read `Left/Top` and `Right/Bottom`) and fill along the vertical axis; the remaining-time text is drawn horizontally across the bar in the same format as on horizontal bars; on thin bars it first steps the font down through the same family's smaller sizes to fit, and is dropped only when even the smallest size cannot fit — the configured thickness is never widened. The effect/skill name is hidden on vertical bars. The size settings are now axis-independent (`Item length`/`Item thickness` for cooldowns, `Bar length`/`Bar thickness` for effects), so switching orientation rotates the bars without re-entering sizes.
-- Added a `Display time` setting to the Cooldowns and Expiring Effects windows to show or hide the remaining-time text on the bars (enabled by default).
-- The Cooldowns window now shows skills that share a cooldown as a single entry instead of one entry per skill — a Captain summoning a herald no longer fills the window with the herald's cosmetic variants, and the same applies to standards and other linked skill groups. The links are extracted from the game client's cooldown channels (831 skills across 54 shared channels, localized in English, French, and German). A new `Shared cooldowns` setting (Cooldowns > General) selects what the merged entry displays: `Fixed skill` (default) always shows the group's base skill (a whitelisted skill takes precedence), and `Rotating skills` cycles through the recovering skills every 2 seconds. Blacklisting removes individual skills from a group; blacklisting all of them hides the entry.
-- Page bars can now jump straight to a page: the current page number is an input box — click it, type the page, press Enter. It only accepts digits and clamps to the valid page range; clicking away without Enter reverts. All paged windows share the same pager control: the Encyclopedia tabs (bestiary, items, quests), the Assets browser, and the crafting recipe list in pages mode.
+- Added the Upkeep bar: a configurable bar of skill icons that tracks your maintenance buffs — each slot shows the remaining buff time, the cooldown while the buff is down, or ready-to-recast, with an optional urgency ordering. Slots are bound by dragging skills onto the new `Upkeep` settings tab; count, size, orientation, colors, and fonts are configurable. Works in English, French, and German.
+- The Cooldowns and Expiring Effects windows can now be vertical: new `Orientation` setting, with independent length/thickness sizes so switching keeps your dimensions.
+- Added a `Display time` setting to the Cooldowns and Expiring Effects windows to show or hide the remaining-time text (enabled by default).
+- Skills that share a cooldown now show as a single entry in the Cooldowns window (heralds, standards, and similar linked groups). The new `Shared cooldowns` setting picks what the entry shows — a fixed skill or the recovering skills in rotation — and blacklisting removes skills from a group.
+- Page bars can now jump straight to a page: click the page number, type it, press Enter.
 
 ### Changed
 
-- The crafting recipe list is now a real table, like the Encyclopedia item tabs: a thin craftable-status color strip, the item icon, and Name, Profession, Rank, Level, and Craftable columns, plus the favorite star. Multi-output recipes append their variant count to the name (`(+2)`) instead of using a separate line, and the Craftable column shows how many crafts the current materials scope allows together with the per-craft batch size (`3 (x25)`), colored by status like the strip. Rows are single-line and denser than the old two-line rows (long names and counts wrap to a second line instead of clipping), highlight on mouse-over, and clicking a recipe no longer rebuilds the whole list. Both display modes (pages and scroll) keep working as before.
-
-- Timer bars now reserve the time-text width from a widest-digit template whose leading digit is capped by the threshold (e.g. `1:08` for a 90s threshold) instead of measuring every possible countdown value; the reserved area can be marginally wider than strictly necessary but never narrower.
+- The crafting recipe list is now a table with Name, Profession, Rank, Level, and Craftable columns, a craftable-status color strip, item icons, and the favorite star; rows are denser and highlight on mouse-over.
+- Timer bars now reserve a stable width for the time text.
 
 ### Fixed
 
-- Timer countdowns no longer show a `10.0s` frame when crossing the 10-second boundary: the decimal is now truncated instead of rounded, so the text reads `10s` and then `9.9s`, `9.8s`, ... (same fix for the unitless countdown on effect icons).
+- Timer countdowns no longer show a `10.0s` frame when crossing the 10-second boundary.
 
 ## v2.0.0
 
 ### Added
 
-- The Bestiary window is now the Encyclopedia: the bestiary became its first tab, joined by Equipment, Resources, Consumables, Housing, and Traceries item tabs with type/rarity/level filters, the shared search grammar (space = and, `|` = or, quotes = exact phrase), and result counts. Item tabs list as tables with icon, name, type, and level columns plus the link buttons. Consumables also covers recipe scrolls (grouped under a single `Recipes` type filter), stat tomes, boosters, and pipe-weed. New `/lui encyclopedia` and `/lui ency` commands open it; the old `/lui bestiary`, `/lui beast`, and `/lui b` aliases keep working.
-- Added a Quests tab to the Encyclopedia with Quests and Deeds sub-tabs: 14,968 quests and 5,390 deeds extracted straight from the game client, listed with name, category, and level, searchable with the shared grammar plus category and level-range filters, fully localized (English, French, German). Clicking a row opens a quest card with the level and category, the bestowing NPC, the description, objectives, and dialog texts, and the reward items as clickable chips that link into the Encyclopedia item tabs.
-- The Traceries tab covers the legendary item system: filter by tracery type, player class, usable character level (`Level` range, matched against the tracery's level band), and base item level (`iLvl` range, matched against the tracery's base — `450-499` shows the 450 tier only, never lower tiers whose enhancement cap covers it). The list is a real table with columns: icon, name, type, class, level band, base iLvl, and the enhancement limit.
-- Added cross-window link buttons to Encyclopedia item rows: an anvil button opens the crafting window searched on the item (preselecting the producing recipe when it is craftable; on a recipe scroll it opens the recipe the scroll teaches), and a book button searches the bestiary for creatures dropping it (shown only for known drop names).
-- Bestiary card drops that match a real item are now clickable, marked with a distinct border color: left click opens the item in the Encyclopedia on its matching tab, right click opens a context menu with `Open in Encyclopedia`, `How to craft this`, and `Show crafts using this` entries when they apply.
-- Added a `Variant` selector to the crafting recipe details for multi-output recipes (choose which of the recipe's outputs to display), a `+x variants` line on their recipe list rows, and variant-aware build plans: the plan and queue show the chosen output, and the choice is saved with tracked plans.
-- The crafting search and the Encyclopedia crafting links now cover critical results and alternate recipe outputs (for example `Adamant Earring of Combat` or `Carved Combat Bow`), which were previously unreachable.
-- Added a `Separator color` setting under `Global > UI > Colors` for subtle interior lines such as table grid lines, independent from the border color, plus table style settings under `Global > UI > Layout`: vertical and horizontal grid line widths and an `Alternating table rows` toggle (disable it and raise the horizontal line width for a single-background look with row separators).
-- Added a Resource card: double-clicking a targeted harvest node (ore deposits, branches, crop fields, scholar artifacts) opens a card showing the node's profession and tier with the in-game tier badge, what it always contains with quantity ranges (for example `Chunk of Gold Ore x1-3`), and what it may contain, with rare finds in the gold chest styling. Yield chips are clickable like bestiary card drops: left click opens the item in the Encyclopedia, right click offers the Encyclopedia and crafting actions. Node lookup is localized, so it also works on French and German clients.
-- Added a `Merge similar drops` setting to the Drops window (enabled by default): picking up the same item again while its drop line is still showing adds to that line's count in place instead of stacking a duplicate line, and refreshes how long it stays visible.
+- The Bestiary window is now the Encyclopedia: the bestiary is joined by Equipment, Resources, Consumables, Housing, and Traceries tabs, all with filters and search. New `/lui encyclopedia` and `/lui ency` commands open it; the old bestiary aliases keep working.
+- Added a Quests tab with Quests and Deeds sub-tabs: 14,968 quests and 5,390 deeds in English, French, and German, with search, category, and level filters. Clicking a row opens a card with the quest's details and rewards.
+- The Traceries tab covers the legendary item system, with filters for tracery type, class, character level, and item level.
+- Encyclopedia item rows now link to other windows: an anvil opens the recipe crafting the item, a book shows which creatures drop it.
+- Bestiary card drops are now clickable: left click opens the item in the Encyclopedia, right click offers Encyclopedia and crafting actions.
+- Multi-output recipes now have a `Variant` selector in the crafting details, and build plans remember the chosen output.
+- The crafting search and the Encyclopedia crafting links now find critical results and alternate recipe outputs.
+- Added a `Separator color` setting and table style settings (grid lines, alternating rows) under `Global > UI`.
+- Added a Resource card: double-click a targeted harvest node to see its profession, tier, and possible yields; yields link into the Encyclopedia. Works in English, French, and German.
+- Added a `Merge similar drops` setting to the Drops window (enabled by default): picking up the same item again adds to the visible line's count instead of a duplicate line.
 
 ### Changed
 
-- The bestiary now works on French and German clients: localized creature names are bridged to the English bestiary data at pack time (~97% of entries; unmatched names find nothing), so target double-click cards and `/lui card` resolve localized targets. Bestiary content is displayed translated where the game data provides a label — creature names, taxonomy, tiers, locations, drops, quests, deeds, and abilities — with untranslated strings kept in English (ratings such as `Feeble` stay English). Search and chat capture stay English-only.
-- The bestiary database now loads from packed local data with a background pre-warm instead of parsing a large Lua table at login, making plugin load and Encyclopedia opening faster.
-- Crafting ingredient, plan, and queue rows derive their height from the item icon plus padding so icons fit exactly at every UI scale, and rows with only a name center their text vertically.
-- Cross-window link buttons now always select the matching window tab (Recipes tab in crafting, Bestiary tab in the Encyclopedia).
-- Stacked drops in the Drops window now show the real item: `[5 Hides]` displays as `Hide` with a count of 5, the item's icon, and its tooltip, instead of an unresolved plural line. Items whose name starts with a number (`100 Virtue XP`) are never mistaken for stacks.
-- Crafting recipe lines are shorter: list rows read `Jeweller - Artisan - Level 35` (the level is the result's equip level) and the recipe details read `Jeweller - Artisan`, dropping the category that only repeated the level.
+- The bestiary now works on French and German clients, displayed translated wherever the game provides a label. Search and chat capture stay English-only.
+- Faster plugin load and Encyclopedia opening.
+- Crafting list rows now size to their icons at every UI scale.
+- Cross-window link buttons now always select the matching window tab.
+- Stacked drops in the Drops window now show the real item: `[5 Hides]` displays as `Hide` x5 with its icon and tooltip.
+- Crafting recipe lines are shorter: `Jeweller - Artisan - Level 35`.
 
 ### Fixed
 
-- Fixed the crafting critical-result row showing the normal item's icon and tooltip when the critical result is a different item with the same name (Heraldry recipes and similar); recipe lists always show the normal result.
+- Fixed the crafting critical-result row showing the wrong icon and tooltip when the critical result shares the normal result's name.
 - Fixed search text set by cross-window link buttons being invisible until the input box was clicked.
-- HUD windows (cooldowns, expiring effects, drops, launcher) no longer set a window z-order, so they stop floating above every other window.
-- Fixed the Recipes button in the Assets browser; it now shows properly how many known recipes can be crafted relatively to the filter applied in assets.
+- HUD windows (cooldowns, expiring effects, drops, launcher) no longer float above every other window.
+- Fixed the Recipes button count in the Assets browser.
 
 ### Removed
 
-- Removed the ready-ratio (`0/3`) status text from the crafting recipe details; per-ingredient readiness and the plan/queue ratios carry that information.
-- Removed the Encyclopedia's `Order` title-bar menu (formerly the Bestiary order controls); bestiary results always list A-Z, matching the item tabs.
+- Removed the ready-ratio (`0/3`) status text from the crafting recipe details.
+- Removed the Encyclopedia's `Order` menu; results always list A-Z.
 
 ## v1.3.0
 

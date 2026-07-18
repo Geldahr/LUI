@@ -2143,7 +2143,6 @@ _G.LUI.Settings.Defaults.Schema =
 		["background_opacity"] = 1.000000,
 	},
 	["global"] = {
-		["bestiary_capture"] = false,
 		["close_windows_with_esc"] = true,
 		["move_mode_shortcut"] = true,
 		["native_scaling"] = false,
@@ -2252,6 +2251,7 @@ _G.LUI.Settings.Defaults.Schema =
 		},
 	},
 	["encyclopedia"] = {
+		["bestiary_capture"] = false,
 		["resource_card_window"] = {
 			["left"] = 1791.000000,
 			["top"] = 515.000000,

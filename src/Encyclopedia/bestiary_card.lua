@@ -665,6 +665,26 @@ local function _build_list_text(values)
     return table.concat(lines, "\n")
 end
 
+-- deeds panel lines: deed_involvement carries deed game ids; the display
+-- name comes from the packed quests domain (properly localized on FR/DE
+-- clients). The quests domain is staged by the background prewarm; until
+-- it lands the panel renders empty (the Items notify_loaded re-bind below
+-- refreshes open cards once staging finishes).
+local function _build_deed_lines(deed_ids)
+    if type(deed_ids) ~= "table" or #deed_ids == 0 then
+        return nil
+    end
+    local Quests = _G.LUI.Data.Lore.Quests
+    if Quests.loaded ~= true then
+        return nil
+    end
+    local lines = {}
+    for i = 1, #deed_ids do
+        lines[i] = Quests.label(Quests.ordinal_of(deed_ids[i]))
+    end
+    return lines
+end
+
 local function _build_drop_texts(record)
     local texts = {}
 
@@ -1808,7 +1828,7 @@ function BestiaryCard:_apply_record(record)
 
     _bind_scroll_label_area(self.abilities_area, record.abilities)
     _bind_scroll_label_area(self.quests_area, record.quest_involvement)
-    _bind_scroll_label_area(self.deeds_area, record.deed_involvement)
+    _bind_scroll_label_area(self.deeds_area, _build_deed_lines(record.deed_involvement))
 
     self:_apply_drop_layout(_build_drop_texts(record))
 end
@@ -1849,7 +1869,8 @@ function BestiaryCard:apply_settings()
 
     _bind_scroll_label_area(self.abilities_area, self.current_record ~= nil and self.current_record.abilities or nil)
     _bind_scroll_label_area(self.quests_area, self.current_record ~= nil and self.current_record.quest_involvement or nil)
-    _bind_scroll_label_area(self.deeds_area, self.current_record ~= nil and self.current_record.deed_involvement or nil)
+    _bind_scroll_label_area(self.deeds_area,
+        self.current_record ~= nil and _build_deed_lines(self.current_record.deed_involvement) or nil)
 
     if self.variant_bar ~= nil then
         self.variant_bar:set_scale(State.settings.global.scale)

@@ -1,3 +1,6 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """High-level access to a LOTRO game install's DAT archives, limited
 to the archives needed for data extraction: gamelogic, general and the
 per-language local archives.
