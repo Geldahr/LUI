@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v2.2.0
+
+### Added
+
 - Quest and deed names on bestiary cards are now properly translated on French and German clients.
 
 ### Changed
@@ -14,8 +24,6 @@
 ### Fixed
 
 - The skill slots on the `Upkeep` settings tab now draw a visible drop frame, with the bound skill icon centered inside it.
-
-### Removed
 
 ## v2.1.0
 
