@@ -14,6 +14,8 @@ local UI = _G.LUI.UI
 local Encyclopedia = _G.LUI.Features.Encyclopedia
 local Lore = _G.LUI.Data.Lore
 local class = _G.LUI.Core.class
+
+local Deeds = Encyclopedia.Deeds
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -98,6 +100,8 @@ function QuestCard:Constructor()
     self:hide()
     self:SetMouseVisible(true)
 
+    self._is_deed = nil
+
     local central = Turbine.UI.Control()
     central:SetMouseVisible(true)
     self:set_central_widget(central)
@@ -111,6 +115,9 @@ function QuestCard:Constructor()
 
     self.category_panel = CW.create_panel(self.content, TR["Category"])
     self.category_value = CW.create_text(self.category_panel.body, false, Turbine.UI.ContentAlignment.MiddleCenter)
+
+    self.completed_panel = CW.create_panel(self.content, TR["Completed"])
+    self.completed_value = CW.create_text(self.completed_panel.body, false, Turbine.UI.ContentAlignment.MiddleLeft)
 
     self.bestower_panel = CW.create_panel(self.content, TR["Bestower"])
     self.bestower_value = CW.create_text(self.bestower_panel.body, false, Turbine.UI.ContentAlignment.MiddleLeft)
@@ -178,6 +185,9 @@ function QuestCard:_measure_content_height()
     local content_w = math.max(1, central_w - (2 * margin))
 
     local h = _scaled_int(BASE_STAT_BOX_H)
+    if self._is_deed == true then
+        h = h + gap + _scaled_int(BASE_STAT_BOX_H)
+    end
     if self._has_bestower == true then
         h = h + gap + _scaled_int(BASE_STAT_BOX_H)
     end
@@ -246,6 +256,18 @@ function QuestCard:_layout_content()
         self.category_panel.body:GetHeight())
 
     local y = stat_h + gap
+
+    -- deed completion status: full-width row under Level/Category
+    if self._is_deed == true then
+        self.completed_panel.frame:SetVisible(true)
+        CW.layout_panel(self.completed_panel, 0, y, content_w, stat_h)
+        self.completed_value:SetPosition(body_pad_x, 0)
+        self.completed_value:SetSize(math.max(1, self.completed_panel.body:GetWidth() - (2 * body_pad_x)),
+            self.completed_panel.body:GetHeight())
+        y = y + stat_h + gap
+    else
+        self.completed_panel.frame:SetVisible(false)
+    end
 
     -- bestower / receiver NPCs: one full-width container each (hidden
     -- when not a named NPC; receiver only when it differs)
@@ -397,6 +419,12 @@ function QuestCard:_apply_quest(ordinal)
     self.level_value:SetText(record.level > 0 and tostring(record.level) or "-")
     self.category_value:SetText(Quests.category_name(record) or "-")
 
+    -- completion status is a deed-only surface
+    self._is_deed = record.is_deed
+    if self._is_deed == true then
+        self:_sync_completed_state()
+    end
+
     local function _npc_text(npc)
         if npc == nil then
             return nil
@@ -445,6 +473,12 @@ function QuestCard:_apply_quest(ordinal)
     self:_layout_content()
 end
 
+-- store → card: completed row text (read-only view of DeedTracker data)
+function QuestCard:_sync_completed_state()
+    local entry = Deeds.completed_entry(Lore.Quests.id_of(self.current_ordinal))
+    self.completed_value:SetText(entry ~= nil and entry.w or TR["Not completed"])
+end
+
 function QuestCard:apply_settings()
     UI.Widgets.LuiWindow.apply_settings(self, State.settings.global.scale)
     self:set_resizable(false)
@@ -455,6 +489,7 @@ function QuestCard:apply_settings()
 
     CW.style_panel(self.level_panel)
     CW.style_panel(self.category_panel)
+    CW.style_panel(self.completed_panel)
     CW.style_panel(self.bestower_panel)
     CW.style_panel(self.receiver_panel)
     CW.style_panel(self.objectives_panel)
@@ -462,6 +497,7 @@ function QuestCard:apply_settings()
     CW.style_panel(self.texts_panel)
     CW.style_text(self.level_value, "Verdana", CW.BASE.TEXT_SIZE + 2, Style.FOREGROUND)
     CW.style_text(self.category_value, "Verdana", CW.BASE.TEXT_SIZE + 2, Style.FOREGROUND)
+    CW.style_text(self.completed_value, "Verdana", CW.BASE.TEXT_SIZE, Style.FOREGROUND)
     CW.style_text(self.bestower_value, "Verdana", CW.BASE.TEXT_SIZE, Style.FOREGROUND)
     CW.style_text(self.receiver_value, "Verdana", CW.BASE.TEXT_SIZE, Style.FOREGROUND)
     CW.style_text(self.objectives_area.label, "Verdana", CW.BASE.TEXT_SIZE, Style.FOREGROUND)

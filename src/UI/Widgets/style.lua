@@ -36,6 +36,8 @@ tries that layer's fallback chain before moving to the next lower layer.
 local DEFAULTS = {
     BACKGROUND = Turbine.UI.Color(1, 0.08, 0.08, 0.08),
     FOREGROUND = Turbine.UI.Color(1, 1, 1, 1),
+    -- completed/done state text (deed completion markers)
+    COMPLETED_TEXT = Turbine.UI.Color(0.35, 0.80, 0.35),
     INFO_FOREGROUND = Turbine.UI.Color(1, 0.80, 0.86, 0.96),
     FOREGROUND_DISABLED = Turbine.UI.Color(0.55, 0.85, 0.85, 0.85),
     TEXT_OUTLINE = Turbine.UI.Color(1, 0, 0, 0),

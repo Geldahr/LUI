@@ -4,7 +4,8 @@
 
 ### Added
 
-- Quest and deed names on bestiary cards are now properly translated on French and German clients.
+- The Encyclopedia's Deeds list and deed card now show completion status: completed deeds get a check mark in the list, the list gains a `Completed` filter, and the card shows the completion date. Completion state is read from the DeedTracker plugin's saved data each time the Deeds view is opened (read-only — LUI never writes deed data); without DeedTracker installed, deeds simply show as not completed.
+- Bestiary cards now mark which of a creature's deeds you have completed (from the same DeedTracker data), and the quest and deed names are properly translated on French and German clients.
 
 ### Changed
 
