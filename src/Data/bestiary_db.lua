@@ -385,16 +385,33 @@ local IMPORT_PLAN = {
     function() import("LUI.src.Data.Bestiary.order_" .. Lore.language()) end,
 }
 
--- returns true when imports, the full decode and the quests + npcs +
--- items staging are done
+-- Packed-file imports are instant (local data, no game calls), so the
+-- whole lore stack loads up front on the first tick; only the bestiary
+-- record decode is spread across ticks. Slow staged loading is reserved
+-- for data sourced from live game API calls (e.g. the crafting store).
 function Bestiary.prewarm_step()
     if Bestiary.loaded ~= true then
-        local index = Bestiary._import_index or 1
-        IMPORT_PLAN[index]()
-        Bestiary._import_index = index + 1
-        if Bestiary._import_index > #IMPORT_PLAN then
-            Lore.load_bestiary()
+        for i = 1, #IMPORT_PLAN do
+            IMPORT_PLAN[i]()
         end
+        Lore.load_bestiary()
+
+        local lang = Lore.language()
+        local plan = Lore.quests_import_plan()
+        for i = 1, #plan do
+            import(plan[i])
+        end
+        import("LUI.src.Data.Npcs.manifest")
+        import("LUI.src.Data.Npcs.records")
+        import("LUI.src.Data.Npcs.labels_" .. lang)
+        Lore.load_quests()
+        Lore.load_npcs()
+
+        local items_plan = Lore.items_import_plan()
+        for i = 1, #items_plan do
+            import(items_plan[i])
+        end
+        Lore.load_items()
         return false
     end
 
@@ -410,45 +427,6 @@ function Bestiary.prewarm_step()
         Bestiary._prewarm_next = last + 1
         return false
     end
-
-    -- bestiary done: stage the quests + npcs domain through the same pump
-    -- (one file import per step), so the first Quests tab open pays no
-    -- synchronous multi-MB import (the texts_<lang> blob stays lazy)
-    if Bestiary._quests_plan == nil then
-        local plan = Lore.quests_import_plan()
-        local lang = Lore.language()
-        plan[#plan + 1] = "LUI.src.Data.Npcs.manifest"
-        plan[#plan + 1] = "LUI.src.Data.Npcs.records"
-        plan[#plan + 1] = "LUI.src.Data.Npcs.labels_" .. lang
-        Bestiary._quests_plan = plan
-        Bestiary._quests_import_index = 1
-    end
-    local index = Bestiary._quests_import_index
-    if index <= #Bestiary._quests_plan then
-        import(Bestiary._quests_plan[index])
-        Bestiary._quests_import_index = index + 1
-        return false
-    end
-
-    -- quests + npcs done: chain the items domain through the pump too -
-    -- the bestiary tracker canonicalizes stacked loot names through the
-    -- plural index, and the Items tab's synchronous load_items() becomes
-    -- a no-op once everything is staged (a no-op chain when crafting or
-    -- the drops window already loaded the domain)
-    if Bestiary._items_plan == nil then
-        Lore.load_quests()
-        Lore.load_npcs()
-        Bestiary._items_plan = Lore.items_import_plan()
-        Bestiary._items_import_index = 1
-        return false
-    end
-    local items_index = Bestiary._items_import_index
-    if items_index <= #Bestiary._items_plan then
-        import(Bestiary._items_plan[items_index])
-        Bestiary._items_import_index = items_index + 1
-        return false
-    end
-    Lore.load_items()
     return true
 end
 
