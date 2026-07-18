@@ -4,7 +4,7 @@
 
 ### Added
 
-- Deed names on bestiary cards are now properly translated on French and German clients.
+- Quest and deed names on bestiary cards are now properly translated on French and German clients.
 
 ### Changed
 

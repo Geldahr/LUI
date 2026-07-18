@@ -363,7 +363,7 @@ local function _new_merged_entry(name)
         resistances = {},
         mitigation = {},
         abilities = {},
-        quest_involvement = {},
+        quest_involvement = {}, -- quest game ids
         deed_involvement = {}, -- deed game ids
         w = {},
         cw = {},
@@ -444,7 +444,7 @@ local function _merge_entry(dst, src, name)
     end
     if type(src.qi) == "table" then
         for i = 1, #src.qi do
-            _append_unique_name(dst.quest_involvement, src.qi[i])
+            _append_unique_id(dst.quest_involvement, src.qi[i])
         end
     end
     if type(src.di) == "table" then

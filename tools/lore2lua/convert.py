@@ -15,8 +15,8 @@ Usage:
 
 Bestiary pipeline: browser_bestiary_dump.js (local tooling in .tools/)
 fetches the wiki (raw dump JSON); .data/lore/bestiary.json is the
-canonical entry database built from it (di fields carry deed game ids
-from the quests domain); this packer turns it into the packed blobs the
+canonical entry database built from it (qi/di fields carry quest/deed
+game ids from the quests domain); this packer turns it into the packed blobs the
 plugin actually loads (src/Data/Bestiary). NOTE: bestiary (and nodes)
 still read the legacy XML layout from --data; porting them to game
 extraction is pending (see tools/data-extractor/README.md).
@@ -1702,11 +1702,12 @@ B_SCALARS = ["n", "bn", "tl", "v", "g", "s", "sp", "r", "a", "i", "t"]
 B_CE = ["f", "fm", "sm", "rt"]
 B_RS = ["cr", "so", "ta", "ph"]
 B_MI = ["co", "ad", "fi", "be", "li", "we", "sh", "fr", "lt"]
-# di carries deed game ids (quests-domain id space, packed base-93
+# qi/di carry quest/deed game ids (quests-domain id space, packed base-93
 # fixed-width against B_DI_BASE); the other lists are pool-string refs
 B_LISTS = ["ab", "qi", "di", "w", "cw"]
+B_ID_LISTS = ("qi", "di")
 # same base id the quests domain packs against (src/Data/Quests/manifest.lua
-# D.base_id), so di offsets share that id space
+# D.base_id), so qi/di offsets share that id space
 B_DI_BASE = 1879048195
 
 _LUA_SPACE = " \t\n\r\f\v"
@@ -1816,10 +1817,10 @@ _B_POOL_GROUP_OF_SCALAR = {
     "r": "location", "a": "location", "v": "location", "i": "location",
     "t": "tier",
 }
-# no "deed" group: di is packed as deed game ids, localized deed labels
-# come from the quests domain at runtime
+# no "quest"/"deed" group: qi/di are packed as quest/deed game ids,
+# localized labels come from the quests domain at runtime
 _B_POOL_GROUPS = ("genus", "species", "subspecies", "tier", "location",
-                  "ability", "quest", "item", "rating")
+                  "ability", "item", "rating")
 _B_QI_PREFIX_RE = re.compile(r"^(-?\s*\[[^\]]*\]\s*)(.*)$")
 _B_SUFFIX_RE = re.compile(r"^(.*?)(\s*\([^)]*\))$")
 
@@ -1839,8 +1840,7 @@ def _emit_bestiary_localized_pools(data_dir, out_dir, entries, record_keys,
         for m in ("ce", "rs", "mi"):
             for v in entry.get(m, {}).values():
                 group_indices["rating"].add(pool_ref[v])
-        for f, group in (("ab", "ability"), ("qi", "quest"),
-                         ("w", "item"), ("cw", "item")):
+        for f, group in (("ab", "ability"), ("w", "item"), ("cw", "item")):
             for v in entry.get(f, []):
                 group_indices[group].add(pool_ref[v])
 
@@ -1892,7 +1892,6 @@ def _emit_bestiary_localized_pools(data_dir, out_dir, entries, record_keys,
                                quest_dict),
             "ability": merged(id_joined(lang, "effects"),
                               id_joined(lang, "skills")),
-            "quest": quest_dict,
             "item": id_joined(lang, "items"),
             "rating": {},
         }
@@ -1902,8 +1901,9 @@ def _emit_bestiary_localized_pools(data_dir, out_dir, entries, record_keys,
             hit = d.get(s)
             if hit:
                 return hit
-            if group in ("quest", "location"):
-                # qi strings are "[level] Name" (some "- [level] Name")
+            if group == "location":
+                # some location strings are "[level] Name" quest-instance
+                # names (some "- [level] Name")
                 m = _B_QI_PREFIX_RE.match(s)
                 if m:
                     hit = d.get(m.group(2))
@@ -1972,11 +1972,12 @@ def convert_bestiary(json_path, out_dir, data_dir=None):
     keys = sorted(entries)
     print("bestiary source: %d entries" % len(keys))
 
-    # the packed form cannot distinguish an empty di list from an absent
+    # the packed form cannot distinguish an empty qi/di list from an absent
     # one (both decode to no field), so normalize before the round-trip
     for entry in entries.values():
-        if entry.get("di") == []:
-            del entry["di"]
+        for f in B_ID_LISTS:
+            if entry.get(f) == []:
+                del entry[f]
 
     aliases = {}
     record_keys = []
@@ -2001,25 +2002,29 @@ def convert_bestiary(json_path, out_dir, data_dir=None):
             for sub in entry.get(m, {}).values():
                 pool_set.add(sub)
         for f in B_LISTS:
-            if f == "di":
-                continue  # deed game ids, not pool strings
+            if f in B_ID_LISTS:
+                continue  # quest/deed game ids, not pool strings
             for v in entry.get(f, []):
                 pool_set.add(v)
     pool = sorted(pool_set)
     pool_ref = {v: i + 1 for i, v in enumerate(pool)}
     ref_w = width_for(len(pool))
 
-    # di: deed game ids packed fixed-width as offsets from B_DI_BASE
-    # (the quests domain's base id), same scheme as the quests records
-    di_max = 0
-    for key in record_keys:
-        for deed_id in entries[key].get("di", []):
-            off = deed_id - B_DI_BASE
-            if off < 0:
-                raise AssertionError("deed id %d below base in %s" % (deed_id, key))
-            if off > di_max:
-                di_max = off
-    di_w = width_for(di_max)
+    # qi/di: quest/deed game ids packed fixed-width as offsets from
+    # B_DI_BASE (the quests domain's base id), same scheme as the quests
+    # records; each list gets its own width
+    id_w = {}
+    for f in B_ID_LISTS:
+        id_max = 0
+        for key in record_keys:
+            for game_id in entries[key].get(f, []):
+                off = game_id - B_DI_BASE
+                if off < 0:
+                    raise AssertionError("%s id %d below base in %s" % (f, game_id, key))
+                if off > id_max:
+                    id_max = off
+        id_w[f] = width_for(id_max)
+    qi_w, di_w = id_w["qi"], id_w["di"]
 
     l_w = width_for(max((e["l"][1] for e in entries.values() if "l" in e), default=0) + 1)
     m_w = width_for(max((e["m"][1] for e in entries.values() if "m" in e), default=0) + 1)
@@ -2043,9 +2048,9 @@ def convert_bestiary(json_path, out_dir, data_dir=None):
         for f in B_LISTS:
             values = entry.get(f, [])
             parts.append(b93(len(values), 1))
-            if f == "di":
+            if f in B_ID_LISTS:
                 for v in values:
-                    parts.append(b93(v - B_DI_BASE, di_w))
+                    parts.append(b93(v - B_DI_BASE, id_w[f]))
             else:
                 for v in values:
                     parts.append(b93(pool_ref[v], ref_w))
@@ -2145,8 +2150,8 @@ def convert_bestiary(json_path, out_dir, data_dir=None):
         for f in B_LISTS:
             n_items = take(1)
             if n_items:
-                if f == "di":
-                    out[f] = [take(di_w) + B_DI_BASE for _ in range(n_items)]
+                if f in B_ID_LISTS:
+                    out[f] = [take(id_w[f]) + B_DI_BASE for _ in range(n_items)]
                 else:
                     out[f] = [pool[take(ref_w) - 1] for _ in range(n_items)]
         return out
@@ -2222,6 +2227,7 @@ def convert_bestiary(json_path, out_dir, data_dir=None):
         "D.p_width = %d\n" % p_w,
         "D.di_base = %d\n" % B_DI_BASE,
         "D.di_width = %d\n" % di_w,
+        "D.qi_width = %d\n" % qi_w,
     ] + alias_lines)
 
     total = 0

@@ -17,6 +17,7 @@ D.m_width = 5
 D.p_width = 4
 D.di_base = 1879048195
 D.di_width = 3
+D.qi_width = 3
 D.aliases = {
 ["bratha tasakh, lady of many venoms"] = "Bratha Tasakh (Remmorchant)",
 ["cursed rider"] = "The Cursed Rider (Mordor Besieged)",

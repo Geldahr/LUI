@@ -6,9 +6,9 @@
 -- --db bestiary, source .data/lore/bestiary.json). Decoded entries reproduce
 -- the raw source entry shape exactly
 -- (n/bn/tl/v/g/s/sp/r/a/i/t/l/m/p/ce/rs/mi/ab/qi/di/w/cw), so the existing
--- data_access/window/card/tracker code consumes them unchanged. di is a
--- list of deed game ids (quests-domain id space); the other lists are
--- pool strings.
+-- data_access/window/card/tracker code consumes them unchanged. qi and di
+-- are lists of quest/deed game ids (quests-domain id space); the other
+-- lists are pool strings.
 -- _G.LUI.Data.Bestiary.DB.en.bestiary becomes an __index proxy over this
 -- module: point lookups by entry key work as before; full-table iteration
 -- is served by count/key_at instead.
@@ -42,6 +42,7 @@ local CE = { "f", "fm", "sm", "rt" }
 local RS = { "cr", "so", "ta", "ph" }
 local MI = { "co", "ad", "fi", "be", "li", "we", "sh", "fr", "lt" }
 local LISTS = { "ab", "qi", "di", "w", "cw" }
+local LIST_QI = 2 -- LISTS[2] = "qi": quest game ids, not pool refs
 local LIST_DI = 3 -- LISTS[3] = "di": deed game ids, not pool refs
 
 -- localized string pool: pool_<lang> mirrors pool.lua entry-for-entry with
@@ -194,11 +195,11 @@ function Bestiary.decode(ordinal)
         local n = take(1)
         if n > 0 then
             local list = {}
-            if k == LIST_DI then
-                local di_base = M.di_base
-                local di_w = M.di_width
+            if k == LIST_QI or k == LIST_DI then
+                local id_base = M.di_base
+                local id_w = k == LIST_QI and M.qi_width or M.di_width
                 for li = 1, n do
-                    list[li] = di_base + take(di_w)
+                    list[li] = id_base + take(id_w)
                 end
             else
                 for li = 1, n do
