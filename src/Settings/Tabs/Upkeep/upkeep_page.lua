@@ -10,6 +10,7 @@ local Lore = _G.LUI.Data.Lore
 local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
+local Style = UI.Widgets.Style
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
@@ -67,6 +68,19 @@ local function _create_slots_editor(content, window, get_count)
         cell.holder:SetParent(entry.control)
         cell.holder:SetMouseVisible(false)
         cell.holder:SetVisible(false)
+
+        -- empty quickslots render nearly invisible on the dark page; a
+        -- border ring marks the drop target (created before the quickslot
+        -- so the icon draws above it)
+        cell.frame = Turbine.UI.Control()
+        cell.frame:SetParent(cell.holder)
+        cell.frame:SetMouseVisible(false)
+        cell.frame:SetBackColor(Style.CONTROL_BORDER)
+
+        cell.frame_inner = Turbine.UI.Control()
+        cell.frame_inner:SetParent(cell.frame)
+        cell.frame_inner:SetMouseVisible(false)
+        cell.frame_inner:SetBackColor(Style.BACKGROUND)
 
         cell.quickslot = Turbine.UI.Lotro.Quickslot()
         cell.quickslot:SetParent(cell.holder)
@@ -181,7 +195,9 @@ local function _create_slots_editor(content, window, get_count)
         local gap = scaled_int(CELL_GAP)
         local row_gap = scaled_int(ROW_GAP)
         local pad = scaled_int(2)
-        local cell_h = qs + pad + name_h + pad + clear_h
+        local border = scaled_int(Style.BORDER_WIDTH_THIN)
+        local frame_size = qs + (2 * border)
+        local cell_h = frame_size + pad + name_h + pad + clear_h
 
         local width = entry.control:GetWidth()
         local per_row = math.floor((width + gap) / (cell_w + gap))
@@ -197,12 +213,21 @@ local function _create_slots_editor(content, window, get_count)
                 cell.holder:SetPosition(col * (cell_w + gap), row * (cell_h + row_gap))
                 cell.holder:SetSize(cell_w, cell_h)
 
-                local qs_x = math.floor((cell_w - qs) / 2)
-                cell.quickslot:SetPosition(qs_x, 0)
+                local frame_x = math.floor((cell_w - frame_size) / 2)
+                cell.frame:SetPosition(frame_x, 0)
+                cell.frame:SetSize(frame_size, frame_size)
+                cell.frame_inner:SetPosition(border, border)
+                cell.frame_inner:SetSize(qs, qs)
+                -- the native quickslot art draws its icon anchored
+                -- bottom-right, leaving a dead margin of ~3/36 of the slot
+                -- on the top/left; nudge the control up-left by half of it
+                -- so the icon sits visually centered in the frame
+                local nudge = math.floor((qs / 24) + 0.5)
+                cell.quickslot:SetPosition(frame_x + border - nudge, border - nudge)
                 cell.quickslot:SetSize(qs, qs)
-                cell.name:SetPosition(0, qs + pad)
+                cell.name:SetPosition(0, frame_size + pad)
                 cell.name:SetSize(cell_w, name_h)
-                cell.clear:SetPosition(qs_x, qs + pad + name_h + pad)
+                cell.clear:SetPosition(frame_x + border, frame_size + pad + name_h + pad)
                 cell.clear:SetSize(qs, clear_h)
 
                 cell.holder:SetVisible(true)
@@ -212,7 +237,7 @@ local function _create_slots_editor(content, window, get_count)
         end
 
         local rows = math.ceil(count / per_row)
-        local base_height = (rows * (QS_SIZE + 2 + NAME_H + 2 + CLEAR_H)) + ((rows - 1) * ROW_GAP) + 4
+        local base_height = (rows * (QS_SIZE + (2 * Style.BORDER_WIDTH_THIN) + 2 + NAME_H + 2 + CLEAR_H)) + ((rows - 1) * ROW_GAP) + 4
         if base_height ~= self.base_height then
             self.base_height = base_height
             self.height = scaled_int(base_height)
