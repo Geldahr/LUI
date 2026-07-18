@@ -3,7 +3,6 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 local TR = _G.LUI.Locale.TR
-local is_lui_english_language = _G.LUI.Locale.is_english_language
 local Pages = _G.LUI.Settings.Pages
 local ConfigSectionPage = _G.LUI.Settings.Content.ConfigSectionPage
 local ConfigNestedTabs = _G.LUI.Settings.Content.ConfigNestedTabs
@@ -570,23 +569,6 @@ function GlobalPage:Constructor(window)
         function()
             return self._settings.global.close_windows_with_esc == true
         end, 2)
-    general:add_row_break()
-    general:add_checkbox("bestiary_capture", TR["Enable bestiary capture (English client only)"],
-        function(value)
-            if is_lui_english_language() == true then
-                self._settings.global.bestiary_capture = value == true
-            else
-                self._settings.global.bestiary_capture = false
-            end
-        end,
-        function()
-            return is_lui_english_language() == true and self._settings.global.bestiary_capture == true
-        end, true)
-    general.controls.bestiary_capture.load_fn = function()
-        local english_only = is_lui_english_language() == true
-        general.controls.bestiary_capture.cb:SetEnabled(english_only == true)
-        return english_only == true and self._settings.global.bestiary_capture == true
-    end
     self:add_tab(TR["General"], "general", general)
 
     local numbers = ConfigContent(window, 4)

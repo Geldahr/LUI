@@ -1,3 +1,6 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Base-93 codec and Lua emission helpers for lore2lua.
 
 Alphabet: printable ASCII 33..126 excluding ']' (93 chars), so blobs can never

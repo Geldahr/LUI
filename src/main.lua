@@ -40,6 +40,7 @@ import "LUI.src.Settings"
 import "LUI.src.Settings.default_layouts"
 
 import "LUI.src.UI"
+import "LUI.src.Chat"
 import "LUI.src.ExpiringEffects"
 import "LUI.src.Cooldowns"
 import "LUI.src.Upkeep"

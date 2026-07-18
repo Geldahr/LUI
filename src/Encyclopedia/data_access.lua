@@ -255,6 +255,21 @@ local function _append_unique_name(list, value)
     list[#list + 1] = value
 end
 
+-- di entries are deed game ids (numbers), not names
+local function _append_unique_id(list, value)
+    if type(list) ~= "table" or type(value) ~= "number" then
+        return
+    end
+
+    for i = 1, #list do
+        if list[i] == value then
+            return
+        end
+    end
+
+    list[#list + 1] = value
+end
+
 local function _merge_text_values(current, next_value)
     if type(next_value) ~= "string" or next_value == "" then
         return current
@@ -348,8 +363,8 @@ local function _new_merged_entry(name)
         resistances = {},
         mitigation = {},
         abilities = {},
-        quest_involvement = {},
-        deed_involvement = {},
+        quest_involvement = {}, -- quest game ids
+        deed_involvement = {}, -- deed game ids
         w = {},
         cw = {},
         levels = {},
@@ -429,12 +444,12 @@ local function _merge_entry(dst, src, name)
     end
     if type(src.qi) == "table" then
         for i = 1, #src.qi do
-            _append_unique_name(dst.quest_involvement, src.qi[i])
+            _append_unique_id(dst.quest_involvement, src.qi[i])
         end
     end
     if type(src.di) == "table" then
         for i = 1, #src.di do
-            _append_unique_name(dst.deed_involvement, src.di[i])
+            _append_unique_id(dst.deed_involvement, src.di[i])
         end
     end
 

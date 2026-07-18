@@ -460,8 +460,8 @@ local function _build_record(name, entry)
     _append_filter_values(filter_parts, entry.resistances)
     _append_filter_values(filter_parts, entry.mitigation)
     _append_filter_values(filter_parts, entry.abilities)
-    _append_filter_values(filter_parts, entry.quest_involvement)
-    _append_filter_values(filter_parts, entry.deed_involvement)
+    -- quest_involvement/deed_involvement are quest/deed game-id lists
+    -- (numbers), never search text
 
     return {
         key = name,

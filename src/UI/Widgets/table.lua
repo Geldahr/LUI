@@ -76,6 +76,11 @@ function LuiTable:Constructor()
     self._hover_index = nil
     self.on_row_clicked = nil
     self.on_row_double_clicked = nil
+    -- optional right-click hook: set it and right clicks open the item
+    -- context menu instead of firing on_row_clicked
+    self.on_item_context_menu = nil
+    self._context_menu = nil
+    self._context_row = nil
 
     self:SetMouseVisible(true)
     self:SetBackColor(self._border_color)
@@ -119,6 +124,47 @@ function LuiTable:destroy()
     self:clear()
     self.on_row_clicked = nil
     self.on_row_double_clicked = nil
+    self.on_item_context_menu = nil
+    if self._context_menu ~= nil then
+        self._context_menu:close()
+    end
+end
+
+-- ---------------------------------------------------- item context menu ----
+
+-- Static right-click menu over the rows. Consumers build the actions ONCE
+-- (menu shape never changes per row) and keep references to them; per open
+-- the table records the clicked row, fires on_item_context_menu(index) for
+-- cheap state sync (set_checked / set_text on the kept actions), then pops
+-- the menu at the cursor. No allocation after the first open.
+function LuiTable:item_context_menu()
+    if self._context_menu == nil then
+        local menu = Widgets.LuiMenu()
+        menu:SetVisible(false)
+        menu:SetSize(1, 1)
+        menu:SetParent(self)
+        self._context_menu = menu
+    end
+    return self._context_menu
+end
+
+-- the row the open (or last open) context menu belongs to; triggered
+-- callbacks resolve their target through these
+function LuiTable:context_row_index()
+    return self._context_row
+end
+
+function LuiTable:context_row_data()
+    return self._rows[self._context_row].data
+end
+
+function LuiTable:_open_item_context_menu(index, args)
+    self._context_row = index
+    self.on_item_context_menu(index)
+    local menu = self:item_context_menu()
+    menu:set_scale(State.settings.global.scale)
+    local screen_x, screen_y = self._rows[index].control:PointToScreen(args.X, args.Y)
+    menu:open_at_screen(screen_x, screen_y)
 end
 
 -- ---------------------------------------------------------------- modes ----
@@ -338,6 +384,11 @@ function LuiTable:_create_row()
     row.control = Turbine.UI.Control()
     row.control:SetMouseVisible(true)
     row.control.MouseClick = function(_, args)
+        if args.Button == Turbine.UI.MouseButton.Right
+            and type(table_widget.on_item_context_menu) == "function" then
+            table_widget:_open_item_context_menu(row.index, args)
+            return
+        end
         if type(table_widget.on_row_clicked) == "function" then
             table_widget.on_row_clicked(row.index, args)
         end

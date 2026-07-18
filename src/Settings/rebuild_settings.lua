@@ -131,8 +131,10 @@ function Settings.rebuild()
     State.settings = {
         global = {
             number_abbrev = {},
-            bestiary_capture = false,
             style = {},
+        },
+        encyclopedia = {
+            bestiary_capture = false,
         },
         ui = {
             windows = {},
@@ -252,8 +254,8 @@ function Settings.rebuild()
     State.settings.global.native_scaling = raw.global.native_scaling == true
     State.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
     State.settings.global.close_windows_with_esc = raw.global.close_windows_with_esc == true
-    State.settings.global.bestiary_capture = raw.global.bestiary_capture == true
     State.settings.global.style = raw.global.style
+    State.settings.encyclopedia.bestiary_capture = raw.encyclopedia.bestiary_capture == true
     State.settings.ui.windows = raw.ui.windows
     State.settings.ui.hud = raw.ui.hud
 
