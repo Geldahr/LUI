@@ -1412,6 +1412,7 @@ function EncyclopediaWindow:Constructor()
             self:refresh_from_store(false)
             self:sync_area_filter_query()
             self:apply_current_area_filter(true)
+            self:refresh_deed_completion()
         else
             self.genus_dropdown:Close()
             self.subcategory_dropdown:Close()
@@ -2109,6 +2110,19 @@ function EncyclopediaWindow:_set_encyclopedia_tab(index)
         self._item_panels[index] = panel
     end
     self:layout()
+    if index == QUESTS_TAB_INDEX then
+        self:refresh_deed_completion()
+    end
+end
+
+-- the deeds view may have become visible (window shown / Quests tab
+-- activated): re-read DeedTracker's file if the deed sub-tab is active
+-- (its panels are lazy)
+function EncyclopediaWindow:refresh_deed_completion()
+    local panel = self._item_panels[QUESTS_TAB_INDEX]
+    if panel ~= nil then
+        panel:refresh_deed_completion()
+    end
 end
 
 function EncyclopediaWindow:refresh_from_store(force)

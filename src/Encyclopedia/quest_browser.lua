@@ -19,6 +19,8 @@ local SearchQuery = _G.LUI.Utils.SearchQuery
 local Encyclopedia = _G.LUI.Features.Encyclopedia
 import "Turbine.UI"
 
+local Deeds = Encyclopedia.Deeds
+
 -- control metrics match the item browser tabs (21px controls, 4px gaps)
 local BASE_BAR_H = 21
 local BASE_GAP = 4
@@ -26,8 +28,24 @@ local BASE_NAV_W = 22
 local BASE_PAGE_BAR_H = 21
 local BASE_PAGE_W = 74
 local BASE_LEVEL_W = 44
+local BASE_ROW_H = 28
+local BASE_COMPLETED_LABEL_W = 80
+-- content inset LuiTable applies inside every cell (CELL_PAD_X)
+local TABLE_CELL_PAD_X = 4
 
 local FILTER_ALL_CODE = 0
+local COMPLETED_FILTER_YES = 1
+local COMPLETED_FILTER_NO = 2
+
+-- completed marker: the 64px check asset drawn at a row-fitting size
+-- (scaled with the rows themselves, even-rounded for crisp centering)
+local CHECK_ICON = "LUI/assets/ui/check.tga"
+local BASE_CHECK_ICON_SIDE = 20
+
+local function _completed_icon_side()
+    local side = scaled_int(BASE_CHECK_ICON_SIDE)
+    return side - (side % 2)
+end
 
 -- shared browser scaffolding (browser_shared.lua); the dropdown max clamp
 -- is this tab's only variation (quest categories run longer)
@@ -53,6 +71,8 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
     self._category_filter = FILTER_ALL_CODE
     self._level_min = nil
     self._level_max = nil
+    self._completed_filter = FILTER_ALL_CODE
+    self._status_col = kind == "deed"
 
     self:SetMouseVisible(true)
     self:SetBackColor(Style.PANEL_BACKGROUND)
@@ -117,14 +137,42 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
         self:_on_filters_changed()
     end
 
+    -- deed sub-tab only: the completed filter dropdown next to Category
+    if self._status_col == true then
+        self.completed_label = UI.Widgets.LuiLabel()
+        self.completed_label:SetParent(self)
+        self.completed_label:SetMouseVisible(false)
+        self.completed_label:SetSelectable(false)
+        self.completed_label:SetMultiline(false)
+        self.completed_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
+        self.completed_label:SetText(TR["Completed"] .. ":")
+
+        self.completed_dropdown = UI.Widgets.LuiDropdown()
+        self.completed_dropdown:SetParent(self)
+        self.completed_dropdown:SetPopupHost(popup_host)
+        self.completed_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        local completed_labels = { TR["All"], TR["Completed"], TR["Not completed"] }
+        self.completed_dropdown:SetMappedOptions(completed_labels,
+            { FILTER_ALL_CODE, COMPLETED_FILTER_YES, COMPLETED_FILTER_NO })
+        self._completed_dd_base_w = _dropdown_base_w(completed_labels)
+        self.completed_dropdown.ValueChanged = function(_, value)
+            self._completed_filter = tonumber(value) or FILTER_ALL_CODE
+            self:_on_filters_changed()
+        end
+    end
+
     self.table = UI.Widgets.LuiTable()
     self.table:SetParent(self)
     self.table:set_auto_height(true)
-    self.table:set_columns({
+    local columns = {
         { title = TR["Name"] },
         { title = TR["Category"], width = 190 },
         { title = TR["Level"], width = 60 },
-    })
+    }
+    if self._status_col == true then
+        table.insert(columns, 1, { title = "", width = self:_status_col_width() })
+    end
+    self.table:set_columns(columns)
     self._table_cells = {}
     self.table.on_row_clicked = function(index)
         local ordinal = self.table:row_data(index)
@@ -167,15 +215,40 @@ function QuestBrowserPanel:_category_options()
     return labels, values
 end
 
+-- the check column: icon side plus the table's per-cell content inset
+-- on both sides, so the icon sits exactly in the cell content box
+function QuestBrowserPanel:_status_col_width()
+    return _completed_icon_side() + (2 * TABLE_CELL_PAD_X)
+end
+
+-- (re)apply the scale-sized check art and center it in the cell; the
+-- position is computed here (creation / scale change), never per frame
+function QuestBrowserPanel:_style_status_icon(icon)
+    local side = _completed_icon_side()
+    local visible = icon:IsVisible()
+    icon:set_icon(CHECK_ICON, side, side)
+    icon:SetVisible(visible)
+    icon:SetPosition(0, math.floor((scaled_int(BASE_ROW_H) - side) / 2))
+end
+
 function QuestBrowserPanel:apply_fonts()
     local font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
     self.search_box:SetFont(font)
     self.category_label:SetFont(font)
     self.category_dropdown:SetFont(font)
     self.category_dropdown:set_scale(State.settings.global.scale)
+    if self._status_col == true then
+        self.completed_label:SetFont(font)
+        self.completed_dropdown:SetFont(font)
+        self.completed_dropdown:set_scale(State.settings.global.scale)
+        self.table:set_column_width(1, self:_status_col_width())
+    end
     self.table:set_header_font(font)
     for slot = 1, #self._table_cells do
         local cells = self._table_cells[slot]
+        if cells.status_icon ~= nil then
+            self:_style_status_icon(cells.status_icon)
+        end
         cells.name_label:SetFont(font)
         cells.category_label:SetFont(font)
         cells.level_label:SetFont(font)
@@ -216,10 +289,14 @@ end
 function QuestBrowserPanel:_rebuild_filtered()
     local Quests = Lore.Quests
     local query = self.search_box:GetText() or ""
+    -- the store revision folds in so completion marks invalidate the
+    -- cached deed list (a mark changes the result set with no filter edit)
     local filter_sig = table.concat({
         tostring(self._category_filter),
         tostring(self._level_min or ""),
         tostring(self._level_max or ""),
+        tostring(self._completed_filter),
+        self._status_col == true and tostring(Deeds.revision()) or "",
     }, "\30")
     local signature = query .. "\30" .. filter_sig
     if signature == self._signature and self._filtered ~= nil then
@@ -266,6 +343,7 @@ function QuestBrowserPanel:_rebuild_filtered()
     local category = self._category_filter
     local level_min = self._level_min
     local level_max = self._level_max
+    local completed_filter = self._completed_filter
     local list = Quests.kind_list(self._kind)
     local need_brief = category ~= FILTER_ALL_CODE or level_min ~= nil or level_max ~= nil
     local filtered, n = {}, 0
@@ -278,6 +356,10 @@ function QuestBrowserPanel:_rebuild_filtered()
                 ok = (category == FILTER_ALL_CODE or cat == category)
                     and (level_min == nil or level >= level_min)
                     and (level_max == nil or level <= level_max)
+            end
+            if ok and completed_filter ~= FILTER_ALL_CODE then
+                local completed = Deeds.completed_entry(Quests.id_of(ordinal)) ~= nil
+                ok = completed == (completed_filter == COMPLETED_FILTER_YES)
             end
             if ok then
                 n = n + 1
@@ -324,7 +406,20 @@ function QuestBrowserPanel:_ensure_table_row(slot)
     }
     cells.name_label:SetMultiline(true)
 
-    self.table:append_row({ cells.name_label, cells.category_label, cells.level_label })
+    if self._status_col == true then
+        -- display-only completed marker: a plain container cell (the table
+        -- sizes it) holding the star image at its fixed centered offset
+        local status_cell = Turbine.UI.Control()
+        status_cell:SetMouseVisible(false)
+        cells.status_icon = UI.Widgets.Image()
+        cells.status_icon:SetParent(status_cell)
+        cells.status_icon:SetMouseVisible(false)
+        self:_style_status_icon(cells.status_icon)
+        cells.status_icon:SetVisible(false)
+        self.table:append_row({ status_cell, cells.name_label, cells.category_label, cells.level_label })
+    else
+        self.table:append_row({ cells.name_label, cells.category_label, cells.level_label })
+    end
     self._table_cells[slot] = cells
     return cells
 end
@@ -337,11 +432,15 @@ function QuestBrowserPanel:_render_table_page(capacity, first)
         shown = 0
     end
 
+    local status_col = self._status_col == true
     for slot = 1, shown do
         local ordinal = filtered[first + slot]
         local cells = self:_ensure_table_row(slot)
         local is_deed, level, _, cat_code = Quests.brief(ordinal)
         local cats = is_deed and Quests.DEED_CATS or Quests.QUEST_CATS
+        if status_col then
+            cells.status_icon:SetVisible(Deeds.completed_entry(Quests.id_of(ordinal)) ~= nil)
+        end
         cells.name_label:SetText(Quests.label(ordinal))
         cells.category_label:SetText(cats[cat_code] or "")
         cells.level_label:SetText(level > 0 and tostring(level) or "")
@@ -391,6 +490,17 @@ function QuestBrowserPanel:layout()
     x = x + category_label_w + gap
     self.category_dropdown:SetPosition(x, margin_t)
     self.category_dropdown:SetSize(category_w, bar_h)
+    x = x + category_w + gap
+
+    if self._status_col == true then
+        local completed_label_w = scaled_int(BASE_COMPLETED_LABEL_W)
+        local completed_w = scaled_int(self._completed_dd_base_w)
+        self.completed_label:SetPosition(x, margin_t)
+        self.completed_label:SetSize(completed_label_w, bar_h)
+        x = x + completed_label_w + gap
+        self.completed_dropdown:SetPosition(x, margin_t)
+        self.completed_dropdown:SetSize(completed_w, bar_h)
+    end
 
     local level_x = width - margin_r - level_block_w
     self.level_label:SetPosition(level_x, margin_t)
@@ -414,7 +524,7 @@ function QuestBrowserPanel:layout()
     local page_bar_h = scaled_int(BASE_PAGE_BAR_H)
     local table_y = search_y + bar_h + gap
     local table_h = height - table_y - margin_b - gap - page_bar_h
-    self.table:set_row_height(scaled_int(28))
+    self.table:set_row_height(scaled_int(BASE_ROW_H))
     self.table:SetPosition(margin_l, table_y)
     self.table:SetSize(inner_w, math.max(1, table_h))
 
@@ -501,7 +611,22 @@ end
 
 function QuestsTabPanel:_set_sub_tab(index)
     self._active_sub_tab = index
+    self:refresh_deed_completion()
     self:layout()
+end
+
+-- the deeds view was (re)opened: re-read DeedTracker's file and refresh
+-- the listing when its content changed (index 2 = the "deed" sub-tab;
+-- panels are lazy, the panel renders fresh data on creation anyway)
+function QuestsTabPanel:refresh_deed_completion()
+    if self._active_sub_tab ~= 2 then
+        return
+    end
+    Deeds.refresh()
+    local panel = self._panels[2]
+    if panel ~= nil then
+        panel:_refresh_list()
+    end
 end
 
 function QuestsTabPanel:apply_fonts()

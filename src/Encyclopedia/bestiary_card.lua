@@ -686,6 +686,46 @@ local function _build_quest_lines(quest_ids)
     return lines
 end
 
+-- the deeds panel additionally carries the completion marker from the
+-- read-only DeedTracker mirror (Encyclopedia.Deeds, never a refresh from
+-- here): completed deeds render green via label markup; the measure path
+-- uses the plain lines so rgb tags never inflate the height estimate
+local _COMPLETED_RGB = string.format("#%02X%02X%02X",
+    math.floor(Style.COMPLETED_TEXT.R * 255 + 0.5),
+    math.floor(Style.COMPLETED_TEXT.G * 255 + 0.5),
+    math.floor(Style.COMPLETED_TEXT.B * 255 + 0.5))
+
+local function _build_deed_lines(deed_ids)
+    if type(deed_ids) ~= "table" or #deed_ids == 0 then
+        return nil, nil
+    end
+    local Quests = _G.LUI.Data.Lore.Quests
+    if Quests.loaded ~= true then
+        return nil, nil
+    end
+    local Deeds = Encyclopedia.Deeds
+    local plain, marked = {}, {}
+    for i = 1, #deed_ids do
+        local id = deed_ids[i]
+        local line = Quests.label(Quests.ordinal_of(id))
+        plain[i] = line
+        if Deeds.completed_entry(id) ~= nil then
+            line = "<rgb=" .. _COMPLETED_RGB .. ">" .. line .. "</rgb>"
+        end
+        marked[i] = line
+    end
+    return marked, plain
+end
+
+-- deeds bind: markup lines go to the label, plain lines to area.text so
+-- the height/scroll measurement never counts rgb tags
+local function _bind_deed_area(area, marked, plain)
+    area.label:SetVerticalScrollBar(nil)
+    area.text = _build_list_text(plain)
+    area.label:SetText(_build_list_text(marked))
+    area.label:SetVerticalScrollBar(area.scroll)
+end
+
 local function _build_drop_texts(record)
     local texts = {}
 
@@ -1203,6 +1243,8 @@ function BestiaryCard:Constructor()
 
     self.deeds_panel = _create_panel(self.content, TR["Deeds"])
     self.deeds_area = _create_scroll_label_area(self.deeds_panel.body)
+    -- completed deed lines are colored via <rgb> markup
+    self.deeds_area.label:SetMarkupEnabled(true)
 
     self.VisibleChanged = function()
         if self:IsVisible() == true then
@@ -1829,7 +1871,7 @@ function BestiaryCard:_apply_record(record)
 
     _bind_scroll_label_area(self.abilities_area, record.abilities)
     _bind_scroll_label_area(self.quests_area, _build_quest_lines(record.quest_involvement))
-    _bind_scroll_label_area(self.deeds_area, _build_quest_lines(record.deed_involvement))
+    _bind_deed_area(self.deeds_area, _build_deed_lines(record.deed_involvement))
 
     self:_apply_drop_layout(_build_drop_texts(record))
 end
@@ -1871,8 +1913,11 @@ function BestiaryCard:apply_settings()
     _bind_scroll_label_area(self.abilities_area, self.current_record ~= nil and self.current_record.abilities or nil)
     _bind_scroll_label_area(self.quests_area,
         self.current_record ~= nil and _build_quest_lines(self.current_record.quest_involvement) or nil)
-    _bind_scroll_label_area(self.deeds_area,
-        self.current_record ~= nil and _build_quest_lines(self.current_record.deed_involvement) or nil)
+    local deed_marked, deed_plain
+    if self.current_record ~= nil then
+        deed_marked, deed_plain = _build_deed_lines(self.current_record.deed_involvement)
+    end
+    _bind_deed_area(self.deeds_area, deed_marked, deed_plain)
 
     if self.variant_bar ~= nil then
         self.variant_bar:set_scale(State.settings.global.scale)
