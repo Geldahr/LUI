@@ -8,6 +8,8 @@
 
 ### Fixed
 
+- Binding a skill on the `Upkeep` settings tab now works for players whose quickslot drops were blocked: the slots accept the skill drop directly instead of through a game quickslot, and draw the skill icon themselves.
+
 ### Removed
 
 ## v2.2.0

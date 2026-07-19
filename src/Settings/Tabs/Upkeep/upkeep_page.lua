@@ -12,6 +12,7 @@ local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Style = UI.Widgets.Style
 local class = _G.LUI.Core.class
+import "Turbine.Gameplay"
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
@@ -51,7 +52,41 @@ local function _slot_name_text(did_text)
     return record.name
 end
 
--- The slot editor: one droppable quickslot per Upkeep slot, with the bound
+-- The bound skill's icon image id: resolved from the trained skill by
+-- localized name (same matching as the Upkeep bar), falling back to the
+-- skill's first buff icon from the skills DB when the character has not
+-- trained the skill.
+local function _skill_icon_id(did)
+    local record = Lore.Skills.buffs_of(did)
+    if record == nil then
+        return nil
+    end
+
+    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if player ~= nil and player.GetTrainedSkills ~= nil then
+        local list = player:GetTrainedSkills()
+        if list ~= nil and list.GetCount ~= nil and list.GetItem ~= nil then
+            for i = 1, (list:GetCount() or 0) do
+                local skill = list:GetItem(i)
+                if skill ~= nil and skill.GetSkillInfo ~= nil then
+                    local info = skill:GetSkillInfo()
+                    if info ~= nil and info.GetName ~= nil and info:GetName() == record.name and
+                        info.GetIconImageID ~= nil then
+                        return info:GetIconImageID()
+                    end
+                end
+            end
+        end
+    end
+
+    local effect = record.effects[1]
+    if effect ~= nil then
+        return effect.icon
+    end
+    return nil
+end
+
+-- The slot editor: one skill drop area per Upkeep slot, with the bound
 -- skill's name and a clear button underneath. Bindings live in the editor
 -- until Apply writes them back to settings (same transactional model as
 -- every other control on the page).
@@ -59,7 +94,6 @@ local function _create_slots_editor(content, window, get_count)
     local entry = content:add_custom("upkeep_slots_editor", 150)
     entry._slots = {}
     entry._cells = {}
-    entry._syncing = false
 
     for i = 1, MAX_SLOTS do
         local cell = {}
@@ -69,9 +103,8 @@ local function _create_slots_editor(content, window, get_count)
         cell.holder:SetMouseVisible(false)
         cell.holder:SetVisible(false)
 
-        -- empty quickslots render nearly invisible on the dark page; a
-        -- border ring marks the drop target (created before the quickslot
-        -- so the icon draws above it)
+        -- a border ring marks the drop target; the bound skill's icon is
+        -- drawn by our own image on top
         cell.frame = Turbine.UI.Control()
         cell.frame:SetParent(cell.holder)
         cell.frame:SetMouseVisible(false)
@@ -82,11 +115,18 @@ local function _create_slots_editor(content, window, get_count)
         cell.frame_inner:SetMouseVisible(false)
         cell.frame_inner:SetBackColor(Style.BACKGROUND)
 
-        cell.quickslot = Turbine.UI.Lotro.Quickslot()
-        cell.quickslot:SetParent(cell.holder)
-        cell.quickslot:SetAllowDrop(true)
-        cell.quickslot:SetUseOnRightClick(false)
-        cell.quickslot:SetStretchMode(1)
+        -- a plain drop area, never a quickslot: the game hands the dragged
+        -- shortcut to any control via DragDrop args, while quickslot
+        -- socketing is blocked by client-side quickslot state for some
+        -- players
+        cell.drop = Turbine.UI.Control()
+        cell.drop:SetParent(cell.holder)
+        if cell.drop.SetAllowDrop ~= nil then
+            cell.drop:SetAllowDrop(true)
+        end
+
+        cell.icon = UI.Widgets.Image()
+        cell.icon:SetParent(cell.drop)
 
         cell.name = UI.Widgets.LuiLabel()
         cell.name:SetParent(cell.holder)
@@ -102,26 +142,24 @@ local function _create_slots_editor(content, window, get_count)
         cell.clear:set_font(window.input_font)
         cell.clear:set_text(TR["Clear"])
 
-        cell.quickslot.ShortcutChanged = function()
-            if entry._syncing == true then
+        cell.drop.DragDrop = function(_, args)
+            local info = args ~= nil and args.DragDropInfo or nil
+            if info == nil or info.GetShortcut == nil then
                 return
             end
-
-            local shortcut = cell.quickslot:GetShortcut()
+            local shortcut = info:GetShortcut()
             local data = nil
             if shortcut ~= nil and shortcut.GetType ~= nil and
                 shortcut:GetType() == Turbine.UI.Lotro.ShortcutType.Skill then
                 data = shortcut:GetData()
             end
             if type(data) ~= "string" or tonumber(data) == nil then
-                -- not a skill shortcut: revert to the stored binding
-                entry:sync_cell(i)
+                -- not a skill: ignore the drop, keep the stored binding
                 return
             end
 
             entry._slots[i] = data
-            cell.name:SetText(_slot_name_text(data))
-            entry:size_quickslot(cell)
+            entry:sync_cell(i)
         end
 
         cell.clear.Click = function()
@@ -132,27 +170,21 @@ local function _create_slots_editor(content, window, get_count)
         entry._cells[i] = cell
     end
 
-    -- SetShortcut resets the quickslot's render size; re-apply the stretch
-    -- and footprint after every shortcut change
-    function entry:size_quickslot(cell)
-        local qs = _even_scaled(QS_SIZE)
-        cell.quickslot:SetStretchMode(1)
-        cell.quickslot:SetSize(qs, qs)
-    end
-
     function entry:sync_cell(index)
         local cell = self._cells[index]
         local did_text = self._slots[index]
-        self._syncing = true
+        local icon_id = nil
         if type(did_text) == "string" and tonumber(did_text) ~= nil then
-            cell.quickslot:SetShortcut(
-                Turbine.UI.Lotro.Shortcut(Turbine.UI.Lotro.ShortcutType.Skill, did_text))
-        else
-            cell.quickslot:SetShortcut(nil)
+            icon_id = _skill_icon_id(tonumber(did_text))
         end
-        self._syncing = false
+        if icon_id ~= nil then
+            local qs = _even_scaled(QS_SIZE)
+            cell.icon:set_icon(Turbine.UI.Graphic(icon_id), qs, qs)
+        else
+            cell.icon:set_icon(nil)
+            cell.icon:SetVisible(false)
+        end
         cell.name:SetText(_slot_name_text(did_text))
-        self:size_quickslot(cell)
     end
 
     function entry:get_value()
@@ -218,13 +250,10 @@ local function _create_slots_editor(content, window, get_count)
                 cell.frame:SetSize(frame_size, frame_size)
                 cell.frame_inner:SetPosition(border, border)
                 cell.frame_inner:SetSize(qs, qs)
-                -- the native quickslot art draws its icon anchored
-                -- bottom-right, leaving a dead margin of ~3/36 of the slot
-                -- on the top/left; nudge the control up-left by half of it
-                -- so the icon sits visually centered in the frame
-                local nudge = math.floor((qs / 24) + 0.5)
-                cell.quickslot:SetPosition(frame_x + border - nudge, border - nudge)
-                cell.quickslot:SetSize(qs, qs)
+                cell.drop:SetPosition(frame_x + border, border)
+                cell.drop:SetSize(qs, qs)
+                cell.icon:SetPosition(0, 0)
+                cell.icon:set_size(qs, qs)
                 cell.name:SetPosition(0, frame_size + pad)
                 cell.name:SetSize(cell_w, name_h)
                 cell.clear:SetPosition(frame_x + border, frame_size + pad + name_h + pad)
