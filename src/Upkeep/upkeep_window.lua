@@ -18,7 +18,6 @@ import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
 
 local add_callback = _G.LUI.Utils.add_callback
-local remove_callback = _G.LUI.Utils.remove_callback
 
 -- The Upkeep bar: a pure tracker for maintenance buffs, one drawn skill
 -- icon per slot (never a quickslot; native quickslot rendering neither
@@ -26,6 +25,11 @@ local remove_callback = _G.LUI.Utils.remove_callback
 -- (Lore.Skills) resolves each bound skill DID to the localized buff names
 -- it applies; player effects are matched by those names, cooldowns come
 -- live from the trained ActiveSkill.
+--
+-- Both inputs are polled on this window's own tick, the way the expiring
+-- effect bars read GetEffects(), and nothing is subscribed to. The bar
+-- therefore stands entirely on its own: it needs no other feature enabled,
+-- and it cannot be left dead by an input that was not ready at load time.
 --
 -- Zoomed (stretched) icons render above every control in their own window
 -- but below other windows, so the slot decorations (drain, shade, timer)
@@ -88,9 +92,8 @@ function UpkeepWindow:Constructor()
     self.last_update_at = 0
     self.update_every = 1.0 / State.settings.global.refresh_rate
     self._skill_discover_due_at = 0
-
-    self._effects_list = nil
-    self._events = {}
+    -- bumped once per effect poll; slots stamp what they saw with it
+    self._effect_gen = 0
 
     self:SetWantsUpdates(true)
     self:SetVisible(false)
@@ -107,7 +110,6 @@ function UpkeepWindow:Constructor()
         self:_raise_companions()
     end)
 
-    self:_setup_effect_tracking()
     self:apply_settings()
 end
 
@@ -118,13 +120,6 @@ end
 function UpkeepWindow:destroy()
     for i = 1, #self.slots do
         self.slots[i]:destroy()
-    end
-    if self._effects_list ~= nil then
-        remove_callback(self._effects_list, "EffectAdded", self._events.ea)
-        remove_callback(self._effects_list, "EffectRemoved", self._events.er)
-        remove_callback(self._effects_list, "EffectsCleared", self._events.ec)
-        self._events = {}
-        self._effects_list = nil
     end
     self.overlay:destroy()
     self:SetWantsUpdates(false)
@@ -233,9 +228,9 @@ function UpkeepWindow:apply_settings()
     end
 
     self:_sync_companion_positions()
-    -- _rescan_effects invalidates the auto order, no separate call needed
-    self:_rescan_effects()
     self:_discover_skills(true)
+    -- _poll_effects invalidates the auto order, no separate call needed
+    self:_poll_effects(Turbine.Engine.GetGameTime())
     self:refresh_visibility()
 end
 
@@ -277,6 +272,8 @@ function UpkeepWindow:Update()
     if self:is_move_mode() == true then
         return
     end
+
+    self:_poll_effects(now)
 
     for i = 1, self._capacity do
         self.slots[i]:update(now)
@@ -379,77 +376,48 @@ function UpkeepWindow:_raise_companions()
     end
 end
 
-function UpkeepWindow:_setup_effect_tracking()
+-- One pass over the player's effects, matching watched buff names to the
+-- slots that want them. Read fresh every tick like the expiring effect bars
+-- do: the effect list does not exist yet at plugin load, so a subscription
+-- taken once in the constructor would stay dead for the whole session.
+--
+-- Only the name is read for effects nobody watches; duration and start time
+-- are read for matches only.
+function UpkeepWindow:_poll_effects(now)
+    local gen = self._effect_gen + 1
+    self._effect_gen = gen
+    local changed = false
+
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    if player == nil or player.GetEffects == nil then
-        return
-    end
-    local list = player:GetEffects()
-    if list == nil then
-        return
+    local list = nil
+    if player ~= nil and player.GetEffects ~= nil then
+        list = player:GetEffects()
     end
 
-    self._effects_list = list
-    self._events.ea = add_callback(list, "EffectAdded", function(sender, args)
-        local idx = args ~= nil and args.Index or nil
-        if idx == nil or sender == nil or sender.Get == nil then
-            return
+    if list ~= nil and list.GetCount ~= nil then
+        for i = 1, (list:GetCount() or 0) do
+            local effect = list:Get(i)
+            if effect ~= nil and effect.GetName ~= nil then
+                local targets = self._watch[effect:GetName()]
+                if targets ~= nil then
+                    for k = 1, #targets do
+                        if self.slots[targets[k]]:mark_active(effect, now, gen) then
+                            changed = true
+                        end
+                    end
+                end
+            end
         end
-        self:_on_effect_added(sender:Get(idx))
-    end)
-    self._events.er = add_callback(list, "EffectRemoved", function(_, args)
-        local effect = args ~= nil and args.Effect or nil
-        if effect ~= nil and effect.GetID ~= nil then
-            self:_on_effect_removed(effect:GetID())
-        else
-            self:_rescan_effects()
-        end
-    end)
-    self._events.ec = add_callback(list, "EffectsCleared", function()
-        self:_rescan_effects()
-    end)
-end
-
-function UpkeepWindow:_on_effect_added(effect)
-    if effect == nil or effect.GetName == nil then
-        return
-    end
-    local targets = self._watch[effect:GetName()]
-    if targets == nil then
-        return
     end
 
-    local now = Turbine.Engine.GetGameTime()
-    for i = 1, #targets do
-        self.slots[targets[i]]:add_active(effect, now)
-    end
-    self:invalidate_order()
-end
-
-function UpkeepWindow:_on_effect_removed(id)
-    local removed = false
     for i = 1, self._capacity do
-        if self.slots[i]:remove_active(id) then
-            removed = true
+        if self.slots[i]:prune_active(gen) then
+            changed = true
         end
     end
-    if removed then
+
+    if changed then
         self:invalidate_order()
-    end
-end
-
-function UpkeepWindow:_rescan_effects()
-    for i = 1, self._capacity do
-        self.slots[i]:clear_active()
-    end
-    self:invalidate_order()
-
-    local list = self._effects_list
-    if list == nil or list.GetCount == nil then
-        return
-    end
-    for i = 1, (list:GetCount() or 0) do
-        self:_on_effect_added(list:Get(i))
     end
 end
 

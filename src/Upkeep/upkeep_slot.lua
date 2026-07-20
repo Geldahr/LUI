@@ -4,8 +4,6 @@
 
 local lui_timed_row_format_time = _G.LUI.Utils.lui_timed_row_format_time
 local lui_apply_opacity_to_color = _G.LUI.Utils.lui_apply_opacity_to_color
-local add_callback = _G.LUI.Utils.add_callback
-local remove_callback = _G.LUI.Utils.remove_callback
 local Upkeep = _G.LUI.Features.Upkeep
 local LUI_TO_LOTRO = _G.LUI.Settings.ToLotro
 local State = _G.LUI.Settings.State
@@ -74,10 +72,11 @@ function UpkeepSlot:Constructor(overlay_parent, window)
     self.binding = nil
     self.did_text = nil
     self.skill = nil
-    self.cb_reset = nil
     self.reset_time = nil
-    -- effect instance id -> { ending, duration }; ending nil = no constant
-    -- duration (toggle/permanent buff, shown active without countdown)
+    -- effect instance id -> { ending, duration, gen }; ending nil = no
+    -- constant duration (toggle/permanent buff, shown active without
+    -- countdown). gen is the poll pass that last saw the effect; entries
+    -- carrying an older gen are gone from the player and get pruned.
     self.active = {}
     self.active_count = 0
 
@@ -229,17 +228,7 @@ function UpkeepSlot:set_skill(skill)
         return
     end
 
-    if self.skill ~= nil and self.cb_reset ~= nil then
-        remove_callback(self.skill, "ResetTimeChanged", self.cb_reset)
-    end
-    self.cb_reset = nil
     self.skill = skill
-
-    if skill ~= nil then
-        self.cb_reset = add_callback(skill, "ResetTimeChanged", function()
-            self:refresh_cooldown()
-        end)
-    end
 
     local icon_id = nil
     if skill ~= nil and skill.GetSkillInfo ~= nil then
@@ -261,6 +250,9 @@ function UpkeepSlot:set_skill(skill)
     self:refresh_cooldown()
 end
 
+-- Polled from update() rather than driven by ResetTimeChanged: the bar
+-- watches at most a handful of skills, and reading them itself keeps it
+-- working no matter which other features are enabled.
 function UpkeepSlot:refresh_cooldown()
     local previous = self.reset_time
     local skill = self.skill
@@ -274,7 +266,10 @@ function UpkeepSlot:refresh_cooldown()
     end
 end
 
-function UpkeepSlot:add_active(effect, now)
+-- Records a watched effect seen in this poll pass. The entry table is reused
+-- across passes so a steady buff allocates nothing; returns whether the
+-- effect is newly active (the caller only re-sorts when the set changed).
+function UpkeepSlot:mark_active(effect, now, gen)
     local id = effect:GetID()
     local duration = tonumber(effect:GetDuration())
     local ending = nil
@@ -288,21 +283,36 @@ function UpkeepSlot:add_active(effect, now)
         duration = nil
     end
 
-    if self.active[id] == nil then
+    local rec = self.active[id]
+    local added = false
+    if rec == nil then
+        rec = {}
+        self.active[id] = rec
         self.active_count = self.active_count + 1
+        added = true
     end
-    self.active[id] = { ending = ending, duration = duration }
+    rec.ending = ending
+    rec.duration = duration
+    rec.gen = gen
+    return added
 end
 
--- returns whether the effect was actually tracked here (the caller only
--- re-sorts when a watched effect went away)
-function UpkeepSlot:remove_active(id)
-    if self.active[id] == nil then
+-- drops entries the latest poll pass did not see; returns whether anything
+-- went away
+function UpkeepSlot:prune_active(gen)
+    if self.active_count == 0 then
         return false
     end
-    self.active[id] = nil
-    self.active_count = self.active_count - 1
-    return true
+
+    local removed = false
+    for id, rec in pairs(self.active) do
+        if rec.gen ~= gen then
+            self.active[id] = nil
+            self.active_count = self.active_count - 1
+            removed = true
+        end
+    end
+    return removed
 end
 
 function UpkeepSlot:clear_active()
@@ -366,6 +376,8 @@ function UpkeepSlot:update(now)
     if self.did_text == nil then
         return
     end
+
+    self:refresh_cooldown()
 
     local s = State.settings.self.upkeep
 
