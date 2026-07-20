@@ -8,6 +8,9 @@
 
 ### Fixed
 
+- The `Upkeep` bar now tracks buffs and cooldowns entirely on its own, so it works the same with the `Expiring Effects` and `Cooldowns` windows disabled.
+- The `Upkeep` bar no longer stays stuck without buff highlights for the rest of the session when your effects are not available yet as the plugin loads.
+
 ### Removed
 
 ## v2.2.1
