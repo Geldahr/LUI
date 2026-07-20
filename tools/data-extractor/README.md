@@ -73,8 +73,12 @@ icon ids, base durations in tenths of seconds, 0 = none);
 `labels_<lang>.lua` the localized skill and buff names;
 `categories.lua` the localized skill-category labels. The mapping is
 many-to-many: trait-rank variants are distinct skill ids sharing one
-name, one skill can grant several buffs, and monster/NPC skills are
-included (debuff sourcing). No runtime loader consumes it yet.
+name and one skill can grant several buffs. Only player skills are
+packed -- those carrying a real `Skill_Category`, i.e. the ones the
+client can quickslot and the player can drag onto an Upkeep slot.
+Uncategorised skills (monster/NPC skills, and internal effect-carrier
+variants of player skills) are not extracted; see the comment in
+`extract.py` for the trade-off. No runtime loader consumes it yet.
 
 The cooldown-groups db (`src/Data/Skills/cooldown_groups_<lang>.lua`)
 maps lowercased localized skill names to their shared-cooldown channel

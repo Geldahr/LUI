@@ -4,10 +4,15 @@
 
 ### Added
 
+- `Upkeep` slots now fade while the game reports the skill cannot be cast, for skills gated on something other than their cooldown — an execute threshold, a required target, a stance. New `Fade when not usable` setting on the `Upkeep > On cooldown` tab, on by default.
+
 ### Changed
 
 ### Fixed
 
+- Player skills that apply no buff — Merciful Strike, Champion's Duel, Blinding Flash, Herb Lore and the like — can now be bound to an `Upkeep` slot. They show their icon and cooldown, and are marked `Cooldown only` on the settings tab. They previously showed as `Unknown skill` and left the slot blank.
+- Dropping something that is not a player skill on an `Upkeep` slot is now refused with a `Not a buff skill` label, instead of binding to a slot that could only ever stay empty.
+- The `Upkeep` bar and the `Upkeep` settings tab now pick the same skill when several trained ranks of it share a name, preferring the one currently recovering. They previously picked from opposite ends of the list and could show different skills, and the bar could read the wrong cooldown.
 - The `Upkeep` bar now tracks buffs and cooldowns entirely on its own, so it works the same with the `Expiring Effects` and `Cooldowns` windows disabled.
 - The `Upkeep` bar no longer stays stuck without buff highlights for the rest of the session when your effects are not available yet as the plugin loads.
 

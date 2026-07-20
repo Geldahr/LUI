@@ -4,6 +4,20 @@
 
 local Utils = _G.LUI.Utils
 
+-- the plugin's own blue, same one the /lui command output uses
+local LUI_COLOR = "#3399FA"
+-- dark orange, readable against the chat backdrop without shouting
+local WARN_COLOR = "#CC7A29"
+
+-- A warning the player needs to see and can act on. Deliberately rare: this
+-- is not for data-age or drift notices, only for a binding the plugin cannot
+-- resolve correctly.
+function Utils.lui_warn(message)
+    Turbine.Shell.WriteLine(
+        "<rgb=" .. LUI_COLOR .. ">LUI</rgb> " ..
+        "<rgb=" .. WARN_COLOR .. ">[WARN] " .. tostring(message or "") .. "</rgb>")
+end
+
 function Utils.lui_chat_type_names(chat_type)
     if type(Turbine.ChatType) ~= "table" then
         return tostring(chat_type)

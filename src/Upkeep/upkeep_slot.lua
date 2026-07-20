@@ -34,6 +34,10 @@ import "LUI.src.Utils.callbacks"
 local UpkeepSlot = class(Turbine.UI.Control)
 Upkeep.UpkeepSlot = UpkeepSlot
 
+-- seconds between IsUsable() polls; far below what the eye resolves, far
+-- above the render rate
+local USABLE_POLL_EVERY = 0.25
+
 -- translucent back colors only render with alpha blending enabled
 local function _set_alpha_backdrop(control)
     control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
@@ -73,6 +77,10 @@ function UpkeepSlot:Constructor(overlay_parent, window)
     self.did_text = nil
     self.skill = nil
     self.reset_time = nil
+    -- IsUsable() covers the conditions the plugin cannot see: execute-range,
+    -- target state, stance, gambits, positional requirements
+    self.usable = true
+    self._usable_due_at = 0
     -- effect instance id -> { ending, duration, gen }; ending nil = no
     -- constant duration (toggle/permanent buff, shown active without
     -- countdown). gen is the poll pass that last saw the effect; entries
@@ -266,9 +274,31 @@ function UpkeepSlot:refresh_cooldown()
     end
 end
 
+-- Skills gated on something the plugin cannot see -- an execute threshold, a
+-- valid target, a stance -- read as ready whenever they are off cooldown;
+-- IsUsable() is the only signal the game gives for that. Skills the character
+-- has not trained resolve to no skill at all, and count as usable so they
+-- render exactly as before.
+--
+-- Throttled: what it reports changes on a human timescale, so polling it at
+-- the render rate would just burn native calls.
+function UpkeepSlot:refresh_usable(now)
+    if now < self._usable_due_at then
+        return
+    end
+    self._usable_due_at = now + USABLE_POLL_EVERY
+
+    local skill = self.skill
+    if skill == nil or skill.IsUsable == nil then
+        self.usable = true
+        return
+    end
+    self.usable = skill:IsUsable() ~= false
+end
+
 -- Records a watched effect seen in this poll pass. The entry table is reused
--- across passes so a steady buff allocates nothing; returns whether the
--- effect is newly active (the caller only re-sorts when the set changed).
+-- across passes so a steady buff allocates nothing; returns whether the slot's
+-- tracked state actually moved, so the caller only re-sorts when it did.
 function UpkeepSlot:mark_active(effect, now, gen)
     local id = effect:GetID()
     local duration = tonumber(effect:GetDuration())
@@ -290,11 +320,28 @@ function UpkeepSlot:mark_active(effect, now, gen)
         self.active[id] = rec
         self.active_count = self.active_count + 1
         added = true
+    elseif rec.gen == gen then
+        -- A second instance of the same effect inside one poll pass: a
+        -- stackable buff that outlasts its own cooldown, applied again before
+        -- the first ran out. The two stacks can share an id, so keep the one
+        -- that runs longest rather than whichever the list yielded last --
+        -- otherwise the slot counts down the stack that is about to expire.
+        -- A stack with no constant duration outlasts any timed one.
+        if rec.ending == nil then
+            return false
+        end
+        if ending ~= nil and ending <= rec.ending then
+            return false
+        end
     end
+    -- an entry whose end moved changes this slot's urgency just as much as a
+    -- new one does, so both have to reach the caller or the auto order goes
+    -- stale until something unrelated dirties it
+    local changed = added or rec.ending ~= ending
     rec.ending = ending
     rec.duration = duration
     rec.gen = gen
-    return added
+    return changed
 end
 
 -- drops entries the latest poll pass did not see; returns whether anything
@@ -378,6 +425,7 @@ function UpkeepSlot:update(now)
     end
 
     self:refresh_cooldown()
+    self:refresh_usable(now)
 
     local s = State.settings.self.upkeep
 
@@ -458,6 +506,12 @@ function UpkeepSlot:update(now)
                 time_text = lui_timed_row_format_time(reset_time - now, s.time_format)
                 time_color = s.cooldown_text_color
             end
+        elseif s.dim_unusable == true and self.usable ~= true then
+            -- off cooldown but the game says it cannot be cast right now:
+            -- faded, and with no countdown since there is nothing to count
+            icon_opacity = s.unusable_opacity
+            if icon_opacity < 0 then icon_opacity = 0 end
+            if icon_opacity > 1 then icon_opacity = 1 end
         end
     end
 
