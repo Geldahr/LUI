@@ -22,6 +22,9 @@ import "LUI.src.Upkeep.skill_lookup"
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.tabs"
+import "LUI.src.Utils.chat"
+
+local lui_warn = _G.LUI.Utils.lui_warn
 
 local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
@@ -98,6 +101,41 @@ local function _build_trained_index()
         end
     end
     return index
+end
+
+-- Rank and trait variants are distinct skill ids sharing one name, and the
+-- game exposes no id on a trained skill to tell them apart, so with two
+-- trained skills of the same name the cooldown shown may be the other one's.
+-- Measured to be rare (a character trains one variant), hence a warning
+-- rather than a guess -- printed here, once per deliberate drop, never from
+-- the bar's periodic rediscovery.
+local function _warn_if_ambiguous(name)
+    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if player == nil or player.GetTrainedSkills == nil then
+        return
+    end
+    local list = player:GetTrainedSkills()
+    if list == nil or list.GetCount == nil or list.GetItem == nil then
+        return
+    end
+
+    local count = 0
+    for i = 1, (list:GetCount() or 0) do
+        local skill = list:GetItem(i)
+        if skill ~= nil and skill.GetSkillInfo ~= nil then
+            local info = skill:GetSkillInfo()
+            if info ~= nil and info.GetName ~= nil and info:GetName() == name then
+                count = count + 1
+            end
+        end
+    end
+    if count > 1 then
+        -- concatenated, not string.format: the message body is translated,
+        -- and a translator dropping or reordering a format specifier would
+        -- otherwise raise out of the drop handler and eat the binding
+        lui_warn(TR["Upkeep: several trained skills share this name, the cooldown shown may be the wrong one"]
+            .. " (" .. name .. " x" .. tostring(count) .. ")")
+    end
 end
 
 -- The bound skill's icon image id: the trained skill's own icon, falling back
@@ -208,7 +246,8 @@ local function _create_slots_editor(content, window, get_count)
             -- is not a skill the player can own and nothing could ever be
             -- tracked for it. Refuse it and say why, leaving whatever was
             -- bound before untouched.
-            if Lore.Skills.buffs_of(tonumber(data)) == nil then
+            local record = Lore.Skills.buffs_of(tonumber(data))
+            if record == nil then
                 cell.name:SetText(TR["Not a buff skill"])
                 cell.marker:SetText("")
                 return
@@ -218,6 +257,7 @@ local function _create_slots_editor(content, window, get_count)
             -- the player may have trained something since the index was built
             entry._trained = nil
             entry:sync_cell(i)
+            _warn_if_ambiguous(record.name)
         end
 
         cell.clear.Click = function()

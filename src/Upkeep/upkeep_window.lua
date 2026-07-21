@@ -17,10 +17,8 @@ import "LUI.src.Upkeep.skill_lookup"
 import "LUI.src.Upkeep.upkeep_slot"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
-import "LUI.src.Utils.chat"
 
 local add_callback = _G.LUI.Utils.add_callback
-local lui_warn = _G.LUI.Utils.lui_warn
 
 -- The Upkeep bar: a pure tracker for maintenance buffs, one drawn skill
 -- icon per slot (never a quickslot; native quickslot rendering neither
@@ -95,8 +93,6 @@ function UpkeepWindow:Constructor()
     self.last_update_at = 0
     self.update_every = 1.0 / State.settings.global.refresh_rate
     self._skill_discover_due_at = 0
-    -- names already warned about, so the 30s rediscovery does not repeat it
-    self._warned_names = {}
     -- bumped once per effect poll; slots stamp what they saw with it
     self._effect_gen = 0
 
@@ -450,8 +446,6 @@ function UpkeepWindow:_discover_skills(force)
     end
 
     local found = {}
-    -- localized name -> how many trained skills answered to it
-    local matches = {}
     if wanted_any then
         local player = Turbine.Gameplay.LocalPlayer.GetInstance()
         if player ~= nil and player.GetTrainedSkills ~= nil then
@@ -462,10 +456,8 @@ function UpkeepWindow:_discover_skills(force)
                     if skill ~= nil and skill.GetSkillInfo ~= nil and skill.GetResetTime ~= nil then
                         local info = skill:GetSkillInfo()
                         if info ~= nil and info.GetName ~= nil then
-                            local name = info:GetName()
-                            local bucket = wanted[name]
+                            local bucket = wanted[info:GetName()]
                             if bucket ~= nil then
-                                matches[name] = (matches[name] or 0) + 1
                                 for k = 1, #bucket do
                                     local slot_index = bucket[k]
                                     found[slot_index] = Upkeep.prefer_trained_skill(
@@ -481,23 +473,5 @@ function UpkeepWindow:_discover_skills(force)
 
     for i = 1, self._capacity do
         self.slots[i]:set_skill(found[i])
-    end
-
-    -- Rank and trait variants are distinct skill ids sharing one name, and the
-    -- game exposes no id on a trained skill to tell them apart, so with two
-    -- trained skills of the same name the cooldown shown may be the other
-    -- one's. Measured to be rare (a character trains one variant), hence a
-    -- warning rather than a guess -- and once per name per session, since
-    -- rediscovery runs every 30 seconds.
-    for name, count in pairs(matches) do
-        if count > 1 and self._warned_names[name] ~= true then
-            self._warned_names[name] = true
-            -- concatenated, not string.format: the message body is
-            -- translated, and a translator dropping or reordering a format
-            -- specifier would otherwise raise out of skill discovery and take
-            -- the whole bar's resolution down with it
-            lui_warn(TR["Upkeep: several trained skills share this name, the cooldown shown may be the wrong one"]
-                .. " (" .. name .. " x" .. tostring(count) .. ")")
-        end
     end
 end
