@@ -7,6 +7,7 @@ local Pages = _G.LUI.Settings.Pages
 local ConfigContent = _G.LUI.Settings.Content.ConfigContent
 local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
 local Lore = _G.LUI.Data.Lore
+local Upkeep = _G.LUI.Features.Upkeep
 local LUI_ENUMS = _G.LUI.Settings.Enums
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
@@ -17,9 +18,13 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.Data.lore_db"
+import "LUI.src.Upkeep.skill_lookup"
 import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.tabs"
+import "LUI.src.Utils.chat"
+
+local lui_warn = _G.LUI.Utils.lui_warn
 
 local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
@@ -28,6 +33,7 @@ local MAX_SLOTS = 12
 local CELL_W = 68
 local QS_SIZE = 36
 local NAME_H = 12
+local MARKER_H = 11
 local CLEAR_H = 15
 local CELL_GAP = 6
 local ROW_GAP = 8
@@ -41,41 +47,110 @@ local function _even_scaled(value)
     return out
 end
 
-local function _slot_name_text(did_text)
-    if type(did_text) ~= "string" or tonumber(did_text) == nil then
+-- Both take the record the caller already decoded: buffs_of() binary-searches
+-- and allocates a fresh record per call, so a cell decodes once and the three
+-- consumers share it.
+--
+-- The skills DB holds every player skill, so a missing record means the drop
+-- was not a skill the player can own. Refused at drop time; this only labels
+-- bindings saved before that check existed.
+local function _slot_name_text(record, bound)
+    if bound ~= true then
         return ""
     end
-    local record = Lore.Skills.buffs_of(tonumber(did_text))
     if record == nil then
-        return TR["Unknown skill"]
+        return TR["Not a buff skill"]
     end
     return record.name
 end
 
--- The bound skill's icon image id: resolved from the trained skill by
--- localized name (same matching as the Upkeep bar), falling back to the
--- skill's first buff icon from the skills DB when the character has not
--- trained the skill.
-local function _skill_icon_id(did)
-    local record = Lore.Skills.buffs_of(did)
+-- Second line under the name: a skill that applies no visible buff still
+-- binds and tracks its cooldown, but the slot can never light up, so say so
+-- rather than leaving it looking like a buff that never fires.
+local function _slot_marker_text(record, bound)
+    if bound ~= true or record == nil or #record.effects > 0 then
+        return ""
+    end
+    return TR["Cooldown only"]
+end
+
+-- localized skill name -> the trained skill to show for it. Built once per
+-- refresh instead of once per cell: laying out 12 cells used to walk the whole
+-- trained-skill list 12 times, calling GetSkillInfo()/GetName() on every entry.
+local function _build_trained_index()
+    local index = {}
+    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if player == nil or player.GetTrainedSkills == nil then
+        return index
+    end
+    local list = player:GetTrainedSkills()
+    if list == nil or list.GetCount == nil or list.GetItem == nil then
+        return index
+    end
+
+    local now = Turbine.Engine.GetGameTime()
+    for i = 1, (list:GetCount() or 0) do
+        local skill = list:GetItem(i)
+        if skill ~= nil and skill.GetSkillInfo ~= nil then
+            local info = skill:GetSkillInfo()
+            if info ~= nil and info.GetName ~= nil then
+                local name = info:GetName()
+                -- same pick as the bar, so both show the same variant
+                index[name] = Upkeep.prefer_trained_skill(index[name], skill, now)
+            end
+        end
+    end
+    return index
+end
+
+-- Rank and trait variants are distinct skill ids sharing one name, and the
+-- game exposes no id on a trained skill to tell them apart, so with two
+-- trained skills of the same name the cooldown shown may be the other one's.
+-- Measured to be rare (a character trains one variant), hence a warning
+-- rather than a guess -- printed here, once per deliberate drop, never from
+-- the bar's periodic rediscovery.
+local function _warn_if_ambiguous(name)
+    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if player == nil or player.GetTrainedSkills == nil then
+        return
+    end
+    local list = player:GetTrainedSkills()
+    if list == nil or list.GetCount == nil or list.GetItem == nil then
+        return
+    end
+
+    local count = 0
+    for i = 1, (list:GetCount() or 0) do
+        local skill = list:GetItem(i)
+        if skill ~= nil and skill.GetSkillInfo ~= nil then
+            local info = skill:GetSkillInfo()
+            if info ~= nil and info.GetName ~= nil and info:GetName() == name then
+                count = count + 1
+            end
+        end
+    end
+    if count > 1 then
+        -- concatenated, not string.format: the message body is translated,
+        -- and a translator dropping or reordering a format specifier would
+        -- otherwise raise out of the drop handler and eat the binding
+        lui_warn(TR["Upkeep: several trained skills share this name, the cooldown shown may be the wrong one"]
+            .. " (" .. name .. " x" .. tostring(count) .. ")")
+    end
+end
+
+-- The bound skill's icon image id: the trained skill's own icon, falling back
+-- to the skill's first buff icon from the skills DB when the character has not
+-- trained it (and to nothing when it grants no buff either).
+local function _skill_icon_id(record, trained)
     if record == nil then
         return nil
     end
 
-    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    if player ~= nil and player.GetTrainedSkills ~= nil then
-        local list = player:GetTrainedSkills()
-        if list ~= nil and list.GetCount ~= nil and list.GetItem ~= nil then
-            for i = 1, (list:GetCount() or 0) do
-                local skill = list:GetItem(i)
-                if skill ~= nil and skill.GetSkillInfo ~= nil then
-                    local info = skill:GetSkillInfo()
-                    if info ~= nil and info.GetName ~= nil and info:GetName() == record.name and
-                        info.GetIconImageID ~= nil then
-                        return info:GetIconImageID()
-                    end
-                end
-            end
+    local found = trained[record.name]
+    if found ~= nil and found.GetSkillInfo ~= nil then
+        local info = found:GetSkillInfo()
+        if info ~= nil and info.GetIconImageID ~= nil then
+            return info:GetIconImageID()
         end
     end
 
@@ -136,6 +211,15 @@ local function _create_slots_editor(content, window, get_count)
         cell.name:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
         cell.name:SetFont(window.field_label_font)
 
+        cell.marker = UI.Widgets.LuiLabel()
+        cell.marker:SetParent(cell.holder)
+        cell.marker:SetMouseVisible(false)
+        cell.marker:SetSelectable(false)
+        cell.marker:SetMultiline(false)
+        cell.marker:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        cell.marker:SetFont(window.field_label_font)
+        cell.marker:SetForeColor(Style.INFO_FOREGROUND)
+
         cell.clear = UI.Widgets.LuiButton()
         cell.clear:SetParent(cell.holder)
         cell.clear:set_scale(State.settings.global.scale)
@@ -158,8 +242,21 @@ local function _create_slots_editor(content, window, get_count)
                 return
             end
 
+            -- Every player skill is in the skills DB, so no record means this
+            -- is not a skill the player can own and nothing could ever be
+            -- tracked for it. Refuse it and say why on the marker line -- the
+            -- name label keeps showing the stored binding, which is untouched.
+            local record = Lore.Skills.buffs_of(tonumber(data))
+            if record == nil then
+                cell.marker:SetText(TR["Not a buff skill"])
+                return
+            end
+
             entry._slots[i] = data
+            -- the player may have trained something since the index was built
+            entry._trained = nil
             entry:sync_cell(i)
+            _warn_if_ambiguous(record.name)
         end
 
         cell.clear.Click = function()
@@ -173,9 +270,17 @@ local function _create_slots_editor(content, window, get_count)
     function entry:sync_cell(index)
         local cell = self._cells[index]
         local did_text = self._slots[index]
+        local bound = type(did_text) == "string" and tonumber(did_text) ~= nil
+        local record = nil
+        if bound then
+            record = Lore.Skills.buffs_of(tonumber(did_text))
+        end
+        if self._trained == nil then
+            self._trained = _build_trained_index()
+        end
         local icon_id = nil
-        if type(did_text) == "string" and tonumber(did_text) ~= nil then
-            icon_id = _skill_icon_id(tonumber(did_text))
+        if bound then
+            icon_id = _skill_icon_id(record, self._trained)
         end
         if icon_id ~= nil then
             local qs = _even_scaled(QS_SIZE)
@@ -184,7 +289,8 @@ local function _create_slots_editor(content, window, get_count)
             cell.icon:set_icon(nil)
             cell.icon:SetVisible(false)
         end
-        cell.name:SetText(_slot_name_text(did_text))
+        cell.name:SetText(_slot_name_text(record, bound))
+        cell.marker:SetText(_slot_marker_text(record, bound))
     end
 
     function entry:get_value()
@@ -207,6 +313,8 @@ local function _create_slots_editor(content, window, get_count)
     end
 
     function entry:set_value(value)
+        -- one walk of the trained-skill list for the whole refresh
+        self._trained = _build_trained_index()
         for i = 1, MAX_SLOTS do
             local did_text = type(value) == "table" and value[i] or nil
             if type(did_text) ~= "string" then
@@ -223,13 +331,14 @@ local function _create_slots_editor(content, window, get_count)
         local qs = _even_scaled(QS_SIZE)
         local cell_w = _even_scaled(CELL_W)
         local name_h = scaled_int(NAME_H)
+        local marker_h = scaled_int(MARKER_H)
         local clear_h = scaled_int(CLEAR_H)
         local gap = scaled_int(CELL_GAP)
         local row_gap = scaled_int(ROW_GAP)
         local pad = scaled_int(2)
         local border = scaled_int(Style.BORDER_WIDTH_THIN)
         local frame_size = qs + (2 * border)
-        local cell_h = frame_size + pad + name_h + pad + clear_h
+        local cell_h = frame_size + pad + name_h + marker_h + pad + clear_h
 
         local width = entry.control:GetWidth()
         local per_row = math.floor((width + gap) / (cell_w + gap))
@@ -256,7 +365,9 @@ local function _create_slots_editor(content, window, get_count)
                 cell.icon:set_size(qs, qs)
                 cell.name:SetPosition(0, frame_size + pad)
                 cell.name:SetSize(cell_w, name_h)
-                cell.clear:SetPosition(frame_x + border, frame_size + pad + name_h + pad)
+                cell.marker:SetPosition(0, frame_size + pad + name_h)
+                cell.marker:SetSize(cell_w, marker_h)
+                cell.clear:SetPosition(frame_x + border, frame_size + pad + name_h + marker_h + pad)
                 cell.clear:SetSize(qs, clear_h)
 
                 cell.holder:SetVisible(true)
@@ -266,7 +377,7 @@ local function _create_slots_editor(content, window, get_count)
         end
 
         local rows = math.ceil(count / per_row)
-        local base_height = (rows * (QS_SIZE + (2 * Style.BORDER_WIDTH_THIN) + 2 + NAME_H + 2 + CLEAR_H)) + ((rows - 1) * ROW_GAP) + 4
+        local base_height = (rows * (QS_SIZE + (2 * Style.BORDER_WIDTH_THIN) + 2 + NAME_H + MARKER_H + 2 + CLEAR_H)) + ((rows - 1) * ROW_GAP) + 4
         if base_height ~= self.base_height then
             self.base_height = base_height
             self.height = scaled_int(base_height)
@@ -278,6 +389,8 @@ local function _create_slots_editor(content, window, get_count)
         for i = 1, MAX_SLOTS do
             local cell = entry._cells[i]
             cell.name:SetFont(window.field_label_font)
+            cell.marker:SetFont(window.field_label_font)
+            cell.marker:SetForeColor(Style.INFO_FOREGROUND)
             cell.clear:set_scale(State.settings.global.scale)
             cell.clear:set_font(window.input_font)
         end
@@ -522,6 +635,24 @@ function UpkeepPage:Constructor(window)
         end,
         function()
             return tostring(settings_getter().cd_transparent_opacity)
+        end)
+    cooldown:add_row_break()
+    cooldown:add_checkbox("uk_dim_unusable", TR["Fade when not usable"],
+        function(value)
+            settings_getter().dim_unusable = value == true
+        end,
+        function()
+            return settings_getter().dim_unusable == true
+        end)
+    cooldown:add_line_edit("uk_unusable_opacity", TR["Icon opacity"],
+        function(value)
+            local opacity = tonumber(value)
+            if opacity ~= nil then
+                settings_getter().unusable_opacity = opacity
+            end
+        end,
+        function()
+            return tostring(settings_getter().unusable_opacity)
         end)
     self:add_tab(TR["On cooldown"], "cooldown", cooldown)
 

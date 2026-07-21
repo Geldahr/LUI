@@ -845,6 +845,8 @@ function Settings.rebuild()
     uk.cd_transparent = raw_uk.cd_transparent
     uk.cd_transparent_opacity = raw_uk.cd_transparent_opacity
     uk.cd_show_time = raw_uk.cd_show_time
+    uk.dim_unusable = raw_uk.dim_unusable
+    uk.unusable_opacity = raw_uk.unusable_opacity
     uk.time_format = raw_uk.time_format
     uk.active_text_color = raw_uk.active_text_color
     uk.cooldown_text_color = raw_uk.cooldown_text_color

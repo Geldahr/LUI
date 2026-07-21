@@ -13,6 +13,7 @@ import "Turbine.Gameplay"
 import "Turbine.UI"
 
 import "LUI.src.Data.lore_db"
+import "LUI.src.Upkeep.skill_lookup"
 import "LUI.src.Upkeep.upkeep_slot"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
@@ -458,7 +459,9 @@ function UpkeepWindow:_discover_skills(force)
                             local bucket = wanted[info:GetName()]
                             if bucket ~= nil then
                                 for k = 1, #bucket do
-                                    found[bucket[k]] = skill
+                                    local slot_index = bucket[k]
+                                    found[slot_index] = Upkeep.prefer_trained_skill(
+                                        found[slot_index], skill, now)
                                 end
                             end
                         end

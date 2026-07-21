@@ -993,18 +993,52 @@ def extract_skills(facade, langs, scan_result):
         for eid in leaves:
             if eid not in deduped:
                 deduped.append(eid)
-        if not deduped:
+        category = props.get("Skill_Category")
+        # Player skills only: a real Skill_Category means the skill sits in a
+        # skill panel, so the client can quickslot it and the player can drag
+        # it onto an Upkeep slot. Skills with no visible buff are kept too --
+        # they pack an empty effect list and track cooldown only. Without them
+        # the runtime cannot resolve a dropped skill id to a name at all and
+        # the slot renders blank (Merciful Strike, Champion's Duel, Blinding
+        # Flash, Herb Lore).
+        #
+        # Uncategorised skills are deliberately NOT extracted. That bucket is
+        # ~4.4k entries and holds two things:
+        #   - monster/NPC skills (Minor Sprain, Injury, Lesser Venom): no
+        #     player skill shares their name, nothing can resolve to them.
+        #   - internal effect-carrier variants of player skills: a separate
+        #     did applying the buff, e.g. Blood Rage 1879481559 carries
+        #     "Routing Fury"/"Blood Rage" while the player entry 1879111438
+        #     carries none.
+        # Where a player skill has a categorised entry, that is the did the
+        # client quickslots and hands to drag-and-drop, so the carrier is not
+        # reachable from a drop and is not needed.
+        #
+        # Known consequence: ~78 player skills whose visible buffs live only
+        # on such a carrier pack an empty effect list, so the bar tracks their
+        # cooldown but not their buff.
+        if category is None or category <= 1:
             continue
         record = {
             "name": name,
-            "category": props.get("Skill_Category"),
+            "category": category,
             "effects": deduped,
         }
         for lang in decoder_langs:
             record["name_" + lang] = localized(facade, name_info, lang)
         skills[did] = record
-    print("decoded %d skills with visible buffs (%d buff effects, %.0fs)" % (
-        len(skills), len(effects), time.time() - t0))
+    # The effect walk runs before the category filter, so effects collected
+    # from skills that were then skipped are still sitting in `effects`. Drop
+    # anything no surviving skill references -- otherwise their names ride
+    # along in every labels_<lang>.lua for nothing.
+    referenced = set()
+    for record in skills.values():
+        referenced.update(record["effects"])
+    dropped = len(effects) - len(referenced)
+    effects = {eid: rec for eid, rec in effects.items() if eid in referenced}
+
+    print("decoded %d skills (%d buff effects, %d unreferenced dropped, %.0fs)" % (
+        len(skills), len(effects), dropped, time.time() - t0))
     return skills, effects
 
 
