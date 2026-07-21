@@ -15,7 +15,7 @@ local WARN_COLOR = "#CC7A29"
 function Utils.lui_warn(message)
     Turbine.Shell.WriteLine(
         "<rgb=" .. LUI_COLOR .. ">LUI</rgb> " ..
-        "<rgb=" .. WARN_COLOR .. ">[WARN] " .. tostring(message or "") .. "</rgb>")
+        "<rgb=" .. WARN_COLOR .. ">[WARN] " .. message .. "</rgb>")
 end
 
 function Utils.lui_chat_type_names(chat_type)

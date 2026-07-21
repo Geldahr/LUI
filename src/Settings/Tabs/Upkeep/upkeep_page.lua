@@ -244,12 +244,11 @@ local function _create_slots_editor(content, window, get_count)
 
             -- Every player skill is in the skills DB, so no record means this
             -- is not a skill the player can own and nothing could ever be
-            -- tracked for it. Refuse it and say why, leaving whatever was
-            -- bound before untouched.
+            -- tracked for it. Refuse it and say why on the marker line -- the
+            -- name label keeps showing the stored binding, which is untouched.
             local record = Lore.Skills.buffs_of(tonumber(data))
             if record == nil then
-                cell.name:SetText(TR["Not a buff skill"])
-                cell.marker:SetText("")
+                cell.marker:SetText(TR["Not a buff skill"])
                 return
             end
 

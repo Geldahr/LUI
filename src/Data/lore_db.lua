@@ -1197,7 +1197,8 @@ end
 
 -- decoded record for a skill id: { id, name, effects = { { id, name, icon,
 -- duration }, ... } } with duration in seconds (0 = no constant duration,
--- e.g. toggles); nil when the skill applies no visible buff
+-- e.g. toggles); effects is empty for cooldown-only skills (no visible
+-- buff); nil when the id is not a player skill at all
 function Skills.buffs_of(id)
     Lore.load_skills()
     local ordinal = Skills.ordinal_of(id)
