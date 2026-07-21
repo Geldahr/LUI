@@ -246,6 +246,7 @@ LUI.src.Languages.de.DE = {
     ["Fade when not usable"] = "Abblenden wenn nicht einsetzbar",
     ["Not a buff skill"] = "Keine Buff-Fertigkeit",
     ["Cooldown only"] = "Nur Abklingzeit",
+    ["On target"] = "Auf dem Ziel",
     ["Upkeep: several trained skills share this name, the cooldown shown may be the wrong one"] = "Aufrechterhaltung: Mehrere erlernte Fertigkeiten tragen diesen Namen, die angezeigte Abklingzeit kann die falsche sein",
     ["Drag and drop a skill icon from the game's Skills panel (or an action bar) into a slot below to bind it. Clear removes the binding."] = "Zieht ein Fertigkeitssymbol per Drag & Drop aus dem Fertigkeiten-Fenster des Spiels (oder einer Aktionsleiste) auf einen Platz unten, um es zu belegen. Leeren entfernt die Belegung.",
     ["Filters"] = "Filter",

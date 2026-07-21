@@ -834,6 +834,7 @@ function Settings.rebuild()
     uk.auto_order = raw_uk.auto_order
     uk.auto_order_anchor = raw_uk.auto_order_anchor
     uk.slots = raw_uk.slots
+    uk.slot_modes = raw_uk.slot_modes
     uk.show_time = raw_uk.show_time
     uk.drain_enabled = raw_uk.drain_enabled
     uk.drain_color = raw_uk.drain_color
