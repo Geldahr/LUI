@@ -30,13 +30,16 @@ local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
 
 local MAX_SLOTS = 12
-local CELL_W = 68
+-- cells follow the settings grid: same column count as the other tabs'
+-- ConfigContent(window, 4), same window.col_gap between columns
+local GRID_COLUMNS = 4
 local QS_SIZE = 36
 local NAME_H = 12
 local MARKER_H = 11
-local CLEAR_H = 15
-local MODE_H = 15
-local CELL_GAP = 6
+-- base of window.input_height: the mode dropdown and Clear button use the
+-- standard settings input size (this constant only feeds the unscaled
+-- base-height math; the scaled layout reads window.input_height itself)
+local CONTROL_H = 21
 local ROW_GAP = 8
 
 -- even sides pair with even containers for exact pixel centering
@@ -67,20 +70,13 @@ end
 
 -- Second line under the name: a skill that applies no visible buff still
 -- binds and tracks its cooldown, but the slot can never light up, so say so
--- rather than leaving it looking like a buff that never fires. Cooldown-only
--- wins over the Target-mode marker: with nothing to watch, where the slot
--- would watch it is moot.
-local function _slot_marker_text(record, bound, mode_target)
-    if bound ~= true or record == nil then
+-- rather than leaving it looking like a buff that never fires. (The watch
+-- mode needs no marker: the Self/Target dropdown below already shows it.)
+local function _slot_marker_text(record, bound)
+    if bound ~= true or record == nil or #record.effects > 0 then
         return ""
     end
-    if #record.effects == 0 then
-        return TR["Cooldown only"]
-    end
-    if mode_target then
-        return TR["On target"]
-    end
-    return ""
+    return TR["Cooldown only"]
 end
 
 -- localized skill name -> the trained skill to show for it. Built once per
@@ -236,11 +232,17 @@ local function _create_slots_editor(content, window, get_count)
         cell.clear:set_font(window.input_font)
         cell.clear:set_text(TR["Clear"])
 
-        -- two-state toggle: where this slot watches its buffs (Self/Target)
-        cell.mode = UI.Widgets.LuiButton()
+        -- where this slot watches its buffs: standard settings dropdown,
+        -- same look and size as every other dropdown in the config window
+        cell.mode = UI.Widgets.LuiDropdown()
         cell.mode:SetParent(cell.holder)
         cell.mode:set_scale(State.settings.global.scale)
-        cell.mode:set_font(window.input_font)
+        cell.mode:SetFont(window.input_font)
+        cell.mode:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
+        cell.mode:SetPopupHost(window)
+        cell.mode:SetMappedOptions(
+            { TR["Self"], TR["Target"] },
+            { LUI_ENUMS.upkeep_track.SELF, LUI_ENUMS.upkeep_track.TARGET })
 
         cell.drop.DragDrop = function(_, args)
             local info = args ~= nil and args.DragDropInfo or nil
@@ -282,12 +284,13 @@ local function _create_slots_editor(content, window, get_count)
             entry:sync_cell(i)
         end
 
-        cell.mode.Click = function()
-            if entry._modes[i] == LUI_ENUMS.upkeep_track.TARGET then
-                entry._modes[i] = LUI_ENUMS.upkeep_track.SELF
-            else
-                entry._modes[i] = LUI_ENUMS.upkeep_track.TARGET
+        cell.mode.ValueChanged = function(_, value)
+            -- sync_cell writes the value back via set_value; the equality
+            -- check stops that echo from looping
+            if entry._modes[i] == value then
+                return
             end
+            entry._modes[i] = value
             entry:sync_cell(i)
         end
 
@@ -316,11 +319,14 @@ local function _create_slots_editor(content, window, get_count)
             cell.icon:set_icon(nil)
             cell.icon:SetVisible(false)
         end
-        local mode_target = self._modes[index] == LUI_ENUMS.upkeep_track.TARGET
-        cell.mode:set_text(mode_target and TR["Target"] or TR["Self"])
+        local mode = self._modes[index]
+        if mode ~= LUI_ENUMS.upkeep_track.TARGET then
+            mode = LUI_ENUMS.upkeep_track.SELF
+        end
+        cell.mode:set_value(mode)
         cell.mode:SetVisible(bound)
         cell.name:SetText(_slot_name_text(record, bound))
-        cell.marker:SetText(_slot_marker_text(record, bound, mode_target))
+        cell.marker:SetText(_slot_marker_text(record, bound))
     end
 
     function entry:get_modes()
@@ -390,30 +396,27 @@ local function _create_slots_editor(content, window, get_count)
     function entry:layout_cells()
         local count = get_count()
         local qs = _even_scaled(QS_SIZE)
-        local cell_w = _even_scaled(CELL_W)
         local name_h = scaled_int(NAME_H)
         local marker_h = scaled_int(MARKER_H)
-        local clear_h = scaled_int(CLEAR_H)
-        local mode_h = scaled_int(MODE_H)
-        local gap = scaled_int(CELL_GAP)
+        local control_h = window.input_height
+        local col_gap = window.col_gap
         local row_gap = scaled_int(ROW_GAP)
         local pad = scaled_int(2)
         local border = scaled_int(Style.BORDER_WIDTH_THIN)
         local frame_size = qs + (2 * border)
-        local cell_h = frame_size + pad + name_h + marker_h + pad + clear_h + pad + mode_h
+        local cell_h = frame_size + pad + name_h + marker_h + pad + control_h + pad + control_h
 
+        -- the settings grid rule: fixed column count, standard column gap,
+        -- cell width identical to a field column on the 4-column tabs
         local width = entry.control:GetWidth()
-        local per_row = math.floor((width + gap) / (cell_w + gap))
-        if per_row < 1 then
-            per_row = 1
-        end
+        local cell_w = math.floor((width - ((GRID_COLUMNS - 1) * col_gap)) / GRID_COLUMNS)
 
         for i = 1, MAX_SLOTS do
             local cell = self._cells[i]
             if i <= count then
-                local row = math.floor((i - 1) / per_row)
-                local col = (i - 1) % per_row
-                cell.holder:SetPosition(col * (cell_w + gap), row * (cell_h + row_gap))
+                local row = math.floor((i - 1) / GRID_COLUMNS)
+                local col = (i - 1) % GRID_COLUMNS
+                cell.holder:SetPosition(col * (cell_w + col_gap), row * (cell_h + row_gap))
                 cell.holder:SetSize(cell_w, cell_h)
 
                 local frame_x = math.floor((cell_w - frame_size) / 2)
@@ -429,10 +432,11 @@ local function _create_slots_editor(content, window, get_count)
                 cell.name:SetSize(cell_w, name_h)
                 cell.marker:SetPosition(0, frame_size + pad + name_h)
                 cell.marker:SetSize(cell_w, marker_h)
-                cell.clear:SetPosition(frame_x + border, frame_size + pad + name_h + marker_h + pad)
-                cell.clear:SetSize(qs, clear_h)
-                cell.mode:SetPosition(frame_x + border, frame_size + pad + name_h + marker_h + pad + clear_h + pad)
-                cell.mode:SetSize(qs, mode_h)
+                cell.mode:SetPosition(0, frame_size + pad + name_h + marker_h + pad)
+                cell.mode:SetSize(cell_w, control_h)
+                -- Clear closes the cell at the very bottom
+                cell.clear:SetPosition(0, cell_h - control_h)
+                cell.clear:SetSize(cell_w, control_h)
 
                 cell.holder:SetVisible(true)
             else
@@ -440,8 +444,10 @@ local function _create_slots_editor(content, window, get_count)
             end
         end
 
-        local rows = math.ceil(count / per_row)
-        local base_height = (rows * (QS_SIZE + (2 * Style.BORDER_WIDTH_THIN) + 2 + NAME_H + MARKER_H + 2 + CLEAR_H + 2 + MODE_H)) + ((rows - 1) * ROW_GAP) + 4
+        local rows = math.ceil(count / GRID_COLUMNS)
+        local base_cell_h = QS_SIZE + (2 * Style.BORDER_WIDTH_THIN) + 2 + NAME_H + MARKER_H
+            + 2 + CONTROL_H + 2 + CONTROL_H
+        local base_height = (rows * base_cell_h) + ((rows - 1) * ROW_GAP) + 4
         if base_height ~= self.base_height then
             self.base_height = base_height
             self.height = scaled_int(base_height)
@@ -458,7 +464,7 @@ local function _create_slots_editor(content, window, get_count)
             cell.clear:set_scale(State.settings.global.scale)
             cell.clear:set_font(window.input_font)
             cell.mode:set_scale(State.settings.global.scale)
-            cell.mode:set_font(window.input_font)
+            cell.mode:SetFont(window.input_font)
         end
         entry:layout_cells()
     end

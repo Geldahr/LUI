@@ -4,7 +4,7 @@
 
 ### Added
 
-- `Upkeep` slots can now watch their buffs on the current target instead of on yourself, for maintained debuffs — DoTs, marks, armour rends. Each bound slot on the `Upkeep > Skills` tab gets a `Self`/`Target` toggle (default `Self`); a `Target` slot lights up while the debuff is on your target, and reads as ready to reapply when you have no target or the debuff is not there.
+- `Upkeep` slots can now watch their buffs on the current target instead of on yourself, for maintained debuffs — DoTs, marks, armour rends. Each bound slot on the `Upkeep > Skills` tab gets a `Self`/`Target` dropdown (default `Self`); a `Target` slot lights up while the debuff is on your target, and reads as ready to reapply when you have no target or the debuff is not there.
 - `Upkeep` slots now fade while the game reports the skill cannot be cast, for skills gated on something other than their cooldown — an execute threshold, a required target, a stance. New `Fade when not usable` setting on the `Upkeep > On cooldown` tab, on by default.
 
 ### Changed
