@@ -68,6 +68,11 @@ e.cooldown_group_display = {
     ROTATE = 2,
 }
 
+e.upkeep_track = {
+    SELF = 1,
+    TARGET = 2,
+}
+
 e.font_style = {
     NONE = 1,
     OUTLINE = 2,
