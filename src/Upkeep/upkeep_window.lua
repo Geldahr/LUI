@@ -501,6 +501,11 @@ function UpkeepWindow:_release_target_manager()
     end
     self._target_em:unregister_added_event(self._target_em_added)
     self._target_em_added = nil
+    -- acquiring flipped a shared background manager (group member, pet) to
+    -- live player:GetTarget() mode; hand it back to its background entity
+    -- before dropping the reference, or it keeps following the player's
+    -- target for its remaining holders (same order as target vitals)
+    self._target_em:restore_background_source_target()
     self._target_em:delete()
     self._target_em = nil
 end
@@ -530,9 +535,9 @@ function UpkeepWindow:_sync_target_manager()
     if target == nil or target.GetEffects == nil then
         return
     end
-    -- targeting yourself: your effects already flow through the self sweep,
-    -- and the manager exists for OTHER entities only (same name check as
-    -- target vitals)
+    -- targeting yourself: the manager exists for OTHER entities only (same
+    -- name check as target vitals), so Target-mode slots see no effects and
+    -- read as ready -- you cannot reapply a debuff to yourself anyway
     if target.GetName ~= nil and player.GetName ~= nil and
         target:GetName() == player:GetName() then
         return
@@ -541,8 +546,12 @@ function UpkeepWindow:_sync_target_manager()
     self._target_em = Vitals.TargetEffectManager.acquire(player, target)
     -- registering the added event snapshots the target's current effects
     -- into the manager's map; the per-tick sweep reads the map directly, so
-    -- the callback itself has nothing left to do
-    self._target_em_added = self._target_em:register_added_event(function() end)
+    -- the callback itself has nothing left to do. Kept in a local because
+    -- register_added_event returns nothing when the manager's effect list
+    -- is not up yet -- unregistering by our own reference always works.
+    local added = function() end
+    self._target_em:register_added_event(added)
+    self._target_em_added = added
 end
 
 function UpkeepWindow:_discover_skills(force)
