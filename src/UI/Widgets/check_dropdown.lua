@@ -76,8 +76,11 @@ function LuiCheckDropdown:Constructor()
     self.button:set_scale(self._scale)
     self.button:set_padding(BASE_POPUP_PAD_X)
     self.button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    -- native-size arrow (stretch mode 0) only at scale 1.0, where it is
+    -- pixel-perfect; mode 0 ignores the layout size, so at any other scale
+    -- the arrow must stretch to the scaled slot or it stays tiny on 4K
+    self.button:set_icon_stretch_mode(self._scale == 1 and 0 or nil)
     Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
-    self.button:set_icon_stretch_mode(0)
     self.button.Click = function()
         self:Toggle()
     end
@@ -161,6 +164,8 @@ function LuiCheckDropdown:set_scale(scale)
     if self.button ~= nil then
         self.button:set_scale(self._scale)
         self.button:set_padding(BASE_POPUP_PAD_X)
+        -- see Constructor: pixel-perfect native arrow at 1.0 only
+        self.button:set_icon_stretch_mode(self._scale == 1 and 0 or nil)
         Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     end
     for i = 1, #self._items do
