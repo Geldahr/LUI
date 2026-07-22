@@ -246,7 +246,6 @@ LUI.src.Languages.fr.FR = {
     ["Fade when not usable"] = "Estomper si inutilisable",
     ["Not a buff skill"] = "Pas une compétence de buff",
     ["Cooldown only"] = "Recharge uniquement",
-    ["On target"] = "Sur la cible",
     ["Upkeep: several trained skills share this name, the cooldown shown may be the wrong one"] = "Entretien : plusieurs compétences apprises portent ce nom, la recharge affichée peut être la mauvaise",
     ["Drag and drop a skill icon from the game's Skills panel (or an action bar) into a slot below to bind it. Clear removes the binding."] = "Glissez-déposez l'icône d'une compétence depuis la fenêtre des compétences du jeu (ou une barre d'action) dans un emplacement ci-dessous pour l'assigner. Effacer retire l'assignation.",
     ["Filters"] = "Filtres",

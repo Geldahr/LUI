@@ -35,7 +35,6 @@ local QS_SIZE = 36
 local NAME_H = 12
 local MARKER_H = 11
 local CLEAR_H = 15
-local MODE_H = 15
 local CELL_GAP = 6
 local ROW_GAP = 8
 
@@ -67,20 +66,12 @@ end
 
 -- Second line under the name: a skill that applies no visible buff still
 -- binds and tracks its cooldown, but the slot can never light up, so say so
--- rather than leaving it looking like a buff that never fires. Cooldown-only
--- wins over the Target-mode marker: with nothing to watch, where the slot
--- would watch it is moot.
-local function _slot_marker_text(record, bound, mode_target)
-    if bound ~= true or record == nil then
+-- rather than leaving it looking like a buff that never fires.
+local function _slot_marker_text(record, bound)
+    if bound ~= true or record == nil or #record.effects > 0 then
         return ""
     end
-    if #record.effects == 0 then
-        return TR["Cooldown only"]
-    end
-    if mode_target then
-        return TR["On target"]
-    end
-    return ""
+    return TR["Cooldown only"]
 end
 
 -- localized skill name -> the trained skill to show for it. Built once per
@@ -177,7 +168,6 @@ end
 local function _create_slots_editor(content, window, get_count)
     local entry = content:add_custom("upkeep_slots_editor", 150)
     entry._slots = {}
-    entry._modes = {}
     entry._cells = {}
 
     for i = 1, MAX_SLOTS do
@@ -236,12 +226,6 @@ local function _create_slots_editor(content, window, get_count)
         cell.clear:set_font(window.input_font)
         cell.clear:set_text(TR["Clear"])
 
-        -- two-state toggle: where this slot watches its buffs (Self/Target)
-        cell.mode = UI.Widgets.LuiButton()
-        cell.mode:SetParent(cell.holder)
-        cell.mode:set_scale(State.settings.global.scale)
-        cell.mode:set_font(window.input_font)
-
         cell.drop.DragDrop = function(_, args)
             local info = args ~= nil and args.DragDropInfo or nil
             if info == nil or info.GetShortcut == nil then
@@ -277,17 +261,6 @@ local function _create_slots_editor(content, window, get_count)
 
         cell.clear.Click = function()
             entry._slots[i] = ""
-            -- an unbound slot has nothing to watch anywhere: back to default
-            entry._modes[i] = LUI_ENUMS.upkeep_track.SELF
-            entry:sync_cell(i)
-        end
-
-        cell.mode.Click = function()
-            if entry._modes[i] == LUI_ENUMS.upkeep_track.TARGET then
-                entry._modes[i] = LUI_ENUMS.upkeep_track.SELF
-            else
-                entry._modes[i] = LUI_ENUMS.upkeep_track.TARGET
-            end
             entry:sync_cell(i)
         end
 
@@ -316,42 +289,8 @@ local function _create_slots_editor(content, window, get_count)
             cell.icon:set_icon(nil)
             cell.icon:SetVisible(false)
         end
-        local mode_target = self._modes[index] == LUI_ENUMS.upkeep_track.TARGET
-        cell.mode:set_text(mode_target and TR["Target"] or TR["Self"])
-        cell.mode:SetVisible(bound)
         cell.name:SetText(_slot_name_text(record, bound))
-        cell.marker:SetText(_slot_marker_text(record, bound, mode_target))
-    end
-
-    function entry:get_modes()
-        local out = {}
-        local last = 0
-        for i = 1, MAX_SLOTS do
-            local mode = self._modes[i]
-            if mode ~= LUI_ENUMS.upkeep_track.TARGET then
-                mode = LUI_ENUMS.upkeep_track.SELF
-            end
-            out[i] = mode
-            if mode ~= LUI_ENUMS.upkeep_track.SELF then
-                last = i
-            end
-        end
-        for i = MAX_SLOTS, last + 1, -1 do
-            out[i] = nil
-        end
-        return out
-    end
-
-    -- absent entries (older saves, trailing trim) are Self, the product
-    -- default; runs before the slots bind so sync_cell reads fresh modes
-    function entry:set_modes(value)
-        for i = 1, MAX_SLOTS do
-            local mode = type(value) == "table" and value[i] or nil
-            if mode ~= LUI_ENUMS.upkeep_track.TARGET then
-                mode = LUI_ENUMS.upkeep_track.SELF
-            end
-            self._modes[i] = mode
-        end
+        cell.marker:SetText(_slot_marker_text(record, bound))
     end
 
     function entry:get_value()
@@ -394,13 +333,12 @@ local function _create_slots_editor(content, window, get_count)
         local name_h = scaled_int(NAME_H)
         local marker_h = scaled_int(MARKER_H)
         local clear_h = scaled_int(CLEAR_H)
-        local mode_h = scaled_int(MODE_H)
         local gap = scaled_int(CELL_GAP)
         local row_gap = scaled_int(ROW_GAP)
         local pad = scaled_int(2)
         local border = scaled_int(Style.BORDER_WIDTH_THIN)
         local frame_size = qs + (2 * border)
-        local cell_h = frame_size + pad + name_h + marker_h + pad + clear_h + pad + mode_h
+        local cell_h = frame_size + pad + name_h + marker_h + pad + clear_h
 
         local width = entry.control:GetWidth()
         local per_row = math.floor((width + gap) / (cell_w + gap))
@@ -431,8 +369,6 @@ local function _create_slots_editor(content, window, get_count)
                 cell.marker:SetSize(cell_w, marker_h)
                 cell.clear:SetPosition(frame_x + border, frame_size + pad + name_h + marker_h + pad)
                 cell.clear:SetSize(qs, clear_h)
-                cell.mode:SetPosition(frame_x + border, frame_size + pad + name_h + marker_h + pad + clear_h + pad)
-                cell.mode:SetSize(qs, mode_h)
 
                 cell.holder:SetVisible(true)
             else
@@ -441,7 +377,7 @@ local function _create_slots_editor(content, window, get_count)
         end
 
         local rows = math.ceil(count / per_row)
-        local base_height = (rows * (QS_SIZE + (2 * Style.BORDER_WIDTH_THIN) + 2 + NAME_H + MARKER_H + 2 + CLEAR_H + 2 + MODE_H)) + ((rows - 1) * ROW_GAP) + 4
+        local base_height = (rows * (QS_SIZE + (2 * Style.BORDER_WIDTH_THIN) + 2 + NAME_H + MARKER_H + 2 + CLEAR_H)) + ((rows - 1) * ROW_GAP) + 4
         if base_height ~= self.base_height then
             self.base_height = base_height
             self.height = scaled_int(base_height)
@@ -457,8 +393,6 @@ local function _create_slots_editor(content, window, get_count)
             cell.marker:SetForeColor(Style.INFO_FOREGROUND)
             cell.clear:set_scale(State.settings.global.scale)
             cell.clear:set_font(window.input_font)
-            cell.mode:set_scale(State.settings.global.scale)
-            cell.mode:set_font(window.input_font)
         end
         entry:layout_cells()
     end
@@ -575,23 +509,6 @@ function UpkeepPage:Constructor(window)
         TR["Drag and drop a skill icon from the game's Skills panel (or an action bar) into a slot below to bind it. Clear removes the binding."],
         34)
     local editor = _create_slots_editor(skills, window, get_count)
-    -- the modes ride a value-only adapter on the same editor, so the
-    -- persisted `slots` shape stays a plain array of DID strings; bound
-    -- first so set_modes runs before the slots bind syncs the cells
-    local modes_adapter = {}
-    function modes_adapter:get_value()
-        return editor:get_modes()
-    end
-    function modes_adapter:set_value(value)
-        editor:set_modes(value)
-    end
-    skills:bind(modes_adapter,
-        function(value)
-            settings_getter().slot_modes = value
-        end,
-        function()
-            return settings_getter().slot_modes
-        end)
     skills:bind(editor,
         function(value)
             settings_getter().slots = value

@@ -447,7 +447,6 @@ settings_schema.fields.global.fields.style = _map_schema(STYLE_VALUE)
 settings_schema.fields.global.fields.bestiary_capture = BOOL
 settings_schema.fields.launcher.fields.buttons = _array_schema(STRING)
 settings_schema.fields.self.fields.upkeep.fields.slots = _array_schema(STRING)
-settings_schema.fields.self.fields.upkeep.fields.slot_modes = _array_schema(NUMBER)
 settings_schema.fields.status_bar.fields.item_registry = _map_schema(NUMBER)
 settings_schema.fields.status_bar.fields.widgets.fields.wallet.fields.items = _array_schema(STRING)
 

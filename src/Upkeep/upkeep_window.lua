@@ -17,19 +17,15 @@ import "LUI.src.Upkeep.skill_lookup"
 import "LUI.src.Upkeep.upkeep_slot"
 import "LUI.src.UI.Widgets.hud"
 import "LUI.src.Utils.callbacks"
-import "LUI.src.Vitals.target_effect_manager"
 
 local add_callback = _G.LUI.Utils.add_callback
-local remove_callback = _G.LUI.Utils.remove_callback
-local Vitals = _G.LUI.Features.Vitals
 
 -- The Upkeep bar: a pure tracker for maintenance buffs, one drawn skill
 -- icon per slot (never a quickslot; native quickslot rendering neither
 -- scales/aligns cleanly nor alpha-blends with decorations). The skills DB
 -- (Lore.Skills) resolves each bound skill DID to the localized buff names
--- it applies; effects on the player (or on the target, for Target-mode
--- slots) are matched by those names, cooldowns come live from the trained
--- ActiveSkill.
+-- it applies; player effects are matched by those names, cooldowns come
+-- live from the trained ActiveSkill.
 --
 -- Both inputs are polled on this window's own tick, the way the expiring
 -- effect bars read GetEffects(), and nothing is subscribed to. The bar
@@ -73,16 +69,8 @@ function UpkeepWindow:Constructor()
     self.slots = {}
     self._capacity = 0
     self._bound_count = 0
-    -- localized buff name -> array of slot indexes watching it; Self-mode
-    -- slots watch the player's effects, Target-mode slots the target's
+    -- localized buff name -> array of slot indexes watching it
     self._watch = {}
-    self._watch_target = {}
-    -- precomputed so nothing target-related runs without a Target-mode slot
-    self._watch_target_any = false
-    -- shared TargetEffectManager for the current target, held only while a
-    -- Target-mode slot exists (see _sync_target_manager)
-    self._target_em = nil
-    self._target_em_added = nil
     -- auto-order working buffers (slot index per display position)
     self._display_order = {}
     self._order_buf = {}
@@ -123,15 +111,6 @@ function UpkeepWindow:Constructor()
         self:_raise_companions()
     end)
 
-    -- retarget signal for Target-mode slots, same pattern as the vitals
-    -- windows; the handler is a no-op while no slot watches the target
-    self._lp = Turbine.Gameplay.LocalPlayer.GetInstance()
-    self._cb_target_changed = add_callback(self._lp, "TargetChanged", function()
-        if self._watch_target_any then
-            self:_sync_target_manager()
-        end
-    end)
-
     self:apply_settings()
 end
 
@@ -140,9 +119,6 @@ end
 ---------------------------------------------------------------------
 
 function UpkeepWindow:destroy()
-    remove_callback(self._lp, "TargetChanged", self._cb_target_changed)
-    self._cb_target_changed = nil
-    self:_release_target_manager()
     for i = 1, #self.slots do
         self.slots[i]:destroy()
     end
@@ -215,7 +191,6 @@ function UpkeepWindow:apply_settings()
     self._capacity = count
 
     self._watch = {}
-    self._watch_target = {}
     self._bound_count = 0
     local move_mode = self:is_move_mode()
     for i = 1, count do
@@ -239,25 +214,19 @@ function UpkeepWindow:apply_settings()
         if did_text ~= nil then
             self._bound_count = self._bound_count + 1
             if record ~= nil then
-                local watch = self._watch
-                if s.slot_modes[i] == LUI_ENUMS.upkeep_track.TARGET then
-                    watch = self._watch_target
-                end
                 local effects = record.effects
                 for k = 1, #effects do
                     local name = effects[k].name
-                    local bucket = watch[name]
+                    local bucket = self._watch[name]
                     if bucket == nil then
                         bucket = {}
-                        watch[name] = bucket
+                        self._watch[name] = bucket
                     end
                     bucket[#bucket + 1] = i
                 end
             end
         end
     end
-    self._watch_target_any = next(self._watch_target) ~= nil
-    self:_sync_target_manager()
 
     self:_sync_companion_positions()
     self:_discover_skills(true)
@@ -408,15 +377,10 @@ function UpkeepWindow:_raise_companions()
     end
 end
 
--- One pass over the player's effects -- and the target's when a slot watches
--- the target -- matching watched buff names to the slots that want them.
---
--- The player's own list is read fresh every tick like the expiring effect
--- bars do: that works for the LOCAL PLAYER ONLY, and the list does not exist
--- yet at plugin load, so a subscription taken once in the constructor would
--- stay dead for the whole session. Target effects instead come from the
--- shared TargetEffectManager (see _sync_target_manager): its reconciled map
--- replaces the raw list, and the same gen/prune pass runs over it.
+-- One pass over the player's effects, matching watched buff names to the
+-- slots that want them. Read fresh every tick like the expiring effect bars
+-- do: the effect list does not exist yet at plugin load, so a subscription
+-- taken once in the constructor would stay dead for the whole session.
 --
 -- Only the name is read for effects nobody watches; duration and start time
 -- are read for matches only.
@@ -426,18 +390,24 @@ function UpkeepWindow:_poll_effects(now)
     local changed = false
 
     local player = Turbine.Gameplay.LocalPlayer.GetInstance()
+    local list = nil
     if player ~= nil and player.GetEffects ~= nil then
-        if self:_sweep_effects(player:GetEffects(), self._watch, now, gen) then
-            changed = true
-        end
+        list = player:GetEffects()
     end
 
-    local em = self._target_em
-    if em ~= nil then
-        -- drives the manager's ghost sweep and its refetch-after-remove
-        em:poll()
-        if self:_sweep_manager_effects(em.effects, self._watch_target, now, gen) then
-            changed = true
+    if list ~= nil and list.GetCount ~= nil then
+        for i = 1, (list:GetCount() or 0) do
+            local effect = list:Get(i)
+            if effect ~= nil and effect.GetName ~= nil then
+                local targets = self._watch[effect:GetName()]
+                if targets ~= nil then
+                    for k = 1, #targets do
+                        if self.slots[targets[k]]:mark_active(effect, now, gen) then
+                            changed = true
+                        end
+                    end
+                end
+            end
         end
     end
 
@@ -450,108 +420,6 @@ function UpkeepWindow:_poll_effects(now)
     if changed then
         self:invalidate_order()
     end
-end
-
-function UpkeepWindow:_sweep_effects(list, watch, now, gen)
-    if list == nil or list.GetCount == nil then
-        return false
-    end
-
-    local changed = false
-    local slots = self.slots
-    for i = 1, (list:GetCount() or 0) do
-        local effect = list:Get(i)
-        if effect ~= nil and effect.GetName ~= nil then
-            local targets = watch[effect:GetName()]
-            if targets ~= nil then
-                for k = 1, #targets do
-                    if slots[targets[k]]:mark_active(effect, now, gen) then
-                        changed = true
-                    end
-                end
-            end
-        end
-    end
-    return changed
-end
-
--- the manager-map twin of _sweep_effects: entries are id -> { effect }
-function UpkeepWindow:_sweep_manager_effects(effects, watch, now, gen)
-    local changed = false
-    local slots = self.slots
-    for _, entry in pairs(effects) do
-        local effect = entry.effect
-        if effect ~= nil and effect.GetName ~= nil then
-            local targets = watch[effect:GetName()]
-            if targets ~= nil then
-                for k = 1, #targets do
-                    if slots[targets[k]]:mark_active(effect, now, gen) then
-                        changed = true
-                    end
-                end
-            end
-        end
-    end
-    return changed
-end
-
-function UpkeepWindow:_release_target_manager()
-    if self._target_em == nil then
-        return
-    end
-    self._target_em:unregister_added_event(self._target_em_added)
-    self._target_em_added = nil
-    -- acquiring flipped a shared background manager (group member, pet) to
-    -- live player:GetTarget() mode; hand it back to its background entity
-    -- before dropping the reference, or it keeps following the player's
-    -- target for its remaining holders (same order as target vitals)
-    self._target_em:restore_background_source_target()
-    self._target_em:delete()
-    self._target_em = nil
-end
-
--- Target effects go through the shared TargetEffectManager, NEVER through a
--- raw GetEffects() read on the target: non-player effect lists only behave
--- through the manager's single held instance (removals ghost, the instance
--- dies on every remove/clear -- see target_effect_manager.lua), and any
--- GetEffects() call from outside while a manager runs on that entity can
--- break it. This function therefore only checks that the METHOD exists
--- (capability probe, no call) and hands the entity to acquire(); the manager
--- is the sole reader of the list. Re-synced on TargetChanged and on settings
--- apply; released whenever no Target-mode slot needs it.
-function UpkeepWindow:_sync_target_manager()
-    self:_release_target_manager()
-    -- held only while the bar actually consumes it: a disabled bar (or one
-    -- with no Target-mode slot) must not keep re-acquiring on retargets
-    if self:get_settings().enabled ~= true or self._watch_target_any ~= true then
-        return
-    end
-
-    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    if player == nil or player.GetTarget == nil then
-        return
-    end
-    local target = player:GetTarget()
-    if target == nil or target.GetEffects == nil then
-        return
-    end
-    -- targeting yourself: the manager exists for OTHER entities only (same
-    -- name check as target vitals), so Target-mode slots see no effects and
-    -- read as ready -- you cannot reapply a debuff to yourself anyway
-    if target.GetName ~= nil and player.GetName ~= nil and
-        target:GetName() == player:GetName() then
-        return
-    end
-
-    self._target_em = Vitals.TargetEffectManager.acquire(player, target)
-    -- registering the added event snapshots the target's current effects
-    -- into the manager's map; the per-tick sweep reads the map directly, so
-    -- the callback itself has nothing left to do. Kept in a local because
-    -- register_added_event returns nothing when the manager's effect list
-    -- is not up yet -- unregistering by our own reference always works.
-    local added = function() end
-    self._target_em:register_added_event(added)
-    self._target_em_added = added
 end
 
 function UpkeepWindow:_discover_skills(force)

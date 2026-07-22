@@ -426,8 +426,6 @@ _G.LUI.Settings.Defaults.Schema =
 			["auto_order_anchor"] = 1.000000,
 			["slots"] = {
 			},
-			["slot_modes"] = {
-			},
 			["show_time"] = true,
 			["drain_enabled"] = true,
 			["drain_color"] = {
