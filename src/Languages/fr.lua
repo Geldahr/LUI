@@ -547,7 +547,6 @@ LUI.src.Languages.fr.FR = {
     ["/lui travel - Toggle the travel window."] = "/lui travel - Bascule la fenêtre de voyage.",
     ["/lui trav - Short alias for /lui travel."] = "/lui trav - Alias court pour /lui travel.",
     ["Raid Manager"] = "Gestionnaire de raid",
-    ["Fill from roster"] = "Remplir depuis le raid",
     ["Share"] = "Partager",
     ["Share produces a chat line here"] = "Partager génère une ligne de chat ici",
     ["Copy the line into raid chat to share this layout."] = "Copiez la ligne dans le chat de raid pour partager cette disposition.",

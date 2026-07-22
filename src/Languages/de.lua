@@ -547,7 +547,6 @@ LUI.src.Languages.de.DE = {
     ["/lui travel - Toggle the travel window."] = "/lui travel - Schaltet das Reisefenster um.",
     ["/lui trav - Short alias for /lui travel."] = "/lui trav - Kurzer Alias für /lui travel.",
     ["Raid Manager"] = "Schlachtzugsverwaltung",
-    ["Fill from roster"] = "Aus Schlachtzug füllen",
     ["Share"] = "Teilen",
     ["Share produces a chat line here"] = "Teilen erzeugt hier eine Chatzeile",
     ["Copy the line into raid chat to share this layout."] = "Kopiert die Zeile in den Schlachtzugs-Chat, um diese Anordnung zu teilen.",

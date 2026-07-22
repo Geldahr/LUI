@@ -279,12 +279,6 @@ function Persistence.ensure_character_settings()
     if type(s.crafting) ~= "table" then
         s.crafting = {}
     end
-    if type(s.raid_layout) ~= "table" then
-        s.raid_layout = {}
-    end
-    if type(s.raid_layout.slots) ~= "table" then
-        s.raid_layout.slots = {}
-    end
 end
 
 local function _merge_assets_cache(loaded)
