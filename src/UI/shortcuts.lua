@@ -18,7 +18,8 @@ Shortcuts.INVENTORY_ICON = UI.AssetIds.backpack_alt
 Shortcuts.CRAFT_ICON = UI.AssetIds.anvil_silver_glow
 Shortcuts.TRAVEL_ICON = UI.AssetIds.compass
 Shortcuts.ASSETS_ICON = UI.AssetIds.chest
-Shortcuts.BESTIARY_ICON = UI.AssetIds.book_orange_cover
+Shortcuts.ENCYCLOPEDIA_ICON = UI.AssetIds.book_orange_cover
+Shortcuts.RAID_ICON = UI.AssetIds.party_leader_banner
 
 local VALID_SHORTCUTS = {
     config = true,
@@ -26,7 +27,8 @@ local VALID_SHORTCUTS = {
     assets = true,
     craft = true,
     travel = true,
-    bestiary = true,
+    encyclopedia = true,
+    raid = true,
 }
 
 local function _window_is_visible(window)
@@ -48,8 +50,10 @@ function Shortcuts.get_icon(shortcut_key)
         return Shortcuts.TRAVEL_ICON
     elseif shortcut_key == "assets" then
         return Shortcuts.ASSETS_ICON
-    elseif shortcut_key == "bestiary" then
-        return Shortcuts.BESTIARY_ICON
+    elseif shortcut_key == "encyclopedia" then
+        return Shortcuts.ENCYCLOPEDIA_ICON
+    elseif shortcut_key == "raid" then
+        return Shortcuts.RAID_ICON
     end
     return nil
 end
@@ -65,8 +69,10 @@ function Shortcuts.get_label(shortcut_key)
         return TR["Travel"]
     elseif shortcut_key == "assets" then
         return TR["Assets"]
-    elseif shortcut_key == "bestiary" then
-        return TR["Bestiary"]
+    elseif shortcut_key == "encyclopedia" then
+        return TR["Encyclopedia"]
+    elseif shortcut_key == "raid" then
+        return TR["Raid Manager"]
     end
     return ""
 end
@@ -84,9 +90,12 @@ function Shortcuts.get_state(shortcut_key)
         return State.settings.travel.enabled == true, _window_is_visible(Windows.travel)
     elseif shortcut_key == "assets" then
         return Windows.assets ~= nil, _window_is_visible(Windows.assets)
-    elseif shortcut_key == "bestiary" then
+    elseif shortcut_key == "encyclopedia" then
         -- created on demand from the imported constructor; always openable
         return true, _window_is_visible(Windows.encyclopedia)
+    elseif shortcut_key == "raid" then
+        -- created on demand from the imported constructor; always openable
+        return true, _window_is_visible(Windows.raid_config)
     end
     return false, false
 end
@@ -102,7 +111,9 @@ function Shortcuts.activate(shortcut_key)
         Shortcuts.toggle_travel()
     elseif shortcut_key == "assets" then
         Shortcuts.toggle_assets()
-    elseif shortcut_key == "bestiary" then
+    elseif shortcut_key == "encyclopedia" then
         Shortcuts.toggle_encyclopedia()
+    elseif shortcut_key == "raid" then
+        Shortcuts.toggle_raid_groups()
     end
 end

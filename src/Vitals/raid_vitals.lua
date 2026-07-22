@@ -249,7 +249,9 @@ function RaidVitals:layout_members(count)
     end
 end
 
-function RaidVitals:update_group_borders(total_count)
+-- Borders wrap each group's occupied extent: the cells up to the last
+-- occupied slot in the group, so manual layouts keep gaps inside the frame.
+function RaidVitals:update_group_borders(slots)
     if self:is_move_mode() == true or _raid_split_enabled() == true then
         for i = 1, #self.group_borders do
             _set_border_visible(self.group_borders[i], false)
@@ -270,12 +272,12 @@ function RaidVitals:update_group_borders(total_count)
 
     for group_index = 1, #self.group_borders do
         local group_first_member = ((group_index - 1) * group_size) + 1
-        local group_member_count = total_count - group_first_member + 1
-        if group_member_count > group_size then
-            group_member_count = group_size
-        end
-        if group_member_count < 0 then
-            group_member_count = 0
+        local group_member_count = 0
+        for offset = 0, group_size - 1 do
+            local entity = slots[group_first_member + offset]
+            if entity ~= nil and entity ~= false then
+                group_member_count = offset + 1
+            end
         end
 
         if group_member_count <= 0 then
@@ -364,17 +366,15 @@ function RaidVitals:hide_combined_members()
     self:SetVisible(false)
 end
 
-function RaidVitals:update_combined_members(active, ordered_members, leader_name)
+function RaidVitals:update_combined_members(active, slots, occupied, last_slot, leader_name)
     if _raid_split_enabled() == true then
         self:hide_combined_members()
         return
     end
 
     local move_mode = self:is_move_mode()
-    local desired_count = #ordered_members
-    if move_mode == true and desired_count == 0 then
-        desired_count = self:get_placeholder_count()
-    elseif move_mode == true and active ~= true then
+    local desired_count = last_slot
+    if move_mode == true and (desired_count == 0 or active ~= true) then
         desired_count = self:get_placeholder_count()
     end
 
@@ -391,9 +391,9 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
         end
 
         self:layout_members(desired_count)
-        self:update_group_borders(desired_count)
+        self:update_group_borders(slots)
         self:update_target_highlight()
-        self:update_visibility(active, #ordered_members)
+        self:update_visibility(active, occupied)
         return
     end
 
@@ -402,8 +402,11 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
         member_window.entity_control:SetMouseVisible(true)
         member_window:set_frame_border_color_override(nil)
 
-        if i <= #ordered_members then
-            local entity = ordered_members[i]
+        local entity = nil
+        if i <= last_slot and slots[i] ~= false then
+            entity = slots[i]
+        end
+        if entity ~= nil then
             member_window:set_entity(entity)
             member_window:set_is_leader(leader_name ~= nil and entity:GetName() == leader_name)
             member_window:SetVisible(true)
@@ -415,38 +418,47 @@ function RaidVitals:update_combined_members(active, ordered_members, leader_name
     end
 
     self:layout_members(desired_count)
-    self:update_group_borders(#ordered_members)
+    self:update_group_borders(slots)
     self:update_target_highlight()
-    self:update_visibility(active, #ordered_members)
+    self:update_visibility(active, occupied)
 end
 
-function RaidVitals:update_split_members(active, ordered_members, leader_name)
+function RaidVitals:update_split_members(active, slots, leader_name)
     local group_size = RaidLayout.group_size()
 
     for group_index = 1, #self.group_windows do
         local first_member = ((group_index - 1) * group_size) + 1
-        local group_members = {}
+        local group_slots = {}
         for offset = 0, group_size - 1 do
-            local entity = ordered_members[first_member + offset]
-            if entity ~= nil then
-                group_members[#group_members + 1] = entity
+            local entity = slots[first_member + offset]
+            if entity == nil then
+                entity = false
             end
+            group_slots[offset + 1] = entity
         end
 
-        self.group_windows[group_index]:update_members(group_members, leader_name, active)
+        self.group_windows[group_index]:update_members(group_slots, leader_name, active)
     end
 end
 
 function RaidVitals:update_members(snapshot)
     local current_snapshot = snapshot or GroupSnapshot.read(self.lp)
     local active = _raid_active(current_snapshot)
-    local ordered_members = {}
+    local slots = {}
+    local occupied = 0
+    local last_slot = 0
     if active == true then
-        ordered_members = GroupOrdering.raid_members(current_snapshot)
+        slots = GroupOrdering.raid_slots(current_snapshot)
+        for i = 1, #slots do
+            if slots[i] ~= false then
+                occupied = occupied + 1
+                last_slot = i
+            end
+        end
     end
 
     local leader_name = current_snapshot.leader_name
-    self:update_combined_members(active, ordered_members, leader_name)
-    self:update_split_members(active, ordered_members, leader_name)
+    self:update_combined_members(active, slots, occupied, last_slot, leader_name)
+    self:update_split_members(active, slots, leader_name)
     self:update_target_highlight()
 end

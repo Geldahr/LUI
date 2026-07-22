@@ -39,6 +39,8 @@ AssetIds.resize_diagonal_tr_bl = 0x4101973F
 
 AssetIds.feather = 0x41004D92
 
+AssetIds.party_leader_banner = 0x4113F18F
+
 AssetIds.backpack = 0x41008113
 AssetIds.backpack_alt = 0x411AD881
 

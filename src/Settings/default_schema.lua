@@ -1999,6 +1999,10 @@ _G.LUI.Settings.Defaults.Schema =
 		},
 		["group_border_width"] = 1.000000,
 		["split_by_group"] = false,
+		["share"] = {
+			["listen"] = true,
+			["leader_only"] = true,
+		},
 		["group_colors"] = {
 			["a"] = {
 				["A"] = 1.000000,
@@ -2174,7 +2178,7 @@ _G.LUI.Settings.Defaults.Schema =
 			[3] = "assets",
 			[4] = "craft",
 			[5] = "travel",
-			[6] = "bestiary",
+			[6] = "encyclopedia",
 		},
 	},
 	["drops"] = {

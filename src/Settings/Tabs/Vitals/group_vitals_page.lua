@@ -111,6 +111,23 @@ function Builder.new_group_unit_page(window, root, options, deps)
     frame:add_info(
         TR["When background effect tracking is enabled, it may add some lag. Whether enabled or not, targeting a group member may not display the correct effects until one of their effects changes."],
         48)
+    if options.raid_layout_dropdown == true then
+        local general = deps.ConfigContent(window, 4, page.refresh_preview)
+        deps.add_checkbox_field(general, options.prefix .. "_share_listen", TR["Apply shared layouts from chat"],
+            function() return get().share.listen end,
+            function(value) get().share.listen = value end, true)
+        general:add_row_break()
+        deps.add_checkbox_field(general, options.prefix .. "_share_leader_only", TR["Leader layouts only"],
+            function() return get().share.leader_only end,
+            function(value) get().share.leader_only = value end, true)
+        general:add_row_break()
+        general:add_button(options.prefix .. "_open_raid_groups", TR["Open Raid Manager"],
+            function()
+                _G.LUI.UI.Shortcuts.toggle_raid_groups()
+            end,
+            TR["Arrange raid members and share the layout with other LUI users. Also available as /lui raid."])
+        page:add_tab(TR["General"], "general", general)
+    end
     page:add_tab(TR["Frame"], "frame", frame)
 
     local colors = deps.new_standard_colors_section(window, page.refresh_preview, options.prefix, get, false)

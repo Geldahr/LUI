@@ -27,7 +27,8 @@ local SHORTCUT_WIDGETS = {
     craft = { shortcut_key = "craft", display_mode = "icon" },
     travel = { shortcut_key = "travel", display_mode = "icon" },
     assets = { shortcut_key = "assets", display_mode = "icon" },
-    bestiary = { shortcut_key = "bestiary", display_mode = "icon" },
+    encyclopedia = { shortcut_key = "encyclopedia", display_mode = "icon" },
+    raid = { shortcut_key = "raid", display_mode = "icon" },
 }
 
 local DRAG_PREVIEW_EDGE_W = 2

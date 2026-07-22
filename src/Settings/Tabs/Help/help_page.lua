@@ -247,7 +247,7 @@ local function _new_interactions_section(window)
         TR["In Edit Bar, drag entries onto the status bar and drag existing status bar items to reorder them."],
         TR["Drag an existing status bar item outside the bar to remove it."],
         TR["Drag an item from the LUI inventory window onto the status bar to track that item count."],
-        TR["Status bar layout tokens include %time%, %inventory%, %durability%, %gold%, %wallet%, %config%, %craft%, %craft.plan%, %travel%, %assets%, and %bestiary%."],
+        TR["Status bar layout tokens include %time%, %inventory%, %durability%, %gold%, %wallet%, %config%, %craft%, %craft.plan%, %travel%, %assets%, %encyclopedia%, and %raid%."],
         TR["Tracked item tokens use %item:[Item Name]%; command buttons use %button:<icon-or-label>:/command%."],
         TR["External plugins or aliases can add custom status bar buttons with /lui api sb --add -k key -t title -i image -c /command."],
     }, "\n")

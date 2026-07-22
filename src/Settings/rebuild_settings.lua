@@ -757,9 +757,10 @@ function Settings.rebuild()
 
     sb.widgets.config = build_shortcut_widget("config")
     sb.widgets.assets = build_shortcut_widget("assets")
-    sb.widgets.bestiary = build_shortcut_widget("bestiary")
+    sb.widgets.encyclopedia = build_shortcut_widget("encyclopedia")
     sb.widgets.craft = build_shortcut_widget("craft")
     sb.widgets.travel = build_shortcut_widget("travel")
+    sb.widgets.raid = build_shortcut_widget("raid")
 
     local raw_cd = raw.self.cooldowns
     local cd = State.settings.self.cooldowns

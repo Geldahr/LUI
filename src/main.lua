@@ -33,6 +33,7 @@ local ExpiringEffects = Features.ExpiringEffects
 local Travel = Features.Travel
 local Upkeep = Features.Upkeep
 local StatusBar = Features.StatusBar
+local Vitals = Features.Vitals
 
 import "LUI.src.Utils"
 import "LUI.src.Utils.coords"
@@ -285,6 +286,21 @@ function Shortcuts.toggle_travel()
     window:open()
 end
 
+function Shortcuts.toggle_raid_groups()
+    local window = Windows.raid_config
+    if window == nil then
+        window = Vitals.RaidConfigWindow()
+        Windows.raid_config = window
+    end
+
+    if window:IsVisible() == true then
+        window:SetVisible(false)
+        return
+    end
+
+    window:open()
+end
+
 function Shortcuts.open_crafting_plan()
     local window = _ensure_crafting_window()
     if window == nil then
@@ -498,7 +514,11 @@ Windows.encyclopedia = nil
 Windows.crafting = nil
 Windows.travel = nil
 Windows.launcher = nil
+Windows.raid_config = nil
 Windows.bestiary_tracker = Encyclopedia.Collector()
+
+Vitals.GroupRosterWatcher.install()
+Vitals.RaidShareListener.install()
 
 Apply.inventory_settings()
 Apply.assets_settings()
@@ -527,6 +547,12 @@ Turbine.Shell.WriteLine(string.format(
 
 Plugins["LUI"].Unload = function()
     Flags.is_unloading = true
+    Vitals.GroupRosterWatcher.uninstall()
+    Vitals.RaidShareListener.uninstall()
+    if Windows.raid_config ~= nil then
+        Windows.raid_config:SetVisible(false)
+        Windows.raid_config = nil
+    end
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Vitals, true)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Target, true)
     Turbine.UI.Lotro.LotroUI.SetEnabled(Turbine.UI.Lotro.LotroUIElement.Party, true)

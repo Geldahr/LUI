@@ -464,6 +464,10 @@ local character_schema = _table_schema({
     version = STRING,
     profile_id = STRING,
     crafting = crafting_settings_schema,
+    raid_layout = _table_schema({
+        manual = BOOL,
+        slots = _map_schema(STRING),
+    }),
 })
 
 local account_schema = _table_schema({

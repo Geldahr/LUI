@@ -198,14 +198,24 @@ function RaidGroupVitalsWindow:update_target_highlight()
     end
 end
 
-function RaidGroupVitalsWindow:update_members(members, leader_name, active)
-    self.current_members = members
+-- slots: array 1..6 of member entities, false = empty cell. Cells keep
+-- their position so a manual layout's gaps stay visible.
+function RaidGroupVitalsWindow:update_members(slots, leader_name, active)
+    self.current_members = slots
     self.current_leader_name = leader_name
     self.current_active = active == true
 
-    local ordered_members = members
+    local occupied = 0
+    local last_slot = 0
+    for i = 1, #slots do
+        if slots[i] ~= false then
+            occupied = occupied + 1
+            last_slot = i
+        end
+    end
+
     local move_mode = self:is_move_mode()
-    local desired_count = #ordered_members
+    local desired_count = last_slot
     if move_mode == true and desired_count < self:get_placeholder_count() then
         desired_count = self:get_placeholder_count()
     end
@@ -224,7 +234,7 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
 
         self:layout_members(desired_count)
         self:update_target_highlight()
-        self:update_visibility(active, #ordered_members)
+        self:update_visibility(active, occupied)
         return
     end
 
@@ -233,8 +243,11 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
         member_window.entity_control:SetMouseVisible(true)
         member_window:set_frame_border_color_override(nil)
 
-        if i <= #ordered_members then
-            local entity = ordered_members[i]
+        local entity = nil
+        if i <= last_slot and slots[i] ~= false then
+            entity = slots[i]
+        end
+        if entity ~= nil then
             member_window:set_entity(entity)
             member_window:set_is_leader(leader_name ~= nil and entity:GetName() == leader_name)
             member_window:SetVisible(true)
@@ -247,5 +260,5 @@ function RaidGroupVitalsWindow:update_members(members, leader_name, active)
 
     self:layout_members(desired_count)
     self:update_target_highlight()
-    self:update_visibility(active, #ordered_members)
+    self:update_visibility(active, occupied)
 end
