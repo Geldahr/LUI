@@ -704,6 +704,11 @@ function StatusBarWindow:destroy()
     self:SetVisible(false)
     self:_cancel_edit_drag()
     self:_clear_widgets()
+    if self._context_menu ~= nil then
+        self._context_menu:close()
+        self._context_menu:SetParent(nil)
+        self._context_menu = nil
+    end
     if self._edit_window ~= nil and self._edit_window.owner == self then
         if self._edit_window.set_owner ~= nil then
             self._edit_window:set_owner(nil)
@@ -1808,20 +1813,40 @@ function StatusBarWindow:_handle_drag_drop(source, args)
     _sync_status_bar_after_raw_edit(edit_window_state)
 end
 
-function StatusBarWindow:_show_bar_menu()
-    local menu = Turbine.UI.ContextMenu()
-    local items = menu:GetItems()
-
-    items:Add(Turbine.UI.MenuItem(TR["Status Bar"], false))
-
-    local edit = Turbine.UI.MenuItem(TR["Edit Bar"])
-    edit.Click = function()
-        self:open_edit_window()
+function StatusBarWindow:_ensure_context_menu()
+    if self._context_menu == nil then
+        local menu = UI.Widgets.LuiMenu()
+        menu:SetVisible(false)
+        menu:SetSize(1, 1)
+        menu:SetParent(self)
+        self._context_menu = menu
     end
-    items:Add(edit)
 
-    self._widget_context_menu = menu
-    menu:ShowMenu()
+    local menu = self._context_menu
+    menu:set_scale(State.settings.global.scale)
+    if menu:is_open() == true then
+        menu:close()
+    end
+    menu:clear_items()
+    return menu
+end
+
+function StatusBarWindow:_open_context_menu(menu)
+    local mouse_x, mouse_y = Turbine.UI.Display.GetMousePosition()
+    menu:open_at_screen(mouse_x, mouse_y)
+end
+
+function StatusBarWindow:_show_bar_menu()
+    local menu = self:_ensure_context_menu()
+    menu:add_action({ text = TR["Status Bar"], enabled = false })
+    menu:add_separator()
+    menu:add_action({
+        text = TR["Edit Bar"],
+        triggered = function()
+            self:open_edit_window()
+        end,
+    })
+    self:_open_context_menu(menu)
 end
 
 function StatusBarWindow:_show_widget_menu(widget)
@@ -1829,25 +1854,22 @@ function StatusBarWindow:_show_widget_menu(widget)
         return
     end
 
-    local menu = Turbine.UI.ContextMenu()
-    local items = menu:GetItems()
-
-    items:Add(Turbine.UI.MenuItem(widget._status_bar_menu_title or "", false))
-
-    local edit = Turbine.UI.MenuItem(TR["Edit Bar"])
-    edit.Click = function()
-        self:open_edit_window()
-    end
-    items:Add(edit)
-
-    local remove = Turbine.UI.MenuItem(TR["Remove"])
-    remove.Click = function()
-        self:_remove_widget_instance(widget)
-    end
-    items:Add(remove)
-
-    self._widget_context_menu = menu
-    menu:ShowMenu()
+    local menu = self:_ensure_context_menu()
+    menu:add_action({ text = widget._status_bar_menu_title or "", enabled = false })
+    menu:add_separator()
+    menu:add_action({
+        text = TR["Edit Bar"],
+        triggered = function()
+            self:open_edit_window()
+        end,
+    })
+    menu:add_action({
+        text = TR["Remove"],
+        triggered = function()
+            self:_remove_widget_instance(widget)
+        end,
+    })
+    self:_open_context_menu(menu)
 end
 
 function StatusBarWindow:_remove_widget_instance(widget)
