@@ -32,7 +32,6 @@ local function migrate_profile(profile_settings)
         end
     end
 
-    profile_settings.version = Migrations.get_settings_version()
     return profile_settings
 end
 
