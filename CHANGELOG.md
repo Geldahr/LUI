@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v2.3.0
+
+### Added
+
 - `Upkeep` slots can now watch their buffs on the current target instead of on yourself, for maintained debuffs — DoTs, marks, armour rends. Each bound slot on the `Upkeep > Skills` tab gets a `Self`/`Target` dropdown (default `Self`); a `Target` slot lights up while the debuff is on your target, and reads as ready to reapply when you have no target or the debuff is not there.
 - `Upkeep` slots now fade while the game reports the skill cannot be cast, for skills gated on something other than their cooldown — an execute threshold, a required target, a stance. New `Fade when not usable` setting on the `Upkeep > On cooldown` tab, on by default.
 
@@ -20,8 +30,6 @@
 - The `Upkeep` bar and the `Upkeep` settings tab now pick the same skill when several trained ranks of it share a name, preferring the one currently recovering. They previously picked from opposite ends of the list and could show different skills, and the bar could read the wrong cooldown.
 - The `Upkeep` bar now tracks buffs and cooldowns entirely on its own, so it works the same with the `Expiring Effects` and `Cooldowns` windows disabled.
 - The `Upkeep` bar no longer stays stuck without buff highlights for the rest of the session when your effects are not available yet as the plugin loads.
-
-### Removed
 
 ## v2.2.1
 
