@@ -625,8 +625,12 @@ LUI.src.Languages.de.DE = {
     ["Cry"] = "Ruf", -- NOTE: new!
     ["Deeds"] = "Taten", -- NOTE: new!
     ["Drops"] = "Beute", -- NOTE: new!
-    ["__drops_chat_acquired_prefix"] = "Ihr habt erhalten", -- NOTE: new!
-    ["__drops_chat_gathered_prefix"] = "Gesammelt", -- NOTE: new!
+    -- loot chat lines: must match the client's German chat output verbatim
+    ["__drops_chat_acquired_prefix"] = "Erhalten:",
+    ["__drops_chat_acquired_prefix_alt"] = "Ihr habt erhalten:",
+    -- the German gathering line has no prefix ("[3 Felle] in Euren
+    -- Rucksack gelegt."), so German matches on the suffix instead
+    ["__drops_chat_gathered_suffix"] = "gelegt",
     ["Align"] = "Ausrichtung", -- NOTE: new!
     ["Top"] = "Oben", -- NOTE: new!
     ["Bottom"] = "Unten", -- NOTE: new!

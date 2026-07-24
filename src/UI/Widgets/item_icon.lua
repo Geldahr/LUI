@@ -172,13 +172,21 @@ function LuiItemIcon:bind(icon_id, background_image_id, item_id)
     self._quickslot_active = use_quickslot
     if use_quickslot == true then
         self:_ensure_quickslot()
-        self.quickslot:SetShortcut(Turbine.UI.Lotro.Shortcut(
-            Turbine.UI.Lotro.ShortcutType.Item,
-            string.format("0x0,0x%X", item_id)))
+        -- external API: the client rejects ids it does not know locally
+        -- (not fully patched / damaged game data), independent of our DB
+        -- being correct; the icon then only loses its tooltip host
+        local ok = pcall(function()
+            self.quickslot:SetShortcut(Turbine.UI.Lotro.Shortcut(
+                Turbine.UI.Lotro.ShortcutType.Item,
+                string.format("0x0,0x%X", item_id)))
+        end)
+        if ok ~= true then
+            self._quickslot_active = false
+        end
     end
     if self.quickslot ~= nil then
-        self.quickslot:SetVisible(use_quickslot == true)
-        self.quickslot:SetMouseVisible(use_quickslot == true)
+        self.quickslot:SetVisible(self._quickslot_active == true)
+        self.quickslot:SetMouseVisible(self._quickslot_active == true)
     end
 end
 

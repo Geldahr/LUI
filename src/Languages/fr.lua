@@ -625,8 +625,9 @@ LUI.src.Languages.fr.FR = {
     ["Cry"] = "Cri", -- NOTE: new!
     ["Deeds"] = "Hauts faits", -- NOTE: new!
     ["Drops"] = "Butin", -- NOTE: new!
-    ["__drops_chat_acquired_prefix"] = "Vous avez acquis", -- NOTE: new!
-    ["__drops_chat_gathered_prefix"] = "Récolté", -- NOTE: new!
+    -- loot chat lines: must match the client's French chat output verbatim
+    ["__drops_chat_acquired_prefix"] = "Vous avez obtenu",
+    ["__drops_chat_gathered_prefix"] = "Vous avez rassemblé",
     ["Align"] = "Alignement", -- NOTE: new!
     ["Top"] = "Haut", -- NOTE: new!
     ["Bottom"] = "Bas", -- NOTE: new!

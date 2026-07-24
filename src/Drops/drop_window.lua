@@ -123,14 +123,27 @@ local function _parse_drop_message(message)
     end
 
     local acquired_prefix = _drops_tr("__drops_chat_acquired_prefix", "You have acquired")
+    -- some languages open the pending-delivery variant with a different
+    -- sentence than the plain loot line (German "Ihr habt erhalten:" vs
+    -- "Erhalten:"); nil when one prefix covers both
+    local acquired_prefix_alt = _drops_tr("__drops_chat_acquired_prefix_alt", nil)
     local gathered_prefix = _drops_tr("__drops_chat_gathered_prefix", "Gathered")
+    -- languages whose gathering line starts with the item link itself
+    -- ("[3 Felle] in Euren Rucksack gelegt.") match on a suffix instead
+    local gathered_suffix = _drops_tr("__drops_chat_gathered_suffix", nil)
     local quantity_prefix = nil
     local gathered_message = false
     if _starts_with(message, acquired_prefix) == true then
         quantity_prefix = string.sub(message, string.len(acquired_prefix) + 1, bracket_start - 1)
+    elseif acquired_prefix_alt ~= nil and _starts_with(message, acquired_prefix_alt) == true then
+        quantity_prefix = string.sub(message, string.len(acquired_prefix_alt) + 1, bracket_start - 1)
     elseif _starts_with(message, gathered_prefix) == true then
         gathered_message = true
         quantity_prefix = string.sub(message, string.len(gathered_prefix) + 1, bracket_start - 1)
+    elseif gathered_suffix ~= nil and bracket_start == 1 and
+        string.find(message, gathered_suffix, bracket_end + 1, true) ~= nil then
+        gathered_message = true
+        quantity_prefix = ""
     else
         return nil, nil
     end
