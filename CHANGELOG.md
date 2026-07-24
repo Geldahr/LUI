@@ -9,6 +9,8 @@
 
 ### Changed
 
+- The item, recipe, quest, NPC and skill databases were refreshed from the current game data, picking up the content added by the latest game update (about 665 new items, 38 recipes, 109 quests and deeds, 122 NPCs and 114 skills), in all three languages.
+
 ### Fixed
 
 - The `Drops` window now works on French and German clients: the loot and gathering chat lines it watches were verified against the game's localized text and corrected. German gathering messages, which start with the item link itself, are now recognized too.

@@ -7,7 +7,7 @@
 local D = {}
 D.ord_width = 2
 D.noff_width = 3
-D.entry_count = 5785
+D.entry_count = 5800
 D.NAME = [=[
 
 "Kleines" Waldmenschen-Totem	g9
@@ -21,9 +21,9 @@ Abgründige Essenz	bVbZb^babe
 Achat-Armband	-/
 Achat-Halskette	%\
 Achat-Quarz-Runenstein	1X
-Adagím-Aubergine	u;
-Adagím-Kichererbse	u<
-Adagím-Welsfilet	u=
+Adagím-Aubergine	uI
+Adagím-Kichererbse	uJ
+Adagím-Welsfilet	uK
 Adamant-Armband	-!
 Adamant-Gürtelschnalle	l(
 Adamant-Halskette	'_
@@ -178,8 +178,8 @@ Armkette der Westfold	N{
 Armkette des Gundabad-Gelehrten	kB
 Armkette des aufgehenden Mondes	fe
 Armkette von Steinhelm	d9
-Armschienen des Hainwärters	s{
-Armschienen des Kinta-Jägers	tx
+Armschienen des Hainwärters	t!
+Armschienen des Kinta-Jägers	u'
 Atharbains destillierte Athelas-Essenz	1!
 Atharbains destillierte Celebrant-Salben	1#
 Atharbains veredelte Athelas-Essenz	1"
@@ -191,7 +191,7 @@ Athelas-Essenz der Eorlingas (x25)	PT
 Athelas-Essenz der Eorlingas (x5)	P3
 Athelas-Essenz der Ered Mithrin	d=
 Athelas-Essenz von Umbar	mY
-Auberginencreme	sj
+Auberginencreme	sk
 Auenland-Apfel	=u
 Auenland-Apfelbaum	=t
 Auenland-Haferbrei	@V
@@ -209,7 +209,7 @@ Aufzeichnung eines Historikers der Unheilskluft	aG
 Aufzeichnung eines Historikers von Eisenbruch	c?
 Aufzeichnung eines Historikers von Gundabad	j8
 Aufzeichnung eines Minas-Ithil-Historikers	f+
-Aufzeichnung eines Mûrai-Historikers	u0
+Aufzeichnung eines Mûrai-Historikers	u>
 Aufzeichnung eines Shagâni-Historikers	mQ
 Aufzeichnung eines anórischen Historikers	\a
 Aureate-Armband	9a
@@ -430,8 +430,8 @@ Behandeltes Schwarzeschen-Kernholz	,s
 Behandeltes Stechpalmen-Brett mit Mithril-Intarsien	6B
 Beinlinge der Unheilskluft / Erneuertes Bündnis	a4
 Beinlinge des Großen Flusses	Fk
-Beinschienen des Hainhüters	t7
-Beinschienen des Kinta-Kriegers	t@
+Beinschienen des Hainhüters	t=
+Beinschienen des Kinta-Kriegers	tI
 Beorns Tisch	g7
 Beryll-Anhänger	<p
 Beryll-Armband	-:
@@ -442,7 +442,7 @@ Beryll-Ring	!}
 Beryll-Ring der Taktik	8<
 Beschädigtes Schmuckstück aus dem Zweiten Zeitalter	X>
 Beschädigtes Schmuckstück aus dem Zweiten Zeitalter (Masse) (x25)	XK
-Beschädigtes mûrisches Artefakt	u/
+Beschädigtes mûrisches Artefakt	u=
 Besserer Heiltrank	7`
 Besserer Mariendistel-Trank	7T
 Bester Karottenkuchen	#z
@@ -675,8 +675,8 @@ Bronzespäne	U}V;
 Brosche aus Khazâd-Gold	Fe
 Brosche aus Khazâd-Kupfer	Fp
 Brot-und-Butter-Pudding	C=
-Brustjacke des Hainwärters	tu
-Brustjacke des Kinta-Jägers	tp
+Brustjacke des Hainwärters	u$
+Brustjacke des Kinta-Jägers	t}
 Brustpanzer mit Gildenmuster	gY
 Brustplatte der Unheilskluft / Erneuertes Bündnis	b5
 Brustplatte des aufgehenden Mondes	fA
@@ -770,7 +770,7 @@ Destillierter Conhuith-Trank	7V
 Destillierter Heiltrank	7U
 Destillierter Lhinestad-Trank	7Q
 Destillierter Mariendistel-Trank	7^
-Dokumentierte Kunde von Mûr Ghala	u@
+Dokumentierte Kunde von Mûr Ghala	uN
 Dolch aus uraltem Stahl	$(
 Dolch der Galadhrim	9'
 Dolch der Klamm	R*
@@ -939,31 +939,33 @@ Eine Handvoll Kirschen	G|
 Eine Tasse Roggenmehl	Lp
 Einfache Athelas-Essenz	)e
 Einfache Celebrant-Salbe	)_
-Einfache Fiedel	no
-Einfache Flöte	&`n{
+Einfache Fiedel des Seefahrers	no
+Einfache Flöte	&`
+Einfache Flöte des Seefahrers	n{
 Einfache Försteraxt	ls
 Einfache Harfe	&_
-Einfache Kinta-Armbrust	tr
-Einfache Kinta-Axt	u*
-Einfache Kinta-Hüter-Schnitzerei	sk
-Einfache Kinta-Keule	t`
+Einfache Kinta-Armbrust	u!
+Einfache Kinta-Axt	u8
+Einfache Kinta-Hüter-Schnitzerei	sl
+Einfache Kinta-Keule	tm
 Einfache Kiste mit Warm mondbeschienener Essenz (Stufe 4)	i(i)i*i+i,i-i.
 Einfache Laute	&^
 Einfache Schurken-Werkzeuge	(/
 Einfache Theorbe	*L
-Einfache Trommel	*Onu
+Einfache Trommel	*O
+Einfache Trommel des Seefahrers	nu
 Einfacher Conhuith-Trank	7P
 Einfacher Heiltrank	7M
-Einfacher Kinta-Bardenschild	u3
+Einfacher Kinta-Bardenschild	uA
 Einfacher Kinta-Bogen	sd
 Einfacher Kinta-Dolch	sb
-Einfacher Kinta-Hammer	tU
-Einfacher Kinta-Schild des Hüters	tC
-Einfacher Kinta-Streitkolben	u!
-Einfacher Kinta-Wächterschild	u8
+Einfacher Kinta-Hammer	tb
+Einfacher Kinta-Schild des Hüters	tM
+Einfacher Kinta-Streitkolben	u.
+Einfacher Kinta-Wächterschild	uF
 Einfacher Lhinestad-Trank	7Z
 Einfacher Mariendistel-Trank	7W
-Einfaches Kinta-Schwert	u)
+Einfaches Kinta-Schwert	u7
 Einlegearbeit der Eorlingas	P1
 Eintopf aus Hühnchen und Zwiebeln	@Y
 Eintopf der Könige	#r
@@ -1125,7 +1127,7 @@ Erleuchtete Schriftrolle der Könige	G\
 Erleuchtetes Buch des Großen Flusses	G<
 Erleuchtetes Unheilskluft-Buch	bn
 Erleuchtetes rohirrisches Buch	Aw
-Erntewerkzeug der Kintai	u?
+Erntewerkzeug der Kintai	uM
 Erstklassige Seefahrer-Flöte	nr
 Eschen-Armbrust	#=
 Eschen-Feldzugshorn	&H
@@ -1329,7 +1331,7 @@ Fischfilets (Rotpunktforelle)	k_
 Fischfilets (Seeforelle)	k`
 Fischfilets (Stierforelle)	kd
 Fischfilets (Wels)	kl
-Fischplatte mit Gemüse	u$
+Fischplatte mit Gemüse	u1
 Fladenbrot	B$
 Flakon Met der Sorte „Auenland-Honig“	Xe
 Flasche mit Goldfüllung	g~
@@ -1384,7 +1386,7 @@ Gebackene Flunder	0t
 Gebeizte Umbar-Gildenhandschuhe	o|
 Gebeizte Umbar-Gildenstiefel	o}
 Gebratene Bohnen mit Rebhuhn (x10)	WN
-Gebratene Oryx-Haxe	u6
+Gebratene Oryx-Haxe	uD
 Gebratene Pilze	#[
 Gebratene Rote-Beete-Streifen	kR
 Gebratener Karpfen	?A
@@ -1406,7 +1408,7 @@ Gebürstetes Leder der Eorlingas	Q&TI
 Gebürstetes Leder der Eorlingas (Masse) (x25)	T@
 Gebürstetes Minas-Ithil-Leder	eTewfh
 Gebürstetes Minas-Ithil-Leder (Masse, x25)	f9
-Gebürstetes Mûrai-Leder	t&tht|
+Gebürstetes Mûrai-Leder	t+tuu+
 Gebürstetes Riddermark-Leder	J8
 Gebürstetes Riddermarkleder (Masse) (x25)	Gi
 Gebürstetes Shagâni-Leder	m6mNn.
@@ -1421,7 +1423,7 @@ Gebürstetes leichtes Leder	%&VUW*
 Gebürstetes leichtes Leder (Masse) (x25)	>i
 Gebürstetes makelloses Leder	%,VSW"
 Gebürstetes makelloses Leder (Masse) (x25)	>c
-Gebürstetes mûrisches Leder (Masse) (x25)	tB
+Gebürstetes mûrisches Leder (Masse) (x25)	tL
 Gebürstetes normales Leder	%(VRW#
 Gebürstetes normales Leder (Masse) (x25)	>d
 Gebürstetes stabiles Leder	%*VXW!
@@ -1429,7 +1431,7 @@ Gebürstetes stabiles Leder (Masse) (x25)	>f
 Geflügelte Halskette	Et
 Gefäß Brombeer-Marmelade	.Y
 Gefäß Minzsoße	.X
-Gefüllte Aubergine	tI
+Gefüllte Aubergine	tS
 Gefüllter Kohlkopf	#b
 Gegen Funken eintauschbares Handwerk	dRdSdTdUdVdWdXeceoe~f8f>fdfnk"k$k'k)k*k+k,rKrLrMrNrOrPrQ
 Gegen Staub eintauschbares Handwerk	bEbFbHbJbMbNbQ
@@ -1615,6 +1617,8 @@ Geschnitzter Umbar-Bogen	nd
 Geschnitzter Umbar-Hammer	n^
 Gesellen-Parabel	F#
 Gesellen-Schilddorn-Ausrüstsatz: Westernis-Art	&E
+Gewaltiger Beorninger-Trank der Wut	^7uTu[u\u^ubuc
+Gewaltiger Verjüngungstrank der Beorninger	^8uRuSuUuVuWuXuYuZu_u`ua
 Gewandtes Armband der Pferdeherren	M=
 Gewürzte Fischplatte	mA
 Gewürzte Hammelhaxe	m/
@@ -1636,7 +1640,7 @@ Gezacktes Messer des Schwertkämpfers	?P
 Gezacktes Messer des Thains	@S
 Gezacktes Riddermark-Messer	Jl
 Gezacktes Umbar-Messer	nT
-Gezacktes mûrisches Messer	t/
+Gezacktes mûrisches Messer	t4
 Geätzte Adamant-Halskette	3i
 Geätzte Beryll-Halskette	4h
 Geätzte Eiben-Armbrust	$V
@@ -1943,8 +1947,6 @@ Großes Zeichen aus West-Emnet	RG
 Großes Zeichen eines Meisters	3/
 Großes Zeichen eines überragenden Meisters	2|
 Großes geprägtes Wappen eines überragenden Meisters	@N
-Grässlicher anórischer Trank der Verjüngung	^8
-Grässlicher anórischer Trank der Wut	^7
 Größere Essenz der Beweglichkeit	[3_!
 Größere Essenz der Finesse	[+^q
 Größere Essenz der Macht	[1^n
@@ -2121,8 +2123,9 @@ Hammer, Messer und Axt der Täler mit Wandhalterung	g;
 Handgefertigte "Essenz des Erkunders"-Kiste	kokqkskukvk}l%
 Handgefertigte "Essenz des flackernden Erkunders"-Kiste	krkxkzk|l!l"l#
 Handgefertigte "Essenz des lebhaften Erkunders"-Kiste	kpktkwkyk{k~l$
-Handgefertigte Fiedel	nw
-Handgefertigte Flöte	'Rnv
+Handgefertigte Fiedel des Seefahrers	nw
+Handgefertigte Flöte	'R
+Handgefertigte Flöte des Seefahrers	nv
 Handgefertigte Handschuhe	$7
 Handgefertigte Harfe	'Q
 Handgefertigte Laute	'P
@@ -2130,7 +2133,8 @@ Handgefertigte Rüstung	$8
 Handgefertigte Schulterschützer	$;
 Handgefertigte Stiefel	$:
 Handgefertigte Theorbe	*M
-Handgefertigte Trommel	*Knn
+Handgefertigte Trommel	*K
+Handgefertigte Trommel des Seefahrers	nn
 Handgefertigte Umbar-Werkzeuge - Set I	sH
 Handgefertigte Umbar-Werkzeuge - Set II	sN
 Handgefertigte Überhose	$9
@@ -2185,8 +2189,8 @@ Harfe aus Minas Ithil	fC
 Harfe der Unheilskluft	`C
 Harfe des Eisenbruchs	c\
 Harfe die Täler	e?
-Harnisch des Hainwärters	t_
-Harnisch des Kinta-Jägers	to
+Harnisch des Hainwärters	tl
+Harnisch des Kinta-Jägers	t|
 Harter Proviant	#i
 Hartgebäck	#X
 Hartstahlbarren (Masse) (x25)	?!
@@ -2214,12 +2218,12 @@ Helm des Elben-Offiziers	(Y
 Helm des Goldenen Heeres	:n
 Helm des Goldenen Waldes	9T
 Helm des Großen Flusses	G(G,
-Helm des Hainhüters	sq
+Helm des Hainhüters	ss
 Helm des Herolds	/9
 Helm des Hüters der Mark	/<
 Helm des Infanteristen	/k
 Helm des Jägers	(v
-Helm des Kinta-Kriegers	tD
+Helm des Kinta-Kriegers	tN
 Helm des Kriegers	$J
 Helm des Kriegers nach Elbenart	!X
 Helm des Kundschafters	/r
@@ -2240,7 +2244,7 @@ Helm mit Gildenmuster	gU
 Helm von Steinhelm	d!
 Henkersaxt der Galadhrim	8~
 Herbstfest-Festessen	<o
-Heroldsumhang aus Sul Madásh	t1
+Heroldsumhang aus Sul Madásh	t7
 Herrliche Elben-Försteraxt	m$
 Herrliche Hobbit-Försteraxt	lV
 Herrliche Mithril-Försteraxt	l{
@@ -2276,7 +2280,7 @@ Himbeerkuchenfüllung	>/
 Hirschfleisch mit Birnensauce	U*
 Hirschwurst	U"
 Hirschwurst (x5)	Tr
-Hirsebrotlaib	t*
+Hirsebrotlaib	t/
 Historiker-Werkzeug	UC
 Historiker-Werkzeuge (Experte)	U9
 Historiker-Werkzeuge (Geselle)	UL
@@ -2459,8 +2463,8 @@ Kappe der Pferdeherren	M:
 Kappe der Unheilskluft / Erneuertes Bündnis	a6
 Kappe des Reisenden	$p
 Kappe von Steinhelm	d2
-Kapuze des Hainpflegers	t3
-Kapuze des Kinta-Gelehrten	tL
+Kapuze des Hainpflegers	t9
+Kapuze des Kinta-Gelehrten	tV
 Kapuzenumhang des Aufsehers aus Lothlórien	9;
 Kapuzenumhang des Bewahrers aus Lothlórien	8'
 Kapuzenumhang des Jägersmanns aus Lothlórien	9?
@@ -2534,18 +2538,18 @@ Khazâd-Kupfer-Ring	.x
 Khazâd-Kupferbarren (Masse) (x25)	>r
 Khazâd-Kupferspäne	V.
 Khazâd-Stahlbarren (Masse) (x25)	?$
-Kinta-Armbrust	t;
-Kinta-Axt	tQ
-Kinta-Bardenschild	sy
-Kinta-Bogen	tc
-Kinta-Dolch	tb
-Kinta-Hammer	t%
+Kinta-Armbrust	tC
+Kinta-Axt	t^
+Kinta-Bardenschild	s}
+Kinta-Bogen	tp
+Kinta-Dolch	to
+Kinta-Hammer	t*
 Kinta-Hüter-Schnitzerei	s`
 Kinta-Keule	sa
-Kinta-Schild des Hüters	tF
-Kinta-Schwert	tN
-Kinta-Streitkolben	tG
-Kinta-Wächterschild	sr
+Kinta-Schild des Hüters	tP
+Kinta-Schwert	tY
+Kinta-Streitkolben	tQ
+Kinta-Wächterschild	st
 Kirsch-Käse-Gebäck	L`
 Kirsch-Nuss-Keks	Le
 Kirsch-Rhabarber-Streusel	Lf
@@ -2555,6 +2559,7 @@ Kirschfüllung (x5)	Nv
 Kirschkuchen	Nu
 Kiste der handgefertigten Essenz des Seefahrers	sPsSsWsXsYsZs[
 Kiste der handgefertigten flackernden Essenz des Seefahrers	p)p*p+p,p-p.p/
+Kiste der handgefertigten flackernden sonnengeküssten Essenz	udueufuguhuiuj
 Kiste der handgefertigten rasanten Essenz des Seefahrers	sOsQsRsTsUsVs\
 Kiste mit Bögen	p=
 Kiste mit Geschmeide	p<
@@ -2612,7 +2617,7 @@ Kleiner Satz veredelter gondorischer Waffenteile	`3
 Kleiner Stapel allseits beliebter Bücher	p1
 Kleiner Tisch	go
 Kleiner Tisch aus Minas Morgul	gp
-Kleiner mûrischer Spiegelbarren	u'
+Kleiner mûrischer Spiegelbarren	u5
 Kleines Buch der Dúnedain	&Q
 Kleines Buch der Kreaturen	&O
 Kleines Buch der Natur	&P
@@ -2659,7 +2664,7 @@ Klumpen Torf	CI
 Klumpen West-Emnet-Torf	TS
 Klumpen anórischer Torf	\y
 Klumpen ithilischer Torf	a`
-Klumpen mûrischer Torf	tT
+Klumpen mûrischer Torf	ta
 Knauf mit Gildenmuster	gV
 Knochengefäß aus Minas Morgul - Geschlossen	gs
 Knochengefäß aus Minas Morgul - Geöffnet	gu
@@ -2863,24 +2868,24 @@ Lichtöl des Eisenbruchs	cI
 Lindwurmfeuer-Halskette	N+
 Lochfeile der Eorlingas	OJ
 Lochfeile der Unheilskluft	b+
-Luxuriöse Auberginencreme	t)
-Luxuriöse Fischplatte mit Gemüse	t?
+Luxuriöse Auberginencreme	t.
+Luxuriöse Fischplatte mit Gemüse	tH
 Luxuriöse Küchenreste eines gefleckten Schweins	i`
 Luxuriöse Rote-Beete-Streifen	lR
 Luxuriöse gebratene Oryx-Haxe	sc
-Luxuriöse gefüllte Aubergine	te
+Luxuriöse gefüllte Aubergine	tr
 Luxuriöse gewürzte Hammelhachse	m5
 Luxuriöser Krebskuchen	m<
 Luxuriöser Rosenkohl im Speckmantel	lN
 Luxuriöser Süßwasserfisch-Teller	lS
 Luxuriöses Beeren-Nussbrot	lP
 Luxuriöses geröstetes Gemüse mit Gewürze	m9
-Madásh-Schmuckstück	tk
-Madáshi-Armkette	tg
-Madáshi-Feld	tK
-Madáshi-Halskette	t(
-Madáshi-Ohrring	tZ
-Madáshi-Ring	ta
+Madásh-Schmuckstück	tx
+Madáshi-Armkette	tt
+Madáshi-Feld	tU
+Madáshi-Halskette	t-
+Madáshi-Ohrring	th
+Madáshi-Ring	tn
 Maiglöckchen	2U
 Maiglöckchen-Feld	2J
 Majestätische Handschuhe des Hüters der Mark	4<
@@ -2894,13 +2899,13 @@ Makellose Handschuhe	"d
 Makellose Hellebarde der Galadhrim	9M
 Makellose Henkersaxt der Galadhrim	95
 Makellose Lederfetzen	VL
-Makellose Madáshi-Armkette	ss
-Makellose Madáshi-Halskette	t!
-Makellose Mûr-Ghala-Anstecknadel	t2
-Makellose Mûr-Ghala-Lochfeile	u"
-Makellose Mûr-Ghala-Schnalle	tR
-Makellose Mûr-Ghala-Signale	tJ
-Makellose Mûr-Ghala-Standarten	su
+Makellose Madáshi-Armkette	sv
+Makellose Madáshi-Halskette	t&
+Makellose Mûr-Ghala-Anstecknadel	t8
+Makellose Mûr-Ghala-Lochfeile	u/
+Makellose Mûr-Ghala-Schnalle	t_
+Makellose Mûr-Ghala-Signale	tT
+Makellose Mûr-Ghala-Standarten	sy
 Makellose Robe	*#
 Makellose Rüstung	"e
 Makellose Schuhe	"g
@@ -2922,9 +2927,9 @@ Makellose gepolsterte Rüstung	(d
 Makellose gepolsterte Schuhe	(e
 Makellose gepolsterte Schulterschützer	(f
 Makellose gepolsterte Überhose	(g
-Makellose mûrische Flöte der feurigen Töne	t"
-Makellose mûrische Jagdbücher	t+
-Makellose mûrische Theorbe der feurigen Akkorde	tq
+Makellose mûrische Flöte der feurigen Töne	t'
+Makellose mûrische Jagdbücher	t0
+Makellose mûrische Theorbe der feurigen Akkorde	t~
 Makellose schimmernde Umbar-Armkette	my
 Makellose schimmernde Umbar-Halskette	me
 Makellose schimmernde Umbar-Münze	o+
@@ -2936,9 +2941,9 @@ Makellose zeremonielle Zwergenaxt	FB
 Makellose Überhose	"f
 Makelloser Dolch der Galadhrim	91
 Makelloser Hut	"c
-Makelloser Madáshi-Ohrring	tm
-Makelloser Madáshi-Ring	t~
-Makelloser Mûr-Ghala-Meißel	t[
+Makelloser Madáshi-Ohrring	tz
+Makelloser Madáshi-Ring	u-
+Makelloser Mûr-Ghala-Meißel	ti
 Makelloser Streitkolben der Galadhrim	99
 Makelloser Umbar-Meißel	oU
 Makelloser Umhang	){
@@ -2950,7 +2955,7 @@ Makelloser verstärkter Umbar-Ring	ml
 Makelloses Annúminas-Zepter	KJ
 Makelloses Glanzleder	UnW(
 Makelloses Glanzleder (Masse) (x25)	Ug
-Makelloses Madáshi-Schmuckstück	tj
+Makelloses Madáshi-Schmuckstück	tw
 Makelloses Númenorer-Zepter	Ft
 Makelloses Schwert der Galadhrim	9/
 Makelloses grimmiges Schwert	R,
@@ -2973,8 +2978,8 @@ Mammutti-Rüstung	0Y
 Mammutti-Schulterschützer	0[
 Mammutti-Stiefel	0\
 Mammutti-Überhose	0W
-Manschetten des Hainpflegers	tV
-Manschetten des Kinta-Gelehrten	td
+Manschetten des Hainpflegers	tc
+Manschetten des Kinta-Gelehrten	tq
 Mantel der Unheilskluft / Erneuertes Bündnis	`v
 Mantel des Goldenen Heeres	:r
 Mantel des Goldenen Waldes	9`
@@ -3151,32 +3156,46 @@ Murmeln der Unheilskluft	`g
 Murmeln des Eisenbruchs	c0
 Mächtiges Armband der Pferdeherren	M<
 Möhrenstäbchen	>(
-Mûr-Ghala-Anstecknadel	t6
-Mûr-Ghala-Lochfeile	u#
-Mûr-Ghala-Meißel	tn
-Mûr-Ghala-Schnalle	s~
-Mûr-Ghala-Signale	tW
-Mûr-Ghala-Standarten	sp
-Mûrai-Holzspäne	t-u:
-Mûrai-Lederfetzen	swt8
-Mûrai-Metallspäne	shsnt#t>
-Mûrische Athelas-Essenz	u7
-Mûrische Celebrant-Essenz	tl
-Mûrische Flöte der feurigen Töne	tS
-Mûrische Jagdbücher	u2
-Mûrische Krähenfüße	t{
-Mûrische Murmeln	tO
-Mûrische Theorbe der feurigen Akkorde	s|
+Mûr-Ghala-Anstecknadel	t<
+Mûr-Ghala-Lochfeile	u0
+Mûr-Ghala-Meißel	t{
+Mûr-Ghala-Schnalle	t%
+Mûr-Ghala-Signale	td
+Mûr-Ghala-Standarten	sr
+Mûr-Ghala-Wappen-der-Elemente	tW
+Mûr-Ghala-Wappen-der-Heilung oder -Erholung	t6
+Mûr-Ghala-Wappen-der-Präzision	sm
+Mûr-Ghala-Wappen-der-Rüstung	tK
+Mûr-Ghala-Wappen-der-Willenskraft	u4
+Mûr-Ghala-Wappen-des-Lichts	tE
+Mûr-Ghala-Wappen-des-Tatendrangs	te
+Mûr-Ghala-Wort-des-Handwerks - Fokus	t?
+Mûr-Ghala-Wort-des-Handwerks - Hast	sw
+Mûr-Ghala-Wort-des-Handwerks - Schatten	sj
+Mûr-Ghala-Wort-des-Handwerks - Taktik	su
+Mûr-Ghala-Wort-des-Handwerks - Verteidigung	t$
+Mûr-Ghala-Wort-des-Handwerks - Wut	t>
+Mûr-Ghala-Wort-des-Handwerks - Zorn	t\
+Mûrai-Holzspäne	t2uH
+Mûrai-Lederfetzen	s{t@
+Mûrai-Metallspäne	shspt(tG
+Mûrische Athelas-Essenz	uE
+Mûrische Celebrant-Essenz	ty
+Mûrische Flöte der feurigen Töne	t`
+Mûrische Jagdbücher	u@
+Mûrische Krähenfüße	u*
+Mûrische Murmeln	tZ
+Mûrische Theorbe der feurigen Akkorde	t"
 Mûrische Tränke	sg
-Mûrischer Barren	t5tHtsttu5
-Mûrischer Barren (Masse) (x25)	t'
-Mûrischer Edhelharn-Talisman	t<
-Mûrisches Brett	t$tEu&
-Mûrisches Holzbrett (Masse) (x25)	t9
-Mûrisches Horn	ti
-Mûrisches Wurfbeil	t.
+Mûrischer Barren	t;tRu"u#uC
+Mûrischer Barren (Masse) (x25)	t,
+Mûrischer Edhelharn-Talisman	tD
+Mûrisches Brett	t)tOu3
+Mûrisches Holzbrett (Masse) (x25)	tA
+Mûrisches Horn	tv
+Mûrisches Wurfbeil	t3
 Münze des Seemannskodex	oH
-Nakhód Júra	t^
+Nakhód Júra	tk
 Nest des aschgrauen Adlers	i_
 Nestad-Pergament (Eisenbruch)	cX
 Nestad-Pergament (Experte)	?d
@@ -3391,7 +3410,7 @@ Polierter Dolch aus uraltem Stahl	#0+d
 Polierter Dolch des Großen Flusses	GB
 Polierter Fangorn-Dolch	RD
 Polierter Fangorn-Streitkolben	Q[
-Polierter Granat	u1
+Polierter Granat	u?
 Polierter Helm der Unheilskluft / Erneuertes Bündnis	bS
 Polierter Ithilharn	f<
 Polierter Mondstein	,a
@@ -3454,7 +3473,7 @@ Premium-Pibgorn	F<
 Premium-Theorbe	Ey
 Premium-Trommel	Ew
 Primitiver Schürferpickel	rt
-Prise gemahlener Krokodilpfeffer	u>
+Prise gemahlener Krokodilpfeffer	uL
 Prächtige Handschuhe aus Lothlórien	9|
 Prächtige Robe aus Lothlórien	9m
 Prächtige Schuhe aus Lothlórien	9p
@@ -3472,11 +3491,11 @@ Purpurnes Windspiel	g-
 Pökelfleisch-Köstlichkeiten	#s
 Quarz-Runenstein der Galadhrim	9*
 Quarz-Runenstein des Goldenen Heeres	<z
-Rationierte Auberginencreme	st
-Rationierte Fischplatte mit Gemüse	u.
+Rationierte Auberginencreme	sx
+Rationierte Fischplatte mit Gemüse	u<
 Rationierte Rote-Beete-Streifen	lO
-Rationierte gebratene Oryx-Haxe	u%
-Rationierte gefüllte Aubergine	u9
+Rationierte gebratene Oryx-Haxe	u2
+Rationierte gefüllte Aubergine	uG
 Rationierte gewürzte Fischplatte	m@
 Rationierte gewürzte Hammelhaxe	mM
 Rationierter Krebskuchen	mF
@@ -3500,8 +3519,8 @@ Rebhuhnfondue (x10)	WP
 Rebhuhnpastete (x10)	WM
 Reif der Onodrim	W}
 Reif der Pferdeherren	M7
-Reif des Hainwärters	t:
-Reif des Kinta-Jägers	t\
+Reif des Hainwärters	tB
+Reif des Kinta-Jägers	tj
 Reif des aufgehenden Mondes	fl
 Reine Athelas-Essenz	/+
 Reine Athelas-Essenz (x5)	9P
@@ -3560,7 +3579,7 @@ Ring von Steinhelm	d8
 Ringpanzer der Galadhrim	9_
 Ringpanzer der Unheilskluft / Erneuertes Bündnis	a!
 Ringpanzer des Hainhüters	si
-Ringpanzer des Kinta-Kriegers	sl
+Ringpanzer des Kinta-Kriegers	sn
 Ringpanzer des aufgehenden Mondes	en
 Ringpanzer von Steinhelm	d0
 Robe aus Lothlórien	9j
@@ -3568,8 +3587,8 @@ Robe des Entdeckers	*)
 Robe des Felsenkletterers	/v
 Robe des Gelehrten	*+
 Robe des Großen Flusses	FM
-Robe des Hainpflegers	u-
-Robe des Kinta-Gelehrten	tf
+Robe des Hainpflegers	u;
+Robe des Kinta-Gelehrten	ts
 Robe des Meisters	/t
 Robe des Reisenden	*&
 Robe des großen Hoar-Auerochsen	0j
@@ -3614,7 +3633,7 @@ Rote Emaille	8b
 Rote Farbe	#W
 Rote Farbe (x5)	5q
 Rote Feuerwerkskörper	GX
-Rote Lehmlampe	t}
+Rote Lehmlampe	u,
 Roter Achat-Ohrring	H_
 Roter Achat-Ring	Hh
 Roter Pfeil	<q
@@ -3742,7 +3761,7 @@ Sachkenntnis: Überragender Meister der Schneiderkunst	>C
 Sachkenntnis: Überragender Meister der Waffenschmiedekunst	>Z
 Sack mit Kaffeebohnen aus Ost-Emnet	M,
 Sack mit Kaffeebohnen aus West-Emnet	TW
-Sack mit Kolbenhirse	t4
+Sack mit Kolbenhirse	t:
 Sack mit Ost-Emnet-Kaffeepulver	M%
 Sack mit Ost-Emnet-Kaffeepulver (x5)	M&
 Sack mit West-Emnet-Kaffeesatz	Th
@@ -3814,7 +3833,7 @@ Schilddorn-Ausrüstsatz des Meisters	65
 Schilddorn-Ausrüstsatz für Experten	'L
 Schilddorn-Ausrüstsatz für Virtuosen	($
 Schilddorn-Ausrüstsatz nach Gundabad-Art	jf
-Schilddorn-Ausrüstsatz nach Mûr-Ghala-Art	u,
+Schilddorn-Ausrüstsatz nach Mûr-Ghala-Art	u:
 Schilddorn-Ausrüstsatz nach Umbar-Art	nU
 Schilddorn-Ausrüstsatz: Westfold-Art	Ap
 Schilde der Täler	e,
@@ -3959,8 +3978,8 @@ Schriftrolle der kleinen Schmiedekunde	!#
 Schriftrolle der kleinen Schneiderkunde	!$
 Schriftrolle der kleinen Schutzkunde	!(
 Schriftrolle der kleinen Waffenschmiedekunde	!%
-Schriftrolle der mûrischen Kampfkunde	sx
-Schriftrolle der mûrischen Schutzkunde	t=
+Schriftrolle der mûrischen Kampfkunde	s|
+Schriftrolle der mûrischen Schutzkunde	tF
 Schriftrolle der uralten Gelehrtenkunde	*@
 Schriftrolle der uralten Goldschmiedekunde	*7
 Schriftrolle der uralten Holzkunde	!:
@@ -4019,9 +4038,9 @@ Schuhe des Entdeckers	"Z
 Schuhe des Felsenkletterers	/7
 Schuhe des Gelehrten	(}
 Schuhe des Großen Flusses	FO
-Schuhe des Hainpflegers	s}
+Schuhe des Hainpflegers	t#
 Schuhe des Jägers	(z
-Schuhe des Kinta-Gelehrten	sv
+Schuhe des Kinta-Gelehrten	sz
 Schuhe des Meisters	/m
 Schuhe des Reisenden	$n
 Schuhe des Scharmützlers	"T
@@ -4034,8 +4053,8 @@ Schulterplatten der Galadhrim	9V
 Schulterplatten der Onodrim	Wa
 Schulterplatten der Pferdeherren	M5
 Schulterplatten des Großen Flusses	FDF~
-Schulterplatten des Hainhüters	tz
-Schulterplatten des Kinta-Kriegers	tv
+Schulterplatten des Hainhüters	u)
+Schulterplatten des Kinta-Kriegers	u%
 Schulterplatten des Reiters	Bp
 Schulterplatten des Théodred	BP
 Schulterschützer aus Zwergeneisen	!V
@@ -4077,8 +4096,8 @@ Schulterstücke der Pferdeherren	M9
 Schulterstücke des Goldenen Heeres	;(
 Schulterstücke des Goldenen Waldes	9Y
 Schulterstücke des Großen Flusses	G$
-Schulterstücke des Hainpflegers	t0
-Schulterstücke des Kinta-Gelehrten	u(
+Schulterstücke des Hainpflegers	t5
+Schulterstücke des Kinta-Gelehrten	u6
 Schutzkunde von Minas Ithil	fZ
 Schwarze Adamant-Brosche	b&
 Schwarze Adamant-Gürtelschnalle	l2
@@ -4299,6 +4318,7 @@ Seefahrer-Flöte der Täler	o#
 Seefahrer-Flöte der Unheilskluft	n|
 Seefahrer-Flöte des Eisenbruchs	o!
 Seilerzwirn-Feld	)N
+Seltene Wort-des-Handwerks-Auswahlkiste (Stufe 116)	d|d}d~e!e"e#e$
 Set-Helme des Hüters	bx
 Set-Helme des Jägers	bw
 Set-Helme für Beorninger	biiZ
@@ -4446,11 +4466,11 @@ Stiefel des Elben-Offiziers	(\
 Stiefel des Goldenen Heeres	:x
 Stiefel des Goldenen Waldes	9U
 Stiefel des Großen Flusses	F^Fm
-Stiefel des Hainwärters	tA
+Stiefel des Hainwärters	tJ
 Stiefel des Herolds	/b
 Stiefel des Hüters der Mark	0"
 Stiefel des Infanteristen	/2
-Stiefel des Kinta-Jägers	tY
+Stiefel des Kinta-Jägers	tg
 Stiefel des Kriegers	$N
 Stiefel des Kundschafters	/A
 Stiefel des Offiziers	/^
@@ -4518,9 +4538,9 @@ Stärkender Schmiedehammer	oq
 Stärkender meisterlich gefertigter Helm	o?pvp}q#q>qQqir0
 Stärkender meisterlicher Reif	o=pCp`q%q)q,qyr"
 Stärkendes meisterliches Band	o9pDpQprq.qTq}r-
-Stärkendes mûrisches Festessen	uA
+Stärkendes mûrisches Festessen	uO
 Stärkendes umbarisches Festessen	pa
-Stück Akazienrinde	t,
+Stück Akazienrinde	t1
 Stück Eichenrinde	Gz
 Stück Eisenbruch-Rinde	c>
 Stück Glanzleder der Eorlingas	TA
@@ -4673,7 +4693,7 @@ Topf mit Westfold-Honig und Hafer	Bg
 Topf mit anórischem Honig und Hafer	^0
 Topf mit feinem Honig und Hafer	*s
 Topf mit köstlichem Hafer und Honig	5~
-Topf mit mûrischem Honig und Hafer	ty
+Topf mit mûrischem Honig und Hafer	u(
 Topf mit schmackhaftem Hafer und Honig	6!
 Topf mit süßem Honig und Hafer	<~
 Topf mit süßem Honig und Hafer aus Ost-Emnet	Lr
@@ -4709,7 +4729,7 @@ Umbar-Anstecknadel	mq
 Umbar-Edhelharn-Talisman	mx
 Umbar-Faustkunst	ni
 Umbar-Feld	mI
-Umbar-Feueröl	m[tX
+Umbar-Feueröl	m[tf
 Umbar-Flöte der feurigen Töne	p%
 Umbar-Gildenohrringe des Sterns der belebenden Tiefen	oy
 Umbar-Gildenohrringe des Sterns der geschützten Muschel	p#
@@ -4796,12 +4816,13 @@ Unheilskluft-Signale	a%
 Unheilskluft-Speerkunst	`^
 Unheilskluft-Standarten	`{
 Unheilskluft-Tonikum des Kampfes	a@
-Unterarmschienen des Hainhüters	sz
-Unterarmschienen des Kinta-Kriegers	so
+Unterarmschienen des Hainhüters	s~
+Unterarmschienen des Kinta-Kriegers	sq
 Unterhemd mit Gildenmuster	gQ
 Unvergleichliche Axt des Thains	4B
 Unvergleichliche Großaxt des Thains	5V
 Unvergleichliche Hellebarde des Thains	3d
+Unvergleichliche Wort-des-Handwerks-Auswahlkiste (Stufe 116)	e%e&e'e(e)e*e+
 Unvergleichliche silberne Stechpalmen-Armbrust	5X
 Unvergleichliche silberne Stechpalmen-Keule	4y
 Unvergleichliche zweihändige silberne Stechpalmen-Keule	5H
@@ -5098,14 +5119,6 @@ Versiegelter neu geschmiedeter zweihändiger Hammer des Waffenmeisters des Zweit
 Versiegelter neu geschmiedeter zweihändiger Hammer des Wächters des Zweiten Zeitalters	:-<<D9KMSvZ<
 Versiegelters handgefertigtes Schwert des Wächters des Dritten Zeitalters	6o<&CpJ}QdYA
 Versiegelters neu geschmiedetes Schwert des Hauptmanns des Zweiten Zeitalters	:/<$CbJwRiXr
-Versiegeltes Täler-Hilfsmittel der Beweglichkeit	e$
-Versiegeltes Täler-Hilfsmittel der Kraft	e!
-Versiegeltes Täler-Hilfsmittel der Macht	d}
-Versiegeltes Täler-Hilfsmittel der Moral	e#
-Versiegeltes Täler-Hilfsmittel der Vitalität	e"
-Versiegeltes Täler-Hilfsmittel des Kampfes	e%e&e'e(e)e*e+
-Versiegeltes Täler-Hilfsmittel des Schicksals	d~
-Versiegeltes Täler-Hilfsmittel des Willens	d|
 Versiegeltes handgefertigtes Buch des Kundigen des Dritten Zeitalters	6L;?EoGgP0Z,
 Versiegeltes handgefertigtes Liederbuch des Barden des Dritten Zeitalters	6_<.E[H9PUZ.
 Versiegeltes handgefertigtes Schwert des Barden des Dritten Zeitalters	6g;XD{K!RTYl
@@ -5195,7 +5208,7 @@ Verstärktes Birkenbrett	B#
 Verstärktes Eichenbrett	H:
 Verstärktes Stechpalmen-Brett	U\W5
 Verstärktes Walnussbrett	TF
-Verzauberter Reparaturamboss	uBuC
+Verzauberter Reparaturamboss	uPuQ
 Verzierte Axt	C"
 Verzierte Fangorn-Armbrust	T+
 Verzierte Fangorn-Keule	S.
@@ -5628,16 +5641,16 @@ Zwiebelsuppe	7j
 Überhose des Goldenen Heeres	;,
 Überhose des Goldenen Waldes	9W
 Überhose des Großen Flusses	FAFV
-Überhose des Hainhüters	tP
-Überhose des Hainpflegers	u4
-Überhose des Hainwärters	tM
+Überhose des Hainhüters	t[
+Überhose des Hainpflegers	uB
+Überhose des Hainwärters	tX
 Überhose des Herolds	0#
 Überhose des Hüters der Mark	/6
 Überhose des Infanteristen	/_
 Überhose des Jägers	(y
 Überhose des Kinta-Gelehrten	se
-Überhose des Kinta-Jägers	tw
-Überhose des Kinta-Kriegers	sm
+Überhose des Kinta-Jägers	u&
+Überhose des Kinta-Kriegers	so
 Überhose des Kriegers	$M
 Überhose des Kundschafters	/:
 Überhose des Meisters	/}
@@ -5695,11 +5708,12 @@ Zwiebelsuppe	7j
 Überragende Essenz des Parierens	_(
 Überragende Essenz des Willens	^y
 Überragende Essenz des kritischen Treffers	_'
-Überragende Fiedel	nz
 Überragende Fiedel der Unheilskluft	c(
+Überragende Fiedel des Seefahrers	nz
 Überragende Fingerreife der Unheilskluft	a{
-Überragende Flöte	(*nq
+Überragende Flöte	(*
 Überragende Flöte der Unheilskluft	`S
+Überragende Flöte des Seefahrers	nq
 Überragende Flöte nach Zwergenart	-s
 Überragende Gemüsepastete (x25)	LR
 Überragende Halskette der Unheilskluft / Erneuertes Bündnis	b>
@@ -5743,8 +5757,9 @@ Zwiebelsuppe	7j
 Überragende Theorbe	*N
 Überragende Theorbe der Unheilskluft	`P
 Überragende Theorbe nach Zwergenart	.#
-Überragende Trommel	*Jn}
+Überragende Trommel	*J
 Überragende Trommel der Unheilskluft	`R
+Überragende Trommel des Seefahrers	n}
 Überragende Trommel nach Zwergenart	-v
 Überragende Unheilskluft-Athelas-Essenz	a9
 Überragende Unheilskluft-Celebrant-Essenz	a:
@@ -5793,11 +5808,11 @@ Zwiebelsuppe	7j
 Überragendes Pibgorn der Unheilskluft	`M
 Überragendes Walnuss-Feldzugshorn	Sw
 Überragendes Würstchen im Teig (x25)	CZ
-Überwurf des Heilers	u+
+Überwurf des Heilers	u9
 „Tuk im Loch“-Bankett	Xm
 ]=]
 D.NOFF = [=[
-!!"!!B!!d!",!"X!##!#F!#x!$8!$I!$\!$w!%.!%E!%Z!%n!&+!&@!&S!&p!'!!';!'M!'d!(,!(I!(c!(z!),!)A!)T!)s!*+!*C!*f!+/!+:!+R!+c!+w!,+!,?!,P!,m!-;!-V!-n!.0!.T!.v!/1!/N!/i!0%!0C!0_!0{!1=!1Z!1w!29!2V!2|!3G!3n!4/!4R!4s!5*!5E!5c!6&!6G!6j!6|!7A!7f!82!8P!8r!9/!9L!9s!:5!:S!:l!;*!;B!;V!;k!<%!<O!<q!=;!=[!=~!>;!>Q!>k!?3!?P!?u!@3!@Q!@j!A!!A6!AR!Aq!B)!BD!B[!Bs!C)!CK!Cj!D,!DF!Dc!Dy!E2!EV!F!!F@!FT!Fn!G0!GG!G^!Gu!H3!H?!HT!Hr!I+!I@!I_!Iq!J0!JD!Jw!K8!KZ!Kr!L-!LO!Lf!M!!M7!ML!Mv!N5!NU!Nv!O8!OV!Oo!P+!PB!P^!Pw!Q2!Q[!Qr!RG!Ra!S&!SI!Sd!T&!TG!Tr!U@!Uh!V2!VV!Vz!W<!Wc!X*!XM!Xj!X}!Y1!YG!Y^!Yr!Z)!ZH!Zc![%![H![y!\<!\_!\|!^Q!_%!_T!`%!`N!`z!aJ!a^!ap!b%!b5!bP!b}!cJ!c}!dP!e$!eO!f"!fU!fy!g7!gU!g}!h@!h`!i$!iG!il!j4!jX!j~!kD!kp!l8!l_!m(!mQ!m}!nG!nn!o:!ol!p:!pg!q-!q^!r-!rX!s(!sT!t"!tG!tm!u;!u`!v$!vD!vk!w4!w[!x,!xW!y#!yN!yy!zD!zq!{<!{d!|/!|W!}1!}f!~:!~o"!D"!w""A""j"#2"#Y"$""$O"$z"%@"%i"&1"&c"'."'V"(("(T")!")M")y"*E"*n"+;"+b",+",Q",{"-D"-l".-".X"/3"/^"0*"0W"1$"1P"2""2O"3%"3S"4%"4J"4s"5C"5o"6?"6e"7,"7P"7y"8M"8v"9F"9t":?":o";3";e"<1"<b"=0"=c">/">`"?-"?W"@+"@c"A7"Ad"B8"Be"C4"Ce"D6"Dy"EL"E{"FM"G'"GY"H."HR"I%"I>"IS"Ie"Iu"JE"J["Jw"K-"K@"Kj"L("L:"LO"Lh"Lz"M5"MS"Mi"N*"NI"Nh"N~"OC"Oc"P$"PQ"Pj"Q""Q<"QL"Qf"R2"RZ"R}"S@"SX"Sw"T8"TL"Tq"U%"U>"UP"Un"V5"VO"Vl"W#"WB"Wg"X%"XI"Xa"Xs"Y*"Y="Y["Yr"Z$"Z6"Z\"[6"[k"\."\N"\r"^$"^8"^J"^e"^y"_-"_<"_V"`2"`z"aA"aW"aw"b2"bV"bx"cL"d$"dV"e9"eN"ew"f9"fa"g""gC"gZ"h3"hM"i$"i="ik"j9"jm"k:"kW"l%"lH"ls"m7"m["n+"nH"nk"o6"oU"om"p/"pk"q>"qp"r8"ra"s0"sZ"t$"tI"to"u9"u["u}"v0"vK"vf"v~"w<"wX"wv"x>"xm"y>"yf"z."zU"{#"{H"{g"|0"|K"|n"}2"}W"~""~L"~s#!E#!n#"?#"n##<##i#$!#$H#$p#%>#%j#&0#&U#&q#'<#'s#(8#(b#)##)2#)F#)^#)u#*,#*@#*L#*t#+(#+<#+`#+v#,.#,H#,k#--#->#-N#-a#-{#.2#.C#.T#.p#/2#/K#/j#0'#0;#0S#0f#0{#1/#1F#1d#1y#2-#2J#2W#2f#3"#35#3H#3Z#4-#4J#4h#5'#5=#5X#5n#6;#6R#6g#7!#7I#7t#8=#8Y#9##9K#9u#:>#:l#;9#;f#<-#<T#<y#=9#=c#>/#>Z#?&#?U#@%#@S#@{#AF#Am#B*#BP#Bx#CB#Ci#D7#Db#E/#ET#E|#FB#Fe#G+#GL#Gw#HE#Ho#I%#IH#IV#Iz#J:#JF#Jh#K/#KL#Kh#L*#LL#LZ#L~#M>#M`#Mq#N.#N>#NW#Nj#O&#O=#O\#Oo#P'#P4#PF#Pe#Pt#Q$#Q;#QY#Qn#R&#R8#RT#Rf#Rx#S6#ST#Sp#T1#TQ#Tr#UJ#Uq#V0#VT#Vk#W##W8#WJ#Wf#X1#XQ#Xh#Y##Y8#YT#Ym#Z##ZE#Z_#Z{#[2#[G#[[#\2#\V#\r#^&#^=#^q#_%#_7#_W#_p#`.#`D#`a#`r#a2#aC#aa#ay#b9#bU#bh#c!#c7#cL#ce#c}#d5#dI#dg#e.#eR#eg#f.#fL#fr#g8#gY#h##hI#hd#i##iD#iZ#i{#j:#jW#jz#k:#kf#l(#lI#ll#m.#mS#mx#n?#nU#nk#o+#oJ#oo#p;#p[#q##qJ#qk#r(#rI#rn#s6#sQ#si#s|#t0#ta#ty#u8#uN#ud#v1#vO#vd#v{#w7#wK#wa#wv#x=#xR#xh#y!#y0#yR#y{#z2#zO#zn#{-#{E#{[#{w#|)#|?#|V#|i#|}#}3#}S#}o#~6#~U#~s$!3$!R$!k$""$"6$"L$"`$#!$#L$#p$$3$$^$%"$%F$%h$&%$&D$&b$'*$'H$'i$(!$(<$(R$(h$)*$)K$)t$*B$*d$+"$+D$+}$,R$-*$-U$-~$.J$.s$/=$/g$/~$03$0Y$1&$1K$1r$2:$2d$33$3_$4%$4L$4f$5($5B$5[$5w$68$6[$7!$7;$7V$7n$8$$89$8R$8g$8{$90$9H$9c$9v$:2$:M$:j$;*$;F$;d$<"$<C$<g$='$=E$=e$=v$>9$>M$>q$?3$?U$@!$@E$@j$A($A:$AP$Ad$Ar$B#$B6$BD$BR$B`$Bt$C-$C>$CN$C^$Cs$D)$D9$DK$Dg$Dy$E-$EA$EV$E~$FC$FV$G3$GM$Gg$H$$H@$HS$Hi$I#$I5$IP$Ig$J.$JF$K2$KD$Kd$Kx$L0$LL$Ld$M&$M?$MX$Ms$N;$N[$N~$O=$O^$Oy$P:$Pa$Px$Q7$QZ$Q|$R/$RA$RV$Rc$S&$SG$Sj$T)$TL$Te$U)$UB$U[$Uo$V'$V;$VW$Vp$W($WI$Wp$X,$XR$X}$Y5$YN$Yh$Z,$ZB$ZP$Z^$Zy$[+$[K$[b$[v$\5$\H$\^$\w$^4$^Q$^u$_<$_l$`7$`[$a($aH$ac$ax$b2$bD$bg$b{$c@$cV$cm$d)$d@$dV$dt$e?$eS$ek$e}$fA$fc$g-$gV$gt$h;$hZ$i)$iS$is$j=$jh$k*$kU$k{$lC$lr$m3$mZ$n'$nO$o#$oH$on$p;$po$q2$qe$r($rT$r{$s@$sf$t/$tW$t|$uD$uv$v>$vp$w9$wf$x.$xZ$y%$yM$y{$zG$zt${5${P${}$|5$|V$|x$}<$}^$~"$~F$~v%!(%!C%!S%!r%"3%"N%"d%"n%#$%#3%#C%#R%#i%$)%$L%$i%$x%%2%%C%%\%%o%&$%&6%&e%'0%'X%($%(F%(i%)'%)H%)[%)s%*)%*8%*H%*\%*l%*{%++%+W%+l%,E%,e%-0%-V%-{%.C%.i%/+%/K%/s%09%0[%1"%1E%1k%2/%2O%2r%35%3f%45%4a%50%5\%5~%6B%6f%7%%7F%7q%83%8U%8~%9E%9i%:0%:T%:v%;3%;W%;w%<9%<Y%<z%=O%=s%>8%>Y%>x%?D%?o%@0%@Q%@|%A<%Ai%B5%B`%C)%CM%Cw%D;%Da%E+%E`%F;%Fr%G?%Gr%HE%Hr%I=%Ih%J5%JO%Jj%K!%K;%KN%Kc%Kr%L%%L5%LF%L`%Lu%M)%M?%MQ%Mb%Mq%N*%N;%NS%Nj%O*%O:%OJ%Oa%P!%P;%PM%Pi%Q(%QC%QV%Ql%R&%R8%RO%Re%Rv%S&%SD%T!%TZ%U5%Ul%VC%Vx%WS%X.%Xf%Y<%Yp%ZD%Z[%[#%[<%[V%[v%\6%\T%\u%^E%^^%^q%_6%__%_~%`C%`[%`x%a5%aN%al%b*%bE%bg%c'%cB%cb%d"%dF%do%e/%eQ%es%f"%f@%fW%f{%gB%gr%hB%hi%i3%i@%iL%ij%j(%jB%j^%jx%kO%km%l-%lE%l_%m!%m<%mY%n%%n?%nX%n|%o>%o`%o|%p<%pR%pn%p|%qK%qh%q~%rA%rY%rj%r~%sO%sj%t'%tA%tV%tr%u=%u^%v'%v=%v_%w"%wD%wf%x*%xN%x~%y?%yR%yr%z1%zA%z[%zq%{,%{D%{Y%{{%|O%|y%}H%}v%~E%~x&!<&!U&!w&"/&"8&"P&"q&#,&#A&#e&$'&$M&$e&$x&%;&%Q&%v&&=&&q&'2&'H&'`&(#&(H&(x&)=&)k&*1&*X&+,&+R&,'&,M&,}&-@&-b&.2&.U&/%&/L&/~&0N&1)&1R&2&&2I&2w&3>&3n&4?&4c&52&5U&6%&6>&6\&6r&7+&7B&8C&8w&9;&9s&:N&:x&;.&;C&;X&;j&;y&</&<J&<o&=,&=B&=f&=z&>0&>G&>l&?"&?4&?F&?b&?v&@2&@J&@a&A$&AH&Ag&B"&B7&BY&Bv&C0&CR&Cm&D+&DI&Db&D}&ED&Eh&F.&FT&Fw&G>&Gc&H)&HN&I#&ID&IW&In&J'&J=&JY&Jw&K6&KN&Km&L0&LG&L`&Lo&M)&M?&MQ&Mb&N)&NL&Ni&O)&OP&Or&P1&PP&Pu&Q:&Qi&R.&RL&Rj&S)&SH&Sq&TB&Tl&U9&Un&V5&V[&V|&W@&Wl&X.&XW&Xx&Y=&Y\&Z/&ZU&Z|&[;&[`&\,&\K&\g&^-&^P&^l&_(&_B&_j&`;&`i&a.&aI&al&b4&be&c/&cZ&d%&dA&dd&e/&eW&ep&f/&fR&fw&g?&ge&h%&hB&hg&i/&iT&is&j9&jY&j}&k?&ka&l3&lP&ls&m2&mY&mz&n6&nK&np&o1&oY&o}&p=&pX&q"&qN&r!&r7&rW&ru&s5&sR&so&t3&tV&ty&u<&ua&v)&vP&vw&w>&wg&x%&xB&xV&y,&yR&yl&z&&zB&zZ&{&&{C&{c&|&&|J&|m&}2&}X&}{&~B&~d'!*'!S'!s'"4'"N'"n'#.'#K'#g'#~'$='$b'%!'%:'%V'%|'&7'&T'&m''(''@''W'(!'(<'(S'(|');')W')t'*/'*V'*s'+?'+['+}',6',R',t'-<'-X'-o'..'.H'.j'/*'/M'/u'0B'0_'0x'14'1M'1f'2#'2?'2Z'2u'36'3U'3v'47'4U'4y'5='5g'6&'6@'6l'7-'7I'7i'8''8I'8f'9-'9E'9d'9~':V';#';M';l'<('<O'<n'=7'=Q'=|'>:'>X'>w'?:'?a'?q'@('@U'A$'AH'Ao'B3'B['B~'CP'Cr'D3'DN'Dk'D{'E/'EK'E['Eu'F+'F9'FU'Ft'G4'GE'G['Gs'H1'HP'Hd'Ht'I"'IN'I\'Ip'J6'JS'K$'KH'Km'L+'LC'LX'M"'M='MT'Mk'N-'NT'N{'O9'O['Ot'P/'Pg'QA'QW'Qk'R6'R`'SA'SV'T2'TD'Tg'U6'UW'Uv'V9'VJ'VY'Vn'W1'WQ'Wk'X+'XK'Xl'Y,'YH'Yn'Z-'ZS'Zp'[7'[W'\#'\B'\k'^5'^Q'^l'_1'_Z'_u'`5'`R'`o'a8'aS'aq'b('bD'bl'c)'cJ'cp'd5'dd'e,'eM'ey'f:'fd'g/'gH'gw'h:'hQ'ho'i*'iH'il'j3'jW'jr'k3'kH'k\'l5'l_'m!'m='m_'m~'nK'nm'o1'oS'p&'pD'pd'q,'qP'q~'rD's!'s7's['t#'tH't|'uC'uj'v2'vg'v|'w:'wY'wz'x='xa'xr'y+'yE'ya'z('zW'{*'{Z'|2'|['}:'}o'~K(!!(!;(!i(")("G("b(#$(#H(#c(#}($@($g(%"(%L(%y(&?(&^('3('U('q((3((T((v()G()h(*+(*L(*|(+U(+t(,6(,W(,y(-J(-f(.#(.>(.Z(.{(/>(/a(0%(0U(12(1e(21(2Y(2|(3>(3\(4$(4V(5+(5e(69(6s(79(7Z(7}(8D(8g(97(9o(:T(;9(;u(<Q(=((=h(>L(?,(?s(@U(@y(AB(AZ(Am(B*(BJ(Bi(C.(CJ(Cd(D!(DC(D^(Ds(E,(EA(ES(Eo(F0(FO(Fp(G-(GN(Ge(H'(H;(HX(Ho(I-(I@(IR(Id(Iy(J.(JA(JU(Jr(K&(K;(KR(Kf(Kx(L1(LK(Lb(Lt(M0(ME(MY(My(N/(NC(NW(Nz(O@(Od(P*(PR(Pg(P~(Q4(QT(Qx(R6(RJ(R_(S((SN(Sy(TC(Tr(U9(U`(Uu(V8(VZ(W&(WE(Wp(X9(Xc(Y&(YC(Y`(Z"(ZA(Zj([5([^(\!(\>(\d(^0(^\(^~(_K(_m(`2(`W(`x(a9(aa(b%(bR(b{(cF(cU(cc(cq(d3(dJ(da(e7(eQ(es(f9(fR(fn(g4(gL(gh(h2(hD(hX(hp(i((iB(ib(i~(j4(jW(ju(k+(k>(kp(l0(lN(lm(m&(mB(mX(n'(n?(nT(nn(oG(p%(pm(qT(qn(r+(rH(ra(ry(s6(sZ(su(t1(tM(tx(uE(ub(v$(v<(w2(wX(x<(y&(yh(z((zG(zg({*({`(|!(|>(|a(|~(}C(}`(~$(~>(~b)!$)!>)!Y)!z)"7)"S)"p)#.)#O)#p)$5)$_)$z)%6)%U)%r)&0)&U)'")'>)'U)'m)(%)(>)(T)(o))*))D))^))r)*1)*O)*c)*r)+5)+g)+y),1),L),c)-!)-L)-h).-).F).f)/!)/:)/U)/l)0-)0C)0s)1.)1E)1b)1~)2<)2Z)2s)3))3F)3a)3u)42)4G)4k)5')5=)5Q)5h)6%)6B)6W)6n)7))7?)7U)7l)8-)8Q)8k)9#)9?)9W)9y)::):Z):|);A);c)<')<H)<q)=6)=Y)=~)>F)>o)?6)?^)@.)@W)A#)AR)B#)BN)Bh)C6)CP)Cl)D%)D?)D[)Dk)E%)E6)EO)Eq)F")F6)FG)F_)G#)GE)Gi)H-)HP)Hv)IH)Iw)JU)K3)KH)K_)Kx)L1)LQ)Lx)M;)Mc)N;)Nj)OA)Oo)P>)Pd)Q2)QV)Q})RN)Rz)S>)SY)Su)T:)T`)U&)UP)Uo)V;)V^)W+)WR)Wt)XB)X^)X{)YI)Yl)Z0)ZO)Zt)[9)[e)\*)\\)^,)^I)^y)_@)_a)`-)`O)`x)aC)ae)b/)bO)br)c2)cG)cm)d')d<)dM)dY)dg)ds)e&)e8)eE)eT)em)e~)f;)fU)fi)g')g;)gQ)gh)g~)h3)hM)hb)hu)i*)i<)iS)ik)j#)j?)jT)jp)k&)k?)kR)ko)l))l?)lU)l|)mF)mc)m{)n6)nK)nd)nv)o*)oT)ox)pG)pg)q-)qJ)qi)r0)rQ)rp)s>)sq)tK)t[)tq)u()u\)v%)v:)vb)w!)wI)wm)x")x?)xS)xk)y-)yG)yf)z$)z2)zI)ze)z}){=){a)|*)|N)|j)}+)}G)}V)}p)~/)~I)~l*!4*!W*!r*"2*"M*"j*#,*#I*#o*$,*$@*$T*$o*%A*%X*%p*&-*&K*&{*'L*(!*(P*)"*)Q**)**V**z*+A*+q*,**,=*,M*,_*,l*-#*-?*-i*-z*.3*.X*.i*.{*/7*/\*0$*0J*0p*18*1a*26*2S*2q*39*3r*4<*4[*4o*5#*5S*5q*60*6M*6d*7!*76*7b*8.*8E*8Y*8n*9(*9=*9c*:+*:E*:k*;%*;?*;W*;m*<3*<K*<f*=$*=J*=e*>**>A*>h*?"*?G*?Y*?g*?}*@.*@=*@M*@j*@y*A7*AH*A_*Aw*B1*BE*Bc*Bq*C%*C<*CL*D.*Dz*Ee*Ey*F3*FP*Fg*F}*G3*Gv*H7*HU*Hu*I5*IN*Ib*I|*J7*JL*Ja*K9*KX*L&*LG*Lj*M.*MP*Mt*NF*Ne*O&*OJ*P'*P=*Pb*Q)*QN*Qt*R<*Rp*S7*S^*T&*TL*Tt*UJ*U`*U|*V=*V^*W$*WQ*W{*XM*Y,*Ya*Z0*ZA*Zd*[**[H*[g*\#*\C*\h*^6*^c*_%*_F*_h*`+*`M*`}*a?*aa*b$*bE*bh*c9*cY*c{*d>*d`*e$*eS*eo*f,*fG*fd*g'*gI*gl*h0*hS*i&*iW*is*j0*jI*jf*k"*k;*kK*kg*l%*lA*l\*lw*mJ*mz*nF*np*oA*of*or*o~*p:*p[*po*p|*q8*qK*qc*qx*r3*rT*rm*s(*sL*sr*t0*tM*th*u(*uC*ug*v-*vH*ve*w$*wB*wV*wy*x?*xa*y$*yE*yg*z"*z:*zM*zk*{+*{G*{`*|!*|@*|h*}$*}E*}`*}r*~(*~:*~U*~f+!&+!4+!D+![+!e+""+"7+"K+"e+"u+#;+#P+#g+$0+$R+$y+%<+%_+&#+&I+&s+'<+'T+'s+(*+(@+(R+(h+(w+)5+)b+*?+++++l+,(+,I+,j+-;+-R+.(+.5+.N+.i+/$+/8+/_+00+0_+0v+1.+1A+1[+1p+2*+2=+2P+2c+2z+33+3G+3Z+3y+48+4E+4c+4t+58+5c+5r+6@+6w+7O+7~+8X+93+9^+:4+:i+;@+<!+<`+=7+=v+>V+>i+?!+?5+?i+@A+@o+A>+Ak+B=+Bx+C1+CP+Cg+D)+DV+E)+E_+F#+FJ+Fy+G<+Gr+HC+Hl+I/+I_+J;+Jf+K'+KG+Kk+L7+LZ+Lq+M#+M7+MT+Mh+M}+N4+NP+Ne+Nr+O"+O4+OD+OT+O_+Or+P1+PP+Pm+Q.+QJ+QV+Qt+R2+RM+Ri+S)+SG+Sn+TE+Th+U,+UN+Ut+V1+VY+W#+WB+Ws+X.+XC+XT+Xk+Y!+Y2+YC+YY+Z.+Z_+[:+[j+\=+\k+^,+^D+^k+_3+_L+_l+`.+`S+`v+a9+aY+a}+b1+bG+b[+b{+c=+c[+d++dN+e$+eC+e}+fV+fr+g2+gO+h"+hF+hi+i++iV+iz+jM+jq+kG+kp+l;+lb+m,+mU+m|+nG+nm+o&+oH+oZ+oz+p8+pY+q%+qA+qV+r!+r@+rj+s2+sX+sy+t6+t^+u%+uE+uj+v,+v>+vR+vj+w%+w8+wW+wq+x1+xG+x^+xy+y5+yM+ye+yv+z-+zK+z`+zv+{8+{[+|/+|M+|l+}/+}G+}\+}w+~?+~b+~{,!0,!C,!U,!k,"4,"Y,#*,#N,#o,$/,$V,$t,%5,%[,%~,&;,&v,'L,'j,(&,(;,(U,(p,)%,)W,)z,*W,+2,+n,,B,,z,-M,.",.S,/+,/k,0C,0X,0y,11,1G,1[,1n,2),2E,2V,2r,35,3[,3~,47,4T,4s,57,5Y,5},6A,6g,7$,7H,7i,8-,8G,8[,8t,92,9G,9e,9},:<,:T,:n,;',;G,;b,;},<F,<r,=+,=E,=`,>(,>G,>_,?5,?e,@8,@d,A3,A`,B0,B<,BN,B~,C7,CR,C~,DK,Dk,E0,ET,Ey,F?,Fe,G9,GY,H",HI,Hq,I:,Ic,J:,Jb,K,,KT,K},LH,M!,M6,MT,Mv,N:,N\,O",OE,Oi,P/,Pa,Q%,QH,Ql,R1,RU,S),SI,Sl,T1,TT,Tx,U>,Up,V/,VL,Vj,W*,WM,Wr,X8,X\,Y$,YV,Yq,Z!,ZV,Zo,[#,[5,[M,[k,\*,\F,\d,^",^=,^e,^y,_6,_N,_e,_|,`4,`M,`e,`},a<,aX,aw,b@,bY,bu,c,,cV,cl,d+,dN,dp,e*,eP,ed,e{,f9,fJ,fi,g,,gJ,gi,h),hL,hl,i:,i[,i~,jC,je,k-,kR,ky,lo,m`,nG,o',of,pE,q*,qs,rW,ro,s5,sh,t3,tL,td,t{,uB,ub,v+,vF,vb,v},w;,we,wz,xF,xl,y9,yR,yu,z;,zb,{/,{d,|*,|N,|j,}*,}?,}S,~(,~@,~`-!$-!;-!T-!w-"/-"H-"X-"s-#)-#B-#R-#e-#~-$0-$E-$i-%&-%<-%X-%y-&;-&\-&n-'#-'8-'J-'m-(5-(R-(f-)(-)I-)b-*$-*>-*X-*u-+3-+X-+x-,0-,Q-,o--%--G--`--s-.:-.M-.i-/!-/6-/N-/d-0.-0Y-0x-1<-1\-2(-2I-2m-34-3M-3w-45-4U-4t-5=-5\-5~-65-6J-6c-6{-77-7X-7}-8<-8Q-8f-9+-9M-9i-:--:i-;3-;[-<(-<H-<k-=8-=Z-=r->'->F->\->x-?;-?b-?t-@*-@Y-A(-A`-As-B$-BM-Bd-C"-C=-CS-Cp-D--D5-DH-DW-Dd-Ds-E"-E4-EH-EX-Ew-F+-F;-FW-F}-G;-G`-H&-H>-Hj-I7-IS-J!-JD-Jh-K%-KC-Kq-L8-L^-Lq-M(-MB-MX-Mp-N.-NB-N[-Ns-O<-Od-P!-PC-PW-Q3-QJ-Qb-Qt-R(-R@-R^-Rq-S+-S?-SX-Sx-T0-TE-T`-Ty-UI-Ux-V9-V`-W'-WE-Wk-X!-XN-Xk-Y/-YX-Z#-Z?-Za-Zz-[:-[W-\#-\L-\n-^0-^T-^f-_(-_H-_o-`--`J-`g-a(-aC-al-b/-bI-b_-bq-c$-c4-cJ-c`-cq-d&-d9-dL-dk-e1-eZ-e~-fE-ft-g>-ga-h&-hc-i&-i:-iL-id-j$-j;-j\-k!-kI-ki-l2-lU-ly-m>-md-n*-nF-np-o:-oZ-p/-pH-pi-q#-q5-qK-q`-qr-r)-rE-rh-rz-s/-sF-s_-ss-t.-tG-tb-u#-u;-uX-u|-v7-vU-vv-w+-w>-wX-x'-xH-xi-yF-y[-yx-z=-zM-zz-{<-{u-|4-|W-|z-}:-}_-~$-~:-~Q-~q.!-.!G.!`.!v."7."M."n.#).#@.#Z.#k.$&.$=.$X.$k.$|.%M.%c.&!.&@.&T.&k.',.'?.'U.'r.(I.(h.)+.)P.)m.*'.*>.*[.*r.+0.+I.+f.+{.,3.,W.,q.-/.-R.-n..)..@..c..y./)./7./P./p.02.0X.0j.0}.10.1N.1s.28.2W.2}.3C.3X.3u.4-.4K.4d.5(.5>.5Q.5p.64.6H.6b.6x.72.7B.7P.7d.7~.82.8I.8^.8m.8{.9<.9S.9t.:*.:H.:Y.:g.;!.;:.;Q.;j.<7.<L.<Z.<x.=7.=V.=t.>1.>Q.>m.?0.?J.?m.@'.@H.@g.A!.A:.Ab.B".B;.BU.Bp.C*.CD.Cd.D$.DE.D_.Dw.E3.EP.Ek.F'.FO.G/.GS.Gq.H;.Hd.I/.IW.J#.JN.K'.KR.L&.LO.Lv.MD.Mi.N3.N\.O-.OY.P%.PT.P|.QI.Qv.RI.Rv.SA.Sq.T:.Tf.U4.Uf.V5.V`.W2.WZ.X).XV.Y+.YW.Z#.ZR.Zz.[G.[t.\G.\r.^;.^i._0._Y.`&.`U.a%.aO.b".bJ.bw.cF.cy.dF.do.e?.ef.f2.f^.g0.gk.hD.i$.iY.j5.jp.kQ.ky.lC.l[.m!.mI.ml.n5.n?.nU.nd.o..oj.o|.p8.pL.pk.px.q1.qL.qm.r1.rX.ry.s@.sa.t(.tD.tc.u$.u;.uY.uv.v3.vN.vl.w,.wI.we.x!.x;.xf.y5.yb.z*.zG.zi.{+.{X.{z.|A.|f.}'.}L.}o.~9.~f/!(/!L/!p/"4/"Z/"w/#6/#K/$&/$=/$h/%5/%m/&7/&`/'+/'U/(%/(T/)!/)J/)a/*)/*F/*`/*o/+//+N/+m/,*/,I/,b/-!/-D/-c/.-/.H/.h//'//M//l/0./0M/0o/17/1Z/1{/2;/2Y/2{/38/3d/4+/4U/4}/5C/5f/6*/6O/6o/74/7Q/7s/8?/8b/9(/9</9O/:#/:G/:U/;$/;F/;o/<2/<U/<x/=I/=z/>N/>x/?F/?q/@E/@{/AP/B'/B^/C5/Ce/D-/DE/Dl/E+/ET/Eq/F3/Fb/G)/G\/Gz/HG/Hj/I6/Ib/J'/JZ/K$/KP/L$/LJ/M#/MK/Mu/N5/NT/O&/OR/Om/P-/P[/Px/QE/Q_/R+/RV/Ry/S>/S_/T1/T_/Tz/UE/Uf/V-/VS/W"/WO/X"/XC/Xn/Y8/YU/Z#/ZO/Z}/[O/[x/\C/\l/^;/^f/_:/_i/`6/`e/a-/aT/a{/bG/bs/c=/cn/d:/df/e3/eb/f*/fQ/fx/gD/gp/h:/hk/i8/ij/j@/jm/k</ki/l;/lm/m=/mt/nF/nt/o1/oO/oy/pE/pq/q=/qh/r5/r[/s,/s\/t&/tR/t~/uL/ux/vE/vr/w;/wk/x@/xi/y8/ye/z./zU/z~/{K/{y/|D/|m/})/}Z/}t/~5/~M/~l0!)0!?0!^0!u0"/0"L0"i0#!0#90#Q0#x0$;0$Z0%!0%J0%n0&60&U0&w0'?0'f0(00(Q0(x0)V0)}0*C0*h0+40+W0+y0,E0,m0-00-R0-z0.>0.b0/'0/J0/s00<00g01901[01}02E02i03.03Z04.04Q04u05605Z06$06K06s07907a08"08>08c08u09.09F09\09{0:70:N0:m0;'0;C0;Z0;r0<*0<E0<Z0<o0=,0=>0=S0=e0>20>f0?>0?l0@@0@m0A<0Ai0B;0Bv0CI0Ci0D10DO0Dh0E&0E@0EZ0E|0F?0Fg0G&0G;0GZ0Gw0H30HI0Hp0I.0IJ0I_0Iz0J>0JY0Jq0K<0KM0Kj0L/0LJ0Ld0L{0M<0Md0N60N\0Ny0O>0OY0Oo0P*0PA0PW0Pw0Q60Q\0Qy0R90RU0R{0S80SU0Sx0T:0TX0U$0UE0Ug0V(0VP0Vo0W10WQ0Wn0X*0XH0Xe0Y.0YM0Yw0Z<0Za0[+0[C0[_0[|0\B0\f0^(0^G0^`0_/0_L0_k0`*0`F0`h0a&0a=0aU0am0b%0bD0bc0bz0c20cc0d"0d:0dS0dl0e%0eJ0eo0f'0f\0g!0gH0gw0h:0hj0i40iU0j'0j<0jT0k10k[0k{0l=0lX0l|0m<0mg0n&0nI0nh0o)0oC0o\0oz0p50pJ0p_0q)0qC0qc0q{0r40rb0s$0s:0sS0sp0t(0tY0tr0u,0uT0ur0v70vT0vw0w?0wh0x$0x?0x\0xu0y00yN0ym0z)0zE0zh0{(0{G0{l0|/0|F0|d0|{0};0}U0}~0~K0~p1!81!Y1!~1"D1"f1#,1#K1#q1$71$K1$e1$~1%?1%\1%y1&61&R1&s1'01'Q1'l1('1(B1(d1(z1)<1)j1)~1*71*I1*d1+#1+11+@1+T1+i1,"1,81,T1,g1,{1-/1-J1-Z1-y1.-1.N1.m1/:1/V1/v10810W10v11;11I11Y11j11~12312N12f12y13+13Q13w14?14Y15"15815b16116\17&17I17f17}18718N18e18|19619M19e1:$1:E1:g1;!1;51;k1<'1<M1<k1=*1=E1=`1=n1>*1>L1>y1?@1?\1?y1@51@`1@|1AA1A\1At1B/1BF1B\1Bv1C=1CR1C_1Cs1D.1D<1DL1Dk1E)1EQ1Ex1FI1Fo1G81G[1H'1H^1Ht1I21IJ1I`1I|1J41JN1Jd1Jy1K/1KH1K`1L'1LC1L^1M"1M>1MZ1My1N41Ni1O'1OA1Oa1P"1PA1Pc1Q!1Q81QX1Qv1R51RM1Rk1S&1S=1SV1Sw1T?1TW1Tq1U/1UH1Uo1V81VT1Vp1W+1W>1WU1Wk1X-1XE1XX1Xo1Y/1YI1Yc1Y~1ZM1['1[F1[k1\*1\F1\y1^@1^[1^w1_71_X1_t1`A1`[1`v1a71af1b+1bD1b[1b|1c41cJ1cc1cw1d/1dC1dY1e11eJ1ec1f11fF1fc1g&1gD1h!1hQ1i$1iH1in1j'1j=1jX1j|1k71kW1kn1l)1lA1la1lx1m<1mZ1n#1nK1nu1o<1oa1p,1pQ1pv1q-1q>1qP1qh1r%1rK1rq1s;1s`1t01tb1u11u`1v51vd1w71we1x51xi1y91yk1z:1zi1{>1{f1|.1|W1|}1}F1}r1~C1~v2!F2!v2"L2"u2#C2$"2$b2%?2%|2&`2&v2'/2'M2'e2(!2(>2(h2)-2)J2)c2*+2*A2*g2+)2+H2+j2,+2,S2,y2-52-M2-v2.72.Z2.o2/*2/J2/^2/v20F20a20z21721S21n22/22V22l23423X23q24524U25$25M25u26*26R26j27227U27k28H28q29<29U29h29{2:22:P2:i2:}2;,2;=2;d2<+2<Q2<m2=%2=A2=\2=s2>P2>w2?:2?[2?~2@O2@w2A:2A`2A|2BG2Bt2CE2Ch2D/2DW2D{2EE2Em2F92F^2G22GU2Gk2H12HU2Hz2IA2It2J:2JW2Ju2K42KR2K~2L=2LX2Lu2M22MH2M_2Mq2N"2N>2NX2O%2OF2OX2Op2P$2P:2PV2Pk2Py2Q/2QR2R.2Rk2S?2Sw2T22T@2TU2Tj2T}2U02UA2UU2Ug2U|2VM2V{2W.2WB2WV2W}2X22XC2X^2X{2YG2Yg2Z&2ZG2Zc2[%2[I2[m2\62\[2^)2^K2^o2_#2_22_F2_Z2_n2`%2`V2`n2a)2aB2ab2az2b22bI2bg2c!2c92cO2ch2d%2dF2d[2e*2eQ2e~2f?2fc2g(2gL2gl2h32hM2hr2i92i_2j*2jK2jg2k$2kB2ka2l&2lN2lk2m%2m@2m[2n"2nF2nn2o.2oQ2oz2pF2py2qJ2r)2rO2r}2sK2s}2tQ2u%2uU2v-2vU2vz2w42wY2ws2x,2xP2y&2yP2z'2zA2zP2zk2{(2{U2|32|W2},2}f2~C2~{3!T3!}3"Q3#!3#P3#z3$E3$p3%43%e3&73&e3'A3'_3(,3(N3(f3)$3)E3)m3*,3*N3*t3+;3+`3+}3,73,U3,w3-,3-L3-{3.43.K3/)3/Y3/|30<30j31231U32"32I32q33733c34534j35:35_35~36@36`36~37O37t38;38`39%39M39v3:A3:j3;33;`3<'3<M3<d3=Z3>O3?A3@33A,3A~3Bo3Ce3DW3EP3FJ3GH3HA3I=3J03K'3Ky3Lm3Mb3N\3OR3PL3QA3RA3SE3TH3U@3V<3W53X;3Y-3Y{3Zh3[T3\H3^73_#3_r3``3aS3bH3cA3d53e,3ex3fj3gX3hG3i73j-3j|3kq3la3m[3nZ3oX3pQ3qH3r<3s03t+3u!3ur3vj3w_3xY3yb3zb3{\3|Z3}O3~H4!>4"44#+4$(4$~4%z4&q4's4(x4)n4*b4+V4,K4-A4.64/,40#40y41s42j43a44_45W46O47D48=4934:)4;&4;|4<r4=n4>n4?k4@h4Af4Bj4Ci4Dc4Eb4Fe4Gc4HY4Ib4Jn4K^4LM4M>4N.4O"4Oq4Pb4QS4RK4S>4T34U(4Ux4Vj4Wc4XV4YI4Z94[*4[y4\q4^d4_T4`K4aF4b>4c64d/4e.4f(4f{4gu4hs4il4j^4ka4lh4mj4na4oW4pO4qF4rA4s94t14u*4v)4w#4w}4xy4yr4zk4{k4|f4}`4~V5!Q5"I5#A5$@5%:5&25'05(25)15*05+05,65-75.35/450951952253<54J55S56N57L58$58Q59!59N5:#5:_5;35;c5<X5=R5>I5?D5@<5A45B-5C,5D'5Dz5Es5Fd5GU5HK5I>5J15K%5K}5Lr5Mh5Na5OZ5PT5QO5RP5SL5TI5T~5UK5U{5VL5V|5W65WT5Wx5XE5Y(5YG5Ym5Z35Z_5[#5[E5[e5\75\^5^#5^S5^r5_35_R5`$5`U5a(5aT5ay5bC5bk5c,5cT5d&5dM5ds5e95ef5f85f`5g(5g>5gZ5g{5h>5h_5h~5iD5ii5j05jT5jx5kB5k^5k|5lB5lc5m(5mD5ma5n'5nD5ng5nx5o85oS5om5p+5pH5pg5q$5qZ5r*5r[5s/5sa5ss5t,5tA5tv5u*5uH5ug5v,5vO5w#5wP5wu5xG5xS5x|5yB5yt5zH5zo5{<5{h5|05|V5|o5}45}W5}|5~A5~f6!.6!`6!z6"B6"f6#86#\6$$6$H6$l6%66%J6%d6%{6&?6&b6''6'I6'm6(46(e6(t6)-6)>6)U6)h6)}6*26*N6*b6*y6+76+H6+X6+n6,%6,56,G6,`6,z6-56-L6-d6-w6.D6.l6/96/a60860W60o61561N61f62!62;62V62l63(63=63L63b63z64.64D64X64x65165C65X65l66,66?66P66t67367W67t68.68D68_68w69669W69w6:C6:f6;%6;>6;_6;q6<#6<86<T6<v6=-6=K6=^6>!6>16>H6>f6?)6?J6?m6@!6@56@K6@_6A$6AK6Aj6A~6BA6BZ6B|6C96CT6Cr6D16DW6Dx6E16EO6Ee6E~6F46FH6Fe6F|6G46GM6Gd6H26HQ6Hu6I86Ic6J'6JK6Jr6K.6KX6Kv6L96LX6M#6MC6Mf6M|6N46NM6Ng6O$6OF6Ol6P,6PB6PW6Q*6QA6QR6Qf6R*6RC6R^6Rr6S,6SM6Sc6T"6TI6Ta6Tv6U16UJ6U_6Uz6V;6VZ6V{6W-6W?6WS6We6X(6XM6Xj6Y/6YF6Yl6Z-6ZE6Zd6[)6[O6[l6[~6\>6\X6\}6^36^J6^_6_+6_T6_x6`76`O6`i6a'6aE6ah6b-6bA6bX6bp6c+6cS6cy6dF6dn6e86ef6f(6fK6fh6g26ga6h16hW6h~6iV6j66jt6kA6kn6lC6l|6mQ6m}6nG6n|6oA6oZ6ox6p16pH6pZ6ps6q)6q=6qZ6qs6r*6rC6rX6rk6s'6s;6sV6sm6t06tC6tV6tp6u36uR6uh6v*6vH6v_6vw6w46wI6wd6x"6xM6xc6xy6y66yP6yn6z'6z@6z\6z{6{76{T6{q6|46|K6|m6}06}O6}g6}z6~K7!"7!>7!T7!u7"07"K7"d7"|7#47#O7#c7#w7$@7$e7%)7%K7%|7&E7&h7'07'U7'p7(27(S7(q7)?7)[7*/7*S7*n7+07+Q7+m7,+7,K7,v7-B7-k7.E7.f7/,7/N7/o70(70=70P70e70|71,71<71S71x72272N72z73@73Z73}74?74O74_74q75-75Q75\75s76'76676S76d77/77C77W77|78<78`79%79B79a7:!7:A7:\7;37;Q7;n7<17<M7<p7=-7=N7=p7>57>R7>q7?17?J7?m7@.7@G7@i7A*7AJ7Ae7B&7B@7B[7Bw7C27CM7Cn7D/7DQ7Dz7E67EO7Ek7F+7FF7Fb7F}7GH7Gd7H07H\7I*7IR7J%7J^7K;7Kn7LG7Ly7MM7N!7NV7O87Oo7P67PW7Px7Q:7Q\7R!7R>7Rb7S-7SP7Sr7T57Ti7UE7V"7VU7W+7WR7Ww7X>7Xb7Y37YJ7Ys7ZB7Z[7[&7[M7[s7\V7^%7^@7^V7^~7_F7__7`(7`T7`}7aJ7aa7b*7bP7bn7c87c_7d-7dW7d|7eA7eY7ep7f77f_7fu7g;7gV7gz7hH7h`7i$7iF7ip7j>7jq7kB7k\7ku7l@7li7m%7mN7mw7nE7nt7o>7op7pD7pj7q-7qM7qn7r27rT7rw7s@7sr7t17tY7u.7uP7uy7vG7vs7w?7wi7x:7xb7y>7yc7z07zY7{+7{c7|D7|r7}N7}v7~S8!#8!H8!p8"88"c8#*8#Q8$$8$N8$u8%A8%Z]=]
+!!"!!B!!d!",!"X!##!#F!#x!$8!$I!$\!$w!%.!%E!%Z!%n!&+!&@!&S!&p!'!!';!'M!'d!(,!(I!(c!(z!),!)A!)T!)s!*+!*C!*f!+/!+:!+R!+c!+w!,+!,?!,P!,m!-;!-V!-n!.0!.T!.v!/1!/N!/i!0%!0C!0_!0{!1=!1Z!1w!29!2V!2|!3G!3n!4/!4R!4s!5*!5E!5c!6&!6G!6j!6|!7A!7f!82!8P!8r!9/!9L!9s!:5!:S!:l!;*!;B!;V!;k!<%!<O!<q!=;!=[!=~!>;!>Q!>k!?3!?P!?u!@3!@Q!@j!A!!A6!AR!Aq!B)!BD!B[!Bs!C)!CK!Cj!D,!DF!Dc!Dy!E2!EV!F!!F@!FT!Fn!G0!GG!G^!Gu!H3!H?!HT!Hr!I+!I@!I_!Iq!J0!JD!Jw!K8!KZ!Kr!L-!LO!Lf!M!!M7!ML!Mv!N5!NU!Nv!O8!OV!Oo!P+!PB!P^!Pw!Q2!Q[!Qr!RG!Ra!S&!SI!Sd!T&!TG!Tr!U@!Uh!V2!VV!Vz!W<!Wc!X*!XM!Xj!X}!Y1!YG!Y^!Yr!Z)!ZH!Zc![%![H![y!\<!\_!\|!^Q!_%!_T!`%!`N!`z!aJ!a^!ap!b%!b5!bP!b}!cJ!c}!dP!e$!eO!f"!fU!fy!g7!gU!g}!h@!h`!i$!iG!il!j4!jX!j~!kD!kp!l8!l_!m(!mQ!m}!nG!nn!o:!ol!p:!pg!q-!q^!r-!rX!s(!sT!t"!tG!tm!u;!u`!v$!vD!vk!w4!w[!x,!xW!y#!yN!yy!zD!zq!{<!{d!|/!|W!}1!}f!~:!~o"!D"!w""A""j"#2"#Y"$""$O"$z"%@"%i"&1"&c"'."'V"(("(T")!")M")y"*E"*n"+;"+b",+",Q",{"-D"-l".-".X"/3"/^"0*"0W"1$"1P"2""2O"3%"3S"4%"4J"4s"5C"5o"6?"6e"7,"7P"7y"8M"8v"9F"9t":?":o";3";e"<1"<b"=0"=c">/">`"?-"?W"@+"@c"A7"Ad"B8"Be"C4"Ce"D6"Dy"EL"E{"FM"G'"GY"H."HR"I%"I>"IS"Ie"Iu"JE"J["Jw"K-"K@"Kj"L("L:"LO"Lh"Lz"M5"MS"Mi"N*"NI"Nh"N~"OC"Oc"P$"PQ"Pj"Q""Q<"QL"Qf"R2"RZ"R}"S@"SX"Sw"T8"TL"Tq"U%"U>"UP"Un"V5"VO"Vl"W#"WB"Wg"X%"XI"Xa"Xs"Y*"Y="Y["Yr"Z$"Z6"Z\"[6"[k"\."\N"\r"^$"^8"^J"^e"^y"_-"_<"_V"`2"`z"aA"aW"aw"b2"bV"bx"cL"d$"dV"e9"eN"ew"f9"fa"g""gC"gZ"h3"hM"i$"i="ik"j9"jm"k:"kW"l%"lH"ls"m7"m["n+"nH"nk"o6"oU"om"p/"pk"q>"qp"r8"ra"s0"sZ"t$"tI"to"u9"u["u}"v0"vK"vf"v~"w<"wX"wv"x>"xm"y>"yf"z."zU"{#"{H"{g"|0"|K"|n"}2"}W"~""~L"~s#!E#!n#"?#"n##<##i#$!#$H#$p#%>#%j#&0#&U#&q#'<#'s#(8#(b#)##)2#)F#)^#)u#*,#*@#*L#*t#+(#+<#+`#+v#,.#,H#,k#--#->#-N#-a#-{#.2#.C#.T#.p#/2#/K#/j#0'#0;#0S#0f#0{#1/#1F#1d#1y#2-#2J#2W#2f#3"#35#3H#3Z#4-#4J#4h#5'#5=#5X#5n#6;#6R#6g#7!#7I#7t#8=#8Y#9##9K#9u#:>#:l#;9#;f#<-#<T#<y#=9#=c#>/#>Z#?&#?U#@%#@S#@{#AF#Am#B*#BP#Bx#CB#Ci#D7#Db#E/#ET#E|#FB#Fe#G+#GL#Gw#HE#Ho#I%#IH#IV#Iz#J:#JF#Jh#K/#KL#Kh#L*#LL#LZ#L~#M>#M`#Mq#N.#N>#NW#Nj#O&#O=#O\#Oo#P'#P4#PF#Pe#Pt#Q$#Q;#QY#Qn#R&#R8#RT#Rf#Rx#S6#ST#Sp#T1#TQ#Tr#UJ#Uq#V0#VT#Vk#W##W8#WJ#Wf#X1#XQ#Xh#Y##Y8#YT#Ym#Z##ZE#Z_#Z{#[2#[G#[[#\2#\V#\r#^&#^=#^q#_%#_7#_W#_p#`.#`D#`a#`r#a2#aC#aa#ay#b9#bU#bh#c!#c7#cL#ce#c}#d5#dI#dg#e.#eR#eg#f.#fL#fr#g8#gY#h##hI#hd#i##iD#iZ#i{#j:#jW#jz#k:#kf#l(#lI#ll#m.#mS#mx#n?#nU#nk#o+#oJ#oo#p;#p[#q##qJ#qk#r(#rI#rn#s6#sQ#si#s|#t0#ta#ty#u8#uN#ud#v1#vO#vd#v{#w7#wK#wa#wv#x=#xR#xh#y!#y0#yR#y{#z2#zO#zn#{-#{E#{[#{w#|)#|?#|V#|i#|}#}3#}S#}o#~6#~U#~s$!3$!R$!k$""$"6$"L$"`$#!$#L$#p$$3$$^$%"$%F$%h$&%$&D$&b$'*$'H$'i$(!$(<$(R$(h$)*$)K$)t$*B$*d$+"$+D$+}$,R$-*$-U$-~$.J$.s$/=$/g$/~$03$0Y$1&$1K$1r$2:$2d$33$3_$4%$4L$4f$5($5B$5[$5w$68$6[$7!$7;$7V$7n$8$$89$8R$8g$8{$90$9H$9c$9v$:2$:M$:j$;*$;F$;d$<"$<C$<g$='$=E$=e$=v$>9$>M$>q$?3$?U$@!$@E$@j$A($A:$AP$Ad$Ar$B#$B6$BD$BR$B`$Bt$C-$C>$CN$C^$Cs$D)$D9$DK$Dg$Dy$E-$EA$EV$E~$FC$FV$G3$GM$Gg$H$$H@$Hc$Hv$I:$IR$Ie$J"$J8$J^$Jv$Kb$Kt$L5$LI$L^$M#$M?$MV$Mw$N2$NK$Nf$O.$ON$Oq$P0$PP$Pl$Q-$QS$Qk$R*$RM$Ro$S"$S4$SI$SU$Sw$T:$T\$Tz$U?$UW$Uz$V5$VN$Vb$Vx$W.$WJ$Wc$Wy$X<$Xc$X}$YE$Yp$Z($ZA$ZZ$Z}$[5$[C$[P$[l$[|$\>$\T$\i$^($^;$^P$^j$_'$_D$_h$`/$`_$a*$aN$ay$b;$bU$bk$c%$c7$cY$cn$d3$dI$d`$dz$e3$eI$eg$f2$fF$f^$fp$g4$gU$g~$hI$hg$i.$iM$iz$jF$jf$k0$kZ$k{$lH$ln$m6$me$n&$nM$nx$oB$ot$p;$pa$q.$qb$r%$rW$ry$sG$sn$t3$tX$u"$uJ$uo$v7$vi$w1$wc$x,$xX$y!$yM$yv$z@$zn${:${g$|($|C$|p$}($}I$}k$~/$~P$~s%!9%!i%!y%"6%"F%"e%#&%#A%#V%#a%#u%$&%$6%$E%$[%$z%%?%%[%%k%&%%&6%&O%&b%&u%')%'W%(#%(K%(u%)9%)[%)x%*;%*N%*f%*z%++%+;%+O%+_%+n%+|%,J%,_%-8%-W%.#%.I%.n%/6%/[%/|%0>%0f%1,%1N%1s%28%2^%3"%3B%3e%4(%4X%5(%5S%6#%6O%6q%75%7X%7v%89%8d%9&%9H%9q%:8%:[%;#%;G%;i%<&%<J%<j%=,%=L%=m%>B%>f%?+%?L%?k%@7%@b%A#%AD%Ao%B/%B[%C(%CR%Cz%D@%Dj%E.%ES%E|%FR%G.%Ge%H2%He%I8%Ie%J0%JZ%K(%KB%K\%Kr%L.%LA%LU%Le%Lv%M(%M9%MR%Mh%Mz%N2%ND%NT%Nd%N{%O.%OF%O\%O{%P-%P=%PS%Pr%Q.%Q@%Q[%Qy%R6%RI%R_%Rw%S+%SB%SW%Si%Sw%T7%Tr%UM%V(%V_%W6%Wk%XF%Y!%YX%Z/%Zc%[7%[N%[t%\/%\I%\i%^)%^G%^h%_8%_P%_d%`)%`Q%`q%a6%aN%ak%b(%bA%b_%b{%c8%cY%cx%d5%dT%ds%e9%eb%f"%fD%ff%fs%g3%gJ%gn%h5%he%i5%i[%j&%j3%j?%j\%jy%k5%kP%kk%lB%l`%l~%m8%mQ%mr%n/%nL%nv%o2%oK%oo%p1%pR%po%q/%qE%qa%qo%r>%rZ%rq%s4%sL%s\%sq%tB%t\%tx%u4%uI%ue%v0%vP%vx%w0%wQ%ws%x7%xX%x{%yA%yq%z2%zE%ze%{$%{4%{N%{d%{}%|7%|L%|n%}B%}l%~;%~i&!8&!k&"/&"H&"j&#"&#+&#C&#d&#}&$4&$W&$x&%@&%W&%k&&.&&D&&i&'0&'d&(%&(;&(R&(t&);&)k&*0&*^&+$&+K&+}&,E&,x&-@&-p&.3&.T&/%&/H&/v&0?&0q&1A&1z&2E&2w&3<&3j&41&4a&52&5U&6%&6H&6v&71&7O&7e&7|&85&96&9j&:.&:f&;A&;k&<!&<6&<K&<\&<l&="&==&=b&=}&>5&>X&>m&?#&?:&?_&?s&@'&@9&@T&@i&A%&A=&AS&Au&B;&BY&Bs&C*&CL&Ci&D#&DE&D`&D|&E<&ET&Ep&F7&FZ&G!&GG&Gj&H1&HU&Hz&IA&It&J7&JJ&Ja&Jx&K0&KL&Kj&L)&LA&L`&M#&M:&MR&Mb&Mz&N2&ND&NT&Nz&O?&O[&Oz&PC&Pe&Q$&QC&Qh&R-&R[&S!&S?&S\&Sz&T;&Td&U5&U_&V,&Va&W(&WN&Wo&X3&X_&Y!&YJ&Yk&Z0&ZO&["&[H&[o&\.&\R&\}&^>&^Y&^~&_C&__&_y&`5&`\&a.&a[&b!&b<&b_&c'&cW&d"&dM&dv&e4&eV&f"&fJ&fc&g"&gE&gj&h2&hW&hv&i5&iY&j"&jG&jf&k,&kL&kp&l2&lS&m&&mC&mf&n%&nL&nm&o)&o>&oc&p$&pL&pp&q0&qK&qs&rA&rr&s*&sJ&sh&t(&tE&tb&u&&uI&ul&v/&vS&vz&wC&wj&x1&xY&xv&y5&yI&y}&zR&{:&{a&{z&|4&|P&|i&}4&}Q&}q&~4&~X&~{'!@'!g'"+'"P'"r'#8'#b'$#'$B'$\'$|'%<'%Y'%u'&.'&K'&p''/''H''e'(,'(E'(c'({')6')N')f'*/'*J'*b'+,'+I'+f',$',=',e'-#'-M'-j'.-'.D'.a'/$'/J'/g'/}'0<'0V'0x'18'1['2%'2P'2m'3('3B'3['3t'41'4M'4i'5%'5D'5d'6&'6E'6d'7)'7K'7u'84'8N'8z'9;'9W'9w':5':W':t';;';S';r'<.'<e'=1'=['=z'>6'>^'>|'?E'?`'@,'@H'@g'A''AH'Ao'B!'B6'Bd'C2'CV'C}'DA'Dj'E.'E_'F"'FA'F\'Fy'G+'G='GY'Gj'H%'H9'HG'Hd'I$'IB'IS'Ij'J#'J?'J_'Jr'K$'K0'K\'Kk'K~'LD'Lb'M2'MV'M{'N9'NQ'Ng'O0'OK'Oc'Oy'P;'Pc'Q+'QG'Qj'R$'R='Ru'SO'Sf'Sy'TD'Tn'UO'Ue'V@'VR'Vu'WD'Wf'X&'XG'XX'Xh'X|'Y?'Y`'Yy'Z9'ZY'Zz'[:'[V'[|'\;'\b'\~'^E'^f'_1'_P'_y'`C'``'`z'a?'ai'b%'bC'ba'b}'cF'cb'd!'d6'dR'dz'e7'eX'e~'fC'fr'g:'g['h)'hH'hr'i='iV'j''jH'j`'j}'k8'kV'kz'lA'lf'm"'mA'mV'mk'nC'nm'o/'oK'om'p.'pY'p{'q?'qb'r4'rR'rr's:'s_'t.'tR'u/'uE'uj'v1'vV'w,'wQ'wx'x@'xu'y,'yH'yh'z*'zK'zo'{"'{9'{S'{o'|6'|f'}8'}i'~@'~j(!H(!}("Y(#/(#I(#w($7($U($p(%2(%V(%q(&-(&N(&u('0('Z(()((M((l()A()d(*!(*A(*c(+&(+U(+v(,9(,Z(-,(-d(.$(.D(.f(/)(/X(/t(01(0L(0i(1+(1L(1o(23(2d(3@(3i(4-(4M(4l(53(5f(6:(6t(7H(8$(8H(8j(9.(9S(9v(:F(:~(;d(<H(=&(=a(>7(>w(?[(@;(A$(Ae(B*(BQ(Bj(B|(C9(CY(Cx(D=(DY(Ds(E0(ER(Em(F$(F;(FP(Fc(F~(G?(G_(H!(H<(H^(Ht(I6(IJ(Ih(I~(J<(JO(Jb(Js(K*(K=(KP(Ke(L#(L5(LJ(Lb(Lu(M)(M@(MZ(Mq(N%(N?(NT(Ni(O*(O>(OR(Og(P+(PO(Ps(Q9(Qb(Qv(R/(RC(Rd(S)(SE(SY(Sn(T7(T^(U*(UR(V#(VH(Vo(W&(WG(Wj(X5(XT(Y!(YH(Yr(Z5(ZR(Zo([1([P([y(\D(\m(^0(^M(^s(_?(_l(`/(`Z(`|(aA(ag(b)(bH(bp(c4(cb(d,(dU(de(dr(e"(eB(eY(ep(fF(fa(g$(gH(gb(g}(hC(h[(hw(iA(iS(ih(j!(j7(jQ(jq(k/(kC(kg(l&(l:(lM(m!(m?(m^(m|(n5(nQ(nh(o6(oN(od(o}(pV(q4(q|(rd(s.(sG(sp(t/(tG(t`(t{(uA(u[(uv(v2(v[(w((wS(wp(x2(xJ(y@(yg(zJ({4({v(|6(|U(|u(}8(}n(~/(~L(~o)!.)!Q)!n)"2)"L)"p)#2)#L)#h)$*)$E)$b)$~)%<)%^)%~)&C)&m)'*)'D)'d)(")(>)(d))0))L))d)){)*3)*L)*c)*})+8)+R)+l),"),?),^),q)-")-C)-u).)).?).Z).q)//)/Z)/v)0;)0T)0t)1/)1H)1d)1z)2;)2Q)3#)3<)3S)3p)4.)4J)4i)5#)57)5T)5o)6%)6@)6U)6y)75)7K)7`)7v)83)8P)8f)8|)97)9M)9d)9z):;):`):y);1);M);f)<))<H)<i)=,)=O)=q)>5)>V)?!)?D)?h)@.)@T)@})AD)Al)B<)Bf)C1)Ca)D1)D\)Dv)ED)E_)Ez)F3)FM)Fj)Fy)G3)GD)G^)H!)H0)HD)HU)Hm)I1)IS)Iw)J;)J_)K&)KV)L')Ld)MA)MV)Mm)N()N?)N`)O()OI)Oq)PI)Px)QO)Q})RL)Rr)S@)Se)T-)T\)U*)UL)Uh)V%)VH)Vn)W4)W_)W})XI)Xl)Y9)Ya)Z$)ZP)Zl)[+)[W)[z)\>)\^)^$)^G)^s)_8)_k)`:)`W)a))aN)ao)b;)b^)c()cQ)cs)d=)d^)e")e@)eU)e{)f5)fJ)f[)fh)fu)g#)g4)gF)gS)gc)g{)h.)hI)hd)hw)i5)iI)i`)iv)j.)jA)j[)jp)k%)k8)kJ)kb)ky)l1)lM)lc)l~)m4)mM)ma)m})n7)nM)nd)o,)oT)oq)p+)pD)pY)pr)q&)q8)qc)r()rU)ru)s;)sX)sw)t>)t`)t~)uL)v!)vY)vj)w!)w6)wk)x3)xH)xp)y/)yW)y{)z0)zM)zb)zy){;){U){t)|2)|@)|W)|s)}-)}K)}o)~8)~\)~x*!9*!U*!e*!~*"=*"W*"z*#B*#f*$"*$@*$[*$x*%:*%W*%}*&:*&N*&c*&}*'O*'g*'~*(;*(Y*)+*)Z**/**_*+0*+`*,7*,e*-**-O*.!*.8*.K*.[*.m*.z*/1*/M*/w*0**0A*0g*0w*1+*1E*1k*22*2X*2~*3F*3o*4D*4b*5!*5G*6"*6J*6j*6}*71*7b*8!*8>*8[*8r*9/*9D*9p*:<*:S*:h*:|*;6*;K*;q*<9*<S*<y*=3*=M*=f*={*>A*>Y*>t*?2*?X*?s*@8*@O*@v*A0*AU*Ah*Au*B-*B<*BK*B[*Bx*C)*CE*CV*Cm*D'*D?*DS*Dq*E!*E3*EJ*EZ*F<*G**Gx*Hc*Hw*I1*IN*Ie*I{*J1*Jt*K5*KS*Ks*L3*LL*L`*Lz*M5*MJ*M_*N7*NV*O$*OE*Oh*P,*PN*Pr*QD*Qc*R$*RH*S%*S;*S`*T'*TL*Tr*U:*Un*V5*V[*W$*WJ*Wr*XH*X^*Xz*Y;*Y[*Z"*ZO*Zy*[K*\**\_*^.*^?*^b*_(*_F*_e*`!*`A*`f*a4*aa*b#*bD*bf*c)*cK*c{*d=*d_*e"*eC*ef*f7*fW*fy*g<*g^*h"*hQ*hm*i**iE*ib*j%*jG*jj*k.*kQ*l$*lU*lq*m.*mG*md*m~*n9*nI*ne*o#*o?*oZ*ou*pH*px*qD*qn*r?*rd*rp*r|*s8*sY*sm*sz*t6*tI*ta*tv*u1*uR*uk*v&*vJ*vp*w.*wK*wf*x&*xA*xe*y+*yF*yc*z"*z@*zT*zw*{=*{_*|"*|C*|e*|~*}8*}K*}i*~)*~E*~^*~}+!>+!f+""+"C+"^+"p+#&+#8+#S+#d+$$+$2+$B+$Y+$c+$~+%5+%I+%c+%s+&9+&N+&e+'.+'P+'w+(:+(\+)!+)G+)q+*:+*R+*q++(++>++P++f++u+,3+,`+-=+.)+.j+/&+/G+/h+09+0P+1&+13+1L+1g+2"+26+2\+3.+3\+3t+4,+4?+4Y+4n+5(+5;+5N+5a+5x+61+6E+6X+6w+76+7C+7a+7r+86+8a+8p+9>+9u+:M+:|+;V+<1+<[+=2+=g+>>+>}+?^+@5+@t+AT+Ag+A}+B3+Bg+C?+Cm+D<+Di+E;+Ev+F/+FN+Fe+G'+GT+H'+H\+I!+IH+Iw+J:+Jp+KA+Kj+L-+L\+M9+Md+N%+NE+Ni+O5+OX+Oo+P!+P5+PR+Pf+P{+Q2+QN+Qc+Qp+Q~+R2+RB+RR+R\+Rp+S/+SN+Sk+T,+TH+TT+Tr+U0+UK+Ug+V'+VE+Vl+WC+Wf+X*+XL+Xr+Y/+YW+Z!+Z@+Zq+[,+[A+[R+[i+[}+\0+\A+\W+^,+^\+_8+_h+`;+`i+a*+aB+ai+b1+bJ+bj+c,+cQ+ct+d7+dW+d{+e/+eE+eY+ey+f;+fY+g)+gL+h"+hA+h{+iT+ip+j0+jM+j~+kD+kg+l)+lT+lx+mK+mo+nE+nn+o9+o`+p*+pS+pz+qE+qk+r$+rF+rX+rx+s6+sW+t#+t?+tT+t}+u>+uh+v0+vV+vw+w4+w[+x#+xC+xh+y*+y<+yP+yh+z#+z6+zU+zo+{/+{E+{[+{w+|3+|K+|c+|t+}++}I+}^+}t+~6+~Y,!-,!K,!j,"-,"E,"Z,"u,#=,#`,#y,$.,$A,$S,$i,%2,%W,&(,&L,&m,'-,'T,'r,(3,(Y,(|,)9,)t,*J,*h,+$,+9,+S,+n,,#,,U,,x,-U,.0,.l,/@,/x,0K,0~,1Q,2),2i,3A,3V,3w,4/,4E,4Y,4l,5',5C,5T,5p,63,6Y,6|,75,7R,7q,85,8W,8{,9?,9e,:",:F,:g,;+,;E,;Y,;r,<0,<E,<c,<{,=:,=R,=l,>%,>E,>`,>{,?D,?p,@),@C,@^,A&,AE,A\,B3,Bc,C6,Cb,D1,D^,E.,E:,EL,E|,F5,FP,F|,GI,Gi,H.,HR,Hw,I=,Ic,J7,JW,J~,KG,Ko,L8,La,M8,M`,N*,NR,N{,OF,O},P4,PR,Pt,Q8,QZ,Q~,RC,Rg,S-,S_,T#,TF,Tj,U/,US,V',VG,Vj,W/,WR,Wv,X<,Xn,Y-,YJ,Yh,Z(,ZK,Zp,[6,[Z,\",\T,\o,\},^T,^m,_!,_3,_K,_i,`(,`D,`b,`~,a;,ac,aw,b4,bL,bc,bz,c2,cK,cn,d@,de,e),eO,ep,f7,fa,g+,gW,h$,hT,h|,iF,i^,iv,j5,jQ,jp,k9,kR,kn,l%,lO,le,m$,mG,mi,n#,nI,n\,nt,o2,oC,ob,p%,pC,pb,q",qE,qe,r3,rT,rw,s<,s^,t&,tK,tr,uh,vX,w@,w~,x_,y>,z#,zl,{P,{h,|.,|a,},,}E,}\,}t,~;,~Z-!$-!?-!Z-!v-"4-"^-"s-#?-#e-$2-$K-$n-%4-%Z-&(-&\-'#-'G-'c-(#-(8-(L-)!-)9-)X-){-*4-*M-*p-+(-+A-+Q-+l-,"-,;-,K-,^-,w--)-->--b--}-.5-.Q-.r-/4-/U-/g-/z-01-0C-0f-1.-1K-1_-2!-2B-2Z-2{-37-3Q-3n-4,-4Q-4q-5)-5J-5h-5|-6@-6X-6l-73-7F-7b-7x-8/-8G-8\-9'-9R-9q-:5-:U-;!-;B-;f-<--<F-<p-=.-=N-=m->6->U->w-?.-?C-?[-?t-@0-@Q-@v-A5-AJ-A_-B$-BF-Bb-C&-Cb-D,-DT-E!-EA-Ed-F1-FS-Fk-F~-G?-GU-Gq-H4-HZ-Hm-I#-IR-J!-JX-Jl-J{-KF-K\-Ky-L6-LL-Li-M&-M.-MA-MP-M\-Ml-My-N--NA-NQ-Np-O$-O4-OP-Ov-P4-PX-P}-Q7-Qc-R0-RL-Rx-S=-Sa-S|-T<-Tj-U1-UV-Uj-V!-V;-VQ-Vi-W'-W;-WT-Wl-X5-X\-Xx-Y<-YP-Z,-ZC-ZZ-Zm-[!-[9-[V-[j-\$-\8-\Q-\q-^)-^>-^X-^r-_B-_q-`2-`X-`~-a>-ad-ax-bG-bd-c(-cQ-cz-d8-dY-ds-e3-eP-ez-fE-fg-g)-gM-g_-h!-hA-hh-i&-iC-i`-j!-j<-je-k(-kB-kW-kj-k{-l--lC-lX-lj-l}-m2-mE-md-n*-nS-nw-o>-om-p7-pY-p}-q[-q}-r3-rE-r\-r{-s4-sU-sx-tB-tb-u+-uN-ur-v7-v\-w#-w?-wi-x3-xS-y(-yA-yb-yz-z.-zD-zX-zk-{"-{>-{a-{s-|(-|?-|W-|l-}'-}@-}Z-}z-~4-~Q-~u.!0.!N.!o."$."7."Q."~.#A.#b.$?.$T.$q.%6.%F.%s.&5.&n.'-.'P.'s.(3.(W.({.)3.)J.)j.*&.*@.*X.*o.+0.+F.+g.,".,9.,S.,d.,}.-6.-Q.-d.-u..F..[..x./9./M./d.0%.08.0N.0k.1B.1a.2$.2I.2f.2~.37.3T.3k.4).4B.4_.4t.5,.5P.5j.6(.6K.6g.7".79.7[.7r.8".80.8I.8i.9+.9Q.9c.9v.:).:G.:l.;1.;P.;v.<<.<Q.<n.=&.=D.=\.>!.>7.>J.>i.?-.?A.?Z.?q.@+.@;.@I.@\.@w.A+.AB.AV.Af.At.B5.BL.Bm.C#.CA.CR.C`.Cx.D3.DJ.Dc.E0.EE.ES.Eq.F0.FO.Fm.G*.GJ.Gf.H).HC.Hf.H~.IA.I`.Ix.J3.JZ.Jy.K4.KN.Ki.L#.L=.L\.L{.M>.MW.Mp.N,.NI.Nd.N~.OH.P(.PL.Pj.Q4.Q\.R(.RP.Rz.SG.S~.TK.T}.UH.Uo.V=.Vb.W,.WU.X&.XR.X|.YM.Yu.ZB.Zo.[B.[o.\:.\j.^3.^_._-.__.`..`X.a+.aS.b".bO.c$.cP.cz.dK.ds.e@.em.f@.fk.g4.gb.h).hR.h}.iN.i|.jH.jy.kC.kp.l?.lr.m?.mh.n8.n_.o+.oV.p).pd.q=.q{.rR.s..si.tJ.tr.u<.uT.ux.vB.ve.w..w8.wN.w\.x'.xc.xu.y1.yE.yd.yq.z*.zE.zf.{*.{Q.{r.|9.|Y.}!.}=.}[.}{.~4.~R.~o/!,/!G/!e/"%/"B/"^/"x/#4/#_/$./$Z/%#/%@/%b/&$/&Q/&s/':/'_/'~/(E/(h/)2/)_/*!/*E/*i/+-/+S/+p/,//,D/,}/-6/-a/../.f//0//X/0$/0N/0|/1M/1x/2C/2Y/3"/3?/3X/3h/4(/4G/4f/5#/5B/5Z/5x/6=/6[/7&/7A/7a/7~/8F/8e/9'/9F/9h/:0/:S/:t/;4/;R/;t/<1/<\/=$/=N/=v/></>_/?#/?H/?h/@-/@J/@l/A8/AZ/B!/B5/BH/Bz/C@/CN/C{/D?/Dh/E+/EN/Eq/FB/Fs/GG/Gq/H?/Hj/I>/It/JI/J~/KV/L./L^/M&/M>/Me/N$/NM/Nj/O,/OZ/P"/PU/Ps/Q@/Qc/R//RZ/R~/SS/S{/TI/T{/UC/Uz/VD/Vn/W./WM/W}/XK/Xf/Y&/YT/Yq/Z>/ZW/[$/[O/[r/\7/\W/^*/^W/^s/_>/__/`&/`L/`y/aH/ay/b</bg/c1/cN/cz/dH/dv/eH/eq/f</fe/g4/g_/h3/hb/i//i^/j&/jM/jt/k@/kl/l6/lg/m3/m_/n,/nZ/o#/oJ/oq/p=/pi/q3/qd/r1/rc/s9/sf/t5/tb/u4/uf/v6/vm/w?/wm/x*/xH/xr/y>/yj/z6/za/{./{T/|%/|U/|}/}K/}w/~E/~q0!>0!k0"40"d0#90#b0$10$^0%'0%N0%w0&D0&r0'=0'f0("0(S0(m0).0)F0)e0*"0*80*V0*n0+(0+E0+b0+x0,20,J0,q0-40-S0-x0.C0.g0//0/N0/p00800_01)01J01q02O02v03<03a04-04P04r05>05f06)06K06s07707Z07~08C08l09509`0:20:T0:v0;>0;b0<'0<S0='0=J0=n0>/0>S0>{0?D0?l0@20@Y0@y0A70A[0An0B'0B?0BU0Bt0C00CG0Cf0C~0D<0DS0Dk0E#0E>0ES0Eh0F%0F70FL0F^0G+0G_0H70He0I90If0J50Jb0K40Ko0LB0Lb0M*0MH0Ma0M}0N90NS0Nu0O80O`0O}0P40PS0Pp0Q,0QB0Qi0R'0RC0RW0Rs0S70SR0Sj0T50TF0Tc0U(0UC0U\0Ut0V50V\0W/0WU0Wr0X70XR0Xh0Y#0Y:0YP0Yp0Z/0ZU0Zr0[20[N0[t0\10\N0\q0^30^Q0^{0_>0_`0`!0`I0`h0a*0aJ0ag0b#0bA0b^0c'0cF0cp0d50dY0e$0e<0eW0eu0f;0f_0g!0g@0gX0h(0hE0hd0i#0i?0ia0i}0j60jN0jf0j|0k=0k[0ks0l+0l[0ly0m30mL0me0m|0nC0nh0n~0oU0ox0pA0pp0q30qc0r-0rN0r~0s50sM0t*0tT0tt0u60uQ0uu0v50v`0v}0wB0wa0x"0x<0xU0xs0y.0yC0yW0z"0z<0z[0zt0{-0{Z0{{0|30|L0|i0}!0}R0}k0~%0~M0~k1!01!M1!p1"81"a1"{1#81#U1#n1$)1$G1$f1%"1%>1%a1&!1&@1&e1'(1'?1'\1't1(41(N1(w1)D1)i1*11*R1*w1+=1+_1,%1,D1,j1-01-D1.*1.C1.\1.|1/;1/W1/s10110Q10m11011J11d12!12B12X12y13H13\13t14(14B14`14n14}15315G15_15u16316E16Y16l17)17917W17j18-18K18w19519T19u1:61:T1:x1;(1;81;H1;\1;p1<-1<D1<W1<h1=01=U1=|1>81>_1>u1?@1?n1@;1@c1A(1AD1A[1At1B-1BC1BZ1Bs1C,1CC1Ca1D$1DE1D^1Dr1EI1Ed1F,1FI1Fg1G$1G>1GL1Gg1H+1HW1H}1I;1IW1Ir1J>1JZ1J~1K;1KR1Kl1L%1L;1LT1Lz1M11M=1MQ1Mk1My1N+1NI1Nf1O01OV1P(1PM1Pu1Q:1Qd1R<1RR1Ro1S)1S>1SZ1Sq1T-1TB1TW1Tl1U'1U>1Ud1V"1V<1V_1V{1W91WW1Wq1XG1Xd1X~1Y?1Y_1Y~1ZA1Z^1Zu1[71[T1[r1\,1\I1\c1\z1^51^U1^|1_61_O1_l1`'1`M1`u1a31aN1ah1a{1b41bI1bj1c$1c71cM1cl1d(1dA1d\1e,1ed1f%1fI1fg1g%1gW1g}1h:1hU1ht1i71iR1i~1j:1jT1jt1kD1kh1l#1l:1lZ1lq1m)1mA1mU1ml1n"1n81nn1o)1oA1on1p%1pA1pc1q#1q^1r01ra1s'1sL1sd1sz1t71tZ1tt1u61uL1uf1u~1v?1vV1vy1w91w`1x*1xS1xy1y?1yi1z01zT1zj1z{1{/1{F1{b1|*1|O1|x1}>1}m1~@1~n2!>2!r2"B2"t2#C2#r2$G2$v2%I2%w2&G2&{2'D2'k2(62([2)%2)P2*"2*T2+%2+T2,+2,S2-"2-_2.@2.|2/Z20>20T20l21,21C21^21{22F22j23)23A23h23~24E24f25'25H25h26226W26r27,27T27t28928M28g29)29<29T2:%2:?2:X2:t2;22;L2;l2<52<J2<q2=72=O2=r2>42>a2?,2?S2?g2@12@H2@o2A42AI2B'2BO2By2C42CF2CY2Co2D/2DG2D[2Di2Dz2EB2Eh2F02FK2Fb2F~2G;2GQ2H/2HU2Hw2I:2I\2J.2JU2Jw2K>2KZ2L&2LR2M$2MF2Ml2N62NY2O$2OK2Ov2P<2Po2Q42QI2Qn2R42RX2R~2SR2Sw2T62TS2Tq2U12U\2Uz2V72VS2Vo2W'2W=2WO2W_2W{2X72Xb2Y%2Y72YN2Ya2Yw2Z52ZI2ZW2Zl2[12[k2\I2\|2^U2^o2^}2_42_H2_[2_m2_~2`42`E2`Z2a,2aY2ak2b!2b52b[2bo2c"2c<2cY2d&2dE2dc2e&2eA2eb2f(2fK2fs2g:2gf2h*2hM2h`2ho2i%2i92iL2ib2j52jL2jf2k!2k@2kX2ko2l(2lE2l^2lv2m.2mF2mb2n%2n:2ng2o02o\2o|2pA2pe2q+2qJ2qp2r,2rP2rv2s=2sg2t*2tE2ta2u!2u?2uc2v-2vI2vb2v}2w:2w_2x%2xL2xk2y02yX2z%2zr2{F2{v2|T2|{2}J2}w2~J2~}3!P3"#3"X3##3#G3#`3$'3$@3$W3$|3%Q3%|3&R3&m3&|3'83'S3(#3(_3)%3)W3*33*o3+H3,"3,J3,}3-L3-|3.G3.q3/=3/`30230c31231m32,32W32z33333O33q34:34W34z35A35g36-36J36c37#37D37W37x38H38`38w39T3:'3:I3:h3;73;^3<#3<M3<u3=>3=c3>03>a3?73?f3@,3@K3@l3A-3AK3A{3BA3Bg3C-3CP3Cy3DC3Dm3E73E_3F-3FR3Fy3G13H(3H{3Im3J_3KW3LK3M<3N23O%3O|3Pv3Qt3Rm3Si3T[3UR3VF3W:3X/3Y*3Y~3Zx3[m3\m3^q3_t3`l3ah3ba3cg3dX3eH3f53g"3gt3hc3iN3j?3k-3l!3lt3mm3na3oW3pE3q73r&3rs3sc3tX3uI3v>3w.3x)3y(3z&3z}3{t3|h3}[3~V4!L4"?4#74$,4%'4&/4'/4(*4)(4){4*t4+j4,`4-V4.S4/K40G41>42@43E44;45/46$46w47m48b49W4:N4;F4<@4=74>.4?,4@%4@{4Ap4Bi4C_4DT4EQ4FI4G?4H;4I;4J84K54L34M74N64O04P/4Q24R04S'4T/4U;4V+4Vy4Wj4XY4YM4Z>4[/4\!4\w4^j4__4`S4aE4b74c04d$4du4ee4fU4gF4h>4i14j"4jw4kr4lj4mb4nZ4oY4pS4qH4rB4s@4t94u+4v.4w54x74y.4z%4z{4{r4|m4}e4~\5!U5"T5#N5$J5%F5&?5'85(85)35*-5+$5+}5,u5-m5.l5/f50^51[52^53\54[55[56b57c58_59`5:e5;e5<^5=h5>v5@!5@z5Ax5Bn5Ch5D_5EY5FQ5GI5HB5IA5J<5K15L*5Ly5Mk5Na5OS5PF5Q:5R45S)5S}5Tv5Up5Vj5We5Xf5Yb5Z_5[55[a5\25\b5^35^K5^j5_/5_Z5`=5`\5a$5aH5at5b85bZ5bz5cL5cs5d85di5e)5eH5eh5f95fk5g=5gj5h05hX5i"5iA5ij5j;5jc5k*5kN5k{5lM5lu5m=5mS5mp5n25nS5nt5o55oY5o~5pE5pj5q/5qW5qs5r35rW5rx5s=5sY5sv5t<5tY5t|5u/5uM5ui5v$5v@5v^5v|5w95wp5x?5xq5yD5yv5z*5zA5zV5{-5{?5{^5{|5|A5|e5}85}f5~,5~\5~i6!36!W6"+6"^6#&6#Q6#}6$E6$l6%&6%I6%m6&36&V6&{6'C6'u6(16(W6({6)M6)r6*96*^6+#6+K6+`6+y6,26,T6,w6-<6-_6.$6.I6.z6/+6/B6/S6/k6/}60460G60d60w61061L61^61n62%62:62J62\62u63163J63b63y64.64Y65#65N65v66M66m67&67J67d67{68668P68l69#69=69R69b69w6:16:C6:Y6:n6;/6;F6;X6;n6<#6<A6<T6<f6=+6=H6=m6>+6>C6>Y6>t6?.6?K6?m6@.6@X6@{6A:6AS6At6B(6B86BM6Bj6C-6CB6Ca6Cs6D66DF6D^6D{6E>6E`6F$6F66FJ6Fa6Ft6G96Ga6H!6H56HV6Hp6I36IN6Ij6J)6JF6Jm6K/6KF6Ke6Kz6L56LI6L^6Lz6M36MI6Mc6My6NG6Ng6O,6OM6Ox6P<6Pa6Q)6QC6Qn6R-6RN6Rn6S86SX6S{6T36TI6Tc6T|6U96U[6V#6VA6VW6Vm6W?6WV6Wh6W{6X?6XX6Xs6Y)6YA6Yc6Yx6Z76Z_6Zv6[-6[F6[`6[t6\16\P6\p6^26^B6^T6^i6^z6_=6_c6`!6`D6`[6a#6aB6aZ6ay6b>6be6c#6c56cS6cn6d46dH6d`6dt6e@6ej6f/6fL6fe6f~6g<6gZ6g}6hB6hV6hn6i'6i@6ii6j06j[6k%6kM6k{6l=6la6l}6mG6mv6nF6nm6o56ol6pK6q+6qV6r%6rX6s36sg6t46t\6u36uV6up6v/6vF6v^6vp6w*6w>6wR6wp6x*6x?6xX6xn6y"6y<6yP6yl6z$6zE6zX6zl6{'6{H6{h6{}6|?6|^6|t6}.6}I6}_6}y6~76~c6~x7!07!K7!f7"%7"<7"U7"r7#27#L7#j7$(7$I7$a7%$7%E7%e7%|7&17&a7'77'S7'j7(,7(E7(a7(y7)37)I7)e7)x7*.7*U7*z7+>7+a7,37,Z7,}7-E7-k7.'7.G7.i7/(7/T7/q70D70i71%71E71g72$72@72a73-73W74"74Z74{75A75d76&76=76R76f76z77377A77Q77i78/78G78d79179U79p7:47:T7:e7:t7;(7;B7;g7;r7<*7<<7<K7<i7<y7=D7=X7=m7>37>Q7>u7?:7?W7?v7@67@V7@r7AH7Ag7B%7BF7Bc7C'7CB7Cd7D'7DJ7Dh7E(7EF7E`7F$7FC7F\7F~7G?7G`7Gz7H;7HU7Hq7I.7IG7Ic7J%7JD7Jg7K17KK7Ke7L"7L@7L[7Lw7M47M^7My7NE7Nr7O?7Oh7P:7Ps7QP7R%7R\7S07Sc7T67Tl7UM7V&7VK7Vm7W/7WO7Wr7X67XS7Xw7YB7Yf7Z)7ZJ7Z~7[Z7\77\k7^@7^h7_.7_S7_w7`H7`q7a97ag7a~7bH7bo7c87c^7dA7dn7e+7eA7ei7f17fI7fq7g?7gh7h57hK7hs7i;7iX7j#7jI7jv7kB7kg7l,7lD7lZ7m"7mI7m`7n&7nA7ne7o37oJ7om7p17pZ7q)7q[7r-7rG7r`7s+7sS7sl7t77t_7u)7uU7v&7vN7w"7wT7wz7x=7x^7x~7yB7ye7z)7zP7{$7{A7{j7|>7|a7}+7}W7~%7~O7~y8!J8!r8"N8"s8#@8#j8$;8$s8%T8&$8&_8'(8'd8(38(X8)"8)H8)s8*:8*b8+48+_8,'8,Q8,k]=]
 _G.LoreData = _G.LoreData or {}
 _G.LoreData["Recipes.names_de"] = D
 return D
