@@ -5,3 +5,5 @@
 -- Import version migration files here as they are added.
 -- Example:
 -- import "LUI.src.Settings.migrations.versions.v0_6_0"
+
+import "LUI.src.Settings.migrations.versions.v2_2_1"

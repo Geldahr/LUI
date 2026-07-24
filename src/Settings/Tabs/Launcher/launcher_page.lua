@@ -27,7 +27,8 @@ local BUTTONS = {
     { key = "assets", label = TR["Assets"] },
     { key = "craft", label = TR["Crafting"] },
     { key = "travel", label = TR["Travel"] },
-    { key = "bestiary", label = TR["Bestiary"] },
+    { key = "encyclopedia", label = TR["Encyclopedia"] },
+    { key = "raid", label = TR["Raid Manager"] },
 }
 
 local function _normalize_direction(orientation, direction)

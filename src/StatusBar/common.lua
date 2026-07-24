@@ -66,7 +66,8 @@ S.STATUS_BAR_LAYOUT_TOKENS = {
     ["craft.plan"] = "craft_plan",
     travel = "travel",
     assets = "assets",
-    bestiary = "bestiary",
+    encyclopedia = "encyclopedia",
+    raid = "raid",
 }
 S.STATUS_BAR_WIDGET_LAYOUT_TOKENS = {
     time_local = "%time%",
@@ -79,7 +80,8 @@ S.STATUS_BAR_WIDGET_LAYOUT_TOKENS = {
     craft_plan = "%craft.plan%",
     travel = "%travel%",
     assets = "%assets%",
-    bestiary = "%bestiary%",
+    encyclopedia = "%encyclopedia%",
+    raid = "%raid%",
 }
 S.STATUS_BAR_EDITABLE_WIDGET_KEYS = {
     "time_local",
@@ -92,7 +94,8 @@ S.STATUS_BAR_EDITABLE_WIDGET_KEYS = {
     "craft_plan",
     "travel",
     "assets",
-    "bestiary",
+    "encyclopedia",
+    "raid",
 }
 
 S.ITEM_WEAR_STATE = Turbine.Gameplay.ItemWearState or {}
@@ -923,8 +926,10 @@ function S.get_status_bar_widget_display_name(widget_key)
         return Shortcuts.get_label("travel")
     elseif widget_key == "assets" then
         return Shortcuts.get_label("assets")
-    elseif widget_key == "bestiary" then
-        return Shortcuts.get_label("bestiary")
+    elseif widget_key == "encyclopedia" then
+        return Shortcuts.get_label("encyclopedia")
+    elseif widget_key == "raid" then
+        return Shortcuts.get_label("raid")
     end
 
     return tostring(widget_key or "")

@@ -21,8 +21,9 @@ function StatusBarPage.build_layout_help()
         TR["  %craft% - toggle crafting window"],
         TR["  %craft.plan% - tracked crafting plan resources"],
         TR["  %travel% - toggle travel window"],
-        TR["  %bestiary% - toggle encyclopedia window"],
+        TR["  %encyclopedia% - toggle encyclopedia window"],
         TR["  %assets% - toggle assets window"],
+        TR["  %raid% - toggle raid manager window"],
     }
 
     local external_lines = S.get_status_bar_api_hint_lines()

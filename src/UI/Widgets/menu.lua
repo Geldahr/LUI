@@ -424,6 +424,19 @@ function LuiMenu:Constructor()
             self:_close_root()
         end
     end
+    self.popup.FocusLost = function()
+        -- Context popups (opened at a screen point) dismiss on any click
+        -- elsewhere, like LuiDropdown. Menu-bar popups keep overlay-based
+        -- dismissal: submenu navigation moves focus between popup windows
+        -- and a blur-close would kill the menu mid-navigation.
+        if self._context_x == nil then
+            return
+        end
+        if self._open_child ~= nil then
+            return
+        end
+        self:close()
+    end
 
     self.popup_inner = Turbine.UI.Control()
     self.popup_inner:SetParent(self.popup)
@@ -636,7 +649,12 @@ function LuiMenu:open_at_screen(screen_x, screen_y)
     if self:is_open() ~= true then
         self._context_x = nil
         self._context_y = nil
+        return
     end
+
+    -- take focus so FocusLost fires on a click anywhere else and the
+    -- context popup dismisses without needing a click on its host
+    self.popup:Focus()
 end
 
 function LuiMenu:close()
@@ -728,6 +746,25 @@ end
 
 function LuiMenu:_open_host_overlay()
     if self._parent_menu ~= nil or self._popup_overlay ~= nil then
+        return
+    end
+
+    -- Context popups get a full-screen click-away overlay: their host is
+    -- often a small HUD (e.g. the status bar), so a host-sized overlay
+    -- would only dismiss on clicks over the host itself. Like the native
+    -- context menu, the dismissing click is swallowed.
+    if self._context_x ~= nil then
+        local overlay = Turbine.UI.Window()
+        local display_w, display_h = Turbine.UI.Display.GetSize()
+        overlay:SetPosition(0, 0)
+        overlay:SetSize(display_w, display_h)
+        overlay:SetMouseVisible(true)
+        overlay:SetZOrder(3090)
+        overlay:SetVisible(true)
+        overlay.MouseDown = function()
+            self:close()
+        end
+        self._popup_overlay = overlay
         return
     end
 

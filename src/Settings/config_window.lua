@@ -662,6 +662,9 @@ function ConfigWindow:refresh_runtime_settings()
     if Windows.raid_vitals ~= nil then
         Windows.raid_vitals:apply_settings()
     end
+    if Windows.raid_config ~= nil then
+        Windows.raid_config:apply_settings()
+    end
     if Windows.expiring_self_effects ~= nil then
         Windows.expiring_self_effects:apply_settings()
     end

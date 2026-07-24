@@ -4,6 +4,8 @@
 
 import "Turbine.Gameplay"
 
+import "LUI.src.Vitals.raid_config"
+
 local Vitals = _G.LUI.Features.Vitals
 local GroupOrdering = Vitals.GroupOrdering or {}
 Vitals.GroupOrdering = GroupOrdering
@@ -25,17 +27,6 @@ local function _is_local_player(entity, local_player_name)
     return entity:GetName() == local_player_name
 end
 
-local function _copy_snapshot_members(snapshot)
-    local ordered = {}
-    local members = snapshot.members
-
-    for i = 1, #members do
-        ordered[i] = members[i]
-    end
-
-    return ordered
-end
-
 function GroupOrdering.fellowship_members(snapshot, show_self)
     local local_player_name = _local_player_name()
     local ordered = {}
@@ -51,6 +42,9 @@ function GroupOrdering.fellowship_members(snapshot, show_self)
     return ordered
 end
 
-function GroupOrdering.raid_members(snapshot)
-    return _copy_snapshot_members(snapshot)
+-- Raid rendering is slot-based: an array 1..24 of member entities with
+-- false = empty cell, resolved through RaidConfig (manual layout when one
+-- exists, game-order chunking otherwise).
+function GroupOrdering.raid_slots(snapshot)
+    return Vitals.RaidConfig.resolve_slots(snapshot)
 end
