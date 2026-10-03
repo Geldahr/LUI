@@ -501,12 +501,9 @@ function UpkeepWindow:_release_target_manager()
     end
     self._target_em:unregister_added_event(self._target_em_added)
     self._target_em_added = nil
-    -- acquiring flipped a shared background manager (group member, pet) to
-    -- live player:GetTarget() mode; hand it back to its background entity
-    -- before dropping the reference, or it keeps following the player's
-    -- target for its remaining holders (same order as target vitals)
-    self._target_em:restore_background_source_target()
-    self._target_em:delete()
+    -- live handle: the manager returns to its background entity (group
+    -- member, pet) once the last live handle is released
+    self._target_em:release_live()
     self._target_em = nil
 end
 

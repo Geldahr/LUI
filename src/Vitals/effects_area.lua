@@ -13,6 +13,14 @@ import "Turbine.UI.Lotro"
 import "LUI.src.Vitals.effect_icon"
 import "LUI.src.Settings.enums"
 
+-- TEMPORARY (issue #64 measurement): event counters read by /lui fxdiag.
+Vitals.FxDiagStats = Vitals.FxDiagStats or {
+    managers = 0, added = 0, removed = 0, cleared = 0, refetch = 0, handler_calls = 0,
+    live_shares = 0, retargets = 0,
+    area_adds = 0, area_removes = 0, sorts = 0, icons_created = 0, rebuilds = 0,
+}
+local FxDiagStats = Vitals.FxDiagStats
+
 local COMPACT_ICON_MIN_SIZE = 22
 local UPSIZE_DELAY_SEC = 30
 
@@ -265,6 +273,7 @@ function EffectsArea:add_effect(effect)
         return
     end
 
+    FxDiagStats.area_adds = FxDiagStats.area_adds + 1
     local id = _effect_id(effect)
     for i = 1, self.list:GetItemCount(), 1 do
         local item = self.list:GetItem(i)
@@ -298,6 +307,7 @@ function EffectsArea:remove_effect(effect, id_override)
         end
         remove_id = _effect_id(effect)
     end
+    FxDiagStats.area_removes = FxDiagStats.area_removes + 1
 
     for i = self.list:GetItemCount(), 1, -1 do
         local item = self.list:GetItem(i)
@@ -327,6 +337,7 @@ function EffectsArea:clear_effects()
 end
 
 function EffectsArea:sort()
+    FxDiagStats.sorts = FxDiagStats.sorts + 1
     self.list:Sort(function(elem1, elem2)
         local expiry1 = _item_sort_expiry(elem1)
         local expiry2 = _item_sort_expiry(elem2)
@@ -626,6 +637,7 @@ function EffectsArea:_sync_compact_to_count()
 end
 
 function EffectsArea:_create_effect_icon(effect)
+    FxDiagStats.icons_created = FxDiagStats.icons_created + 1
     local icon_size = self:_active_icon_size()
     local lotro_font, f = self:_active_timer_font()
     return Vitals.EffectIcon(effect, icon_size, lotro_font, _timer_style(f), f.color, f.outline_color)
@@ -636,6 +648,7 @@ function EffectsArea:_rebuild_icons()
         return
     end
 
+    FxDiagStats.rebuilds = FxDiagStats.rebuilds + 1
     local effects = {}
     for i = 1, self.list:GetItemCount(), 1 do
         local item = self.list:GetItem(i)

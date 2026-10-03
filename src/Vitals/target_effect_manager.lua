@@ -10,6 +10,14 @@ local remove_callback = _G.LUI.Utils.remove_callback
 local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 
+-- TEMPORARY (issue #64 measurement): event counters read by /lui fxdiag.
+Vitals.FxDiagStats = Vitals.FxDiagStats or {
+    managers = 0, added = 0, removed = 0, cleared = 0, refetch = 0, handler_calls = 0,
+    live_shares = 0, retargets = 0,
+    area_adds = 0, area_removes = 0, sorts = 0, icons_created = 0, rebuilds = 0,
+}
+local FxDiagStats = Vitals.FxDiagStats
+
 ---@class TargetEffectManagerEffectEntry
 ---@field is_refreshed boolean
 ---@field effect Turbine.Gameplay.Effect
@@ -23,6 +31,8 @@ import "Turbine.Gameplay"
 ---@field player Turbine.Gameplay.Actor|nil
 ---@field source_target Turbine.Gameplay.Actor|nil
 ---@field background_source_target Turbine.Gameplay.Actor|nil
+---@field live_refs number
+---@field live_entity Turbine.Gameplay.Actor|nil
 ---@field cache_kind string|nil
 ---@field cache_name string|nil
 ---@field cache_entry table|nil
@@ -74,6 +84,11 @@ function TargetEffectManager:Constructor(player, source_target)
     self.source_target = source_target
     self.background_source_target = source_target
     self.ref_count = 1
+    -- Live handles (source nil, following player:GetTarget()) and the entity
+    -- the live effect list was fetched for. Maintained by the cache.
+    self.live_refs = 0
+    self.live_entity = nil
+    FxDiagStats.managers = FxDiagStats.managers + 1
     self.cache_kind = nil
     self.cache_name = nil
     self.cache_entry = nil
@@ -106,6 +121,7 @@ function TargetEffectManager:delete()
     end
 
     self.ref_count = 0
+    FxDiagStats.managers = FxDiagStats.managers - 1
     Vitals.TargetEffectManagerCache.release(self)
 
     self.effects = nil
@@ -117,6 +133,21 @@ function TargetEffectManager:delete()
     self.player = nil
     self.source_target = nil
     self.background_source_target = nil
+    self.live_entity = nil
+end
+
+-- Release a handle taken with TargetEffectManager.acquire (live). When the
+-- last live handle goes while silent holders remain, the manager returns to
+-- its background source.
+function TargetEffectManager:release_live()
+    self.live_refs = self.live_refs - 1
+    if self.live_refs == 0 then
+        self.live_entity = nil
+        if self.ref_count > 1 then
+            self:restore_background_source_target()
+        end
+    end
+    self:delete()
 end
 
 ---------------------------------------------------------------------
@@ -225,6 +256,52 @@ function TargetEffectManager:restore_background_source_target()
     end
 end
 
+-- Point a shared live manager at the player's CURRENT target. Used when the
+-- selected target changed to another entity that resolves to this manager
+-- (identity-identical mobs): the held effect list belongs to the previous
+-- entity. Refetch it and reconcile the tracked effects against the new list,
+-- telling every handler what left and what is there.
+function TargetEffectManager:retarget_live(target)
+    FxDiagStats.retargets = FxDiagStats.retargets + 1
+    self.live_entity = target
+
+    self:detach_callbacks()
+    self.instance_effects = _get_target_effects(self.player, nil)
+    self:attach_callbacks()
+
+    local present = {}
+    local list = self.instance_effects
+    if list ~= nil then
+        for i = 1, list:GetCount() do
+            local effect = list:Get(i)
+            if effect ~= nil then
+                present[effect:GetID()] = effect
+            end
+        end
+    end
+
+    local gone = {}
+    for id, _ in pairs(self.effects) do
+        if present[id] == nil then
+            gone[#gone + 1] = id
+        end
+    end
+    for i = 1, #gone do
+        local entry = self.effects[gone[i]]
+        self.effects[gone[i]] = nil
+        for j = 1, #self.removed_event do
+            self.removed_event[j](entry.effect)
+        end
+    end
+
+    for id, effect in pairs(present) do
+        self.effects[id] = { is_refreshed = true, effect = effect }
+        for j = 1, #self.added_event do
+            self.added_event[j](effect)
+        end
+    end
+end
+
 function TargetEffectManager:attach_callbacks()
     if self.instance_effects == nil then
         return
@@ -258,6 +335,8 @@ end
 ---@param sender Turbine.Gameplay.EffectList
 ---@param args table
 function TargetEffectManager:effect_added(sender, args)
+    FxDiagStats.added = FxDiagStats.added + 1
+    FxDiagStats.handler_calls = FxDiagStats.handler_calls + #self.added_event
     local effect = sender:Get(args.Index)
 
     local id = effect:GetID()
@@ -278,6 +357,8 @@ end
 ---@param sender Turbine.Gameplay.EffectList
 ---@param args table
 function TargetEffectManager:effect_removed(sender, args)
+    FxDiagStats.removed = FxDiagStats.removed + 1
+    FxDiagStats.refetch = FxDiagStats.refetch + 1
     local count = 0
     for id, _ in pairs(self.effects) do
         count = count + 1
@@ -305,6 +386,8 @@ end
 ---@param sender Turbine.Gameplay.EffectList
 ---@param args table
 function TargetEffectManager:effect_cleared(sender, args)
+    FxDiagStats.cleared = FxDiagStats.cleared + 1
+    FxDiagStats.refetch = FxDiagStats.refetch + 1
     -- Keep it for safety
     for id, _ in pairs(self.effects) do
         self.effects[id].is_refreshed = false
