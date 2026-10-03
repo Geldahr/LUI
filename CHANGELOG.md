@@ -16,6 +16,8 @@
 
 ### Removed
 
+- Removed the `Use native LotRO UI scaling` option from `Global` settings. It had no effect since game Update 49.6; LUI keeps using its own UI scale.
+
 ## v2.3.1
 
 ### Fixed

@@ -137,7 +137,7 @@ local function _new_about_section(window)
         TR["It focuses on combat-related UI such as self vitals, target vitals, boss vitals, fellowship vitals, raid vitals, expiring effects, cooldowns elements and also inventory, and status bar."],
         "",
         TR["The global LUI UI scale applies uniformly across the whole LUI interface."],
-        TR["By default it is separate from the built-in LotRO UI scaling; native scaling can be enabled in Global settings."],
+        TR["It is separate from the built-in LotRO UI scaling."],
         "",
         TR["For the best experience, set the global LUI UI scale before changing individual sizes."],
         TR["Recommended starting points: 1080p = 1.0, 1440p = 1.3 to 1.4, 2160p / 4k = 2.0."],
@@ -202,7 +202,7 @@ local function _new_features_section(window)
         "",
         TR["Status Bar and Profiles"],
         TR["Status Bar can show time, inventory space, equipment wear, money, wallet items, shortcut buttons, the tracked crafting plan, tracked inventory items, and custom API buttons."],
-        TR["Profiles let characters share or switch configurations; Global settings control LUI scale, native scaling, colors, fonts, borders, and overlays."],
+        TR["Profiles let characters share or switch configurations; Global settings control LUI scale, colors, fonts, borders, and overlays."],
     }, "\n")
 
     _create_help_text(page, "help_features", features_text, FEATURES_HEIGHT)
