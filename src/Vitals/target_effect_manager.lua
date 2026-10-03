@@ -10,14 +10,6 @@ local remove_callback = _G.LUI.Utils.remove_callback
 local class = _G.LUI.Core.class
 import "Turbine.Gameplay"
 
--- TEMPORARY (issue #64 measurement): event counters read by /lui fxdiag.
-Vitals.FxDiagStats = Vitals.FxDiagStats or {
-    managers = 0, added = 0, removed = 0, cleared = 0, refetch = 0, handler_calls = 0,
-    live_shares = 0, retargets = 0,
-    area_adds = 0, area_removes = 0, sorts = 0, icons_created = 0, rebuilds = 0,
-}
-local FxDiagStats = Vitals.FxDiagStats
-
 ---@class TargetEffectManagerEffectEntry
 ---@field is_refreshed boolean
 ---@field effect Turbine.Gameplay.Effect
@@ -88,7 +80,6 @@ function TargetEffectManager:Constructor(player, source_target)
     -- the live effect list was fetched for. Maintained by the cache.
     self.live_refs = 0
     self.live_entity = nil
-    FxDiagStats.managers = FxDiagStats.managers + 1
     self.cache_kind = nil
     self.cache_name = nil
     self.cache_entry = nil
@@ -121,7 +112,6 @@ function TargetEffectManager:delete()
     end
 
     self.ref_count = 0
-    FxDiagStats.managers = FxDiagStats.managers - 1
     Vitals.TargetEffectManagerCache.release(self)
 
     self.effects = nil
@@ -262,7 +252,6 @@ end
 -- entity. Refetch it and reconcile the tracked effects against the new list,
 -- telling every handler what left and what is there.
 function TargetEffectManager:retarget_live(target)
-    FxDiagStats.retargets = FxDiagStats.retargets + 1
     self.live_entity = target
 
     self:detach_callbacks()
@@ -335,8 +324,6 @@ end
 ---@param sender Turbine.Gameplay.EffectList
 ---@param args table
 function TargetEffectManager:effect_added(sender, args)
-    FxDiagStats.added = FxDiagStats.added + 1
-    FxDiagStats.handler_calls = FxDiagStats.handler_calls + #self.added_event
     local effect = sender:Get(args.Index)
 
     local id = effect:GetID()
@@ -357,8 +344,6 @@ end
 ---@param sender Turbine.Gameplay.EffectList
 ---@param args table
 function TargetEffectManager:effect_removed(sender, args)
-    FxDiagStats.removed = FxDiagStats.removed + 1
-    FxDiagStats.refetch = FxDiagStats.refetch + 1
     local count = 0
     for id, _ in pairs(self.effects) do
         count = count + 1
@@ -386,8 +371,6 @@ end
 ---@param sender Turbine.Gameplay.EffectList
 ---@param args table
 function TargetEffectManager:effect_cleared(sender, args)
-    FxDiagStats.cleared = FxDiagStats.cleared + 1
-    FxDiagStats.refetch = FxDiagStats.refetch + 1
     -- Keep it for safety
     for id, _ in pairs(self.effects) do
         self.effects[id].is_refreshed = false

@@ -74,57 +74,6 @@ local function _handle_status_bar_api_command(list, index)
     return StatusBarCommon.register_status_bar_api_item(spec)
 end
 
--- TEMPORARY (issue #64 measurement): /lui fxdiag starts, then stops and saves,
--- a once-per-second sample of the target effect manager and effect icon
--- counters to PluginData "LUI_FxDiag". Remove with the counters in
--- target_effect_manager.lua and effects_area.lua.
-local FXDIAG_KEYS = {
-    "added", "removed", "cleared", "refetch", "handler_calls", "live_shares", "retargets",
-    "area_adds", "area_removes", "sorts", "icons_created", "rebuilds",
-}
-local _fxdiag = nil
-
-local function _fx_diag()
-    local stats = _G.LUI.Features.Vitals.FxDiagStats
-
-    if _fxdiag ~= nil then
-        _fxdiag.control:SetWantsUpdates(false)
-        Turbine.PluginData.Save(Turbine.DataScope.Account, "LUI_FxDiag", _fxdiag.lines)
-        Turbine.Shell.WriteLine("fxdiag: stopped, " .. tostring(#_fxdiag.lines) .. " samples saved to PluginData LUI_FxDiag")
-        _fxdiag = nil
-        return
-    end
-
-    local state = { lines = {}, last = {}, next_at = Turbine.Engine.GetGameTime() + 1, frames = 0 }
-    for i = 1, #FXDIAG_KEYS do
-        state.last[FXDIAG_KEYS[i]] = stats[FXDIAG_KEYS[i]]
-    end
-
-    state.control = Turbine.UI.Control()
-    state.control.Update = function()
-        state.frames = state.frames + 1
-        local now = Turbine.Engine.GetGameTime()
-        if now < state.next_at then
-            return
-        end
-        state.next_at = now + 1
-
-        local line = "t=" .. tostring(math.floor(now)) .. " fps=" .. tostring(state.frames) ..
-            " managers=" .. tostring(stats.managers)
-        state.frames = 0
-        for i = 1, #FXDIAG_KEYS do
-            local key = FXDIAG_KEYS[i]
-            line = line .. " " .. key .. "=" .. tostring(stats[key] - state.last[key])
-            state.last[key] = stats[key]
-        end
-        state.lines[#state.lines + 1] = line
-    end
-    state.control:SetWantsUpdates(true)
-
-    _fxdiag = state
-    Turbine.Shell.WriteLine("fxdiag: recording, run /lui fxdiag again to stop and save")
-end
-
 function command:Execute(_, str)
     if str == nil or string.len(str) == 0 then
         Turbine.Shell.WriteLine(TR["Missing Argument for more information type /lui help."])
@@ -148,8 +97,6 @@ function command:Execute(_, str)
         else
             MoveMode.toggle()
         end
-    elseif cmd == "fxdiag" then
-        _fx_diag()
     elseif cmd == "config" then
         Shortcuts.toggle_config()
     elseif cmd == "inventory" or cmd == "inv" then

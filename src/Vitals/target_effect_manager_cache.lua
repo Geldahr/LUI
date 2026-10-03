@@ -238,8 +238,6 @@ local function _reuse_manager(cached, source_target, target)
             _attach_other_entry_name_changed(entry)
         end
         cached:retarget_live(target)
-    else
-        Vitals.FxDiagStats.live_shares = Vitals.FxDiagStats.live_shares + 1
     end
 
     return cached
