@@ -237,17 +237,19 @@ function AssetsEntry:Constructor(on_hover)
     self.icon_back:SetMouseVisible(false)
     self.icon_back:SetZOrder(1)
 
+    -- Tooltip provider. It is not stretched: our own images draw the icon,
+    -- and it is only shown (at its native size) when we have no icon id.
     self.icon_item_info_control = Turbine.UI.Lotro.ItemInfoControl()
     self.icon_item_info_control:SetParent(self.icon_back)
     self.icon_item_info_control:SetMouseVisible(false)
     self.icon_item_info_control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self.icon_item_info_control:SetVisible(false)
-    self.icon_item_info_control:SetZOrder(0)
+    self.icon_item_info_control:SetZOrder(1)
 
     self.icon_fore = UI.Widgets.Image()
     self.icon_fore:SetParent(self.icon_back)
     self.icon_fore:SetMouseVisible(false)
-    self.icon_fore:SetZOrder(1)
+    self.icon_fore:SetZOrder(2)
 
     self.icon_item_control = Turbine.UI.Lotro.ItemControl()
     self.icon_item_control:SetParent(self.icon_back)
@@ -428,6 +430,7 @@ function AssetsEntry:bind(record)
         self.icon_item_info_control:SetVisible(true)
         self.icon_item_info_control:SetMouseVisible(true)
         self.icon_item_info_control:SetItemInfo(record.item_info)
+        self.icon_item_info_control:SetOpacity(icon_id ~= nil and 0 or 1)
     else
         self.icon_item_info_control:SetVisible(false)
         self.icon_item_info_control:SetMouseVisible(false)
@@ -476,15 +479,19 @@ function AssetsEntry:_layout_icon_controls(icon_w, icon_h)
 
     self.icon_back:SetPosition(visual_x, visual_y)
     self.icon_back:set_size(visual_side, visual_side)
+    self.icon_back:SetSize(visual_side, visual_side)
 
+    -- Children are laid out in real pixels: the stretched background no
+    -- longer scales what sits inside it.
+    -- The item info control draws its 32px icon after a 3px top/left pad:
+    -- offset it by that pad and let its box cover the whole icon so the
+    -- tooltip works anywhere on it.
     self.icon_fore:SetPosition(0, 0)
-    self.icon_fore:set_size(BASE_ICON_SIZE, BASE_ICON_SIZE)
+    self.icon_fore:set_size(visual_side, visual_side)
     self.icon_item_info_control:SetPosition(ITEM_CONTROL_OFFSET, ITEM_CONTROL_OFFSET)
-    self.icon_item_info_control:SetSize(BASE_ICON_SIZE + ITEM_INFO_CONTROL_EXTRA, BASE_ICON_SIZE + ITEM_INFO_CONTROL_EXTRA)
-    self.icon_item_control:SetPosition(ITEM_CONTROL_OFFSET, ITEM_CONTROL_OFFSET)
-    self.icon_item_control:SetSize(BASE_ICON_SIZE + ITEM_CONTROL_EXTRA, BASE_ICON_SIZE + ITEM_CONTROL_EXTRA)
+    self.icon_item_info_control:SetSize(visual_side + ITEM_INFO_CONTROL_EXTRA, visual_side + ITEM_INFO_CONTROL_EXTRA)
     local qty_padding = _scaled_int(BASE_QTY_PADDING)
-    local qty_side = math.max(0, BASE_ICON_SIZE - (2 * qty_padding))
+    local qty_side = math.max(0, visual_side - (2 * qty_padding))
     self.qty_label:SetPosition(qty_padding, qty_padding)
     self.qty_label:SetSize(qty_side, qty_side)
 end

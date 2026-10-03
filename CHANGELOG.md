@@ -8,6 +8,9 @@
 
 ### Fixed
 
+- Icons are drawn at the right size again after game Update 49.6, which changed how plugin images are resized. Launcher and status bar icons, button icons, and the item icons in the `Inventory` and `Assets` windows were shown at their original size, overflowing or sitting off-centre in their slot.
+- `Inventory` item icons are now centred in their cell with the same margin on every side.
+
 ### Removed
 
 ## v2.3.0

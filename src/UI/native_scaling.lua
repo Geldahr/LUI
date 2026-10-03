@@ -175,8 +175,9 @@ function NativeScaling.apply(window, use_global_scaling, scale, origin_left, ori
         result.scale = NativeScaling.set_scale(window, scale)
         result.registered = NativeScaling.register(window)
     else
+        -- Never call SetScale here: since U49.6 it turns native scaling ON for
+        -- the window when the plugin is not using Global scaling.
         result.unregistered = NativeScaling.unregister(window)
-        result.scale = NativeScaling.set_scale(window, scale)
     end
 
     return result

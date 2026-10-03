@@ -27,8 +27,35 @@ local function _has_flag(value, flag)
     return math.floor(value / flag) % 2 == 1
 end
 
+local _native_sizes = {}
+local EDGE_PROPORTIONAL = Turbine.UI.EdgeAttachmentType.Proportional
+local Control = Turbine.UI.Control
+
+-- Native sizes are measured on a throwaway control: since U49.6 a control that
+-- has been in stretch mode 2 keeps the image size and ignores later SetSize.
+local function _native_size(icon)
+    local size = _native_sizes[icon]
+    if size == nil then
+        local probe = Turbine.UI.Control()
+        probe:SetBackground(icon)
+        probe:SetStretchMode(2)
+        local w, h = probe:GetSize()
+        size = { w, h }
+        _native_sizes[icon] = size
+    end
+    return size[1], size[2]
+end
+
 function Image:Constructor(icon, w, h)
     Turbine.UI.Control.Constructor(self)
+
+    -- Since U49.6 a stretched control ignores SetSize; it only rescales when
+    -- its parent resizes and its edges are attached. The picture therefore
+    -- lives on a child that fills this control, and this control is the one
+    -- that gets sized and positioned.
+    self._img = Control()
+    self._img:SetParent(self)
+    self._img:SetMouseVisible(false)
 
     self:SetMouseVisible(false)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
@@ -48,6 +75,46 @@ function Image:Constructor(icon, w, h)
     elseif w ~= nil then
         self:set_size(w, h)
     end
+end
+
+function Image:SetBackground(background)
+    self._img:SetBackground(background)
+end
+
+function Image:GetBackground()
+    return self._img:GetBackground()
+end
+
+function Image:SetStretchMode(mode)
+    self._img:SetStretchMode(mode)
+end
+
+function Image:GetStretchMode()
+    return self._img:GetStretchMode()
+end
+
+function Image:SetBlendMode(mode)
+    self._img:SetBlendMode(mode)
+end
+
+function Image:SetBackColor(color)
+    self._img:SetBackColor(color)
+end
+
+function Image:GetBackColor()
+    return self._img:GetBackColor()
+end
+
+function Image:SetBackColorBlendMode(mode)
+    self._img:SetBackColorBlendMode(mode)
+end
+
+function Image:SetOpacity(opacity)
+    self._img:SetOpacity(opacity)
+end
+
+function Image:GetOpacity()
+    return self._img:GetOpacity()
 end
 
 function Image:_store_size_request(w, h)
@@ -224,15 +291,20 @@ function Image:set_icon(icon, w, h)
     end
 
     self:SetVisible(true)
-    self:SetSize(0, 0)
-    self:SetBackground(icon)
-    self:SetStretchMode(2)
-    self.original_w, self.original_h = self:GetSize()
+    self.original_w, self.original_h = _native_size(icon)
     self._real_w = self.original_w
     self._real_h = self.original_h
 
+    -- Stretch mode 1 scales relative to the size the control has when the
+    -- mode is set, so both controls must be at the native size at that moment.
+    local img = self._img
     self:SetSize(self.original_w, self.original_h)
-    self:SetStretchMode(1)
+    img:SetStretchMode(0)
+    img:SetBackground(icon)
+    img:SetPosition(0, 0)
+    img:SetSize(self.original_w, self.original_h)
+    img:SetStretchMode(1)
+    img:AttachEdges(EDGE_PROPORTIONAL, EDGE_PROPORTIONAL, EDGE_PROPORTIONAL, EDGE_PROPORTIONAL)
 
     if self:_set_size(w, h) == nil then
         self:set_alignment(self._align)
