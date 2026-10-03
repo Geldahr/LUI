@@ -24,7 +24,6 @@ import "Turbine.Gameplay"
 ---@field source_target Turbine.Gameplay.Actor|nil
 ---@field background_source_target Turbine.Gameplay.Actor|nil
 ---@field live_refs number
----@field live_entity Turbine.Gameplay.Actor|nil
 ---@field cache_kind string|nil
 ---@field cache_name string|nil
 ---@field cache_entry table|nil
@@ -76,10 +75,9 @@ function TargetEffectManager:Constructor(player, source_target)
     self.source_target = source_target
     self.background_source_target = source_target
     self.ref_count = 1
-    -- Live handles (source nil, following player:GetTarget()) and the entity
-    -- the live effect list was fetched for. Maintained by the cache.
+    -- Live handles (source nil, following player:GetTarget()). Maintained by
+    -- the cache.
     self.live_refs = 0
-    self.live_entity = nil
     self.cache_kind = nil
     self.cache_name = nil
     self.cache_entry = nil
@@ -123,7 +121,6 @@ function TargetEffectManager:delete()
     self.player = nil
     self.source_target = nil
     self.background_source_target = nil
-    self.live_entity = nil
 end
 
 -- Release a handle taken with TargetEffectManager.acquire (live). When the
@@ -131,11 +128,8 @@ end
 -- its background source.
 function TargetEffectManager:release_live()
     self.live_refs = self.live_refs - 1
-    if self.live_refs == 0 then
-        self.live_entity = nil
-        if self.ref_count > 1 then
-            self:restore_background_source_target()
-        end
+    if self.live_refs == 0 and self.ref_count > 1 then
+        self:restore_background_source_target()
     end
     self:delete()
 end
@@ -246,49 +240,23 @@ function TargetEffectManager:restore_background_source_target()
     end
 end
 
--- Point a shared live manager at the player's CURRENT target. Used when the
--- selected target changed to another entity that resolves to this manager
--- (identity-identical mobs): the held effect list belongs to the previous
--- entity. Refetch it and reconcile the tracked effects against the new list,
--- telling every handler what left and what is there.
-function TargetEffectManager:retarget_live(target)
-    self.live_entity = target
-
-    self:detach_callbacks()
-    self.instance_effects = _get_target_effects(self.player, nil)
-    self:attach_callbacks()
-
-    local present = {}
-    local list = self.instance_effects
-    if list ~= nil then
-        for i = 1, list:GetCount() do
-            local effect = list:Get(i)
-            if effect ~= nil then
-                present[effect:GetID()] = effect
-            end
-        end
-    end
-
-    local gone = {}
-    for id, _ in pairs(self.effects) do
-        if present[id] == nil then
-            gone[#gone + 1] = id
-        end
-    end
-    for i = 1, #gone do
-        local entry = self.effects[gone[i]]
-        self.effects[gone[i]] = nil
+-- The selected target changed to ANOTHER entity that resolves to this shared
+-- live manager (identity-identical mobs). Everything tracked belongs to the
+-- previous entity: tell the handlers it left, then hold the new target's list.
+-- A freshly fetched target list is empty and only reports its effects on the
+-- next change, so nothing can be read from it here.
+function TargetEffectManager:retarget_live()
+    local old = self.effects
+    self.effects = {}
+    for _, entry in pairs(old) do
         for j = 1, #self.removed_event do
             self.removed_event[j](entry.effect)
         end
     end
 
-    for id, effect in pairs(present) do
-        self.effects[id] = { is_refreshed = true, effect = effect }
-        for j = 1, #self.added_event do
-            self.added_event[j](effect)
-        end
-    end
+    self:detach_callbacks()
+    self.instance_effects = _get_target_effects(self.player, nil)
+    self:attach_callbacks()
 end
 
 function TargetEffectManager:attach_callbacks()
