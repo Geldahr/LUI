@@ -35,18 +35,9 @@ function LuiBaseWindow:Constructor(opts)
     end
 end
 
+-- LUI scales itself: keep the game's UI scaling off this window.
 function LuiBaseWindow:apply_native_scaling(target_window)
-    local target = target_window or self
-    local native_scaling = NativeScaling
-
-    local use_native = native_scaling.is_enabled() == true and
-        native_scaling.has_global_scaling_api(target) == true
-
-    if use_native then
-        native_scaling.enable(target)
-    else
-        native_scaling.disable(target)
-    end
+    NativeScaling.disable(target_window or self)
 end
 
 function LuiBaseWindow:set_hideable(enabled)

@@ -535,13 +535,6 @@ function GlobalPage:Constructor(window)
         function()
             return tostring(self._settings.global.scale)
         end)
-    general:add_checkbox("native_scaling", TR["Use native LotRO UI scaling"],
-        function(value)
-            self._settings.global.native_scaling = value == true
-        end,
-        function()
-            return self._settings.global.native_scaling == true
-        end, true)
     general:add_row_break()
     general:add_line_edit("refresh_rate", TR["Refresh rate of some UI elements (fps)"],
         function(value)

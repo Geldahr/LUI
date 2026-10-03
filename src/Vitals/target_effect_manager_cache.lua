@@ -179,18 +179,18 @@ local function _detach_other_entry_name_changed(entry)
     entry.name_changed_event = nil
 end
 
--- A live acquire (source_target == nil, reading player:GetTarget()) must never reuse a
--- manager that is itself live. Switching between two identity-identical mobs while another
--- live holder (boss vitals) keeps the manager alive would otherwise reuse it with
--- set_source_target(nil) early-returning (source unchanged), leaving the manager attached
--- to the PREVIOUS mob's effect list and delivering its stale effects for the new target.
--- Silent-backed managers (pets, group members) are safe to reuse: their source genuinely
--- changes, which forces a detach/refetch/attach cycle.
-local function _reuse_allowed(cached, source_target)
-    return source_target ~= nil or cached.source_target ~= nil
-end
+-- Live handles (source_target == nil, reading player:GetTarget()) share one manager per
+-- target: target vitals, boss vitals, target expiring effects and upkeep are handlers on
+-- the same instance. A second manager on the same entity would hold a second effect list
+-- on it.
+--
+-- The game returns a new entity object on every player:GetTarget() call, so an acquire
+-- cannot tell "same target again" from "another mob with the same identity". Acquire
+-- therefore always shares, and the one case where the shared manager is stale -- the
+-- selection moved to an identity-identical mob while another handler still holds it --
+-- is handled when the player's TargetChanged fires (_on_target_changed).
 
-local function _find_other_entry(name, target, source_target)
+local function _find_other_entry(name, target)
     local bucket = _other_manager_cache[name]
     if bucket == nil then
         return nil
@@ -198,8 +198,7 @@ local function _find_other_entry(name, target, source_target)
 
     for i = 1, #bucket do
         local entry = bucket[i]
-        if _other_entities_match(entry.identity_entity, target) == true
-            and _reuse_allowed(entry.manager, source_target) then
+        if _other_entities_match(entry.identity_entity, target) == true then
             return entry
         end
     end
@@ -207,20 +206,73 @@ local function _find_other_entry(name, target, source_target)
     return nil
 end
 
-local function _reuse_manager(cached, source_target)
+-- Live managers, to re-point on TargetChanged. Weak keys: a released manager drops out.
+local _live_managers = setmetatable({}, { __mode = "k" })
+local _target_changed_hooked = false
+
+-- Runs on the player's TargetChanged, before or after the consumers' own handlers (the
+-- order does not matter: consumers only release and re-acquire). A live manager that the
+-- NEW target resolves to is about to be shared again by the re-acquiring consumers, but
+-- it still tracks the previous entity: re-point it. Managers with a background source
+-- (group member, pet) track that one entity and are left alone, as are managers the new
+-- target does not resolve to (their handlers are releasing them).
+local function _on_target_changed(player)
+    local target = player:GetTarget()
+    local name = _entity_name(target)
+
+    for manager in pairs(_live_managers) do
+        if manager.live_refs == 0 or manager.source_target ~= nil then
+            _live_managers[manager] = nil
+        elseif name ~= nil
+            and manager.cache_kind == OTHER_CACHE_KIND
+            and manager.background_source_target == nil then
+            local entry = manager.cache_entry
+            if entry.name == name and _other_entities_match(entry.identity_entity, target) == true then
+                -- keep the identity (and its NameChanged hook) on the entity now tracked
+                _detach_other_entry_name_changed(entry)
+                entry.identity_entity = target
+                _attach_other_entry_name_changed(entry)
+                manager:retarget_live()
+            end
+        end
+    end
+end
+
+local function _track_live(player, manager)
+    _live_managers[manager] = true
+    if _target_changed_hooked ~= true then
+        _target_changed_hooked = true
+        add_callback(player, "TargetChanged", function()
+            _on_target_changed(player)
+        end)
+    end
+end
+
+local function _reuse_manager(player, cached, source_target)
     cached.ref_count = cached.ref_count + 1
     -- Group and companion vitals pass a stable source for background tracking.
-    -- Target vitals passes nil to use player:GetTarget() while selected.
     if source_target ~= nil then
         cached.background_source_target = source_target
+        cached:set_source_target(source_target)
+        return cached
     end
-    cached:set_source_target(source_target)
+
+    -- Live handle: follows player:GetTarget() while selected. A manager that is already
+    -- live is shared as it is; its tracked effects stay.
+    cached.live_refs = cached.live_refs + 1
+    cached:set_source_target(nil)
+    _track_live(player, cached)
 
     return cached
 end
 
 local function _new_manager(player, source_target)
-    return Vitals.TargetEffectManager(player, source_target)
+    local manager = Vitals.TargetEffectManager(player, source_target)
+    if source_target == nil then
+        manager.live_refs = 1
+        _track_live(player, manager)
+    end
+    return manager
 end
 
 local function _new_player_manager(player, source_target, name)
@@ -252,7 +304,8 @@ local function _new_other_manager(player, target, source_target)
 end
 
 -- Acquire (creating or sharing) a manager for `target`. `source_target` is nil for a live
--- selected target and the entity itself for background (silent) tracking.
+-- selected target and the entity itself for background (silent) tracking. A live handle
+-- must be given back with manager:release_live(), a silent one with manager:delete().
 --
 -- Lookup is by NAME across both caches, matching v1.1.0 semantics: the entity object used
 -- to probe does not decide whether a cached manager is found. This matters because the
@@ -266,13 +319,13 @@ function TargetEffectManagerCache.acquire(player, target, source_target)
 
     if name ~= nil then
         local cached = _player_manager_cache[name]
-        if cached ~= nil and _reuse_allowed(cached, source_target) then
-            return _reuse_manager(cached, source_target)
+        if cached ~= nil then
+            return _reuse_manager(player, cached, source_target)
         end
 
-        local entry = _find_other_entry(name, target, source_target)
+        local entry = _find_other_entry(name, target)
         if entry ~= nil then
-            return _reuse_manager(entry.manager, source_target)
+            return _reuse_manager(player, entry.manager, source_target)
         end
 
         if _entity_is_player(target) == true then

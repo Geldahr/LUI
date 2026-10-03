@@ -113,6 +113,11 @@ function EffectsArea:Constructor(frame_width, effects_settings, effects_height)
     self.compact_icon_size = nil
     self.compact_timer_font_size = nil
     self.upsize_due_at = nil
+    -- effect id -> icon, so an effect event does not scan the list
+    self._items = {}
+    -- set by add/remove; the sort, compact check and height run once in the
+    -- next Update however many effects changed
+    self._dirty = false
 
     self:SetSize(1, self.max_height)
     self:SetMouseVisible(false)
@@ -132,6 +137,10 @@ function EffectsArea:Constructor(frame_width, effects_settings, effects_height)
 end
 
 function EffectsArea:Update()
+    if self._dirty == true then
+        self:_flush()
+    end
+
     if self.is_compact ~= true or type(self.upsize_due_at) ~= "number" then
         self:SetWantsUpdates(false)
         self.upsize_due_at = nil
@@ -266,28 +275,15 @@ function EffectsArea:add_effect(effect)
     end
 
     local id = _effect_id(effect)
-    for i = 1, self.list:GetItemCount(), 1 do
-        local item = self.list:GetItem(i)
-        if item ~= nil then
-            local item_id = _item_effect_id(item)
-            if item_id == id then
-                if item.set_effect ~= nil then
-                    item:set_effect(effect)
-                end
-                self:sort()
-                self:_sync_compact_to_count()
-                self:_apply_dynamic_height()
-                self:_update_upsize_debounce()
-                return
-            end
-        end
+    local item = self._items[id]
+    if item ~= nil then
+        item:set_effect(effect)
+    else
+        item = self:_create_effect_icon(effect)
+        self._items[id] = item
+        self.list:AddItem(item)
     end
-
-    self.list:AddItem(self:_create_effect_icon(effect))
-    self:sort()
-    self:_sync_compact_to_count()
-    self:_apply_dynamic_height()
-    self:_update_upsize_debounce()
+    self:_mark_dirty()
 end
 
 function EffectsArea:remove_effect(effect, id_override)
@@ -299,20 +295,15 @@ function EffectsArea:remove_effect(effect, id_override)
         remove_id = _effect_id(effect)
     end
 
-    for i = self.list:GetItemCount(), 1, -1 do
-        local item = self.list:GetItem(i)
-        if item ~= nil then
-            local item_id = _item_effect_id(item)
-            if item.effect == effect or item_id == remove_id then
-                _destroy_item(item)
-                self.list:RemoveItem(item)
-            end
-        end
+    local item = self._items[remove_id]
+    if item == nil then
+        return
     end
 
-    self:_sync_compact_to_count()
-    self:_apply_dynamic_height()
-    self:_update_upsize_debounce()
+    self._items[remove_id] = nil
+    _destroy_item(item)
+    self.list:RemoveItem(item)
+    self:_mark_dirty()
 end
 
 function EffectsArea:clear_effects()
@@ -321,6 +312,21 @@ function EffectsArea:clear_effects()
         _destroy_item(item)
     end
     self.list:ClearItems()
+    self._items = {}
+    self:_flush()
+end
+
+function EffectsArea:_mark_dirty()
+    if self._dirty == true then
+        return
+    end
+    self._dirty = true
+    self:SetWantsUpdates(true)
+end
+
+function EffectsArea:_flush()
+    self._dirty = false
+    self:sort()
     self:_sync_compact_to_count()
     self:_apply_dynamic_height()
     self:_update_upsize_debounce()
@@ -592,15 +598,16 @@ function EffectsArea:_can_upsize_now()
 end
 
 function EffectsArea:_update_upsize_debounce()
+    -- updates stay on while an add/remove still waits for its flush
     if self.is_compact ~= true then
-        self:SetWantsUpdates(false)
+        self:SetWantsUpdates(self._dirty == true)
         self.upsize_due_at = nil
         return
     end
 
     if self:_can_upsize_now() ~= true then
         self.upsize_due_at = nil
-        self:SetWantsUpdates(false)
+        self:SetWantsUpdates(self._dirty == true)
         return
     end
 
@@ -631,24 +638,36 @@ function EffectsArea:_create_effect_icon(effect)
     return Vitals.EffectIcon(effect, icon_size, lotro_font, _timer_style(f), f.color, f.outline_color)
 end
 
+-- Applies the current icon size and timer font to the live icons and drops
+-- the ones the settings no longer track. Icons are kept, not recreated: each
+-- one is two windows, an effect display and a label.
 function EffectsArea:_rebuild_icons()
     if self.list == nil then
         return
     end
 
-    local effects = {}
+    local icon_size = self:_active_icon_size()
+    local lotro_font, f = self:_active_timer_font()
+    local style = _timer_style(f)
+
+    local kept = {}
     for i = 1, self.list:GetItemCount(), 1 do
         local item = self.list:GetItem(i)
-        if item ~= nil and item.effect ~= nil and self:_should_track_effect(item.effect) == true then
-            table.insert(effects, item.effect)
+        if item.effect ~= nil and self:_should_track_effect(item.effect) == true then
+            item:apply_style(icon_size, lotro_font, style, f.color, f.outline_color)
+            kept[#kept + 1] = item
+        else
+            if item.effect ~= nil then
+                self._items[_effect_id(item.effect)] = nil
+            end
+            _destroy_item(item)
         end
-        _destroy_item(item)
     end
 
+    -- same icons, added back so the list lays them out at the new size
     self.list:ClearItems()
-
-    for i = 1, #effects do
-        self.list:AddItem(self:_create_effect_icon(effects[i]))
+    for i = 1, #kept do
+        self.list:AddItem(kept[i])
     end
     self:sort()
     self:_apply_dynamic_height()

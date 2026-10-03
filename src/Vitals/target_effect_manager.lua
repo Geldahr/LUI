@@ -23,6 +23,7 @@ import "Turbine.Gameplay"
 ---@field player Turbine.Gameplay.Actor|nil
 ---@field source_target Turbine.Gameplay.Actor|nil
 ---@field background_source_target Turbine.Gameplay.Actor|nil
+---@field live_refs number
 ---@field cache_kind string|nil
 ---@field cache_name string|nil
 ---@field cache_entry table|nil
@@ -74,6 +75,9 @@ function TargetEffectManager:Constructor(player, source_target)
     self.source_target = source_target
     self.background_source_target = source_target
     self.ref_count = 1
+    -- Live handles (source nil, following player:GetTarget()). Maintained by
+    -- the cache.
+    self.live_refs = 0
     self.cache_kind = nil
     self.cache_name = nil
     self.cache_entry = nil
@@ -117,6 +121,17 @@ function TargetEffectManager:delete()
     self.player = nil
     self.source_target = nil
     self.background_source_target = nil
+end
+
+-- Release a handle taken with TargetEffectManager.acquire (live). When the
+-- last live handle goes while silent holders remain, the manager returns to
+-- its background source.
+function TargetEffectManager:release_live()
+    self.live_refs = self.live_refs - 1
+    if self.live_refs == 0 and self.ref_count > 1 then
+        self:restore_background_source_target()
+    end
+    self:delete()
 end
 
 ---------------------------------------------------------------------
@@ -223,6 +238,25 @@ function TargetEffectManager:restore_background_source_target()
     if self.background_source_target ~= nil then
         self:set_source_target(self.background_source_target)
     end
+end
+
+-- The selected target changed to ANOTHER entity that resolves to this shared
+-- live manager (identity-identical mobs). Everything tracked belongs to the
+-- previous entity: tell the handlers it left, then hold the new target's list.
+-- A freshly fetched target list is empty and only reports its effects on the
+-- next change, so nothing can be read from it here.
+function TargetEffectManager:retarget_live()
+    local old = self.effects
+    self.effects = {}
+    for _, entry in pairs(old) do
+        for j = 1, #self.removed_event do
+            self.removed_event[j](entry.effect)
+        end
+    end
+
+    self:detach_callbacks()
+    self.instance_effects = _get_target_effects(self.player, nil)
+    self:attach_callbacks()
 end
 
 function TargetEffectManager:attach_callbacks()

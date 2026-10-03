@@ -430,7 +430,7 @@ function BossVitals:_detach_effect_manager()
         self.em_removed_event = nil
     end
 
-    self.em:delete()
+    self.em:release_live()
     self.em = nil
 end
 

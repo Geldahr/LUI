@@ -518,8 +518,7 @@ function TargetVitals:_detach_effect_manager()
         self.em_removed_event = nil
     end
 
-    self.em:restore_background_source_target()
-    self.em:delete()
+    self.em:release_live()
     self.em = nil
 end
 

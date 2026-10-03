@@ -28,39 +28,24 @@ function EffectIcon:Constructor(effect, size, font, font_style, font_color, outl
     self.last_update_at = 0
     self.update_every = 1.0 / State.settings.global.refresh_rate
 
-    self:SetSize(size, size)
-
     self.icon = Turbine.UI.Lotro.EffectDisplay()
     self.icon:SetParent(self)
-    self.icon:SetSize(size, size)
     self.icon:SetZOrder(1)
 
     self.label_back = Turbine.UI.Window()
     self:apply_native_scaling(self.label_back)
     self.label_back:SetParent(self)
-    self.label_back:SetSize(size, size)
     self.label_back:SetVisible(true)
     self.label_back:SetMouseVisible(false)
     self.label_back:SetZOrder(5)
 
     self.timer = UI.Widgets.LuiLabel()
     self.timer:SetParent(self.label_back)
-    self.timer:SetSize(size, size)
     self.timer:SetTextAlignment(Turbine.UI.ContentAlignment.BottomRight)
-    self.timer:SetFont(font)
-    if font_style ~= nil then
-        self.timer:SetFontStyle(font_style)
-    else
-        self.timer:SetFontStyle(Turbine.UI.FontStyle.Outline)
-    end
-    if outline_color ~= nil then
-        self.timer:SetOutlineColor(outline_color)
-    end
-    if font_color ~= nil then
-        self.timer:SetForeColor(font_color)
-    end
     self.timer:SetMouseVisible(false)
     self.timer:SetZOrder(5)
+
+    self:apply_style(size, font, font_style, font_color, outline_color)
 
     self:SetVisible(true)
 
@@ -79,6 +64,27 @@ function EffectIcon:destroy()
     self.timer:SetText("")
     self.label_back:SetVisible(false)
     self:SetVisible(false)
+end
+
+-- Size and timer font; also used to restyle a live icon in place (compact
+-- mode, settings apply) instead of recreating it.
+function EffectIcon:apply_style(size, font, font_style, font_color, outline_color)
+    self:SetSize(size, size)
+    self.icon:SetSize(size, size)
+    self.label_back:SetSize(size, size)
+    self.timer:SetSize(size, size)
+    self.timer:SetFont(font)
+    if font_style ~= nil then
+        self.timer:SetFontStyle(font_style)
+    else
+        self.timer:SetFontStyle(Turbine.UI.FontStyle.Outline)
+    end
+    if outline_color ~= nil then
+        self.timer:SetOutlineColor(outline_color)
+    end
+    if font_color ~= nil then
+        self.timer:SetForeColor(font_color)
+    end
 end
 
 function EffectIcon:get_effect_id()

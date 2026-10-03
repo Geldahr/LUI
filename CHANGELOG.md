@@ -6,9 +6,17 @@
 
 ### Changed
 
+- Effect icons on the vitals frames are much cheaper to update when many effects change at once, as on a raid boss: a changed effect no longer re-sorts and re-measures the whole icon row each time, and icons that shrink to fit are resized instead of being rebuilt.
+- The target frame, boss frame, `Target Expiring Effects` window and `Upkeep` slots set to `Target` now share a single effect tracker per target, instead of each tracking the same target separately.
+
 ### Fixed
 
+- Disabling target vitals now really stops the target frame: it previously kept tracking the target's effects and building their icons behind the hidden frame. The `Target Expiring Effects` window keeps working on its own, and with every target feature off nothing tracks the target at all.
+- A boss is no longer tracked twice, once by the boss frame and once by the hidden target frame.
+
 ### Removed
+
+- Removed the `Use native LotRO UI scaling` option from `Global` settings. It had no effect since game Update 49.6; LUI keeps using its own UI scale.
 
 ## v2.3.1
 
