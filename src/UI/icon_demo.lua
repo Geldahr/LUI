@@ -106,8 +106,37 @@ end
 -- token search bar prototype
 ---------------------------------------------------------------------
 
-local function _build_search_bar(parent, x, y, w)
-    local h = _s(30)
+-- base sizes (scaled with _s): LARGE is the 30px token bar, COMPACT matches
+-- the 21px search fields used by the other windows
+local BAR_LARGE = {
+    bar = 30, chip = 22, gap = 5, chip_pad = 6, search = 16, search_x = 7, chips_x = 28,
+    marker_w = 34, marker_icon = 12, chip_icon = 14, chip_icon_w = 18,
+    close_btn = 16, close_icon = 9, close_w = 20, clear_btn = 24, clear_icon = 12, clear_w = 32,
+    text_h = 20, font = 1,
+}
+local BAR_COMPACT = {
+    bar = 21, chip = 17, gap = 4, chip_pad = 5, search = 13, search_x = 5, chips_x = 22,
+    marker_w = 30, marker_icon = 10, chip_icon = 11, chip_icon_w = 15,
+    close_btn = 13, close_icon = 7, close_w = 16, clear_btn = 19, clear_icon = 10, clear_w = 24,
+    text_h = 17, font = 0,
+}
+
+-- size for an item centred in `area`: same parity, so the space above and
+-- below is identical (no 1px/2px split)
+local function _fit(value, area)
+    if (area - value) % 2 ~= 0 then
+        return value - 1
+    end
+    return value
+end
+
+local function _build_search_bar(parent, x, y, w, size)
+    -- even height: the 1px border leaves an even inner area
+    local h = _s(size.bar)
+    if h % 2 ~= 0 then
+        h = h + 1
+    end
+    local small_font = Style.CONTENT_SMALL_FONT_SIZE + size.font
     local bar = Turbine.UI.Control()
     bar:SetParent(parent)
     bar:SetPosition(x, y)
@@ -123,7 +152,8 @@ local function _build_search_bar(parent, x, y, w)
     inner:SetBackColor(Style.ALTERNATE_BACKGROUND)
     inner:SetMouseVisible(false)
 
-    _tinted_image(bar, Icons.path("search"), _s(16), _s(7), math.floor((h - _s(16)) / 2), Style.ICON_FOREGROUND)
+    local search_size = _fit(_s(size.search), h)
+    _tinted_image(bar, Icons.path("search"), search_size, _s(size.search_x), (h - search_size) / 2, Style.ICON_FOREGROUND)
 
     local chip_layer = Turbine.UI.Control()
     chip_layer:SetParent(bar)
@@ -131,19 +161,53 @@ local function _build_search_bar(parent, x, y, w)
     chip_layer:SetSize(w, h)
     chip_layer:SetMouseVisible(false)
 
-    -- "< +N" markers for chips scrolled out on either side
+    local CHIP_H = _fit(_s(size.chip), h)
+    local CHIP_GAP = _s(size.gap)
+    local MARKER_W = _s(size.marker_w)
+
+    -- "< +N" markers for chips scrolled out on either side: chip-sized,
+    -- borderless button look
     local function make_marker(icon)
         local marker = Turbine.UI.Control()
         marker:SetParent(bar)
-        marker:SetSize(_s(34), h)
-        marker:SetMouseVisible(false)
-        marker.icon = _tinted_image(marker, Icons.path(icon), _s(12), 0, math.floor((h - _s(12)) / 2), Style.ICON_FOREGROUND)
-        marker.label = _label(marker, "", _s(12), 0, _s(22), h, Style.ALTERNATE_FOREGROUND, Style.CONTENT_SMALL_FONT_SIZE + 1)
+        marker:SetSize(MARKER_W, CHIP_H)
+        marker:SetMouseVisible(true)
+        _set_alpha_blend(marker)
+        marker:SetBackColor(Style.TRANSPARENT_BACKGROUND)
+        local icon_size = _fit(_s(size.marker_icon), CHIP_H)
+        marker.icon = _tinted_image(marker, Icons.path(icon), icon_size, _s(5), (CHIP_H - icon_size) / 2, Style.ICON_FOREGROUND)
+        marker.label = _label(marker, "", _s(5) + icon_size, 0, MARKER_W - _s(5) - icon_size, CHIP_H, Style.CONTROL_FOREGROUND, small_font)
         marker:SetVisible(false)
         return marker
     end
     local left_marker = make_marker("chevron_left")
     local right_marker = make_marker("chevron_right")
+    local popup_side = nil
+
+    local function paint_marker(marker, side)
+        if popup_side == side then
+            marker:SetBackColor(Style.CONTROL_BACKGROUND_ACTIVE)
+        elseif marker._hover == true then
+            marker:SetBackColor(Style.CONTROL_BACKGROUND_HOVER)
+        else
+            marker:SetBackColor(Style.TRANSPARENT_BACKGROUND)
+        end
+    end
+    local function paint_markers()
+        paint_marker(left_marker, "left")
+        paint_marker(right_marker, "right")
+    end
+    for _, spec in ipairs({ { left_marker, "left" }, { right_marker, "right" } }) do
+        local marker, side = spec[1], spec[2]
+        marker.MouseEnter = function()
+            marker._hover = true
+            paint_marker(marker, side)
+        end
+        marker.MouseLeave = function()
+            marker._hover = false
+            paint_marker(marker, side)
+        end
+    end
 
     local text_box = Turbine.UI.TextBox()
     text_box:SetParent(bar)
@@ -155,27 +219,33 @@ local function _build_search_bar(parent, x, y, w)
     text_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     local hint = _label(bar, "Search tokens...", 0, 0, _s(380), h,
-        Style.PLACEHOLDER_FOREGROUND, Style.CONTENT_SMALL_FONT_SIZE + 1)
+        Style.PLACEHOLDER_FOREGROUND, small_font)
 
-    local clear = _flat_button(bar, w - _s(28), math.floor((h - _s(24)) / 2), _s(24), "window_close", 12)
+    local clear_size = _fit(_s(size.clear_btn), h)
+    local clear = _flat_button(bar, w - clear_size - _s(4), (h - clear_size) / 2,
+        clear_size, "window_close", size.clear_icon)
 
     local chips = {}
+    -- children receive mouse events themselves, so they all forward the wheel
+    local on_wheel
+    local function wheel(_, args)
+        on_wheel(args)
+    end
     local chip_controls = {}
     local layout
 
-    local CHIPS_X = _s(28)
-    local CHIP_H = _s(22)
-    local CHIP_GAP = _s(5)
-    local CHIP_ICON_W = _s(18)
-    local CHIP_CLOSE_W = _s(20)
-    local CHIP_PAD = _s(6)
-    local MARKER_W = _s(34)
+    local CHIPS_X = _s(size.chips_x)
+    local CHIP_ICON_W = _s(size.chip_icon_w)
+    local CHIP_CLOSE_W = _s(size.close_w)
+    local CHIP_PAD = _s(size.chip_pad)
     local MIN_TEXT_W = _s(100)
-    local CLEAR_W = _s(32)
-    local chip_font_size = (Style.CONTENT_SMALL_FONT_SIZE + 1) * _scale()
+    local CLEAR_W = _s(size.clear_w)
+    local chip_font_size = small_font * _scale()
 
     -- nil = follow the newest chip; a number = first visible chip index
     local first_visible = nil
+    -- first chip index shown by the last layout
+    local shown_first = 1
 
     local function chip_parts(text)
         local key, value = string.match(text, "^(%a+):(.+)$")
@@ -188,29 +258,113 @@ local function _build_search_bar(parent, x, y, w)
         return icon, value, text_w, CHIP_PAD + icon_w + text_w + CHIP_CLOSE_W
     end
 
-    local function make_chip(index, cx)
+    local function make_chip(index, parent_control, cx, cy, full_width)
         local text = chips[index]
         local icon, value, text_w, cw = chip_parts(text)
+        if full_width ~= nil then
+            cw = full_width
+        end
 
         local chip = Turbine.UI.Control()
-        chip:SetParent(chip_layer)
-        chip:SetPosition(cx, math.floor((h - CHIP_H) / 2))
+        chip:SetParent(parent_control)
+        chip:SetPosition(cx, cy)
         chip:SetSize(cw, CHIP_H)
         _set_alpha_blend(chip)
         chip:SetBackColor(Style.CONTROL_BACKGROUND)
 
         local tx = CHIP_PAD
         if icon ~= nil then
-            _tinted_image(chip, Icons.path(icon), _s(14), tx, math.floor((CHIP_H - _s(14)) / 2), Style.ICON_FOREGROUND)
+            local chip_icon = _fit(_s(size.chip_icon), CHIP_H)
+            _tinted_image(chip, Icons.path(icon), chip_icon, tx, (CHIP_H - chip_icon) / 2, Style.ICON_FOREGROUND)
             tx = tx + CHIP_ICON_W
         end
-        _label(chip, value, tx, 0, text_w, CHIP_H, Style.CONTROL_FOREGROUND, Style.CONTENT_SMALL_FONT_SIZE + 1)
-        local remove = _flat_button(chip, cw - _s(19), math.floor((CHIP_H - _s(16)) / 2), _s(16), "window_close", 9)
+        _label(chip, value, tx, 0, text_w, CHIP_H, Style.CONTROL_FOREGROUND, small_font)
+        local close = _fit(_s(size.close_btn), CHIP_H)
+        local remove = _flat_button(chip, cw - close - _s(3), (CHIP_H - close) / 2, close, "window_close", size.close_icon)
+        if parent_control == chip_layer then
+            chip.MouseWheel = wheel
+            remove.MouseWheel = wheel
+        end
         remove.Click = function()
             table.remove(chips, index)
             layout()
         end
         return chip
+    end
+
+    -- overflow list: hidden chips of one side, each removable
+    local popup = Turbine.UI.Window()
+    UI.NativeScaling.apply_window(popup)
+    popup:SetVisible(false)
+    popup:SetZOrder(3000)
+    _set_alpha_blend(popup)
+    popup:SetBackColor(Style.CONTROL_BORDER)
+    local popup_inner = Turbine.UI.Control()
+    popup_inner:SetParent(popup)
+    popup_inner:SetPosition(1, 1)
+    _set_alpha_blend(popup_inner)
+    popup_inner:SetBackColor(Style.PANEL_BACKGROUND)
+    popup_inner:SetMouseVisible(false)
+    local popup_chips = {}
+    local hidden = { left = {}, right = {} }
+    local refresh_popup
+
+    local function close_popup()
+        for i = 1, #popup_chips do
+            popup_chips[i]:SetVisible(false)
+            popup_chips[i]:SetParent(nil)
+        end
+        popup_chips = {}
+        popup_side = nil
+        popup:SetVisible(false)
+        paint_markers()
+    end
+
+    refresh_popup = function()
+        local side = popup_side
+        local indexes = side ~= nil and hidden[side] or {}
+        if side == nil or #indexes == 0 then
+            close_popup()
+            return
+        end
+        for i = 1, #popup_chips do
+            popup_chips[i]:SetVisible(false)
+            popup_chips[i]:SetParent(nil)
+        end
+        popup_chips = {}
+        local pad = _s(5)
+        local width = 0
+        for k = 1, #indexes do
+            local _, _, _, cw = chip_parts(chips[indexes[k]])
+            width = math.max(width, cw)
+        end
+        for k = 1, #indexes do
+            popup_chips[#popup_chips + 1] = make_chip(indexes[k], popup_inner, pad, pad + (k - 1) * (CHIP_H + CHIP_GAP), width)
+        end
+        local inner_w = width + 2 * pad
+        local inner_h = #indexes * CHIP_H + (#indexes - 1) * CHIP_GAP + 2 * pad
+        popup_inner:SetSize(inner_w, inner_h)
+        popup:SetSize(inner_w + 2, inner_h + 2)
+        local marker = side == "left" and left_marker or right_marker
+        local sx, sy = marker:PointToScreen(0, CHIP_H + _s(6))
+        popup:SetPosition(sx, sy)
+        popup:SetVisible(true)
+        paint_markers()
+    end
+
+    bar.MouseWheel = wheel
+    text_box.MouseWheel = wheel
+    left_marker.MouseWheel = wheel
+    right_marker.MouseWheel = wheel
+    clear.MouseWheel = wheel
+
+    left_marker.MouseClick = function()
+        popup_side = popup_side ~= "left" and "left" or nil
+        refresh_popup()
+    end
+    right_marker.MouseClick = function()
+        popup_side = popup_side ~= "right" and "right" or nil
+        refresh_popup()
     end
 
     -- chips from `first` that fit in `space`, plus the width they use
@@ -247,7 +401,7 @@ local function _build_search_bar(parent, x, y, w)
         local last, used = fit_from(1, widths, space)
         if last < #chips then
             -- not everything fits: room for both markers, then pick the window
-            local window_space = space - (2 * MARKER_W)
+            local window_space = space - (2 * (MARKER_W + CHIP_GAP))
             if first_visible == nil then
                 -- newest chips, walking back from the end
                 first = #chips
@@ -262,42 +416,51 @@ local function _build_search_bar(parent, x, y, w)
             last, used = fit_from(first, widths, window_space)
         end
 
+        shown_first = first
         local cx = CHIPS_X
         left_marker:SetVisible(first > 1)
         if first > 1 then
-            left_marker:SetPosition(cx, 0)
+            left_marker:SetPosition(cx, math.floor((h - CHIP_H) / 2))
             left_marker.label:SetText("+" .. tostring(first - 1))
-            cx = cx + MARKER_W
+            cx = cx + MARKER_W + CHIP_GAP
         end
         for i = first, last do
-            chip_controls[#chip_controls + 1] = make_chip(i, cx)
+            chip_controls[#chip_controls + 1] = make_chip(i, chip_layer, cx, math.floor((h - CHIP_H) / 2))
             cx = cx + widths[i] + CHIP_GAP
+        end
+        hidden.left = {}
+        for i = 1, first - 1 do
+            hidden.left[#hidden.left + 1] = i
+        end
+        hidden.right = {}
+        for i = last + 1, #chips do
+            hidden.right[#hidden.right + 1] = i
         end
         right_marker:SetVisible(last < #chips)
         if last < #chips then
-            right_marker:SetPosition(cx, 0)
+            right_marker:SetPosition(cx, math.floor((h - CHIP_H) / 2))
             right_marker.label:SetText("+" .. tostring(#chips - last))
             cx = cx + MARKER_W
         end
 
         local tx = cx + _s(2)
         local tw = math.max(0, w - tx - CLEAR_W)
-        text_box:SetPosition(tx, math.floor((h - _s(20)) / 2))
-        text_box:SetSize(tw, _s(20))
+        local text_h = _fit(_s(size.text_h), h)
+        text_box:SetPosition(tx, (h - text_h) / 2)
+        text_box:SetSize(tw, text_h)
         hint:SetPosition(tx, 0)
         hint:SetVisible(#chips == 0 and (text_box:GetText() or "") == "")
+        if popup_side ~= nil then
+            refresh_popup()
+        end
     end
 
     -- mouse wheel scrolls through the chips
-    bar.MouseWheel = function(_, args)
-        if #chips == 0 then
+    on_wheel = function(args)
+        if #hidden.left == 0 and #hidden.right == 0 then
             return
         end
-        local current = first_visible
-        if current == nil then
-            current = #chips
-        end
-        current = current - args.Direction
+        local current = shown_first - args.Direction
         first_visible = math.max(1, math.min(current, #chips))
         layout()
     end
@@ -324,6 +487,7 @@ local function _build_search_bar(parent, x, y, w)
     clear.Click = function()
         chips = {}
         first_visible = nil
+        close_popup()
         text_box:SetText("")
         layout()
     end
@@ -372,6 +536,7 @@ local function _build_content(window, content)
     dd:SetParent(content)
     dd:set_scale(_scale())
     dd:SetPopupHost(window)
+    dd:SetFont(_font(Style.CONTROL_FONT_SIZE))
     dd:SetMappedOptions({ "Bree-land", "Lone-lands", "North Downs", "Evendim" }, { 1, 2, 3, 4 })
     dd:SetPosition(0, y)
     dd:SetSize(_s(180), _s(24))
@@ -380,6 +545,7 @@ local function _build_content(window, content)
     cdd:SetParent(content)
     cdd:set_scale(_scale())
     cdd:SetPopupHost(window)
+    cdd:SetFont(_font(Style.CONTROL_FONT_SIZE))
     cdd:SetMappedOptions({ "Beast", "Troll", "Orc", "Spider" }, { 1, 2, 3, 4 })
     cdd:SetPosition(_s(196), y)
     cdd:SetSize(_s(180), _s(24))
@@ -388,6 +554,7 @@ local function _build_content(window, content)
     dd_off:SetParent(content)
     dd_off:set_scale(_scale())
     dd_off:SetPopupHost(window)
+    dd_off:SetFont(_font(Style.CONTROL_FONT_SIZE))
     dd_off:SetMappedOptions({ "Disabled" }, { 1 })
     dd_off:SetPosition(_s(392), y)
     dd_off:SetSize(_s(180), _s(24))
@@ -424,8 +591,10 @@ local function _build_content(window, content)
     y = y + _s(34)
 
     y = _section(content, y, "Token search bar prototype: click it, type, Enter adds a chip, x removes")
-    _build_search_bar(content, 0, y, W - _s(20))
-    y = y + _s(40)
+    _build_search_bar(content, 0, y, W - _s(20), BAR_LARGE)
+    y = y + _s(38)
+    _build_search_bar(content, 0, y, W - _s(20), BAR_COMPACT)
+    y = y + _s(31)
 
     y = _section(content, y, "Favourite star (click), bestiary current area, resize corner")
     local star = _flat_button(content, 0, y, _s(28), "star", 18)
