@@ -1,0 +1,4 @@
+[submodule "tools/icons/lucide"]
+	path = tools/icons/lucide
+	url = https://github.com/lucide-icons/lucide
+	shallow = true

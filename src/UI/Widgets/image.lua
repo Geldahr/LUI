@@ -109,6 +109,13 @@ function Image:SetBackColorBlendMode(mode)
     self._img:SetBackColorBlendMode(mode)
 end
 
+-- Colors a white icon: the back color multiplies the picture, and only the
+-- icon's opaque pixels show it.
+function Image:set_tint(color)
+    self._img:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
+    self._img:SetBackColor(color)
+end
+
 function Image:SetOpacity(opacity)
     self._img:SetOpacity(opacity)
 end

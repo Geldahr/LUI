@@ -12,6 +12,7 @@ import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.menu"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.icons"
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.Utils.font"
 
@@ -25,6 +26,7 @@ local LuiLabel = Widgets.LuiLabel
 local LuiMenu = Widgets.LuiMenu
 local LuiMenuBar = Widgets.LuiMenuBar
 local Style = Widgets.Style
+local Icons = Widgets.Icons
 
 local BASE_DEFAULT_W = 420
 local BASE_DEFAULT_H = 280
@@ -693,11 +695,8 @@ function LuiWindow:_apply_style()
     self:_style_title_button(self._maximize_button)
     self:_style_title_button(self._close_button)
     self:_sync_maximize_button_icon()
-    self._close_button:set_icon(
-        AssetIds.x,
-        AssetIds.x_hover,
-        AssetIds.x_hover,
-        AssetIds.x,
+    self._close_button:set_tinted_icon(
+        Icons.path("window_close"),
         BASE_TITLE_ACTION_ICON,
         BASE_TITLE_ACTION_ICON,
         LuiButton.icon_position.RIGHT
@@ -775,18 +774,13 @@ function LuiWindow:_sync_maximize_button_icon()
         return
     end
 
-    local normal = AssetIds.window_maximize
-    local hover = AssetIds.window_maximize_hover
+    local icon = Icons.path("window_maximize")
     if self:is_maximized() == true then
-        normal = AssetIds.window_restore
-        hover = AssetIds.window_restore_hover
+        icon = Icons.path("window_restore")
     end
 
-    self._maximize_button:set_icon(
-        normal,
-        hover,
-        hover,
-        normal,
+    self._maximize_button:set_tinted_icon(
+        icon,
         BASE_TITLE_ACTION_ICON,
         BASE_TITLE_ACTION_ICON,
         LuiButton.icon_position.RIGHT

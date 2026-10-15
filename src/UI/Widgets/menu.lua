@@ -14,6 +14,7 @@ import "LUI.src.UI.Widgets.checkbox"
 import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.icons"
 import "LUI.src.Utils.font"
 
 local Widgets = _G.LUI.UI.Widgets
@@ -24,6 +25,7 @@ local LuiLabel = Widgets.LuiLabel
 local LuiDropdown = Widgets.LuiDropdown
 local LuiCheckDropdown = Widgets.LuiCheckDropdown
 local Style = Widgets.Style
+local Icons = Widgets.Icons
 
 local BASE_TOP_MENU_H = 22
 local BASE_TOP_MENU_MIN_W = 42
@@ -33,6 +35,7 @@ local BASE_POPUP_MIN_W = 150
 local BASE_POPUP_PAD_X = 6
 local BASE_MARK_W = 20
 local BASE_ARROW_W = 16
+local BASE_ARROW_ICON = 10
 local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_ICON_SIZE = 16
@@ -111,14 +114,9 @@ function LuiAction:Constructor()
     self._label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self._label:SetFont(self._font)
 
-    self._arrow = LuiLabel()
+    self._arrow = Image()
     self._arrow:SetParent(self)
     self._arrow:SetMouseVisible(false)
-    self._arrow:SetSelectable(false)
-    self._arrow:SetMultiline(false)
-    self._arrow:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self._arrow:SetFont(self._font)
-    self._arrow:SetText(">")
     self._arrow:SetVisible(false)
 
     self.SizeChanged = function()
@@ -176,7 +174,6 @@ function LuiAction:set_scale(scale)
     self._font = _scaled_font(self._scale)
     self._checkbox:set_scale(self._scale)
     self._label:SetFont(self._font)
-    self._arrow:SetFont(self._font)
     self:_layout()
     self:_update_visual_state()
 end
@@ -187,7 +184,6 @@ function LuiAction:set_font(font)
     end
     self._font = font
     self._label:SetFont(font)
-    self._arrow:SetFont(font)
 end
 
 function LuiAction:set_text(text)
@@ -291,25 +287,33 @@ function LuiAction:_layout()
     self._label:SetPosition(label_x, 0)
     self._label:SetSize(label_w, height)
 
-    self._arrow:SetPosition(math.max(0, width - arrow_w - pad), 0)
-    self._arrow:SetSize(arrow_w, height)
+    local arrow_icon = math.min(height, _scaled_int(self._scale, BASE_ARROW_ICON))
+    self._arrow:set_icon(Icons.path("submenu_arrow"), arrow_icon)
+    -- set_icon shows the image; only submenu entries have an arrow
+    self._arrow:SetVisible(self._submenu ~= nil)
+    self._arrow:SetPosition(
+        math.max(0, width - arrow_w - pad + math.floor((arrow_w - arrow_icon) / 2)),
+        math.max(0, math.floor((height - arrow_icon) / 2)))
 end
 
 function LuiAction:_update_visual_state()
     local back = Style.BACKGROUND
     local text = Style.CONTROL_FOREGROUND
+    local icon = Style.ICON_FOREGROUND
 
     if self._enabled ~= true then
         back = Style.CONTROL_BACKGROUND_DISABLED
         text = Style.CONTROL_FOREGROUND_DISABLED
+        icon = Style.ICON_FOREGROUND_DISABLED
     elseif self._hover == true or self._submenu_open == true then
         back = Style.CONTROL_BACKGROUND_HOVER
         text = Style.CONTROL_FOREGROUND_HOVER
+        icon = Style.ICON_FOREGROUND_HOVER
     end
 
     self:SetBackColor(back)
     self._label:SetForeColor(text)
-    self._arrow:SetForeColor(text)
+    self._arrow:set_tint(icon)
     self._checkbox:SetChecked(self._checkable == true and self._checked == true)
 end
 

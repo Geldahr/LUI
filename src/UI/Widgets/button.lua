@@ -180,6 +180,11 @@ function LuiButton:Constructor()
     self._icon_render_w = nil
     self._icon_render_h = nil
     self._icon_stretch_mode = nil
+    -- per-state tint colors for white icons; nil = icon drawn untinted
+    self._icon_tint_normal = nil
+    self._icon_tint_hover = nil
+    self._icon_tint_pressed = nil
+    self._icon_tint_disabled = nil
     self._padding = 0
 
     self.SizeChanged = function()
@@ -323,6 +328,24 @@ function LuiButton:set_icon(normal, hover, active, disabled, width, height, posi
     self._icon_position = _normalize_icon_position(position or self._icon_position)
     self._right_width = 0
     self:_layout()
+end
+
+-- One white icon (UI.Widgets.Icons path) tinted per state with the shared
+-- ICON_* style colors.
+function LuiButton:set_tinted_icon(icon, width, height, position)
+    self._icon_tint_normal = Style.ICON_FOREGROUND
+    self._icon_tint_hover = Style.ICON_FOREGROUND_HOVER
+    self._icon_tint_pressed = Style.ICON_FOREGROUND_PRESSED
+    self._icon_tint_disabled = Style.ICON_FOREGROUND_DISABLED
+    self:set_icon(icon, nil, nil, nil, width, height, position)
+end
+
+function LuiButton:set_icon_tint(normal, hover, pressed, disabled)
+    self._icon_tint_normal = normal
+    self._icon_tint_hover = hover
+    self._icon_tint_pressed = pressed
+    self._icon_tint_disabled = disabled
+    self:_update_visual_state()
 end
 
 function LuiButton:set_icon_position(position)
@@ -505,6 +528,13 @@ function LuiButton:_current_icon()
     return self._icon_normal
 end
 
+function LuiButton:_current_icon_tint()
+    if self._enabled ~= true then return self._icon_tint_disabled end
+    if self._pressed == true or self._active == true then return self._icon_tint_pressed end
+    if self._hover == true then return self._icon_tint_hover end
+    return self._icon_tint_normal
+end
+
 function LuiButton:_apply_default_font()
     local font = _scaled_font(self._scale, Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE)
     if self._label ~= nil then
@@ -538,6 +568,9 @@ function LuiButton:_update_visual_state()
         end
         if self._icon_render_w ~= nil then
             self._icon:set_size(self._icon_render_w, self._icon_render_h)
+        end
+        if self._icon_tint_normal ~= nil then
+            self._icon:set_tint(self:_current_icon_tint())
         end
     end
 end

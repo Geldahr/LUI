@@ -25,13 +25,6 @@ AssetIds.arrow_r_yellow_inverted = 0x4110A133
 AssetIds.arrow_r_yellow_dark = 0x4110A134
 AssetIds.arrow_r_transparent = 0x4110A12E
 
-AssetIds.x = "LUI/assets/ui/x_64.tga"
-AssetIds.x_hover = "LUI/assets/ui/x_hover_64.tga"
-AssetIds.window_maximize = "LUI/assets/ui/maximize_64.tga"
-AssetIds.window_maximize_hover = "LUI/assets/ui/maximize_hover_64.tga"
-AssetIds.window_restore = "LUI/assets/ui/restore_64.tga"
-AssetIds.window_restore_hover = "LUI/assets/ui/restore_hover_64.tga"
-
 AssetIds.resize_horizontal = 0x410081BF
 AssetIds.resize_vertical = 0x410081C0
 AssetIds.resize_diagonal_tl_br = 0x41007E20

@@ -6,6 +6,7 @@ local Widgets = _G.LUI.UI.Widgets
 
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.icons"
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.tooltip"
 import "LUI.src.UI.Widgets.image"

@@ -1,0 +1,36 @@
+# LUI icon set. Regenerate with:
+#   python tools/icons/build_icons.py
+#
+# lucide <out_name> <lucide_icon> [filled] [zoom=N]
+#   Rendered from tools/icons/lucide/icons/<lucide_icon>.svg in both line
+#   weights: assets/ui/icons/<out_name>_thin_64.tga (stroke 2) and
+#   <out_name>_bold_64.tga (stroke 2.5). zoom=N crops the canvas around its
+#   centre (small glyphs fill their slot) and keeps the rendered line weight.
+#
+# own <out_name> <source>
+#   Shape (alpha) taken from a single-colour TGA under tools/icons/sources/:
+#   assets/ui/icons/<out_name>_64.tga.
+#
+# Every output is white; the colour comes from the in-game tint.
+
+own window_close x_64.tga
+own window_maximize maximize_64.tga
+own window_restore restore_64.tga
+
+lucide chevron_down chevron-down
+lucide chevron_up chevron-up
+lucide chevron_left chevron-left
+lucide chevron_right chevron-right
+lucide dropdown_arrow chevron-down zoom=1.5
+lucide submenu_arrow chevron-right zoom=1.5
+lucide plus plus
+lucide minus minus
+lucide check check
+lucide search search
+lucide resize_corner move-diagonal-2
+lucide star star
+lucide star_filled star filled
+lucide locate locate-fixed
+lucide map_pin map-pin
+lucide level chevrons-up
+lucide family paw-print

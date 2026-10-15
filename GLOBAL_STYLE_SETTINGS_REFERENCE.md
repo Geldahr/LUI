@@ -27,6 +27,7 @@ Style changes are applied after a plugin reload.
 | Table vertical lines width | `TABLE_VERTICAL_BORDER_WIDTH` | Column grid lines of LuiTable lists (they run through the title bar). 0 removes them. The table frame and title underline are not separate settings: they follow the shared Border width and Border color like every other widget. |
 | Table horizontal lines width | `TABLE_HORIZONTAL_BORDER_WIDTH` | Row separator lines. 0 removes them (default: alternating row colors carry the separation instead). |
 | Alternating table rows | `TABLE_ALTERNATE_ROWS` | Alternate table row backgrounds between the panel and alternate background colors. Disable for a single background, typically together with a horizontal line width. |
+| Icon line weight | `ICON_WEIGHT` | Line weight of the Lucide-based UI icons (dropdown arrows, chevrons, check marks, search and chip icons): Thin (stroke 2) or Bold (stroke 2.5). The window close/maximize/restore icons have a single shape and are not affected. |
 
 ## Global > UI > Colors > Frame
 
@@ -98,6 +99,18 @@ Style changes are applied after a plugin reload.
 | Subtle foreground | `SUBTLE_FOREGROUND` | Low-emphasis foreground for subtle shared UI marks, including thin divider and separator lines that should be visible without reading as borders. |
 | Disabled accent | `ACCENT_BACKGROUND_DISABLED` | Accent fill for disabled shared controls. |
 | Invalid background | `INVALID_BACKGROUND` | Background for invalid shared UI states, such as invalid color input swatches or validation-style fields. |
+
+## Global > UI > Colors > Icons
+
+UI icons are white images tinted with these colors. When an icon color is not set, it follows the matching control text color.
+
+| Setting | Style token | What it changes |
+| --- | --- | --- |
+| Icon color | `ICON_FOREGROUND` | Normal color of shared UI icons: window close/maximize/restore, dropdown and menu arrows, steppers, check marks, search and chip icons. Falls back to Control text. |
+| Icon hover color | `ICON_FOREGROUND_HOVER` | Icon color while its control is hovered. Falls back to Icon color. |
+| Icon pressed color | `ICON_FOREGROUND_PRESSED` | Icon color while its control is pressed or active. Falls back to Icon hover color. |
+| Icon disabled color | `ICON_FOREGROUND_DISABLED` | Icon color on disabled controls. Falls back to Control disabled text. |
+| Icon accent color | `ICON_ACCENT` | Highlighted icons that carry a state, such as the filled Crafting favorite star. |
 
 ## Global > UI > Colors > Overlays
 
