@@ -903,11 +903,12 @@ function StatusBarWindow:_refresh_edit_drag_ghost_text(text)
     end
 
     local title = tostring(text or "")
-    local ghost_w = math.max(140, math.min(300, 28 + (string.len(title) * 7)))
+    local ghost_font = _edit_drag_ghost_font()
+    local ghost_w = math.max(140, math.min(300, 28 + _G.LUI.Utils.measure_text_width_in_font(title, ghost_font) + 2))
     local ghost_h = math.max(22, math.floor(self:GetHeight() + 6))
 
     self._edit_drag_ghost_label:SetText(title)
-    self._edit_drag_ghost_label:SetFont(_edit_drag_ghost_font())
+    self._edit_drag_ghost_label:SetFont(ghost_font)
     self:_layout_edit_drag_ghost(ghost_w, ghost_h)
 end
 

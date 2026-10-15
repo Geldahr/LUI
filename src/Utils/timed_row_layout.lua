@@ -6,72 +6,20 @@ local LUI_ENUMS = _G.LUI.Settings.Enums
 local Utils = _G.LUI.Utils
 import "LUI.src.Settings.enums"
 import "LUI.src.Utils.time_format"
+import "LUI.src.Utils.text_width"
 
 local lui_format_timeout = Utils.lui_format_timeout
 local lui_format_timeout_seconds = Utils.lui_format_timeout_seconds
+local measure_text_width = Utils.measure_text_width
+local font_char_widths = Utils.font_char_widths
+local resolve_font_size = Utils.resolve_font_size
+local font_sizes = Utils.font_sizes
 
 local MIN_SIDE_PADDING = 2
 local TEXT_SIDE_PADDING_RATIO = 0.12
 local TEXT_GAP_RATIO = 0.35
 local FONT_WIDTH_CACHE = {}
 local WIDEST_DIGIT_CACHE = {}
-
--- Must stay in sync with the per-family size lists inside FONT_TO_LOTRO
--- (src/Utils/font.lua): the vertical time-font fit returns sizes from this
--- table that are rendered through FONT_TO_LOTRO. A divergence makes the fit
--- measure at a size the game renders differently, clipping vertical time text.
-local AVAILABLE_FONT_SIZES = {
-    verdana = { 10, 12, 14, 16, 18, 20, 22, 23 },
-    verdanabold = { 16 },
-    bookantiqua = { 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36 },
-    bookantiquabold = { 12, 14, 18, 19, 22, 24 },
-    trajanpro = { 13, 14, 15, 16, 18, 19, 20, 21, 23, 24, 25, 26, 28 },
-    trajanprobold = { 16, 22, 24, 25, 30, 36 },
-    arial = { 12 },
-    fixedsys = { 15 },
-    lucidaconsole = { 12 },
-}
-
-local FONT_WIDTH_FACTORS = {
-    verdana = 1.00,
-    verdanabold = 1.06,
-    bookantiqua = 1.10,
-    bookantiquabold = 1.13,
-    trajanpro = 1.18,
-    trajanprobold = 1.24,
-    arial = 0.98,
-    fixedsys = 0.92,
-    lucidaconsole = 0.94,
-}
-
-local MONOSPACE_FONTS = {
-    fixedsys = true,
-    lucidaconsole = true,
-}
-
-local FONT_CHAR_WIDTH_OVERRIDES = {
-    verdana = {
-        ["1"] = 0.50,
-        [":"] = 0.26,
-    },
-    verdanabold = {
-        ["1"] = 0.52,
-        [":"] = 0.27,
-    },
-}
-
-local DIGIT_WIDTH_UNITS = {
-    ["0"] = 0.58,
-    ["1"] = 0.38,
-    ["2"] = 0.56,
-    ["3"] = 0.56,
-    ["4"] = 0.58,
-    ["5"] = 0.58,
-    ["6"] = 0.58,
-    ["7"] = 0.54,
-    ["8"] = 0.60,
-    ["9"] = 0.58,
-}
 
 local function _normalize_font_size(font_size)
     local size = tonumber(font_size)
@@ -90,85 +38,6 @@ local function _normalize_font_name(font_name)
     end
     return (font_name:gsub("[%s%-%_]", ""):lower())
 end
-local function _choose_font_size(size, available_sizes)
-    local numeric_size = tonumber(size) or 0
-    local count = #available_sizes
-    if count == 0 then
-        return 12
-    end
-    if count == 1 then
-        return available_sizes[1]
-    end
-    if numeric_size <= available_sizes[1] then
-        return available_sizes[1]
-    end
-    if numeric_size >= available_sizes[count] then
-        return available_sizes[count]
-    end
-
-    for i = 1, count - 1 do
-        local lower = available_sizes[i]
-        local upper = available_sizes[i + 1]
-        local midpoint = (lower + upper) / 2
-        if numeric_size < midpoint then
-            return lower
-        elseif numeric_size == midpoint then
-            return upper
-        elseif numeric_size < upper then
-            return upper
-        end
-    end
-
-    return available_sizes[count]
-end
-
-local function _char_width_units(ch, normalized_font_name)
-    local font_overrides = FONT_CHAR_WIDTH_OVERRIDES[normalized_font_name]
-    if font_overrides ~= nil then
-        local override_width = font_overrides[ch]
-        if override_width ~= nil then
-            return override_width
-        end
-    end
-
-    local digit_width = DIGIT_WIDTH_UNITS[ch]
-    if digit_width ~= nil then
-        return digit_width
-    end
-    if ch == ":" then
-        return 0.22
-    end
-    if ch == "." then
-        return 0.20
-    end
-    if ch == "s" or ch == "S" then
-        return 0.46
-    end
-    if ch == " " then
-        return 0.30
-    end
-    if string.match(ch, "%l") ~= nil then
-        return 0.52
-    end
-    if string.match(ch, "%u") ~= nil then
-        return 0.66
-    end
-    return 0.60
-end
-
-local function _text_width_units(text, normalized_font_name)
-    local value = tostring(text or "")
-    if MONOSPACE_FONTS[normalized_font_name] == true then
-        return string.len(value) * 0.60
-    end
-
-    local units = 0
-    for i = 1, string.len(value) do
-        units = units + _char_width_units(string.sub(value, i, i), normalized_font_name)
-    end
-    return units
-end
-
 local function _text_width_safety_padding(normalized_font_name, resolved_size)
     local padding = 1
     if normalized_font_name == "verdana" and resolved_size <= 18 then
@@ -185,38 +54,43 @@ local function _normalized_threshold(threshold)
     return value
 end
 
-local function _wider_text(current, candidate, normalized_font_name)
+local function _wider_text(current, candidate, normalized_font_name, font_size)
     if candidate == nil then
         return current
     end
     if current == nil then
         return candidate
     end
-    if _text_width_units(candidate, normalized_font_name) > _text_width_units(current, normalized_font_name) then
+    if measure_text_width(candidate, normalized_font_name, font_size)
+        > measure_text_width(current, normalized_font_name, font_size) then
         return candidate
     end
     return current
 end
 
-local function _widest_digit_in_range(normalized_font_name, min_digit, max_digit)
+-- digit widths come from the measured font table, so they depend on the
+-- rendered size as well as the family
+local function _widest_digit_in_range(normalized_font_name, font_size, min_digit, max_digit)
+    local widths = font_char_widths(normalized_font_name, font_size)
     local widest
-    local widest_units
+    local widest_width
     for digit = min_digit, max_digit do
         local ch = tostring(digit)
-        local units = _char_width_units(ch, normalized_font_name)
-        if widest == nil or units > widest_units then
+        local width = widths[ch]
+        if widest == nil or width > widest_width then
             widest = ch
-            widest_units = units
+            widest_width = width
         end
     end
     return widest
 end
 
-local function _widest_digit(normalized_font_name)
-    local cached = WIDEST_DIGIT_CACHE[normalized_font_name]
+local function _widest_digit(normalized_font_name, font_size)
+    local key = normalized_font_name .. "|" .. tostring(resolve_font_size(normalized_font_name, font_size))
+    local cached = WIDEST_DIGIT_CACHE[key]
     if cached == nil then
-        cached = _widest_digit_in_range(normalized_font_name, 0, 9)
-        WIDEST_DIGIT_CACHE[normalized_font_name] = cached
+        cached = _widest_digit_in_range(normalized_font_name, font_size, 0, 9)
+        WIDEST_DIGIT_CACHE[key] = cached
     end
     return cached
 end
@@ -230,28 +104,28 @@ end
 -- can only lead with 0-5, threshold 90 only allows one minute), the remaining
 -- positions use the widest digit outright. Never under-reserves; may
 -- over-reserve by a fraction of a pixel where trailing digits are constrained.
-local function _max_time_width_sample(limit, normalized_font_name, time_format)
-    local d = _widest_digit(normalized_font_name)
+local function _max_time_width_sample(limit, normalized_font_name, font_size, time_format)
+    local d = _widest_digit(normalized_font_name, font_size)
 
     local widest
     if time_format == LUI_ENUMS.cooldown_time_format.WHOLE_SECONDS then
         if limit >= 10 then
             -- "48s": tens capped by the threshold, ones free.
-            local tens = _widest_digit_in_range(normalized_font_name, 1,
+            local tens = _widest_digit_in_range(normalized_font_name, font_size, 1,
                 math.min(5, math.floor(limit / 10)))
             widest = tens .. d .. "s"
         else
             -- "5s": the single digit is capped by the threshold.
-            widest = _widest_digit_in_range(normalized_font_name, 0, math.floor(limit)) .. "s"
+            widest = _widest_digit_in_range(normalized_font_name, font_size, 0, math.floor(limit)) .. "s"
         end
     else
         -- "0.8s": the lead is capped by the threshold, the decimal is free.
-        local lead = _widest_digit_in_range(normalized_font_name, 0, math.min(9, math.floor(limit)))
+        local lead = _widest_digit_in_range(normalized_font_name, font_size, 0, math.min(9, math.floor(limit)))
         widest = lead .. "." .. d .. "s"
         if limit >= 10 then
-            local tens = _widest_digit_in_range(normalized_font_name, 1,
+            local tens = _widest_digit_in_range(normalized_font_name, font_size, 1,
                 math.min(5, math.floor(limit / 10)))
-            widest = _wider_text(widest, tens .. d .. "s", normalized_font_name)
+            widest = _wider_text(widest, tens .. d .. "s", normalized_font_name, font_size)
         end
     end
 
@@ -260,11 +134,11 @@ local function _max_time_width_sample(limit, normalized_font_name, time_format)
         -- threshold, further minute digits are free, seconds are 0-5 then 0-9.
         local max_minutes = math.floor(limit / 60)
         local minutes_text = tostring(max_minutes)
-        local minute_lead = _widest_digit_in_range(normalized_font_name, 1,
+        local minute_lead = _widest_digit_in_range(normalized_font_name, font_size, 1,
             tonumber(string.sub(minutes_text, 1, 1)))
         local minute_template = minute_lead .. string.rep(d, string.len(minutes_text) - 1)
-        local seconds_tens = _widest_digit_in_range(normalized_font_name, 0, 5)
-        widest = _wider_text(widest, minute_template .. ":" .. seconds_tens .. d, normalized_font_name)
+        local seconds_tens = _widest_digit_in_range(normalized_font_name, font_size, 0, 5)
+        widest = _wider_text(widest, minute_template .. ":" .. seconds_tens .. d, normalized_font_name, font_size)
     end
 
     return widest
@@ -280,23 +154,17 @@ local function _time_width_cache_key(font_name, font_size, threshold, time_forma
 end
 
 local function lui_timed_row_resolved_font_size(font_name, font_size)
-    local normalized = _normalize_font_name(font_name)
-    local available = AVAILABLE_FONT_SIZES[normalized]
-    if available == nil then
-        return 12
-    end
-    return _choose_font_size(_normalize_font_size(font_size), available)
+    return resolve_font_size(_normalize_font_name(font_name), _normalize_font_size(font_size))
 end
 
+-- measured glyph advances plus the label side padding
 local function lui_timed_row_estimate_text_width(text, font_name, font_size)
     local normalized = _normalize_font_name(font_name)
     local resolved_size = lui_timed_row_resolved_font_size(normalized, font_size)
-    local family_factor = FONT_WIDTH_FACTORS[normalized] or 1.0
-    local units = _text_width_units(text, normalized)
-
     local side_padding = math.max(MIN_SIDE_PADDING, math.floor((resolved_size * TEXT_SIDE_PADDING_RATIO) + 0.5))
-    local width = (units * resolved_size * family_factor) + side_padding + _text_width_safety_padding(normalized, resolved_size)
-    return math.max(1, math.floor(width + 0.5))
+    local width = measure_text_width(tostring(text or ""), normalized, font_size)
+        + side_padding + _text_width_safety_padding(normalized, resolved_size)
+    return math.max(1, width)
 end
 
 local function lui_timed_row_format_time(seconds, time_format)
@@ -320,7 +188,7 @@ local function lui_timed_row_time_label_width(font_name, font_size, threshold, t
         return cached
     end
 
-    local sample = _max_time_width_sample(limit, normalized_font_name, time_format)
+    local sample = _max_time_width_sample(limit, normalized_font_name, font_size, time_format)
     local widest = lui_timed_row_estimate_text_width(sample, normalized_font_name, font_size)
 
     FONT_WIDTH_CACHE[cache_key] = widest
@@ -453,10 +321,7 @@ end
 local function lui_timed_row_fit_vertical_time_font_size(thickness, border_width, font_name, font_size, threshold,
                                                          time_format)
     local border = _normalized_border(border_width)
-    local available = AVAILABLE_FONT_SIZES[_normalize_font_name(font_name)]
-    if available == nil then
-        available = { 12 }
-    end
+    local available = font_sizes(_normalize_font_name(font_name))
 
     -- The resolved size is always a member of the family's size list; start
     -- from it and walk straight down to the smallest.

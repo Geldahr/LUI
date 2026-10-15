@@ -99,6 +99,30 @@ end
 function Utils.lui_vitals_layout_label(label, width, height, anchor, width_mode, text_alignment, x_offset, y_offset,
                                        font_name, font_size, text)
     local rendered_text = tostring(text or "")
+    -- called on every morale/power update: skip the measuring and layout
+    -- when nothing it depends on changed since the last call
+    local last = label._lui_vitals_layout
+    if last ~= nil and last.text == rendered_text and last.width == width and last.height == height
+        and last.anchor == anchor and last.width_mode == width_mode and last.text_alignment == text_alignment
+        and last.x_offset == x_offset and last.y_offset == y_offset
+        and last.font_name == font_name and last.font_size == font_size then
+        return
+    end
+    if last == nil then
+        last = {}
+        label._lui_vitals_layout = last
+    end
+    last.text = rendered_text
+    last.width = width
+    last.height = height
+    last.anchor = anchor
+    last.width_mode = width_mode
+    last.text_alignment = text_alignment
+    last.x_offset = x_offset
+    last.y_offset = y_offset
+    last.font_name = font_name
+    last.font_size = font_size
+
     local rect_width = width
     if width_mode == LUI_ENUMS.vitals_label_width_mode.AUTO then
         rect_width = math.min(width, _longest_line_width(rendered_text, font_name, font_size))

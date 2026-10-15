@@ -2,7 +2,8 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Utils = _G.LUI.Utils
+local FONT_TO_LOTRO = Utils.FONT_TO_LOTRO
 local UI = _G.LUI.UI
 local class = _G.LUI.Core.class
 import "Turbine.UI"
@@ -16,6 +17,7 @@ import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 import "LUI.src.UI.Widgets.icons"
 import "LUI.src.Utils.font"
+import "LUI.src.Utils.text_width"
 
 local Widgets = _G.LUI.UI.Widgets
 local LuiButton = Widgets.LuiButton
@@ -49,8 +51,9 @@ local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
 end
 
-local function _text_width(scale, text)
-    return _scaled_int(scale, (string.len(tostring(text or "")) * 7) + 2)
+-- measured width of a text in the font it is drawn with, +2 for glyph edges
+local function _text_width(font, text)
+    return Utils.measure_text_width_in_font(tostring(text or ""), font) + 2
 end
 
 local function _set_blend(control)
@@ -254,7 +257,7 @@ end
 
 function LuiAction:preferred_width()
     local width = _scaled_int(self._scale, (BASE_POPUP_PAD_X * 2) + BASE_MARK_W + BASE_ARROW_W)
-    width = width + _text_width(self._scale, self._text)
+    width = width + _text_width(self._font, self._text)
     return math.max(_scaled_int(self._scale, BASE_POPUP_MIN_W), width)
 end
 
@@ -604,7 +607,7 @@ end
 function LuiMenu:preferred_width()
     return math.max(
         _scaled_int(self._scale, BASE_TOP_MENU_MIN_W),
-        _scaled_int(self._scale, BASE_TOP_PAD_X * 2) + _text_width(self._scale, self._title)
+        _scaled_int(self._scale, BASE_TOP_PAD_X * 2) + _text_width(self._font, self._title)
     )
 end
 

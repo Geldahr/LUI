@@ -7,7 +7,8 @@
 -- Both cards must stay visually locked together; card-specific dimensions
 -- stay in their own files.
 
-local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Utils = _G.LUI.Utils
+local FONT_TO_LOTRO = Utils.FONT_TO_LOTRO
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Encyclopedia = _G.LUI.Features.Encyclopedia
@@ -15,6 +16,7 @@ local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets"
+import "LUI.src.Utils.text_width"
 
 local Style = UI.Widgets.Style
 local Shortcuts = UI.Shortcuts
@@ -38,8 +40,6 @@ CardWidgets.BASE = {
     CHIP_GAP_X = 4,
     CHIP_GAP_Y = 4,
     CHIP_BORDER = 1,
-    CHIP_CHAR_W = 5.8,
-    TEXT_CHAR_W = 5.8,
     TEXT_LINE_H = 14,
     SCROLL_W = 10,
     SCROLL_GAP = 3,
@@ -128,8 +128,10 @@ function CardWidgets.layout_panel(panel, x, y, w, h)
     panel.title:SetSize(math.max(1, panel.header:GetWidth() - CardWidgets.scaled_int(18)), header_h)
 end
 
-function CardWidgets.estimate_text_width(text, base_char_w)
-    return math.floor((string.len(text or "") * base_char_w * State.settings.global.scale) + 0.5)
+-- measured pixel width of `text` in `font_name` at the unscaled `size`
+-- (the card fonts are scaled the same way, see CardWidgets.scaled_font)
+function CardWidgets.measure_text(text, font_name, size)
+    return Utils.measure_text_width(text or "", font_name, CardWidgets.scaled_size(size))
 end
 
 -- shared number/percent rendering for bestiary rows, cards and chips
@@ -176,7 +178,10 @@ end
 function CardWidgets.estimate_chip_width(text)
     local pad_x = CardWidgets.scaled_int(BASE.CHIP_PAD_X)
     local border_w = CardWidgets.scaled_int(BASE.CHIP_BORDER)
-    return CardWidgets.estimate_text_width(text or "", BASE.CHIP_CHAR_W) + (2 * pad_x) + (2 * border_w)
+    -- chips are drawn in Verdana TEXT_SIZE (DropChip:apply_settings); memoized
+    -- because card chip lists repeat the same item names; +2 for glyph edges
+    local text_w = Utils.cached_text_width(text or "", "Verdana", CardWidgets.scaled_size(BASE.TEXT_SIZE)) + 2
+    return text_w + (2 * pad_x) + (2 * border_w)
 end
 
 -- rows of chips flowing left to right; entries are strings or

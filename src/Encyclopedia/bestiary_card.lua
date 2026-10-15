@@ -41,7 +41,6 @@ local BASE_TITLE_SIZE = CW.BASE.TITLE_SIZE
 local BASE_TEXT_SIZE = CW.BASE.TEXT_SIZE
 local BASE_OFFSET = CW.BASE.OFFSET
 local BASE_CHIP_H = CW.BASE.CHIP_H
-local BASE_TEXT_CHAR_W = CW.BASE.TEXT_CHAR_W
 local BASE_TEXT_LINE_H = CW.BASE.TEXT_LINE_H
 local BASE_SCROLL_W = CW.BASE.SCROLL_W
 local BASE_SCROLL_GAP = CW.BASE.SCROLL_GAP
@@ -711,11 +710,9 @@ local function _build_drop_texts(record)
     return texts
 end
 
-local _estimate_text_width = CW.estimate_text_width
-
+-- stat values and text areas are drawn in Verdana (see _style_text calls)
 local function _estimate_font_text_width(text, font_size)
-    local scaled_char_w = BASE_TEXT_CHAR_W * (font_size / BASE_TEXT_SIZE)
-    return _estimate_text_width(text, scaled_char_w)
+    return CW.measure_text(text, "Verdana", font_size)
 end
 
 local function _choose_stat_font_size(text, max_width)
@@ -743,7 +740,7 @@ local function _estimate_wrapped_line_count(text, max_width)
         if line == "" then
             line_count = line_count + 1
         else
-            local width = _estimate_text_width(line, BASE_TEXT_CHAR_W)
+            local width = CW.measure_text(line, "Verdana", BASE_TEXT_SIZE)
             line_count = line_count + math.max(1, math.ceil(width / max_width))
         end
     end

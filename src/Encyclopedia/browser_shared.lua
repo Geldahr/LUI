@@ -6,29 +6,33 @@
 -- and quest tabs): sizing and parsing math that must behave identically
 -- in every tab lives here; panel-specific layout stays in each file.
 
-local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Utils = _G.LUI.Utils
+local FONT_TO_LOTRO = Utils.FONT_TO_LOTRO
+import "LUI.src.UI.Widgets.style"
+import "LUI.src.Utils.text_width"
+local Style = _G.LUI.UI.Widgets.Style
 local State = _G.LUI.Settings.State
 local Encyclopedia = _G.LUI.Features.Encyclopedia
 
 local BrowserShared = {}
 Encyclopedia.BrowserShared = BrowserShared
 
--- filter dropdowns size to their longest option (estimate, same approach
--- as the card chips): byte length x char width + arrow/padding, clamped.
+-- filter dropdowns size to their longest option: measured width in the
+-- dropdown font (CONTROL_FONT_NAME, CONTROL_FONT_SIZE - 2, see the browsers'
+-- apply_fonts) at scale 1 + arrow/padding, clamped; callers scale the result.
 -- The max clamp is per-tab (quest categories run longer than item types).
-local BASE_FILTER_CHAR_W = 6.2
 local BASE_DROPDOWN_PAD = 26
 local BASE_DROPDOWN_MIN_W = 70
 
 function BrowserShared.dropdown_base_w(labels, base_max_w)
     local longest = 0
     for i = 1, #labels do
-        local n = string.len(labels[i] or "")
+        local n = Utils.measure_text_width(labels[i] or "", Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
         if n > longest then
             longest = n
         end
     end
-    local w = (longest * BASE_FILTER_CHAR_W) + BASE_DROPDOWN_PAD
+    local w = longest + 2 + BASE_DROPDOWN_PAD
     return math.min(base_max_w, math.max(BASE_DROPDOWN_MIN_W, w))
 end
 

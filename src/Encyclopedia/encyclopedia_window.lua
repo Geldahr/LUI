@@ -5,6 +5,8 @@
 local TR = _G.LUI.Locale.TR
 local SearchQuery = _G.LUI.Utils.SearchQuery
 local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local measure_text_width = _G.LUI.Utils.measure_text_width
+local cached_text_width = _G.LUI.Utils.cached_text_width
 local Defaults = _G.LUI.Settings.Defaults
 local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
 local Flags = _G.LUI.Runtime.Flags
@@ -19,6 +21,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Inventory.filter"
 import "LUI.src.Utils.font"
+import "LUI.src.Utils.text_width"
 import "LUI.src.Utils.search_query"
 
 local DATA_ACCESS = Encyclopedia.DataAccess
@@ -66,8 +69,6 @@ local BASE_CHIP_GAP_X = 4
 local BASE_CHIP_GAP_Y = 4
 local BASE_CHIP_BORDER = 1
 local BASE_CHIP_MIN_W = 52
-local BASE_CHIP_CHAR_W = 5.8
-local BASE_TAXONOMY_CHAR_W = 5.8
 local BASE_TAXONOMY_PAD_X = 5
 local BASE_RESIZE_REFRESH_DELAY = 0.10
 local BASE_RESIZE_REFLOW_MIN_INTERVAL = 0.50
@@ -641,11 +642,18 @@ local function _compare_records(left, right)
     return left.sort_name < right.sort_name
 end
 
+-- the row chips, meta texts and level filter label are all drawn in the
+-- small content font
+local function _small_font_size()
+    return Style.CONTENT_SMALL_FONT_SIZE * State.settings.global.scale
+end
+
 local function _estimate_chip_width(text)
-    local char_w = BASE_CHIP_CHAR_W * State.settings.global.scale
     local pad_x = _scaled_int(BASE_CHIP_PAD_X)
     local border_w = _scaled_int(BASE_CHIP_BORDER)
-    local text_w = math.floor((string.len(text or "") * char_w) + 0.5)
+    -- memoized: pagination lays out every filtered record's drop chips, and
+    -- the same item names repeat across many creatures; +2 for glyph edges
+    local text_w = cached_text_width(text or "", Style.CONTENT_SMALL_FONT_NAME, _small_font_size()) + 2
     local min_w = _scaled_int(BASE_CHIP_MIN_W)
     local width = text_w + (2 * (pad_x + border_w))
     if width < min_w then
@@ -654,8 +662,8 @@ local function _estimate_chip_width(text)
     return width
 end
 
-local function _estimate_text_width(text, base_char_w)
-    return math.floor((string.len(text or "") * base_char_w * State.settings.global.scale) + 0.5)
+local function _small_text_width(text)
+    return measure_text_width(text or "", Style.CONTENT_SMALL_FONT_NAME, _small_font_size()) + 2
 end
 
 local function _build_chip_layout(texts, max_width)
@@ -1018,8 +1026,8 @@ function BestiaryRow:bind(record, width)
 
     local inner_w = math.max(1, width - (2 * pad_x))
     local right_text_w = math.max(
-        _estimate_text_width(record.level_text or "", BASE_TAXONOMY_CHAR_W),
-        _estimate_text_width(record.power_text or "", BASE_TAXONOMY_CHAR_W)
+        _small_text_width(record.level_text),
+        _small_text_width(record.power_text)
     )
     local right_w = math.min(
         math.max(_scaled_int(72), math.floor((inner_w - column_gap_x) / 2)),
@@ -1972,7 +1980,7 @@ function EncyclopediaWindow:layout()
     self.pager:SetPosition(0, 0)
     self.pager:SetSize(self.page_bar:GetSize())
 
-    local level_label_w = _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
+    local level_label_w = _small_text_width(TR["Level"] .. ":") + gap
     local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)
     local level_dash_w = _scaled_int(10)
     local level_block_w = level_label_w + gap + level_input_w + gap + level_dash_w + gap + level_input_w

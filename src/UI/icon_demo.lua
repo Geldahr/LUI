@@ -18,7 +18,7 @@ local LuiButton = Widgets.LuiButton
 local LuiLabel = Widgets.LuiLabel
 local Image = Widgets.Image
 local FONT_TO_LOTRO = LUI.Utils.FONT_TO_LOTRO
-local estimate_text_width = LUI.Utils.lui_timed_row_estimate_text_width
+local measure_text_width = LUI.Utils.measure_text_width
 
 local IconDemo = {}
 UI.IconDemo = IconDemo
@@ -27,6 +27,24 @@ local WEIGHTED = {
     "dropdown_arrow", "submenu_arrow", "chevron_down", "chevron_up", "chevron_left", "chevron_right",
     "plus", "minus", "check", "search", "resize_corner", "star", "star_filled", "locate",
     "map_pin", "level", "family",
+}
+
+-- autocomplete entries: keyword, icon, hint, extra words that also match
+local KEYWORDS = {
+    { key = "loc", icon = "map_pin", hint = "Location: region or area", aliases = { "location", "area", "region", "zone" } },
+    { key = "lvl", icon = "level", hint = "Level: 50, >100, 50-60", aliases = { "level" } },
+    { key = "gen", icon = "family", hint = "Family: genus or subcategory", aliases = { "family", "genus", "type" } },
+}
+
+-- DEMO sample: the real region > area list will be baked into the bestiary
+-- pack (pre-ordered, per language)
+local SAMPLE_LOCATIONS = {
+    { region = "Bree-land", areas = { "Bree-town", "Buckland", "Chetwood", "Midgewater Marsh", "Old Forest", "South Bree-fields" } },
+    { region = "Ered Luin", areas = { "Gondamon", "Rath Teraig", "Thorin's Gate" } },
+    { region = "Evendim", areas = { "Annúminas", "Men Erain", "Tinnudir" } },
+    { region = "Lone-lands", areas = { "Agamaur", "Nain Enidh", "Ost Guruth", "Weathertop" } },
+    { region = "North Downs", areas = { "Esteldín", "Fields of Fornost", "Meluinen", "Trestlebridge" } },
+    { region = "The Shire", areas = { "Hobbiton", "Michel Delving", "Stock", "Thistle Brook" } },
 }
 
 -- keyword chips show an icon instead of "key:"
@@ -67,6 +85,8 @@ local function _label(parent, text, x, y, w, h, color, size)
     label:SetFont(_font(size or Style.CONTROL_FONT_SIZE))
     label:SetForeColor(color or Style.FOREGROUND)
     label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    -- one line: a too-narrow label must clip, never wrap
+    label:SetMultiline(false)
     label:SetText(text)
     label:SetMouseVisible(false)
     return label
@@ -130,7 +150,7 @@ local function _fit(value, area)
     return value
 end
 
-local function _build_search_bar(parent, x, y, w, size)
+local function _build_search_bar(parent, x, y, w, size, host)
     -- even height: the 1px border leaves an even inner area
     local h = _s(size.bar)
     if h % 2 ~= 0 then
@@ -253,7 +273,9 @@ local function _build_search_bar(parent, x, y, w, size)
         if icon == nil then
             value = text
         end
-        local text_w = estimate_text_width(value, Style.CONTENT_SMALL_FONT_NAME, chip_font_size)
+        -- measured advances of the font the chip label is drawn in
+        -- (_label uses CONTROL_FONT_NAME), plus 2px so antialiased edges fit
+        local text_w = measure_text_width(value, Style.CONTROL_FONT_NAME, chip_font_size) + 2
         local icon_w = icon ~= nil and CHIP_ICON_W or 0
         return icon, value, text_w, CHIP_PAD + icon_w + text_w + CHIP_CLOSE_W
     end
@@ -305,6 +327,54 @@ local function _build_search_bar(parent, x, y, w, size)
     _set_alpha_blend(popup_inner)
     popup_inner:SetBackColor(Style.PANEL_BACKGROUND)
     popup_inner:SetMouseVisible(false)
+    -- click-away catcher like LuiDropdown: an invisible control on top of
+    -- the host window's content; the lists are separate windows above it,
+    -- so only clicks outside them land here
+    local click_away = Turbine.UI.Control()
+    click_away:SetParent(host)
+    click_away:SetPosition(0, 0)
+    click_away:SetMouseVisible(true)
+    click_away:SetZOrder(9999)
+    click_away:SetVisible(false)
+    local close_lists
+
+    local function show_click_away()
+        click_away:SetSize(host:GetWidth(), host:GetHeight())
+        click_away:SetVisible(true)
+    end
+
+    -- the catcher only lives while a list is open
+    local suggest_open = false
+    local overflow_open = false
+    local pending_refresh = false
+    local refresh_suggest
+
+    -- per-frame work only while needed: a deferred list refresh, and while
+    -- a list is open, closing it once the bar is no longer on screen
+    -- (window hidden by Escape, tab switched, global UI hide...)
+    local function sync_updates()
+        bar:SetWantsUpdates(pending_refresh == true or suggest_open == true or overflow_open == true)
+    end
+    bar.Update = function()
+        if pending_refresh == true then
+            pending_refresh = false
+            refresh_suggest()
+        end
+        if (suggest_open == true or overflow_open == true) and bar:IsDisplayed() ~= true then
+            close_lists()
+        end
+        sync_updates()
+    end
+
+    local function sync_click_away()
+        if suggest_open == true or overflow_open == true then
+            show_click_away()
+        else
+            click_away:SetVisible(false)
+        end
+        sync_updates()
+    end
+
     local popup_chips = {}
     local hidden = { left = {}, right = {} }
     local refresh_popup
@@ -317,6 +387,8 @@ local function _build_search_bar(parent, x, y, w, size)
         popup_chips = {}
         popup_side = nil
         popup:SetVisible(false)
+        overflow_open = false
+        sync_click_away()
         paint_markers()
     end
 
@@ -349,6 +421,8 @@ local function _build_search_bar(parent, x, y, w, size)
         local sx, sy = marker:PointToScreen(0, CHIP_H + _s(6))
         popup:SetPosition(sx, sy)
         popup:SetVisible(true)
+        overflow_open = true
+        sync_click_away()
         paint_markers()
     end
 
@@ -465,11 +539,262 @@ local function _build_search_bar(parent, x, y, w, size)
         layout()
     end
 
+    -----------------------------------------------------------------
+    -- autocomplete: keyword, then (loc:) region, then area
+    -----------------------------------------------------------------
+    local suggest = Turbine.UI.Window()
+    UI.NativeScaling.apply_window(suggest)
+    suggest:SetVisible(false)
+    suggest:SetZOrder(3000)
+    _set_alpha_blend(suggest)
+    suggest:SetBackColor(Style.CONTROL_BORDER)
+    local suggest_inner = Turbine.UI.Control()
+    suggest_inner:SetParent(suggest)
+    suggest_inner:SetPosition(1, 1)
+    _set_alpha_blend(suggest_inner)
+    suggest_inner:SetBackColor(Style.PANEL_BACKGROUND)
+    suggest_inner:SetMouseVisible(false)
+    local suggest_rows = {}
+    local suggest_entries = {}
+    local highlight = 1
+    -- text produced by a final pick (area / whole region): no list for it
+    local completed_text = nil
+    local ROW_H = CHIP_H + _s(4)
+    local ROW_W = _s(320)
+
+    local function trim(text)
+        return (string.gsub(text, "^%s*(.-)%s*$", "%1"))
+    end
+
+    -- rebuild the list on the next frame: a pick happens inside a row click
+    -- (or the Enter TextChanged), and SetText does not reliably fire
+    -- TextChanged from there, so the list is refreshed explicitly
+    local function refresh_suggest_later()
+        pending_refresh = true
+        sync_updates()
+    end
+
+    local function set_text(value)
+        text_box:SetText(value)
+        text_box:Focus()
+        -- caret after the inserted text (index past the last character)
+        text_box:SetSelection(string.len(value) + 1, 0)
+        hint:SetVisible(false)
+        refresh_suggest_later()
+    end
+
+    local function keyword_entries(typed)
+        local out = {}
+        for _, entry in ipairs(KEYWORDS) do
+            local hit = typed == "" or string.sub(entry.key, 1, #typed) == typed
+            for _, alias in ipairs(entry.aliases) do
+                if string.sub(alias, 1, #typed) == typed then
+                    hit = true
+                end
+            end
+            if hit == true then
+                out[#out + 1] = {
+                    icon = entry.icon, text = entry.key .. ":", hint = entry.hint,
+                    apply = function() set_text(entry.key .. ":") end,
+                }
+            end
+        end
+        return out
+    end
+
+    local function region_entries(typed)
+        local out = {}
+        for _, location in ipairs(SAMPLE_LOCATIONS) do
+            if typed == "" or string.find(string.lower(location.region), typed, 1, true) ~= nil then
+                out[#out + 1] = {
+                    icon = "map_pin", text = location.region, hint = #location.areas .. " areas",
+                    apply = function() set_text("loc:" .. location.region .. " > ") end,
+                }
+            end
+        end
+        return out
+    end
+
+    local function area_entries(location, typed)
+        local out = {}
+        if typed == "" then
+            out[1] = {
+                text = "All of " .. location.region,
+                apply = function()
+                    completed_text = "loc:" .. location.region
+                    set_text(completed_text)
+                end,
+            }
+        end
+        for _, area in ipairs(location.areas) do
+            if string.lower(area) == typed then
+                return {} -- already complete
+            end
+            if typed == "" or string.find(string.lower(area), typed, 1, true) ~= nil then
+                out[#out + 1] = {
+                    text = area,
+                    apply = function()
+                        completed_text = "loc:" .. location.region .. " > " .. area
+                        set_text(completed_text)
+                    end,
+                }
+            end
+        end
+        return out
+    end
+
+    local function entries_for(text)
+        if completed_text ~= nil and text == completed_text then
+            return {}
+        end
+        local typed = string.lower(trim(text))
+        local key, rest = string.match(typed, "^(%a+):(.*)$")
+        if key == nil then
+            return keyword_entries(typed)
+        end
+        if key ~= "loc" then
+            return {}
+        end
+        local region_part, area_part = string.match(rest, "^(.-)%s*>%s*(.*)$")
+        if region_part == nil then
+            return region_entries(trim(rest))
+        end
+        for _, location in ipairs(SAMPLE_LOCATIONS) do
+            if string.lower(location.region) == trim(region_part) then
+                return area_entries(location, trim(area_part))
+            end
+        end
+        return {}
+    end
+
+    local function paint_rows()
+        for i = 1, #suggest_rows do
+            if i == highlight then
+                suggest_rows[i]:SetBackColor(Style.CONTROL_BACKGROUND_HOVER)
+            else
+                suggest_rows[i]:SetBackColor(Style.TRANSPARENT_BACKGROUND)
+            end
+        end
+    end
+
+    local function close_suggest()
+        for i = 1, #suggest_rows do
+            suggest_rows[i]:SetVisible(false)
+            suggest_rows[i]:SetParent(nil)
+        end
+        suggest_rows = {}
+        suggest_entries = {}
+        suggest:SetVisible(false)
+        suggest_open = false
+        sync_click_away()
+    end
+
+    local function open_suggest(entries)
+        close_suggest()
+        if #entries == 0 then
+            return
+        end
+        suggest_entries = entries
+        highlight = 1
+        local pad = _s(3)
+        local icon_size = _fit(_s(size.chip_icon), ROW_H)
+        for k, entry in ipairs(entries) do
+            local row = Turbine.UI.Control()
+            row:SetParent(suggest_inner)
+            row:SetPosition(pad, pad + (k - 1) * ROW_H)
+            row:SetSize(ROW_W, ROW_H)
+            _set_alpha_blend(row)
+            row:SetMouseVisible(true)
+            local tx = _s(6)
+            if entry.icon ~= nil then
+                _tinted_image(row, Icons.path(entry.icon), icon_size, tx, (ROW_H - icon_size) / 2, Style.ICON_FOREGROUND)
+            end
+            tx = tx + icon_size + _s(6)
+            local text_w = ROW_W - tx - _s(6)
+            if entry.hint ~= nil then
+                text_w = _s(150)
+                _label(row, entry.hint, tx + text_w, 0, ROW_W - tx - text_w - _s(6), ROW_H,
+                    Style.ALTERNATE_FOREGROUND, small_font)
+            end
+            _label(row, entry.text, tx, 0, text_w, ROW_H, Style.CONTROL_FOREGROUND, small_font)
+            row.MouseEnter = function()
+                highlight = k
+                paint_rows()
+            end
+            row.MouseClick = function()
+                entry.apply()
+            end
+            suggest_rows[#suggest_rows + 1] = row
+        end
+        paint_rows()
+        local inner_w = ROW_W + 2 * pad
+        local inner_h = #entries * ROW_H + 2 * pad
+        suggest_inner:SetSize(inner_w, inner_h)
+        suggest:SetSize(inner_w + 2, inner_h + 2)
+        local sx, sy = text_box:PointToScreen(0, text_box:GetHeight() + _s(6))
+        suggest:SetPosition(sx, sy)
+        suggest:SetVisible(true)
+        suggest_open = true
+        sync_click_away()
+    end
+
+    close_lists = function()
+        close_suggest()
+        close_popup()
+    end
+
+    click_away.MouseDown = function(_, args)
+        close_lists()
+        -- a click on the search bar is not "outside": keep typing there
+        local sx, sy = click_away:PointToScreen(args.X, args.Y)
+        local bx, by = bar:PointToScreen(0, 0)
+        if sx >= bx and sx < bx + w and sy >= by and sy < by + h then
+            text_box:Focus()
+        end
+    end
+
+    -- an empty field only lists keywords on request (double-click); typing
+    -- (or a pick that continues, region -> area) opens the list by itself
+    refresh_suggest = function(requested)
+        local text = text_box:GetText() or ""
+        if trim(text) == "" and requested ~= true then
+            close_suggest()
+            return
+        end
+        open_suggest(entries_for(text))
+    end
+
+    -- key actions a focused TextBox receives (measured in game)
+    local ACTION_UP = 29
+    local ACTION_DOWN = 113
+    text_box:SetWantsKeyEvents(true)
+    text_box.KeyDown = function(_, args)
+        if #suggest_entries == 0 then
+            return
+        end
+        if args.Action == ACTION_UP then
+            highlight = math.max(1, highlight - 1)
+            paint_rows()
+        elseif args.Action == ACTION_DOWN then
+            highlight = math.min(#suggest_entries, highlight + 1)
+            paint_rows()
+        end
+    end
+
     text_box.TextChanged = function()
         local text = text_box:GetText() or ""
         if string.find(text, "\n", 1, true) ~= nil then
-            local value = string.gsub(string.gsub(text, "\n", ""), "^%s*(.-)%s*$", "%1")
+            local value = trim(string.gsub(text, "\n", ""))
+            -- Enter with an open list picks the highlighted entry
+            if #suggest_entries > 0 then
+                local entry = suggest_entries[highlight]
+                text_box:SetText(value)
+                entry.apply()
+                return
+            end
             text_box:SetText("")
+            close_suggest()
+            completed_text = nil
             if value ~= "" then
                 chips[#chips + 1] = value
                 first_visible = nil
@@ -478,16 +803,26 @@ local function _build_search_bar(parent, x, y, w, size)
             return
         end
         hint:SetVisible(#chips == 0 and text == "")
+        refresh_suggest()
     end
 
     bar.MouseClick = function()
         text_box:Focus()
     end
 
+    local function open_on_request()
+        text_box:Focus()
+        refresh_suggest(true)
+    end
+    bar.MouseDoubleClick = open_on_request
+    text_box.MouseDoubleClick = open_on_request
+
     clear.Click = function()
         chips = {}
         first_visible = nil
         close_popup()
+        close_suggest()
+        completed_text = nil
         text_box:SetText("")
         layout()
     end
@@ -591,9 +926,9 @@ local function _build_content(window, content)
     y = y + _s(34)
 
     y = _section(content, y, "Token search bar prototype: click it, type, Enter adds a chip, x removes")
-    _build_search_bar(content, 0, y, W - _s(20), BAR_LARGE)
+    _build_search_bar(content, 0, y, W - _s(20), BAR_LARGE, window)
     y = y + _s(38)
-    _build_search_bar(content, 0, y, W - _s(20), BAR_COMPACT)
+    _build_search_bar(content, 0, y, W - _s(20), BAR_COMPACT, window)
     y = y + _s(31)
 
     y = _section(content, y, "Favourite star (click), bestiary current area, resize corner")
