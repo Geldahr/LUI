@@ -30,8 +30,6 @@ local Widgets = UI.Widgets
 local SearchQuery = Utils.SearchQuery
 
 local MODE_TOKENS = "tokens"
--- suggestion lists are capped: type to narrow them
-local MAX_SUGGESTIONS = 20
 
 local function _trim(text)
     return (string.gsub(text, "^%s*(.-)%s*$", "%1"))
@@ -244,13 +242,6 @@ function SearchField:_format_chip(token)
     return self._keyword_by_key[key].icon, value
 end
 
-local function _cap(items)
-    while #items > MAX_SUGGESTIONS do
-        items[#items] = nil
-    end
-    return items
-end
-
 function SearchField:_keyword_items(typed)
     local out = {}
     for _, keyword in ipairs(self._keywords) do
@@ -330,7 +321,7 @@ function SearchField:_suggestions(text)
         parent_part = _trim(parent_part)
         for _, entry in ipairs(index) do
             if string.lower(entry.name) == parent_part and entry.children ~= nil then
-                return _cap(_child_items(keyword, entry, _trim(child_part)))
+                return _child_items(keyword, entry, _trim(child_part))
             end
         end
         return {}
@@ -346,5 +337,5 @@ function SearchField:_suggestions(text)
             segment = string.lower(string.sub(text, from))
         end
     end
-    return _cap(_value_items(keyword, index, _trim(segment))), from
+    return _value_items(keyword, index, _trim(segment)), from
 end

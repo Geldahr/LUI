@@ -140,10 +140,6 @@ function LuiAction:Constructor()
     self._hint_label:SetFont(self._font)
     self._hint_label:SetVisible(false)
 
-    self.SizeChanged = function()
-        self:_layout()
-    end
-
     self.MouseEnter = function()
         if self._enabled ~= true then
             return
@@ -298,6 +294,13 @@ function LuiAction:preferred_width()
     return math.max(_scaled_int(self._scale, BASE_POPUP_MIN_W), width)
 end
 
+-- laid out here, not from SizeChanged: it does not fire reliably for a
+-- programmatic SetSize (rows inside the scrolling list kept a stale width)
+function LuiAction:SetSize(width, height)
+    Turbine.UI.Control.SetSize(self, width, height)
+    self:_layout()
+end
+
 function LuiAction:preferred_height()
     return _scaled_int(self._scale, BASE_ITEM_H)
 end
@@ -388,11 +391,14 @@ function LuiSeparator:Constructor()
     self._line:SetBackColor(Style.SUBTLE_FOREGROUND)
     _set_blend(self._line)
 
-    self.SizeChanged = function()
-        self:_layout()
-    end
-
     Turbine.UI.Control.SetSize(self, _scaled_int(self._scale, BASE_POPUP_MIN_W), self:preferred_height())
+    self:_layout()
+end
+
+-- laid out here, not from SizeChanged: it does not fire reliably for a
+-- programmatic SetSize (rows inside the scrolling list kept a stale width)
+function LuiSeparator:SetSize(width, height)
+    Turbine.UI.Control.SetSize(self, width, height)
     self:_layout()
 end
 
@@ -585,6 +591,17 @@ function LuiMenu:_sync_action_parents()
     end
 end
 
+-- many actions at once (suggestion lists): one popup layout at the end
+-- instead of one per action
+function LuiMenu:add_actions(specs)
+    self._batch_adding = true
+    for i = 1, #specs do
+        self:add_action(specs[i])
+    end
+    self._batch_adding = false
+    self:_layout_popup()
+end
+
 function LuiMenu:add_action(spec)
     if type(spec) ~= "table" then
         spec = { text = spec }
@@ -612,7 +629,9 @@ function LuiMenu:add_action(spec)
     action:set_triggered(spec.triggered or spec.action)
 
     self._items[#self._items + 1] = action
-    self:_layout_popup()
+    if self._batch_adding ~= true then
+        self:_layout_popup()
+    end
     return action
 end
 
@@ -742,6 +761,11 @@ function LuiMenu:_set_highlight_item(item_index)
     self._highlight = item_index
     if item_index ~= nil then
         self._items[item_index]:_set_highlighted(true)
+        -- scroll mode: keep the highlighted row in view (list index =
+        -- item index, every item is a list row)
+        if self._scroll_enabled == true then
+            self.popup_list:EnsureVisible(item_index)
+        end
     end
 end
 
@@ -982,8 +1006,6 @@ end
 
 function LuiMenu:_layout_popup()
     local border = self:_popup_border()
-    local width = self:_popup_width()
-    local inner_w = math.max(0, width - (2 * border))
     local item_count = #self._items
     local visible_count = item_count
     if self._scroll_enabled == true then
@@ -995,6 +1017,10 @@ function LuiMenu:_layout_popup()
     end
     local use_scroll = self._scroll_enabled == true and item_count > visible_count
     local scroll_w = use_scroll == true and BASE_SCROLL_W or 0
+    -- the scrollbar and the border widen the popup instead of narrowing
+    -- the rows below their preferred width
+    local width = self:_popup_width() + scroll_w + (2 * border)
+    local inner_w = math.max(0, width - (2 * border))
     local item_w = math.max(0, inner_w - scroll_w)
 
     self.popup:SetSize(width, inner_h + (2 * border))

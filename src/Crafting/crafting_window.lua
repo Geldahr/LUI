@@ -2241,8 +2241,9 @@ function CraftingWindow:_profession_filter_from_query_value(value)
         return FILTER_MINE, true
     end
     local labels, values = self.store:get_profession_options()
+    local key = SearchQuery.match_key(token)
     for index = 1, #values do
-        if _lower(tostring(values[index])) == token or _lower(labels[index]) == token then
+        if _lower(tostring(values[index])) == token or SearchQuery.match_key(labels[index]) == key then
             return values[index], true
         end
     end
@@ -2308,8 +2309,9 @@ function CraftingWindow:_scope_sources_from_query_value(value)
     for part in string.gmatch(normalized, "[^,]+") do
         part = _trim(part)
         local found = nil
+        local key = SearchQuery.match_key(part)
         for i = 1, #values do
-            if _lower(labels[i]) == part or _lower(tostring(values[i])) == part then
+            if SearchQuery.match_key(labels[i]) == key or _lower(tostring(values[i])) == part then
                 found = values[i]
             end
         end

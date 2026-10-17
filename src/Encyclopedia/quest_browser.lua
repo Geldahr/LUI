@@ -295,9 +295,10 @@ function QuestBrowserPanel:_compute_filters()
     local category = self._category_filter
     if tokens.cat ~= nil then
         category = nil
-        local needle = string.lower(tokens.cat)
+        -- case / article-insensitive (SearchQuery.match_key)
+        local needle = SearchQuery.match_key(tokens.cat)
         for i = 2, #self._category_labels do
-            if string.lower(self._category_labels[i]) == needle then
+            if SearchQuery.match_key(self._category_labels[i]) == needle then
                 category = self._category_values[i]
             end
         end

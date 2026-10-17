@@ -692,3 +692,29 @@ function SearchQuery.format_range(min_text, max_text)
     end
     return nil
 end
+
+-- leading articles a typed name may add or omit compared to the data
+-- ("Angle of Mitheithel" / "The Angle of Mitheithel"; fr / de as well)
+local ARTICLE_PATTERNS = {
+    "^the%s+", "^les%s+", "^le%s+", "^la%s+", "^l'%s*",
+    "^der%s+", "^die%s+", "^das%s+", "^den%s+",
+}
+
+-- name comparison key for keyword values: trimmed, lower case, one leading
+-- article dropped. Every filter compares names through it, so a typed
+-- value never misses on case or an article.
+function SearchQuery.match_key(text)
+    local key = _lower_text(_trim_text(text))
+    -- every article starts with t, l or d: one byte test for most names
+    local first = string.byte(key, 1)
+    if first ~= 116 and first ~= 108 and first ~= 100 then
+        return key
+    end
+    for i = 1, #ARTICLE_PATTERNS do
+        local stripped, count = string.gsub(key, ARTICLE_PATTERNS[i], "", 1)
+        if count > 0 then
+            return stripped
+        end
+    end
+    return key
+end

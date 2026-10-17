@@ -160,28 +160,38 @@ local function _parse_genus_token_value(value)
     return genus, subcategory, true
 end
 
-local function _record_matches_location_parts(record, parts)
-    if type(parts) ~= "table" or #parts == 0 then
+-- SearchQuery.match_key of a record field (case / article-insensitive),
+-- cached on the record
+local function _record_key(record, field)
+    local cache = record._match_keys
+    if cache == nil then
+        cache = {}
+        record._match_keys = cache
+    end
+    local key = cache[field]
+    if key == nil then
+        key = SearchQuery.match_key(record[field] or "")
+        cache[field] = key
+    end
+    return key
+end
+
+-- keys: SearchQuery.match_key of each region > area > instance part
+local function _record_matches_location_keys(record, keys)
+    if keys == nil or #keys == 0 then
         return true
     end
-    if _same_text(record.region, parts[1]) ~= true then
+    if _record_key(record, "region") ~= keys[1] then
         return false
     end
-    if #parts >= 2 and _same_text(record.area, parts[2]) ~= true then
+    if #keys >= 2 and _record_key(record, "area") ~= keys[2] then
         return false
     end
-    if #parts >= 3 and _same_text(record.instance, parts[3]) ~= true then
+    if #keys >= 3 and _record_key(record, "instance") ~= keys[3] then
         return false
     end
 
     return true
-end
-
--- /loc names can differ from the bestiary data by a leading article
--- ("Angle of Mitheithel" vs "The Angle of Mitheithel")
-local function _location_key(text)
-    local key = _lower_text(_trim_text(text))
-    return (string.gsub(key, "^the%s+", ""))
 end
 
 -- the data's own spelling of a /loc region > area > instance path, so the
@@ -193,7 +203,7 @@ local LOCATION_FIELDS = { "region", "area", "instance" }
 local function _canonical_location_parts(records, parts)
     local keys = {}
     for i = 1, #parts do
-        keys[i] = _location_key(parts[i])
+        keys[i] = SearchQuery.match_key(parts[i])
     end
     local best = nil
     local best_exact = -1
@@ -203,7 +213,7 @@ local function _canonical_location_parts(records, parts)
         local matches = true
         for i = 1, #parts do
             local name = record[LOCATION_FIELDS[i]]
-            if name == nil or _location_key(name) ~= keys[i] then
+            if name == nil or SearchQuery.match_key(name) ~= keys[i] then
                 matches = false
                 break
             end
@@ -1264,7 +1274,7 @@ function EncyclopediaWindow:Constructor()
     self.query_location_filter_valid = false
     self.query_location_parts = nil
     self.filter_chip_groups = {}
-    self._suggest_index = nil
+    self._suggest_index = {}
     self.genus_filter = FILTER_ALL
     self.subcategory_filter = FILTER_NONE
     self._suppress_genus_changed = false
@@ -1407,7 +1417,7 @@ function EncyclopediaWindow:Constructor()
             hint = TR["Location: region or area"],
             aliases = { "location", "area", "region", "zone" },
             values = function()
-                return self:_query_suggest_index().loc
+                return self:_query_suggest_index("loc")
             end,
             child_hint = TR["%d areas"],
         },
@@ -1423,7 +1433,7 @@ function EncyclopediaWindow:Constructor()
             hint = TR["Genus: genus or subcategory"],
             aliases = { "genus", "family", "type", TR["Genus"] },
             values = function()
-                return self:_query_suggest_index().gen
+                return self:_query_suggest_index("gen")
             end,
             child_hint = TR["%d subcategories"],
         },
@@ -1819,14 +1829,21 @@ function EncyclopediaWindow:_replace_keyword_chip(key, value)
     self:update_filter()
 end
 
-function EncyclopediaWindow:_query_suggest_index()
-    if self._suggest_index == nil then
-        self._suggest_index = {
-            loc = _build_path_index(self.all_records, "region", "area"),
-            gen = _build_path_index(self.all_records, "genus", "subcategory"),
-        }
+-- suggestion values of one keyword, built on its first use (typing loc:
+-- does not build gen:) and cached until the record set changes
+local SUGGEST_INDEX_FIELDS = {
+    loc = { "region", "area" },
+    gen = { "genus", "subcategory" },
+}
+
+function EncyclopediaWindow:_query_suggest_index(key)
+    local index = self._suggest_index[key]
+    if index == nil then
+        local fields = SUGGEST_INDEX_FIELDS[key]
+        index = _build_path_index(self.all_records, fields[1], fields[2])
+        self._suggest_index[key] = index
     end
-    return self._suggest_index
+    return index
 end
 
 function EncyclopediaWindow:update_filter()
@@ -1848,6 +1865,13 @@ function EncyclopediaWindow:update_filter()
     self.query_location_filter_active = state.token_map.loc ~= nil
     self.query_location_filter_valid = location_parts ~= nil
     self.query_location_parts = location_parts
+    self.query_location_keys = nil
+    if location_parts ~= nil then
+        self.query_location_keys = {}
+        for i = 1, #location_parts do
+            self.query_location_keys[i] = SearchQuery.match_key(location_parts[i])
+        end
+    end
     self:_sync_pager(1)
     self:apply_view()
 end
@@ -2377,7 +2401,7 @@ function EncyclopediaWindow:_rebuild_record_index()
         by_key[self.all_records[i].key] = i
     end
     self._record_index_by_key = by_key
-    self._suggest_index = nil
+    self._suggest_index = {}
 end
 
 function EncyclopediaWindow:_refresh_dirty_records(dirty_names)
@@ -2563,19 +2587,22 @@ function EncyclopediaWindow:apply_view()
     if self.query_level_filter_active ~= true then
         filter_level_min, filter_level_max = _read_level_filter_range(self)
     end
-    local location_parts = self.query_location_parts
+    local location_keys = self.query_location_keys
     local impossible_level_range = (self.query_level_filter_active == true and self.query_level_filter_valid ~= true) or
         (filter_level_min ~= nil and filter_level_max ~= nil and filter_level_min > filter_level_max)
     local use_query_taxonomy = self.query_genus_filter_active == true
     local genus_filter = use_query_taxonomy == true and self.query_genus_filter or self.genus_filter
     local subcategory_filter = use_query_taxonomy == true and self.query_subcategory_filter or self.subcategory_filter
+    -- typed gen: values compare case / article-insensitive
+    local genus_key = SearchQuery.match_key(genus_filter)
+    local subcategory_key = SearchQuery.match_key(subcategory_filter)
     for i = 1, #self.all_records do
         local record = self.all_records[i]
         local genus_ok = self.query_genus_filter_active ~= true or self.query_genus_filter_valid == true
         if genus_ok == true and genus_filter == FILTER_ALL then
             genus_ok = true
         elseif genus_ok == true and use_query_taxonomy == true then
-            genus_ok = _same_text(record.genus, genus_filter) == true
+            genus_ok = _record_key(record, "genus") == genus_key
         elseif genus_ok == true then
             genus_ok = record.genus == genus_filter
         end
@@ -2583,13 +2610,13 @@ function EncyclopediaWindow:apply_view()
         if subcategory_ok == true and (subcategory_filter == FILTER_NONE or subcategory_filter == FILTER_ALL) then
             subcategory_ok = true
         elseif subcategory_ok == true and use_query_taxonomy == true then
-            subcategory_ok = _same_text(record.subcategory, subcategory_filter) == true
+            subcategory_ok = _record_key(record, "subcategory") == subcategory_key
         elseif subcategory_ok == true then
             subcategory_ok = record.subcategory == subcategory_filter
         end
         local level_ok = impossible_level_range ~= true and _matches_level_range(record, filter_level_min, filter_level_max)
         local location_ok = self.query_location_filter_active ~= true or
-            (self.query_location_filter_valid == true and _record_matches_location_parts(record, location_parts))
+            (self.query_location_filter_valid == true and _record_matches_location_keys(record, location_keys))
         record._matched_drop_lookup = nil
         if genus_ok == true and subcategory_ok == true and level_ok == true and location_ok == true then
             local query_ok = true

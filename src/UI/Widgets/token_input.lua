@@ -188,6 +188,8 @@ function TokenInput:Constructor()
     self._menu = LuiMenu()
     self._menu:SetParent(self)
     self._menu:SetVisible(false)
+    -- every suggestion is listed; long lists scroll
+    self._menu:set_scroll_options({ scroll = true, max_visible = 12 })
 
     -- click-away catcher (as LuiDropdown): an invisible control over the
     -- host window's content; the lists are windows above it
@@ -792,12 +794,13 @@ function TokenInput:_open_suggest(entries, from, to)
     end
     self._suggest_from = from
     self._suggest_to = to
+    local specs = {}
     for _, entry in ipairs(entries) do
         local icon = nil
         if entry.icon ~= nil then
             icon = Icons.path(entry.icon)
         end
-        self._menu:add_action({
+        specs[#specs + 1] = {
             text = entry.text,
             hint = entry.hint,
             icon = icon,
@@ -805,8 +808,9 @@ function TokenInput:_open_suggest(entries, from, to)
             action = function()
                 self:_pick(entry, self._text_box:GetText() or "")
             end,
-        })
+        }
     end
+    self._menu:add_actions(specs)
     self._menu:open_below(self._text_box)
     self:_sync_updates()
 end

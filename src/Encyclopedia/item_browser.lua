@@ -76,11 +76,12 @@ local function _keyword_values(labels)
     return out
 end
 
--- the dropdown value whose label matches (case-insensitive); nil = unknown
+-- the dropdown value whose label matches (case / article-insensitive,
+-- SearchQuery.match_key); nil = unknown
 local function _value_for_label(labels, values, wanted)
-    local needle = string.lower(wanted)
+    local needle = SearchQuery.match_key(wanted)
     for i = 2, #labels do
-        if string.lower(labels[i]) == needle then
+        if SearchQuery.match_key(labels[i]) == needle then
             return values[i]
         end
     end
