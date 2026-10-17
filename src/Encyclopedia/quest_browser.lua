@@ -20,10 +20,10 @@ local Encyclopedia = _G.LUI.Features.Encyclopedia
 import "Turbine.UI"
 
 -- control metrics match the item browser tabs (21px controls, 4px gaps)
-local BASE_BAR_H = 21
+local BASE_BAR_H = 22
 local BASE_GAP = 4
 local BASE_NAV_W = 22
-local BASE_PAGE_BAR_H = 21
+local BASE_PAGE_BAR_H = 22
 local BASE_PAGE_W = 74
 local BASE_LEVEL_W = 44
 

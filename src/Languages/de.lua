@@ -174,6 +174,7 @@ LUI.src.Languages.de.DE = {
     ["About LUI"] = "Über LUI",
     ["Above Morale"] = "Über der Moral",
     ["After the global LUI UI scale feels right, use the other settings for micro adjustments."] = "Wenn sich die globale LUI-UI-Skalierung richtig anfühlt, nutze die anderen Einstellungen für Feinanpassungen.",
+    ["Interface icons from Lucide (lucide.dev), ISC License."] = "Oberflächensymbole von Lucide (lucide.dev), ISC-Lizenz.",
     ["All"] = "Alle",
     ["locations"] = "Orte",
     ["Genus"] = "Gattung",

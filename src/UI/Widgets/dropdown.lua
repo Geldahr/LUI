@@ -11,6 +11,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.base_window"
 
 local Widgets = _G.LUI.UI.Widgets
 local LuiButton = Widgets.LuiButton
@@ -348,8 +349,9 @@ function LuiDropdown:Open()
         local host = self._popup_host
         local overlay = Turbine.UI.Control()
         overlay:SetParent(host)
-        overlay:SetPosition(0, 0)
-        overlay:SetSize(host:GetWidth(), host:GetHeight())
+        local ox, oy, ow, oh = Widgets.popup_catcher_rect(host)
+        overlay:SetPosition(ox, oy)
+        overlay:SetSize(ow, oh)
         overlay:SetMouseVisible(true)
         overlay:SetZOrder(9999)
         overlay:SetVisible(true)
@@ -358,10 +360,11 @@ function LuiDropdown:Open()
             local cx = args ~= nil and args.X or nil
             local cy = args ~= nil and args.Y or nil
             if type(cx) == "number" and type(cy) == "number" then
-                local host_sx, host_sy = host:PointToScreen(0, 0)
+                -- click is in overlay coordinates
+                local over_sx, over_sy = overlay:PointToScreen(0, 0)
                 local popup_x, popup_y = self.popup:GetPosition()
-                local rel_x = popup_x - host_sx
-                local rel_y = popup_y - host_sy
+                local rel_x = popup_x - over_sx
+                local rel_y = popup_y - over_sy
                 local popup_w, popup_h = self.popup:GetSize()
                 if cx >= rel_x and cx <= (rel_x + popup_w) and cy >= rel_y and cy <= (rel_y + popup_h) then
                     return

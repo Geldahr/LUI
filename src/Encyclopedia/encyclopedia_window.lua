@@ -47,8 +47,8 @@ Encyclopedia.CONTENT_MARGINS = {
     right = BASE_MARGIN_RIGHT,
     bottom = BASE_MARGIN_BOTTOM,
 }
-local BASE_BAR_H = 21
-local BASE_FILTER_H = 21
+local BASE_BAR_H = 22
+local BASE_FILTER_H = 22
 local BASE_GAP = 4
 local BASE_CLEAR_W = 59
 local BASE_LEVEL_INPUT_W = 44

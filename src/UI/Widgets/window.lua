@@ -168,6 +168,8 @@ function LuiWindow:Constructor(opts)
     end
     LuiBaseWindow.Constructor(self, opts)
 
+    -- popups opened inside it use content_rect() (see LuiMenu overlay)
+    self.is_lui_window = true
     self._scale = 1
     self._icon_asset = nil
     self._icon_size = BASE_ICON
@@ -525,7 +527,36 @@ function LuiWindow:is_maximized()
     return self:get_tile() == TILE_MAXIMIZED
 end
 
+-- content area (below the title bar and divider) in window coordinates:
+-- in-content popups (menus, lists) cover only this, so the title bar stays
+-- usable while they are open
+function LuiWindow:content_rect()
+    local width, height = self:GetSize()
+    local border = self:_border()
+    local top = border + _scaled_int(self._scale, BASE_TITLE_BAR_H) + self:_divider_h()
+    return border, top, math.max(0, width - (2 * border)), math.max(0, height - top - border)
+end
+
+-- menu / dropdown / picker popups are separate windows fixed on screen:
+-- close them when this window hides, starts moving, resizing or changes
+-- maximize state
+function LuiWindow:_close_open_menu()
+    if LuiMenu._active_root ~= nil then
+        LuiMenu._active_root:close()
+    end
+    if Widgets.LuiDropdown._active ~= nil then
+        Widgets.LuiDropdown._active:Close()
+    end
+    if Widgets.LuiCheckDropdown._active ~= nil then
+        Widgets.LuiCheckDropdown._active:Close()
+    end
+    if Widgets.LuiColorField._active ~= nil then
+        Widgets.LuiColorField._active:_close_picker(true)
+    end
+end
+
 function LuiWindow:toggle_maximized()
+    self:_close_open_menu()
     if self:is_maximized() == true then
         self:restore()
     else
@@ -727,8 +758,8 @@ function LuiWindow:request_close()
 end
 
 function LuiWindow:SetVisible(visible)
-    if visible ~= true and LuiMenu._active_root ~= nil then
-        LuiMenu._active_root:close()
+    if visible ~= true then
+        self:_close_open_menu()
     end
     LuiBaseWindow.SetVisible(self, visible)
 end
@@ -795,6 +826,7 @@ function LuiWindow:_start_drag(args)
         return
     end
 
+    self:_close_open_menu()
     self._dragging = true
     self._drag_start_screen_x, self._drag_start_screen_y = self._title_bar:PointToScreen(
         args ~= nil and args.X or 0,
@@ -1065,6 +1097,7 @@ function LuiWindow:_start_resize(region, args)
     end
 
     self:_stop_drag()
+    self:_close_open_menu()
     self._resizing = true
     self._resize_mask = region._resize_mask or 0
     self._resize_start_screen_x, self._resize_start_screen_y = region:PointToScreen(

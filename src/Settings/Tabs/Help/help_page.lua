@@ -25,7 +25,7 @@ local HELP_PAGE_FONT_SIZE_OFFSET = 3
 local GITHUB_URL = "https://github.com/Geldahr/LUI"
 local GITHUB_LABEL_TEXT =
     TR["For more information, feature requests, or bug reports, please visit the GitHub repository:"]
-local ABOUT_HEIGHT = 156
+local ABOUT_HEIGHT = 188
 local GITHUB_HEIGHT = 59
 local FEATURES_HEIGHT = 620
 local INTERACTIONS_HEIGHT = 980
@@ -142,6 +142,8 @@ local function _new_about_section(window)
         TR["For the best experience, set the global LUI UI scale before changing individual sizes."],
         TR["Recommended starting points: 1080p = 1.0, 1440p = 1.3 to 1.4, 2160p / 4k = 2.0."],
         TR["After the global LUI UI scale feels right, use the other settings for micro adjustments."],
+        "",
+        TR["Interface icons from Lucide (lucide.dev), ISC License."],
     }, "\n")
 
     _create_help_text(page, "help_about", about_text, ABOUT_HEIGHT)

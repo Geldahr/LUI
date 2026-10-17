@@ -12,6 +12,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.Utils.color"
 
 local Widgets = _G.LUI.UI.Widgets
@@ -349,8 +350,9 @@ function LuiColorField:open_picker()
 
     local overlay = Turbine.UI.Control()
     overlay:SetParent(host)
-    overlay:SetPosition(0, 0)
-    overlay:SetSize(host:GetWidth(), host:GetHeight())
+    local ox, oy, ow, oh = Widgets.popup_catcher_rect(host)
+    overlay:SetPosition(ox, oy)
+    overlay:SetSize(ow, oh)
     overlay:SetMouseVisible(true)
     overlay:SetZOrder(9999)
     overlay:SetVisible(true)
@@ -389,19 +391,20 @@ function LuiColorField:open_picker()
     border:SetSize(panel_w, panel_h)
     inner:SetSize(panel_w - 2, panel_h - 2)
 
+    -- the panel is a child of the overlay: position in overlay coordinates
     local host_sx, host_sy = host:PointToScreen(0, 0)
     local sw_sx, sw_sy = self.swatch_border:PointToScreen(0, 0)
-    local rel_x = sw_sx - host_sx
-    local rel_y = sw_sy - host_sy
+    local rel_x = sw_sx - host_sx - ox
+    local rel_y = sw_sy - host_sy - oy
 
     local px = rel_x + self.swatch_border:GetWidth() + _scaled_int(self._scale, BASE_PICKER_OFFSET)
     local py = rel_y
 
-    if px + panel_w > host:GetWidth() then
+    if px + panel_w > ow then
         px = rel_x - panel_w - _scaled_int(self._scale, BASE_PICKER_OFFSET)
     end
-    if py + panel_h > host:GetHeight() then
-        py = host:GetHeight() - panel_h - _scaled_int(self._scale, BASE_PICKER_OFFSET)
+    if py + panel_h > oh then
+        py = oh - panel_h - _scaled_int(self._scale, BASE_PICKER_OFFSET)
     end
     if px < 0 then px = 0 end
     if py < 0 then py = 0 end

@@ -23,13 +23,13 @@ import "Turbine.UI"
 import "LUI.src.UI.Widgets.item_icon"
 
 -- control metrics match the bestiary filter bar (21px controls, 4px gaps)
-local BASE_BAR_H = 21
+local BASE_BAR_H = 22
 -- native item art is 32px and must never be scaled (stretch mode 0 tiles)
 local BASE_ICON_SIDE = 32
 local BASE_GAP = 4
 -- page bar matches the bestiary tab exactly (22x21 square nav buttons)
 local BASE_NAV_W = 22
-local BASE_PAGE_BAR_H = 21
+local BASE_PAGE_BAR_H = 22
 local BASE_PAGE_W = 74
 local BASE_LEVEL_W = 44
 

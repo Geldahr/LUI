@@ -16,6 +16,7 @@ import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 import "LUI.src.UI.Widgets.icons"
+import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.text_width"
 
@@ -38,6 +39,7 @@ local BASE_POPUP_PAD_X = 6
 local BASE_MARK_W = 20
 local BASE_ARROW_W = 16
 local BASE_ARROW_ICON = 10
+local BASE_HINT_GAP = 12
 local BASE_OPEN_GAP = 1
 local BASE_EDGE_PAD = 4
 local BASE_ICON_SIZE = 16
@@ -81,10 +83,13 @@ Widgets.LuiAction = LuiAction
 function LuiAction:Constructor()
     Turbine.UI.Control.Constructor(self)
 
+    self._is_action = true
     self._scale = 1
     self._text = ""
     self._callback = nil
     self._icon_asset = nil
+    -- white UI icon (Widgets.Icons) tinted with the ICON_* colors per state
+    self._icon_tinted = false
     self._checkable = false
     self._checked = false
     self._enabled = true
@@ -92,6 +97,9 @@ function LuiAction:Constructor()
     self._submenu_open = false
     self._owner_menu = nil
     self._submenu = nil
+    self._hint = nil
+    -- keyboard / hover highlight, set by the owning menu
+    self._highlighted = false
     self._font = _scaled_font(self._scale)
 
     self:SetMouseVisible(true)
@@ -121,6 +129,16 @@ function LuiAction:Constructor()
     self._arrow:SetParent(self)
     self._arrow:SetMouseVisible(false)
     self._arrow:SetVisible(false)
+
+    -- optional dim text on the right (e.g. autocomplete descriptions)
+    self._hint_label = LuiLabel()
+    self._hint_label:SetParent(self)
+    self._hint_label:SetMouseVisible(false)
+    self._hint_label:SetSelectable(false)
+    self._hint_label:SetMultiline(false)
+    self._hint_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self._hint_label:SetFont(self._font)
+    self._hint_label:SetVisible(false)
 
     self.SizeChanged = function()
         self:_layout()
@@ -177,6 +195,7 @@ function LuiAction:set_scale(scale)
     self._font = _scaled_font(self._scale)
     self._checkbox:set_scale(self._scale)
     self._label:SetFont(self._font)
+    self._hint_label:SetFont(self._font)
     self:_layout()
     self:_update_visual_state()
 end
@@ -187,6 +206,7 @@ function LuiAction:set_font(font)
     end
     self._font = font
     self._label:SetFont(font)
+    self._hint_label:SetFont(font)
 end
 
 function LuiAction:set_text(text)
@@ -198,9 +218,23 @@ function LuiAction:set_title(title)
     self:set_text(title)
 end
 
-function LuiAction:set_icon(icon)
-    self._icon_asset = icon
+function LuiAction:set_hint(text)
+    self._hint = text
+    self._hint_label:SetText(text or "")
+    self._hint_label:SetVisible(text ~= nil)
     self:_layout()
+end
+
+function LuiAction:_set_highlighted(highlighted)
+    self._highlighted = highlighted == true
+    self:_update_visual_state()
+end
+
+function LuiAction:set_icon(icon, tinted)
+    self._icon_asset = icon
+    self._icon_tinted = tinted == true
+    self:_layout()
+    self:_update_visual_state()
 end
 
 function LuiAction:set_checkable(checkable)
@@ -258,6 +292,9 @@ end
 function LuiAction:preferred_width()
     local width = _scaled_int(self._scale, (BASE_POPUP_PAD_X * 2) + BASE_MARK_W + BASE_ARROW_W)
     width = width + _text_width(self._font, self._text)
+    if self._hint ~= nil then
+        width = width + _scaled_int(self._scale, BASE_HINT_GAP) + _text_width(self._font, self._hint)
+    end
     return math.max(_scaled_int(self._scale, BASE_POPUP_MIN_W), width)
 end
 
@@ -287,6 +324,13 @@ function LuiAction:_layout()
         self._icon:SetVisible(false)
     end
 
+    if self._hint ~= nil then
+        local hint_w = _text_width(self._font, self._hint)
+        local hint_x = math.max(label_x, width - arrow_w - pad - hint_w)
+        self._hint_label:SetPosition(hint_x, 0)
+        self._hint_label:SetSize(hint_w, height)
+        label_w = math.max(0, hint_x - _scaled_int(self._scale, BASE_HINT_GAP) - label_x)
+    end
     self._label:SetPosition(label_x, 0)
     self._label:SetSize(label_w, height)
 
@@ -308,7 +352,7 @@ function LuiAction:_update_visual_state()
         back = Style.CONTROL_BACKGROUND_DISABLED
         text = Style.CONTROL_FOREGROUND_DISABLED
         icon = Style.ICON_FOREGROUND_DISABLED
-    elseif self._hover == true or self._submenu_open == true then
+    elseif self._hover == true or self._highlighted == true or self._submenu_open == true then
         back = Style.CONTROL_BACKGROUND_HOVER
         text = Style.CONTROL_FOREGROUND_HOVER
         icon = Style.ICON_FOREGROUND_HOVER
@@ -316,7 +360,11 @@ function LuiAction:_update_visual_state()
 
     self:SetBackColor(back)
     self._label:SetForeColor(text)
+    self._hint_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
     self._arrow:set_tint(icon)
+    if self._icon_tinted == true then
+        self._icon:set_tint(icon)
+    end
     self._checkbox:SetChecked(self._checkable == true and self._checked == true)
 end
 
@@ -398,6 +446,11 @@ function LuiMenu:Constructor()
     self._scroll_options = nil
     self._context_x = nil
     self._context_y = nil
+    self._in_menu_bar = false
+    -- control the popup opens under (open_below)
+    self._anchor = nil
+    -- index in _items of the highlighted action (keyboard / hover)
+    self._highlight = nil
 
     self.button = LuiButton()
     self.button:SetParent(self)
@@ -549,10 +602,13 @@ function LuiMenu:add_action(spec)
     action:set_text(spec.text or spec.title)
     action:set_checkable(spec.checkable == true)
     if spec.checkable ~= true then
-        action:set_icon(spec.icon)
+        action:set_icon(spec.icon, spec.icon_tinted)
     end
     action:set_checked(spec.checked == true)
     action:set_enabled(spec.enabled ~= false)
+    if spec.hint ~= nil then
+        action:set_hint(spec.hint)
+    end
     action:set_triggered(spec.triggered or spec.action)
 
     self._items[#self._items + 1] = action
@@ -601,6 +657,7 @@ function LuiMenu:clear_items()
         end
     end
     self._items = {}
+    self._highlight = nil
     self:_layout_popup()
 end
 
@@ -646,6 +703,76 @@ function LuiMenu:open()
     end
 end
 
+-- Open under `control` (any control inside the host window), without taking
+-- the keyboard focus: the control keeps receiving key input (autocomplete).
+-- Dismissal uses the host-window overlay. The first action is highlighted.
+function LuiMenu:open_below(control)
+    self._anchor = control
+    self:open()
+    if self:is_open() ~= true then
+        self._anchor = nil
+        return
+    end
+    self:set_highlight(1)
+end
+
+local function _is_action(item)
+    return item._is_action == true and item._enabled == true
+end
+
+-- highlight the index-th selectable action (1-based among actions)
+function LuiMenu:set_highlight(index)
+    local count = 0
+    local target = nil
+    for i = 1, #self._items do
+        if _is_action(self._items[i]) then
+            count = count + 1
+            if count == index then
+                target = i
+            end
+        end
+    end
+    self:_set_highlight_item(target)
+end
+
+function LuiMenu:_set_highlight_item(item_index)
+    if self._highlight ~= nil and self._items[self._highlight] ~= nil then
+        self._items[self._highlight]:_set_highlighted(false)
+    end
+    self._highlight = item_index
+    if item_index ~= nil then
+        self._items[item_index]:_set_highlighted(true)
+    end
+end
+
+-- move the highlight by delta selectable actions, clamped
+function LuiMenu:move_highlight(delta)
+    local actions = {}
+    local current = 0
+    for i = 1, #self._items do
+        if _is_action(self._items[i]) then
+            actions[#actions + 1] = i
+            if i == self._highlight then
+                current = #actions
+            end
+        end
+    end
+    if #actions == 0 then
+        return
+    end
+    local target = math.max(1, math.min(#actions, current + delta))
+    self:_set_highlight_item(actions[target])
+end
+
+-- run the highlighted action; false when nothing is highlighted
+function LuiMenu:trigger_highlight()
+    if self._highlight == nil then
+        return false
+    end
+    self._items[self._highlight]:trigger()
+    return true
+end
+
 -- Open as a standalone context menu at a screen point: no menu bar, no
 -- sibling hover chaining; the popup anchors to the given point instead of
 -- the menu button.
@@ -667,6 +794,7 @@ end
 function LuiMenu:close()
     self._context_x = nil
     self._context_y = nil
+    self._anchor = nil
     if self._popup_overlay ~= nil then
         self._popup_overlay:SetVisible(false)
         self._popup_overlay = nil
@@ -782,8 +910,16 @@ function LuiMenu:_open_host_overlay()
 
     local overlay = Turbine.UI.Control()
     overlay:SetParent(host)
-    overlay:SetPosition(0, 0)
-    overlay:SetSize(host:GetWidth(), host:GetHeight())
+    if self._in_menu_bar ~= true then
+        -- in-content menus leave the title bar usable (close, maximize,
+        -- drag); LuiWindow closes the menu when it moves or resizes
+        local x, y, w, h = Widgets.popup_catcher_rect(host)
+        overlay:SetPosition(x, y)
+        overlay:SetSize(w, h)
+    else
+        overlay:SetPosition(0, 0)
+        overlay:SetSize(host:GetWidth(), host:GetHeight())
+    end
     overlay:SetMouseVisible(true)
     overlay:SetZOrder(9999)
     overlay:SetVisible(true)
@@ -815,6 +951,12 @@ function LuiMenu:_set_open_child(child)
 end
 
 function LuiMenu:_action_hovered(action)
+    -- hover and keyboard share one highlight
+    for i = 1, #self._items do
+        if self._items[i] == action then
+            self:_set_highlight_item(i)
+        end
+    end
     if action._submenu ~= nil then
         action._submenu:open()
         return
@@ -886,6 +1028,8 @@ function LuiMenu:_position_popup()
 
     if self._context_x ~= nil then
         x, y = self._context_x, self._context_y
+    elseif self._anchor ~= nil then
+        x, y = self._anchor:PointToScreen(0, self._anchor:GetHeight() + gap)
     elseif self._parent_action ~= nil then
         x, y = self._parent_action:PointToScreen(self._parent_action:GetWidth(), 0)
     else
@@ -964,6 +1108,9 @@ function LuiMenuBar:add_menu(title_or_menu, options)
     end
 
     menu:SetParent(self)
+    -- menu-bar menus cover the whole host window (title bar included) so
+    -- hovering across the bar switches menus
+    menu._in_menu_bar = true
     if type(title_or_menu) ~= "table" then
         menu:set_scroll_options(options)
     end
