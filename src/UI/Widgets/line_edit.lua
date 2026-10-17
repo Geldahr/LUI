@@ -226,8 +226,11 @@ function LuiLineEdit:_layout()
     end
 
     -- the plain TextBox draws text at its edges: inset the box itself on
-    -- both sides (centred text stays centred), the placeholder matches
+    -- both sides (centred text stays centred), the placeholder matches;
+    -- narrow fields (pager page box) shrink the inset so the text keeps
+    -- room (at most 1/8 of the width per side)
     local inset_x = math.floor(((DEFAULT_INSET_X + PLACEHOLDER_CURSOR_GAP) * self._scale) + 0.5)
+    inset_x = math.min(inset_x, math.floor(text_w / 8))
     self.text_box:SetPosition(inset_x, 0)
     self.text_box:SetSize(math.max(0, text_w - (inset_x * 2)), inner_h)
 
