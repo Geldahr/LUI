@@ -1150,7 +1150,7 @@ function CraftingWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Crafting"])
-    self:set_icon(UI.AssetIds.anvil_silver_glow)
+    UI.Shortcuts.apply_window_icon(self, "craft")
     self:set_resizable(true)
     self:hide()
     self:SetWantsUpdates(false)
@@ -1170,7 +1170,7 @@ function CraftingWindow:Constructor()
         error("Crafting window requires enabled crafting store")
     end
     self._last_store_version = tonumber(self.store ~= nil and self.store.version or nil) or 0
-    self.search_groups = {}
+    self.search_chip_groups = {}
     self.search_query_state = SearchQuery.parse("", CRAFTING_QUERY_TOKENS)
     self.scope_source_keys = self.store:get_default_source_keys()
     self.scope_key = self.store:scope_key_from_sources(self.scope_source_keys)
@@ -1207,7 +1207,10 @@ function CraftingWindow:Constructor()
     self.plan_variants = {}
     self._plan_dirty = false
     self._plan_user_changed = false
-    self._suppress_search_text_changed = false
+    self._search_mode_applied = false
+    self._scope_before_query = nil
+    self.query_scope_filter_active = false
+    self.query_scope_filter_valid = false
     self._recipe_list_signature = nil
     self._recipe_list_loaded_count = 0
     self._recipe_list_loading = false
@@ -1227,19 +1230,23 @@ function CraftingWindow:Constructor()
     self.top_bar = Turbine.UI.Control()
     self.top_bar:SetParent(content_host)
 
-    self.search_box = UI.Widgets.LineEdit()
-    self.search_box:SetParent(self.top_bar)
-    self.search_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.search_box:set_placeholder_text(TR["Search..."])
-    self.search_box:set_clearable(true)
-    self.search_box.TextChanged = function()
-        if self._suppress_search_text_changed == true then
-            return
-        end
+    -- Classic text or Tokens chips (crafting.search_mode)
+    self.search_field = UI.Widgets.SearchField()
+    self.search_field:SetParent(self.top_bar)
+    self.search_field:set_popup_host(self)
+    self.search_field:set_placeholder(TR["Search..."])
+    self.search_field:set_keywords(self:_query_keywords())
+    self.search_field.QueryChanged = function()
+        local scope_key = self.scope_key
         self:_sync_search_query_state()
         self:_sync_recipe_pager(1)
         self:_invalidate_recipe_list()
         self:refresh_recipe_list()
+        -- a mat: chip changed the material sources
+        if self.scope_key ~= scope_key then
+            self:refresh_selected_recipe()
+            self:refresh_plan()
+        end
     end
 
     self.favorite_filter_button = UI.Widgets.LuiButton()
@@ -2230,6 +2237,9 @@ function CraftingWindow:_profession_filter_from_query_value(value)
     if token == "all" then
         return FILTER_ALL, true
     end
+    if token == "mine" or token == "my" then
+        return FILTER_MINE, true
+    end
     local labels, values = self.store:get_profession_options()
     for index = 1, #values do
         if _lower(tostring(values[index])) == token or _lower(labels[index]) == token then
@@ -2240,11 +2250,105 @@ function CraftingWindow:_profession_filter_from_query_value(value)
     return FILTER_ALL, false
 end
 
+-- Tokens-mode keywords; each replaces one filter field (the favourite star
+-- stays a button in both modes, fav: keeps working as typed text)
+function CraftingWindow:_query_keywords()
+    local function profession_values()
+        local labels, values = self.store:get_profession_options()
+        local out = { { name = "mine" } }
+        for i = 1, #values do
+            if values[i] ~= FILTER_ALL and values[i] ~= FILTER_MINE then
+                out[#out + 1] = { name = labels[i] }
+            end
+        end
+        return out
+    end
+    local function rank_values()
+        local out = { { name = "mine" } }
+        for tier = 1, #CRAFT_RANKS do
+            out[#out + 1] = { name = _craft_rank_name(tier) }
+        end
+        return out
+    end
+    local availability_values = {
+        { name = TR["Craftable"] }, { name = TR["Known"] }, { name = TR["Not known"] },
+    }
+    local function source_values()
+        local labels = self.store:get_source_options()
+        local out = {}
+        for i = 1, #labels do
+            out[#out + 1] = { name = labels[i] }
+        end
+        return out
+    end
+    return {
+        { key = "prof", icon = "hammer", hint = TR["Profession"], aliases = { "profession", TR["Profession"] },
+            values = profession_values },
+        { key = "rank", icon = "award", hint = TR["Rank"], aliases = { TR["Rank"] }, values = rank_values },
+        { key = "avail", icon = "package_check", hint = TR["Show"], aliases = { "available", "show", TR["Show"] },
+            values = function()
+                return availability_values
+            end, multi = true },
+        { key = "mat", icon = "boxes", hint = TR["Materials"], aliases = { "materials", TR["Materials"] },
+            values = source_values, multi = true },
+        { key = "lvl", icon = "level", hint = TR["Level: 50, >100, 50-60"], aliases = { "level", TR["Equip lvl"] } },
+        { key = "fav", icon = "star_filled", hint = TR["Favorites: true or false"], aliases = { "favorite" } },
+    }
+end
+
+-- mat: chip value -> material source keys ("all" or a comma list of source
+-- labels / keys); nil when a part is unknown
+function CraftingWindow:_scope_sources_from_query_value(value)
+    local labels, values = self.store:get_source_options()
+    local normalized = _lower(_trim(value))
+    if normalized == "all" or normalized == _lower(TR["All"]) then
+        return self.store:get_all_source_keys()
+    end
+    local keys = {}
+    for part in string.gmatch(normalized, "[^,]+") do
+        part = _trim(part)
+        local found = nil
+        for i = 1, #values do
+            if _lower(labels[i]) == part or _lower(tostring(values[i])) == part then
+                found = values[i]
+            end
+        end
+        if found == nil then
+            return nil
+        end
+        keys[#keys + 1] = found
+    end
+    return keys
+end
+
+-- a valid mat: chip sets the material sources; removing it restores the
+-- sources picked before
+function CraftingWindow:_apply_scope_query(state)
+    local value = state.token_map.mat
+    self.query_scope_filter_active = value ~= nil
+    self.query_scope_filter_valid = false
+    if value ~= nil then
+        local keys = self:_scope_sources_from_query_value(value)
+        if keys ~= nil then
+            self.query_scope_filter_valid = true
+            if self._scope_before_query == nil then
+                self._scope_before_query = self.scope_source_keys
+            end
+            self:set_scope_sources(keys, false)
+        end
+    elseif self._scope_before_query ~= nil then
+        self:set_scope_sources(self._scope_before_query, false)
+        self._scope_before_query = nil
+    end
+end
+
 function CraftingWindow:_sync_search_query_state()
-    local state = SearchQuery.parse(self.search_box:GetText(), CRAFTING_QUERY_TOKENS)
+    local state = self.search_field:get_query_state()
     local level_filter = SearchQuery.read_level_filter(state, "lvl")
     self.search_query_state = state
-    self.search_groups = state.normalized_groups
+    -- AND across chips (Classic is one chip)
+    self.search_chip_groups = state.chip_groups
+    self:_apply_scope_query(state)
     self.query_profession_filter_active = state.token_map.prof ~= nil
     self.query_rank_filter_active = state.token_map.rank ~= nil
     self.query_availability_filter_active = state.token_map.avail ~= nil
@@ -2360,11 +2464,102 @@ function CraftingWindow:_refresh_plan_dirty_state()
 end
 
 function CraftingWindow:_apply_search_query(text)
-    local query_text = _safe_string(text, "")
-    self._suppress_search_text_changed = true
-    self.search_box:SetText(query_text)
-    self._suppress_search_text_changed = false
+    self.search_field:set_query(_safe_string(text, ""))
     self:_sync_search_query_state()
+end
+
+-- the filter row; Tokens mode hides it (keyword chips replace the fields)
+function CraftingWindow:_field_controls()
+    return {
+        self.profession_label, self.profession_dropdown, self.rank_label, self.rank_dropdown,
+        self.scope_label, self.scope_dropdown, self.availability_label, self.availability_dropdown,
+        self.level_label, self.level_min_box, self.level_dash_label, self.level_max_box,
+    }
+end
+
+-- crafting.search_mode. Entering Tokens mode (also when the window starts
+-- in it) turns the field values into chips (prof:mine / rank:mine for the
+-- defaults) and sets the hidden fields to All, so they never filter unseen
+function CraftingWindow:_apply_search_mode(mode)
+    local switched = self.search_field:set_mode(mode)
+    local entering = switched == true or self._search_mode_applied ~= true
+    self._search_mode_applied = true
+    local tokens = self.search_field:is_tokens()
+    for _, control in ipairs(self:_field_controls()) do
+        control:SetVisible(tokens ~= true)
+    end
+    if tokens == true then
+        self.profession_dropdown:Close()
+        self.rank_dropdown:Close()
+        self.scope_dropdown:Close()
+        self.availability_dropdown:Close()
+        if entering == true then
+            self:_fields_to_chips()
+        end
+    end
+    return entering
+end
+
+function CraftingWindow:_fields_to_chips()
+    local field = self.search_field
+    local function add(key, value)
+        if value ~= nil and field:has_keyword(key) ~= true then
+            field:replace_keyword(key, value)
+        end
+    end
+    if self.profession_filter == FILTER_MINE then
+        add("prof", "mine")
+    elseif self.profession_filter ~= FILTER_ALL then
+        local labels, values = self.store:get_profession_options()
+        for i = 1, #values do
+            if values[i] == self.profession_filter then
+                add("prof", labels[i])
+            end
+        end
+    end
+    if self.rank_filter == RANK_MINE then
+        add("rank", "mine")
+    elseif self.rank_filter ~= FILTER_ALL then
+        add("rank", _craft_rank_name(self.rank_filter))
+    end
+    local shown = {}
+    if self.show_filter[AVAILABILITY_READY] == true then
+        shown[#shown + 1] = TR["Craftable"]
+    end
+    if self.show_filter[AVAILABILITY_KNOWN] == true then
+        shown[#shown + 1] = TR["Known"]
+    end
+    if self.show_filter[AVAILABILITY_UNLEARNED] == true then
+        shown[#shown + 1] = TR["Not known"]
+    end
+    if #shown > 0 then
+        add("avail", table.concat(shown, ","))
+    end
+    add("lvl", SearchQuery.format_range(self.level_min_box:GetText() or "", self.level_max_box:GetText() or ""))
+    if self.store:scope_key_from_sources(self.scope_source_keys)
+        ~= self.store:scope_key_from_sources(self.store:get_default_source_keys()) then
+        local labels, values = self.store:get_source_options()
+        local picked = {}
+        for i = 1, #values do
+            for k = 1, #self.scope_source_keys do
+                if self.scope_source_keys[k] == values[i] then
+                    picked[#picked + 1] = labels[i]
+                end
+            end
+        end
+        add("mat", table.concat(picked, ","))
+    end
+
+    self.profession_filter = FILTER_ALL
+    self.rank_filter = FILTER_ALL
+    self.show_filter = {}
+    self.level_min_filter = nil
+    self.level_max_filter = nil
+    self.profession_dropdown:SetValue(FILTER_ALL)
+    self.rank_dropdown:SetValue(FILTER_ALL)
+    self.availability_dropdown:SetSelectedValues({}, false)
+    self.level_min_box:SetText("")
+    self.level_max_box:SetText("")
 end
 
 function CraftingWindow:_scope_source_summary(selected_values)
@@ -2548,6 +2743,16 @@ function CraftingWindow:open_from_asset_materials(material_keyword)
     -- consuming the filtered materials
     self:_apply_search_query(material_keyword)
     self:_invalidate_recipe_list()
+    if self.search_field:is_tokens() == true then
+        -- Tokens mode has no fields: the opening filters become chips
+        self.search_field:replace_keyword("prof", nil)
+        self.search_field:replace_keyword("rank", nil)
+        self.search_field:replace_keyword("avail", TR["Craftable"] .. "," .. TR["Known"])
+        self.search_field:replace_keyword("mat", "all")
+        self.search_field:replace_keyword("lvl", nil)
+        self.show_filter = {}
+        self:_sync_search_query_state()
+    end
 
     if self.profession_dropdown ~= nil then
         self.profession_dropdown:SetValue(self.profession_filter)
@@ -2570,9 +2775,6 @@ function CraftingWindow:open_from_asset_materials(material_keyword)
 
     self:open()
     self:show_recipe_tab()
-    -- text set while the window was hidden does not repaint until the box
-    -- is interacted with (same workaround as open_item_search)
-    self.search_box:refresh_text_async()
 end
 
 -- Cross-window link entry (Encyclopedia rows, bestiary card drops): open on
@@ -2609,7 +2811,6 @@ function CraftingWindow:open_item_search(item_name, select_recipe_id)
         end
     end
     self:_apply_search_query(query)
-    self.search_box:refresh_text_async()
 
     self.profession_dropdown:SetValue(self.profession_filter)
     self.rank_dropdown:SetValue(self.rank_filter)
@@ -2675,8 +2876,13 @@ function CraftingWindow:apply_settings()
     self:set_minimum_size(self:_minimum_window_size())
     self:_enforce_min_size()
 
-    self.search_box:set_scale(State.settings.global.scale)
-    self.search_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    self.search_field:set_scale(State.settings.global.scale)
+    self.search_field:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
+    if self:_apply_search_mode(State.settings.crafting.search_mode) == true then
+        self:_sync_search_query_state()
+        self:_sync_recipe_pager(1)
+        self:_invalidate_recipe_list()
+    end
     self.favorite_filter_button:set_scale(1)
     self.scope_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.scope_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
@@ -2928,6 +3134,9 @@ function CraftingWindow:_recipe_matches_filters(recipe)
     if self.query_level_filter_active == true and self.query_level_filter_valid ~= true then
         return false
     end
+    if self.query_scope_filter_active == true and self.query_scope_filter_valid ~= true then
+        return false
+    end
 
     local profession_filter = self.query_profession_filter_active == true and
         self.query_profession_filter or self.profession_filter
@@ -2950,8 +3159,10 @@ function CraftingWindow:_recipe_matches_filters(recipe)
     elseif required_rank ~= FILTER_ALL and tonumber(recipe.tier) ~= required_rank then
         return false
     end
-    if self.store:recipe_matches_query(recipe, self.search_groups) ~= true then
-        return false
+    for ci = 1, #self.search_chip_groups do
+        if self.store:recipe_matches_query(recipe, self.search_chip_groups[ci]) ~= true then
+            return false
+        end
     end
     local require_favorite = self.favorite_filter_active
     if self.query_favorite_filter_explicit == true then
@@ -3031,7 +3242,7 @@ function CraftingWindow:_recipe_filter_signature()
         self.favorite_filter_active == true and "favorites" or "",
         _safe_string(self.level_min_filter, ""),
         _safe_string(self.level_max_filter, ""),
-        _safe_string(self.search_box ~= nil and self.search_box:GetText() or "", ""),
+        self.search_field:get_query_text(),
     }, "\30")
 end
 
@@ -4108,7 +4319,11 @@ function CraftingWindow:layout()
         right_w = width - margin_left - margin_right - gap - left_w
     end
     local top_row_h = math.max(bar_h, favorite_filter_w)
+    -- Tokens mode hides the filter row under the search row
     local top_bar_h = top_row_h + gap + bar_h
+    if self.search_field:is_tokens() == true then
+        top_bar_h = top_row_h
+    end
     local content_top = margin_top + top_bar_h + gap
     local content_bottom_gap = loading_panel_h > 0 and gap or 0
     local content_h = height - content_top - margin_bottom - loading_panel_h - content_bottom_gap
@@ -4135,8 +4350,8 @@ function CraftingWindow:layout()
 
     local top_control_y = math.max(0, math.floor((top_row_h - bar_h) / 2))
     local favorite_filter_y = math.max(0, math.floor((top_row_h - favorite_filter_w) / 2))
-    self.search_box:SetPosition(0, top_control_y)
-    self.search_box:SetSize(self.top_bar:GetWidth() - favorite_filter_w - gap, bar_h)
+    self.search_field:SetPosition(0, top_control_y)
+    self.search_field:SetSize(self.top_bar:GetWidth() - favorite_filter_w - gap, bar_h)
     self.favorite_filter_button:SetPosition(self.top_bar:GetWidth() - favorite_filter_w, favorite_filter_y)
     self.favorite_filter_button:SetSize(favorite_filter_w, favorite_filter_w)
 

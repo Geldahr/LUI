@@ -126,7 +126,7 @@ function InventoryWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Inventory"])
-    self:set_icon(UI.AssetIds.backpack_alt)
+    UI.Shortcuts.apply_window_icon(self, "inventory")
     self:set_resizable(UI.Widgets.LuiWindow.RESIZE_BOTH)
     self:hide()
     self:SetWantsUpdates(false)

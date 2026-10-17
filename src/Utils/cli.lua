@@ -116,8 +116,6 @@ function command:Execute(_, str)
         else
             display_help()
         end
-    elseif cmd == "icondemo" then -- TEMPORARY (src/UI/icon_demo.lua)
-        UI.IconDemo.toggle()
     elseif cmd == "card" then
         local monster_name = table.concat(list, " ", 2)
         if monster_name == nil or monster_name == "" then

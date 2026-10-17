@@ -4,13 +4,27 @@
 
 ### Added
 
+- New `Tokens` search mode for the `Encyclopedia` (every tab), `Crafting` and `Assets` search bars, chosen per window with the new `Search bar` setting in each one's settings (default `Classic`). Enter turns the typed text into a chip, the search runs only when chips change, and clicking a chip puts it back for editing. Keyword chips such as `loc:`, `type:`, `rar:`, `prof:` or `owner:` show an icon and suggest their values as you type (`loc:` lists regions, then their areas). In this mode the chips replace the filter dropdowns and level boxes.
+- New search keywords, also usable as typed text in `Classic` mode: `type:`, `rar:` and `lvl:` on the item tabs (plus `class:` and `ilvl:` on `Traceries`), `cat:` and `lvl:` on `Quests` and `Deeds`, and `mat:` in `Crafting` to pick the material sources.
+- Every search bar now has a clear `X` inside it, shown only while there is something to clear. It replaces the separate `Clear` buttons.
+- New `Global > UI` settings for icons: `Icon line weight` (thin or bold), `Legacy menu icons`, and icon colors on `Colors > Icons` (normal, hover, pressed, disabled, accent and `Menu icons color`).
+- The `LUI Configuration` window now shows an icon in its title bar.
+
 ### Changed
 
+- LUI's icons were redrawn as one tinted set based on Lucide icons (credited on the `About` page): dropdown and menu arrows, check marks, spin box, pager and tab arrows, the `Crafting` favorite star, the `Bestiary` location button, the resize cursors, and the menu icons on the status bar, the LUI Menu and window titles. Tick `Legacy menu icons` to keep the previous menu artwork.
+- Text widths are now measured from the game's real fonts, so labels, chips and columns no longer clip or leave uneven gaps.
+- Search bars stay on one line: long text scrolls sideways with the cursor instead of wrapping.
+- The `Bestiary` search in `Classic` mode waits for 2 characters before filtering, like the item tabs.
+- Menus, dropdowns and color pickers no longer block a window's title bar: you can drag, close or maximize the window while one is open, and it closes instead of staying behind.
+- The `Assets` `Recipes` button passes only the search text to `Crafting`, not the `owner:` and `store:` filters.
 - Effect icons on the vitals frames are much cheaper to update when many effects change at once, as on a raid boss: a changed effect no longer re-sorts and re-measures the whole icon row each time, and icons that shrink to fit are resized instead of being rebuilt.
 - The target frame, boss frame, `Target Expiring Effects` window and `Upkeep` slots set to `Target` now share a single effect tracker per target, instead of each tracking the same target separately.
 
 ### Fixed
 
+- The `Bestiary` location button now finds creatures when the game names an area differently from the bestiary data, for example `Angle of Mitheithel` for `The Angle of Mitheithel`.
+- A dropdown no longer stays on screen after its window is closed.
 - Disabling target vitals now really stops the target frame: it previously kept tracking the target's effects and building their icons behind the hidden frame. The `Target Expiring Effects` window keeps working on its own, and with every target feature off nothing tracks the target at all.
 - A boss is no longer tracked twice, once by the boss frame and once by the hidden target frame.
 

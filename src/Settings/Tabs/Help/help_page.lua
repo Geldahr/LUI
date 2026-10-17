@@ -28,7 +28,7 @@ local GITHUB_LABEL_TEXT =
 local ABOUT_HEIGHT = 188
 local GITHUB_HEIGHT = 59
 local FEATURES_HEIGHT = 620
-local INTERACTIONS_HEIGHT = 980
+local INTERACTIONS_HEIGHT = 1010
 local COMMANDS_HEIGHT = 400
 local GITHUB_LINK_HEIGHT = 22
 local GITHUB_LABEL_HEIGHT = 30
@@ -228,6 +228,7 @@ local function _new_interactions_section(window)
         TR["Double-click a Bestiary result row to open that monster's card."],
         TR["Use the Bestiary location button while the Bestiary is open to run the localized location command and filter Bestiary results to the current area when LUI can resolve it."],
         TR["Bestiary search supports plain text, quoted phrases, OR with |, and filters loc:<region/area>, gen:<genus/subcategory>, and lvl:<min-max>."],
+        TR["In the Tokens search mode (Encyclopedia, Crafting and Assets settings), press Enter to turn the typed text into a chip; the search runs when chips change. Click a chip to edit it; keywords such as loc:, type: or prof: suggest their values."],
         "",
         TR["Crafting"],
         TR["Click a recipe row or recipe icon to select the recipe."],

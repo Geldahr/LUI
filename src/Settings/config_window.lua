@@ -69,6 +69,7 @@ function ConfigWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["LUI Configuration"])
+    UI.Shortcuts.apply_window_icon(self, "config")
     self:set_resizable(true)
     self:hide()
 

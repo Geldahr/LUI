@@ -255,6 +255,7 @@ function Settings.rebuild()
     State.settings.global.close_windows_with_esc = raw.global.close_windows_with_esc == true
     State.settings.global.style = raw.global.style
     State.settings.encyclopedia.bestiary_capture = raw.encyclopedia.bestiary_capture == true
+    State.settings.encyclopedia.search_mode = raw.encyclopedia.search_mode
     State.settings.ui.windows = raw.ui.windows
     State.settings.ui.hud = raw.ui.hud
 
@@ -526,6 +527,7 @@ function Settings.rebuild()
         assets.enabled = raw_assets.enabled
         assets.view_mode = raw_assets.view_mode
         assets.stack_items = raw_assets.stack_items
+        assets.search_mode = raw_assets.search_mode
         assets.tile.icons = scaled_int(raw_assets.tile.icons)
         assets.tile.details = scaled_int(raw_assets.tile.details)
     end
@@ -533,6 +535,7 @@ function Settings.rebuild()
     local raw_crafting = raw.crafting
     State.settings.crafting.display_mode = raw_crafting.display_mode
     State.settings.crafting.enabled = raw_crafting.enabled
+    State.settings.crafting.search_mode = raw_crafting.search_mode
 
     local raw_travel = raw.travel
     State.settings.travel.display_mode = raw_travel.display_mode

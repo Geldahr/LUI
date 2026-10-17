@@ -171,6 +171,7 @@ function LuiWindow:Constructor(opts)
     self.is_lui_window = true
     self._scale = 1
     self._icon_asset = nil
+    self._icon_tint = nil
     self._icon_size = BASE_ICON
     self._central_widget = nil
     self._margin_left = BASE_MARGIN
@@ -341,6 +342,12 @@ function LuiWindow:set_icon(icon, size)
         return
     end
     self._icon:SetVisible(icon ~= nil)
+    self:_layout()
+end
+
+-- tints a white title icon (Widgets.Icons); nil shows it as is
+function LuiWindow:set_icon_tint(color)
+    self._icon_tint = color
     self:_layout()
 end
 
@@ -1321,6 +1328,9 @@ function LuiWindow:_layout()
     if self._icon_asset ~= nil and icon_size > 0 and chrome_square > 0 then
         local title_icon_size = math.min(icon_size, chrome_square)
         self._icon:set_icon(self._icon_asset, title_icon_size)
+        if self._icon_tint ~= nil then
+            self._icon:set_tint(self._icon_tint)
+        end
         local actual_w, actual_h = self._icon:get_size()
         actual_w = actual_w or title_icon_size
         actual_h = actual_h or title_icon_size

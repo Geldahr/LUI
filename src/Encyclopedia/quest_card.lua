@@ -92,7 +92,7 @@ function QuestCard:Constructor()
     self._suppress_position_persist = false
 
     self:set_title(TR["Quests"])
-    self:set_icon(UI.AssetIds.book_orange_cover)
+    UI.Shortcuts.apply_window_icon(self, "encyclopedia")
     self:set_resizable(false)
     self:enable_maximize(false)
     self:hide()

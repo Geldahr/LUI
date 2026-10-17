@@ -67,6 +67,58 @@ local function _apply_link_icon(button, icon)
     )
 end
 
+-- dropdown labels (without "All") as SearchField keyword values
+local function _keyword_values(labels)
+    local out = {}
+    for i = 2, #labels do
+        out[#out + 1] = { name = labels[i] }
+    end
+    return out
+end
+
+-- the dropdown value whose label matches (case-insensitive); nil = unknown
+local function _value_for_label(labels, values, wanted)
+    local needle = string.lower(wanted)
+    for i = 2, #labels do
+        if string.lower(labels[i]) == needle then
+            return values[i]
+        end
+    end
+    return nil
+end
+
+local function _label_for_value(labels, values, wanted)
+    for i = 2, #values do
+        if values[i] == wanted then
+            return labels[i]
+        end
+    end
+    return nil
+end
+
+-- AND across chips (Classic is one chip): intersect the per-chip search
+-- sets; a chip still below the seed threshold applies no filter
+local function _search_set_for_state(state)
+    local result = nil
+    for ci = 1, #state.chip_groups do
+        local set = SearchQuery.evaluate_domain(state.chip_groups[ci], Lore.Items)
+        if set ~= nil then
+            if result == nil then
+                result = set
+            else
+                local both = {}
+                for ordinal in pairs(result) do
+                    if set[ordinal] == true then
+                        both[ordinal] = true
+                    end
+                end
+                result = both
+            end
+        end
+    end
+    return result
+end
+
 local function _even_int(value)
     local out = math.floor(value + 0.5)
     if out % 2 ~= 0 then
@@ -100,12 +152,12 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
 
     Lore.load_items()
 
-    self.search_box = UI.Widgets.LuiLineEdit()
-    self.search_box:SetParent(self)
-    self.search_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.search_box:set_placeholder_text(TR["Search..."])
-    self.search_box:set_clearable(true)
-    self.search_box.TextChanged = function()
+    -- Classic text or Tokens chips (encyclopedia.search_mode)
+    self.search_field = UI.Widgets.SearchField()
+    self.search_field:SetParent(self)
+    self.search_field:set_popup_host(popup_host)
+    self.search_field:set_placeholder(TR["Search..."])
+    self.search_field.QueryChanged = function()
         self:_on_filters_changed()
     end
 
@@ -138,6 +190,7 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
         quality_values[#quality_values + 1] = code
     end
     self.quality_dropdown:SetMappedOptions(quality_labels, quality_values)
+    self._quality_labels, self._quality_values = quality_labels, quality_values
     self._quality_dd_base_w = _dropdown_base_w(quality_labels)
     self.quality_dropdown.ValueChanged = function(_, value)
         self._quality_filter = tonumber(value) or FILTER_ALL_CODE
@@ -150,6 +203,7 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     self.class_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     local class_labels, class_values = self:_class_options()
     self.class_dropdown:SetMappedOptions(class_labels, class_values)
+    self._class_labels, self._class_values = class_labels, class_values
     self._class_dd_base_w = _dropdown_base_w(class_labels)
     self.class_dropdown.ValueChanged = function(_, value)
         self._class_filter = tonumber(value) or FILTER_ALL_CODE
@@ -180,6 +234,7 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
             pclass_values[#pclass_values + 1] = idx
         end
         self.pclass_dropdown:SetMappedOptions(pclass_labels, pclass_values)
+        self._pclass_labels, self._pclass_values = pclass_labels, pclass_values
         self._pclass_dd_base_w = _dropdown_base_w(pclass_labels)
         self.pclass_dropdown.ValueChanged = function(_, value)
             self._pclass_filter = tonumber(value) or FILTER_ALL_CODE
@@ -294,8 +349,129 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     self.results_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.results_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
 
-
+    self.search_field:set_keywords(self:_query_keywords())
+    self:set_search_mode(State.settings.encyclopedia.search_mode)
+    self:_compute_filters()
     self:apply_fonts()
+end
+
+-- Tokens-mode keywords; each replaces one filter field
+function ItemBrowserPanel:_query_keywords()
+    local type_values = _keyword_values(self._class_labels)
+    local quality_values = _keyword_values(self._quality_labels)
+    local keywords = {
+        {
+            key = "type",
+            icon = "tag",
+            hint = TR["Type"],
+            aliases = { TR["Type"] },
+            values = function()
+                return type_values
+            end,
+        },
+        {
+            key = "rar",
+            icon = "gem",
+            hint = TR["Rarity"],
+            aliases = { "rarity", "quality", TR["Rarity"] },
+            values = function()
+                return quality_values
+            end,
+        },
+        {
+            key = "lvl",
+            icon = "level",
+            hint = TR["Level: 50, >100, 50-60"],
+            aliases = { "level", TR["Level"] },
+        },
+    }
+    if self._bucket == "tracery" then
+        local pclass_values = _keyword_values(self._pclass_labels)
+        keywords[#keywords + 1] = {
+            key = "class",
+            icon = "shield",
+            hint = TR["Class"],
+            aliases = { TR["Class"] },
+            values = function()
+                return pclass_values
+            end,
+        }
+        keywords[#keywords + 1] = {
+            key = "ilvl",
+            icon = "gauge",
+            hint = TR["Item level: 500, >500, 480-520"],
+            aliases = { "itemlevel", "ilevel" },
+        }
+    end
+    return keywords
+end
+
+-- the filter row; Tokens mode hides it (keyword chips replace the fields)
+function ItemBrowserPanel:_field_controls()
+    local controls = {
+        self.type_label, self.class_dropdown, self.rarity_label, self.quality_dropdown,
+        self.level_label, self.level_min_box, self.level_dash_label, self.level_max_box,
+    }
+    if self.pclass_dropdown ~= nil then
+        controls[#controls + 1] = self.pclass_label
+        controls[#controls + 1] = self.pclass_dropdown
+        controls[#controls + 1] = self.ilvl_label
+        controls[#controls + 1] = self.ilvl_min_box
+        controls[#controls + 1] = self.ilvl_dash_label
+        controls[#controls + 1] = self.ilvl_max_box
+    end
+    return controls
+end
+
+-- encyclopedia.search_mode; switching to Tokens turns the field values into
+-- chips and resets the fields, so a hidden field never filters
+function ItemBrowserPanel:set_search_mode(mode)
+    local switched = self.search_field:set_mode(mode)
+    local tokens = self.search_field:is_tokens()
+    for _, control in ipairs(self:_field_controls()) do
+        control:SetVisible(tokens ~= true)
+    end
+    if tokens == true then
+        self.class_dropdown:Close()
+        self.quality_dropdown:Close()
+        if self.pclass_dropdown ~= nil then
+            self.pclass_dropdown:Close()
+        end
+    end
+    if switched ~= true then
+        return
+    end
+    if tokens == true then
+        self:_fields_to_chips()
+    end
+    self:layout()
+    self:_on_filters_changed()
+end
+
+function ItemBrowserPanel:_fields_to_chips()
+    local field = self.search_field
+    local function add(key, value)
+        if value ~= nil and field:has_keyword(key) ~= true then
+            field:replace_keyword(key, value)
+        end
+    end
+    add("type", _label_for_value(self._class_labels, self._class_values, self._class_filter))
+    add("rar", _label_for_value(self._quality_labels, self._quality_values, self._quality_filter))
+    add("lvl", SearchQuery.format_range(self.level_min_box:GetText() or "", self.level_max_box:GetText() or ""))
+    self._class_filter = FILTER_ALL_CODE
+    self._quality_filter = FILTER_ALL_CODE
+    self.class_dropdown:SetValue(FILTER_ALL_CODE)
+    self.quality_dropdown:SetValue(FILTER_ALL_CODE)
+    self.level_min_box:SetText("")
+    self.level_max_box:SetText("")
+    if self.pclass_dropdown ~= nil then
+        add("class", _label_for_value(self._pclass_labels, self._pclass_values, self._pclass_filter))
+        add("ilvl", SearchQuery.format_range(self.ilvl_min_box:GetText() or "", self.ilvl_max_box:GetText() or ""))
+        self._pclass_filter = FILTER_ALL_CODE
+        self.pclass_dropdown:SetValue(FILTER_ALL_CODE)
+        self.ilvl_min_box:SetText("")
+        self.ilvl_max_box:SetText("")
+    end
 end
 
 function ItemBrowserPanel:_class_options()
@@ -335,8 +511,8 @@ end
 
 function ItemBrowserPanel:apply_fonts()
     local font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
-    self.search_box:set_scale(State.settings.global.scale)
-    self.search_box:SetFont(font)
+    self.search_field:set_scale(State.settings.global.scale)
+    self.search_field:SetFont(font)
     self.type_label:SetFont(font)
     self.rarity_label:SetFont(font)
     self.quality_dropdown:SetFont(font)
@@ -378,13 +554,61 @@ function ItemBrowserPanel:_parse_level(text)
     return BrowserShared.parse_level(text)
 end
 
-function ItemBrowserPanel:_on_filters_changed()
-    self._level_min = self:_parse_level(self.level_min_box:GetText())
-    self._level_max = self:_parse_level(self.level_max_box:GetText())
-    if self.ilvl_min_box ~= nil then
-        self._ilvl_min = self:_parse_level(self.ilvl_min_box:GetText())
-        self._ilvl_max = self:_parse_level(self.ilvl_max_box:GetText())
+-- effective filters: the fields, overridden by their query keyword; a
+-- keyword value that matches nothing known empties the list
+function ItemBrowserPanel:_compute_filters()
+    local state = self.search_field:get_query_state()
+    local tokens = state.token_map
+    local impossible = false
+
+    local quality = self._quality_filter
+    if tokens.rar ~= nil then
+        quality = _value_for_label(self._quality_labels, self._quality_values, tokens.rar)
+        impossible = impossible or quality == nil
     end
+    local class_code = self._class_filter
+    if tokens.type ~= nil then
+        class_code = _value_for_label(self._class_labels, self._class_values, tokens.type)
+        impossible = impossible or class_code == nil
+    end
+    local pclass = self._pclass_filter
+    if pclass ~= nil and tokens.class ~= nil then
+        pclass = _value_for_label(self._pclass_labels, self._pclass_values, tokens.class)
+        impossible = impossible or pclass == nil
+    end
+
+    local level_min = self:_parse_level(self.level_min_box:GetText())
+    local level_max = self:_parse_level(self.level_max_box:GetText())
+    if tokens.lvl ~= nil then
+        local range = SearchQuery.read_level_filter(state, "lvl")
+        impossible = impossible or range.active ~= true or range.impossible == true
+        level_min, level_max = range.min, range.max
+    end
+    local ilvl_min, ilvl_max = nil, nil
+    if self.ilvl_min_box ~= nil then
+        ilvl_min = self:_parse_level(self.ilvl_min_box:GetText())
+        ilvl_max = self:_parse_level(self.ilvl_max_box:GetText())
+        if tokens.ilvl ~= nil then
+            local range = SearchQuery.read_level_filter(state, "ilvl")
+            impossible = impossible or range.active ~= true or range.impossible == true
+            ilvl_min, ilvl_max = range.min, range.max
+        end
+    end
+
+    self._query_state = state
+    self._query_text = self.search_field:get_query_text()
+    self._impossible = impossible
+    self._eff_quality = quality
+    self._eff_class = class_code
+    self._eff_pclass = pclass
+    self._level_min = level_min
+    self._level_max = level_max
+    self._ilvl_min = ilvl_min
+    self._ilvl_max = ilvl_max
+end
+
+function ItemBrowserPanel:_on_filters_changed()
+    self:_compute_filters()
     self:_sync_pager(1)
     self:_refresh_list()
 end
@@ -402,21 +626,14 @@ function ItemBrowserPanel:_sync_pager(page, page_count)
     self._pager_syncing = false
 end
 
--- shared query grammar (space = AND, | = OR, quotes = literal phrase),
--- evaluated over the packed per-term search sets: intersect terms inside a
--- group, union the groups. nil means "no search filter".
-local function _search_set_for_query(query)
-    local state = SearchQuery.parse(query, {})
-    return SearchQuery.evaluate_domain(state.normalized_groups, Lore.Items)
-end
-
 function ItemBrowserPanel:_rebuild_filtered()
     local Items = Lore.Items
-    local query = self.search_box:GetText() or ""
+    local query = self._query_text
     local filter_sig = table.concat({
-        tostring(self._quality_filter),
-        tostring(self._class_filter),
-        tostring(self._pclass_filter or ""),
+        tostring(self._impossible),
+        tostring(self._eff_quality),
+        tostring(self._eff_class),
+        tostring(self._eff_pclass or ""),
         tostring(self._level_min or ""),
         tostring(self._level_max or ""),
         tostring(self._ilvl_min or ""),
@@ -442,8 +659,13 @@ function ItemBrowserPanel:_rebuild_filtered()
     self._query = query
     self._filter_sig = filter_sig
 
+    if self._impossible == true then
+        self._filtered = {}
+        return
+    end
+
     if can_refine == true then
-        local search_set = _search_set_for_query(query)
+        local search_set = _search_set_for_state(self._query_state)
         if search_set ~= nil then
             local filtered, n = {}, 0
             for i = 1, #previous do
@@ -461,12 +683,12 @@ function ItemBrowserPanel:_rebuild_filtered()
         return
     end
 
-    local search_set = _search_set_for_query(query)
-    local quality = self._quality_filter
-    local class_code = self._class_filter
+    local search_set = _search_set_for_state(self._query_state)
+    local quality = self._eff_quality
+    local class_code = self._eff_class
     local recipe_class_set = class_code == FILTER_RECIPES_CODE and Items.RECIPE_CLASS_SET or nil
     local is_tracery = self._bucket == "tracery"
-    local pclass = self._pclass_filter
+    local pclass = self._eff_pclass
     local level_min = self._level_min
     local level_max = self._level_max
     local ilvl_min = self._ilvl_min
@@ -740,9 +962,8 @@ function ItemBrowserPanel:open_item_search(item_name)
         self.ilvl_min_box:SetText("")
         self.ilvl_max_box:SetText("")
     end
-    self.search_box:SetText(query)
-    self.search_box:refresh_text_async()
-    -- programmatic SetText does not fire TextChanged: refresh explicitly
+    self.search_field:set_query(query)
+    -- set_query does not fire QueryChanged: refresh explicitly
     self:_on_filters_changed()
 end
 
@@ -824,10 +1045,14 @@ function ItemBrowserPanel:layout()
         self.ilvl_max_box:SetSize(level_w, bar_h)
     end
 
-    -- row 2: search across the full width
+    -- row 2: search across the full width (row 1 in Tokens mode, where the
+    -- filter row is hidden)
     local search_y = margin_t + bar_h + gap
-    self.search_box:SetPosition(margin_l, search_y)
-    self.search_box:SetSize(math.max(1, width - margin_l - margin_r), bar_h)
+    if self.search_field:is_tokens() == true then
+        search_y = margin_t
+    end
+    self.search_field:SetPosition(margin_l, search_y)
+    self.search_field:SetSize(math.max(1, width - margin_l - margin_r), bar_h)
 
     local page_bar_h = scaled_int(BASE_PAGE_BAR_H)
     local page_w = scaled_int(BASE_PAGE_W)

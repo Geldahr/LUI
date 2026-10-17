@@ -17,8 +17,6 @@ import "LUI.src.UI.hidable"
 import "LUI.src.UI.move_ui"
 import "LUI.src.Vitals"
 import "LUI.src.UI.Widgets"
--- TEMPORARY: icon demo window (/lui icondemo)
-import "LUI.src.UI.icon_demo"
 import "LUI.src.UI.item_actions"
 import "LUI.src.Settings"
 import "LUI.src.Inventory"

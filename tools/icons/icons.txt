@@ -41,4 +41,25 @@ lucide star_filled star filled
 lucide map_pinned map-pinned
 lucide x x
 lucide level chevrons-up
+# search keyword chips
+lucide tag tag
+lucide gem gem
+lucide shield shield
+lucide gauge gauge
+lucide scroll_text scroll-text
+lucide hammer hammer
+lucide award award
+lucide package_check package-check
+lucide boxes boxes
+lucide user user
+lucide archive archive
+# toolbar shortcuts (status bar, LUI Menu, window titles)
+lucide settings settings
+lucide backpack backpack
+lucide anvil anvil
+lucide compass compass
+lucide briefcase briefcase
+lucide book_open_text book-open-text
+lucide users users
+lucide refresh_cw refresh-cw
 lucide family paw-print

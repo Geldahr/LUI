@@ -88,6 +88,7 @@ local BESTIARY_QUERY_TOKENS = {
     lvl = true,
 }
 
+
 local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
 local COLOR_DROP_CHIP_TEXT = Turbine.UI.Color(1, 0.76, 0.88, 0.79)
@@ -671,6 +672,91 @@ local function _match_record_query(record, groups)
     return query_ok, matched
 end
 
+-- every chip must match (AND across chips, OR inside one); drop highlights
+-- merge. Classic search is a single chip.
+local function _match_record_chips(record, chip_groups)
+    if #chip_groups == 1 then
+        return _match_record_query(record, chip_groups[1])
+    end
+    local matched = nil
+    for ci = 1, #chip_groups do
+        local ok, chip_matched = _match_record_query(record, chip_groups[ci])
+        if ok ~= true then
+            return false, nil
+        end
+        if chip_matched ~= nil then
+            if matched == nil then
+                matched = {}
+            end
+            for key in pairs(chip_matched) do
+                matched[key] = true
+            end
+        end
+    end
+    return true, matched
+end
+
+-- Classic search waits for 2 characters, as the item tabs
+-- (SearchQuery.evaluate_domain): shorter words are ignored, and while a
+-- group has no 2+ character word the text filter is off (still typing)
+local MIN_QUERY_TERM_LEN = 2
+
+local function _drop_short_terms(chip_groups)
+    local out = {}
+    for ci = 1, #chip_groups do
+        local groups = {}
+        for gi = 1, #chip_groups[ci] do
+            local group = {}
+            for _, term in ipairs(chip_groups[ci][gi]) do
+                if #term >= MIN_QUERY_TERM_LEN then
+                    group[#group + 1] = term
+                end
+            end
+            if #group == 0 then
+                return {}
+            end
+            groups[#groups + 1] = group
+        end
+        out[#out + 1] = groups
+    end
+    return out
+end
+
+-- region > areas or genus > subcategories from the loaded records: one
+-- pass, sorted once, cached until the record set changes
+local function _build_path_index(records, parent_field, child_field)
+    local by_name = {}
+    local list = {}
+    for i = 1, #records do
+        local record = records[i]
+        local parent = record[parent_field]
+        if parent ~= nil and parent ~= "" then
+            local entry = by_name[parent]
+            if entry == nil then
+                entry = { name = parent, children = {}, seen = {} }
+                by_name[parent] = entry
+                list[#list + 1] = entry
+            end
+            local child = record[child_field]
+            if child ~= nil and child ~= "" and child ~= parent and entry.seen[child] ~= true then
+                entry.seen[child] = true
+                entry.children[#entry.children + 1] = child
+            end
+        end
+    end
+    local function by_lower(left, right)
+        return _lower_text(left) < _lower_text(right)
+    end
+    table.sort(list, function(left, right)
+        return by_lower(left.name, right.name)
+    end)
+    for i = 1, #list do
+        table.sort(list[i].children, by_lower)
+        list[i].seen = nil
+    end
+    return list
+end
+
 -- bestiary results list in fixed name order, matching the item tabs'
 -- baked label-sorted permutations (the Order menu was removed: title-bar
 -- menus should not exist unless every tab participates)
@@ -1143,7 +1229,7 @@ function EncyclopediaWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Encyclopedia"])
-    self:set_icon(UI.AssetIds.book_orange_cover)
+    UI.Shortcuts.apply_window_icon(self, "encyclopedia")
     self:set_resizable(true)
     self:hide()
     self:SetWantsUpdates(false)
@@ -1163,7 +1249,6 @@ function EncyclopediaWindow:Constructor()
     self._prepared_record_key = 0
     self.current_area = nil
     self.last_applied_area_query = nil
-    self._suppress_area_text_changed = false
     self._suppress_level_text_changed = false
 
     self.query_state = SearchQuery.parse("", BESTIARY_QUERY_TOKENS)
@@ -1178,7 +1263,8 @@ function EncyclopediaWindow:Constructor()
     self.query_location_filter_active = false
     self.query_location_filter_valid = false
     self.query_location_parts = nil
-    self.filter_groups = {}
+    self.filter_chip_groups = {}
+    self._suggest_index = nil
     self.genus_filter = FILTER_ALL
     self.subcategory_filter = FILTER_NONE
     self._suppress_genus_changed = false
@@ -1309,17 +1395,44 @@ function EncyclopediaWindow:Constructor()
         on_level_filter_changed(self.level_max_box)
     end
 
-    self.filter_tb = UI.Widgets.LineEdit()
-    self.filter_tb:SetParent(self.filter_bar)
-    self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.filter_tb:set_placeholder_text(TR["Search..."])
-    self.filter_tb:set_clearable(true)
-    self.filter_tb.TextChanged = function()
-        if self._suppress_area_text_changed ~= true then
-            self.current_area = nil
-            self.last_applied_area_query = nil
-            BestiaryCache.area_filter_query = nil
-        end
+    -- Classic text or Tokens chips (encyclopedia.search_mode)
+    self.search_field = UI.Widgets.SearchField()
+    self.search_field:SetParent(self.filter_bar)
+    self.search_field:set_popup_host(self)
+    self.search_field:set_placeholder(TR["Search..."])
+    self.search_field:set_keywords({
+        {
+            key = "loc",
+            icon = "map_pinned",
+            hint = TR["Location: region or area"],
+            aliases = { "location", "area", "region", "zone" },
+            values = function()
+                return self:_query_suggest_index().loc
+            end,
+            child_hint = TR["%d areas"],
+        },
+        {
+            key = "lvl",
+            icon = "level",
+            hint = TR["Level: 50, >100, 50-60"],
+            aliases = { "level", TR["Level"] },
+        },
+        {
+            key = "gen",
+            icon = "family",
+            hint = TR["Genus: genus or subcategory"],
+            aliases = { "genus", "family", "type", TR["Genus"] },
+            values = function()
+                return self:_query_suggest_index().gen
+            end,
+            child_hint = TR["%d subcategories"],
+        },
+    })
+    self.search_field.QueryChanged = function()
+        -- a user edit drops the resolved /loc area
+        self.current_area = nil
+        self.last_applied_area_query = nil
+        BestiaryCache.area_filter_query = nil
         self:update_filter()
     end
 
@@ -1520,13 +1633,15 @@ function EncyclopediaWindow:apply_settings()
     self.level_min_box:SetFont(button_font)
     self.level_dash_label:SetFont(button_font)
     self.level_max_box:SetFont(button_font)
-    self.filter_tb:set_scale(State.settings.global.scale)
-    self.filter_tb:SetFont(button_font)
+    self.search_field:set_scale(State.settings.global.scale)
+    self.search_field:SetFont(button_font)
+    local search_mode_switched = self:_apply_search_mode(State.settings.encyclopedia.search_mode)
     self.area_label:SetFont(button_font)
     self.encyclopedia_tabs:set_scale(State.settings.global.scale)
     self.encyclopedia_tabs:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 3))
     for _, panel in pairs(self._item_panels) do
         panel:apply_fonts()
+        panel:set_search_mode(State.settings.encyclopedia.search_mode)
     end
     self:ensure_area_shortcut()
     self.genus_label:SetFont(button_font)
@@ -1561,7 +1676,11 @@ function EncyclopediaWindow:apply_settings()
     -- (apply_view alone must not, so typing keystrokes reuse the cache)
     self:_invalidate_row_layouts()
     self:layout()
-    self:apply_view()
+    if search_mode_switched == true then
+        self:update_filter()
+    else
+        self:apply_view()
+    end
 end
 
 function EncyclopediaWindow:_invalidate_row_layouts()
@@ -1634,13 +1753,91 @@ function EncyclopediaWindow:handle_user_resize()
     self._last_resize_at = Turbine.Engine.GetGameTime()
 end
 
+function EncyclopediaWindow:_tokens_mode()
+    return self.search_field:is_tokens()
+end
+
+-- shows the widget of the search mode setting. Tokens mode has no genus /
+-- level fields (gen: and lvl: chips replace them): the field row is hidden
+-- and the search row moves up. A switch carries the query over (Classic
+-- text <-> chips; field filters become chips and the fields reset, so a
+-- hidden field never filters). Returns true when the mode changed on an
+-- existing window.
+function EncyclopediaWindow:_apply_search_mode(mode)
+    local switched = self.search_field:set_mode(mode)
+    local tokens = self:_tokens_mode()
+    self.nav_bar:SetVisible(tokens ~= true)
+    self.level_bar:SetVisible(tokens ~= true)
+    if tokens == true then
+        self.genus_dropdown:Close()
+        self.subcategory_dropdown:Close()
+    end
+    if switched ~= true then
+        return false
+    end
+
+    if tokens == true then
+        local genus_chip = self:_genus_chip_value()
+        if genus_chip ~= nil and self.search_field:has_keyword("gen") ~= true then
+            self.search_field:replace_keyword("gen", genus_chip)
+        end
+        local level_chip = self:_level_chip_value()
+        if level_chip ~= nil and self.search_field:has_keyword("lvl") ~= true then
+            self.search_field:replace_keyword("lvl", level_chip)
+        end
+        self.genus_filter = FILTER_ALL
+        self.subcategory_filter = FILTER_NONE
+        self:refresh_taxonomy_filters()
+        self._suppress_level_text_changed = true
+        self.level_min_box:SetText("")
+        self.level_max_box:SetText("")
+        self._suppress_level_text_changed = false
+    end
+    return true
+end
+
+-- gen: chip value of the taxonomy dropdowns (nil = All)
+function EncyclopediaWindow:_genus_chip_value()
+    if self.genus_filter == FILTER_ALL then
+        return nil
+    end
+    if self.subcategory_filter == FILTER_ALL or self.subcategory_filter == FILTER_NONE then
+        return self.genus_filter
+    end
+    return self.genus_filter .. " > " .. self.subcategory_filter
+end
+
+-- lvl: chip value of the level boxes (nil = both empty)
+function EncyclopediaWindow:_level_chip_value()
+    return SearchQuery.format_range(self.level_min_box:GetText() or "", self.level_max_box:GetText() or "")
+end
+
+-- one chip per keyword: replaces (or with nil removes) the `key:` chip,
+-- then searches
+function EncyclopediaWindow:_replace_keyword_chip(key, value)
+    self.search_field:replace_keyword(key, value)
+    self:update_filter()
+end
+
+function EncyclopediaWindow:_query_suggest_index()
+    if self._suggest_index == nil then
+        self._suggest_index = {
+            loc = _build_path_index(self.all_records, "region", "area"),
+            gen = _build_path_index(self.all_records, "genus", "subcategory"),
+        }
+    end
+    return self._suggest_index
+end
+
 function EncyclopediaWindow:update_filter()
-    local query = self.filter_tb:GetText() or ""
-    local state = SearchQuery.parse(query, BESTIARY_QUERY_TOKENS)
+    local state = self.search_field:get_query_state()
     local level_filter = SearchQuery.read_level_filter(state, "lvl")
     local location_parts = _parse_location_token_value(state.token_map.loc)
     self.query_state = state
-    self.filter_groups = state.normalized_groups
+    self.filter_chip_groups = state.chip_groups
+    if self:_tokens_mode() ~= true then
+        self.filter_chip_groups = _drop_short_terms(state.chip_groups)
+    end
     self.query_level_min = level_filter.min
     self.query_level_max = level_filter.max
     self.query_level_filter_active = state.token_map.lvl ~= nil
@@ -1656,9 +1853,7 @@ function EncyclopediaWindow:update_filter()
 end
 
 function EncyclopediaWindow:_set_filter_query_text(query)
-    self._suppress_area_text_changed = true
-    self.filter_tb:SetText(query)
-    self._suppress_area_text_changed = false
+    self.search_field:set_query(query)
     self:update_filter()
 end
 
@@ -1673,6 +1868,10 @@ function EncyclopediaWindow:_apply_location_query_value(value)
         error("Invalid bestiary location query path")
     end
 
+    if self:_tokens_mode() == true then
+        self:_replace_keyword_chip("loc", location_value)
+        return
+    end
     local tokens = SearchQuery.copy_tokens_except(self.query_state, { loc = true })
     SearchQuery.add_token(tokens, "loc", location_value)
     self:_set_filter_query_text(SearchQuery.serialize(self.query_state.text_groups, tokens, BESTIARY_QUERY_TOKENS))
@@ -1712,7 +1911,7 @@ function EncyclopediaWindow:apply_current_area_filter(force)
         error("Invalid bestiary area filter path")
     end
 
-    local state = SearchQuery.parse(self.filter_tb:GetText() or "", BESTIARY_QUERY_TOKENS)
+    local state = self.search_field:get_query_state()
     if force ~= true and self.last_applied_area_query == location_value and state.token_map.loc == location_value then
         self._applied_area_raw = query
         return
@@ -1765,13 +1964,9 @@ function EncyclopediaWindow:open_query_search(query)
 
     self:set_taxonomy_filters(FILTER_ALL, FILTER_NONE)
 
-    self._suppress_area_text_changed = true
-    self.filter_tb:SetText(query)
-    self._suppress_area_text_changed = false
-    self.filter_tb:refresh_text_async()
+    self.search_field:set_query(query)
     self:update_filter()
-
-    self.filter_tb:Focus()
+    self.search_field:Focus()
 end
 
 function EncyclopediaWindow:open_item_search(item_name)
@@ -1946,6 +2141,14 @@ function EncyclopediaWindow:_ensure_column_separators(count)
     end
 end
 
+-- the search row sits under the genus / level row, which Tokens mode hides
+function EncyclopediaWindow:_filter_row_offset(bar_h, gap)
+    if self:_tokens_mode() == true then
+        return 0
+    end
+    return bar_h + gap
+end
+
 function EncyclopediaWindow:_content_metrics()
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)
     local margin_top = _scaled_int(BASE_MARGIN_TOP)
@@ -1958,7 +2161,8 @@ function EncyclopediaWindow:_content_metrics()
     local host_w, host_h = self.bestiary_host:GetSize()
     local inner_w = host_w - margin_left - margin_right
     -- two filter rows: taxonomy + level share the first, search the second
-    local content_top = margin_top + bar_h + gap + filter_h + gap
+    -- (Tokens mode: the search row only)
+    local content_top = margin_top + self:_filter_row_offset(bar_h, gap) + filter_h + gap
     local content_h = host_h - content_top - margin_bottom - gap - bar_h
     return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, level_h, filter_h, gap
 end
@@ -2057,7 +2261,7 @@ function EncyclopediaWindow:layout()
     self.level_max_box:SetPosition(level_max_x, 0)
     self.level_max_box:SetSize(level_input_w, level_h)
 
-    self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap)
+    self.filter_bar:SetPosition(margin_left, margin_top + self:_filter_row_offset(bar_h, gap))
     self.filter_bar:SetSize(inner_w, filter_h)
 
     local area_slot_size = filter_h
@@ -2071,8 +2275,8 @@ function EncyclopediaWindow:layout()
     _sync_area_slot_icon(self)
     self.area_label:SetPosition(0, 0)
     self.area_label:SetSize(0, 0)
-    self.filter_tb:SetPosition(filter_x, 0)
-    self.filter_tb:SetSize(filter_w, filter_h)
+    self.search_field:SetPosition(filter_x, 0)
+    self.search_field:SetSize(filter_w, filter_h)
 
     self.content:SetPosition(margin_left, content_top)
     self.content:SetSize(inner_w, content_h)
@@ -2173,6 +2377,7 @@ function EncyclopediaWindow:_rebuild_record_index()
         by_key[self.all_records[i].key] = i
     end
     self._record_index_by_key = by_key
+    self._suggest_index = nil
 end
 
 function EncyclopediaWindow:_refresh_dirty_records(dirty_names)
@@ -2351,8 +2556,8 @@ end
 
 function EncyclopediaWindow:apply_view()
     local filtered = {}
-    local filter_groups = self.filter_groups
-    local has_query = type(filter_groups) == "table" and #filter_groups > 0
+    local chip_groups = self.filter_chip_groups
+    local has_query = #chip_groups > 0
     local filter_level_min = self.query_level_min
     local filter_level_max = self.query_level_max
     if self.query_level_filter_active ~= true then
@@ -2390,7 +2595,7 @@ function EncyclopediaWindow:apply_view()
             local query_ok = true
             local matched_drop_lookup = nil
             if has_query == true then
-                query_ok, matched_drop_lookup = _match_record_query(record, filter_groups)
+                query_ok, matched_drop_lookup = _match_record_chips(record, chip_groups)
             end
             record._matched_drop_lookup = matched_drop_lookup
             if query_ok == true then

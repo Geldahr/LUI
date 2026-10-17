@@ -40,6 +40,29 @@ end
 
 local _scaled_font = BrowserShared.scaled_font
 
+-- AND across chips (Classic is one chip): intersect the per-chip search
+-- sets; a chip still below the seed threshold applies no filter
+local function _search_set_for_state(state)
+    local result = nil
+    for ci = 1, #state.chip_groups do
+        local set = SearchQuery.evaluate_domain(state.chip_groups[ci], Lore.Quests)
+        if set ~= nil then
+            if result == nil then
+                result = set
+            else
+                local both = {}
+                for ordinal in pairs(result) do
+                    if set[ordinal] == true then
+                        both[ordinal] = true
+                    end
+                end
+                result = both
+            end
+        end
+    end
+    return result
+end
+
 local QuestBrowserPanel = class(Turbine.UI.Control)
 Encyclopedia.QuestBrowserPanel = QuestBrowserPanel
 
@@ -59,12 +82,12 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
 
     Lore.load_quests()
 
-    self.search_box = UI.Widgets.LuiLineEdit()
-    self.search_box:SetParent(self)
-    self.search_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.search_box:set_placeholder_text(TR["Search..."])
-    self.search_box:set_clearable(true)
-    self.search_box.TextChanged = function()
+    -- Classic text or Tokens chips (encyclopedia.search_mode)
+    self.search_field = UI.Widgets.SearchField()
+    self.search_field:SetParent(self)
+    self.search_field:set_popup_host(popup_host)
+    self.search_field:set_placeholder(TR["Search..."])
+    self.search_field.QueryChanged = function()
         self:_on_filters_changed()
     end
 
@@ -82,6 +105,7 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
     self.category_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     local category_labels, category_values = self:_category_options()
     self.category_dropdown:SetMappedOptions(category_labels, category_values)
+    self._category_labels, self._category_values = category_labels, category_values
     self._category_dd_base_w = _dropdown_base_w(category_labels)
     self.category_dropdown.ValueChanged = function(_, value)
         self._category_filter = tonumber(value) or FILTER_ALL_CODE
@@ -150,7 +174,74 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
     self.results_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleRight)
     self.results_label:SetForeColor(Style.ALTERNATE_FOREGROUND)
 
+    local category_values_list = {}
+    for i = 2, #category_labels do
+        category_values_list[#category_values_list + 1] = { name = category_labels[i] }
+    end
+    self.search_field:set_keywords({
+        {
+            key = "cat",
+            icon = "scroll_text",
+            hint = TR["Category"],
+            aliases = { "category", TR["Category"] },
+            values = function()
+                return category_values_list
+            end,
+        },
+        {
+            key = "lvl",
+            icon = "level",
+            hint = TR["Level: 50, >100, 50-60"],
+            aliases = { "level", TR["Level"] },
+        },
+    })
+    self:set_search_mode(State.settings.encyclopedia.search_mode)
+    self:_compute_filters()
     self:apply_fonts()
+end
+
+-- the filter row; Tokens mode hides it (cat: and lvl: chips replace it)
+function QuestBrowserPanel:_field_controls()
+    return {
+        self.category_label, self.category_dropdown,
+        self.level_label, self.level_min_box, self.level_dash_label, self.level_max_box,
+    }
+end
+
+-- encyclopedia.search_mode; switching to Tokens turns the field values into
+-- chips and resets the fields, so a hidden field never filters
+function QuestBrowserPanel:set_search_mode(mode)
+    local switched = self.search_field:set_mode(mode)
+    local tokens = self.search_field:is_tokens()
+    for _, control in ipairs(self:_field_controls()) do
+        control:SetVisible(tokens ~= true)
+    end
+    if tokens == true then
+        self.category_dropdown:Close()
+    end
+    if switched ~= true then
+        return
+    end
+    if tokens == true then
+        local field = self.search_field
+        if self._category_filter ~= FILTER_ALL_CODE and field:has_keyword("cat") ~= true then
+            for i = 2, #self._category_values do
+                if self._category_values[i] == self._category_filter then
+                    field:replace_keyword("cat", self._category_labels[i])
+                end
+            end
+        end
+        local level = SearchQuery.format_range(self.level_min_box:GetText() or "", self.level_max_box:GetText() or "")
+        if level ~= nil and field:has_keyword("lvl") ~= true then
+            field:replace_keyword("lvl", level)
+        end
+        self._category_filter = FILTER_ALL_CODE
+        self.category_dropdown:SetValue(FILTER_ALL_CODE)
+        self.level_min_box:SetText("")
+        self.level_max_box:SetText("")
+    end
+    self:layout()
+    self:_on_filters_changed()
 end
 
 -- All + the categories used by this kind, in the label order baked per
@@ -170,8 +261,8 @@ end
 
 function QuestBrowserPanel:apply_fonts()
     local font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
-    self.search_box:set_scale(State.settings.global.scale)
-    self.search_box:SetFont(font)
+    self.search_field:set_scale(State.settings.global.scale)
+    self.search_field:SetFont(font)
     self.category_label:SetFont(font)
     self.category_dropdown:SetFont(font)
     self.category_dropdown:set_scale(State.settings.global.scale)
@@ -195,9 +286,40 @@ function QuestBrowserPanel:_parse_level(text)
     return BrowserShared.parse_level(text)
 end
 
+-- effective filters: the fields, overridden by their query keyword; a
+-- keyword value that matches nothing known empties the list
+function QuestBrowserPanel:_compute_filters()
+    local state = self.search_field:get_query_state()
+    local tokens = state.token_map
+    local impossible = false
+    local category = self._category_filter
+    if tokens.cat ~= nil then
+        category = nil
+        local needle = string.lower(tokens.cat)
+        for i = 2, #self._category_labels do
+            if string.lower(self._category_labels[i]) == needle then
+                category = self._category_values[i]
+            end
+        end
+        impossible = impossible or category == nil
+    end
+    local level_min = self:_parse_level(self.level_min_box:GetText())
+    local level_max = self:_parse_level(self.level_max_box:GetText())
+    if tokens.lvl ~= nil then
+        local range = SearchQuery.read_level_filter(state, "lvl")
+        impossible = impossible or range.active ~= true or range.impossible == true
+        level_min, level_max = range.min, range.max
+    end
+    self._query_state = state
+    self._query_text = self.search_field:get_query_text()
+    self._impossible = impossible
+    self._eff_category = category
+    self._level_min = level_min
+    self._level_max = level_max
+end
+
 function QuestBrowserPanel:_on_filters_changed()
-    self._level_min = self:_parse_level(self.level_min_box:GetText())
-    self._level_max = self:_parse_level(self.level_max_box:GetText())
+    self:_compute_filters()
     self:_sync_pager(1)
     self:_refresh_list()
 end
@@ -217,9 +339,10 @@ end
 
 function QuestBrowserPanel:_rebuild_filtered()
     local Quests = Lore.Quests
-    local query = self.search_box:GetText() or ""
+    local query = self._query_text
     local filter_sig = table.concat({
-        tostring(self._category_filter),
+        tostring(self._impossible),
+        tostring(self._eff_category),
         tostring(self._level_min or ""),
         tostring(self._level_max or ""),
     }, "\30")
@@ -243,9 +366,13 @@ function QuestBrowserPanel:_rebuild_filtered()
     self._query = query
     self._filter_sig = filter_sig
 
+    if self._impossible == true then
+        self._filtered = {}
+        return
+    end
+
     if can_refine == true then
-        local state = SearchQuery.parse(query, {})
-        local search_set = SearchQuery.evaluate_domain(state.normalized_groups, Quests)
+        local search_set = _search_set_for_state(self._query_state)
         if search_set ~= nil then
             local filtered, n = {}, 0
             for i = 1, #previous do
@@ -263,9 +390,8 @@ function QuestBrowserPanel:_rebuild_filtered()
         return
     end
 
-    local state = SearchQuery.parse(query, {})
-    local search_set = SearchQuery.evaluate_domain(state.normalized_groups, Quests)
-    local category = self._category_filter
+    local search_set = _search_set_for_state(self._query_state)
+    local category = self._eff_category
     local level_min = self._level_min
     local level_max = self._level_max
     local list = Quests.kind_list(self._kind)
@@ -407,10 +533,14 @@ function QuestBrowserPanel:layout()
     self.level_max_box:SetPosition(level_x, margin_t)
     self.level_max_box:SetSize(level_w, bar_h)
 
-    -- row 2: search across the full width
+    -- row 2: search across the full width (row 1 in Tokens mode, where the
+    -- filter row is hidden)
     local search_y = margin_t + bar_h + gap
-    self.search_box:SetPosition(margin_l, search_y)
-    self.search_box:SetSize(inner_w, bar_h)
+    if self.search_field:is_tokens() == true then
+        search_y = margin_t
+    end
+    self.search_field:SetPosition(margin_l, search_y)
+    self.search_field:SetSize(inner_w, bar_h)
 
     -- table fills the middle; footer page bar at the bottom
     local page_bar_h = scaled_int(BASE_PAGE_BAR_H)
@@ -511,6 +641,14 @@ function QuestsTabPanel:apply_fonts()
     self.sub_tabs:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 1))
     for _, panel in pairs(self._panels) do
         panel:apply_fonts()
+    end
+end
+
+-- encyclopedia.search_mode for the created sub-panels (later ones read the
+-- setting when they are created)
+function QuestsTabPanel:set_search_mode(mode)
+    for _, panel in pairs(self._panels) do
+        panel:set_search_mode(mode)
     end
 end
 

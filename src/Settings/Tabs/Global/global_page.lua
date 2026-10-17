@@ -385,6 +385,8 @@ local function _new_ui_colors_section(window, settings_getter)
     icons:add_row_break()
     _add_style_color(icons, settings_getter, "ICON_FOREGROUND_DISABLED", TR["Icon disabled color"])
     _add_style_color(icons, settings_getter, "ICON_ACCENT", TR["Icon accent color"])
+    icons:add_row_break()
+    _add_style_color(icons, settings_getter, "ICON_MENU", TR["Menu icons color"])
 
     local overlays = ConfigContent(window, 3)
     _add_style_color(overlays, settings_getter, "MODAL_OVERLAY_BACKGROUND", TR["Modal overlay background"])
@@ -490,6 +492,11 @@ local function _new_ui_page(window, settings_getter)
 
     local general = ConfigContent(window, 4)
     general:add_info(TR["Style changes apply after reloading the plugin."], 34)
+    _add_style_choice(general, style_settings_getter, "ICON_WEIGHT", TR["Icon line weight"],
+        { TR["Thin"], TR["Bold"] }, UI.Widgets.Icons.WEIGHTS)
+    general:add_row_break()
+    _add_style_checkbox(general, style_settings_getter, "ICON_MENU_LEGACY", TR["Legacy menu icons"])
+    general:add_row_break()
     _add_reset_button(page, general)
     page:add_tab(TR["General"], "general", general)
 
@@ -502,9 +509,6 @@ local function _new_ui_page(window, settings_getter)
     _add_style_number(layout, style_settings_getter, "TABLE_HORIZONTAL_BORDER_WIDTH", TR["Table horizontal lines width"])
     layout:add_row_break()
     _add_style_checkbox(layout, style_settings_getter, "TABLE_ALTERNATE_ROWS", TR["Alternating table rows"])
-    layout:add_row_break()
-    _add_style_choice(layout, style_settings_getter, "ICON_WEIGHT", TR["Icon line weight"],
-        { TR["Thin"], TR["Bold"] }, UI.Widgets.Icons.WEIGHTS)
     page:add_tab(TR["Layout"], "layout", layout)
 
     page:add_tab(TR["Colors"], "colors", _new_ui_colors_section(window, style_settings_getter))

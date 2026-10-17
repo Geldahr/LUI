@@ -298,10 +298,19 @@ function SearchQuery.parse(query, token_keys)
 
     _end_group(groups, current_group)
 
+    local normalized_groups = SearchQuery.normalize_groups(groups)
+    -- the whole text is one chip (see parse_chips): a record must match
+    -- every entry of chip_groups
+    local chip_groups = {}
+    if #normalized_groups > 0 then
+        chip_groups[1] = normalized_groups
+    end
+
     return {
         raw = text,
         text_groups = groups,
-        normalized_groups = SearchQuery.normalize_groups(groups),
+        normalized_groups = normalized_groups,
+        chip_groups = chip_groups,
         tokens = tokens,
         token_map = token_map,
     }
@@ -568,4 +577,118 @@ function SearchQuery.read_level_filter(state, key)
     end
 
     return filter
+end
+
+-- Token search chips (TokenInput). A keyword chip is "key:value" where the
+-- whole rest is the value (no quoting needed: "loc:Trollshaws > The Angle
+-- of Mitheithel"); any other chip is a query of its own.
+
+-- key, value of a keyword chip; nil for a text chip
+function SearchQuery.split_chip(chip, token_keys)
+    if type(chip) ~= "string" then
+        error("SearchQuery.split_chip requires chip string")
+    end
+    local text = _trim_text(chip)
+    local key, value_index = _read_token_key(text, 1)
+    if type(key) ~= "string" or token_keys[key] ~= true then
+        return nil, nil
+    end
+    local value = _trim_text((text:sub(value_index):gsub("\"", "")))
+    if value == "" then
+        return nil, nil
+    end
+    return key, value
+end
+
+-- Same state shape as parse(), from chips: chips AND together (chip_groups
+-- holds one group list per text chip, OR stays inside a chip); keyword
+-- chips fill tokens / token_map (one per key: the last one wins).
+function SearchQuery.parse_chips(chips, token_keys)
+    if type(chips) ~= "table" then
+        error("SearchQuery.parse_chips requires chips table")
+    end
+
+    local tokens = {}
+    local token_map = {}
+    local chip_groups = {}
+    local text_groups = {}
+    local function set_token(key, value)
+        for index = #tokens, 1, -1 do
+            if tokens[index].key == key then
+                table.remove(tokens, index)
+            end
+        end
+        tokens[#tokens + 1] = { key = key, value = value }
+        token_map[key] = value
+    end
+
+    for index = 1, #chips do
+        local key, value = SearchQuery.split_chip(chips[index], token_keys)
+        if key ~= nil then
+            set_token(key, value)
+        else
+            local state = SearchQuery.parse(chips[index], token_keys)
+            for t = 1, #state.tokens do
+                set_token(state.tokens[t].key, state.tokens[t].value)
+            end
+            if #state.normalized_groups > 0 then
+                chip_groups[#chip_groups + 1] = state.normalized_groups
+            end
+            for g = 1, #state.text_groups do
+                text_groups[#text_groups + 1] = state.text_groups[g]
+            end
+        end
+    end
+
+    return {
+        raw = nil,
+        text_groups = text_groups,
+        normalized_groups = SearchQuery.normalize_groups(text_groups),
+        chip_groups = chip_groups,
+        tokens = tokens,
+        token_map = token_map,
+    }
+end
+
+-- query text -> chips (search mode switch, cross-window searches): one
+-- chip per keyword token, the remaining text as one chip
+function SearchQuery.query_to_chips(query, token_keys)
+    local state = SearchQuery.parse(query, token_keys)
+    local chips = {}
+    if #state.text_groups > 0 then
+        chips[1] = SearchQuery.serialize(state.text_groups, {}, token_keys)
+    end
+    for index = 1, #state.tokens do
+        chips[#chips + 1] = state.tokens[index].key .. ":" .. state.tokens[index].value
+    end
+    return chips
+end
+
+-- chips -> query text (search mode switch back to classic)
+function SearchQuery.chips_to_query(chips, token_keys)
+    local parts = {}
+    for index = 1, #chips do
+        local key, value = SearchQuery.split_chip(chips[index], token_keys)
+        if key ~= nil then
+            parts[#parts + 1] = key .. ":" .. _serialize_token_value(value)
+        else
+            parts[#parts + 1] = _trim_text(chips[index])
+        end
+    end
+    return table.concat(parts, " ")
+end
+
+-- level-range chip value of two min / max boxes: "a-b", ">=a", "<=b";
+-- nil when both are empty
+function SearchQuery.format_range(min_text, max_text)
+    if min_text ~= "" and max_text ~= "" then
+        return min_text .. "-" .. max_text
+    end
+    if min_text ~= "" then
+        return ">=" .. min_text
+    end
+    if max_text ~= "" then
+        return "<=" .. max_text
+    end
+    return nil
 end

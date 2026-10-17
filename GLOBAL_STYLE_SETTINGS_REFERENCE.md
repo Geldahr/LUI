@@ -12,10 +12,12 @@ Style changes are applied after a plugin reload.
 
 ## Global > UI > General
 
-| Setting | What it changes |
-| --- | --- |
-| Reload notice | Explains that saved UI style changes apply after reloading the plugin. |
-| Reset shared UI style | Clears saved shared UI user overrides. Apply/Save persists the cleared user layer, so developer style or built-in defaults are visible after reload. |
+| Setting | Style token | What it changes |
+| --- | --- | --- |
+| Reload notice | - | Explains that saved UI style changes apply after reloading the plugin. |
+| Icon line weight | `ICON_WEIGHT` | Line weight of the Lucide-based UI icons (dropdown arrows, chevrons, check marks, search and chip icons): Thin (stroke 2) or Bold (stroke 2.5). The window close/maximize/restore icons have a single shape and are not affected. |
+| Legacy menu icons | `ICON_MENU_LEGACY` | Use the old game artwork for the menu icons (status bar, LUI Menu, window titles) instead of the tinted Lucide icons. Off by default. |
+| Reset shared UI style | - | Clears saved shared UI user overrides. Apply/Save persists the cleared user layer, so developer style or built-in defaults are visible after reload. |
 
 ## Global > UI > Layout
 
@@ -27,7 +29,6 @@ Style changes are applied after a plugin reload.
 | Table vertical lines width | `TABLE_VERTICAL_BORDER_WIDTH` | Column grid lines of LuiTable lists (they run through the title bar). 0 removes them. The table frame and title underline are not separate settings: they follow the shared Border width and Border color like every other widget. |
 | Table horizontal lines width | `TABLE_HORIZONTAL_BORDER_WIDTH` | Row separator lines. 0 removes them (default: alternating row colors carry the separation instead). |
 | Alternating table rows | `TABLE_ALTERNATE_ROWS` | Alternate table row backgrounds between the panel and alternate background colors. Disable for a single background, typically together with a horizontal line width. |
-| Icon line weight | `ICON_WEIGHT` | Line weight of the Lucide-based UI icons (dropdown arrows, chevrons, check marks, search and chip icons): Thin (stroke 2) or Bold (stroke 2.5). The window close/maximize/restore icons have a single shape and are not affected. |
 
 ## Global > UI > Colors > Frame
 
@@ -110,6 +111,7 @@ UI icons are white images tinted with these colors. When an icon color is not se
 | Icon hover color | `ICON_FOREGROUND_HOVER` | Icon color while its control is hovered. Falls back to Icon color. |
 | Icon pressed color | `ICON_FOREGROUND_PRESSED` | Icon color while its control is pressed or active. Falls back to Icon hover color. |
 | Icon disabled color | `ICON_FOREGROUND_DISABLED` | Icon color on disabled controls. Falls back to Control disabled text. |
+| Menu icons color | `ICON_MENU` | Normal color of the menu icons (status bar shortcuts, LUI Menu buttons, window title icons) while Legacy menu icons is off; hover/pressed/disabled use the shared icon colors. Falls back to Icon color. |
 | Icon accent color | `ICON_ACCENT` | Highlighted icons that carry a state, such as the filled Crafting favorite star. |
 
 ## Global > UI > Colors > Overlays

@@ -17,7 +17,8 @@
 --       from, to: character range of `text` that `value` replaces; text
 --       after `to` is kept. No range = the whole text; no `to` = to the end.
 --   FormatToken(sender, token)      -> icon_name_or_nil, label
--- Chips that do not fit scroll (mouse wheel) behind "< +N" / "> +N" markers;
+-- Clicking a chip puts its text back in the field for editing (Enter adds
+-- it again). Chips that do not fit scroll (mouse wheel) behind "< +N" / "> +N" markers;
 -- clicking a marker lists the hidden chips. The suggestion list opens when
 -- typing (or on double-click with an empty field); Up/Down move, Enter or a
 -- click picks; Enter with no list adds the token.
@@ -301,6 +302,19 @@ function TokenInput:remove_token(index)
     self:_fire_changed()
 end
 
+-- the token's text goes back into the field for editing; the token is
+-- removed (TokensChanged) and Enter adds the edited text again
+function TokenInput:edit_token(index)
+    local text = self._tokens[index].text
+    table.remove(self._tokens, index)
+    self:_close_lists()
+    self:_set_field_text(text)
+    self._text_box:Focus()
+    self._text_box:SetSelection(string.len(text) + 1, 0)
+    self:_layout()
+    self:_fire_changed()
+end
+
 function TokenInput:clear()
     self._tokens = {}
     self._first_visible = nil
@@ -544,6 +558,9 @@ function TokenInput:_make_chip(index, parent, x, y, full_width)
     local remove = self:_flat_button(chip, w - close - self:_s(3), (chip_h - close) / 2, close, v.close_icon)
     remove.Click = function()
         self:remove_token(index)
+    end
+    chip.MouseClick = function()
+        self:edit_token(index)
     end
     if parent == self._chip_layer then
         local wheel = function(_, args)

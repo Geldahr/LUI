@@ -207,7 +207,7 @@ function TravelWindow:Constructor()
     self:SetWantsUpdates(false)
 
     self:set_title(TR["Travel"])
-    self:set_icon(UI.AssetIds.compass)
+    UI.Shortcuts.apply_window_icon(self, "travel")
     self:set_margin(_scaled_int(BASE_MARGIN))
 
     self.content = Turbine.UI.Control()

@@ -2,8 +2,8 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- Encyclopedia settings: the bestiary chat-capture toggle (writes the
--- encyclopedia settings section).
+-- Encyclopedia settings: the bestiary chat-capture toggle and the search
+-- bar mode of every Encyclopedia tab (writes the encyclopedia settings section).
 
 local TR = _G.LUI.Locale.TR
 local is_lui_english_language = _G.LUI.Locale.is_english_language
@@ -37,5 +37,13 @@ function EncyclopediaPage:Constructor(window)
         general.controls.bestiary_capture.cb:SetEnabled(english_only == true)
         return english_only == true and self._settings.encyclopedia.bestiary_capture == true
     end
+    general:add_row_break()
+    general:add_dropdown("search_mode", TR["Search bar"], { TR["Classic"], TR["Tokens"] }, { "classic", "tokens" },
+        function(value)
+            self._settings.encyclopedia.search_mode = value
+        end,
+        function()
+            return self._settings.encyclopedia.search_mode
+        end, TR["Classic: the search runs on every keystroke. Tokens: Enter turns the typed text into a chip and the search runs when chips change."])
     self:add_tab(TR["General"], "general", general)
 end

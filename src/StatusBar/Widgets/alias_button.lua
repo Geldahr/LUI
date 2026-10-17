@@ -43,8 +43,10 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
 
     self.command = type(entry.command) == "string" and entry.command or nil
     self.icon_background = nil
+    self._icon_tint = nil
     if type(entry.icon_background) == "number" or type(entry.icon_background) == "string" then
-        self.icon_background = entry.icon_background
+        -- LUI's own API buttons (the reloader) follow the menu icon set
+        self.icon_background, self._icon_tint = UI.Shortcuts.api_button_icon(entry.icon_background)
     end
     self.icon_label = type(entry.icon_label) == "string" and entry.icon_label or nil
     self.font = font
@@ -101,6 +103,9 @@ function AliasButtonWidget:Constructor(spec, widget_w, bar_h, font)
     self.icon:SetParent(self)
     self.icon:SetZOrder(2)
     self.icon:set_alignment(UI.Widgets.Image.CENTER + UI.Widgets.Image.MIDDLE)
+    if self._icon_tint ~= nil then
+        self.icon:set_tint(self._icon_tint)
+    end
 
     self.label = UI.Widgets.LuiLabel()
     self.label:SetParent(self)
