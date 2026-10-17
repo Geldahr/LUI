@@ -5,7 +5,7 @@
 -- TEMPORARY review window for the tinted icon set: /lui icondemo.
 -- A real LuiWindow (title buttons, menu bar with sub-menus and checkable
 -- items) plus real dropdowns and checkboxes, all using the migrated icons;
--- the remaining rows preview icons not migrated yet and the token search bar.
+-- spin box, pager, clearable search field and the token search bar.
 -- Remove once the icon migration is reviewed.
 
 local LUI = _G.LUI
@@ -24,13 +24,14 @@ UI.IconDemo = IconDemo
 
 local WEIGHTED = {
     "dropdown_arrow", "submenu_arrow", "chevron_down", "chevron_up", "chevron_left", "chevron_right",
-    "plus", "minus", "check", "search", "resize_corner", "star", "star_filled", "locate",
-    "map_pin", "level", "family",
+    "chevron_up_small", "chevron_down_small", "chevron_left_small", "chevron_right_small",
+    "plus", "minus", "check", "search", "resize_horizontal", "resize_vertical", "resize_tl_br", "resize_tr_bl", "star", "star_filled", "map_pinned",
+    "x", "level", "family",
 }
 
 -- autocomplete entries: keyword, icon, hint, extra words that also match
 local KEYWORDS = {
-    { key = "loc", icon = "map_pin", hint = "Location: region or area", aliases = { "location", "area", "region", "zone" } },
+    { key = "loc", icon = "map_pinned", hint = "Location: region or area", aliases = { "location", "area", "region", "zone" } },
     { key = "lvl", icon = "level", hint = "Level: 50, >100, 50-60", aliases = { "level" } },
     { key = "gen", icon = "family", hint = "Family: genus or subcategory", aliases = { "family", "genus", "type" } },
 }
@@ -48,7 +49,7 @@ local SAMPLE_LOCATIONS = {
 
 -- keyword chips show an icon instead of "key:"
 local CHIP_KEYWORDS = {
-    loc = "map_pin",
+    loc = "map_pinned",
     lvl = "level",
     gen = "family",
 }
@@ -296,18 +297,29 @@ local function _build_content(window, content)
     end
     y = y + _s(32)
 
-    -- not migrated yet: previews on plain tinted buttons
-    y = _section(content, y, "Preview (not migrated yet): spin box, pager, tab scroll, + disabled")
-    cx = 0
-    for _, name in ipairs({ "chevron_up", "chevron_down", "plus", "minus", "chevron_left", "chevron_right" }) do
-        _button(content, cx, y, _s(24), _s(24), name, 14)
-        cx = cx + _s(30)
-    end
-    cx = cx + _s(20)
-    for _, name in ipairs({ "chevron_up", "chevron_down", "plus", "minus" }) do
-        _button(content, cx, y, _s(24), _s(24), name, 14):set_enabled(false)
-        cx = cx + _s(30)
-    end
+    y = _section(content, y, "Spin box, pager, search field (X shows once there is text)")
+    local spin = Widgets.LuiSpinBox()
+    spin:SetParent(content)
+    spin:set_scale(_scale())
+    spin:set_minimum(0)
+    spin:set_maximum(10)
+    spin:SetPosition(0, y)
+    local pager = Widgets.LuiPager()
+    pager:SetParent(content)
+    pager:set_font(_font(Style.CONTROL_FONT_SIZE - 1))
+    pager:set_scale(_scale())
+    pager:set_page_count(5)
+    pager:set_metrics(_s(22), _s(4))
+    pager:SetPosition(_s(90), y)
+    pager:SetSize(pager:preferred_width(_s(40)), _s(22))
+    local search = Widgets.LuiLineEdit()
+    search:SetParent(content)
+    search:set_scale(_scale())
+    search:SetFont(_font(Style.CONTROL_FONT_SIZE - 1))
+    search:set_placeholder_text("Search...")
+    search:set_clearable(true)
+    search:SetPosition(_s(320), y)
+    search:SetSize(_s(240), _s(22))
     y = y + _s(34)
 
     y = _section(content, y, "TokenInput (large, compact): type, Enter adds a chip, x removes, double-click lists")
@@ -316,7 +328,7 @@ local function _build_content(window, content)
     local compact = _build_token_input(content, 0, y, W - _s(20), Widgets.TokenInput.COMPACT, window)
     y = y + compact:get_height() + _s(10)
 
-    y = _section(content, y, "Favourite star (click), bestiary current area, resize corner")
+    y = _section(content, y, "Favourite star (click), bestiary location, resize corner")
     local star = _flat_button(content, 0, y, _s(28), "star", 18)
     star._favorite = false
     star.Click = function(sender)
@@ -328,8 +340,8 @@ local function _build_content(window, content)
             sender:set_tinted_icon(Icons.path("star"), 18)
         end
     end
-    _button(content, _s(40), y, _s(28), _s(28), "locate", 18)
-    _tinted_image(content, Icons.path("resize_corner"), _s(14), _s(84), y + _s(14), Style.ICON_FOREGROUND)
+    _button(content, _s(40), y, _s(28), _s(28), "map_pinned", 18)
+    _tinted_image(content, Icons.path("resize_tl_br"), _s(14), _s(84), y + _s(14), Style.ICON_FOREGROUND)
     y = y + _s(40)
 
     y = _section(content, y, "Line weights (setting: " .. Style.ICON_WEIGHT .. "): thin vs bold, 20 px and 14 px")

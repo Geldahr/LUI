@@ -50,7 +50,6 @@ Encyclopedia.CONTENT_MARGINS = {
 local BASE_BAR_H = 22
 local BASE_FILTER_H = 22
 local BASE_GAP = 4
-local BASE_CLEAR_W = 59
 local BASE_LEVEL_INPUT_W = 44
 local BASE_NAV_W = 22
 local BASE_PAGE_W = 74
@@ -77,8 +76,8 @@ local BASE_RESIZE_REFLOW_MIN_INTERVAL = 0.50
 local BASE_STORE_REFRESH_MIN_INTERVAL = 2.0
 local BASE_COLUMN_W = 600
 
-local AREA_COMPASS_ICON = "LUI/assets/ui/compass_64.tga"
-local AREA_COMPASS_HOVER_ICON = "LUI/assets/ui/compass_hover_64.tga"
+-- location icon inset inside the /loc quickslot square
+local BASE_AREA_ICON_INSET = 3
 
 
 local FILTER_ALL = "__all"
@@ -177,32 +176,70 @@ local function _record_matches_location_parts(record, parts)
     return true
 end
 
-local function _area_compass_icon(hovered)
-    if hovered == true then
-        return AREA_COMPASS_HOVER_ICON
-    end
-
-    return AREA_COMPASS_ICON
+-- /loc names can differ from the bestiary data by a leading article
+-- ("Angle of Mitheithel" vs "The Angle of Mitheithel")
+local function _location_key(text)
+    local key = _lower_text(_trim_text(text))
+    return (string.gsub(key, "^the%s+", ""))
 end
 
-local function _set_area_slot_icon_background(window, target_w, target_h)
-    local background = _area_compass_icon(window._area_slot_hovered == true)
-    if type(target_w) ~= "number" or target_w < 1 or type(target_h) ~= "number" or target_h < 1 then
-        target_w, target_h = window.area_slot:GetSize()
-    end
+-- the data's own spelling of a /loc region > area > instance path, so the
+-- query written to the search field matches exactly: the record whose
+-- whole path matches (article-insensitive) with the most exact names wins;
+-- a path the data does not know is kept as the game gave it
+local LOCATION_FIELDS = { "region", "area", "instance" }
 
-    if type(target_w) ~= "number" or target_w < 1 then
-        target_w = _scaled_int(BASE_FILTER_H)
+local function _canonical_location_parts(records, parts)
+    local keys = {}
+    for i = 1, #parts do
+        keys[i] = _location_key(parts[i])
     end
-    if type(target_h) ~= "number" or target_h < 1 then
-        target_h = target_w
+    local best = nil
+    local best_exact = -1
+    for r = 1, #records do
+        local record = records[r]
+        local exact = 0
+        local matches = true
+        for i = 1, #parts do
+            local name = record[LOCATION_FIELDS[i]]
+            if name == nil or _location_key(name) ~= keys[i] then
+                matches = false
+                break
+            end
+            if _same_text(name, parts[i]) == true then
+                exact = exact + 1
+            end
+        end
+        if matches == true and exact > best_exact then
+            best = record
+            best_exact = exact
+            if exact == #parts then
+                break
+            end
+        end
     end
+    if best == nil then
+        return parts
+    end
+    local canonical = {}
+    for i = 1, #parts do
+        canonical[i] = best[LOCATION_FIELDS[i]]
+    end
+    return canonical
+end
 
-    if window._area_slot_icon_background ~= background then
-        window._area_slot_icon_background = background
+-- tinted location icon centred over the /loc quickslot, hover-aware
+local function _sync_area_slot_icon(window)
+    local x, y = window.area_slot:GetPosition()
+    local inset = _scaled_int(BASE_AREA_ICON_INSET)
+    local size = math.max(1, window.area_slot:GetWidth() - (inset * 2))
+    window.area_slot_icon:set_icon(UI.Widgets.Icons.path("map_pinned"), size, size)
+    if window._area_slot_hovered == true then
+        window.area_slot_icon:set_tint(Style.ICON_FOREGROUND_HOVER)
+    else
+        window.area_slot_icon:set_tint(Style.ICON_FOREGROUND)
     end
-
-    window.area_slot_icon:set_icon(background, target_w, target_h)
+    window.area_slot_icon:SetPosition(x + inset, y + inset)
 end
 
 local function _to_number(value, fallback)
@@ -1276,6 +1313,7 @@ function EncyclopediaWindow:Constructor()
     self.filter_tb:SetParent(self.filter_bar)
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.filter_tb:set_placeholder_text(TR["Search..."])
+    self.filter_tb:set_clearable(true)
     self.filter_tb.TextChanged = function()
         if self._suppress_area_text_changed ~= true then
             self.current_area = nil
@@ -1283,22 +1321,6 @@ function EncyclopediaWindow:Constructor()
             BestiaryCache.area_filter_query = nil
         end
         self:update_filter()
-    end
-
-    self.clear_button = UI.Widgets.LuiButton()
-    self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:set_text(TR["Clear"])
-    self.clear_button.Click = function()
-        self.current_area = nil
-        self.last_applied_area_query = nil
-        BestiaryCache.area_filter_query = nil
-        self._suppress_level_text_changed = true
-        self.level_min_box:SetText("")
-        self.level_max_box:SetText("")
-        self._suppress_level_text_changed = false
-        self.filter_tb:SetText("")
-        self:update_filter()
-        self.filter_tb:Focus()
     end
 
     self.area_label = UI.Widgets.LuiLabel()
@@ -1321,13 +1343,11 @@ function EncyclopediaWindow:Constructor()
     self._area_slot_hovered = false
     self.area_slot.MouseEnter = function()
         self._area_slot_hovered = true
-        local icon_w, icon_h = self.area_slot:GetSize()
-        _set_area_slot_icon_background(self, icon_w, icon_h)
+        _sync_area_slot_icon(self)
     end
     self.area_slot.MouseLeave = function()
         self._area_slot_hovered = false
-        local icon_w, icon_h = self.area_slot:GetSize()
-        _set_area_slot_icon_background(self, icon_w, icon_h)
+        _sync_area_slot_icon(self)
     end
 
     self.area_slot_cover = Turbine.UI.Control()
@@ -1341,7 +1361,6 @@ function EncyclopediaWindow:Constructor()
     self.area_slot_icon:SetParent(self.filter_bar)
     self.area_slot_icon:SetMouseVisible(false)
     self.area_slot_icon:SetZOrder(3)
-    _set_area_slot_icon_background(self, _scaled_int(BASE_FILTER_H), _scaled_int(BASE_FILTER_H))
 
     self.taxonomy_bar = Turbine.UI.Control()
     self.taxonomy_bar:SetParent(self.nav_bar)
@@ -1501,8 +1520,8 @@ function EncyclopediaWindow:apply_settings()
     self.level_min_box:SetFont(button_font)
     self.level_dash_label:SetFont(button_font)
     self.level_max_box:SetFont(button_font)
+    self.filter_tb:set_scale(State.settings.global.scale)
     self.filter_tb:SetFont(button_font)
-    self.clear_button:set_font(button_font)
     self.area_label:SetFont(button_font)
     self.encyclopedia_tabs:set_scale(State.settings.global.scale)
     self.encyclopedia_tabs:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 3))
@@ -1686,6 +1705,7 @@ function EncyclopediaWindow:apply_current_area_filter(force)
     if location_parts == nil then
         error("Invalid bestiary area filter query")
     end
+    location_parts = _canonical_location_parts(self.all_records, location_parts)
 
     local location_value = SearchQuery.format_path(location_parts)
     if location_value == nil then
@@ -2041,18 +2061,14 @@ function EncyclopediaWindow:layout()
     self.filter_bar:SetSize(inner_w, filter_h)
 
     local area_slot_size = filter_h
-    local clear_w = _scaled_int(BASE_CLEAR_W)
     local area_slot_x = 0
     local filter_x = area_slot_size + gap
-    local filter_w = math.max(1, inner_w - clear_w - gap - filter_x)
-    self.clear_button:SetPosition(inner_w - clear_w, 0)
-    self.clear_button:SetSize(clear_w, filter_h)
+    local filter_w = math.max(1, inner_w - filter_x)
     self.area_slot:SetPosition(area_slot_x, 0)
     self.area_slot:SetSize(area_slot_size, area_slot_size)
     self.area_slot_cover:SetPosition(area_slot_x, 0)
     self.area_slot_cover:SetSize(area_slot_size, area_slot_size)
-    self.area_slot_icon:SetPosition(area_slot_x, 0)
-    _set_area_slot_icon_background(self, area_slot_size, area_slot_size)
+    _sync_area_slot_icon(self)
     self.area_label:SetPosition(0, 0)
     self.area_label:SetSize(0, 0)
     self.filter_tb:SetPosition(filter_x, 0)

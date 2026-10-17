@@ -18,7 +18,6 @@ import "LUI.src.Utils.font"
 
 local UI = _G.LUI.UI
 local Widgets = UI.Widgets
-local AssetIds = UI.Assets
 local LuiBaseWindow = Widgets.LuiBaseWindow
 local LuiButton = Widgets.LuiButton
 local Image = Widgets.Image
@@ -1235,11 +1234,13 @@ function LuiWindow:_sync_resize_handle_icons()
     end
 
     local handle = _scaled_int(self._scale, BASE_RESIZE_HANDLE)
-    self._resize_handles.horizontal:set_icon(AssetIds.resize_horizontal, handle, handle)
-    self._resize_handles.vertical:set_icon(AssetIds.resize_vertical, handle, handle)
-    self._resize_handles.diagonal_tl_br:set_icon(AssetIds.resize_diagonal_tl_br, handle, handle)
-    self._resize_handles.diagonal_tr_bl:set_icon(AssetIds.resize_diagonal_tr_bl, handle, handle)
+    self._resize_handles.horizontal:set_icon(Icons.path("resize_horizontal"), handle, handle)
+    self._resize_handles.vertical:set_icon(Icons.path("resize_vertical"), handle, handle)
+    self._resize_handles.diagonal_tl_br:set_icon(Icons.path("resize_tl_br"), handle, handle)
+    self._resize_handles.diagonal_tr_bl:set_icon(Icons.path("resize_tr_bl"), handle, handle)
     for _, resize_handle in pairs(self._resize_handles) do
+        -- an active cursor: the bright icon color
+        resize_handle:set_tint(Style.ICON_FOREGROUND_HOVER)
         resize_handle:SetPosition(0, 0)
         resize_handle:SetVisible(resize_handle == self._active_resize_handle)
     end

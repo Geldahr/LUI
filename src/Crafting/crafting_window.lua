@@ -170,12 +170,6 @@ local SOURCE_HINT_COLORS = {
 local FAVORITE_SCALE_BREAKPOINT = 1.5
 local FAVORITE_ICON_SMALL = 24
 local FAVORITE_ICON_LARGE = 48
-local FAVORITE_STAR_24 = "LUI/assets/ui/star_24.tga"
-local FAVORITE_STAR_48 = "LUI/assets/ui/star_48.tga"
-local FAVORITE_STAR_GRAY_24 = "LUI/assets/ui/star_gray_24.tga"
-local FAVORITE_STAR_GRAY_48 = "LUI/assets/ui/star_gray_48.tga"
-local FAVORITE_STAR_HOVER_24 = "LUI/assets/ui/star_hover_24.tga"
-local FAVORITE_STAR_HOVER_48 = "LUI/assets/ui/star_hover_48.tga"
 
 local function _scaled_int(value)
     return math.floor((value * State.settings.global.scale) + 0.5)
@@ -195,34 +189,22 @@ local function _favorite_icon_size()
     return scale > FAVORITE_SCALE_BREAKPOINT and FAVORITE_ICON_LARGE or FAVORITE_ICON_SMALL
 end
 
-local function _favorite_icon_paths(favorite)
-    local side = _favorite_icon_size()
-    if side > FAVORITE_ICON_SMALL then
-        return favorite == true and FAVORITE_STAR_48 or FAVORITE_STAR_GRAY_48, FAVORITE_STAR_HOVER_48,
-            FAVORITE_STAR_GRAY_48, side
-    end
-
-    return favorite == true and FAVORITE_STAR_24 or FAVORITE_STAR_GRAY_24, FAVORITE_STAR_HOVER_24,
-        FAVORITE_STAR_GRAY_24, side
-end
-
 local function _apply_favorite_icon(button, favorite)
     if button == nil then
         return
     end
 
-    local normal, hover, disabled, side = _favorite_icon_paths(favorite)
+    -- outline star in the icon colors; a favorite is the filled star in the
+    -- accent color
+    local Icons = UI.Widgets.Icons
+    local side = _favorite_icon_size()
     button:set_text("")
-    button:set_icon(
-        normal,
-        hover,
-        hover,
-        disabled,
-        side,
-        side,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
-    button:set_icon_stretch_mode(0)
+    if favorite == true then
+        button:set_tinted_icon(Icons.path("star_filled"), side, side, UI.Widgets.LuiButton.icon_position.LEFT)
+        button:set_icon_tint(Style.ICON_ACCENT, Style.ICON_ACCENT, Style.ICON_ACCENT, Style.ICON_FOREGROUND_DISABLED)
+    else
+        button:set_tinted_icon(Icons.path("star"), side, side, UI.Widgets.LuiButton.icon_position.LEFT)
+    end
     button:set_active(false)
 end
 
@@ -1022,7 +1004,6 @@ function CraftingPlanRow:Constructor(on_count_changed, on_remove)
 
     self.count_box = UI.Widgets.LuiSpinBox()
     self.count_box:SetParent(self)
-    self.count_box:set_render(UI.Widgets.LuiSpinBox.render.PLUS_MINUS)
     self.count_box:set_minimum(0)
     self.count_box:set_step(1)
     self.count_box:set_decimals(0)
@@ -1250,6 +1231,7 @@ function CraftingWindow:Constructor()
     self.search_box:SetParent(self.top_bar)
     self.search_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.search_box:set_placeholder_text(TR["Search..."])
+    self.search_box:set_clearable(true)
     self.search_box.TextChanged = function()
         if self._suppress_search_text_changed == true then
             return
@@ -1258,17 +1240,6 @@ function CraftingWindow:Constructor()
         self:_sync_recipe_pager(1)
         self:_invalidate_recipe_list()
         self:refresh_recipe_list()
-    end
-
-    self.clear_button = UI.Widgets.LuiButton()
-    self.clear_button:SetParent(self.top_bar)
-    self.clear_button:set_text(TR["Clear"])
-    self.clear_button.Click = function()
-        self:_apply_search_query("")
-        self:_sync_recipe_pager(1)
-        self:_invalidate_recipe_list()
-        self:refresh_recipe_list()
-        self.search_box:Focus()
     end
 
     self.favorite_filter_button = UI.Widgets.LuiButton()
@@ -1521,11 +1492,8 @@ function CraftingWindow:Constructor()
     self.variant_prev_button:SetParent(self.detail_panel.inner)
     self.variant_prev_button:set_text("")
     self.variant_prev_button:set_padding(2)
-    self.variant_prev_button:set_icon(
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_white,
-        UI.AssetIds.arrow_l_transparent,
+    self.variant_prev_button:set_tinted_icon(
+        UI.Widgets.Icons.path("chevron_left_small"),
         BASE_VARIANT_NAV_W,
         nil,
         UI.Widgets.LuiButton.icon_position.LEFT
@@ -1546,11 +1514,8 @@ function CraftingWindow:Constructor()
     self.variant_next_button:SetParent(self.detail_panel.inner)
     self.variant_next_button:set_text("")
     self.variant_next_button:set_padding(2)
-    self.variant_next_button:set_icon(
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_white,
-        UI.AssetIds.arrow_r_transparent,
+    self.variant_next_button:set_tinted_icon(
+        UI.Widgets.Icons.path("chevron_right_small"),
         BASE_VARIANT_NAV_W,
         nil,
         UI.Widgets.LuiButton.icon_position.LEFT
@@ -1569,7 +1534,6 @@ function CraftingWindow:Constructor()
 
     self.plan_spin_box = UI.Widgets.LuiSpinBox()
     self.plan_spin_box:SetParent(self.detail_panel.inner)
-    self.plan_spin_box:set_render(UI.Widgets.LuiSpinBox.render.PLUS_MINUS)
     self.plan_spin_box:set_minimum(0)
     self.plan_spin_box:set_step(1)
     self.plan_spin_box:set_decimals(0)
@@ -2711,8 +2675,8 @@ function CraftingWindow:apply_settings()
     self:set_minimum_size(self:_minimum_window_size())
     self:_enforce_min_size()
 
+    self.search_box:set_scale(State.settings.global.scale)
     self.search_box:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 1))
-    self.clear_button:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
     self.favorite_filter_button:set_scale(1)
     self.scope_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
     self.scope_dropdown:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2))
@@ -4172,11 +4136,9 @@ function CraftingWindow:layout()
     local top_control_y = math.max(0, math.floor((top_row_h - bar_h) / 2))
     local favorite_filter_y = math.max(0, math.floor((top_row_h - favorite_filter_w) / 2))
     self.search_box:SetPosition(0, top_control_y)
-    self.search_box:SetSize(self.top_bar:GetWidth() - clear_w - favorite_filter_w - (gap * 2), bar_h)
-    self.favorite_filter_button:SetPosition(self.top_bar:GetWidth() - clear_w - gap - favorite_filter_w, favorite_filter_y)
+    self.search_box:SetSize(self.top_bar:GetWidth() - favorite_filter_w - gap, bar_h)
+    self.favorite_filter_button:SetPosition(self.top_bar:GetWidth() - favorite_filter_w, favorite_filter_y)
     self.favorite_filter_button:SetSize(favorite_filter_w, favorite_filter_w)
-    self.clear_button:SetPosition(self.top_bar:GetWidth() - clear_w, top_control_y)
-    self.clear_button:SetSize(clear_w, bar_h)
 
     local row2_y = top_row_h + gap
     local label_gap = _scaled_int(4)

@@ -12,23 +12,6 @@ AssetIds.silver_coin = 0x41007e7c
 AssetIds.copper_coin = 0x41007e7d
 AssetIds.durability = 0x41003061
 
-AssetIds.arrow_l_white = 0x41108D0C
-AssetIds.arrow_r_white = 0x41108D0D
-
-AssetIds.arrow_l_yellow_normal = 0x4110A12F
-AssetIds.arrow_l_yellow_inverted = 0x4110A130
-AssetIds.arrow_l_yellow_dark = 0x4110A131
-AssetIds.arrow_l_transparent = 0x4110A12D
-
-AssetIds.arrow_r_yellow_normal = 0x4110A132
-AssetIds.arrow_r_yellow_inverted = 0x4110A133
-AssetIds.arrow_r_yellow_dark = 0x4110A134
-AssetIds.arrow_r_transparent = 0x4110A12E
-
-AssetIds.resize_horizontal = 0x410081BF
-AssetIds.resize_vertical = 0x410081C0
-AssetIds.resize_diagonal_tl_br = 0x41007E20
-AssetIds.resize_diagonal_tr_bl = 0x4101973F
 
 AssetIds.feather = 0x41004D92
 
@@ -52,7 +35,6 @@ AssetIds.chest_alt_2 = 0x4111BE3E
 AssetIds.chest_alt_3 = 0x411BA042
 
 AssetIds.compass = "LUI/assets/ui/compass_64.tga"
-AssetIds.compass_hover = "LUI/assets/ui/compass_hover_64.tga"
 
 AssetIds.book_shortcut = 0x410031FB
 AssetIds.book_open = 0x410E0435

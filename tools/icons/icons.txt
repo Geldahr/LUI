@@ -23,14 +23,22 @@ lucide chevron_left chevron-left
 lucide chevron_right chevron-right
 lucide dropdown_arrow chevron-down zoom=1.5
 lucide submenu_arrow chevron-right zoom=1.5
+# zoomed chevrons for tiny buttons (spin box halves, variant selector)
+lucide chevron_up_small chevron-up zoom=2
+lucide chevron_down_small chevron-down zoom=2
+lucide chevron_left_small chevron-left zoom=2
+lucide chevron_right_small chevron-right zoom=2
 lucide plus plus
 lucide minus minus
 lucide check check
 lucide search search
-lucide resize_corner move-diagonal-2
+lucide resize_horizontal move-horizontal
+lucide resize_vertical move-vertical
+lucide resize_tl_br move-diagonal-2
+lucide resize_tr_bl move-diagonal
 lucide star star
 lucide star_filled star filled
-lucide locate locate-fixed
-lucide map_pin map-pin
+lucide map_pinned map-pinned
+lucide x x
 lucide level chevrons-up
 lucide family paw-print

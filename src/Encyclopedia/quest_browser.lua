@@ -63,6 +63,7 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
     self.search_box:SetParent(self)
     self.search_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.search_box:set_placeholder_text(TR["Search..."])
+    self.search_box:set_clearable(true)
     self.search_box.TextChanged = function()
         self:_on_filters_changed()
     end
@@ -169,6 +170,7 @@ end
 
 function QuestBrowserPanel:apply_fonts()
     local font = _scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
+    self.search_box:set_scale(State.settings.global.scale)
     self.search_box:SetFont(font)
     self.category_label:SetFont(font)
     self.category_dropdown:SetFont(font)

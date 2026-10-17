@@ -10,7 +10,7 @@ Usage: python tools/fonts/measure_fonts.py <screenshot_dir>
   the window footer (PAGE_W x PAGE_H below). Requires Pillow.
 
 
-Rebuilds the exact layout of src/UI/font_calibration.lua for the page area
+Rebuilds the exact layout of tools/fonts/font_calibration.lua for the page area
 (PAGE_W x PAGE_H), maps screenshot i (time order) to page i, and for each
 cell measures the ink extent of "|" + char*reps + "|".
 advance(char) = (ink(cell) - ink("||" reference)) / reps

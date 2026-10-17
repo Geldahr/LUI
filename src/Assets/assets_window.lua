@@ -44,7 +44,6 @@ local BASE_MIN_H = 262
 local BASE_DETAILS_W = 170
 local BASE_DETAILS_MIN_H = 46
 local BASE_DETAILS_EXTRA_H = 6
-local BASE_CLEAR_W = 59
 local BASE_STORAGE_LABEL_W = 56
 local BASE_STORAGE_W = 133
 local BASE_OWNER_LABEL_W = 67
@@ -645,17 +644,9 @@ function AssetsWindow:Constructor()
     self.filter_tb:SetParent(self.filter_bar)
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.filter_tb:set_placeholder_text(TR["Search..."])
+    self.filter_tb:set_clearable(true)
     self.filter_tb.TextChanged = function()
         self:update_filter()
-    end
-
-    self.clear_button = UI.Widgets.LuiButton()
-    self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:set_text(TR["Clear"])
-    self.clear_button.Click = function()
-        self.filter_tb:SetText("")
-        self:update_filter()
-        self.filter_tb:Focus()
     end
 
     self.owner_label = UI.Widgets.LuiLabel()
@@ -988,7 +979,7 @@ function AssetsWindow:apply_settings()
     local button_font = _scaled_control_font(Style.CONTROL_FONT_SIZE - 1)
     self.pager:set_font(button_font)
     self.pager:set_scale(State.settings.global.scale)
-    self.clear_button:set_font(button_font)
+    self.filter_tb:set_scale(State.settings.global.scale)
     self.filter_tb:SetFont(button_font)
     self.owner_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.owner_dropdown:SetFont(button_font)
@@ -1806,7 +1797,6 @@ function AssetsWindow:layout()
     local gap = layout.gap
     local nav_w = _scaled_int(BASE_NAV_W)
     local page_w = _scaled_int(BASE_PAGE_W)
-    local clear_w = _scaled_int(BASE_CLEAR_W)
     local owner_label_w = _scaled_int(BASE_OWNER_LABEL_W)
     local owner_w = _scaled_int(BASE_OWNER_W)
     local storage_label_w = _scaled_int(BASE_STORAGE_LABEL_W)
@@ -1868,14 +1858,8 @@ function AssetsWindow:layout()
     self.filter_bar:SetPosition(margin_left, filter_top)
     self.filter_bar:SetSize(inner_w, filter_h)
 
-    self.clear_button:SetPosition(math.max(0, inner_w - clear_w), 0)
-    self.clear_button:SetSize(math.min(clear_w, inner_w), filter_h)
-    local filter_w = inner_w - clear_w - gap
-    if filter_w < 0 then
-        filter_w = 0
-    end
     self.filter_tb:SetPosition(0, 0)
-    self.filter_tb:SetSize(filter_w, filter_h)
+    self.filter_tb:SetSize(inner_w, filter_h)
 
     local summary_top = filter_top + filter_h + gap
     self.summary_bar:SetPosition(margin_left, summary_top)

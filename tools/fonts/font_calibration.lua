@@ -2,13 +2,15 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
--- TEMPORARY font calibration window: /lui fontcal.
+-- Font calibration window (not loaded by the plugin). To recalibrate: copy
+-- to src/UI/, import it from src/UI/__init__.lua, add a `/lui fontcal`
+-- command calling UI.FontCalibration.toggle() in src/Utils/cli.lua, then
+-- screenshot every page and run tools/fonts/measure_fonts.py.
 -- Every LotRO font LUI can resolve, every character: one blue cell per
 -- character showing "|" .. char x reps .. "|". A screenshot script measures
 -- the ink width of each cell; (cell - "||" reference cell) / reps gives the
 -- exact advance of the character. The layout is deterministic for a given
 -- page size (shown in the header) so the analysis rebuilds the same order.
--- Remove once the width table is generated.
 
 local LUI = _G.LUI
 local UI = LUI.UI

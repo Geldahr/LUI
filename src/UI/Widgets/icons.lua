@@ -23,15 +23,22 @@ local WEIGHTED = {
     chevron_right = true,
     dropdown_arrow = true,
     submenu_arrow = true,
+    chevron_up_small = true,
+    chevron_down_small = true,
+    chevron_left_small = true,
+    chevron_right_small = true,
     plus = true,
     minus = true,
     check = true,
     search = true,
-    resize_corner = true,
+    resize_horizontal = true,
+    resize_vertical = true,
+    resize_tl_br = true,
+    resize_tr_bl = true,
     star = true,
     star_filled = true,
-    locate = true,
-    map_pin = true,
+    map_pinned = true,
+    x = true,
     level = true,
     family = true,
 }
@@ -49,6 +56,10 @@ local WEIGHTS = {
 }
 
 Icons.WEIGHTS = { "thin", "bold" }
+
+-- icon of every clear button (search bars, TokenInput); "x" switches them
+-- all to the Lucide X
+Icons.CLEAR = "window_close"
 
 function Icons.path_for_weight(name, weight)
     if WEIGHTED[name] ~= true then

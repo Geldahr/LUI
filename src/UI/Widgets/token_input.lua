@@ -419,9 +419,9 @@ function TokenInput:_flat_button(parent, x, y, size, icon_size)
     button:set_scale(self._scale)
     button:SetPosition(x, y)
     button:SetSize(size, size)
-    button:set_tinted_icon(Icons.path("window_close"), icon_size)
+    button:set_tinted_icon(Icons.path(Icons.CLEAR), icon_size)
+    -- no box, as the search-bar clear X: hover only brightens the icon
     Style.apply_transparent_button(button)
-    button:set_hover_back_color(Style.ACCENT_BACKGROUND_DISABLED)
     return button
 end
 
@@ -512,9 +512,8 @@ function TokenInput:_apply_style()
     local clear_size = _fit(self:_s(v.clear_btn), h)
     self._clear:set_scale(self._scale)
     self._clear:SetSize(clear_size, clear_size)
-    self._clear:set_tinted_icon(Icons.path("window_close"), v.clear_icon)
+    self._clear:set_tinted_icon(Icons.path(Icons.CLEAR), v.clear_icon)
     Style.apply_transparent_button(self._clear)
-    self._clear:set_hover_back_color(Style.ACCENT_BACKGROUND_DISABLED)
 
     self:_build_marker_content(self._left_marker)
     self:_build_marker_content(self._right_marker)
@@ -594,7 +593,13 @@ function TokenInput:_layout()
     local chip_h = self:_chip_height()
     local chip_y = (h - chip_h) / 2
     local chips_x = self._lead_icon ~= nil and self:_s(v.lead_w) or self:_s(v.edge)
-    local clear_w = self:_s(v.clear_w)
+    -- the clear X only shows while there is something to clear
+    local has_content = self:_has_content()
+    self._clear:SetVisible(has_content)
+    local clear_w = self:_s(v.edge)
+    if has_content == true then
+        clear_w = self:_s(v.clear_w)
+    end
     local count = #self._tokens
 
     local space = w - chips_x - clear_w - self:_s(MIN_TEXT_W)
@@ -657,6 +662,10 @@ function TokenInput:_layout()
     if self._overflow_side ~= nil then
         self:_refresh_overflow()
     end
+end
+
+function TokenInput:_has_content()
+    return #self._tokens > 0 or (self._text_box:GetText() or "") ~= ""
 end
 
 function TokenInput:_sync_placeholder()
@@ -915,7 +924,11 @@ function TokenInput:_wire_events()
             end
             return
         end
-        self:_sync_placeholder()
+        if self:_has_content() ~= self._clear:IsVisible() then
+            self:_layout()
+        else
+            self:_sync_placeholder()
+        end
         self:_refresh_suggest()
     end
 end

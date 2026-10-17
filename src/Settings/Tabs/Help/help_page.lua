@@ -226,7 +226,7 @@ local function _new_interactions_section(window)
         TR["Bestiary"],
         TR["Double-click a non-player target's LUI target vitals to open its Bestiary card on the English client."],
         TR["Double-click a Bestiary result row to open that monster's card."],
-        TR["Use the Bestiary compass/location button while the Bestiary is open to run the localized location command and filter Bestiary results to the current area when LUI can resolve it."],
+        TR["Use the Bestiary location button while the Bestiary is open to run the localized location command and filter Bestiary results to the current area when LUI can resolve it."],
         TR["Bestiary search supports plain text, quoted phrases, OR with |, and filters loc:<region/area>, gen:<genus/subcategory>, and lvl:<min-max>."],
         "",
         TR["Crafting"],

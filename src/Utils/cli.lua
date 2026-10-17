@@ -118,8 +118,6 @@ function command:Execute(_, str)
         end
     elseif cmd == "icondemo" then -- TEMPORARY (src/UI/icon_demo.lua)
         UI.IconDemo.toggle()
-    elseif cmd == "fontcal" then -- TEMPORARY (src/UI/font_calibration.lua)
-        UI.FontCalibration.toggle()
     elseif cmd == "card" then
         local monster_name = table.concat(list, " ", 2)
         if monster_name == nil or monster_name == "" then

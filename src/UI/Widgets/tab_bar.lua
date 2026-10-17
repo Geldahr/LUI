@@ -7,15 +7,14 @@ local FONT_TO_LOTRO = Utils.FONT_TO_LOTRO
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 
-import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.icons"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
 import "LUI.src.Utils.text_width"
 
 local UI = _G.LUI.UI
 local Widgets = UI.Widgets
-local AssetIds = UI.Assets
 local LuiButton = Widgets.LuiButton
 local LuiLabel = Widgets.LuiLabel
 local Style = Widgets.Style
@@ -434,11 +433,8 @@ function LuiTabBar:Constructor()
     self._scroll_left_button:set_text("")
     self._scroll_left_button:set_padding(2)
     Style.apply_transparent_button(self._scroll_left_button)
-    self._scroll_left_button:set_icon(
-        AssetIds.arrow_l_yellow_normal,
-        AssetIds.arrow_l_yellow_inverted,
-        AssetIds.arrow_l_yellow_dark,
-        AssetIds.arrow_l_transparent,
+    self._scroll_left_button:set_tinted_icon(
+        Widgets.Icons.path("chevron_left"),
         BASE_SCROLL_BUTTON_SIZE,
         nil,
         LuiButton.icon_position.LEFT
@@ -454,11 +450,8 @@ function LuiTabBar:Constructor()
     self._scroll_right_button:set_text("")
     self._scroll_right_button:set_padding(2)
     Style.apply_transparent_button(self._scroll_right_button)
-    self._scroll_right_button:set_icon(
-        AssetIds.arrow_r_yellow_normal,
-        AssetIds.arrow_r_yellow_inverted,
-        AssetIds.arrow_r_yellow_dark,
-        AssetIds.arrow_r_transparent,
+    self._scroll_right_button:set_tinted_icon(
+        Widgets.Icons.path("chevron_right"),
         BASE_SCROLL_BUTTON_SIZE,
         nil,
         LuiButton.icon_position.RIGHT
