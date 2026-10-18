@@ -16,7 +16,7 @@
 #
 # Every output is white; the colour comes from the in-game tint.
 
-own window_close x_64.tga
+own window_close x_64.tga sized
 own window_maximize maximize_64.tga
 own window_restore restore_64.tga
 

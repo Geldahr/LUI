@@ -81,7 +81,7 @@ end
 
 AssetIds.icons = {
     -- LUI's own shapes (single weight)
-    window_close = ICON_DIR .. "window_close_64.tga",
+    window_close = sized(ICON_DIR .. "window_close_"),
     window_maximize = ICON_DIR .. "window_maximize_64.tga",
     window_restore = ICON_DIR .. "window_restore_64.tga",
 

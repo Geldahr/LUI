@@ -92,6 +92,11 @@ local function _fit(value, area)
 end
 
 -- a detached control is still drawn at the screen origin: hide first
+-- the overflow list shows at most this many chips, then scrolls
+local OVERFLOW_MAX_ROWS = 12
+-- the game scrollbar is drawn at a fixed width, never scaled (as LuiMenu)
+local BASE_SCROLL_W = 10
+
 local function _discard(control)
     control:SetVisible(false)
     control:SetParent(nil)
@@ -183,6 +188,13 @@ function TokenInput:Constructor()
     end
 
     self._overflow, self._overflow_inner = _popup_window()
+    -- hidden chips, one per row; scrolls past OVERFLOW_MAX_ROWS
+    self._overflow_list = Turbine.UI.ListBox()
+    self._overflow_list:SetParent(self._overflow_inner)
+    self._overflow_scroll = Turbine.UI.Lotro.ScrollBar()
+    self._overflow_scroll:SetOrientation(Turbine.UI.Orientation.Vertical)
+    self._overflow_scroll:SetParent(self._overflow_inner)
+    self._overflow_list:SetVerticalScrollBar(self._overflow_scroll)
     -- suggestions are a regular LuiMenu (same look and dismissal as every
     -- menu), opened under the text box without taking the keyboard focus
     self._menu = LuiMenu()
@@ -421,8 +433,10 @@ function TokenInput:_label(parent, text, x, y, w, h, color)
     return label
 end
 
+-- chip and marker icons; pre-scaled: chips are also listed in the
+-- (scrolling) overflow list
 function TokenInput:_icon(parent, name, size, x, y)
-    local image = Image(Icons.path(name), size)
+    local image = Image(Icons.sized(name), size)
     image:SetParent(parent)
     image:SetPosition(x, y)
     image:set_tint(Style.ICON_FOREGROUND)
@@ -435,7 +449,8 @@ function TokenInput:_flat_button(parent, x, y, size, icon_size)
     button:set_scale(self._scale)
     button:SetPosition(x, y)
     button:SetSize(size, size)
-    button:set_tinted_icon(Icons.path(Icons.CLEAR), icon_size)
+    -- pre-scaled: chips are also listed in the overflow popup
+    button:set_tinted_icon(Icons.sized(Icons.CLEAR), icon_size)
     -- no box, as the search-bar clear X: hover only brightens the icon
     Style.apply_transparent_button(button)
     return button
@@ -486,9 +501,26 @@ function TokenInput:_build_marker_content(marker)
     content:SetMouseVisible(false)
     local icon_size = _fit(self:_s(self._variant.marker_icon), chip_h)
     self:_icon(content, marker._icon_name, icon_size, self:_s(5), (chip_h - icon_size) / 2)
-    marker._label = self:_label(content, "", self:_s(5) + icon_size, 0, w - self:_s(5) - icon_size, chip_h,
+    marker._label_x = self:_s(5) + icon_size
+    marker._label = self:_label(content, "", marker._label_x, 0, w - marker._label_x, chip_h,
         Style.CONTROL_FOREGROUND)
     marker._content = content
+end
+
+-- marker width: room for "+N" of the largest possible count (every token
+-- hidden on one side), so the count is never cut
+function TokenInput:_marker_width()
+    local icon_x = self:_s(5) + _fit(self:_s(self._variant.marker_icon), self:_chip_height())
+    local text_w = measure_text_width("+" .. tostring(#self._tokens), Style.CONTROL_FONT_NAME,
+        self:_small_font_size() * self._scale) + 2
+    return math.max(self:_s(self._variant.marker_w), icon_x + text_w + self:_s(5))
+end
+
+function TokenInput:_size_marker(marker, w)
+    local chip_h = self:_chip_height()
+    marker:SetSize(w, chip_h)
+    marker._content:SetSize(w, chip_h)
+    marker._label:SetSize(w - marker._label_x, chip_h)
 end
 
 function TokenInput:_paint_marker(marker)
@@ -608,7 +640,9 @@ function TokenInput:_layout()
     self._chip_controls = {}
 
     local gap = self:_s(v.gap)
-    local marker_w = self:_s(v.marker_w)
+    local marker_w = self:_marker_width()
+    self:_size_marker(self._left_marker, marker_w)
+    self:_size_marker(self._right_marker, marker_w)
     local chip_h = self:_chip_height()
     local chip_y = (h - chip_h) / 2
     local chips_x = self._lead_icon ~= nil and self:_s(v.lead_w) or self:_s(v.edge)
@@ -728,11 +762,18 @@ function TokenInput:_close_lists()
     self:_close_overflow()
 end
 
-function TokenInput:_close_overflow()
+-- hidden first: a control detached while visible keeps drawing at the
+-- screen's top-left
+function TokenInput:_clear_overflow_rows()
     for i = 1, #self._overflow_chips do
-        _discard(self._overflow_chips[i])
+        self._overflow_chips[i]:SetVisible(false)
     end
+    self._overflow_list:ClearItems()
     self._overflow_chips = {}
+end
+
+function TokenInput:_close_overflow()
+    self:_clear_overflow_rows()
     self._overflow_side = nil
     self._overflow:SetVisible(false)
     self._overflow_open = false
@@ -748,10 +789,7 @@ function TokenInput:_refresh_overflow()
         self:_close_overflow()
         return
     end
-    for i = 1, #self._overflow_chips do
-        _discard(self._overflow_chips[i])
-    end
-    self._overflow_chips = {}
+    self:_clear_overflow_rows()
 
     local chip_h = self:_chip_height()
     local gap = self:_s(self._variant.gap)
@@ -761,12 +799,28 @@ function TokenInput:_refresh_overflow()
     for k = 1, #indexes do
         width = math.max(width, self._tokens[indexes[k]].width)
     end
+    local row_h = chip_h + gap
     for k = 1, #indexes do
-        self._overflow_chips[k] = self:_make_chip(indexes[k], self._overflow_inner, pad,
-            pad + (k - 1) * (chip_h + gap), width)
+        local row = Turbine.UI.Control()
+        row:SetSize(width, row_h)
+        row:SetMouseVisible(false)
+        self:_make_chip(indexes[k], row, 0, 0, width)
+        self._overflow_list:AddItem(row)
+        self._overflow_chips[k] = row
     end
-    local inner_w = width + 2 * pad
-    local inner_h = #indexes * chip_h + (#indexes - 1) * gap + 2 * pad
+    local rows = math.min(#indexes, OVERFLOW_MAX_ROWS)
+    local list_h = rows * row_h - gap
+    local scrolls = #indexes > OVERFLOW_MAX_ROWS
+    local scroll_w = scrolls and BASE_SCROLL_W or 0
+    -- the scrollbar runs the full height against the right border; the
+    -- padding only surrounds the chips
+    local inner_w = width + 2 * pad + scroll_w
+    local inner_h = list_h + 2 * pad
+    self._overflow_list:SetPosition(pad, pad)
+    self._overflow_list:SetSize(width, list_h)
+    self._overflow_scroll:SetVisible(scrolls)
+    self._overflow_scroll:SetPosition(inner_w - scroll_w, 0)
+    self._overflow_scroll:SetSize(scroll_w, inner_h)
     self._overflow_inner:SetSize(inner_w, inner_h)
     self._overflow:SetSize(inner_w + 2, inner_h + 2)
     local marker = side == "left" and self._left_marker or self._right_marker
