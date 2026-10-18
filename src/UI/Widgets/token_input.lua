@@ -20,8 +20,8 @@
 -- Clicking a chip puts its text back in the field for editing (Enter adds
 -- it again). Chips that do not fit scroll (mouse wheel) behind "< +N" / "> +N" markers;
 -- clicking a marker lists the hidden chips. The suggestion list opens when
--- typing (or on double-click with an empty field); Up/Down move, Enter or a
--- click picks; Enter with no list adds the token.
+-- typing, on a click in the empty field, on Down, or on double-click;
+-- Up/Down move, Enter or a click picks; Enter with no list adds the token.
 
 local LUI = _G.LUI
 local UI = LUI.UI
@@ -815,8 +815,8 @@ function TokenInput:_open_suggest(entries, from, to)
     self:_sync_updates()
 end
 
--- an empty field only lists suggestions on request (double-click); typing,
--- or a pick that continues, opens the list by itself
+-- an empty field only lists suggestions on request (click, Down,
+-- double-click); typing, or a pick that continues, opens the list by itself
 function TokenInput:_refresh_suggest(requested)
     if type(self.Suggestions) ~= "function" then
         return
@@ -881,13 +881,21 @@ function TokenInput:_wire_events()
     self._text_box.MouseWheel = wheel
     self._clear.MouseWheel = wheel
 
-    self.MouseClick = function()
-        self._text_box:Focus()
-    end
     local open_on_request = function()
         self._text_box:Focus()
         self:_refresh_suggest(true)
     end
+    -- a click in the empty field lists the suggestions; with text it only
+    -- places the caret (no list popping up while editing)
+    local click = function()
+        if _trim(self._text_box:GetText() or "") == "" then
+            open_on_request()
+        else
+            self._text_box:Focus()
+        end
+    end
+    self.MouseClick = click
+    self._text_box.MouseClick = click
     self.MouseDoubleClick = open_on_request
     self._text_box.MouseDoubleClick = open_on_request
 
@@ -910,6 +918,10 @@ function TokenInput:_wire_events()
     self._text_box:SetWantsKeyEvents(true)
     self._text_box.KeyDown = function(_, args)
         if self._menu:is_open() ~= true then
+            -- Down opens the list (empty field included)
+            if args.Action == ACTION_DOWN then
+                self:_refresh_suggest(true)
+            end
             return
         end
         if args.Action == ACTION_UP then

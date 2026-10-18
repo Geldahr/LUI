@@ -103,8 +103,10 @@ AssetIds.icons = {
     resize_vertical = lucide("resize_vertical"),
     resize_tl_br = lucide("resize_tl_br"),
     resize_tr_bl = lucide("resize_tr_bl"),
-    star = lucide_sized("star"),
-    star_filled = lucide_sized("star_filled"),
+    -- stretched: tinted on light (selected) rows, where a pre-scaled icon's
+    -- tint shows a square; the recipe table is paged by default
+    star = lucide("star"),
+    star_filled = lucide("star_filled"),
     map_pinned = lucide_sized("map_pinned"),
     x = lucide("x"),
     level = lucide_sized("level"),

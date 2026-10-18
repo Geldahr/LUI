@@ -9,6 +9,7 @@
 --
 -- icon[n] is the entry for an n px box (n = 0..64): { img = path, size = px },
 -- the largest pre-scaled size <= n (44 -> 40), at least the smallest one.
+-- icon.sized = true marks it (Turbine.UI.Graphic icons are tables too).
 
 local UI = _G.LUI.UI
 
@@ -21,7 +22,7 @@ function UI.sized_icon(base)
     for i = 1, #SIZES do
         entries[i] = { img = base .. SIZES[i] .. ".tga", size = SIZES[i] }
     end
-    local icon = {}
+    local icon = { sized = true }
     local s = 1
     for n = 0, UI.SIZED_ICON_MAX do
         if SIZES[s + 1] ~= nil and SIZES[s + 1] <= n then

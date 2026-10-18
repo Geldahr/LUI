@@ -382,8 +382,9 @@ function Image:_set_sized_icon(icon, w, h)
 end
 
 function Image:set_icon(icon, w, h)
-    -- type(), not a field test: game art ids are numbers, which can't be indexed
-    if type(icon) == "table" then
+    -- type() first: game art ids are numbers, which can't be indexed;
+    -- Turbine.UI.Graphic icons are tables without the `sized` mark
+    if type(icon) == "table" and icon.sized == true then
         self:_set_sized_icon(icon, w, h)
         return
     end

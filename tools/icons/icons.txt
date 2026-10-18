@@ -39,8 +39,8 @@ lucide resize_horizontal move-horizontal
 lucide resize_vertical move-vertical
 lucide resize_tl_br move-diagonal-2
 lucide resize_tr_bl move-diagonal
-lucide star star sized
-lucide star_filled star filled sized
+lucide star star
+lucide star_filled star filled
 lucide map_pinned map-pinned sized
 lucide x x
 lucide level chevrons-up sized
