@@ -438,7 +438,7 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
         end
         local icon_path = widget_cfg ~= nil and widget_cfg.icon == true and S.get_widget_icon(widget_key) or nil
         return ctor(widget_w, bar_h, font, icon_path, widget_cfg.color,
-            widget_cfg.content_alignment)
+            widget_cfg.content_alignment, widget_cfg.icon_coloring)
     elseif widget_key == "equipment_wear" then
         local ctor = _widget_ctor("EquipmentWearWidget")
         if ctor == nil then
@@ -446,7 +446,7 @@ local function _widget_factory(widget_key, widget_w, bar_h, font, widget_cfg, wi
         end
         local icon_path = widget_cfg ~= nil and widget_cfg.icon == true and S.get_widget_icon(widget_key) or nil
         return ctor(widget_w, bar_h, font, icon_path, widget_cfg.color, widget_cfg.coloring,
-            widget_cfg.content_alignment)
+            widget_cfg.content_alignment, widget_cfg.icon_coloring)
     elseif widget_key == "money" then
         local ctor = _widget_ctor("MoneyWidget")
         if ctor == nil then

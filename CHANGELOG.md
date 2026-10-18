@@ -10,11 +10,12 @@
 - New `Global > UI` settings for icons: `Icon line weight` (thin or bold), `Legacy menu icons`, and icon colors on `Colors > Icons` (normal, hover, pressed, disabled, accent and `Menu icons color`).
 - The `LUI Configuration` window now shows an icon in its title bar.
 - Instance creatures can now be found by location: `loc:` lists every instance, such as `loc:The Icy Crevasse`.
+- The quick setup now asks which search bar you prefer (`Classic` or `Tokens`, for `Encyclopedia`, `Crafting` and `Assets`) and which menu icons (`Modern` or `Legacy`).
 
 ### Changed
 
 - The item, quest, NPC and skill databases were refreshed from the current game data, picking up the content of the latest game update (about 400 new items, 122 quests and deeds, 62 NPCs and 23 skills), in all three languages.
-- LUI's icons were redrawn as one tinted set based on Lucide icons (credited on the `About` page): dropdown and menu arrows, check marks, spin box, pager and tab arrows, the `Crafting` favorite star, the `Bestiary` location button, the resize cursors, and the menu icons on the status bar, the LUI Menu and window titles. Tick `Legacy menu icons` to keep the previous menu artwork.
+- LUI's icons were redrawn as one tinted set based on Lucide icons (credited on the `About` page): dropdown and menu arrows, check marks, spin box, pager and tab arrows, the `Crafting` favorite star, the `Bestiary` location button, the resize cursors, the menu icons on the status bar, the LUI Menu and window titles, and the status bar inventory (backpack) and durability (hammer) icons, drawn in the text color or, with the new `Colored icon` option (on by default), in the bag space and wear colors. Tick `Legacy menu icons` to keep the previous menu artwork.
 - Text widths are now measured from the game's real fonts, so labels, chips and columns no longer clip or leave uneven gaps.
 - Search bars stay on one line: long text scrolls sideways with the cursor instead of wrapping.
 - The `Bestiary` search in `Classic` mode waits for 2 characters before filtering, like the item tabs.

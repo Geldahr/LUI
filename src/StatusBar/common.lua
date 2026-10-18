@@ -1168,18 +1168,38 @@ function S.get_icon_size(bar_h)
     return size
 end
 
+-- Lucide icons of the inventory / durability widgets (the legacy menu icon
+-- setting keeps the game art)
+local WIDGET_LUCIDE_ICONS = {
+    inventory_space = "backpack",
+    equipment_wear = "hammer",
+}
+
 function S.get_widget_icon_w(widget_key, icon_h)
-    if widget_key == "inventory_space" then
+    if widget_key == "inventory_space" and UI.Shortcuts.icons_tinted() ~= true then
         return math.floor(((icon_h * S.BACKPACK_ICON_W) / S.BACKPACK_ICON_H) + 0.5)
     end
     return icon_h
 end
 
 function S.get_widget_icon(widget_key)
+    if WIDGET_LUCIDE_ICONS[widget_key] ~= nil and UI.Shortcuts.icons_tinted() == true then
+        return UI.Widgets.Icons.path(WIDGET_LUCIDE_ICONS[widget_key])
+    end
     if widget_key == "inventory_space" then
         return S.INVENTORY_SPACE_ICON
     elseif widget_key == "equipment_wear" then
         return S.DURABILITY_ICON
+    end
+    return nil
+end
+
+-- the initial tint of a widget's icon: the Lucide icons take the status bar
+-- text color (the widgets then follow their warning / wear colors through
+-- set_icon_color), game art stays as drawn (nil)
+function S.get_widget_icon_tint(widget_key, font)
+    if WIDGET_LUCIDE_ICONS[widget_key] ~= nil and UI.Shortcuts.icons_tinted() == true then
+        return font.color
     end
     return nil
 end

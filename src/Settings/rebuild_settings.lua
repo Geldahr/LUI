@@ -707,6 +707,7 @@ function Settings.rebuild()
         enabled = in_zones("inventory_space"),
         width = scaled_int(raw_sb.widgets.inventory_space.width),
         icon = raw_sb.widgets.inventory_space.icon,
+        icon_coloring = raw_sb.widgets.inventory_space.icon_coloring == true,
         color = raw_sb.widgets.inventory_space.color,
         content_alignment = ToLotro.text_alignment[raw_sb.widgets.inventory_space.text_alignment],
     }
@@ -714,6 +715,7 @@ function Settings.rebuild()
         enabled = in_zones("equipment_wear"),
         width = scaled_int(raw_sb.widgets.equipment_wear.width),
         icon = raw_sb.widgets.equipment_wear.icon,
+        icon_coloring = raw_sb.widgets.equipment_wear.icon_coloring == true,
         coloring = raw_sb.widgets.equipment_wear.coloring == true,
         color = raw_sb.widgets.equipment_wear.color,
         content_alignment = ToLotro.text_alignment[raw_sb.widgets.equipment_wear.text_alignment],

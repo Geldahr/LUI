@@ -391,6 +391,35 @@ local function _apply_runtime_settings()
     end
 end
 
+-- the windows with a Classic / Tokens search bar setting (the inventory
+-- search stays classic)
+local SEARCH_MODE_SECTIONS = { "encyclopedia", "crafting", "assets" }
+
+local function _search_tokens_enabled()
+    return State.loaded_settings.encyclopedia.search_mode == "tokens"
+end
+
+local function _set_search_tokens(enabled)
+    local mode = enabled == true and "tokens" or "classic"
+    for i = 1, #SEARCH_MODE_SECTIONS do
+        State.loaded_settings[SEARCH_MODE_SECTIONS[i]].search_mode = mode
+    end
+end
+
+-- ICON_MENU_LEGACY is a style override: nil keeps the default (modern)
+local function _legacy_icons_enabled()
+    return State.loaded_settings.global.style.ICON_MENU_LEGACY == true
+end
+
+local function _set_legacy_icons(enabled)
+    if enabled == true then
+        State.loaded_settings.global.style.ICON_MENU_LEGACY = true
+    else
+        State.loaded_settings.global.style.ICON_MENU_LEGACY = nil
+    end
+    Apply.saved_global_style()
+end
+
 local FirstRunQuickSetup = class(UI.Widgets.LuiBaseWindow)
 Settings.FirstRunQuickSetup = FirstRunQuickSetup
 
@@ -998,6 +1027,7 @@ function FirstRunQuickSetup:update_step()
     if setup_step == 4 then
         self._layout_mode = "choice"
         self:_set_body_text(TR["Replace the default inventory bags?"], BODY_H)
+        self:set_choice_labels(TR["No"], TR["Yes"])
         self:update_binary_choice_buttons(State.loaded_settings.inventory.replace == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
@@ -1020,6 +1050,7 @@ function FirstRunQuickSetup:update_step()
     if setup_step == 5 then
         self._layout_mode = "choice"
         self:_set_body_text(TR["Enable the status bar?"], BODY_H)
+        self:set_choice_labels(TR["No"], TR["Yes"])
         self:update_binary_choice_buttons(State.loaded_settings.status_bar.enabled == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
@@ -1031,7 +1062,32 @@ function FirstRunQuickSetup:update_step()
     if setup_step == 6 then
         self._layout_mode = "choice"
         self:_set_body_text(TR["Enable the LUI Menu?"], BODY_H)
+        self:set_choice_labels(TR["No"], TR["Yes"])
         self:update_binary_choice_buttons(self.selected_launcher_enabled == true)
+        self.choice_no:SetVisible(true)
+        self.choice_yes:SetVisible(true)
+        self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
+        return
+    end
+
+    if setup_step == 7 then
+        self._layout_mode = "choice"
+        self:_set_body_text(TR["Which search bar do you prefer?"], BODY_H)
+        self:set_choice_labels(TR["Classic"], TR["Tokens"])
+        self:update_binary_choice_buttons(_search_tokens_enabled())
+        self.choice_no:SetVisible(true)
+        self.choice_yes:SetVisible(true)
+        self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
+        return
+    end
+
+    if setup_step == 8 then
+        self._layout_mode = "choice"
+        self:_set_body_text(TR["Which menu icons do you prefer?"], BODY_H)
+        self:set_choice_labels(TR["Modern"], TR["Legacy"])
+        self:update_binary_choice_buttons(_legacy_icons_enabled())
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
         self.next_button:SetVisible(true)
@@ -1048,7 +1104,7 @@ function FirstRunQuickSetup:update_step()
 end
 
 function FirstRunQuickSetup:go_next()
-    local max_step = self.has_existing_configurations == true and 8 or 7
+    local max_step = self.has_existing_configurations == true and 10 or 9
     if self.step >= max_step then
         return
     end
@@ -1133,6 +1189,11 @@ function FirstRunQuickSetup:select_layout(layout_key)
     self:apply_ui_scale()
 end
 
+function FirstRunQuickSetup:set_choice_labels(no_text, yes_text)
+    self.choice_no:set_text(no_text)
+    self.choice_yes:set_text(yes_text)
+end
+
 function FirstRunQuickSetup:update_binary_choice_buttons(enabled)
     self.choice_no:set_active(enabled ~= true)
     self.choice_yes:set_active(enabled == true)
@@ -1152,6 +1213,10 @@ function FirstRunQuickSetup:select_binary_choice(enabled)
     elseif setup_step == 6 then
         self.selected_launcher_enabled = value
         State.loaded_settings.launcher.enabled = value
+    elseif setup_step == 7 then
+        _set_search_tokens(value)
+    elseif setup_step == 8 then
+        _set_legacy_icons(value)
     else
         return
     end
