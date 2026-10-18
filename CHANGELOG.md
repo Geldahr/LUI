@@ -28,6 +28,7 @@
 
 - The `Bestiary` location button now finds the creatures of far more places, on every client. It previously filtered on the zone name as given, so a zone the bestiary files as an area (`Wildwood` for `Bree-land > The Wildwood`), as an instance, or under a slightly different spelling showed no creatures, and on French and German clients most zones failed. Typed `loc:` and `gen:` values also ignore case and a leading article (`Angle of Mitheithel` finds `The Angle of Mitheithel`), and places with no known creatures leave the search unchanged instead of emptying it. Where map zones overlap, the button now searches every zone containing your position (for example `loc:"Bree-land | The Great River"`), so it shows more rather than missing the place you are in; `loc:` accepts several places separated by `|`.
 - A dropdown no longer stays on screen after its window is closed.
+- Effect icons on the vitals frames no longer stay in the top-left corner of the screen after the plugin is reloaded.
 - Disabling target vitals now really stops the target frame: it previously kept tracking the target's effects and building their icons behind the hidden frame. The `Target Expiring Effects` window keeps working on its own, and with every target feature off nothing tracks the target at all.
 - A boss is no longer tracked twice, once by the boss frame and once by the hidden target frame.
 
