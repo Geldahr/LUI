@@ -146,7 +146,6 @@ local BASE_SOURCE_TOOLTIP_MAX_H = 132
 local BASE_SOURCE_TOOLTIP_PAD_X = 12
 local BASE_SOURCE_TOOLTIP_PAD_Y = 9
 local BASE_SOURCE_TOOLTIP_LINE_H = 12
-local BESTIARY_ACTION_ICON = UI.AssetIds.book_orange_cover
 
 local STATUS_READY = Turbine.UI.Color(1.00, 0.31, 0.78, 0.43)
 local STATUS_MISSING = Turbine.UI.Color(1.00, 0.86, 0.30, 0.30)
@@ -213,16 +212,9 @@ local function _apply_bestiary_icon(button)
         return
     end
 
+    -- the Encyclopedia menu icon (Lucide, or the legacy art)
     local side = math.max(14, _scaled_int(16))
-    button:set_icon(
-        BESTIARY_ACTION_ICON,
-        BESTIARY_ACTION_ICON,
-        BESTIARY_ACTION_ICON,
-        BESTIARY_ACTION_ICON,
-        side,
-        side,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
+    UI.Shortcuts.apply_button_icon(button, "encyclopedia", side, side, UI.Widgets.LuiButton.icon_position.LEFT)
 end
 
 local function _quote_bestiary_query_term(term)

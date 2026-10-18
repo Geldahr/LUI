@@ -170,6 +170,77 @@ function Coords.get_best_zone_in_region(region_id, ns, ew)
     return nil
 end
 
+local function _node_names(node)
+    local names = { node.name }
+    if type(node.aliases) == "table" then
+        for i = 1, #node.aliases do
+            names[#names + 1] = node.aliases[i]
+        end
+    end
+    return names
+end
+
+-- names of the nodes from `zone` down to the deepest one containing the
+-- point (first matching child at each level), deepest first; each entry is
+-- { name, alias... }
+local function _zone_names(zone, ns, ew)
+    local path = {}
+    local node = zone
+    while node ~= nil do
+        table.insert(path, 1, _node_names(node))
+        local next_node = nil
+        if type(node.sub_zones) == "table" then
+            for i = 1, #node.sub_zones do
+                local child = node.sub_zones[i]
+                if type(child) == "table" and type(child.coords) == "table" and rect_contains_point(child.coords, ns, ew) then
+                    next_node = child
+                    break
+                end
+            end
+        end
+        node = next_node
+    end
+    return path
+end
+
+-- every path from `zone` down through ALL children containing the point
+-- (sub-zones overlap too), each deepest first like _zone_names
+local function _all_zone_paths(zone, ns, ew, above, out)
+    local chain = { _node_names(zone) }
+    for i = 1, #above do
+        chain[#chain + 1] = above[i]
+    end
+    local deeper = false
+    if type(zone.sub_zones) == "table" then
+        for i = 1, #zone.sub_zones do
+            local child = zone.sub_zones[i]
+            if type(child) == "table" and type(child.coords) == "table" and rect_contains_point(child.coords, ns, ew) then
+                deeper = true
+                _all_zone_paths(child, ns, ew, chain, out)
+            end
+        end
+    end
+    if deeper ~= true then
+        out[#out + 1] = chain
+    end
+    return out
+end
+
+function Coords.get_zones_in_region(region_id, ns, ew)
+    local out = {}
+    local region = Coords.DATA[region_id]
+    if region == nil or region.zones == nil then
+        return out
+    end
+    for i = 1, #region.zones do
+        local zone = region.zones[i]
+        if type(zone) == "table" and type(zone.coords) == "table" and rect_contains_point(zone.coords, ns, ew) then
+            out[#out + 1] = zone
+        end
+    end
+    return out
+end
+
 function Coords.get_zone_from_loc(loc_text)
     local coords, err = Coords.loc_to_player_coords(loc_text)
     if coords == nil then
@@ -181,9 +252,17 @@ function Coords.get_zone_from_loc(loc_text)
         return nil, "zone not found for these coordinates"
     end
 
+    local candidates = {}
+    local containing = Coords.get_zones_in_region(coords.region_id, coords.ns, coords.ew)
+    for i = 1, #containing do
+        _all_zone_paths(containing[i], coords.ns, coords.ew, {}, candidates)
+    end
+
     return {
         zone = zone.name,
         sub_zone = (sub_zone ~= nil and sub_zone ~= zone) and sub_zone.name or nil,
+        names = _zone_names(zone, coords.ns, coords.ew),
+        candidates = candidates,
         player_coords = { ns = coords.ns, ew = coords.ew, z = coords.z },
         region_id = coords.region_id,
     }
@@ -215,6 +294,11 @@ function Coords.resolve_location_from_loc(loc_text)
     return {
         region = result.zone,
         area = area,
+        -- every zone level with its aliases, deepest first: the Bestiary
+        -- matches them against both its regions and its areas
+        names = result.names,
+        -- the same for every zone containing the point (zones overlap)
+        candidates = result.candidates,
         player_coords = result.player_coords,
         region_id = result.region_id,
     }

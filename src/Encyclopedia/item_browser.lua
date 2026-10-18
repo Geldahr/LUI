@@ -50,21 +50,13 @@ local _scaled_font = BrowserShared.scaled_font
 
 -- link action icons: identical treatment to the crafting window's
 -- bestiary button on drop resources (16px icon in a 22px square button)
-local CRAFT_ACTION_ICON = UI.AssetIds.anvil_silver_glow
-local BESTIARY_ACTION_ICON = UI.AssetIds.book_orange_cover
 local BASE_LINK_BUTTON_W = 22
 
-local function _apply_link_icon(button, icon)
+-- shortcut: "craft" or "encyclopedia", the menu icon of the window the
+-- button opens (Lucide, or the legacy art)
+local function _apply_link_icon(button, shortcut)
     local side = math.max(14, scaled_int(16))
-    button:set_icon(
-        icon,
-        icon,
-        icon,
-        icon,
-        side,
-        side,
-        UI.Widgets.LuiButton.icon_position.LEFT
-    )
+    UI.Shortcuts.apply_button_icon(button, shortcut, side, side, UI.Widgets.LuiButton.icon_position.LEFT)
 end
 
 -- dropdown labels (without "All") as SearchField keyword values
@@ -537,9 +529,9 @@ function ItemBrowserPanel:apply_fonts()
         end
         if cells.craft_button ~= nil then
             cells.craft_button:set_scale(1)
-            _apply_link_icon(cells.craft_button, CRAFT_ACTION_ICON)
+            _apply_link_icon(cells.craft_button, "craft")
             cells.bestiary_button:set_scale(1)
-            _apply_link_icon(cells.bestiary_button, BESTIARY_ACTION_ICON)
+            _apply_link_icon(cells.bestiary_button, "encyclopedia")
         end
     end
     self.level_label:SetFont(font)
@@ -818,7 +810,7 @@ function ItemBrowserPanel:_ensure_table_row(slot)
         cells.craft_button = UI.Widgets.LuiButton()
         cells.craft_button:SetParent(cells.actions)
         cells.craft_button:set_scale(1)
-        _apply_link_icon(cells.craft_button, CRAFT_ACTION_ICON)
+        _apply_link_icon(cells.craft_button, "craft")
         cells.craft_button:SetVisible(false)
         cells.craft_button.Click = function()
             Shortcuts.open_crafting_item_search(cells._craft_search_name, cells._link_recipe_id)
@@ -826,7 +818,7 @@ function ItemBrowserPanel:_ensure_table_row(slot)
         cells.bestiary_button = UI.Widgets.LuiButton()
         cells.bestiary_button:SetParent(cells.actions)
         cells.bestiary_button:set_scale(1)
-        _apply_link_icon(cells.bestiary_button, BESTIARY_ACTION_ICON)
+        _apply_link_icon(cells.bestiary_button, "encyclopedia")
         cells.bestiary_button:SetVisible(false)
         cells.bestiary_button.Click = function()
             Shortcuts.open_bestiary_item_search(cells._link_name)

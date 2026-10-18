@@ -9,9 +9,11 @@
 - Every search bar now has a clear `X` inside it, shown only while there is something to clear. It replaces the separate `Clear` buttons.
 - New `Global > UI` settings for icons: `Icon line weight` (thin or bold), `Legacy menu icons`, and icon colors on `Colors > Icons` (normal, hover, pressed, disabled, accent and `Menu icons color`).
 - The `LUI Configuration` window now shows an icon in its title bar.
+- Instance creatures can now be found by location: `loc:` lists every instance, such as `loc:The Icy Crevasse`.
 
 ### Changed
 
+- The item, quest, NPC and skill databases were refreshed from the current game data, picking up the content of the latest game update (about 400 new items, 122 quests and deeds, 62 NPCs and 23 skills), in all three languages.
 - LUI's icons were redrawn as one tinted set based on Lucide icons (credited on the `About` page): dropdown and menu arrows, check marks, spin box, pager and tab arrows, the `Crafting` favorite star, the `Bestiary` location button, the resize cursors, and the menu icons on the status bar, the LUI Menu and window titles. Tick `Legacy menu icons` to keep the previous menu artwork.
 - Text widths are now measured from the game's real fonts, so labels, chips and columns no longer clip or leave uneven gaps.
 - Search bars stay on one line: long text scrolls sideways with the cursor instead of wrapping.
@@ -23,7 +25,7 @@
 
 ### Fixed
 
-- The `Bestiary` location button now finds creatures when the game names an area differently from the bestiary data, for example `Angle of Mitheithel` for `The Angle of Mitheithel`.
+- The `Bestiary` location button now finds the creatures of far more places, on every client. It previously filtered on the zone name as given, so a zone the bestiary files as an area (`Wildwood` for `Bree-land > The Wildwood`), as an instance, or under a slightly different spelling showed no creatures, and on French and German clients most zones failed. Typed `loc:` and `gen:` values also ignore case and a leading article (`Angle of Mitheithel` finds `The Angle of Mitheithel`), and places with no known creatures leave the search unchanged instead of emptying it. Where map zones overlap, the button now searches every zone containing your position (for example `loc:"Bree-land | The Great River"`), so it shows more rather than missing the place you are in; `loc:` accepts several places separated by `|`.
 - A dropdown no longer stays on screen after its window is closed.
 - Disabling target vitals now really stops the target frame: it previously kept tracking the target's effects and building their icons behind the hidden frame. The `Target Expiring Effects` window keeps working on its own, and with every target feature off nothing tracks the target at all.
 - A boss is no longer tracked twice, once by the boss frame and once by the hidden target frame.

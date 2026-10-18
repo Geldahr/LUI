@@ -751,19 +751,21 @@ function LuiMenu:set_highlight(index)
             end
         end
     end
-    self:_set_highlight_item(target)
+    self:_set_highlight_item(target, true)
 end
 
-function LuiMenu:_set_highlight_item(item_index)
+-- reveal: scroll mode scrolls the row into view (list index = item index,
+-- every item is a list row). Only keyboard moves reveal: a hovered row is
+-- under the cursor already, and scrolling it would put the next row under
+-- the cursor, hover it, scroll again... down to the last row.
+function LuiMenu:_set_highlight_item(item_index, reveal)
     if self._highlight ~= nil and self._items[self._highlight] ~= nil then
         self._items[self._highlight]:_set_highlighted(false)
     end
     self._highlight = item_index
     if item_index ~= nil then
         self._items[item_index]:_set_highlighted(true)
-        -- scroll mode: keep the highlighted row in view (list index =
-        -- item index, every item is a list row)
-        if self._scroll_enabled == true then
+        if reveal == true and self._scroll_enabled == true then
             self.popup_list:EnsureVisible(item_index)
         end
     end
@@ -785,7 +787,7 @@ function LuiMenu:move_highlight(delta)
         return
     end
     local target = math.max(1, math.min(#actions, current + delta))
-    self:_set_highlight_item(actions[target])
+    self:_set_highlight_item(actions[target], true)
 end
 
 -- run the highlighted action; false when nothing is highlighted
