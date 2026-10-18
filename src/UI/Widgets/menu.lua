@@ -338,7 +338,7 @@ function LuiAction:_layout()
     self._label:SetSize(label_w, height)
 
     local arrow_icon = math.min(height, _scaled_int(self._scale, BASE_ARROW_ICON))
-    self._arrow:set_icon(Icons.path("submenu_arrow"), arrow_icon)
+    self._arrow:set_icon(Icons.sized("submenu_arrow"), arrow_icon)
     -- set_icon shows the image; only submenu entries have an arrow
     self._arrow:SetVisible(self._submenu ~= nil)
     self._arrow:SetPosition(

@@ -22,10 +22,9 @@ Icons.WEIGHTS = { "thin", "bold" }
 -- all to the Lucide X
 Icons.CLEAR = "window_close"
 
--- the icon to draw for a name of UI.AssetIds.icons: a path, or a pre-scaled
--- icon (UI.sized_icon) that the Image widget draws unstretched; Lucide icons
--- in the current line weight
-function Icons.path(name)
+-- the icon of a name of UI.AssetIds.icons in the current line weight (Lucide
+-- icons): a path, or a pre-scaled icon (UI.sized_icon) for the sized ones
+local function _entry(name)
     local icon = UI.AssetIds.icons[name]
     if icon == nil then
         error("Unknown icon: " .. tostring(name))
@@ -37,6 +36,41 @@ function Icons.path(name)
             error("Unknown icon weight: " .. tostring(Style.ICON_WEIGHT))
         end
         return weighted
+    end
+    return icon
+end
+
+-- Two ways to draw an icon, because of two LotRO client limits:
+--   * Icons.path: the 64 px file, stretched to its size. Tinted cleanly
+--     (only the icon's pixels take the color), but a stretched picture
+--     ignores its parent's clipping: inside a scrolling list it draws
+--     outside the list.
+--   * Icons.sized: the pre-scaled files (UI.sized_icon), drawn unstretched,
+--     so they clip inside scrolling lists. Caveat: the client applies an
+--     unstretched control's tint over its whole square, so a tinted one
+--     shows a faint square on a light opaque background.
+-- Rule: an icon goes sized when its control can sit in a scrolling area.
+-- Icons built into widgets (checkbox, dropdown, spin box, pager, tab bar,
+-- menu) are sized; the window title bar and the search bars never scroll
+-- and stay stretched. A standalone button's icon (toolbar, shortcut,
+-- favorite star) is stretched unless the button sits in a scrolling area.
+-- No blend mode, window or layer gives both (measured in game 2026-10-18).
+
+-- the stretched 64 px file of an icon (every icon, pre-scaled ones included)
+function Icons.path(name)
+    local icon = _entry(name)
+    if icon.sized == true then
+        return icon[UI.SIZED_ICON_MAX].img
+    end
+    return icon
+end
+
+-- the pre-scaled icon, for places inside a scrolling list (see above: it
+-- clips, but a tint shows as a faint square on light backgrounds)
+function Icons.sized(name)
+    local icon = _entry(name)
+    if icon.sized ~= true then
+        error("Icon has no pre-scaled sizes: " .. tostring(name))
     end
     return icon
 end

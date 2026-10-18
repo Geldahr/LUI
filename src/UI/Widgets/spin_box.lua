@@ -164,7 +164,7 @@ function LuiSpinBox:Constructor()
     self.increment_button:SetParent(self._buttons_back)
     Style.apply_embedded_button(self.increment_button)
     -- the icon fills the largest square the half-height button allows
-    self.increment_button:set_tinted_icon(Icons.path("chevron_up_small"), BASE_BUTTON_W)
+    self.increment_button:set_tinted_icon(Icons.sized("chevron_up_small"), BASE_BUTTON_W)
     self.increment_button.Click = function()
         self:_adjust(self._step)
     end
@@ -172,7 +172,7 @@ function LuiSpinBox:Constructor()
     self.decrement_button = LuiButton()
     self.decrement_button:SetParent(self._buttons_back)
     Style.apply_embedded_button(self.decrement_button)
-    self.decrement_button:set_tinted_icon(Icons.path("chevron_down_small"), BASE_BUTTON_W)
+    self.decrement_button:set_tinted_icon(Icons.sized("chevron_down_small"), BASE_BUTTON_W)
     self.decrement_button.Click = function()
         self:_adjust(-self._step)
     end

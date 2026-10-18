@@ -69,18 +69,23 @@ end
 
 -- a shortcut's icon in a given style, whatever the setting (quick setup
 -- preview): the old game art when `legacy`, else the Lucide icon (tint it
--- with ICON_MENU)
-function Shortcuts.get_style_icon(shortcut_key, legacy)
+-- with ICON_MENU). Stretched: menu icons never sit in a scrolling list,
+-- unless `in_list` (then the pre-scaled one, which clips)
+function Shortcuts.get_style_icon(shortcut_key, legacy, in_list)
     if legacy == true then
         return LEGACY_ICONS[shortcut_key]
+    end
+    if in_list == true then
+        return UI.Widgets.Icons.sized(LUCIDE_ICONS[shortcut_key])
     end
     return UI.Widgets.Icons.path(LUCIDE_ICONS[shortcut_key])
 end
 
 -- a shortcut's icon on a LuiButton: the Menu icons color (shared hover /
--- pressed / disabled icon colors), the legacy art untinted
-function Shortcuts.apply_button_icon(button, shortcut_key, width, height, position)
-    local icon = Shortcuts.get_icon(shortcut_key)
+-- pressed / disabled icon colors), the legacy art untinted. `in_list`: the
+-- button sits in a scrolling list (pre-scaled icon)
+function Shortcuts.apply_button_icon(button, shortcut_key, width, height, position, in_list)
+    local icon = Shortcuts.get_style_icon(shortcut_key, Shortcuts.icons_tinted() ~= true, in_list)
     if Shortcuts.icons_tinted() == true then
         local Style = UI.Widgets.Style
         button:set_tinted_icon(icon, width, height, position)

@@ -16,16 +16,16 @@
 #
 # Every output is white; the colour comes from the in-game tint.
 
-own window_close x_64.tga sized
+own window_close x_64.tga
 own window_maximize maximize_64.tga
 own window_restore restore_64.tga
 
 lucide chevron_down chevron-down
 lucide chevron_up chevron-up
-lucide chevron_left chevron-left
-lucide chevron_right chevron-right
+lucide chevron_left chevron-left sized
+lucide chevron_right chevron-right sized
 lucide dropdown_arrow chevron-down zoom=1.5 sized
-lucide submenu_arrow chevron-right zoom=1.5
+lucide submenu_arrow chevron-right zoom=1.5 sized
 # zoomed chevrons for tiny buttons (spin box halves, variant selector)
 lucide chevron_up_small chevron-up zoom=2 sized
 lucide chevron_down_small chevron-down zoom=2 sized
@@ -40,7 +40,7 @@ lucide resize_vertical move-vertical
 lucide resize_tl_br move-diagonal-2
 lucide resize_tr_bl move-diagonal
 lucide star star
-lucide star_filled star filled
+lucide star_filled star filled sized
 lucide map_pinned map-pinned sized
 lucide x x
 lucide level chevrons-up sized

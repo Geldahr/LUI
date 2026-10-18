@@ -263,7 +263,8 @@ function LuiCheckBox:_layout()
     self._border_right:SetSize(border_thickness, math.max(0, icon_size - (2 * border_thickness)))
 
     local fill_size = math.max(0, icon_size - (2 * border_thickness))
-    self._fill:set_icon(Icons.path("check"), fill_size)
+    -- pre-scaled: checkboxes sit in scrolling settings pages and lists
+    self._fill:set_icon(Icons.sized("check"), fill_size)
     -- set_icon shows the image; the mark is only visible when checked
     self._fill:SetVisible(self._checked == true)
     self._fill:SetPosition(border_thickness, border_thickness)

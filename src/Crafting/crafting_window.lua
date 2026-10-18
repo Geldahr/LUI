@@ -212,9 +212,10 @@ local function _apply_bestiary_icon(button)
         return
     end
 
-    -- the Encyclopedia menu icon (Lucide, or the legacy art)
+    -- the Encyclopedia menu icon (Lucide, or the legacy art); pre-scaled:
+    -- the ingredient and missing lists scroll
     local side = math.max(14, _scaled_int(16))
-    UI.Shortcuts.apply_button_icon(button, "encyclopedia", side, side, UI.Widgets.LuiButton.icon_position.LEFT)
+    UI.Shortcuts.apply_button_icon(button, "encyclopedia", side, side, UI.Widgets.LuiButton.icon_position.LEFT, true)
 end
 
 local function _quote_bestiary_query_term(term)

@@ -81,16 +81,16 @@ end
 
 AssetIds.icons = {
     -- LUI's own shapes (single weight)
-    window_close = sized(ICON_DIR .. "window_close_"),
+    window_close = ICON_DIR .. "window_close_64.tga",
     window_maximize = ICON_DIR .. "window_maximize_64.tga",
     window_restore = ICON_DIR .. "window_restore_64.tga",
 
     chevron_down = lucide("chevron_down"),
     chevron_up = lucide("chevron_up"),
-    chevron_left = lucide("chevron_left"),
-    chevron_right = lucide("chevron_right"),
+    chevron_left = lucide_sized("chevron_left"),
+    chevron_right = lucide_sized("chevron_right"),
     dropdown_arrow = lucide_sized("dropdown_arrow"),
-    submenu_arrow = lucide("submenu_arrow"),
+    submenu_arrow = lucide_sized("submenu_arrow"),
     chevron_up_small = lucide_sized("chevron_up_small"),
     chevron_down_small = lucide_sized("chevron_down_small"),
     chevron_left_small = lucide("chevron_left_small"),
@@ -103,10 +103,9 @@ AssetIds.icons = {
     resize_vertical = lucide("resize_vertical"),
     resize_tl_br = lucide("resize_tl_br"),
     resize_tr_bl = lucide("resize_tr_bl"),
-    -- stretched: tinted on light (selected) rows, where a pre-scaled icon's
-    -- tint shows a square; the recipe table is paged by default
     star = lucide("star"),
-    star_filled = lucide("star_filled"),
+    -- pre-scaled for the fav: keyword in the (scrolling) suggestion menu
+    star_filled = lucide_sized("star_filled"),
     map_pinned = lucide_sized("map_pinned"),
     x = lucide("x"),
     level = lucide_sized("level"),

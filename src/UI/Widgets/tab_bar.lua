@@ -434,7 +434,7 @@ function LuiTabBar:Constructor()
     self._scroll_left_button:set_padding(2)
     Style.apply_transparent_button(self._scroll_left_button)
     self._scroll_left_button:set_tinted_icon(
-        Widgets.Icons.path("chevron_left"),
+        Widgets.Icons.sized("chevron_left"),
         BASE_SCROLL_BUTTON_SIZE,
         nil,
         LuiButton.icon_position.LEFT
@@ -451,7 +451,7 @@ function LuiTabBar:Constructor()
     self._scroll_right_button:set_padding(2)
     Style.apply_transparent_button(self._scroll_right_button)
     self._scroll_right_button:set_tinted_icon(
-        Widgets.Icons.path("chevron_right"),
+        Widgets.Icons.sized("chevron_right"),
         BASE_SCROLL_BUTTON_SIZE,
         nil,
         LuiButton.icon_position.RIGHT

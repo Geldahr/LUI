@@ -798,7 +798,8 @@ function TokenInput:_open_suggest(entries, from, to)
     for _, entry in ipairs(entries) do
         local icon = nil
         if entry.icon ~= nil then
-            icon = Icons.path(entry.icon)
+            -- pre-scaled: the suggestion menu scrolls
+            icon = Icons.sized(entry.icon)
         end
         specs[#specs + 1] = {
             text = entry.text,

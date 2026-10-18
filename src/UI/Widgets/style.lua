@@ -269,7 +269,8 @@ function Style.apply_embedded_button(button)
 end
 
 function Style.apply_dropdown_arrow(button, width, position)
-    button:set_tinted_icon(Widgets.Icons.path("dropdown_arrow"), width, nil, position)
+    -- pre-scaled: dropdowns sit in scrolling settings pages
+    button:set_tinted_icon(Widgets.Icons.sized("dropdown_arrow"), width, nil, position)
 end
 
 Widgets.Style = Style
