@@ -64,10 +64,17 @@ function Shortcuts.icons_tinted()
 end
 
 function Shortcuts.get_icon(shortcut_key)
-    if Shortcuts.icons_tinted() == true then
-        return UI.Widgets.Icons.path(LUCIDE_ICONS[shortcut_key])
+    return Shortcuts.get_style_icon(shortcut_key, Shortcuts.icons_tinted() ~= true)
+end
+
+-- a shortcut's icon in a given style, whatever the setting (quick setup
+-- preview): the old game art when `legacy`, else the Lucide icon (tint it
+-- with ICON_MENU)
+function Shortcuts.get_style_icon(shortcut_key, legacy)
+    if legacy == true then
+        return LEGACY_ICONS[shortcut_key]
     end
-    return LEGACY_ICONS[shortcut_key]
+    return UI.Widgets.Icons.path(LUCIDE_ICONS[shortcut_key])
 end
 
 -- a shortcut's icon on a LuiButton: the Menu icons color (shared hover /

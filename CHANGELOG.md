@@ -10,7 +10,7 @@
 - New `Global > UI` settings for icons: `Icon line weight` (thin or bold), `Legacy menu icons`, `Modern coin icons`, and icon colors on `Colors > Icons` (normal, hover, pressed, disabled, accent, `Menu icons color` and the gold, silver and copper coin colors).
 - The `LUI Configuration` window now shows an icon in its title bar.
 - Instance creatures can now be found by location: `loc:` lists every instance, such as `loc:The Icy Crevasse`.
-- The quick setup now asks which search bar you prefer (`Classic` or `Tokens`, for `Encyclopedia`, `Crafting` and `Assets`) and which menu icons (`Modern` or `Legacy`).
+- The quick setup now asks which search bar you prefer (`Classic` or `Tokens`, for `Encyclopedia`, `Crafting` and `Assets`) and which menu icons (`Modern` or `Legacy`), with a preview of each answer.
 
 ### Changed
 
