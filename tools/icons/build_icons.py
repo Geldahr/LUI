@@ -27,12 +27,15 @@ LIST_FILE = os.path.join(HERE, "icons.txt")
 
 SIZE = 64
 SUPERSAMPLE = 4
+# pre-scaled sizes of the `sized` icons, drawn unstretched in game (keep in
+# sync with SIZES in src/UI/sized_icon.lua; 64 is the main file)
+SIZED = (8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48)
 WHITE = (255, 255, 255)
 WEIGHTS = (("thin", 2.0), ("bold", 2.5))
 
 
 def _white_from_alpha(alpha):
-    out = Image.new("RGBA", (SIZE, SIZE), WHITE + (0,))
+    out = Image.new("RGBA", alpha.size, WHITE + (0,))
     out.putalpha(alpha)
     return out
 
@@ -44,7 +47,7 @@ def _save(image, name):
     return path
 
 
-def render_lucide(icon, stroke_width, filled, zoom):
+def render_lucide(icon, stroke_width, filled, zoom, size=SIZE):
     svg = open(os.path.join(LUCIDE_DIR, icon + ".svg"), encoding="utf-8").read()
     svg = svg.replace('stroke="currentColor"', 'stroke="#FFFFFF"')
     # zoom crops the 24-unit canvas around its centre so small glyphs
@@ -57,16 +60,21 @@ def render_lucide(icon, stroke_width, filled, zoom):
         svg = svg.replace('viewBox="0 0 24 24"', 'viewBox="%s %s %s %s"' % (origin, origin, side, side), 1)
     if filled:
         svg = svg.replace('fill="none"', 'fill="#FFFFFF"', 1)
-    png = resvg_py.svg_to_bytes(svg_string=svg, width=SIZE * SUPERSAMPLE, height=SIZE * SUPERSAMPLE)
+    # small sizes get more supersampling so thin strokes stay smooth
+    scale = max(SUPERSAMPLE, 256 // size)
+    png = resvg_py.svg_to_bytes(svg_string=svg, width=size * scale, height=size * scale)
     alpha = Image.open(io.BytesIO(bytes(png))).convert("RGBA").getchannel("A")
-    return _white_from_alpha(alpha.resize((SIZE, SIZE), Image.LANCZOS))
+    return _white_from_alpha(alpha.resize((size, size), Image.LANCZOS))
 
 
-def convert_own(source):
+def convert_own(source, size=SIZE):
     image = Image.open(os.path.join(SOURCES_DIR, source)).convert("RGBA")
     if image.size != (SIZE, SIZE):
         raise SystemExit("%s: expected %dx%d, got %r" % (source, SIZE, SIZE, image.size))
-    return _white_from_alpha(image.getchannel("A"))
+    alpha = image.getchannel("A")
+    if size != SIZE:
+        alpha = alpha.resize((size, size), Image.LANCZOS)
+    return _white_from_alpha(alpha)
 
 
 def main():
@@ -82,16 +90,20 @@ def main():
             out_name, icon = parts[1], parts[2]
             options = parts[3:]
             filled = "filled" in options
+            sizes = (SIZE,) + (SIZED if "sized" in options else ())
             zoom = 1.0
             for option in options:
                 if option.startswith("zoom="):
                     zoom = float(option[len("zoom="):])
             for weight, stroke in WEIGHTS:
-                written.append(_save(render_lucide(icon, stroke, filled, zoom),
-                                     "%s_%s_64.tga" % (out_name, weight)))
+                for size in sizes:
+                    written.append(_save(render_lucide(icon, stroke, filled, zoom, size),
+                                         "%s_%s_%d.tga" % (out_name, weight, size)))
         elif kind == "own":
             out_name, source = parts[1], parts[2]
-            written.append(_save(convert_own(source), "%s_64.tga" % out_name))
+            sizes = (SIZE,) + (SIZED if "sized" in parts[3:] else ())
+            for size in sizes:
+                written.append(_save(convert_own(source, size), "%s_%d.tga" % (out_name, size)))
         else:
             raise SystemExit("%s:%d: unknown kind %r" % (LIST_FILE, line_no, kind))
     for path in written:

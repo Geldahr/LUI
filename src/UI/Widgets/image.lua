@@ -5,8 +5,11 @@
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.sized_icon"
 
-local Widgets = _G.LUI.UI.Widgets
+local UI = _G.LUI.UI
+local Widgets = UI.Widgets
+local type = type
 local Style = Widgets.Style
 
 ---@class Image : Turbine.UI.Control
@@ -57,6 +60,18 @@ function Image:Constructor(icon, w, h)
     self._img:SetParent(self)
     self._img:SetMouseVisible(false)
 
+    -- Pre-scaled icons (UI.sized_icon) are drawn by a second, never
+    -- stretched child at the file's own size: stretched controls ignore their
+    -- parent's clipping and draw outside scrolling lists. Created on first
+    -- use; the tint / blend / opacity forwarded to _img are kept for it.
+    self._fixed = nil
+    self._sized = nil
+    self._fixed_img = nil
+    self._blend_mode = nil
+    self._back_color = nil
+    self._back_color_blend_mode = nil
+    self._opacity = nil
+
     self:SetMouseVisible(false)
     self:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
     self:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
@@ -94,11 +109,19 @@ function Image:GetStretchMode()
 end
 
 function Image:SetBlendMode(mode)
+    self._blend_mode = mode
     self._img:SetBlendMode(mode)
+    if self._fixed ~= nil then
+        self._fixed:SetBlendMode(mode)
+    end
 end
 
 function Image:SetBackColor(color)
+    self._back_color = color
     self._img:SetBackColor(color)
+    if self._fixed ~= nil then
+        self._fixed:SetBackColor(color)
+    end
 end
 
 function Image:GetBackColor()
@@ -106,18 +129,26 @@ function Image:GetBackColor()
 end
 
 function Image:SetBackColorBlendMode(mode)
+    self._back_color_blend_mode = mode
     self._img:SetBackColorBlendMode(mode)
+    if self._fixed ~= nil then
+        self._fixed:SetBackColorBlendMode(mode)
+    end
 end
 
 -- Colors a white icon: the back color multiplies the picture, and only the
 -- icon's opaque pixels show it.
 function Image:set_tint(color)
-    self._img:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
-    self._img:SetBackColor(color)
+    self:SetBackColorBlendMode(Turbine.UI.BlendMode.Multiply)
+    self:SetBackColor(color)
 end
 
 function Image:SetOpacity(opacity)
+    self._opacity = opacity
     self._img:SetOpacity(opacity)
+    if self._fixed ~= nil then
+        self._fixed:SetOpacity(opacity)
+    end
 end
 
 function Image:GetOpacity()
@@ -284,7 +315,84 @@ function Image:_set_size(w, h)
     end
 end
 
+function Image:_ensure_fixed()
+    if self._fixed ~= nil then
+        return self._fixed
+    end
+    local fixed = Control()
+    fixed:SetParent(self)
+    fixed:SetMouseVisible(false)
+    if self._blend_mode ~= nil then
+        fixed:SetBlendMode(self._blend_mode)
+    end
+    if self._back_color_blend_mode ~= nil then
+        fixed:SetBackColorBlendMode(self._back_color_blend_mode)
+    end
+    if self._back_color ~= nil then
+        fixed:SetBackColor(self._back_color)
+    end
+    if self._opacity ~= nil then
+        fixed:SetOpacity(self._opacity)
+    end
+    self._fixed = fixed
+    return fixed
+end
+
+-- the pre-scaled file for the current box: the largest size that fits,
+-- centered (re-picked on every SetSize)
+function Image:_place_sized()
+    local w, h = self:GetSize()
+    local box = math.floor(math.min(w, h))
+    if box < 0 then
+        box = 0
+    elseif box > UI.SIZED_ICON_MAX then
+        box = UI.SIZED_ICON_MAX
+    end
+    local entry = self._sized[box]
+    local fixed = self._fixed
+    if self._fixed_img ~= entry.img then
+        self._fixed_img = entry.img
+        fixed:SetBackground(entry.img)
+    end
+    fixed:SetSize(entry.size, entry.size)
+    fixed:SetPosition(math.floor((w - entry.size) / 2), math.floor((h - entry.size) / 2))
+end
+
+function Image:SetSize(w, h)
+    Control.SetSize(self, w, h)
+    if self._sized ~= nil then
+        self:_place_sized()
+    end
+end
+
+function Image:_set_sized_icon(icon, w, h)
+    self._sized = icon
+    self:_ensure_fixed():SetVisible(true)
+    self._img:SetVisible(false)
+    self.original_w = UI.SIZED_ICON_MAX
+    self.original_h = UI.SIZED_ICON_MAX
+    self._real_w = self.original_w
+    self._real_h = self.original_h
+    self:SetVisible(true)
+    if self:_set_size(w, h) == nil then
+        Control.SetSize(self, self.original_w, self.original_h)
+        self:_place_sized()
+        self:set_alignment(self._align)
+    end
+end
+
 function Image:set_icon(icon, w, h)
+    -- type(), not a field test: game art ids are numbers, which can't be indexed
+    if type(icon) == "table" then
+        self:_set_sized_icon(icon, w, h)
+        return
+    end
+    if self._sized ~= nil then
+        self._sized = nil
+        self._fixed:SetVisible(false)
+        self._img:SetVisible(true)
+    end
+
     if icon == nil then
         self.original_w = nil
         self.original_h = nil

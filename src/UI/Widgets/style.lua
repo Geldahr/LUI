@@ -137,6 +137,12 @@ local DEFAULTS = {
     -- menu icons (status bar, LUI Menu, window titles): the old game art
     -- instead of the tinted Lucide set
     ICON_MENU_LEGACY = false,
+    -- money coins (status bar, inventory): the game's coin art, or with
+    -- ICON_COINS_MODERN the Lucide coins in these colors
+    ICON_COIN_GOLD = Turbine.UI.Color(1, 0.96, 0.78, 0.26),
+    ICON_COIN_SILVER = Turbine.UI.Color(1, 0.80, 0.82, 0.85),
+    ICON_COIN_COPPER = Turbine.UI.Color(1, 0.82, 0.50, 0.30),
+    ICON_COINS_MODERN = false,
 
     WINDOW_WORK_AREA = function()
         local display_w, display_h = Turbine.UI.Display.GetSize()

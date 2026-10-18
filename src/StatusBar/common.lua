@@ -49,9 +49,6 @@ S.ICON_INSET = 4
 S.BACKPACK_ICON_W = 24
 S.BACKPACK_ICON_H = 30
 
-S.GOLD_ICON = UI.AssetIds.gold_coin
-S.SILVER_ICON = UI.AssetIds.silver_coin
-S.COPPER_ICON = UI.AssetIds.copper_coin
 S.INVENTORY_SPACE_ICON = UI.AssetIds.backpack
 S.DURABILITY_ICON = UI.AssetIds.durability
 

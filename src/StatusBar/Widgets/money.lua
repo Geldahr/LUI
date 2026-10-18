@@ -57,15 +57,15 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
     self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self:SetSize(widget_w, bar_h)
 
-    self.g_icon = UI.Widgets.Image(S.GOLD_ICON)
+    self.g_icon = UI.Widgets.Icons.coin_image("gold")
     self.g_icon:SetParent(self)
     self.g_icon:SetVisible(false)
 
-    self.s_icon = UI.Widgets.Image(S.SILVER_ICON)
+    self.s_icon = UI.Widgets.Icons.coin_image("silver")
     self.s_icon:SetParent(self)
     self.s_icon:SetVisible(false)
 
-    self.c_icon = UI.Widgets.Image(S.COPPER_ICON)
+    self.c_icon = UI.Widgets.Icons.coin_image("copper")
     self.c_icon:SetParent(self)
     self.c_icon:SetVisible(false)
 
@@ -155,9 +155,9 @@ function MoneyWidget:Constructor(widget_w, bar_h, font, content_alignment)
     _apply_widget_font(self._tip_sign, font)
 
     self._tip_coins = {}
-    local coin_icons = { S.GOLD_ICON, S.SILVER_ICON, S.COPPER_ICON }
+    local coin_metals = { "gold", "silver", "copper" }
     for i = 1, 3 do
-        local icon = UI.Widgets.Image(coin_icons[i])
+        local icon = UI.Widgets.Icons.coin_image(coin_metals[i])
         icon:SetParent(self._tip_inner)
         icon:SetMouseVisible(false)
         icon:SetVisible(false)

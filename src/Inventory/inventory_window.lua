@@ -74,9 +74,6 @@ local function _has_resize_dir(mask, dir)
     return math.floor((mask or 0) / dir) % 2 == 1
 end
 
-local GOLD_ICON = Turbine.UI.Graphic(0x41007e7b)
-local SILVER_ICON = Turbine.UI.Graphic(0x41007e7c)
-local COPPER_ICON = Turbine.UI.Graphic(0x41007e7d)
 
 local function _get_item_description(item)
     if item == nil then
@@ -171,13 +168,13 @@ function InventoryWindow:Constructor()
     self.header = Turbine.UI.Control()
     self.header:SetParent(content)
 
-    self.g_icon = UI.Widgets.Image(GOLD_ICON)
+    self.g_icon = UI.Widgets.Icons.coin_image("gold")
     self.g_icon:SetParent(self.header)
 
-    self.s_icon = UI.Widgets.Image(SILVER_ICON)
+    self.s_icon = UI.Widgets.Icons.coin_image("silver")
     self.s_icon:SetParent(self.header)
 
-    self.c_icon = UI.Widgets.Image(COPPER_ICON)
+    self.c_icon = UI.Widgets.Icons.coin_image("copper")
     self.c_icon:SetParent(self.header)
 
     local function make_money_label()

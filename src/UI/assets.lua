@@ -2,6 +2,8 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import "LUI.src.UI.sized_icon"
+
 local UI = _G.LUI.UI
 local AssetIds = UI.Assets
 
@@ -61,3 +63,76 @@ AssetIds.book_blue_cover = 0x4113BC91
 AssetIds.plus_25 = 0x41116576
 AssetIds.minus_25 = 0x41116579
 -- There are other +/- colors available as 25x25 icons.
+
+-- LUI's white, tintable icons (tools/icons/build_icons.py), drawn tinted with
+-- the ICON_* style colors through Widgets.Icons.path(name). Lucide icons come
+-- in both line weights (Style.ICON_WEIGHT); sized ones are pre-scaled
+-- (UI.sized_icon) and drawn unstretched, so they clip inside scrolling lists.
+local ICON_DIR = "LUI/assets/ui/icons/"
+local sized = UI.sized_icon
+
+local function lucide(name)
+    return { thin = ICON_DIR .. name .. "_thin_64.tga", bold = ICON_DIR .. name .. "_bold_64.tga" }
+end
+
+local function lucide_sized(name)
+    return { thin = sized(ICON_DIR .. name .. "_thin_"), bold = sized(ICON_DIR .. name .. "_bold_") }
+end
+
+AssetIds.icons = {
+    -- LUI's own shapes (single weight)
+    window_close = sized(ICON_DIR .. "window_close_"),
+    window_maximize = ICON_DIR .. "window_maximize_64.tga",
+    window_restore = ICON_DIR .. "window_restore_64.tga",
+
+    chevron_down = lucide("chevron_down"),
+    chevron_up = lucide("chevron_up"),
+    chevron_left = lucide("chevron_left"),
+    chevron_right = lucide("chevron_right"),
+    dropdown_arrow = lucide_sized("dropdown_arrow"),
+    submenu_arrow = lucide("submenu_arrow"),
+    chevron_up_small = lucide_sized("chevron_up_small"),
+    chevron_down_small = lucide_sized("chevron_down_small"),
+    chevron_left_small = lucide("chevron_left_small"),
+    chevron_right_small = lucide("chevron_right_small"),
+    plus = lucide("plus"),
+    minus = lucide("minus"),
+    check = lucide_sized("check"),
+    search = lucide("search"),
+    resize_horizontal = lucide("resize_horizontal"),
+    resize_vertical = lucide("resize_vertical"),
+    resize_tl_br = lucide("resize_tl_br"),
+    resize_tr_bl = lucide("resize_tr_bl"),
+    star = lucide_sized("star"),
+    star_filled = lucide_sized("star_filled"),
+    map_pinned = lucide_sized("map_pinned"),
+    x = lucide("x"),
+    level = lucide_sized("level"),
+
+    -- search keyword chips
+    tag = lucide_sized("tag"),
+    gem = lucide_sized("gem"),
+    shield = lucide_sized("shield"),
+    gauge = lucide_sized("gauge"),
+    scroll_text = lucide_sized("scroll_text"),
+    hammer = lucide_sized("hammer"),
+    award = lucide_sized("award"),
+    package_check = lucide_sized("package_check"),
+    boxes = lucide_sized("boxes"),
+    user = lucide_sized("user"),
+    archive = lucide_sized("archive"),
+
+    -- menu icons (status bar, LUI Menu, window titles)
+    settings = lucide("settings"),
+    backpack = lucide("backpack"),
+    anvil = lucide("anvil"),
+    compass = lucide("compass"),
+    briefcase = lucide("briefcase"),
+    book_open_text = lucide_sized("book_open_text"),
+    users = lucide("users"),
+    refresh_cw = lucide("refresh_cw"),
+    family = lucide_sized("family"),
+
+    -- money (Modern coin icons)
+    coins = lucide("coins"),
+}
