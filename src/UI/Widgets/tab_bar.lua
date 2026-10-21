@@ -2,18 +2,19 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local Utils = _G.LUI.Utils
+local FONT_TO_LOTRO = Utils.FONT_TO_LOTRO
 local class = _G.LUI.Core.class
 import "Turbine.UI"
 
-import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.icons"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.Utils.text_width"
 
 local UI = _G.LUI.UI
 local Widgets = UI.Widgets
-local AssetIds = UI.Assets
 local LuiButton = Widgets.LuiButton
 local LuiLabel = Widgets.LuiLabel
 local Style = Widgets.Style
@@ -37,7 +38,6 @@ local BASE_TAB_PADDING_X = 14
 local BASE_LABEL_PADDING_X = 8
 local BASE_CONTENT_PADDING = 0
 local BASE_MIN_TAB_WIDTH = 56
-local BASE_APPROX_CHAR_WIDTH = 7
 local BASE_SCROLL_BUTTON_SIZE = 18
 local BASE_SCROLL_BUTTON_GAP = 2
 
@@ -93,67 +93,10 @@ local function _show_value(value)
     return value ~= false
 end
 
-local function _approx_char_width_units(ch)
-    if ch == " " then
-        return 0.45
-    end
-    if ch == "." or ch == "," or ch == ":" or ch == ";" or ch == "'" then
-        return 0.35
-    end
-    if ch == "m" then
-        return 1.70
-    end
-    if ch == "w" then
-        return 1.58
-    end
-    if ch == "n" or ch == "h" or ch == "u" then
-        return 1.00
-    end
-    if ch == "a" or ch == "c" or ch == "e" or ch == "o" or ch == "s" then
-        return 0.96
-    end
-    if ch == "d" or ch == "g" or ch == "p" or ch == "q" then
-        return 1.02
-    end
-    if ch == "b" or ch == "k" or ch == "x" or ch == "y" or ch == "z" then
-        return 0.94
-    end
-    if ch == "i" or ch == "l" or ch == "I" or ch == "j" then
-        return 0.55
-    end
-    if ch == "f" or ch == "t" or ch == "r" then
-        return 0.70
-    end
-    if ch == "M" or ch == "W" then
-        return 1.82
-    end
-    if ch == "N" or ch == "H" or ch == "U" then
-        return 1.14
-    end
-    if string.match(ch, "%u") ~= nil then
-        return 1.08
-    end
-    if string.match(ch, "%l") ~= nil then
-        return 0.98
-    end
-    if string.match(ch, "%d") ~= nil then
-        return 0.95
-    end
-    return 1.0
-end
-
-local function _approx_text_width(scale, text)
-    local value = tostring(text or "")
-    local units = 0
-    if string.len(value) < 1 then
-        units = 1
-    else
-        for i = 1, string.len(value) do
-            units = units + _approx_char_width_units(string.sub(value, i, i))
-        end
-    end
-
-    return _scaled_int(scale, BASE_TAB_PADDING_X * 2) + _scaled_int(scale, BASE_APPROX_CHAR_WIDTH * units)
+-- measured width of the tab text in the bar font, plus the tab padding
+local function _tab_text_width(scale, text, font)
+    return _scaled_int(scale, BASE_TAB_PADDING_X * 2)
+        + Utils.measure_text_width_in_font(tostring(text or ""), font) + 2
 end
 
 local function _tab_gap(scale, selection_style)
@@ -490,11 +433,8 @@ function LuiTabBar:Constructor()
     self._scroll_left_button:set_text("")
     self._scroll_left_button:set_padding(2)
     Style.apply_transparent_button(self._scroll_left_button)
-    self._scroll_left_button:set_icon(
-        AssetIds.arrow_l_yellow_normal,
-        AssetIds.arrow_l_yellow_inverted,
-        AssetIds.arrow_l_yellow_dark,
-        AssetIds.arrow_l_transparent,
+    self._scroll_left_button:set_tinted_icon(
+        Widgets.Icons.sized("chevron_left"),
         BASE_SCROLL_BUTTON_SIZE,
         nil,
         LuiButton.icon_position.LEFT
@@ -510,11 +450,8 @@ function LuiTabBar:Constructor()
     self._scroll_right_button:set_text("")
     self._scroll_right_button:set_padding(2)
     Style.apply_transparent_button(self._scroll_right_button)
-    self._scroll_right_button:set_icon(
-        AssetIds.arrow_r_yellow_normal,
-        AssetIds.arrow_r_yellow_inverted,
-        AssetIds.arrow_r_yellow_dark,
-        AssetIds.arrow_r_transparent,
+    self._scroll_right_button:set_tinted_icon(
+        Widgets.Icons.sized("chevron_right"),
         BASE_SCROLL_BUTTON_SIZE,
         nil,
         LuiButton.icon_position.RIGHT
@@ -1184,7 +1121,7 @@ function LuiTabBar:_layout_tabs_horizontal(width, height)
 
     for i = 1, count do
         local entry = self._tabs[i]
-        local desired = math.max(min_tab_w, _approx_text_width(self._scale, entry ~= nil and entry.text or ""))
+        local desired = math.max(min_tab_w, _tab_text_width(self._scale, entry ~= nil and entry.text or "", self._font))
         widths[i] = desired
         total = total + desired
     end
@@ -1383,7 +1320,7 @@ function LuiTabBar:_desired_side_strip_width()
     local width = _scaled_int(self._scale, BASE_SIDE_TAB_WIDTH)
     for i = 1, #self._tabs do
         local entry = self._tabs[i]
-        local desired = _approx_text_width(self._scale, entry ~= nil and entry.text or "")
+        local desired = _tab_text_width(self._scale, entry ~= nil and entry.text or "", self._font)
         if desired > width then
             width = desired
         end

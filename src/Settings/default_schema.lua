@@ -2219,6 +2219,7 @@ _G.LUI.Settings.Defaults.Schema =
 	["crafting"] = {
 		["enabled"] = true,
 		["display_mode"] = "pages",
+		["search_mode"] = "classic",
 	},
 	["travel"] = {
 		["enabled"] = true,
@@ -2226,6 +2227,7 @@ _G.LUI.Settings.Defaults.Schema =
 	},
 	["assets"] = {
 		["enabled"] = true,
+		["search_mode"] = "classic",
 		["layouts"] = {
 			["details"] = {
 				["cols"] = 4.000000,
@@ -2259,6 +2261,7 @@ _G.LUI.Settings.Defaults.Schema =
 	},
 	["encyclopedia"] = {
 		["bestiary_capture"] = false,
+		["search_mode"] = "classic",
 		["resource_card_window"] = {
 			["left"] = 1791.000000,
 			["top"] = 515.000000,
@@ -2335,6 +2338,7 @@ _G.LUI.Settings.Defaults.Schema =
 				["text_alignment"] = 1.000000,
 				["coloring"] = true,
 				["icon"] = true,
+				["icon_coloring"] = true,
 			},
 			["inventory_space"] = {
 				["color"] = {
@@ -2360,6 +2364,7 @@ _G.LUI.Settings.Defaults.Schema =
 				["width"] = 70.000000,
 				["text_alignment"] = 1.000000,
 				["icon"] = true,
+				["icon_coloring"] = true,
 			},
 			["item"] = {
 				["width"] = 56.000000,

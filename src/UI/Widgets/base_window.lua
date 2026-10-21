@@ -13,6 +13,17 @@ local Widgets = LUI.UI.Widgets
 local NativeScaling = LUI.UI.NativeScaling
 local Hidable = LUI.UI.Hidable
 
+-- rect (host coordinates) a popup's click-away catcher covers: inside a
+-- LuiWindow only the content area, so the title bar (close, maximize, drag)
+-- stays usable while a dropdown / menu / picker is open; LuiWindow closes
+-- open popups when it moves, resizes or changes maximize state
+function Widgets.popup_catcher_rect(host)
+    if host.is_lui_window == true then
+        return host:content_rect()
+    end
+    return 0, 0, host:GetWidth(), host:GetHeight()
+end
+
 ---@class LuiBaseWindow : Turbine.UI.Window
 local LuiBaseWindow = class(Turbine.UI.Window)
 Widgets.LuiBaseWindow = LuiBaseWindow

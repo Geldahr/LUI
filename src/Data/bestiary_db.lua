@@ -81,6 +81,7 @@ function Lore.load_bestiary()
     -- decoded entries are the bestiary window's working set
     Bestiary._entry_cache = {}
     Bestiary._group_cache = {}
+    Bestiary._paths_cache = {}
     Bestiary.loaded = true
 end
 
@@ -88,6 +89,70 @@ local function _pool_string(ref)
     local P = Bestiary.P
     local w = P.poff_width
     return sub(P.POOL, u(P.POFF, (ref - 1) * w + 1, w), u(P.POFF, ref * w + 1, w) - 1)
+end
+
+-- ref -> English text of the names paths.lua references (EN_REFS /
+-- EN_NAMES); the /loc zone names are English
+local function _paths_english(D)
+    local map = {}
+    local w = D.ref_width
+    local index = 0
+    for name in string.gmatch(D.EN_NAMES .. "\n", "([^\n]*)\n") do
+        map[u(D.EN_REFS, index * w + 1, w)] = name
+        index = index + 1
+    end
+    return map
+end
+
+-- baked Tokens-search suggestions (paths.lua, tools/lore2lua/
+-- bestiary_paths.py): key "loc" (region > areas) or "gen" (genus >
+-- subcategories) -> { { name = text, en = English text, children = { text },
+-- children_en = { English text } } }, already in this language's display
+-- order; names resolve through the records' own pool, so a suggestion
+-- always equals what a record shows
+function Bestiary.paths(key)
+    Lore.load_bestiary()
+    local cached = Bestiary._paths_cache[key]
+    if cached ~= nil then
+        return cached
+    end
+    import("LUI.src.Data.Bestiary.paths")
+    local D = _G.LoreData["Bestiary.paths"]
+    -- the blob of the pool in use (an English pool when no localized one)
+    local lang = Lore.language()
+    if Bestiary._pool_key == "Bestiary.pool" then
+        lang = "en"
+    end
+    local blob = D[string.upper(key) .. "_" .. lang]
+    if Bestiary._paths_english == nil then
+        Bestiary._paths_english = _paths_english(D)
+    end
+    local english = Bestiary._paths_english
+    local ref_w, count_w = D.ref_width, D.count_width
+    local out = {}
+    local pos = 1
+    while pos <= #blob do
+        local parent = u(blob, pos, ref_w)
+        pos = pos + ref_w
+        local n = u(blob, pos, count_w)
+        pos = pos + count_w
+        local children = {}
+        local children_en = {}
+        for k = 1, n do
+            local ref = u(blob, pos, ref_w)
+            children[k] = _pool_string(ref)
+            children_en[k] = english[ref]
+            pos = pos + ref_w
+        end
+        out[#out + 1] = {
+            name = _pool_string(parent),
+            en = english[parent],
+            children = children,
+            children_en = children_en,
+        }
+    end
+    Bestiary._paths_cache[key] = out
+    return out
 end
 
 function Bestiary.key_at(ordinal)

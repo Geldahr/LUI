@@ -12,10 +12,12 @@ Style changes are applied after a plugin reload.
 
 ## Global > UI > General
 
-| Setting | What it changes |
-| --- | --- |
-| Reload notice | Explains that saved UI style changes apply after reloading the plugin. |
-| Reset shared UI style | Clears saved shared UI user overrides. Apply/Save persists the cleared user layer, so developer style or built-in defaults are visible after reload. |
+| Setting | Style token | What it changes |
+| --- | --- | --- |
+| Reload notice | - | Explains that saved UI style changes apply after reloading the plugin. |
+| Icon line weight | `ICON_WEIGHT` | Line weight of the Lucide-based UI icons (dropdown arrows, chevrons, check marks, search and chip icons): Thin (stroke 2) or Bold (stroke 2.5). The window close/maximize/restore icons have a single shape and are not affected. |
+| Legacy menu icons | `ICON_MENU_LEGACY` | Use the old game artwork for the menu icons (status bar, LUI Menu, window titles) instead of the tinted Lucide icons. Off by default. |
+| Reset shared UI style | - | Clears saved shared UI user overrides. Apply/Save persists the cleared user layer, so developer style or built-in defaults are visible after reload. |
 
 ## Global > UI > Layout
 
@@ -98,6 +100,19 @@ Style changes are applied after a plugin reload.
 | Subtle foreground | `SUBTLE_FOREGROUND` | Low-emphasis foreground for subtle shared UI marks, including thin divider and separator lines that should be visible without reading as borders. |
 | Disabled accent | `ACCENT_BACKGROUND_DISABLED` | Accent fill for disabled shared controls. |
 | Invalid background | `INVALID_BACKGROUND` | Background for invalid shared UI states, such as invalid color input swatches or validation-style fields. |
+
+## Global > UI > Colors > Icons
+
+UI icons are white images tinted with these colors. When an icon color is not set, it follows the matching control text color.
+
+| Setting | Style token | What it changes |
+| --- | --- | --- |
+| Icon color | `ICON_FOREGROUND` | Normal color of shared UI icons: window close/maximize/restore, dropdown and menu arrows, steppers, check marks, search and chip icons. Falls back to Control text. |
+| Icon hover color | `ICON_FOREGROUND_HOVER` | Icon color while its control is hovered. Falls back to Icon color. |
+| Icon pressed color | `ICON_FOREGROUND_PRESSED` | Icon color while its control is pressed or active. Falls back to Icon hover color. |
+| Icon disabled color | `ICON_FOREGROUND_DISABLED` | Icon color on disabled controls. Falls back to Control disabled text. |
+| Menu icons color | `ICON_MENU` | Normal color of the menu icons (status bar shortcuts, LUI Menu buttons, window title icons) while Legacy menu icons is off; hover/pressed/disabled use the shared icon colors. Falls back to Icon color. |
+| Icon accent color | `ICON_ACCENT` | Highlighted icons that carry a state, such as the filled Crafting favorite star. |
 
 ## Global > UI > Colors > Overlays
 

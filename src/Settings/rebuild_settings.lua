@@ -255,6 +255,7 @@ function Settings.rebuild()
     State.settings.global.close_windows_with_esc = raw.global.close_windows_with_esc == true
     State.settings.global.style = raw.global.style
     State.settings.encyclopedia.bestiary_capture = raw.encyclopedia.bestiary_capture == true
+    State.settings.encyclopedia.search_mode = raw.encyclopedia.search_mode
     State.settings.ui.windows = raw.ui.windows
     State.settings.ui.hud = raw.ui.hud
 
@@ -526,6 +527,7 @@ function Settings.rebuild()
         assets.enabled = raw_assets.enabled
         assets.view_mode = raw_assets.view_mode
         assets.stack_items = raw_assets.stack_items
+        assets.search_mode = raw_assets.search_mode
         assets.tile.icons = scaled_int(raw_assets.tile.icons)
         assets.tile.details = scaled_int(raw_assets.tile.details)
     end
@@ -533,6 +535,7 @@ function Settings.rebuild()
     local raw_crafting = raw.crafting
     State.settings.crafting.display_mode = raw_crafting.display_mode
     State.settings.crafting.enabled = raw_crafting.enabled
+    State.settings.crafting.search_mode = raw_crafting.search_mode
 
     local raw_travel = raw.travel
     State.settings.travel.display_mode = raw_travel.display_mode
@@ -704,6 +707,7 @@ function Settings.rebuild()
         enabled = in_zones("inventory_space"),
         width = scaled_int(raw_sb.widgets.inventory_space.width),
         icon = raw_sb.widgets.inventory_space.icon,
+        icon_coloring = raw_sb.widgets.inventory_space.icon_coloring == true,
         color = raw_sb.widgets.inventory_space.color,
         content_alignment = ToLotro.text_alignment[raw_sb.widgets.inventory_space.text_alignment],
     }
@@ -711,6 +715,7 @@ function Settings.rebuild()
         enabled = in_zones("equipment_wear"),
         width = scaled_int(raw_sb.widgets.equipment_wear.width),
         icon = raw_sb.widgets.equipment_wear.icon,
+        icon_coloring = raw_sb.widgets.equipment_wear.icon_coloring == true,
         coloring = raw_sb.widgets.equipment_wear.coloring == true,
         color = raw_sb.widgets.equipment_wear.color,
         content_alignment = ToLotro.text_alignment[raw_sb.widgets.equipment_wear.text_alignment],

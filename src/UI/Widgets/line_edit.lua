@@ -7,14 +7,22 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
 import "LUI.src.UI.Widgets.label"
+import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.icons"
 
 local Widgets = _G.LUI.UI.Widgets
 local LuiLabel = Widgets.LuiLabel
+local LuiButton = Widgets.LuiButton
 local Style = Widgets.Style
+local Icons = Widgets.Icons
 local DEFAULT_INSET_X = 4
 local PLACEHOLDER_CURSOR_GAP = 2
 local SCROLL_BAR_WIDTH = 10
+-- clear X (set_clearable): same metrics as the compact TokenInput's
+local BASE_CLEAR_BTN = 18
+local BASE_CLEAR_ICON = 10
+local BASE_CLEAR_MARGIN = 2
 
 local function _scaled_int(scale, value)
     return math.floor((value * scale) + 0.5)
@@ -47,6 +55,8 @@ function LuiLineEdit:Constructor()
     self._text_color = Style.CONTROL_FOREGROUND
     self._digits_only = false
     self._digits_updating = false
+    self._clearable = false
+    self._clear_button = nil
 
     self:SetMouseVisible(true)
     _set_alpha_blend(self)
@@ -56,8 +66,12 @@ function LuiLineEdit:Constructor()
     self._inner:SetMouseVisible(false)
     _set_alpha_blend(self._inner)
 
-    self.text_box = Turbine.UI.Lotro.TextBox()
+    -- plain TextBox: the Lotro one draws its own frame, which shows as a
+    -- line wherever it does not fill the whole field (next to the clear X)
+    self.text_box = Turbine.UI.TextBox()
     self.text_box:SetParent(self._inner)
+    _set_alpha_blend(self.text_box)
+    self:_sync_text_box_multiline()
     self.text_box:SetZOrder(1)
     self.text_box:SetTextAlignment(self._text_alignment)
 
@@ -83,7 +97,7 @@ function LuiLineEdit:Constructor()
     end
     self.text_box.TextChanged = function(sender, args)
         if self._digits_only == true and self._digits_updating ~= true then
-            -- the Lotro TextBox is multiline: Enter inserts a newline, so a
+            -- the TextBox is multiline: Enter inserts a newline, so a
             -- stripped newline doubles as the submit signal (same trick as
             -- LuiSpinBox)
             local text = self.text_box:GetText() or ""
@@ -100,6 +114,7 @@ function LuiLineEdit:Constructor()
             end
         end
         self:_refresh_placeholder()
+        self:_sync_clear_button()
         if type(self.TextChanged) == "function" then
             self.TextChanged(self, args)
         end
@@ -189,6 +204,17 @@ function LuiLineEdit:_layout()
     self._inner:SetSize(inner_w, inner_h)
 
     local text_w = inner_w
+    if self._clear_button ~= nil and self._clear_button:IsVisible() == true then
+        local margin = _scaled_int(self._scale, BASE_CLEAR_MARGIN)
+        local size = math.min(_scaled_int(self._scale, BASE_CLEAR_BTN), inner_h)
+        -- same parity as the inner height so it centres exactly
+        size = size - ((inner_h - size) % 2)
+        self._clear_button:set_scale(self._scale)
+        self._clear_button:SetSize(size, size)
+        self._clear_button:set_tinted_icon(Icons.path(Icons.CLEAR), BASE_CLEAR_ICON)
+        self._clear_button:SetPosition(inner_w - size - margin, (inner_h - size) / 2)
+        text_w = math.max(0, inner_w - size - (margin * 2))
+    end
     if self._scroll_bar ~= nil and self._multiline == true then
         local sb_w = SCROLL_BAR_WIDTH
         if sb_w > inner_w then
@@ -199,10 +225,15 @@ function LuiLineEdit:_layout()
         text_w = math.max(0, inner_w - sb_w)
     end
 
-    self.text_box:SetPosition(0, 0)
-    self.text_box:SetSize(text_w, inner_h)
-
+    -- the plain TextBox draws text at its edges: inset the box itself on
+    -- both sides (centred text stays centred), the placeholder matches;
+    -- narrow fields (pager page box) shrink the inset so the text keeps
+    -- room (at most 1/8 of the width per side)
     local inset_x = math.floor(((DEFAULT_INSET_X + PLACEHOLDER_CURSOR_GAP) * self._scale) + 0.5)
+    inset_x = math.min(inset_x, math.floor(text_w / 8))
+    self.text_box:SetPosition(inset_x, 0)
+    self.text_box:SetSize(math.max(0, text_w - (inset_x * 2)), inner_h)
+
     self.placeholder_label:SetPosition(inset_x, 0)
     self.placeholder_label:SetSize(math.max(0, text_w - (inset_x * 2)), inner_h)
 end
@@ -210,6 +241,50 @@ end
 function LuiLineEdit:_refresh_placeholder()
     local text = self.text_box:GetText() or ""
     self.placeholder_label:SetVisible(self._placeholder_text ~= "" and text == "")
+end
+
+-- Clear X inside the field, shown only while there is text to clear; the
+-- click empties the field and fires TextChanged like typing would.
+function LuiLineEdit:set_clearable(clearable)
+    self._clearable = clearable == true
+    if self._clearable == true and self._clear_button == nil then
+        self._clear_button = LuiButton()
+        self._clear_button:SetParent(self._inner)
+        self._clear_button:SetZOrder(3)
+        self._clear_button:set_text("")
+        -- no box: hover only brightens the icon tint
+        Style.apply_transparent_button(self._clear_button)
+        self._clear_button:SetVisible(false)
+        self._clear_button.Click = function()
+            self:_clear_text()
+        end
+    end
+    self:_sync_clear_button()
+end
+
+function LuiLineEdit:_clear_text()
+    self.text_box:SetText("")
+    self:_refresh_placeholder()
+    self:_sync_clear_button()
+    -- programmatic SetText does not fire the TextBox's TextChanged
+    if type(self.TextChanged) == "function" then
+        self.TextChanged(self, {})
+    end
+    self:Focus()
+end
+
+function LuiLineEdit:_sync_clear_button()
+    if self._clear_button == nil then
+        return
+    end
+    local visible = self._clearable == true
+        and self._enabled == true
+        and self._read_only ~= true
+        and (self.text_box:GetText() or "") ~= ""
+    if visible ~= self._clear_button:IsVisible() then
+        self._clear_button:SetVisible(visible)
+        self:_layout()
+    end
 end
 
 function LuiLineEdit:set_placeholder_text(text)
@@ -301,11 +376,18 @@ function LuiLineEdit:SetBackColor(color)
     self:_update_visual_state(true)
 end
 
+-- single line unless asked otherwise: long text must not wrap. Digits-only
+-- fields keep the multiline TextBox, whose Enter newline is their submit
+-- signal.
+function LuiLineEdit:_sync_text_box_multiline()
+    if self.text_box.SetMultiline ~= nil then
+        self.text_box:SetMultiline(self._multiline == true or self._digits_only == true)
+    end
+end
+
 function LuiLineEdit:SetMultiline(multiline)
     self._multiline = multiline == true
-    if self.text_box.SetMultiline ~= nil then
-        self.text_box:SetMultiline(self._multiline)
-    end
+    self:_sync_text_box_multiline()
 
     if self._multiline == true and self._scroll_bar == nil and self.text_box.SetVerticalScrollBar ~= nil then
         self._scroll_bar = Turbine.UI.Lotro.ScrollBar()
@@ -325,9 +407,10 @@ end
 function LuiLineEdit:SetText(text)
     self.text_box:SetText(text or "")
     self:_refresh_placeholder()
+    self:_sync_clear_button()
 end
 
--- Re-apply the current text on the next frame. The Lotro TextBox does not
+-- Re-apply the current text on the next frame. The TextBox does not
 -- paint text that was set while its window was hidden, and re-setting it
 -- in the same call stack that shows the window is still too early; the
 -- config pages fix the same quirk with SetText(GetText()) once the page
@@ -351,6 +434,7 @@ end
 -- TextChanged.
 function LuiLineEdit:set_digits_only(digits_only)
     self._digits_only = digits_only == true
+    self:_sync_text_box_multiline()
 end
 
 function LuiLineEdit:SetWantsKeyEvents(wants_key_events)
@@ -371,6 +455,7 @@ function LuiLineEdit:SetReadOnly(read_only)
         self.text_box:SetReadOnly(read_only)
     end
     self:_update_visual_state(true)
+    self:_sync_clear_button()
 end
 
 function LuiLineEdit:SetEnabled(enabled)
@@ -380,6 +465,7 @@ function LuiLineEdit:SetEnabled(enabled)
         self.text_box:SetEnabled(self._enabled)
     end
     self:_update_visual_state(true)
+    self:_sync_clear_button()
 end
 
 function LuiLineEdit:Focus()

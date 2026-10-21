@@ -16,7 +16,9 @@ import "LUI.src.Settings.Tabs.feature_shell"
 import "LUI.src.Settings.Content.content"
 import "LUI.src.Settings.Content.tabs"
 import "LUI.src.UI.Widgets"
+import "LUI.src.Utils.text_width"
 
+local Utils = _G.LUI.Utils
 local FeatureShell = _G.LUI.Settings.Tabs.SettingsFeatureShell
 local scaled_int = FeatureShell.scaled_int
 local Style = UI.Widgets.Style
@@ -25,11 +27,7 @@ local HELP_PAGE_FONT_SIZE_OFFSET = 3
 local GITHUB_URL = "https://github.com/Geldahr/LUI"
 local GITHUB_LABEL_TEXT =
     TR["For more information, feature requests, or bug reports, please visit the GitHub repository:"]
-local ABOUT_HEIGHT = 156
 local GITHUB_HEIGHT = 59
-local FEATURES_HEIGHT = 620
-local INTERACTIONS_HEIGHT = 980
-local COMMANDS_HEIGHT = 400
 local GITHUB_LINK_HEIGHT = 22
 local GITHUB_LABEL_HEIGHT = 30
 
@@ -41,13 +39,31 @@ local function _scaled_help_int(value)
     return math.floor(_scaled_help_size(value) + 0.5)
 end
 
+-- size request for the help font; it snaps to a rendered size, so text is
+-- measured at this same request
+local function _help_font_size()
+    return _scaled_help_size(Style.CONTENT_SMALL_FONT_SIZE + HELP_PAGE_FONT_SIZE_OFFSET)
+end
+
 local function _scaled_help_font()
-    local size = Style.CONTENT_SMALL_FONT_SIZE + HELP_PAGE_FONT_SIZE_OFFSET
-    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, _scaled_help_size(size))
+    local size = _help_font_size()
+    local font = FONT_TO_LOTRO(Style.CONTENT_SMALL_FONT_NAME, size)
     if font == nil then
         error("Missing help font: " .. tostring(Style.CONTENT_SMALL_FONT_NAME) .. " " .. tostring(size))
     end
     return font
+end
+
+-- wrapped text height: a label steps its lines by the rendered font size
+-- (measured in game: Verdana18 at 18 px; with the inset, wraps matched two
+-- screenshots line for line), plus one spare line for a wrap at the edge
+local function _help_text_height(text, width)
+    local font_name = Style.CONTENT_SMALL_FONT_NAME
+    local font_size = _help_font_size()
+    local line_h = Utils.resolve_font_size(font_name, font_size)
+    local wrap_w = math.max(1, width - _scaled_help_int(Utils.LABEL_WRAP_INSET))
+    local lines = Utils.wrap_text(text, wrap_w, Utils.font_char_widths(font_name, font_size))
+    return (lines + 1) * line_h
 end
 
 local function _layout_help_text(entry)
@@ -56,8 +72,8 @@ local function _layout_help_text(entry)
     entry.body:SetSize(w, h)
 end
 
-local function _create_help_text(page, key, text, height)
-    local entry = page:add_custom(key, height)
+local function _create_help_text(page, key, text)
+    local entry = page:add_custom(key)
 
     entry.body = UI.Widgets.LuiLabel()
     entry.body:SetParent(entry.control)
@@ -67,6 +83,16 @@ local function _create_help_text(page, key, text, height)
     entry.body:SetForeColor(Style.FOREGROUND)
     entry.body:SetText(text)
 
+    -- re-measured only when the layout width or the scale changes
+    entry.measure_height = function(_, width)
+        local scale = State.settings.global.scale
+        if width ~= entry.measured_width or scale ~= entry.measured_scale then
+            entry.measured_width = width
+            entry.measured_scale = scale
+            entry.measured_height = _help_text_height(text, width)
+        end
+        return entry.measured_height
+    end
     entry.control.SizeChanged = function()
         _layout_help_text(entry)
     end
@@ -142,9 +168,11 @@ local function _new_about_section(window)
         TR["For the best experience, set the global LUI UI scale before changing individual sizes."],
         TR["Recommended starting points: 1080p = 1.0, 1440p = 1.3 to 1.4, 2160p / 4k = 2.0."],
         TR["After the global LUI UI scale feels right, use the other settings for micro adjustments."],
+        "",
+        TR["Interface icons from Lucide (lucide.dev), ISC License."],
     }, "\n")
 
-    _create_help_text(page, "help_about", about_text, ABOUT_HEIGHT)
+    _create_help_text(page, "help_about", about_text)
     page:add_break()
     _create_link_box(page, "help_github", GITHUB_LABEL_TEXT, GITHUB_URL, GITHUB_HEIGHT)
 
@@ -173,7 +201,7 @@ local function _new_commands_section(window)
         TR["/lui api sb --add -k key -t title -i image -c /command - Register a status bar API button."],
     }, "\n")
 
-    _create_help_text(page, "help_commands", commands_text, COMMANDS_HEIGHT)
+    _create_help_text(page, "help_commands", commands_text)
     return page
 end
 
@@ -205,7 +233,7 @@ local function _new_features_section(window)
         TR["Profiles let characters share or switch configurations; Global settings control LUI scale, colors, fonts, borders, and overlays."],
     }, "\n")
 
-    _create_help_text(page, "help_features", features_text, FEATURES_HEIGHT)
+    _create_help_text(page, "help_features", features_text)
     return page
 end
 
@@ -224,13 +252,14 @@ local function _new_interactions_section(window)
         TR["Bestiary"],
         TR["Double-click a non-player target's LUI target vitals to open its Bestiary card on the English client."],
         TR["Double-click a Bestiary result row to open that monster's card."],
-        TR["Use the Bestiary compass/location button while the Bestiary is open to run the localized location command and filter Bestiary results to the current area when LUI can resolve it."],
+        TR["Use the Bestiary location button while the Bestiary is open to run the localized location command and filter Bestiary results to the current area when LUI can resolve it."],
         TR["Bestiary search supports plain text, quoted phrases, OR with |, and filters loc:<region/area>, gen:<genus/subcategory>, and lvl:<min-max>."],
+        TR["In the Tokens search mode (Encyclopedia, Crafting and Assets settings), press Enter to turn the typed text into a chip; the search runs when chips change. A chip matches its exact text and every chip must match: use one chip per word to find words in any order. Double-click a chip to edit it; keywords such as loc:, type: or prof: suggest their values."],
         "",
         TR["Crafting"],
         TR["Click a recipe row or recipe icon to select the recipe."],
         TR["Click a recipe star to toggle favorite; the star beside search filters to favorites."],
-        TR["Use fav:true or fav:false, prof:<name>, rank:<rank>, lvl:<min-max>, and avail:ready or avail:missing in Crafting search."],
+        TR["Use fav:true or fav:false, prof:<name>, rank:<rank>, lvl:<min-max>, avail:craftable,known,unlearned, and mat:<source> or mat:all for material sources in Crafting search."],
         TR["Hover material source/amount hints to see where required items are available."],
         TR["Click a material Bestiary button to search for droppable sources; click the plan Bestiary button to search missing droppable materials."],
         TR["Use the plan count controls to change recipe counts, x to remove a recipe, Track Plan to save it to the status bar, Revert to reload the saved plan, and Clear to empty the draft."],
@@ -252,7 +281,7 @@ local function _new_interactions_section(window)
         TR["External plugins or aliases can add custom status bar buttons with /lui api sb --add -k key -t title -i image -c /command."],
     }, "\n")
 
-    _create_help_text(page, "help_interactions", interactions_text, INTERACTIONS_HEIGHT)
+    _create_help_text(page, "help_interactions", interactions_text)
     return page
 end
 

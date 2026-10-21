@@ -13,13 +13,26 @@ import "LUI.src.UI.assets"
 
 local Shortcuts = UI.Shortcuts
 
-Shortcuts.CONFIG_ICON = UI.AssetIds.feather
-Shortcuts.INVENTORY_ICON = UI.AssetIds.backpack_alt
-Shortcuts.CRAFT_ICON = UI.AssetIds.anvil_silver_glow
-Shortcuts.TRAVEL_ICON = UI.AssetIds.compass
-Shortcuts.ASSETS_ICON = UI.AssetIds.chest
-Shortcuts.ENCYCLOPEDIA_ICON = UI.AssetIds.book_orange_cover
-Shortcuts.RAID_ICON = UI.AssetIds.party_leader_banner
+-- shortcut icons: tinted Lucide icons (Widgets.Icons names), or the old
+-- game art with the ICON_MENU_LEGACY style setting
+local LUCIDE_ICONS = {
+    config = "settings",
+    inventory = "backpack",
+    craft = "anvil",
+    travel = "compass",
+    assets = "briefcase",
+    encyclopedia = "book_open_text",
+    raid = "users",
+}
+local LEGACY_ICONS = {
+    config = UI.AssetIds.feather,
+    inventory = UI.AssetIds.backpack_alt,
+    craft = UI.AssetIds.anvil_silver_glow,
+    travel = UI.AssetIds.compass,
+    assets = UI.AssetIds.chest,
+    encyclopedia = UI.AssetIds.book_orange_cover,
+    raid = UI.AssetIds.party_leader_banner,
+}
 
 local VALID_SHORTCUTS = {
     config = true,
@@ -39,23 +52,69 @@ function Shortcuts.is_valid(shortcut_key)
     return VALID_SHORTCUTS[shortcut_key] == true
 end
 
+-- LUI's own status bar API buttons whose image has a Lucide version (the
+-- LUIReloader helper registers its button with this image)
+local LUCIDE_API_IMAGES = {
+    ["LUI/reloader/reload.tga"] = "refresh_cw",
+}
+
+-- true when the shortcut icons are the tinted Lucide set
+function Shortcuts.icons_tinted()
+    return UI.Widgets.Style.ICON_MENU_LEGACY ~= true
+end
+
 function Shortcuts.get_icon(shortcut_key)
-    if shortcut_key == "config" then
-        return Shortcuts.CONFIG_ICON
-    elseif shortcut_key == "inventory" then
-        return Shortcuts.INVENTORY_ICON
-    elseif shortcut_key == "craft" then
-        return Shortcuts.CRAFT_ICON
-    elseif shortcut_key == "travel" then
-        return Shortcuts.TRAVEL_ICON
-    elseif shortcut_key == "assets" then
-        return Shortcuts.ASSETS_ICON
-    elseif shortcut_key == "encyclopedia" then
-        return Shortcuts.ENCYCLOPEDIA_ICON
-    elseif shortcut_key == "raid" then
-        return Shortcuts.RAID_ICON
+    return Shortcuts.get_style_icon(shortcut_key, Shortcuts.icons_tinted() ~= true)
+end
+
+-- a shortcut's icon in a given style, whatever the setting (quick setup
+-- preview): the old game art when `legacy`, else the Lucide icon (tint it
+-- with ICON_MENU). Stretched: menu icons never sit in a scrolling list,
+-- unless `in_list` (then the pre-scaled one, which clips)
+function Shortcuts.get_style_icon(shortcut_key, legacy, in_list)
+    if legacy == true then
+        return LEGACY_ICONS[shortcut_key]
     end
-    return nil
+    if in_list == true then
+        return UI.Widgets.Icons.sized(LUCIDE_ICONS[shortcut_key])
+    end
+    return UI.Widgets.Icons.path(LUCIDE_ICONS[shortcut_key])
+end
+
+-- a shortcut's icon on a LuiButton: the Menu icons color (shared hover /
+-- pressed / disabled icon colors), the legacy art untinted. `in_list`: the
+-- button sits in a scrolling list (pre-scaled icon)
+function Shortcuts.apply_button_icon(button, shortcut_key, width, height, position, in_list)
+    local icon = Shortcuts.get_style_icon(shortcut_key, Shortcuts.icons_tinted() ~= true, in_list)
+    if Shortcuts.icons_tinted() == true then
+        local Style = UI.Widgets.Style
+        button:set_tinted_icon(icon, width, height, position)
+        button:set_icon_tint(Style.ICON_MENU, Style.ICON_FOREGROUND_HOVER, Style.ICON_FOREGROUND_PRESSED,
+            Style.ICON_FOREGROUND_DISABLED)
+    else
+        button:set_icon(icon, nil, nil, nil, width, height, position)
+        button:set_icon_tint(nil, nil, nil, nil)
+    end
+end
+
+-- the image a status bar API button shows and its tint (nil: as given);
+-- LUI's own buttons follow the menu icon set
+function Shortcuts.api_button_icon(image)
+    local name = LUCIDE_API_IMAGES[image]
+    if name ~= nil and Shortcuts.icons_tinted() == true then
+        return UI.Widgets.Icons.path(name), UI.Widgets.Style.ICON_MENU
+    end
+    return image, nil
+end
+
+-- a shortcut's icon in a LuiWindow title bar
+function Shortcuts.apply_window_icon(window, shortcut_key)
+    window:set_icon(Shortcuts.get_icon(shortcut_key))
+    if Shortcuts.icons_tinted() == true then
+        window:set_icon_tint(UI.Widgets.Style.ICON_MENU)
+    else
+        window:set_icon_tint(nil)
+    end
 end
 
 function Shortcuts.get_label(shortcut_key)

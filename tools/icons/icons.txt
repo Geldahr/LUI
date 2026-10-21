@@ -1,0 +1,65 @@
+# LUI icon set. Regenerate with:
+#   python tools/icons/build_icons.py
+#
+# lucide <out_name> <lucide_icon> [filled] [zoom=N] [sized]
+#   Rendered from tools/icons/lucide/icons/<lucide_icon>.svg in both line
+#   weights: assets/ui/icons/<out_name>_thin_64.tga (stroke 2) and
+#   <out_name>_bold_64.tga (stroke 2.5). zoom=N crops the canvas around its
+#   centre (small glyphs fill their slot) and keeps the rendered line weight.
+#   sized also writes <out_name>_<weight>_<N>.tga for every pre-scaled size
+#   (build_icons.py SIZED): the game draws those unstretched, so they clip
+#   inside scrolling lists.
+#
+# own <out_name> <source> [sized]
+#   Shape (alpha) taken from a single-colour TGA under tools/icons/sources/:
+#   assets/ui/icons/<out_name>_64.tga (sized: also <out_name>_<N>.tga).
+#
+# Every output is white; the colour comes from the in-game tint.
+
+own window_close x_64.tga sized
+own window_maximize maximize_64.tga
+own window_restore restore_64.tga
+
+lucide chevron_left chevron-left sized
+lucide chevron_right chevron-right sized
+lucide dropdown_arrow chevron-down zoom=1.5 sized
+lucide submenu_arrow chevron-right zoom=1.5 sized
+# zoomed chevrons for tiny buttons (spin box halves, variant selector)
+lucide chevron_up_small chevron-up zoom=2 sized
+lucide chevron_down_small chevron-down zoom=2 sized
+lucide chevron_left_small chevron-left zoom=2
+lucide chevron_right_small chevron-right zoom=2
+lucide check check sized
+lucide search search
+lucide resize_horizontal move-horizontal
+lucide resize_vertical move-vertical
+lucide resize_tl_br move-diagonal-2
+lucide resize_tr_bl move-diagonal
+lucide star star
+lucide star_filled star filled sized
+lucide map_pinned map-pinned sized
+lucide level chevrons-up sized
+# search keyword chips
+lucide tag tag sized
+lucide gem gem sized
+lucide shield shield sized
+lucide gauge gauge sized
+lucide scroll_text scroll-text sized
+lucide hammer hammer sized
+lucide award award sized
+lucide package_check package-check sized
+lucide boxes boxes sized
+lucide user user sized
+lucide archive archive sized
+# toolbar shortcuts (status bar, LUI Menu, window titles)
+lucide settings settings
+lucide backpack backpack
+lucide anvil anvil
+lucide compass compass
+lucide briefcase briefcase
+lucide book_open_text book-open-text sized
+lucide users users
+lucide refresh_cw refresh-cw
+lucide family paw-print sized
+# money (status bar, inventory), tinted gold / silver / copper
+lucide coins coins

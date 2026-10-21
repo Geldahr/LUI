@@ -11,12 +11,13 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.base_window"
 
 local Widgets = _G.LUI.UI.Widgets
 local LuiButton = Widgets.LuiButton
 local Style = Widgets.Style
 local BASE_ITEM_H = 18
-local BASE_ARROW_W = 13
+local BASE_ARROW_W = 12
 local BASE_DROPDOWN_W = 119
 local BASE_DROPDOWN_H = 21
 local BASE_OPEN_GAP = 1
@@ -51,6 +52,8 @@ function LuiDropdown:Constructor()
     self._value = nil
     self._popup_host = nil
     self._popup_overlay = nil
+    self._host_overlay = nil
+    self._host_overlay_parent = nil
 
     self._labels = {}
     self._values = {}
@@ -70,10 +73,6 @@ function LuiDropdown:Constructor()
     self.button:set_scale(self._scale)
     self.button:set_padding(BASE_POPUP_PAD_X)
     self.button:set_text_alignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    -- native-size arrow (stretch mode 0) only at scale 1.0, where it is
-    -- pixel-perfect; mode 0 ignores the layout size, so at any other scale
-    -- the arrow must stretch to the scaled slot or it stays tiny on 4K
-    self.button:set_icon_stretch_mode(self._scale == 1 and 0 or nil)
     Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     self.button.Click = function()
         self:Toggle()
@@ -176,8 +175,6 @@ function LuiDropdown:set_scale(scale)
     if self.button ~= nil then
         self.button:set_scale(self._scale)
         self.button:set_padding(BASE_POPUP_PAD_X)
-        -- see Constructor: pixel-perfect native arrow at 1.0 only
-        self.button:set_icon_stretch_mode(self._scale == 1 and 0 or nil)
         Style.apply_dropdown_arrow(self.button, BASE_ARROW_W, LuiButton.icon_position.RIGHT)
     end
 
@@ -352,34 +349,54 @@ function LuiDropdown:Open()
 
     if self._popup_host ~= nil then
         local host = self._popup_host
-        local overlay = Turbine.UI.Control()
-        overlay:SetParent(host)
-        overlay:SetPosition(0, 0)
-        overlay:SetSize(host:GetWidth(), host:GetHeight())
-        overlay:SetMouseVisible(true)
-        overlay:SetZOrder(9999)
-        overlay:SetVisible(true)
-
-        overlay.MouseDown = function(_, args)
-            local cx = args ~= nil and args.X or nil
-            local cy = args ~= nil and args.Y or nil
-            if type(cx) == "number" and type(cy) == "number" then
-                local host_sx, host_sy = host:PointToScreen(0, 0)
-                local popup_x, popup_y = self.popup:GetPosition()
-                local rel_x = popup_x - host_sx
-                local rel_y = popup_y - host_sy
-                local popup_w, popup_h = self.popup:GetSize()
-                if cx >= rel_x and cx <= (rel_x + popup_w) and cy >= rel_y and cy <= (rel_y + popup_h) then
-                    return
-                end
-            end
-            self:Close()
+        -- one overlay per dropdown, not one per open: a hidden control
+        -- stays parented to the host
+        local overlay = self._host_overlay
+        if overlay == nil then
+            overlay = self:_make_host_overlay()
         end
-
+        if self._host_overlay_parent ~= host then
+            -- hidden first: a control moved while shown draws at the
+            -- screen's top-left
+            overlay:SetVisible(false)
+            overlay:SetParent(host)
+            self._host_overlay_parent = host
+        end
+        local ox, oy, ow, oh = Widgets.popup_catcher_rect(host)
+        overlay:SetPosition(ox, oy)
+        overlay:SetSize(ow, oh)
+        overlay:SetVisible(true)
         self._popup_overlay = overlay
     end
 
     self.popup:SetVisible(true)
+end
+
+-- the host's click-away overlay: a click outside the popup closes it
+function LuiDropdown:_make_host_overlay()
+    local overlay = Turbine.UI.Control()
+    overlay:SetVisible(false)
+    overlay:SetMouseVisible(true)
+    overlay:SetZOrder(9999)
+    overlay.MouseDown = function(_, args)
+        local cx = args ~= nil and args.X or nil
+        local cy = args ~= nil and args.Y or nil
+        if type(cx) == "number" and type(cy) == "number" then
+            -- click is in overlay coordinates
+            local over_sx, over_sy = overlay:PointToScreen(0, 0)
+            local popup_x, popup_y = self.popup:GetPosition()
+            local rel_x = popup_x - over_sx
+            local rel_y = popup_y - over_sy
+            local popup_w, popup_h = self.popup:GetSize()
+            if cx >= rel_x and cx <= (rel_x + popup_w) and cy >= rel_y and cy <= (rel_y + popup_h) then
+                return
+            end
+        end
+        self:Close()
+    end
+
+    self._host_overlay = overlay
+    return overlay
 end
 
 function LuiDropdown:Toggle()

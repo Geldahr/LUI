@@ -8,7 +8,7 @@ local WidgetBase = _G.LUI.Features.StatusBar.WidgetBase
 local InventorySpaceWidget = class(WidgetBase)
 StatusBarWidgets.InventorySpaceWidget = InventorySpaceWidget
 
-function InventorySpaceWidget:Constructor(widget_w, bar_h, font, icon_path, warn_color, content_alignment)
+function InventorySpaceWidget:Constructor(widget_w, bar_h, font, icon_path, warn_color, content_alignment, icon_coloring)
     WidgetBase.Constructor(self, "inventory_space", widget_w, bar_h, font,
         content_alignment or Turbine.UI.ContentAlignment.MiddleRight, icon_path)
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
@@ -18,6 +18,8 @@ function InventorySpaceWidget:Constructor(widget_w, bar_h, font, icon_path, warn
     self._base_color = font ~= nil and font.color or nil
     self._last_color_key = nil
     self.warn_color = warn_color
+    -- the icon takes the warning colors too, or keeps the text color
+    self.icon_coloring = icon_coloring == true
 end
 
 function InventorySpaceWidget:update(now)
@@ -31,6 +33,7 @@ function InventorySpaceWidget:update(now)
         self:set_text("--/--")
         if self._base_color ~= nil then
             self.label:SetForeColor(self._base_color)
+            self:set_icon_color(self._base_color)
             self._last_color_key = "base"
         end
         return
@@ -41,6 +44,7 @@ function InventorySpaceWidget:update(now)
     if total <= 0 then
         if self._base_color ~= nil and self._last_color_key ~= "base" then
             self.label:SetForeColor(self._base_color)
+            self:set_icon_color(self._base_color)
             self._last_color_key = "base"
         end
         return
@@ -63,6 +67,9 @@ function InventorySpaceWidget:update(now)
 
     if key ~= self._last_color_key and c ~= nil then
         self.label:SetForeColor(c)
+        if self.icon_coloring == true then
+            self:set_icon_color(c)
+        end
         self._last_color_key = key
     end
 end

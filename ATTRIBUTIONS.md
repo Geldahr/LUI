@@ -22,6 +22,15 @@ A copy of the GNU Free Documentation License 1.3 is included at
 Copyright belongs to the respective Lotro-Wiki contributors and other rights
 holders.
 
+## Lucide Icons
+
+Several interface icons under `assets/ui/icons/` are rendered from the
+Lucide icon set (https://lucide.dev), recoloured and rasterized for plugin
+use. Lucide is distributed under the ISC License; a copy is included at
+`LICENSES/Lucide-ISC.txt`.
+
+Copyright (c) Lucide Icons and Contributors.
+
 ## LOTRO Game Data
 
 The packed databases under `src/Data` (items, recipes, quests, deeds, NPCs,

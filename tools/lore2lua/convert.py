@@ -2229,6 +2229,9 @@ def convert_bestiary(json_path, out_dir, data_dir=None):
         "D.di_width = %d\n" % di_w,
         "D.qi_width = %d\n" % qi_w,
     ] + alias_lines)
+    # Tokens-search suggestion lists, baked from the files just written
+    from bestiary_paths import emit_bestiary_paths
+    sizes["paths.lua"] = emit_bestiary_paths(out_dir)
 
     total = 0
     print("emitted files:")

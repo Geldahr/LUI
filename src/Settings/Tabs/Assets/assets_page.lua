@@ -56,6 +56,14 @@ function AssetsPage:Constructor(window)
         function()
             return self._settings.assets.view_mode
         end)
+    general:add_row_break()
+    general:add_dropdown("assets_search_mode", TR["Search bar"], { TR["Classic"], TR["Tokens"] }, { "classic", "tokens" },
+        function(value)
+            self._settings.assets.search_mode = value
+        end,
+        function()
+            return self._settings.assets.search_mode
+        end, TR["Classic: the search runs on every keystroke. Tokens: Enter turns the typed text into a chip and the search runs when chips change."])
     self:add_tab(TR["General"], "general", general)
 
     local tiles = ConfigContent(window, 4)

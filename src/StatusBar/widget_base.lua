@@ -22,6 +22,7 @@ function StatusBarWidgetBase:Constructor(widget_key, widget_w, bar_h, font, cont
     Turbine.UI.Control.Constructor(self)
 
     self.widget_key = widget_key
+    self._icon_tinted = false
     self._last_text = nil
     self._last_markup_enabled = false
 
@@ -70,6 +71,11 @@ function StatusBarWidgetBase:Constructor(widget_key, widget_w, bar_h, font, cont
         local icon_y = S.get_centered_icon_y(h, icon_h)
         self.icon:SetPosition(ICON_MARGIN, icon_y)
         self.icon:set_icon(icon_path, icon_w, icon_h)
+        local tint = S.get_widget_icon_tint(widget_key, font)
+        if tint ~= nil then
+            self.icon:set_tint(tint)
+            self._icon_tinted = true
+        end
         self.label:SetPosition(ICON_MARGIN + icon_w + S.ICON_GAP, 0)
         self.label:SetSize(math.max(0, w - ICON_MARGIN - icon_w - S.ICON_GAP), h)
     else
@@ -95,6 +101,13 @@ function StatusBarWidgetBase:set_text(text, markup_enabled)
     self._last_text = t
     self._last_markup_enabled = use_markup
     self.label:SetText(t)
+end
+
+-- the tinted (Lucide) icon follows its text color; game art keeps its own
+function StatusBarWidgetBase:set_icon_color(color)
+    if self._icon_tinted == true then
+        self.icon:set_tint(color)
+    end
 end
 
 function StatusBarWidgetBase:update(now)

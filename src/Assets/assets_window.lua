@@ -32,8 +32,8 @@ local BASE_MARGIN_LEFT = 15
 local BASE_MARGIN_TOP = 11
 local BASE_MARGIN_RIGHT = 15
 local BASE_MARGIN_BOTTOM = 15
-local BASE_BAR_H = 21
-local BASE_FILTER_H = 21
+local BASE_BAR_H = 22
+local BASE_FILTER_H = 22
 local BASE_SUMMARY_H = 21
 local BASE_HINT_H = 19
 local BASE_GAP = 4
@@ -44,7 +44,6 @@ local BASE_MIN_H = 262
 local BASE_DETAILS_W = 170
 local BASE_DETAILS_MIN_H = 46
 local BASE_DETAILS_EXTRA_H = 6
-local BASE_CLEAR_W = 59
 local BASE_STORAGE_LABEL_W = 56
 local BASE_STORAGE_W = 133
 local BASE_OWNER_LABEL_W = 67
@@ -485,7 +484,7 @@ function AssetsWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Assets"])
-    self:set_icon(UI.AssetIds.chest)
+    UI.Shortcuts.apply_window_icon(self, "assets")
     self:set_resizable(true)
     self:hide()
     self:SetWantsUpdates(false)
@@ -505,7 +504,7 @@ function AssetsWindow:Constructor()
     self.page_size = 1
     self.all_records = {}
     self.records = {}
-    self.filter_groups = {}
+    self.filter_chip_groups = {}
     self.filter_query_state = SearchQuery.parse("", ASSETS_QUERY_TOKENS)
     self.sort_mode = SORT_NAME_ASC
     self.grouping_mode = GROUP_NONE
@@ -641,21 +640,33 @@ function AssetsWindow:Constructor()
     self.filter_bar = Turbine.UI.Control()
     self.filter_bar:SetParent(content_host)
 
-    self.filter_tb = UI.Widgets.LineEdit()
-    self.filter_tb:SetParent(self.filter_bar)
-    self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.filter_tb:set_placeholder_text(TR["Search..."])
-    self.filter_tb.TextChanged = function()
-        self:update_filter()
+    -- Classic text or Tokens chips (assets.search_mode)
+    self.search_field = UI.Widgets.SearchField()
+    self.search_field:SetParent(self.filter_bar)
+    self.search_field:set_popup_host(self)
+    self.search_field:set_placeholder(TR["Search..."])
+    self._owner_labels = { TR["All"] }
+    self._storage_labels = { TR["All"], TR["Backpack"], TR["Bank"], TR["Shared Storage"], TR["Vault"] }
+    self._storage_values = { STORAGE_ALL, "backpack", "bank", "shared_storage", "vault" }
+    local function label_values(labels)
+        local out = {}
+        for i = 2, #labels do
+            out[#out + 1] = { name = labels[i] }
+        end
+        return out
     end
-
-    self.clear_button = UI.Widgets.LuiButton()
-    self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:set_text(TR["Clear"])
-    self.clear_button.Click = function()
-        self.filter_tb:SetText("")
+    self.search_field:set_keywords({
+        { key = "owner", icon = "user", hint = TR["Character"], aliases = { "character", TR["Character"] },
+            values = function()
+                return label_values(self._owner_labels)
+            end },
+        { key = "store", icon = "archive", hint = TR["Storage"], aliases = { "storage", TR["Storage"] },
+            values = function()
+                return label_values(self._storage_labels)
+            end },
+    })
+    self.search_field.QueryChanged = function()
         self:update_filter()
-        self.filter_tb:Focus()
     end
 
     self.owner_label = UI.Widgets.LuiLabel()
@@ -693,10 +704,7 @@ function AssetsWindow:Constructor()
     self.storage_dropdown:SetParent(self.nav_bar)
     self.storage_dropdown:SetPopupHost(self)
     self.storage_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self.storage_dropdown:SetMappedOptions(
-        { TR["All"], TR["Backpack"], TR["Bank"], TR["Shared Storage"], TR["Vault"] },
-        { STORAGE_ALL, "backpack", "bank", "shared_storage", "vault" }
-    )
+    self.storage_dropdown:SetMappedOptions(self._storage_labels, self._storage_values)
     self.storage_dropdown.ValueChanged = function(_, value)
         self:set_storage_filter(value)
     end
@@ -746,9 +754,10 @@ function AssetsWindow:Constructor()
             window = Crafting.CraftingWindow()
             Windows.crafting = window
         end
-        -- the active assets search carries over, so the recipe list shows
-        -- exactly what the button counted
-        window:open_from_asset_materials(self.filter_tb:GetText())
+        -- the active assets search text carries over (owner:/store: are
+        -- Assets-only), so the recipe list shows what the button counted
+        local state = self.search_field:get_query_state()
+        window:open_from_asset_materials(SearchQuery.serialize(state.text_groups, {}, ASSETS_QUERY_TOKENS))
     end
 
     self.content = Turbine.UI.Control()
@@ -846,10 +855,6 @@ function AssetsWindow:capture_geometry()
     raw.stack_items = self.stack_items
 end
 
-function AssetsWindow:persist_geometry()
-    self:capture_geometry()
-end
-
 function AssetsWindow:set_view_mode(mode, persist)
     if mode ~= LUI_ENUMS.assets_view_mode.ICONS and mode ~= LUI_ENUMS.assets_view_mode.DETAILS then
         mode = LUI_ENUMS.assets_view_mode.DETAILS
@@ -896,11 +901,47 @@ function AssetsWindow:_sync_pager(page, page_count)
     self._pager_syncing = false
 end
 
+-- assets.search_mode. Switching to Tokens turns the dropdown values into
+-- chips and resets the dropdowns, so a hidden field never filters. Returns
+-- true when an existing mode changed.
+function AssetsWindow:_apply_search_mode(mode)
+    local switched = self.search_field:set_mode(mode)
+    local tokens = self.search_field:is_tokens()
+    self.nav_bar:SetVisible(tokens ~= true)
+    if tokens == true then
+        self.owner_dropdown:Close()
+        self.storage_dropdown:Close()
+    end
+    if switched ~= true then
+        return false
+    end
+    if tokens == true then
+        local field = self.search_field
+        if self.owner_filter ~= OWNER_ALL and field:has_keyword("owner") ~= true then
+            field:replace_keyword("owner", self.owner_filter)
+        end
+        if self.storage_filter ~= STORAGE_ALL and field:has_keyword("store") ~= true then
+            for i = 2, #self._storage_values do
+                if self._storage_values[i] == self.storage_filter then
+                    field:replace_keyword("store", self._storage_labels[i])
+                end
+            end
+        end
+        self.owner_filter = OWNER_ALL
+        self.storage_filter = STORAGE_ALL
+        self._suppress_owner_changed = true
+        self.owner_dropdown:SetValue(OWNER_ALL)
+        self._suppress_owner_changed = false
+        self.storage_dropdown:SetValue(STORAGE_ALL)
+    end
+    return true
+end
+
 function AssetsWindow:update_filter()
-    local query = self.filter_tb:GetText() or ""
-    local state = SearchQuery.parse(query, ASSETS_QUERY_TOKENS)
+    local state = self.search_field:get_query_state()
     self.filter_query_state = state
-    self.filter_groups = state.normalized_groups
+    -- AND across chips (Classic is one chip)
+    self.filter_chip_groups = state.chip_groups
     self.query_owner_filter_active = state.token_map.owner ~= nil
     self.query_storage_filter_active = state.token_map.store ~= nil
     self.query_owner_filter, self.query_owner_filter_valid = _parse_owner_query_value(state.token_map.owner)
@@ -988,8 +1029,9 @@ function AssetsWindow:apply_settings()
     local button_font = _scaled_control_font(Style.CONTROL_FONT_SIZE - 1)
     self.pager:set_font(button_font)
     self.pager:set_scale(State.settings.global.scale)
-    self.clear_button:set_font(button_font)
-    self.filter_tb:SetFont(button_font)
+    self.search_field:set_scale(State.settings.global.scale)
+    self.search_field:SetFont(button_font)
+    local search_mode_switched = self:_apply_search_mode(s.search_mode)
     self.owner_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
     self.owner_dropdown:SetFont(button_font)
     self.storage_label:SetFont(_scaled_control_font(Style.CONTROL_FONT_SIZE - 1))
@@ -1025,6 +1067,9 @@ function AssetsWindow:apply_settings()
     self:_sync_menu_actions()
     self:layout()
     self:refresh_from_store(true)
+    if search_mode_switched == true then
+        self:update_filter()
+    end
 end
 
 function AssetsWindow:handle_user_resize()
@@ -1338,6 +1383,7 @@ function AssetsWindow:_refresh_owner_options()
         selected = OWNER_ALL
     end
 
+    self._owner_labels = labels
     self._suppress_owner_changed = true
     self.owner_dropdown:SetMappedOptions(labels, values)
     self.owner_dropdown:SetValue(selected)
@@ -1617,10 +1663,17 @@ function AssetsWindow:_apply_record_view(reset_page)
         else
             storage_matches = storage_filter == STORAGE_ALL or record.source_key == storage_filter
         end
-        if storage_matches and
-            owner_matches and
-            SearchQuery.matches_groups(self.filter_groups, record.haystack_lower) == true then
-            filtered[#filtered + 1] = record
+        if storage_matches and owner_matches then
+            local text_matches = true
+            for ci = 1, #self.filter_chip_groups do
+                if SearchQuery.matches_groups(self.filter_chip_groups[ci], record.haystack_lower) ~= true then
+                    text_matches = false
+                    break
+                end
+            end
+            if text_matches == true then
+                filtered[#filtered + 1] = record
+            end
         end
     end
 
@@ -1806,7 +1859,6 @@ function AssetsWindow:layout()
     local gap = layout.gap
     local nav_w = _scaled_int(BASE_NAV_W)
     local page_w = _scaled_int(BASE_PAGE_W)
-    local clear_w = _scaled_int(BASE_CLEAR_W)
     local owner_label_w = _scaled_int(BASE_OWNER_LABEL_W)
     local owner_w = _scaled_int(BASE_OWNER_W)
     local storage_label_w = _scaled_int(BASE_STORAGE_LABEL_W)
@@ -1864,18 +1916,16 @@ function AssetsWindow:layout()
         self.owner_label:SetSize(0, bar_h)
     end
 
+    -- Tokens mode hides the character / storage row above the search row
     local filter_top = margin_top + bar_h + gap
+    if self.search_field:is_tokens() == true then
+        filter_top = margin_top
+    end
     self.filter_bar:SetPosition(margin_left, filter_top)
     self.filter_bar:SetSize(inner_w, filter_h)
 
-    self.clear_button:SetPosition(math.max(0, inner_w - clear_w), 0)
-    self.clear_button:SetSize(math.min(clear_w, inner_w), filter_h)
-    local filter_w = inner_w - clear_w - gap
-    if filter_w < 0 then
-        filter_w = 0
-    end
-    self.filter_tb:SetPosition(0, 0)
-    self.filter_tb:SetSize(filter_w, filter_h)
+    self.search_field:SetPosition(0, 0)
+    self.search_field:SetSize(inner_w, filter_h)
 
     local summary_top = filter_top + filter_h + gap
     self.summary_bar:SetPosition(margin_left, summary_top)

@@ -32,14 +32,12 @@ Inventory.InventoryWindow = InventoryWindow
 local MARGIN_LEFT = 15
 local MARGIN_RIGHT = 15
 local MARGIN_BOTTOM = 6
-local FILTER_H = 21
+local FILTER_H = 22
 local BASE_MONEY_H = 24
 local MONEY_GAP = 3
 local BASE_HINT_GAP = 6
 local BASE_HINT_H = 34
 local BAR_GAP = 4
-local FILTER_GAP = 4
-local CLEAR_W = 52
 local MIN_WINDOW_W = 193
 local MIN_WINDOW_H = 148
 local MIN_COLS = 6
@@ -76,9 +74,6 @@ local function _has_resize_dir(mask, dir)
     return math.floor((mask or 0) / dir) % 2 == 1
 end
 
-local GOLD_ICON = Turbine.UI.Graphic(0x41007e7b)
-local SILVER_ICON = Turbine.UI.Graphic(0x41007e7c)
-local COPPER_ICON = Turbine.UI.Graphic(0x41007e7d)
 
 local function _get_item_description(item)
     if item == nil then
@@ -128,7 +123,7 @@ function InventoryWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Inventory"])
-    self:set_icon(UI.AssetIds.backpack_alt)
+    UI.Shortcuts.apply_window_icon(self, "inventory")
     self:set_resizable(UI.Widgets.LuiWindow.RESIZE_BOTH)
     self:hide()
     self:SetWantsUpdates(false)
@@ -152,8 +147,6 @@ function InventoryWindow:Constructor()
     self.money_h = BASE_MONEY_H
     self.money_gap = MONEY_GAP
     self.bar_gap = BAR_GAP
-    self.filter_gap = FILTER_GAP
-    self.clear_w = CLEAR_W
     self.hint_gap = BASE_HINT_GAP
     self.hint_h = BASE_HINT_H
     self.header_h = FILTER_H + BASE_MONEY_H + MONEY_GAP
@@ -175,13 +168,13 @@ function InventoryWindow:Constructor()
     self.header = Turbine.UI.Control()
     self.header:SetParent(content)
 
-    self.g_icon = UI.Widgets.Image(GOLD_ICON)
+    self.g_icon = UI.Widgets.Icons.coin_image("gold")
     self.g_icon:SetParent(self.header)
 
-    self.s_icon = UI.Widgets.Image(SILVER_ICON)
+    self.s_icon = UI.Widgets.Icons.coin_image("silver")
     self.s_icon:SetParent(self.header)
 
-    self.c_icon = UI.Widgets.Image(COPPER_ICON)
+    self.c_icon = UI.Widgets.Icons.coin_image("copper")
     self.c_icon:SetParent(self.header)
 
     local function make_money_label()
@@ -204,16 +197,7 @@ function InventoryWindow:Constructor()
     self.filter_tb:SetFont(_scaled_font("Verdana", BASE_FILTER_FONT_SIZE))
     self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
     self.filter_tb:set_placeholder_text(TR["Search..."])
-
-    self.clear_button = UI.Widgets.LuiButton()
-    self.clear_button:SetParent(self.header)
-    self.clear_button:set_font(_scaled_font("Verdana", BASE_FILTER_FONT_SIZE))
-    self.clear_button:set_text(TR["Clear"])
-    self.clear_button.Click = function()
-        self.filter_tb:SetText("")
-        self:update_filter()
-        self.filter_tb:Focus()
-    end
+    self.filter_tb:set_clearable(true)
 
     local menu_bar = self:get_menu_bar()
     self.edit_menu = menu_bar:add_menu(TR["Edit"])
@@ -354,10 +338,6 @@ function InventoryWindow:capture_geometry()
     window_state.tile = geometry.tile
 end
 
-function InventoryWindow:persist_geometry()
-    self:capture_geometry()
-end
-
 function InventoryWindow:get_needed_rows(cols)
     local c = cols
     if type(c) ~= "number" then
@@ -462,15 +442,9 @@ function InventoryWindow:layout()
     self.c_label:SetPosition(x, y)
     self.c_label:SetSize(field_w, money_h)
 
-    local clear_w = self.clear_w
-    local gap = self.filter_gap
-
     local filter_y = money_h + self.money_gap
 
-    self.clear_button:SetPosition(self.header:GetWidth() - clear_w, filter_y)
-    self.clear_button:SetSize(clear_w, self.filter_h)
-
-    local filter_w = self.header:GetWidth() - clear_w - gap
+    local filter_w = self.header:GetWidth()
     if filter_w < _scaled_int(59) then
         filter_w = _scaled_int(59)
     end
@@ -808,8 +782,6 @@ function InventoryWindow:apply_settings()
     self.filter_h = _scaled_int(FILTER_H)
     self.money_gap = _scaled_int(MONEY_GAP)
     self.bar_gap = _scaled_int(BAR_GAP)
-    self.filter_gap = _scaled_int(FILTER_GAP)
-    self.clear_w = _scaled_int(CLEAR_W)
     local scale = State.settings.global.scale
     self.money_h = math.floor((BASE_MONEY_H * scale) + 0.5)
     self.hint_gap = math.floor((BASE_HINT_GAP * scale) + 0.5)
@@ -835,8 +807,8 @@ function InventoryWindow:apply_settings()
     self.c_label:SetOutlineColor(sb_font.outline_color)
 
     local filter_font = _scaled_font("Verdana", BASE_FILTER_FONT_SIZE)
+    self.filter_tb:set_scale(scale)
     self.filter_tb:SetFont(filter_font)
-    self.clear_button:set_font(filter_font)
 
     local hint_font_size = math.floor((BASE_HINT_FONT_SIZE * scale) + 0.5)
     local hint_font = FONT_TO_LOTRO("Verdana", hint_font_size)

@@ -15,7 +15,8 @@ local _gradient_morale_color = lui_gradient_morale_color
 local EquipmentWearWidget = class(WidgetBase)
 StatusBarWidgets.EquipmentWearWidget = EquipmentWearWidget
 
-function EquipmentWearWidget:Constructor(widget_w, bar_h, font, icon_path, wear_color, coloring, content_alignment)
+function EquipmentWearWidget:Constructor(widget_w, bar_h, font, icon_path, wear_color, coloring, content_alignment,
+    icon_coloring)
     WidgetBase.Constructor(self, "equipment_wear", widget_w, bar_h, font,
         content_alignment or Turbine.UI.ContentAlignment.MiddleLeft, icon_path)
     self.player = Turbine.Gameplay.LocalPlayer.GetInstance()
@@ -28,6 +29,8 @@ function EquipmentWearWidget:Constructor(widget_w, bar_h, font, icon_path, wear_
     self._item_callbacks = {}
     self.wear_color = wear_color or {}
     self.coloring = coloring == true
+    -- the icon takes the wear colors too, or keeps the text color
+    self.icon_coloring = icon_coloring == true
 
     self:set_text("--% (--%)", false)
     self:_ensure_equipment()
@@ -187,13 +190,25 @@ function EquipmentWearWidget:_scan(now)
 
     if count <= 0 or weakest == nil then
         self:set_text("--% (--%)", false)
+        self:set_icon_color(self.label:GetForeColor())
         return
     end
 
     local average = S.round_nearest(sum / count)
-    if self.coloring == true then
-        local average_color = _gradient_morale_color(average / 100, self.wear_color.green, self.wear_color.yellow,
+    local average_color = nil
+    if self.coloring == true or self.icon_coloring == true then
+        average_color = _gradient_morale_color(average / 100, self.wear_color.green, self.wear_color.yellow,
             self.wear_color.red)
+    end
+    -- the icon takes the average's wear color (the number next to it), or
+    -- the text color
+    if self.icon_coloring == true then
+        self:set_icon_color(average_color)
+    else
+        self:set_icon_color(self.label:GetForeColor())
+    end
+
+    if self.coloring == true then
         local weakest_color = _gradient_morale_color(weakest / 100, self.wear_color.green, self.wear_color.yellow,
             self.wear_color.red)
         self:set_text(

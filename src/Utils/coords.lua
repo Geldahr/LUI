@@ -29,9 +29,10 @@ Utils.Coords = Utils.Coords or {}
 local Coords = Utils.Coords
 Coords.DATA = Utils.CoordsData
 
+-- nil when the /loc field was not found
 local function _parse_decimal(value)
-    if type(value) ~= "string" then
-        return tonumber(value)
+    if value == nil then
+        return nil
     end
 
     local normalized = value:gsub(",", ".")
@@ -39,10 +40,6 @@ local function _parse_decimal(value)
 end
 
 local function parse_loc(loc_text)
-    if type(loc_text) ~= "string" then
-        return nil, "loc_text must be a string"
-    end
-
     local normalized = " " .. string.lower(loc_text) .. " "
 
     local region_id = tonumber(normalized:match("[^%w]r%s*(%d+)"))
@@ -113,13 +110,9 @@ end
 
 local function find_deepest(node, ns, ew)
     local children = node.sub_zones
-    if type(children) ~= "table" then
-        return node
-    end
-
     for i = 1, #children do
         local child = children[i]
-        if type(child) == "table" and type(child.coords) == "table" and rect_contains_point(child.coords, ns, ew) then
+        if rect_contains_point(child.coords, ns, ew) then
             return find_deepest(child, ns, ew)
         end
     end
@@ -149,25 +142,78 @@ function Coords.loc_to_player_coords(loc_text)
     }
 end
 
-function Coords.get_best_zone(ns, ew)
-    return Coords.get_best_zone_in_region(1, ns, ew)
-end
-
 function Coords.get_best_zone_in_region(region_id, ns, ew)
-    local region = Coords.DATA[region_id]
-    if region == nil or region.zones == nil then
-        return nil
-    end
-
-    local zones = region.zones
+    local zones = Coords.DATA[region_id].zones
     for i = 1, #zones do
         local zone = zones[i]
-        if type(zone) == "table" and type(zone.coords) == "table" and rect_contains_point(zone.coords, ns, ew) then
+        if rect_contains_point(zone.coords, ns, ew) then
             return zone, find_deepest(zone, ns, ew)
         end
     end
 
     return nil
+end
+
+local function _node_names(node)
+    local names = { node.name }
+    for i = 1, #node.aliases do
+        names[#names + 1] = node.aliases[i]
+    end
+    return names
+end
+
+-- names of the nodes from `zone` down to the deepest one containing the
+-- point (first matching child at each level), deepest first; each entry is
+-- { name, alias... }
+local function _zone_names(zone, ns, ew)
+    local path = {}
+    local node = zone
+    while node ~= nil do
+        table.insert(path, 1, _node_names(node))
+        local next_node = nil
+        for i = 1, #node.sub_zones do
+            local child = node.sub_zones[i]
+            if rect_contains_point(child.coords, ns, ew) then
+                next_node = child
+                break
+            end
+        end
+        node = next_node
+    end
+    return path
+end
+
+-- every path from `zone` down through ALL children containing the point
+-- (sub-zones overlap too), each deepest first like _zone_names
+local function _all_zone_paths(zone, ns, ew, above, out)
+    local chain = { _node_names(zone) }
+    for i = 1, #above do
+        chain[#chain + 1] = above[i]
+    end
+    local deeper = false
+    for i = 1, #zone.sub_zones do
+        local child = zone.sub_zones[i]
+        if rect_contains_point(child.coords, ns, ew) then
+            deeper = true
+            _all_zone_paths(child, ns, ew, chain, out)
+        end
+    end
+    if deeper ~= true then
+        out[#out + 1] = chain
+    end
+    return out
+end
+
+function Coords.get_zones_in_region(region_id, ns, ew)
+    local out = {}
+    local zones = Coords.DATA[region_id].zones
+    for i = 1, #zones do
+        local zone = zones[i]
+        if rect_contains_point(zone.coords, ns, ew) then
+            out[#out + 1] = zone
+        end
+    end
+    return out
 end
 
 function Coords.get_zone_from_loc(loc_text)
@@ -181,27 +227,23 @@ function Coords.get_zone_from_loc(loc_text)
         return nil, "zone not found for these coordinates"
     end
 
+    local candidates = {}
+    local containing = Coords.get_zones_in_region(coords.region_id, coords.ns, coords.ew)
+    for i = 1, #containing do
+        _all_zone_paths(containing[i], coords.ns, coords.ew, {}, candidates)
+    end
+
     return {
         zone = zone.name,
         sub_zone = (sub_zone ~= nil and sub_zone ~= zone) and sub_zone.name or nil,
+        names = _zone_names(zone, coords.ns, coords.ew),
+        candidates = candidates,
         player_coords = { ns = coords.ns, ew = coords.ew, z = coords.z },
         region_id = coords.region_id,
     }
 end
 
-function Coords.get_zone_name_from_loc(loc_text)
-    local result, err = Coords.get_zone_from_loc(loc_text)
-    if result == nil then
-        return nil, nil, err
-    end
-    return result.zone, result.sub_zone, nil
-end
-
 function Coords.resolve_location_from_chat(loc_text)
-    return Coords.resolve_location_from_loc(loc_text)
-end
-
-function Coords.resolve_location_from_loc(loc_text)
     local result, err = Coords.get_zone_from_loc(loc_text)
     if result == nil then
         return nil, err
@@ -215,6 +257,11 @@ function Coords.resolve_location_from_loc(loc_text)
     return {
         region = result.zone,
         area = area,
+        -- every zone level with its aliases, deepest first: the Bestiary
+        -- matches them against both its regions and its areas
+        names = result.names,
+        -- the same for every zone containing the point (zones overlap)
+        candidates = result.candidates,
         player_coords = result.player_coords,
         region_id = result.region_id,
     }

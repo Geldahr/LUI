@@ -6,16 +6,19 @@ local class = _G.LUI.Core.class
 import "Turbine.UI"
 
 import "LUI.src.UI.Widgets.label"
+import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.icons"
 
 local Widgets = _G.LUI.UI.Widgets
 local LuiLabel = Widgets.LuiLabel
+local Image = Widgets.Image
 local Style = Widgets.Style
+local Icons = Widgets.Icons
 local BASE_CHECKBOX_W = 120
 local BASE_CHECKBOX_H = 16
 local BASE_ICON_SIZE = 16
 local BASE_TEXT_GAP = 6
-local BASE_FILL_MARGIN = 2
 
 local function _round(value)
     return math.floor(value + 0.5)
@@ -68,7 +71,8 @@ function LuiCheckBox:Constructor()
     self._border_right:SetParent(self._icon)
     self._border_right:SetMouseVisible(false)
 
-    self._fill = Turbine.UI.Control()
+    -- check mark: white icon tinted with the accent color
+    self._fill = Image()
     self._fill:SetParent(self._icon)
     self._fill:SetMouseVisible(false)
 
@@ -238,8 +242,6 @@ function LuiCheckBox:_layout()
     local label_x = icon_size
     local visual_scale = self._scale * self._icon_scale
     local border_thickness = math.max(1, _round((tonumber(Style.BORDER_WIDTH) or 1) * visual_scale))
-    local fill_margin = math.max(1, _round(BASE_FILL_MARGIN * visual_scale))
-    local fill_offset = border_thickness + fill_margin
 
     if self._text ~= "" then
         label_x = label_x + _round(BASE_TEXT_GAP * self._scale)
@@ -260,9 +262,12 @@ function LuiCheckBox:_layout()
     self._border_right:SetPosition(math.max(0, icon_size - border_thickness), border_thickness)
     self._border_right:SetSize(border_thickness, math.max(0, icon_size - (2 * border_thickness)))
 
-    local fill_size = math.max(0, icon_size - (2 * fill_offset))
-    self._fill:SetPosition(fill_offset, fill_offset)
-    self._fill:SetSize(fill_size, fill_size)
+    local fill_size = math.max(0, icon_size - (2 * border_thickness))
+    -- pre-scaled: checkboxes sit in scrolling settings pages and lists
+    self._fill:set_icon(Icons.sized("check"), fill_size)
+    -- set_icon shows the image; the mark is only visible when checked
+    self._fill:SetVisible(self._checked == true)
+    self._fill:SetPosition(border_thickness, border_thickness)
 
     self._label:SetPosition(label_x, 0)
     self._label:SetSize(math.max(0, w - label_x), h)
@@ -285,7 +290,7 @@ function LuiCheckBox:_update_visual_state()
     self._border_bottom:SetBackColor(border_color)
     self._border_left:SetBackColor(border_color)
     self._border_right:SetBackColor(border_color)
-    self._fill:SetBackColor(fill_color)
+    self._fill:set_tint(fill_color)
     self._fill:SetVisible(self._checked == true)
     self._label:SetForeColor(text_color)
 end

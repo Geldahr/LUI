@@ -5,12 +5,15 @@
 local TR = _G.LUI.Locale.TR
 local SearchQuery = _G.LUI.Utils.SearchQuery
 local FONT_TO_LOTRO = _G.LUI.Utils.FONT_TO_LOTRO
+local measure_text_width = _G.LUI.Utils.measure_text_width
+local cached_text_width = _G.LUI.Utils.cached_text_width
 local Defaults = _G.LUI.Settings.Defaults
 local BestiaryCache = _G.LUI.Runtime.Caches.Bestiary
 local Flags = _G.LUI.Runtime.Flags
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Encyclopedia = _G.LUI.Features.Encyclopedia
+local Lore = _G.LUI.Data.Lore
 local Windows = _G.LUI.Runtime.Windows
 local class = _G.LUI.Core.class
 import "Turbine.UI"
@@ -19,6 +22,7 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets"
 import "LUI.src.Inventory.filter"
 import "LUI.src.Utils.font"
+import "LUI.src.Utils.text_width"
 import "LUI.src.Utils.search_query"
 
 local DATA_ACCESS = Encyclopedia.DataAccess
@@ -44,10 +48,9 @@ Encyclopedia.CONTENT_MARGINS = {
     right = BASE_MARGIN_RIGHT,
     bottom = BASE_MARGIN_BOTTOM,
 }
-local BASE_BAR_H = 21
-local BASE_FILTER_H = 21
+local BASE_BAR_H = 22
+local BASE_FILTER_H = 22
 local BASE_GAP = 4
-local BASE_CLEAR_W = 59
 local BASE_LEVEL_INPUT_W = 44
 local BASE_NAV_W = 22
 local BASE_PAGE_W = 74
@@ -66,8 +69,6 @@ local BASE_CHIP_GAP_X = 4
 local BASE_CHIP_GAP_Y = 4
 local BASE_CHIP_BORDER = 1
 local BASE_CHIP_MIN_W = 52
-local BASE_CHIP_CHAR_W = 5.8
-local BASE_TAXONOMY_CHAR_W = 5.8
 local BASE_TAXONOMY_PAD_X = 5
 local BASE_RESIZE_REFRESH_DELAY = 0.10
 local BASE_RESIZE_REFLOW_MIN_INTERVAL = 0.50
@@ -76,8 +77,8 @@ local BASE_RESIZE_REFLOW_MIN_INTERVAL = 0.50
 local BASE_STORE_REFRESH_MIN_INTERVAL = 2.0
 local BASE_COLUMN_W = 600
 
-local AREA_COMPASS_ICON = "LUI/assets/ui/compass_64.tga"
-local AREA_COMPASS_HOVER_ICON = "LUI/assets/ui/compass_hover_64.tga"
+-- location icon inset inside the /loc quickslot square
+local BASE_AREA_ICON_INSET = 3
 
 
 local FILTER_ALL = "__all"
@@ -87,6 +88,7 @@ local BESTIARY_QUERY_TOKENS = {
     gen = true,
     lvl = true,
 }
+
 
 local COLOR_DROP_CHIP_BORDER = Turbine.UI.Color(1, 0.28, 0.28, 0.28)
 local COLOR_DROP_CHIP_BG = Turbine.UI.Color(1, 0.08, 0.08, 0.08)
@@ -136,6 +138,35 @@ local function _parse_location_token_value(value)
     return parts
 end
 
+-- loc: value -> list of region > area > instance paths; several places are
+-- separated by "|" (overlapping zones: "Bree-land | The Great River");
+-- nil when any place is invalid
+local function _parse_location_paths(value)
+    if type(value) ~= "string" then
+        return nil
+    end
+    local paths = {}
+    for place in string.gmatch(value .. "|", "([^|]*)|") do
+        local parts = _parse_location_token_value(place)
+        if parts == nil then
+            return nil
+        end
+        paths[#paths + 1] = parts
+    end
+    if #paths == 0 then
+        return nil
+    end
+    return paths
+end
+
+local function _format_location_paths(paths)
+    local out = {}
+    for i = 1, #paths do
+        out[i] = SearchQuery.format_path(paths[i])
+    end
+    return table.concat(out, " | ")
+end
+
 local function _parse_genus_token_value(value)
     local parts = SearchQuery.parse_path(value)
     if type(parts) ~= "table" or #parts == 0 or #parts > 2 then
@@ -159,49 +190,141 @@ local function _parse_genus_token_value(value)
     return genus, subcategory, true
 end
 
-local function _record_matches_location_parts(record, parts)
-    if type(parts) ~= "table" or #parts == 0 then
+-- SearchQuery.match_key of a record field (case / article-insensitive),
+-- cached on the record
+local function _record_key(record, field)
+    local cache = record._match_keys
+    if cache == nil then
+        cache = {}
+        record._match_keys = cache
+    end
+    local key = cache[field]
+    if key == nil then
+        key = SearchQuery.match_key(record[field] or "")
+        cache[field] = key
+    end
+    return key
+end
+
+-- keys: SearchQuery.match_key of each region > area > instance part; a
+-- single part also matches the instance (instance creatures have no region
+-- in the data: loc:<instance> finds them)
+local function _record_matches_location_keys(record, keys)
+    if keys == nil or #keys == 0 then
         return true
     end
-    if _same_text(record.region, parts[1]) ~= true then
+    if #keys == 1 and _record_key(record, "instance") == keys[1] then
+        return true
+    end
+    if _record_key(record, "region") ~= keys[1] then
         return false
     end
-    if #parts >= 2 and _same_text(record.area, parts[2]) ~= true then
+    if #keys >= 2 and _record_key(record, "area") ~= keys[2] then
         return false
     end
-    if #parts >= 3 and _same_text(record.instance, parts[3]) ~= true then
+    if #keys >= 3 and _record_key(record, "instance") ~= keys[3] then
         return false
     end
 
     return true
 end
 
-local function _area_compass_icon(hovered)
-    if hovered == true then
-        return AREA_COMPASS_HOVER_ICON
+-- several places (keys per path): a record in any of them matches
+local function _record_matches_location_paths(record, paths_keys)
+    for i = 1, #paths_keys do
+        if _record_matches_location_keys(record, paths_keys[i]) == true then
+            return true
+        end
     end
-
-    return AREA_COMPASS_ICON
+    return false
 end
 
-local function _set_area_slot_icon_background(window, target_w, target_h)
-    local background = _area_compass_icon(window._area_slot_hovered == true)
-    if type(target_w) ~= "number" or target_w < 1 or type(target_h) ~= "number" or target_h < 1 then
-        target_w, target_h = window.area_slot:GetSize()
+-- /loc zone path (deepest level first, each level { name, alias... }) ->
+-- the Bestiary places it names, a list of { region, area } (area nil for
+-- a whole region), from the baked Bestiary loc paths; empty when no level
+-- names a Bestiary region or area. The zone table and the Bestiary
+-- disagree on levels ("Wildwood" is a zone, the Bestiary has Bree-land >
+-- The Wildwood) and on language (the zone table is English), so each level
+-- is tried as an area, then as a region, by localized and English name,
+-- case / article-insensitive. An area found under several regions
+-- resolves to the region an outer level names, else to every region
+-- holding it ("Kings' End" is a top-level zone, the Bestiary lists it
+-- under both Far and Old Anórien).
+local function _resolve_location(index, levels)
+    local keyed = {}
+    for i = 1, #levels do
+        local keys = {}
+        for _, name in ipairs(levels[i]) do
+            keys[SearchQuery.match_key(name)] = true
+        end
+        keyed[i] = keys
     end
+    local function named(keys, text, english)
+        return keys[SearchQuery.match_key(text)] == true
+            or keys[SearchQuery.match_key(english)] == true
+    end
+    local function outer_region(from)
+        for j = from, #keyed do
+            for _, entry in ipairs(index) do
+                if named(keyed[j], entry.name, entry.en) then
+                    return entry
+                end
+            end
+        end
+        return nil
+    end
+    for i = 1, #keyed do
+        local preferred = outer_region(i + 1)
+        local places = {}
+        local preferred_places = {}
+        local seen = {}
+        for _, entry in ipairs(index) do
+            for c = 1, #entry.children do
+                local area = entry.children[c]
+                if named(keyed[i], area, entry.children_en[c]) then
+                    -- every matching area of a region (a level and its
+                    -- aliases: Archet Dale / Archet; untranslated twins:
+                    -- Havens of Belfalas / Les Havres de Belfalas), once
+                    -- per match key ("Fallows", "The Fallows")
+                    local key = entry.name .. ">" .. SearchQuery.match_key(area)
+                    if seen[key] ~= true then
+                        seen[key] = true
+                        local target = places
+                        if entry == preferred then
+                            target = preferred_places
+                        end
+                        target[#target + 1] = { entry.name, area }
+                    end
+                end
+            end
+        end
+        if #preferred_places > 0 then
+            return preferred_places
+        end
+        if #places > 0 then
+            return places
+        end
+        for _, entry in ipairs(index) do
+            if named(keyed[i], entry.name, entry.en) then
+                return { { entry.name } }
+            end
+        end
+    end
+    return {}
+end
 
-    if type(target_w) ~= "number" or target_w < 1 then
-        target_w = _scaled_int(BASE_FILTER_H)
+-- tinted location icon centred over the /loc quickslot, hover-aware
+local function _sync_area_slot_icon(window)
+    local x, y = window.area_slot:GetPosition()
+    local inset = _scaled_int(BASE_AREA_ICON_INSET)
+    local size = math.max(1, window.area_slot:GetWidth() - (inset * 2))
+    window.area_slot_icon:set_icon(UI.Widgets.Icons.path("map_pinned"), size, size)
+    if window._area_slot_hovered == true then
+        window.area_slot_icon:set_tint(Style.ICON_FOREGROUND_HOVER)
+    else
+        window.area_slot_icon:set_tint(Style.ICON_FOREGROUND)
     end
-    if type(target_h) ~= "number" or target_h < 1 then
-        target_h = target_w
-    end
-
-    if window._area_slot_icon_background ~= background then
-        window._area_slot_icon_background = background
-    end
-
-    window.area_slot_icon:set_icon(background, target_w, target_h)
+    window.area_slot_icon:SetPosition(x + inset, y + inset)
 end
 
 local function _to_number(value, fallback)
@@ -497,7 +620,6 @@ end
 -- Session-captured mobs missing from the packed DB (few) are the only
 -- insertions.
 local function _build_records()
-    local Lore = _G.LUI.Data.Lore
     local LoreBestiary = Lore.Bestiary
     Lore.load_bestiary()
     local cache = DATA_ACCESS.ensure_cache()
@@ -633,6 +755,56 @@ local function _match_record_query(record, groups)
     return query_ok, matched
 end
 
+-- every entry of chip_groups must match (a Tokens chip is one exact term,
+-- all in one entry); drop highlights merge. Classic search is one entry.
+local function _match_record_chips(record, chip_groups)
+    if #chip_groups == 1 then
+        return _match_record_query(record, chip_groups[1])
+    end
+    local matched = nil
+    for ci = 1, #chip_groups do
+        local ok, chip_matched = _match_record_query(record, chip_groups[ci])
+        if ok ~= true then
+            return false, nil
+        end
+        if chip_matched ~= nil then
+            if matched == nil then
+                matched = {}
+            end
+            for key in pairs(chip_matched) do
+                matched[key] = true
+            end
+        end
+    end
+    return true, matched
+end
+
+-- Classic search waits for 2 characters, as the item tabs
+-- (SearchQuery.evaluate_domain): shorter words are ignored, and while a
+-- group has no 2+ character word the text filter is off (still typing)
+local MIN_QUERY_TERM_LEN = 2
+
+local function _drop_short_terms(chip_groups)
+    local out = {}
+    for ci = 1, #chip_groups do
+        local groups = {}
+        for gi = 1, #chip_groups[ci] do
+            local group = {}
+            for _, term in ipairs(chip_groups[ci][gi]) do
+                if #term >= MIN_QUERY_TERM_LEN then
+                    group[#group + 1] = term
+                end
+            end
+            if #group == 0 then
+                return {}
+            end
+            groups[#groups + 1] = group
+        end
+        out[#out + 1] = groups
+    end
+    return out
+end
+
 -- bestiary results list in fixed name order, matching the item tabs'
 -- baked label-sorted permutations (the Order menu was removed: title-bar
 -- menus should not exist unless every tab participates)
@@ -641,11 +813,18 @@ local function _compare_records(left, right)
     return left.sort_name < right.sort_name
 end
 
+-- the row chips, meta texts and level filter label are all drawn in the
+-- small content font
+local function _small_font_size()
+    return Style.CONTENT_SMALL_FONT_SIZE * State.settings.global.scale
+end
+
 local function _estimate_chip_width(text)
-    local char_w = BASE_CHIP_CHAR_W * State.settings.global.scale
     local pad_x = _scaled_int(BASE_CHIP_PAD_X)
     local border_w = _scaled_int(BASE_CHIP_BORDER)
-    local text_w = math.floor((string.len(text or "") * char_w) + 0.5)
+    -- memoized: pagination lays out every filtered record's drop chips, and
+    -- the same item names repeat across many creatures; +2 for glyph edges
+    local text_w = cached_text_width(text or "", Style.CONTENT_SMALL_FONT_NAME, _small_font_size()) + 2
     local min_w = _scaled_int(BASE_CHIP_MIN_W)
     local width = text_w + (2 * (pad_x + border_w))
     if width < min_w then
@@ -654,8 +833,8 @@ local function _estimate_chip_width(text)
     return width
 end
 
-local function _estimate_text_width(text, base_char_w)
-    return math.floor((string.len(text or "") * base_char_w * State.settings.global.scale) + 0.5)
+local function _small_text_width(text)
+    return measure_text_width(text or "", Style.CONTENT_SMALL_FONT_NAME, _small_font_size()) + 2
 end
 
 local function _build_chip_layout(texts, max_width)
@@ -1018,8 +1197,8 @@ function BestiaryRow:bind(record, width)
 
     local inner_w = math.max(1, width - (2 * pad_x))
     local right_text_w = math.max(
-        _estimate_text_width(record.level_text or "", BASE_TAXONOMY_CHAR_W),
-        _estimate_text_width(record.power_text or "", BASE_TAXONOMY_CHAR_W)
+        _small_text_width(record.level_text),
+        _small_text_width(record.power_text)
     )
     local right_w = math.min(
         math.max(_scaled_int(72), math.floor((inner_w - column_gap_x) / 2)),
@@ -1098,7 +1277,7 @@ function EncyclopediaWindow:Constructor()
     UI.Widgets.LuiWindow.Constructor(self)
 
     self:set_title(TR["Encyclopedia"])
-    self:set_icon(UI.AssetIds.book_orange_cover)
+    UI.Shortcuts.apply_window_icon(self, "encyclopedia")
     self:set_resizable(true)
     self:hide()
     self:SetWantsUpdates(false)
@@ -1118,7 +1297,6 @@ function EncyclopediaWindow:Constructor()
     self._prepared_record_key = 0
     self.current_area = nil
     self.last_applied_area_query = nil
-    self._suppress_area_text_changed = false
     self._suppress_level_text_changed = false
 
     self.query_state = SearchQuery.parse("", BESTIARY_QUERY_TOKENS)
@@ -1133,7 +1311,7 @@ function EncyclopediaWindow:Constructor()
     self.query_location_filter_active = false
     self.query_location_filter_valid = false
     self.query_location_parts = nil
-    self.filter_groups = {}
+    self.filter_chip_groups = {}
     self.genus_filter = FILTER_ALL
     self.subcategory_filter = FILTER_NONE
     self._suppress_genus_changed = false
@@ -1264,33 +1442,49 @@ function EncyclopediaWindow:Constructor()
         on_level_filter_changed(self.level_max_box)
     end
 
-    self.filter_tb = UI.Widgets.LineEdit()
-    self.filter_tb:SetParent(self.filter_bar)
-    self.filter_tb:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self.filter_tb:set_placeholder_text(TR["Search..."])
-    self.filter_tb.TextChanged = function()
-        if self._suppress_area_text_changed ~= true then
-            self.current_area = nil
-            self.last_applied_area_query = nil
-            BestiaryCache.area_filter_query = nil
-        end
-        self:update_filter()
-    end
-
-    self.clear_button = UI.Widgets.LuiButton()
-    self.clear_button:SetParent(self.filter_bar)
-    self.clear_button:set_text(TR["Clear"])
-    self.clear_button.Click = function()
+    -- Classic text or Tokens chips (encyclopedia.search_mode)
+    self.search_field = UI.Widgets.SearchField()
+    self.search_field:SetParent(self.filter_bar)
+    self.search_field:set_popup_host(self)
+    self.search_field:set_placeholder(TR["Search..."])
+    self.search_field:set_keywords({
+        {
+            key = "loc",
+            icon = "map_pinned",
+            hint = TR["Location: region or area"],
+            aliases = { "location", "area", "region", "zone" },
+            -- the baked list (Lore.Bestiary.paths): captures add no region,
+            -- area, genus or subcategory the pack lacks (the cache keeps
+            -- only levels and drops), so it is exact
+            values = function()
+                return Lore.Bestiary.paths("loc")
+            end,
+            child_hint = TR["%d areas"],
+        },
+        {
+            key = "lvl",
+            icon = "level",
+            hint = TR["Level: 50, >100, 50-60"],
+            aliases = { "level", TR["Level"] },
+        },
+        {
+            key = "gen",
+            icon = "family",
+            hint = TR["Genus: genus or subcategory"],
+            aliases = { "genus", "family", "type", TR["Genus"] },
+            values = function()
+                return Lore.Bestiary.paths("gen")
+            end,
+            child_hint = TR["%d subcategories"],
+        },
+    })
+    self.search_field.QueryChanged = function()
+        -- a user edit drops the resolved /loc area
         self.current_area = nil
         self.last_applied_area_query = nil
         BestiaryCache.area_filter_query = nil
-        self._suppress_level_text_changed = true
-        self.level_min_box:SetText("")
-        self.level_max_box:SetText("")
-        self._suppress_level_text_changed = false
-        self.filter_tb:SetText("")
+        BestiaryCache.area_filter_candidates = nil
         self:update_filter()
-        self.filter_tb:Focus()
     end
 
     self.area_label = UI.Widgets.LuiLabel()
@@ -1313,13 +1507,11 @@ function EncyclopediaWindow:Constructor()
     self._area_slot_hovered = false
     self.area_slot.MouseEnter = function()
         self._area_slot_hovered = true
-        local icon_w, icon_h = self.area_slot:GetSize()
-        _set_area_slot_icon_background(self, icon_w, icon_h)
+        _sync_area_slot_icon(self)
     end
     self.area_slot.MouseLeave = function()
         self._area_slot_hovered = false
-        local icon_w, icon_h = self.area_slot:GetSize()
-        _set_area_slot_icon_background(self, icon_w, icon_h)
+        _sync_area_slot_icon(self)
     end
 
     self.area_slot_cover = Turbine.UI.Control()
@@ -1333,7 +1525,6 @@ function EncyclopediaWindow:Constructor()
     self.area_slot_icon:SetParent(self.filter_bar)
     self.area_slot_icon:SetMouseVisible(false)
     self.area_slot_icon:SetZOrder(3)
-    _set_area_slot_icon_background(self, _scaled_int(BASE_FILTER_H), _scaled_int(BASE_FILTER_H))
 
     self.taxonomy_bar = Turbine.UI.Control()
     self.taxonomy_bar:SetParent(self.nav_bar)
@@ -1459,10 +1650,6 @@ function EncyclopediaWindow:capture_geometry()
     window.tile = geometry.tile
 end
 
-function EncyclopediaWindow:persist_geometry()
-    self:capture_geometry()
-end
-
 function EncyclopediaWindow:_minimum_window_size()
     local window_w, window_h = self:GetSize()
     local central_w, central_h = self:central_widget():GetSize()
@@ -1493,13 +1680,15 @@ function EncyclopediaWindow:apply_settings()
     self.level_min_box:SetFont(button_font)
     self.level_dash_label:SetFont(button_font)
     self.level_max_box:SetFont(button_font)
-    self.filter_tb:SetFont(button_font)
-    self.clear_button:set_font(button_font)
+    self.search_field:set_scale(State.settings.global.scale)
+    self.search_field:SetFont(button_font)
+    local search_mode_switched = self:_apply_search_mode(State.settings.encyclopedia.search_mode)
     self.area_label:SetFont(button_font)
     self.encyclopedia_tabs:set_scale(State.settings.global.scale)
     self.encyclopedia_tabs:set_font(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE + 3))
     for _, panel in pairs(self._item_panels) do
         panel:apply_fonts()
+        panel:set_search_mode(State.settings.encyclopedia.search_mode)
     end
     self:ensure_area_shortcut()
     self.genus_label:SetFont(button_font)
@@ -1534,7 +1723,11 @@ function EncyclopediaWindow:apply_settings()
     -- (apply_view alone must not, so typing keystrokes reuse the cache)
     self:_invalidate_row_layouts()
     self:layout()
-    self:apply_view()
+    if search_mode_switched == true then
+        self:update_filter()
+    else
+        self:apply_view()
+    end
 end
 
 function EncyclopediaWindow:_invalidate_row_layouts()
@@ -1607,13 +1800,81 @@ function EncyclopediaWindow:handle_user_resize()
     self._last_resize_at = Turbine.Engine.GetGameTime()
 end
 
+function EncyclopediaWindow:_tokens_mode()
+    return self.search_field:is_tokens()
+end
+
+-- shows the widget of the search mode setting. Tokens mode has no genus /
+-- level fields (gen: and lvl: chips replace them): the field row is hidden
+-- and the search row moves up. A switch carries the query over (Classic
+-- text <-> chips; field filters become chips and the fields reset, so a
+-- hidden field never filters). Returns true when the mode changed on an
+-- existing window.
+function EncyclopediaWindow:_apply_search_mode(mode)
+    local switched = self.search_field:set_mode(mode)
+    local tokens = self:_tokens_mode()
+    self.nav_bar:SetVisible(tokens ~= true)
+    self.level_bar:SetVisible(tokens ~= true)
+    if tokens == true then
+        self.genus_dropdown:Close()
+        self.subcategory_dropdown:Close()
+    end
+    if switched ~= true then
+        return false
+    end
+
+    if tokens == true then
+        local genus_chip = self:_genus_chip_value()
+        if genus_chip ~= nil and self.search_field:has_keyword("gen") ~= true then
+            self.search_field:replace_keyword("gen", genus_chip)
+        end
+        local level_chip = self:_level_chip_value()
+        if level_chip ~= nil and self.search_field:has_keyword("lvl") ~= true then
+            self.search_field:replace_keyword("lvl", level_chip)
+        end
+        self.genus_filter = FILTER_ALL
+        self.subcategory_filter = FILTER_NONE
+        self:refresh_taxonomy_filters()
+        self._suppress_level_text_changed = true
+        self.level_min_box:SetText("")
+        self.level_max_box:SetText("")
+        self._suppress_level_text_changed = false
+    end
+    return true
+end
+
+-- gen: chip value of the taxonomy dropdowns (nil = All)
+function EncyclopediaWindow:_genus_chip_value()
+    if self.genus_filter == FILTER_ALL then
+        return nil
+    end
+    if self.subcategory_filter == FILTER_ALL or self.subcategory_filter == FILTER_NONE then
+        return self.genus_filter
+    end
+    return self.genus_filter .. " > " .. self.subcategory_filter
+end
+
+-- lvl: chip value of the level boxes (nil = both empty)
+function EncyclopediaWindow:_level_chip_value()
+    return SearchQuery.format_range(self.level_min_box:GetText() or "", self.level_max_box:GetText() or "")
+end
+
+-- one chip per keyword: replaces (or with nil removes) the `key:` chip,
+-- then searches
+function EncyclopediaWindow:_replace_keyword_chip(key, value)
+    self.search_field:replace_keyword(key, value)
+    self:update_filter()
+end
+
 function EncyclopediaWindow:update_filter()
-    local query = self.filter_tb:GetText() or ""
-    local state = SearchQuery.parse(query, BESTIARY_QUERY_TOKENS)
+    local state = self.search_field:get_query_state()
     local level_filter = SearchQuery.read_level_filter(state, "lvl")
-    local location_parts = _parse_location_token_value(state.token_map.loc)
+    local location_paths = _parse_location_paths(state.token_map.loc)
     self.query_state = state
-    self.filter_groups = state.normalized_groups
+    self.filter_chip_groups = state.chip_groups
+    if self:_tokens_mode() ~= true then
+        self.filter_chip_groups = _drop_short_terms(state.chip_groups)
+    end
     self.query_level_min = level_filter.min
     self.query_level_max = level_filter.max
     self.query_level_filter_active = state.token_map.lvl ~= nil
@@ -1622,30 +1883,39 @@ function EncyclopediaWindow:update_filter()
         _parse_genus_token_value(state.token_map.gen)
     self.query_genus_filter_active = state.token_map.gen ~= nil
     self.query_location_filter_active = state.token_map.loc ~= nil
-    self.query_location_filter_valid = location_parts ~= nil
-    self.query_location_parts = location_parts
+    self.query_location_filter_valid = location_paths ~= nil
+    self.query_location_parts = location_paths
+    self.query_location_keys = nil
+    if location_paths ~= nil then
+        self.query_location_keys = {}
+        for p = 1, #location_paths do
+            local keys = {}
+            for i = 1, #location_paths[p] do
+                keys[i] = SearchQuery.match_key(location_paths[p][i])
+            end
+            self.query_location_keys[p] = keys
+        end
+    end
     self:_sync_pager(1)
     self:apply_view()
 end
 
 function EncyclopediaWindow:_set_filter_query_text(query)
-    self._suppress_area_text_changed = true
-    self.filter_tb:SetText(query)
-    self._suppress_area_text_changed = false
+    self.search_field:set_query(query)
     self:update_filter()
 end
 
 function EncyclopediaWindow:_apply_location_query_value(value)
-    local location_parts = _parse_location_token_value(value)
-    if location_parts == nil then
+    local location_paths = _parse_location_paths(value)
+    if location_paths == nil then
         error("Invalid bestiary location query value")
     end
+    local location_value = _format_location_paths(location_paths)
 
-    local location_value = SearchQuery.format_path(location_parts)
-    if location_value == nil then
-        error("Invalid bestiary location query path")
+    if self:_tokens_mode() == true then
+        self:_replace_keyword_chip("loc", location_value)
+        return
     end
-
     local tokens = SearchQuery.copy_tokens_except(self.query_state, { loc = true })
     SearchQuery.add_token(tokens, "loc", location_value)
     self:_set_filter_query_text(SearchQuery.serialize(self.query_state.text_groups, tokens, BESTIARY_QUERY_TOKENS))
@@ -1674,17 +1944,49 @@ function EncyclopediaWindow:apply_current_area_filter(force)
         return
     end
 
-    local location_parts = _parse_location_token_value(query)
-    if location_parts == nil then
-        error("Invalid bestiary area filter query")
+    -- the zone paths of every zone containing the position when the
+    -- location button set them (zones overlap: all are searched, better
+    -- more than less); deepest part first
+    local candidates = BestiaryCache.area_filter_candidates
+    local index = Lore.Bestiary.paths("loc")
+    local places = {}
+    local whole_regions = {}
+    for c = 1, #candidates do
+        local resolved = _resolve_location(index, candidates[c])
+        for r = 1, #resolved do
+            local place = resolved[r]
+            places[#places + 1] = place
+            if place[2] == nil then
+                whole_regions[place[1]] = true
+            end
+        end
     end
-
-    local location_value = SearchQuery.format_path(location_parts)
-    if location_value == nil then
-        error("Invalid bestiary area filter path")
+    if #places == 0 then
+        -- no Bestiary creature lives there: keep the search as it is rather
+        -- than filtering everything out
+        self._applied_area_raw = query
+        return
     end
+    -- one entry per place; a whole region already covers its areas
+    local location_paths = {}
+    local seen = {}
+    for i = 1, #places do
+        local region, area = places[i][1], places[i][2]
+        if area == nil or whole_regions[region] ~= true then
+            local parts = { region }
+            if area ~= nil and whole_regions[region] ~= true then
+                parts[2] = area
+            end
+            local key = SearchQuery.format_path(parts)
+            if seen[key] ~= true then
+                seen[key] = true
+                location_paths[#location_paths + 1] = parts
+            end
+        end
+    end
+    local location_value = _format_location_paths(location_paths)
 
-    local state = SearchQuery.parse(self.filter_tb:GetText() or "", BESTIARY_QUERY_TOKENS)
+    local state = self.search_field:get_query_state()
     if force ~= true and self.last_applied_area_query == location_value and state.token_map.loc == location_value then
         self._applied_area_raw = query
         return
@@ -1698,16 +2000,6 @@ end
 
 function EncyclopediaWindow:on_location_resolved()
     self:sync_area_filter_query()
-    self:apply_current_area_filter(true)
-end
-
-function EncyclopediaWindow:set_area_filter_query(query)
-    if type(query) ~= "string" or query == "" then
-        return
-    end
-
-    BestiaryCache.area_filter_query = query
-    self.current_area = query
     self:apply_current_area_filter(true)
 end
 
@@ -1729,6 +2021,7 @@ function EncyclopediaWindow:open_query_search(query)
     self.current_area = nil
     self.last_applied_area_query = nil
     BestiaryCache.area_filter_query = nil
+    BestiaryCache.area_filter_candidates = nil
 
     self._suppress_level_text_changed = true
     self.level_min_box:SetText("")
@@ -1737,13 +2030,9 @@ function EncyclopediaWindow:open_query_search(query)
 
     self:set_taxonomy_filters(FILTER_ALL, FILTER_NONE)
 
-    self._suppress_area_text_changed = true
-    self.filter_tb:SetText(query)
-    self._suppress_area_text_changed = false
-    self.filter_tb:refresh_text_async()
+    self.search_field:set_query(query)
     self:update_filter()
-
-    self.filter_tb:Focus()
+    self.search_field:Focus()
 end
 
 function EncyclopediaWindow:open_item_search(item_name)
@@ -1918,6 +2207,14 @@ function EncyclopediaWindow:_ensure_column_separators(count)
     end
 end
 
+-- the search row sits under the genus / level row, which Tokens mode hides
+function EncyclopediaWindow:_filter_row_offset(bar_h, gap)
+    if self:_tokens_mode() == true then
+        return 0
+    end
+    return bar_h + gap
+end
+
 function EncyclopediaWindow:_content_metrics()
     local margin_left = _scaled_int(BASE_MARGIN_LEFT)
     local margin_top = _scaled_int(BASE_MARGIN_TOP)
@@ -1930,7 +2227,8 @@ function EncyclopediaWindow:_content_metrics()
     local host_w, host_h = self.bestiary_host:GetSize()
     local inner_w = host_w - margin_left - margin_right
     -- two filter rows: taxonomy + level share the first, search the second
-    local content_top = margin_top + bar_h + gap + filter_h + gap
+    -- (Tokens mode: the search row only)
+    local content_top = margin_top + self:_filter_row_offset(bar_h, gap) + filter_h + gap
     local content_h = host_h - content_top - margin_bottom - gap - bar_h
     return margin_left, margin_top, inner_w, math.max(1, content_top), math.max(1, content_h), bar_h, level_h, filter_h, gap
 end
@@ -1972,7 +2270,7 @@ function EncyclopediaWindow:layout()
     self.pager:SetPosition(0, 0)
     self.pager:SetSize(self.page_bar:GetSize())
 
-    local level_label_w = _estimate_text_width(TR["Level"] .. ":", BASE_TAXONOMY_CHAR_W) + gap
+    local level_label_w = _small_text_width(TR["Level"] .. ":") + gap
     local level_input_w = _scaled_int(BASE_LEVEL_INPUT_W)
     local level_dash_w = _scaled_int(10)
     local level_block_w = level_label_w + gap + level_input_w + gap + level_dash_w + gap + level_input_w
@@ -2029,26 +2327,22 @@ function EncyclopediaWindow:layout()
     self.level_max_box:SetPosition(level_max_x, 0)
     self.level_max_box:SetSize(level_input_w, level_h)
 
-    self.filter_bar:SetPosition(margin_left, margin_top + bar_h + gap)
+    self.filter_bar:SetPosition(margin_left, margin_top + self:_filter_row_offset(bar_h, gap))
     self.filter_bar:SetSize(inner_w, filter_h)
 
     local area_slot_size = filter_h
-    local clear_w = _scaled_int(BASE_CLEAR_W)
     local area_slot_x = 0
     local filter_x = area_slot_size + gap
-    local filter_w = math.max(1, inner_w - clear_w - gap - filter_x)
-    self.clear_button:SetPosition(inner_w - clear_w, 0)
-    self.clear_button:SetSize(clear_w, filter_h)
+    local filter_w = math.max(1, inner_w - filter_x)
     self.area_slot:SetPosition(area_slot_x, 0)
     self.area_slot:SetSize(area_slot_size, area_slot_size)
     self.area_slot_cover:SetPosition(area_slot_x, 0)
     self.area_slot_cover:SetSize(area_slot_size, area_slot_size)
-    self.area_slot_icon:SetPosition(area_slot_x, 0)
-    _set_area_slot_icon_background(self, area_slot_size, area_slot_size)
+    _sync_area_slot_icon(self)
     self.area_label:SetPosition(0, 0)
     self.area_label:SetSize(0, 0)
-    self.filter_tb:SetPosition(filter_x, 0)
-    self.filter_tb:SetSize(filter_w, filter_h)
+    self.search_field:SetPosition(filter_x, 0)
+    self.search_field:SetSize(filter_w, filter_h)
 
     self.content:SetPosition(margin_left, content_top)
     self.content:SetSize(inner_w, content_h)
@@ -2070,7 +2364,6 @@ local BUCKET_TAB_BY_CODE = { [1] = 2, [2] = 4, [3] = 3, [4] = 5, [5] = 6 }
 -- browsable item (unknown name or bucket "other"). Shared probe for every
 -- surface that decides whether an item link makes sense.
 function Encyclopedia.encyclopedia_tab_for_item(item_name)
-    local Lore = _G.LUI.Data.Lore
     -- the items DB is staged in the background by the bestiary prewarm
     -- pump; a link probe must never pay the full synchronous import
     -- (bestiary cards bind chips on target double-click, combat-adjacent).
@@ -2327,26 +2620,29 @@ end
 
 function EncyclopediaWindow:apply_view()
     local filtered = {}
-    local filter_groups = self.filter_groups
-    local has_query = type(filter_groups) == "table" and #filter_groups > 0
+    local chip_groups = self.filter_chip_groups
+    local has_query = #chip_groups > 0
     local filter_level_min = self.query_level_min
     local filter_level_max = self.query_level_max
     if self.query_level_filter_active ~= true then
         filter_level_min, filter_level_max = _read_level_filter_range(self)
     end
-    local location_parts = self.query_location_parts
+    local location_keys = self.query_location_keys
     local impossible_level_range = (self.query_level_filter_active == true and self.query_level_filter_valid ~= true) or
         (filter_level_min ~= nil and filter_level_max ~= nil and filter_level_min > filter_level_max)
     local use_query_taxonomy = self.query_genus_filter_active == true
     local genus_filter = use_query_taxonomy == true and self.query_genus_filter or self.genus_filter
     local subcategory_filter = use_query_taxonomy == true and self.query_subcategory_filter or self.subcategory_filter
+    -- typed gen: values compare case / article-insensitive
+    local genus_key = SearchQuery.match_key(genus_filter)
+    local subcategory_key = SearchQuery.match_key(subcategory_filter)
     for i = 1, #self.all_records do
         local record = self.all_records[i]
         local genus_ok = self.query_genus_filter_active ~= true or self.query_genus_filter_valid == true
         if genus_ok == true and genus_filter == FILTER_ALL then
             genus_ok = true
         elseif genus_ok == true and use_query_taxonomy == true then
-            genus_ok = _same_text(record.genus, genus_filter) == true
+            genus_ok = _record_key(record, "genus") == genus_key
         elseif genus_ok == true then
             genus_ok = record.genus == genus_filter
         end
@@ -2354,19 +2650,19 @@ function EncyclopediaWindow:apply_view()
         if subcategory_ok == true and (subcategory_filter == FILTER_NONE or subcategory_filter == FILTER_ALL) then
             subcategory_ok = true
         elseif subcategory_ok == true and use_query_taxonomy == true then
-            subcategory_ok = _same_text(record.subcategory, subcategory_filter) == true
+            subcategory_ok = _record_key(record, "subcategory") == subcategory_key
         elseif subcategory_ok == true then
             subcategory_ok = record.subcategory == subcategory_filter
         end
         local level_ok = impossible_level_range ~= true and _matches_level_range(record, filter_level_min, filter_level_max)
         local location_ok = self.query_location_filter_active ~= true or
-            (self.query_location_filter_valid == true and _record_matches_location_parts(record, location_parts))
+            (self.query_location_filter_valid == true and _record_matches_location_paths(record, location_keys))
         record._matched_drop_lookup = nil
         if genus_ok == true and subcategory_ok == true and level_ok == true and location_ok == true then
             local query_ok = true
             local matched_drop_lookup = nil
             if has_query == true then
-                query_ok, matched_drop_lookup = _match_record_query(record, filter_groups)
+                query_ok, matched_drop_lookup = _match_record_chips(record, chip_groups)
             end
             record._matched_drop_lookup = matched_drop_lookup
             if query_ok == true then

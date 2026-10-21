@@ -289,7 +289,7 @@ Utils.CoordsData = {
             -- Other
             {
                 name = "EB-Helm's Deep",
-                aliases = {},
+                aliases = { "Helm's Deep" },
                 coords = { top = 72.5, left = -50.9, bottom = 66.0, right = -42.3 },
                 level = { 0, 0 },
                 sub_zones = {},
@@ -347,14 +347,14 @@ Utils.CoordsData = {
             },
             {
                 name = "Helm's Deep (before-dawn)",
-                aliases = {},
+                aliases = { "Helm's Deep" },
                 coords = { top = 72.5, left = -36.5, bottom = 66.0, right = -27.9 },
                 level = { 0, 0 },
                 sub_zones = {},
             },
             {
                 name = "Helm's Deep (sunrise)",
-                aliases = {},
+                aliases = { "Helm's Deep" },
                 coords = { top = 72.5, left = -22.1, bottom = 66.0, right = -13.5 },
                 level = { 0, 0 },
                 sub_zones = {},
@@ -368,7 +368,7 @@ Utils.CoordsData = {
             },
             {
                 name = "Isengard Depths (flooded)",
-                aliases = {},
+                aliases = { "Isengard Depths (after)" },
                 coords = { top = -69.0, left = 31.3, bottom = -73.6, right = 37.5 },
                 level = { 0, 0 },
                 sub_zones = {},
@@ -603,7 +603,7 @@ Utils.CoordsData = {
             },
             {
                 name = "Delvings of Gundabad",
-                aliases = {},
+                aliases = { "Gundabad" },
                 coords = { top = -32.4, left = -133.8, bottom = -53.2, right = -106.0 },
                 level = { 130, 140 },
                 sub_zones = {
@@ -728,14 +728,16 @@ Utils.CoordsData = {
                         level = { 55, 55 },
                         sub_zones = {},
                     },
-                    {
-                        name = "Zirakzigil",
-                        aliases = {},
-                        coords = { top = 17.3, left = -113.0, bottom = 11.6, right = -105.4 },
-                        level = { 53, 54 },
-                        sub_zones = {},
-                    },
                 },
+            },
+            -- the Silvertine peak lies outside Moria's map rectangle: a zone of
+            -- its own, or /loc there finds no zone (Bestiary: Moria > Zirakzigil)
+            {
+                name = "Zirakzigil",
+                aliases = {},
+                coords = { top = 17.3, left = -113.0, bottom = 11.6, right = -105.4 },
+                level = { 53, 54 },
+                sub_zones = {},
             },
             {
                 name = "Vales of Anduin",
@@ -827,7 +829,7 @@ Utils.CoordsData = {
             },
             {
                 name = "Glimmerdeep",
-                aliases = {},
+                aliases = { "Glimmerdeep (Instance)" },
                 coords = { top = 33.2, left = -139.0, bottom = 29.2, right = -133.7 },
                 level = { 115, 120 },
                 sub_zones = {},
@@ -841,7 +843,7 @@ Utils.CoordsData = {
             },
             {
                 name = "Nud-melek T.A. 1981",
-                aliases = {},
+                aliases = { "Nud-melek" },
                 coords = { top = 42.1, left = -143.8, bottom = 34.25, right = -133.5 },
                 level = { 0, 0 },
                 sub_zones = {},
@@ -1196,7 +1198,7 @@ Utils.CoordsData = {
             },
             {
                 name = "Belfalas (King's Gondor)",
-                aliases = { "Belfalas" },
+                aliases = { "Belfalas", "The Havens of Belfalas (King's Gondor)" },
                 coords = { top = -69.2, left = -84.1, bottom = -94.8, right = -50.0 },
                 level = { 142, 143 },
                 sub_zones = {
@@ -1246,7 +1248,7 @@ Utils.CoordsData = {
             },
             {
                 name = "Minas Tirith (Midsummer)",
-                aliases = {},
+                aliases = { "Minas Tirith" },
                 coords = { top = 26.9, left = -62.0, bottom = 18.8, right = -51.2 },
                 level = { 0, 0 },
                 sub_zones = {},
@@ -1260,7 +1262,7 @@ Utils.CoordsData = {
             },
             {
                 name = "Morannon",
-                aliases = {},
+                aliases = { "Battle of the Morannon" },
                 coords = { top = 67.0, left = -12.1, bottom = 55.4, right = 3.4 },
                 level = { 0, 0 },
                 sub_zones = {},
@@ -1281,14 +1283,14 @@ Utils.CoordsData = {
             },
             {
                 name = "Retaking Dol Amroth",
-                aliases = {},
+                aliases = { "Dol Amroth" },
                 coords = { top = -32.4, left = -130.4, bottom = -37.2, right = -124.0 },
                 level = { 0, 0 },
                 sub_zones = {},
             },
             {
                 name = "Riders' Stand",
-                aliases = {},
+                aliases = { "Rider's Stand" },
                 coords = { top = 29.6, left = -27.8, bottom = 14.7, right = -7.9 },
                 level = { 0, 0 },
                 sub_zones = {},
@@ -1416,7 +1418,7 @@ Utils.CoordsData = {
             },
             {
                 name = "Kâm Lagúrz",
-                aliases = {},
+                aliases = { "Kâm Lagúrz, the Brokencleft" },
                 coords = { top = 35.5, left = 15.7, bottom = 13.6, right = 44.9 },
                 level = { 0, 0 },
                 sub_zones = {},

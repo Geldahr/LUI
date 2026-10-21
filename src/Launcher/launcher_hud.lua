@@ -243,7 +243,11 @@ end
 
 function LauncherMenu:_apply_button_icon(button, size, icon_size)
     button:SetSize(size, size)
-    button:set_icon(button._launcher_icon, nil, nil, nil, icon_size, icon_size, UI.Widgets.LuiButton.icon_position.RIGHT)
+    if button.shortcut_key ~= nil then
+        Shortcuts.apply_button_icon(button, button.shortcut_key, icon_size, icon_size, UI.Widgets.LuiButton.icon_position.RIGHT)
+    else
+        button:set_icon(button._launcher_icon, nil, nil, nil, icon_size, icon_size, UI.Widgets.LuiButton.icon_position.RIGHT)
+    end
 end
 
 function LauncherMenu:_layout_buttons()

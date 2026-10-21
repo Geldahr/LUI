@@ -281,6 +281,31 @@ local function _add_style_font_name(page, settings_getter, key, label)
     return entry
 end
 
+local function _add_style_choice(page, settings_getter, key, label, labels, values)
+    local entry = page:add_dropdown(_style_control_key(key), label, labels, values)
+    page:bind(entry,
+        function(value)
+            if entry._loaded_direct ~= true and value == entry._loaded_value then
+                return
+            end
+
+            local style = _style_settings(settings_getter())
+            if value == _style_inherited_value(settings_getter(), key) then
+                style[key] = nil
+            else
+                style[key] = value
+            end
+        end,
+        function()
+            local value, direct = _style_value(settings_getter(), key)
+            entry._loaded_value = value
+            entry._loaded_direct = direct == true
+            entry._style_default_value = Style.DEFAULTS[key]
+            return value
+        end)
+    return entry
+end
+
 local function _reset_style_controls(page)
     page:stage_style_reset()
     page.window:update_all_swatches()
@@ -353,6 +378,20 @@ local function _new_ui_colors_section(window, settings_getter)
     _add_style_color(accents, settings_getter, "ACCENT_BACKGROUND_DISABLED", TR["Disabled accent"])
     _add_style_color(accents, settings_getter, "INVALID_BACKGROUND", TR["Invalid background"])
 
+    local icons = ConfigContent(window, 3)
+    _add_style_color(icons, settings_getter, "ICON_FOREGROUND", TR["Icon color"])
+    _add_style_color(icons, settings_getter, "ICON_FOREGROUND_HOVER", TR["Icon hover color"])
+    _add_style_color(icons, settings_getter, "ICON_FOREGROUND_PRESSED", TR["Icon pressed color"])
+    icons:add_row_break()
+    _add_style_color(icons, settings_getter, "ICON_FOREGROUND_DISABLED", TR["Icon disabled color"])
+    _add_style_color(icons, settings_getter, "ICON_ACCENT", TR["Icon accent color"])
+    icons:add_row_break()
+    _add_style_color(icons, settings_getter, "ICON_MENU", TR["Menu icons color"])
+    icons:add_row_break()
+    _add_style_color(icons, settings_getter, "ICON_COIN_GOLD", TR["Gold coin color"])
+    _add_style_color(icons, settings_getter, "ICON_COIN_SILVER", TR["Silver coin color"])
+    _add_style_color(icons, settings_getter, "ICON_COIN_COPPER", TR["Copper coin color"])
+
     local overlays = ConfigContent(window, 3)
     _add_style_color(overlays, settings_getter, "MODAL_OVERLAY_BACKGROUND", TR["Modal overlay background"])
     _add_style_opacity(overlays, settings_getter, "MODAL_OVERLAY_BACKGROUND", TR["Modal overlay opacity"])
@@ -405,6 +444,7 @@ local function _new_ui_colors_section(window, settings_getter)
     page:add_tab(TR["Text"], "text", text)
     page:add_tab(TR["Control Text"], "control_text", control_text)
     page:add_tab(TR["Accents"], "accents", accents)
+    page:add_tab(TR["Icons"], "icons", icons)
     page:add_tab(TR["Overlays"], "overlays", overlays)
     page:add_tab(TR["Move Mode"], "move_mode", move_mode)
     return page
@@ -456,6 +496,13 @@ local function _new_ui_page(window, settings_getter)
 
     local general = ConfigContent(window, 4)
     general:add_info(TR["Style changes apply after reloading the plugin."], 34)
+    _add_style_choice(general, style_settings_getter, "ICON_WEIGHT", TR["Icon line weight"],
+        { TR["Thin"], TR["Bold"] }, UI.Widgets.Icons.WEIGHTS)
+    general:add_row_break()
+    _add_style_checkbox(general, style_settings_getter, "ICON_MENU_LEGACY", TR["Legacy menu icons"])
+    general:add_row_break()
+    _add_style_checkbox(general, style_settings_getter, "ICON_COINS_MODERN", TR["Modern coin icons"])
+    general:add_row_break()
     _add_reset_button(page, general)
     page:add_tab(TR["General"], "general", general)
 

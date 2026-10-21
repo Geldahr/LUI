@@ -72,7 +72,7 @@ function ResourceCard:Constructor()
     self._suppress_position_persist = false
 
     self:set_title(TR["Resource"])
-    self:set_icon(UI.AssetIds.anvil_silver_glow)
+    UI.Shortcuts.apply_window_icon(self, "craft")
     self:set_resizable(false)
     self:enable_maximize(false)
     self:hide()

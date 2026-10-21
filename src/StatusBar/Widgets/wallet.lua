@@ -294,9 +294,7 @@ function WalletWidget:_layout()
 
         local label_w = 0
         if text ~= "" then
-            local text_chars = string.len(text)
-            local char_w = math.max(6, math.floor(h * 0.55))
-            label_w = (text_chars * char_w) + label_pad
+            label_w = _G.LUI.Utils.measure_text_width_in_font(text, item.label:GetFont()) + 2 + label_pad
             if label_w <= 0 then
                 label_w = MIN_FIELD_W
             elseif label_w < MIN_FIELD_W then

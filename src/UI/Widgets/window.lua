@@ -12,12 +12,12 @@ import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.menu"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.icons"
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.Utils.font"
 
 local UI = _G.LUI.UI
 local Widgets = UI.Widgets
-local AssetIds = UI.Assets
 local LuiBaseWindow = Widgets.LuiBaseWindow
 local LuiButton = Widgets.LuiButton
 local Image = Widgets.Image
@@ -25,6 +25,7 @@ local LuiLabel = Widgets.LuiLabel
 local LuiMenu = Widgets.LuiMenu
 local LuiMenuBar = Widgets.LuiMenuBar
 local Style = Widgets.Style
+local Icons = Widgets.Icons
 
 local BASE_DEFAULT_W = 420
 local BASE_DEFAULT_H = 280
@@ -166,8 +167,11 @@ function LuiWindow:Constructor(opts)
     end
     LuiBaseWindow.Constructor(self, opts)
 
+    -- popups opened inside it use content_rect() (see LuiMenu overlay)
+    self.is_lui_window = true
     self._scale = 1
     self._icon_asset = nil
+    self._icon_tint = nil
     self._icon_size = BASE_ICON
     self._central_widget = nil
     self._margin_left = BASE_MARGIN
@@ -338,6 +342,12 @@ function LuiWindow:set_icon(icon, size)
         return
     end
     self._icon:SetVisible(icon ~= nil)
+    self:_layout()
+end
+
+-- tints a white title icon (Widgets.Icons); nil shows it as is
+function LuiWindow:set_icon_tint(color)
+    self._icon_tint = color
     self:_layout()
 end
 
@@ -523,7 +533,36 @@ function LuiWindow:is_maximized()
     return self:get_tile() == TILE_MAXIMIZED
 end
 
+-- content area (below the title bar and divider) in window coordinates:
+-- in-content popups (menus, lists) cover only this, so the title bar stays
+-- usable while they are open
+function LuiWindow:content_rect()
+    local width, height = self:GetSize()
+    local border = self:_border()
+    local top = border + _scaled_int(self._scale, BASE_TITLE_BAR_H) + self:_divider_h()
+    return border, top, math.max(0, width - (2 * border)), math.max(0, height - top - border)
+end
+
+-- menu / dropdown / picker popups are separate windows fixed on screen:
+-- close them when this window hides, starts moving, resizing or changes
+-- maximize state
+function LuiWindow:_close_open_menu()
+    if LuiMenu._active_root ~= nil then
+        LuiMenu._active_root:close()
+    end
+    if Widgets.LuiDropdown._active ~= nil then
+        Widgets.LuiDropdown._active:Close()
+    end
+    if Widgets.LuiCheckDropdown._active ~= nil then
+        Widgets.LuiCheckDropdown._active:Close()
+    end
+    if Widgets.LuiColorField._active ~= nil then
+        Widgets.LuiColorField._active:_close_picker(true)
+    end
+end
+
 function LuiWindow:toggle_maximized()
+    self:_close_open_menu()
     if self:is_maximized() == true then
         self:restore()
     else
@@ -693,11 +732,8 @@ function LuiWindow:_apply_style()
     self:_style_title_button(self._maximize_button)
     self:_style_title_button(self._close_button)
     self:_sync_maximize_button_icon()
-    self._close_button:set_icon(
-        AssetIds.x,
-        AssetIds.x_hover,
-        AssetIds.x_hover,
-        AssetIds.x,
+    self._close_button:set_tinted_icon(
+        Icons.path("window_close"),
         BASE_TITLE_ACTION_ICON,
         BASE_TITLE_ACTION_ICON,
         LuiButton.icon_position.RIGHT
@@ -728,8 +764,8 @@ function LuiWindow:request_close()
 end
 
 function LuiWindow:SetVisible(visible)
-    if visible ~= true and LuiMenu._active_root ~= nil then
-        LuiMenu._active_root:close()
+    if visible ~= true then
+        self:_close_open_menu()
     end
     LuiBaseWindow.SetVisible(self, visible)
 end
@@ -775,18 +811,13 @@ function LuiWindow:_sync_maximize_button_icon()
         return
     end
 
-    local normal = AssetIds.window_maximize
-    local hover = AssetIds.window_maximize_hover
+    local icon = Icons.path("window_maximize")
     if self:is_maximized() == true then
-        normal = AssetIds.window_restore
-        hover = AssetIds.window_restore_hover
+        icon = Icons.path("window_restore")
     end
 
-    self._maximize_button:set_icon(
-        normal,
-        hover,
-        hover,
-        normal,
+    self._maximize_button:set_tinted_icon(
+        icon,
         BASE_TITLE_ACTION_ICON,
         BASE_TITLE_ACTION_ICON,
         LuiButton.icon_position.RIGHT
@@ -801,6 +832,7 @@ function LuiWindow:_start_drag(args)
         return
     end
 
+    self:_close_open_menu()
     self._dragging = true
     self._drag_start_screen_x, self._drag_start_screen_y = self._title_bar:PointToScreen(
         args ~= nil and args.X or 0,
@@ -1071,6 +1103,7 @@ function LuiWindow:_start_resize(region, args)
     end
 
     self:_stop_drag()
+    self:_close_open_menu()
     self._resizing = true
     self._resize_mask = region._resize_mask or 0
     self._resize_start_screen_x, self._resize_start_screen_y = region:PointToScreen(
@@ -1208,11 +1241,13 @@ function LuiWindow:_sync_resize_handle_icons()
     end
 
     local handle = _scaled_int(self._scale, BASE_RESIZE_HANDLE)
-    self._resize_handles.horizontal:set_icon(AssetIds.resize_horizontal, handle, handle)
-    self._resize_handles.vertical:set_icon(AssetIds.resize_vertical, handle, handle)
-    self._resize_handles.diagonal_tl_br:set_icon(AssetIds.resize_diagonal_tl_br, handle, handle)
-    self._resize_handles.diagonal_tr_bl:set_icon(AssetIds.resize_diagonal_tr_bl, handle, handle)
+    self._resize_handles.horizontal:set_icon(Icons.path("resize_horizontal"), handle, handle)
+    self._resize_handles.vertical:set_icon(Icons.path("resize_vertical"), handle, handle)
+    self._resize_handles.diagonal_tl_br:set_icon(Icons.path("resize_tl_br"), handle, handle)
+    self._resize_handles.diagonal_tr_bl:set_icon(Icons.path("resize_tr_bl"), handle, handle)
     for _, resize_handle in pairs(self._resize_handles) do
+        -- an active cursor: the bright icon color
+        resize_handle:set_tint(Style.ICON_FOREGROUND_HOVER)
         resize_handle:SetPosition(0, 0)
         resize_handle:SetVisible(resize_handle == self._active_resize_handle)
     end
@@ -1293,6 +1328,9 @@ function LuiWindow:_layout()
     if self._icon_asset ~= nil and icon_size > 0 and chrome_square > 0 then
         local title_icon_size = math.min(icon_size, chrome_square)
         self._icon:set_icon(self._icon_asset, title_icon_size)
+        if self._icon_tint ~= nil then
+            self._icon:set_tint(self._icon_tint)
+        end
         local actual_w, actual_h = self._icon:get_size()
         actual_w = actual_w or title_icon_size
         actual_h = actual_h or title_icon_size

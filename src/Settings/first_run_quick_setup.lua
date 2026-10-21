@@ -14,6 +14,7 @@ local Persistence = _G.LUI.Settings.Persistence
 local Colors = _G.LUI.Settings.Colors
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
+local Shortcuts = _G.LUI.UI.Shortcuts
 local Hidable = _G.LUI.UI.Hidable
 local Settings = _G.LUI.Settings
 local class = _G.LUI.Core.class
@@ -52,6 +53,17 @@ local CONFIG_DROPDOWN_H = 20
 local LAYOUT_BUTTON_W = 100
 local LAYOUT_BUTTON_H = 22
 local LAYOUT_LABEL_H = 18
+-- preview of the selected answer on the search bar / menu icons questions
+local PREVIEW_H = 22
+-- one question line: the preview sits right under it
+local BODY_PREVIEW_H = BODY_LINE_H + BODY_LINE_PAD
+local PREVIEW_ICON = 20
+local PREVIEW_ICON_GAP = 8
+local PREVIEW_QUERY = "loc:Bree-land"
+local PREVIEW_KEYWORDS = {
+    { key = "loc", icon = "map_pinned" },
+}
+local PREVIEW_SHORTCUTS = { "config", "inventory", "craft", "travel", "assets", "encyclopedia" }
 
 local function _scaled_size(value)
     return value * State.settings.global.scale
@@ -324,6 +336,19 @@ local function _apply_runtime_settings()
     Apply.cooldowns_settings()
     Apply.launcher_settings()
 
+    -- search bar mode (and scale) of the windows that already exist: Assets
+    -- is built at startup, Encyclopedia / Crafting once opened (a quick setup
+    -- started from the profile manager)
+    if Windows.assets ~= nil then
+        Windows.assets:apply_settings()
+    end
+    if Windows.encyclopedia ~= nil then
+        Windows.encyclopedia:apply_settings()
+    end
+    if Windows.crafting ~= nil then
+        Windows.crafting:apply_settings()
+    end
+
     if Windows.config ~= nil then
         Windows.config:apply_ui_scale()
         Windows.config:layout()
@@ -389,6 +414,35 @@ local function _apply_runtime_settings()
             Windows.launcher:set_move_mode(true)
         end
     end
+end
+
+-- the windows with a Classic / Tokens search bar setting (the inventory
+-- search stays classic)
+local SEARCH_MODE_SECTIONS = { "encyclopedia", "crafting", "assets" }
+
+local function _search_tokens_enabled()
+    return State.loaded_settings.encyclopedia.search_mode == "tokens"
+end
+
+local function _set_search_tokens(enabled)
+    local mode = enabled == true and "tokens" or "classic"
+    for i = 1, #SEARCH_MODE_SECTIONS do
+        State.loaded_settings[SEARCH_MODE_SECTIONS[i]].search_mode = mode
+    end
+end
+
+-- ICON_MENU_LEGACY is a style override: nil keeps the default (modern)
+local function _legacy_icons_enabled()
+    return State.loaded_settings.global.style.ICON_MENU_LEGACY == true
+end
+
+local function _set_legacy_icons(enabled)
+    if enabled == true then
+        State.loaded_settings.global.style.ICON_MENU_LEGACY = true
+    else
+        State.loaded_settings.global.style.ICON_MENU_LEGACY = nil
+    end
+    Apply.saved_global_style()
 end
 
 local FirstRunQuickSetup = class(UI.Widgets.LuiBaseWindow)
@@ -503,6 +557,26 @@ function FirstRunQuickSetup:Constructor(options)
     self.config_dropdown:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
     self.config_dropdown:SetPopupHost(self)
     self.config_dropdown:SetMappedOptions(self.existing_config_labels, self.existing_config_values)
+
+    -- the real search bar (read-only: a mouse blocker covers it) and a row
+    -- of menu icons, showing the selected answer of steps 7 / 8
+    self._preview_kind = nil
+    self.preview = Turbine.UI.Control()
+    self.preview:SetParent(self.inner)
+    self.preview:SetMouseVisible(false)
+    self.preview:SetVisible(false)
+
+    self.preview_search = UI.Widgets.SearchField()
+    self.preview_search:SetParent(self.preview)
+    self.preview_search:set_keywords(PREVIEW_KEYWORDS)
+    self.preview_search:set_popup_host(self)
+
+    self.preview_icons = {}
+
+    self.preview_blocker = Turbine.UI.Control()
+    self.preview_blocker:SetParent(self.preview)
+    self.preview_blocker:SetMouseVisible(true)
+    self.preview_blocker:SetZOrder(10)
 
     self.layout_label = UI.Widgets.LuiLabel()
     self.layout_label:SetParent(self.inner)
@@ -674,6 +748,9 @@ function FirstRunQuickSetup:_window_height_for_content()
     elseif self._layout_mode == "choice" then
         content_bottom = content_bottom + BODY_CONTROL_GAP + LAYOUT_BUTTON_H
     end
+    if self._preview_kind ~= nil then
+        content_bottom = content_bottom + BODY_CONTROL_GAP + PREVIEW_H
+    end
 
     local inner_h = content_bottom + BOTTOM_BUTTON_GAP + BUTTON_H + WINDOW_MARGIN
     return math.max(WINDOW_H, inner_h + (FRAME_BORDER * 2))
@@ -768,6 +845,13 @@ function FirstRunQuickSetup:layout()
 
     local body_bottom = body_top + body_h
     local control_row_y = body_bottom + control_gap
+    if self._preview_kind ~= nil then
+        local preview_h = _scaled_int(PREVIEW_H)
+        self.preview:SetPosition(margin, control_row_y)
+        self.preview:SetSize(inner_w - (margin * 2), preview_h)
+        self:_layout_preview()
+        control_row_y = control_row_y + preview_h + control_gap
+    end
     local scale_button_w = _scaled_int(SCALE_BUTTON_W)
     local scale_input_w = _scaled_int(SCALE_INPUT_W)
     local scale_input_h = _scaled_int(SCALE_INPUT_H)
@@ -844,6 +928,67 @@ function FirstRunQuickSetup:layout()
     self.settings_button:SetPosition(action_row_x + button_w + action_gap, bottom_y)
     self.settings_button:SetSize(button_w, button_h)
     self.done_button:SetPosition(action_row_x + (button_w * 2) + (action_gap * 2), bottom_y)
+end
+
+function FirstRunQuickSetup:_layout_preview()
+    local w, h = self.preview:GetSize()
+    self.preview_blocker:SetPosition(0, 0)
+    self.preview_blocker:SetSize(w, h)
+
+    if self._preview_kind == "search" then
+        local field_h = self.preview_search.tokens:get_height()
+        self.preview_search:SetPosition(0, math.floor((h - field_h) / 2))
+        self.preview_search:SetSize(w, field_h)
+        return
+    end
+
+    local size = _scaled_int(PREVIEW_ICON)
+    local gap = _scaled_int(PREVIEW_ICON_GAP)
+    local count = #self.preview_icons
+    local x = math.floor((w - (count * size) - ((count - 1) * gap)) / 2)
+    local y = math.floor((h - size) / 2)
+    for i = 1, count do
+        self.preview_icons[i]:SetPosition(x, y)
+        self.preview_icons[i]:set_size(size, size)
+        x = x + size + gap
+    end
+end
+
+-- fills the preview with the current answer (search mode / icon style)
+function FirstRunQuickSetup:_refresh_preview()
+    -- hidden first: a control detached while visible keeps drawing at the
+    -- screen's top-left
+    for i = 1, #self.preview_icons do
+        self.preview_icons[i]:SetVisible(false)
+        self.preview_icons[i]:SetParent(nil)
+    end
+    self.preview_icons = {}
+
+    if self._preview_kind == "search" then
+        local field = self.preview_search
+        field:set_scale(State.settings.global.scale)
+        if _search_tokens_enabled() == true then
+            field:set_mode(UI.Widgets.SearchField.TOKENS)
+        else
+            field:set_mode(UI.Widgets.SearchField.CLASSIC)
+        end
+        field:set_query(PREVIEW_QUERY)
+        field:SetVisible(true)
+        return
+    end
+
+    self.preview_search:SetVisible(false)
+    local legacy = _legacy_icons_enabled()
+    for i = 1, #PREVIEW_SHORTCUTS do
+        local icon = UI.Widgets.Image(Shortcuts.get_style_icon(PREVIEW_SHORTCUTS[i], legacy))
+        icon:SetParent(self.preview)
+        if legacy ~= true then
+            icon:set_tint(Style.ICON_MENU)
+        end
+        self.preview_icons[i] = icon
+    end
+    -- the icons go under the mouse blocker
+    self.preview_blocker:SetZOrder(10)
 end
 
 function FirstRunQuickSetup:capture_preview_window_snapshots()
@@ -944,6 +1089,8 @@ function FirstRunQuickSetup:update_step()
     self.done_button:SetVisible(false)
     self.move_manually_button:SetVisible(false)
     self.settings_button:SetVisible(false)
+    self.preview:SetVisible(false)
+    self._preview_kind = nil
 
     if self.has_existing_configurations == true and self.step == 1 then
         self._layout_mode = "config"
@@ -998,6 +1145,7 @@ function FirstRunQuickSetup:update_step()
     if setup_step == 4 then
         self._layout_mode = "choice"
         self:_set_body_text(TR["Replace the default inventory bags?"], BODY_H)
+        self:set_choice_labels(TR["No"], TR["Yes"])
         self:update_binary_choice_buttons(State.loaded_settings.inventory.replace == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
@@ -1020,6 +1168,7 @@ function FirstRunQuickSetup:update_step()
     if setup_step == 5 then
         self._layout_mode = "choice"
         self:_set_body_text(TR["Enable the status bar?"], BODY_H)
+        self:set_choice_labels(TR["No"], TR["Yes"])
         self:update_binary_choice_buttons(State.loaded_settings.status_bar.enabled == true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
@@ -1031,7 +1180,38 @@ function FirstRunQuickSetup:update_step()
     if setup_step == 6 then
         self._layout_mode = "choice"
         self:_set_body_text(TR["Enable the LUI Menu?"], BODY_H)
+        self:set_choice_labels(TR["No"], TR["Yes"])
         self:update_binary_choice_buttons(self.selected_launcher_enabled == true)
+        self.choice_no:SetVisible(true)
+        self.choice_yes:SetVisible(true)
+        self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
+        return
+    end
+
+    if setup_step == 7 then
+        self._layout_mode = "choice"
+        self:_set_body_text(TR["Which search bar do you prefer?"], BODY_PREVIEW_H)
+        self:set_choice_labels(TR["Classic"], TR["Tokens"])
+        self:update_binary_choice_buttons(_search_tokens_enabled())
+        self._preview_kind = "search"
+        self:_refresh_preview()
+        self.preview:SetVisible(true)
+        self.choice_no:SetVisible(true)
+        self.choice_yes:SetVisible(true)
+        self.next_button:SetVisible(true)
+        self:_fit_window_to_content()
+        return
+    end
+
+    if setup_step == 8 then
+        self._layout_mode = "choice"
+        self:_set_body_text(TR["Which menu icons do you prefer?"], BODY_PREVIEW_H)
+        self:set_choice_labels(TR["Modern"], TR["Legacy"])
+        self:update_binary_choice_buttons(_legacy_icons_enabled())
+        self._preview_kind = "icons"
+        self:_refresh_preview()
+        self.preview:SetVisible(true)
         self.choice_no:SetVisible(true)
         self.choice_yes:SetVisible(true)
         self.next_button:SetVisible(true)
@@ -1048,7 +1228,7 @@ function FirstRunQuickSetup:update_step()
 end
 
 function FirstRunQuickSetup:go_next()
-    local max_step = self.has_existing_configurations == true and 8 or 7
+    local max_step = self.has_existing_configurations == true and 10 or 9
     if self.step >= max_step then
         return
     end
@@ -1133,6 +1313,11 @@ function FirstRunQuickSetup:select_layout(layout_key)
     self:apply_ui_scale()
 end
 
+function FirstRunQuickSetup:set_choice_labels(no_text, yes_text)
+    self.choice_no:set_text(no_text)
+    self.choice_yes:set_text(yes_text)
+end
+
 function FirstRunQuickSetup:update_binary_choice_buttons(enabled)
     self.choice_no:set_active(enabled ~= true)
     self.choice_yes:set_active(enabled == true)
@@ -1152,12 +1337,19 @@ function FirstRunQuickSetup:select_binary_choice(enabled)
     elseif setup_step == 6 then
         self.selected_launcher_enabled = value
         State.loaded_settings.launcher.enabled = value
+    elseif setup_step == 7 then
+        _set_search_tokens(value)
+    elseif setup_step == 8 then
+        _set_legacy_icons(value)
     else
         return
     end
 
     self:update_binary_choice_buttons(value)
     _apply_runtime_settings()
+    if self._preview_kind ~= nil then
+        self:_refresh_preview()
+    end
 
     MoveMode.refresh_snapshot()
 

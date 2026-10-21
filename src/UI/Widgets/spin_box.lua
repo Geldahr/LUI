@@ -10,21 +10,19 @@ import "Turbine.UI.Lotro"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.UI.Widgets.icons"
 
 local Widgets = _G.LUI.UI.Widgets
 local LuiButton = Widgets.LuiButton
 local LuiLineEdit = Widgets.LuiLineEdit
 local Style = Widgets.Style
+local Icons = Widgets.Icons
 local BASE_WIDGET_W = 72
 local BASE_WIDGET_H = 21
 local BASE_BUTTON_W = 18
-local BASE_BUTTON_FONT_SIZE = 8
 local BASE_TEXTBOX_INSET_X = 2
 local BASE_TEXTBOX_INSET_Y = 2
 local BASE_BUTTONS_INSET_Y = 0
-
-local RENDER_PLUS_MINUS = "plus_minus"
-local RENDER_ARROWS = "arrows"
 
 local function _scaled_size(scale, value)
     return value * scale
@@ -95,11 +93,6 @@ end
 local LuiSpinBox = class(Turbine.UI.Control)
 Widgets.LuiSpinBox = LuiSpinBox
 
-LuiSpinBox.render = {
-    PLUS_MINUS = RENDER_PLUS_MINUS,
-    ARROWS = RENDER_ARROWS,
-}
-
 function LuiSpinBox:Constructor()
     Turbine.UI.Control.Constructor(self)
 
@@ -110,7 +103,6 @@ function LuiSpinBox:Constructor()
     self._uses_default_size = true
     self._uses_default_font = true
     self._enabled = true
-    self._render = RENDER_PLUS_MINUS
     self._minimum = nil
     self._maximum = nil
     self._step = 1
@@ -171,6 +163,8 @@ function LuiSpinBox:Constructor()
     self.increment_button = LuiButton()
     self.increment_button:SetParent(self._buttons_back)
     Style.apply_embedded_button(self.increment_button)
+    -- the icon fills the largest square the half-height button allows
+    self.increment_button:set_tinted_icon(Icons.sized("chevron_up_small"), BASE_BUTTON_W)
     self.increment_button.Click = function()
         self:_adjust(self._step)
     end
@@ -178,6 +172,7 @@ function LuiSpinBox:Constructor()
     self.decrement_button = LuiButton()
     self.decrement_button:SetParent(self._buttons_back)
     Style.apply_embedded_button(self.decrement_button)
+    self.decrement_button:set_tinted_icon(Icons.sized("chevron_down_small"), BASE_BUTTON_W)
     self.decrement_button.Click = function()
         self:_adjust(-self._step)
     end
@@ -188,15 +183,11 @@ function LuiSpinBox:Constructor()
 
     Turbine.UI.Control.SetSize(self, _scaled_int(self._scale, BASE_WIDGET_W), _scaled_int(self._scale, BASE_WIDGET_H))
     self:_apply_default_font()
-    self:set_render(RENDER_PLUS_MINUS)
     self:set_value(0, false)
 end
 
 function LuiSpinBox:_apply_default_font()
     self.text_box:SetFont(_scaled_font(self._scale, Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
-    local button_font = _scaled_font(self._scale, "Verdana", BASE_BUTTON_FONT_SIZE)
-    self.increment_button:set_font(button_font)
-    self.decrement_button:set_font(button_font)
 end
 
 function LuiSpinBox:_effective_decimals()
@@ -349,21 +340,6 @@ function LuiSpinBox:_layout()
     self.decrement_button:SetSize(button_w, bottom_h)
 end
 
-function LuiSpinBox:set_render(render_mode)
-    if render_mode ~= RENDER_ARROWS then
-        render_mode = RENDER_PLUS_MINUS
-    end
-    self._render = render_mode
-
-    if render_mode == RENDER_ARROWS then
-        self.increment_button:set_text("^")
-        self.decrement_button:set_text("v")
-    else
-        self.increment_button:set_text("+")
-        self.decrement_button:set_text("-")
-    end
-end
-
 function LuiSpinBox:set_minimum(value)
     self._minimum = value ~= nil and tonumber(value) or nil
     if self._maximum ~= nil and self._minimum ~= nil and self._maximum < self._minimum then
@@ -444,14 +420,6 @@ function LuiSpinBox:SetFont(font)
     end
     self._uses_default_font = false
     self.text_box:SetFont(font)
-end
-
-function LuiSpinBox:SetButtonFont(font)
-    if font == nil then
-        return
-    end
-    self.increment_button:set_font(font)
-    self.decrement_button:set_font(font)
 end
 
 function LuiSpinBox:SetTextAlignment(alignment)

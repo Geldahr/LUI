@@ -46,6 +46,14 @@ function CraftingPage:Constructor(window)
         function()
             return self._settings.crafting.enabled == true
         end)
+    general:add_row_break()
+    general:add_dropdown("crafting_search_mode", TR["Search bar"], { TR["Classic"], TR["Tokens"] }, { "classic", "tokens" },
+        function(value)
+            self._settings.crafting.search_mode = value
+        end,
+        function()
+            return self._settings.crafting.search_mode
+        end, TR["Classic: the search runs on every keystroke. Tokens: Enter turns the typed text into a chip and the search runs when chips change."])
     self:add_tab(TR["General"], "general", general)
 
     local recipes = ConfigContent(window, 4)

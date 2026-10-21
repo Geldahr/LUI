@@ -6,17 +6,17 @@ local class = _G.LUI.Core.class
 import "Turbine.UI"
 import "Turbine.UI.Lotro"
 
-import "LUI.src.UI.assets"
 import "LUI.src.UI.Widgets.button"
+import "LUI.src.UI.Widgets.icons"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.line_edit"
 
 local UI = _G.LUI.UI
-local AssetIds = UI.AssetIds
 local Widgets = UI.Widgets
 local LuiButton = Widgets.LuiButton
 local LuiLabel = Widgets.LuiLabel
 local LuiLineEdit = Widgets.LuiLineEdit
+local Icons = Widgets.Icons
 
 local BASE_NAV_W = 22
 local BASE_SLASH_W = 12
@@ -58,15 +58,7 @@ function LuiPager:Constructor()
     self.prev_button:SetParent(self)
     self.prev_button:set_text("")
     self.prev_button:set_padding(2)
-    self.prev_button:set_icon(
-        AssetIds.arrow_l_white,
-        AssetIds.arrow_l_white,
-        AssetIds.arrow_l_white,
-        AssetIds.arrow_l_transparent,
-        BASE_NAV_W,
-        nil,
-        LuiButton.icon_position.LEFT
-    )
+    self.prev_button:set_tinted_icon(Icons.sized("chevron_left"), BASE_NAV_W, nil, LuiButton.icon_position.LEFT)
     self.prev_button.Click = function()
         self:_set_page_internal(self._page - 1, true)
     end
@@ -75,15 +67,7 @@ function LuiPager:Constructor()
     self.next_button:SetParent(self)
     self.next_button:set_text("")
     self.next_button:set_padding(2)
-    self.next_button:set_icon(
-        AssetIds.arrow_r_white,
-        AssetIds.arrow_r_white,
-        AssetIds.arrow_r_white,
-        AssetIds.arrow_r_transparent,
-        BASE_NAV_W,
-        nil,
-        LuiButton.icon_position.RIGHT
-    )
+    self.next_button:set_tinted_icon(Icons.sized("chevron_right"), BASE_NAV_W, nil, LuiButton.icon_position.RIGHT)
     self.next_button.Click = function()
         self:_set_page_internal(self._page + 1, true)
     end

@@ -178,6 +178,13 @@ local function _new_widgets_section(window, settings_getter)
         function()
             return settings_getter().widgets.inventory_space.icon == true
         end)
+    inventory:add_checkbox("sb_inv_icon_coloring", TR["Colored icon"],
+        function(value)
+            settings_getter().widgets.inventory_space.icon_coloring = value == true
+        end,
+        function()
+            return settings_getter().widgets.inventory_space.icon_coloring == true
+        end)
     inventory:add_dropdown("sb_inv_text_alignment", TR["Text alignment"], inventory.text_alignment_labels,
         inventory.text_alignment_values,
         function(value)
@@ -205,6 +212,13 @@ local function _new_widgets_section(window, settings_getter)
         end,
         function()
             return settings_getter().widgets.equipment_wear.icon == true
+        end)
+    durability:add_checkbox("sb_durability_icon_coloring", TR["Colored icon"],
+        function(value)
+            settings_getter().widgets.equipment_wear.icon_coloring = value == true
+        end,
+        function()
+            return settings_getter().widgets.equipment_wear.icon_coloring == true
         end)
     durability:add_dropdown("sb_durability_text_alignment", TR["Text alignment"], durability.text_alignment_labels,
         durability.text_alignment_values,

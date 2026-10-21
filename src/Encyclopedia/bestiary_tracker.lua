@@ -89,6 +89,8 @@ function Encyclopedia.set_current_location(location)
     local current_location = {
         region = region,
         area = area,
+        names = location.names,
+        candidates = location.candidates,
         player_coords = location.player_coords,
         region_id = location.region_id,
     }
@@ -96,6 +98,9 @@ function Encyclopedia.set_current_location(location)
 
     Encyclopedia.current_location = current_location
     BestiaryCache.area_filter_query = query
+    -- runtime only (never saved): the zone paths of every zone containing
+    -- the position, which the Bestiary resolves and searches together
+    BestiaryCache.area_filter_candidates = location.candidates
 
     local window = Windows.encyclopedia
     if window ~= nil then

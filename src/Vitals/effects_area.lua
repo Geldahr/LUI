@@ -97,8 +97,23 @@ end
 local EffectsArea = class(Turbine.UI.Control)
 Vitals.EffectsArea = EffectsArea
 
+-- every live area (weak: a dropped frame's area is collected), for unload
+local LIVE_AREAS = setmetatable({}, { __mode = "k" })
+
+-- Plugin unload: hides every effect icon. Each icon is a window inside its
+-- frame's list; when the frames go away, icons still visible are left
+-- detached and the client draws them at the screen's top-left.
+function EffectsArea.hide_all_icons()
+    for area in pairs(LIVE_AREAS) do
+        for i = 1, area.list:GetItemCount() do
+            _destroy_item(area.list:GetItem(i))
+        end
+    end
+end
+
 function EffectsArea:Constructor(frame_width, effects_settings, effects_height)
     Turbine.UI.Control.Constructor(self)
+    LIVE_AREAS[self] = true
 
     self.on_height_changed = nil
     self.effects_settings = effects_settings

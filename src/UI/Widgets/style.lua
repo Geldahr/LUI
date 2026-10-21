@@ -23,7 +23,6 @@ LUI.UI.Style = {
     BORDER_WIDTH = 1.5,
     BORDER_WIDTH_THIN = 1,
     BORDER_WIDTH_LARGE = 2,
-    DROPDOWN_ARROW = 0x41007e1a,
 }
 
 Widgets read values as UI.Widgets.Style.CONTROL_BORDER or Style["CONTROL_BORDER"].
@@ -125,10 +124,25 @@ local DEFAULTS = {
     DRAG_PREVIEW_FILL = Turbine.UI.Color(0.28, 1.00, 1.00, 1.00),
     DRAG_PREVIEW_EDGE = Turbine.UI.Color(0.95, 1.00, 1.00, 1.00),
 
-    DROPDOWN_ARROW = 0x41007e1a,
-    DROPDOWN_ARROW_HOVER = 0x41007e1b,
-    DROPDOWN_ARROW_PRESSED = 0x41007e19,
-    DROPDOWN_ARROW_DISABLED = 0x41007e1a,
+    -- White UI icons (assets/ui/icons) are tinted with these colors.
+    ICON_FOREGROUND = Turbine.UI.Color(1, 0.843, 0.824, 0.769),
+    ICON_FOREGROUND_HOVER = Turbine.UI.Color(1, 1, 1, 1),
+    ICON_FOREGROUND_PRESSED = Turbine.UI.Color(1, 1, 1, 1),
+    ICON_FOREGROUND_DISABLED = Turbine.UI.Color(0.55, 0.85, 0.85, 0.85),
+    ICON_ACCENT = Turbine.UI.Color(1, 0.90, 0.72, 0.29),
+    -- menu icons (status bar, LUI Menu, window titles); follows Icon color
+    ICON_MENU = Turbine.UI.Color(1, 0.843, 0.824, 0.769),
+    -- Line weight of the Lucide icons: "thin" (stroke 2) or "bold" (2.5).
+    ICON_WEIGHT = "bold",
+    -- menu icons (status bar, LUI Menu, window titles): the old game art
+    -- instead of the tinted Lucide set
+    ICON_MENU_LEGACY = false,
+    -- money coins (status bar, inventory): the game's coin art, or with
+    -- ICON_COINS_MODERN the Lucide coins in these colors
+    ICON_COIN_GOLD = Turbine.UI.Color(1, 0.96, 0.78, 0.26),
+    ICON_COIN_SILVER = Turbine.UI.Color(1, 0.80, 0.82, 0.85),
+    ICON_COIN_COPPER = Turbine.UI.Color(1, 0.82, 0.50, 0.30),
+    ICON_COINS_MODERN = false,
 
     WINDOW_WORK_AREA = function()
         local display_w, display_h = Turbine.UI.Display.GetSize()
@@ -172,9 +186,11 @@ local FALLBACKS = {
     DRAG_GHOST_FOREGROUND = "FOREGROUND",
     DRAG_PREVIEW_FILL = "DRAG_GHOST_FOREGROUND",
     DRAG_PREVIEW_EDGE = "DRAG_GHOST_FOREGROUND",
-    DROPDOWN_ARROW_HOVER = "DROPDOWN_ARROW",
-    DROPDOWN_ARROW_PRESSED = "DROPDOWN_ARROW_HOVER",
-    DROPDOWN_ARROW_DISABLED = "DROPDOWN_ARROW",
+    ICON_FOREGROUND = "CONTROL_FOREGROUND",
+    ICON_FOREGROUND_HOVER = "ICON_FOREGROUND",
+    ICON_MENU = "ICON_FOREGROUND",
+    ICON_FOREGROUND_PRESSED = "ICON_FOREGROUND_HOVER",
+    ICON_FOREGROUND_DISABLED = "CONTROL_FOREGROUND_DISABLED",
 }
 
 local function _style_override(style, key)
@@ -253,19 +269,8 @@ function Style.apply_embedded_button(button)
 end
 
 function Style.apply_dropdown_arrow(button, width, position)
-    if button == nil then
-        return
-    end
-
-    button:set_icon(
-        Style.DROPDOWN_ARROW,
-        Style.DROPDOWN_ARROW_HOVER,
-        Style.DROPDOWN_ARROW_PRESSED,
-        Style.DROPDOWN_ARROW_DISABLED,
-        width,
-        nil,
-        position
-    )
+    -- pre-scaled: dropdowns sit in scrolling settings pages
+    button:set_tinted_icon(Widgets.Icons.sized("dropdown_arrow"), width, nil, position)
 end
 
 Widgets.Style = Style

@@ -547,6 +547,7 @@ Turbine.Shell.WriteLine(string.format(
 
 Plugins["LUI"].Unload = function()
     Flags.is_unloading = true
+    Vitals.EffectsArea.hide_all_icons()
     Vitals.GroupRosterWatcher.uninstall()
     Vitals.RaidShareListener.uninstall()
     if Windows.raid_config ~= nil then
