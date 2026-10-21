@@ -20,8 +20,6 @@ own window_close x_64.tga sized
 own window_maximize maximize_64.tga
 own window_restore restore_64.tga
 
-lucide chevron_down chevron-down
-lucide chevron_up chevron-up
 lucide chevron_left chevron-left sized
 lucide chevron_right chevron-right sized
 lucide dropdown_arrow chevron-down zoom=1.5 sized
@@ -31,8 +29,6 @@ lucide chevron_up_small chevron-up zoom=2 sized
 lucide chevron_down_small chevron-down zoom=2 sized
 lucide chevron_left_small chevron-left zoom=2
 lucide chevron_right_small chevron-right zoom=2
-lucide plus plus
-lucide minus minus
 lucide check check sized
 lucide search search
 lucide resize_horizontal move-horizontal
@@ -42,7 +38,6 @@ lucide resize_tr_bl move-diagonal
 lucide star star
 lucide star_filled star filled sized
 lucide map_pinned map-pinned sized
-lucide x x
 lucide level chevrons-up sized
 # search keyword chips
 lucide tag tag sized

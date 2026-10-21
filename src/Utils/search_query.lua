@@ -600,9 +600,10 @@ function SearchQuery.split_chip(chip, token_keys)
     return key, value
 end
 
--- Same state shape as parse(), from chips: chips AND together (chip_groups
--- holds one group list per text chip, OR stays inside a chip); keyword
--- chips fill tokens / token_map (one per key: the last one wins).
+-- Same state shape as parse(), from chips. A text chip is its exact text
+-- (one term, matched as a phrase: no OR, quotes or keywords inside it) and
+-- chips AND together, so every text chip lands in one group; keyword chips
+-- fill tokens / token_map (one per key: the last one wins).
 function SearchQuery.parse_chips(chips, token_keys)
     if type(chips) ~= "table" then
         error("SearchQuery.parse_chips requires chips table")
@@ -610,40 +611,36 @@ function SearchQuery.parse_chips(chips, token_keys)
 
     local tokens = {}
     local token_map = {}
-    local chip_groups = {}
-    local text_groups = {}
-    local function set_token(key, value)
-        for index = #tokens, 1, -1 do
-            if tokens[index].key == key then
-                table.remove(tokens, index)
-            end
-        end
-        tokens[#tokens + 1] = { key = key, value = value }
-        token_map[key] = value
-    end
-
+    local terms = {}
     for index = 1, #chips do
         local key, value = SearchQuery.split_chip(chips[index], token_keys)
         if key ~= nil then
-            set_token(key, value)
+            for t = #tokens, 1, -1 do
+                if tokens[t].key == key then
+                    table.remove(tokens, t)
+                end
+            end
+            tokens[#tokens + 1] = { key = key, value = value }
+            token_map[key] = value
         else
-            local state = SearchQuery.parse(chips[index], token_keys)
-            for t = 1, #state.tokens do
-                set_token(state.tokens[t].key, state.tokens[t].value)
-            end
-            if #state.normalized_groups > 0 then
-                chip_groups[#chip_groups + 1] = state.normalized_groups
-            end
-            for g = 1, #state.text_groups do
-                text_groups[#text_groups + 1] = state.text_groups[g]
-            end
+            -- quotes can't be written back to a Classic query (serialize)
+            _push_term(terms, (string.gsub(chips[index], "\"", "")))
         end
     end
 
+    local text_groups = {}
+    if #terms > 0 then
+        text_groups[1] = terms
+    end
+    local normalized_groups = SearchQuery.normalize_groups(text_groups)
+    local chip_groups = {}
+    if #normalized_groups > 0 then
+        chip_groups[1] = normalized_groups
+    end
     return {
         raw = nil,
         text_groups = text_groups,
-        normalized_groups = SearchQuery.normalize_groups(text_groups),
+        normalized_groups = normalized_groups,
         chip_groups = chip_groups,
         tokens = tokens,
         token_map = token_map,
@@ -651,12 +648,20 @@ function SearchQuery.parse_chips(chips, token_keys)
 end
 
 -- query text -> chips (search mode switch, cross-window searches): one
--- chip per keyword token, the remaining text as one chip
+-- chip per term (a quoted phrase stays one) and per keyword token. Chips
+-- only AND, so "a|b" has no chip form: its alternatives become chips too
 function SearchQuery.query_to_chips(query, token_keys)
     local state = SearchQuery.parse(query, token_keys)
     local chips = {}
-    if #state.text_groups > 0 then
-        chips[1] = SearchQuery.serialize(state.text_groups, {}, token_keys)
+    local seen = {}
+    for g = 1, #state.text_groups do
+        local group = state.text_groups[g]
+        for t = 1, #group do
+            if seen[group[t]] ~= true then
+                seen[group[t]] = true
+                chips[#chips + 1] = group[t]
+            end
+        end
     end
     for index = 1, #state.tokens do
         chips[#chips + 1] = state.tokens[index].key .. ":" .. state.tokens[index].value
@@ -672,7 +677,11 @@ function SearchQuery.chips_to_query(chips, token_keys)
         if key ~= nil then
             parts[#parts + 1] = key .. ":" .. _serialize_token_value(value)
         else
-            parts[#parts + 1] = _trim_text(chips[index])
+            -- a chip with spaces is quoted, so Classic keeps it a phrase
+            local term = _serialize_term(chips[index], token_keys)
+            if term ~= nil then
+                parts[#parts + 1] = term
+            end
         end
     end
     return table.concat(parts, " ")

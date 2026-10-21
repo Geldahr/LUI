@@ -314,10 +314,6 @@ function TravelWindow:capture_geometry()
     window.tile = geometry.tile
 end
 
-function TravelWindow:persist_geometry()
-    self:capture_geometry()
-end
-
 function TravelWindow:_load_geometry()
     local window = Defaults.get_ui_window_state("travel")
     self:set_geometry(window)

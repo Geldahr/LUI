@@ -73,9 +73,17 @@ function CardWidgets.scaled_font(name, size)
     return font
 end
 
+-- "Verdana" in the card code stands for the control font chosen in
+-- settings; drawing and measuring both resolve through here
+function CardWidgets.font_name(font_name)
+    if font_name == "Verdana" then
+        return Style.CONTROL_FONT_NAME
+    end
+    return font_name
+end
+
 function CardWidgets.style_text(text, font_name, font_size, color)
-    local resolved_font_name = font_name == "Verdana" and Style.CONTROL_FONT_NAME or font_name
-    text:SetFont(CardWidgets.scaled_font(resolved_font_name, font_size))
+    text:SetFont(CardWidgets.scaled_font(CardWidgets.font_name(font_name), font_size))
     text:SetFontStyle(Turbine.UI.FontStyle.Outline)
     text:SetOutlineColor(Style.TEXT_OUTLINE)
     text:SetForeColor(color)
@@ -129,9 +137,9 @@ function CardWidgets.layout_panel(panel, x, y, w, h)
 end
 
 -- measured pixel width of `text` in `font_name` at the unscaled `size`
--- (the card fonts are scaled the same way, see CardWidgets.scaled_font)
+-- (the font and scaled size request style_text draws it with)
 function CardWidgets.measure_text(text, font_name, size)
-    return Utils.measure_text_width(text or "", font_name, CardWidgets.scaled_size(size))
+    return Utils.measure_text_width(text or "", CardWidgets.font_name(font_name), CardWidgets.scaled_size(size))
 end
 
 -- shared number/percent rendering for bestiary rows, cards and chips
@@ -178,9 +186,10 @@ end
 function CardWidgets.estimate_chip_width(text)
     local pad_x = CardWidgets.scaled_int(BASE.CHIP_PAD_X)
     local border_w = CardWidgets.scaled_int(BASE.CHIP_BORDER)
-    -- chips are drawn in Verdana TEXT_SIZE (DropChip:apply_settings); memoized
-    -- because card chip lists repeat the same item names; +2 for glyph edges
-    local text_w = Utils.cached_text_width(text or "", "Verdana", CardWidgets.scaled_size(BASE.TEXT_SIZE)) + 2
+    -- chips are drawn in the control font at TEXT_SIZE (DropChip:apply_settings
+    -- styles "Verdana"); memoized because card chip lists repeat the same
+    -- item names; +2 for glyph edges
+    local text_w = Utils.cached_text_width(text or "", Style.CONTROL_FONT_NAME, CardWidgets.scaled_size(BASE.TEXT_SIZE)) + 2
     return text_w + (2 * pad_x) + (2 * border_w)
 end
 

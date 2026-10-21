@@ -710,7 +710,8 @@ local function _build_drop_texts(record)
     return texts
 end
 
--- stat values and text areas are drawn in Verdana (see _style_text calls)
+-- stat values and text areas are styled "Verdana" (see _style_text calls):
+-- CW.measure_text resolves it to the control font they are drawn in
 local function _estimate_font_text_width(text, font_size)
     return CW.measure_text(text, "Verdana", font_size)
 end
@@ -760,8 +761,7 @@ local function _apply_scroll_label_style(area)
         return
     end
 
-    local font_name = area.font_name == "Verdana" and Style.CONTROL_FONT_NAME or area.font_name
-    area.label:SetFont(_scaled_font(font_name, area.font_size))
+    area.label:SetFont(_scaled_font(CW.font_name(area.font_name), area.font_size))
     area.label:SetFontStyle(Turbine.UI.FontStyle.Outline)
     area.label:SetOutlineColor(Style.TEXT_OUTLINE)
     area.label:SetForeColor(area.color)

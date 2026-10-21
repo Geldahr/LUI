@@ -42,8 +42,8 @@ local FILTER_RECIPES_CODE = -1
 local BrowserShared = Encyclopedia.BrowserShared
 local BASE_DROPDOWN_MAX_W = 190
 
-local function _dropdown_base_w(labels)
-    return BrowserShared.dropdown_base_w(labels, BASE_DROPDOWN_MAX_W)
+local function _dropdown_w(labels)
+    return BrowserShared.dropdown_w(labels, BASE_DROPDOWN_MAX_W)
 end
 
 local _scaled_font = BrowserShared.scaled_font
@@ -184,7 +184,6 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     end
     self.quality_dropdown:SetMappedOptions(quality_labels, quality_values)
     self._quality_labels, self._quality_values = quality_labels, quality_values
-    self._quality_dd_base_w = _dropdown_base_w(quality_labels)
     self.quality_dropdown.ValueChanged = function(_, value)
         self._quality_filter = tonumber(value) or FILTER_ALL_CODE
         self:_on_filters_changed()
@@ -197,7 +196,6 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
     local class_labels, class_values = self:_class_options()
     self.class_dropdown:SetMappedOptions(class_labels, class_values)
     self._class_labels, self._class_values = class_labels, class_values
-    self._class_dd_base_w = _dropdown_base_w(class_labels)
     self.class_dropdown.ValueChanged = function(_, value)
         self._class_filter = tonumber(value) or FILTER_ALL_CODE
         self:_on_filters_changed()
@@ -228,7 +226,6 @@ function ItemBrowserPanel:Constructor(bucket_name, popup_host)
         end
         self.pclass_dropdown:SetMappedOptions(pclass_labels, pclass_values)
         self._pclass_labels, self._pclass_values = pclass_labels, pclass_values
-        self._pclass_dd_base_w = _dropdown_base_w(pclass_labels)
         self.pclass_dropdown.ValueChanged = function(_, value)
             self._pclass_filter = tonumber(value) or FILTER_ALL_CODE
             self:_on_filters_changed()
@@ -512,7 +509,11 @@ function ItemBrowserPanel:apply_fonts()
     self.quality_dropdown:set_scale(State.settings.global.scale)
     self.class_dropdown:SetFont(font)
     self.class_dropdown:set_scale(State.settings.global.scale)
+    -- dropdown widths follow the rendered (snapped) font size
+    self._quality_dd_w = _dropdown_w(self._quality_labels)
+    self._class_dd_w = _dropdown_w(self._class_labels)
     if self.pclass_dropdown ~= nil then
+        self._pclass_dd_w = _dropdown_w(self._pclass_labels)
         self.pclass_label:SetFont(font)
         self.pclass_dropdown:SetFont(font)
         self.pclass_dropdown:set_scale(State.settings.global.scale)
@@ -971,8 +972,8 @@ function ItemBrowserPanel:layout()
     local margin_r = scaled_int(margins.right)
     local margin_b = scaled_int(margins.bottom)
     local level_w = scaled_int(BASE_LEVEL_W)
-    local quality_w = scaled_int(self._quality_dd_base_w)
-    local class_w = scaled_int(self._class_dd_base_w)
+    local quality_w = self._quality_dd_w
+    local class_w = self._class_dd_w
 
     -- row 1: Type / Rarity left, Level block flush right. Traceries swap
     -- the min-max range for two single-value inputs (Level and iLvl)
@@ -1002,7 +1003,7 @@ function ItemBrowserPanel:layout()
 
     if self.pclass_dropdown ~= nil then
         local pclass_label_w = scaled_int(46)
-        local pclass_w = scaled_int(self._pclass_dd_base_w)
+        local pclass_w = self._pclass_dd_w
         x = x + quality_w + (2 * gap)
         self.pclass_label:SetPosition(x, margin_t)
         self.pclass_label:SetSize(pclass_label_w, bar_h)

@@ -336,6 +336,19 @@ local function _apply_runtime_settings()
     Apply.cooldowns_settings()
     Apply.launcher_settings()
 
+    -- search bar mode (and scale) of the windows that already exist: Assets
+    -- is built at startup, Encyclopedia / Crafting once opened (a quick setup
+    -- started from the profile manager)
+    if Windows.assets ~= nil then
+        Windows.assets:apply_settings()
+    end
+    if Windows.encyclopedia ~= nil then
+        Windows.encyclopedia:apply_settings()
+    end
+    if Windows.crafting ~= nil then
+        Windows.crafting:apply_settings()
+    end
+
     if Windows.config ~= nil then
         Windows.config:apply_ui_scale()
         Windows.config:layout()

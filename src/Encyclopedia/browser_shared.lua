@@ -12,28 +12,49 @@ import "LUI.src.UI.Widgets.style"
 import "LUI.src.Utils.text_width"
 local Style = _G.LUI.UI.Widgets.Style
 local State = _G.LUI.Settings.State
+local scaled_int = _G.LUI.UI.NativeScaling.scaled_int
 local Encyclopedia = _G.LUI.Features.Encyclopedia
 
 local BrowserShared = {}
 Encyclopedia.BrowserShared = BrowserShared
 
 -- filter dropdowns size to their longest option: measured width in the
--- dropdown font (CONTROL_FONT_NAME, CONTROL_FONT_SIZE - 2, see the browsers'
--- apply_fonts) at scale 1 + arrow/padding, clamped; callers scale the result.
--- The max clamp is per-tab (quest categories run longer than item types).
-local BASE_DROPDOWN_PAD = 26
+-- dropdown font at the current scale (CONTROL_FONT_NAME, CONTROL_FONT_SIZE
+-- - 2, the request the browsers' apply_fonts make) + arrow/padding, clamped.
+-- The game snaps fonts to fixed sizes, so the text grows in steps, not
+-- linearly: "too long" is decided at scale 1 (longest label + padding over
+-- the per-tab max; quest categories run longer than item types): a label
+-- that fits there fits at every scale (snapped sizes grow each label by a
+-- different ratio), and a longer one keeps the share of its text the max
+-- shows at scale 1. Scale-dependent: the browsers recompute it in
+-- apply_fonts.
+local BASE_DROPDOWN_PAD = 28
 local BASE_DROPDOWN_MIN_W = 70
 
-function BrowserShared.dropdown_base_w(labels, base_max_w)
+function BrowserShared.dropdown_w(labels, base_max_w)
+    local base_size = Style.CONTROL_FONT_SIZE - 2
+    local size = base_size * State.settings.global.scale
+    local base_room = base_max_w - BASE_DROPDOWN_PAD
     local longest = 0
+    local longest_base = 0
+    local longest_fitting = 0
     for i = 1, #labels do
-        local n = Utils.measure_text_width(labels[i] or "", Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE - 2)
+        local n = Utils.measure_text_width(labels[i], Style.CONTROL_FONT_NAME, size)
+        local base_n = Utils.measure_text_width(labels[i], Style.CONTROL_FONT_NAME, base_size)
         if n > longest then
             longest = n
         end
+        if base_n > longest_base then
+            longest_base = base_n
+        end
+        if base_n <= base_room and n > longest_fitting then
+            longest_fitting = n
+        end
     end
-    local w = longest + 2 + BASE_DROPDOWN_PAD
-    return math.min(base_max_w, math.max(BASE_DROPDOWN_MIN_W, w))
+    if longest_base > base_room then
+        longest = math.max(longest_fitting, math.floor(longest * base_room / longest_base))
+    end
+    return math.max(scaled_int(BASE_DROPDOWN_MIN_W), longest + scaled_int(BASE_DROPDOWN_PAD))
 end
 
 function BrowserShared.scaled_font(name, size)

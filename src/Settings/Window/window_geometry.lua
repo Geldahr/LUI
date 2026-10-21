@@ -36,10 +36,6 @@ function ConfigWindow:update_saved_geometry()
     state.tile = geometry.tile
 end
 
-function ConfigWindow:persist_geometry()
-    self:update_saved_geometry()
-end
-
 function ConfigWindow:apply_saved_geometry()
     local default_width = _scaled_int(CONFIG_DEFAULT_WIDTH)
     local default_height = _scaled_int(CONFIG_DEFAULT_HEIGHT)

@@ -69,6 +69,9 @@ function SearchField:Constructor()
     self.tokens.Suggestions = function(_, text)
         return self:_suggestions(text)
     end
+    self.tokens.KeywordOf = function(_, text)
+        return self:_typed_keyword(text)
+    end
     self.tokens.TokensChanged = function()
         self:_fire_changed()
     end
@@ -240,6 +243,18 @@ function SearchField:_format_chip(token)
         return nil, token
     end
     return self._keyword_by_key[key].icon, value
+end
+
+-- TokenInput KeywordOf: the declared keyword `text` starts with, read as
+-- _suggestions reads it (set whenever values are listed, never over
+-- keyword names), and the chip value (nil when empty: "lvl:" is no chip)
+function SearchField:_typed_keyword(text)
+    local key = string.match(string.lower(_trim(text)), "^(%a+):")
+    if key == nil or self._keyword_by_key[key] == nil then
+        return nil, nil
+    end
+    local _, value = SearchQuery.split_chip(text, self._token_keys)
+    return key, value
 end
 
 function SearchField:_keyword_items(typed)

@@ -2474,7 +2474,8 @@ end
 
 -- crafting.search_mode. Entering Tokens mode (also when the window starts
 -- in it) turns the field values into chips (prof:mine / rank:mine for the
--- defaults) and sets the hidden fields to All, so they never filter unseen
+-- defaults) and sets the hidden fields to All (Materials to the default
+-- sources), so they never filter unseen
 function CraftingWindow:_apply_search_mode(mode)
     local switched = self.search_field:set_mode(mode)
     local entering = switched == true or self._search_mode_applied ~= true
@@ -2545,6 +2546,10 @@ function CraftingWindow:_fields_to_chips()
         add("mat", table.concat(picked, ","))
     end
 
+    -- the hidden Materials dropdown goes back to the default sources: the
+    -- mat: chip is the only scope filter, removing it restores the default
+    self._scope_before_query = nil
+    self:set_scope_sources(self.store:get_default_source_keys(), false)
     self.profession_filter = FILTER_ALL
     self.rank_filter = FILTER_ALL
     self.show_filter = {}
@@ -2725,7 +2730,15 @@ end
 function CraftingWindow:open_from_asset_materials(material_keyword)
     self.profession_filter = FILTER_ALL
     self.rank_filter = FILTER_ALL
-    self:set_scope_sources(self.store:get_all_source_keys(), false)
+    -- Classic shows All in the dropdown; Tokens keeps the hidden dropdown on
+    -- the default sources and carries All as the mat:all chip, so removing
+    -- the chip restores the default, not the forced All
+    self._scope_before_query = nil
+    if self.search_field:is_tokens() == true then
+        self:set_scope_sources(self.store:get_default_source_keys(), false)
+    else
+        self:set_scope_sources(self.store:get_all_source_keys(), false)
+    end
     -- Ready AND Known: the assets Recipes counter counts known craftable
     -- recipes, so the opened list must apply both axes or the full
     -- catalog's ready-but-unlearned recipes flood past the counted number
@@ -2852,10 +2865,6 @@ function CraftingWindow:capture_geometry()
     window.width = geometry.width
     window.height = geometry.height
     window.tile = geometry.tile
-end
-
-function CraftingWindow:persist_geometry()
-    self:capture_geometry()
 end
 
 function CraftingWindow:_minimum_window_size()

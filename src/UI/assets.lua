@@ -85,8 +85,6 @@ AssetIds.icons = {
     window_maximize = ICON_DIR .. "window_maximize_64.tga",
     window_restore = ICON_DIR .. "window_restore_64.tga",
 
-    chevron_down = lucide("chevron_down"),
-    chevron_up = lucide("chevron_up"),
     chevron_left = lucide_sized("chevron_left"),
     chevron_right = lucide_sized("chevron_right"),
     dropdown_arrow = lucide_sized("dropdown_arrow"),
@@ -95,8 +93,6 @@ AssetIds.icons = {
     chevron_down_small = lucide_sized("chevron_down_small"),
     chevron_left_small = lucide("chevron_left_small"),
     chevron_right_small = lucide("chevron_right_small"),
-    plus = lucide("plus"),
-    minus = lucide("minus"),
     check = lucide_sized("check"),
     search = lucide("search"),
     resize_horizontal = lucide("resize_horizontal"),
@@ -107,7 +103,6 @@ AssetIds.icons = {
     -- pre-scaled for the fav: keyword in the (scrolling) suggestion menu
     star_filled = lucide_sized("star_filled"),
     map_pinned = lucide_sized("map_pinned"),
-    x = lucide("x"),
     level = lucide_sized("level"),
 
     -- search keyword chips

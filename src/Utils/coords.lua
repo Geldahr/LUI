@@ -29,9 +29,10 @@ Utils.Coords = Utils.Coords or {}
 local Coords = Utils.Coords
 Coords.DATA = Utils.CoordsData
 
+-- nil when the /loc field was not found
 local function _parse_decimal(value)
-    if type(value) ~= "string" then
-        return tonumber(value)
+    if value == nil then
+        return nil
     end
 
     local normalized = value:gsub(",", ".")
@@ -39,10 +40,6 @@ local function _parse_decimal(value)
 end
 
 local function parse_loc(loc_text)
-    if type(loc_text) ~= "string" then
-        return nil, "loc_text must be a string"
-    end
-
     local normalized = " " .. string.lower(loc_text) .. " "
 
     local region_id = tonumber(normalized:match("[^%w]r%s*(%d+)"))
@@ -113,13 +110,9 @@ end
 
 local function find_deepest(node, ns, ew)
     local children = node.sub_zones
-    if type(children) ~= "table" then
-        return node
-    end
-
     for i = 1, #children do
         local child = children[i]
-        if type(child) == "table" and type(child.coords) == "table" and rect_contains_point(child.coords, ns, ew) then
+        if rect_contains_point(child.coords, ns, ew) then
             return find_deepest(child, ns, ew)
         end
     end
@@ -149,20 +142,11 @@ function Coords.loc_to_player_coords(loc_text)
     }
 end
 
-function Coords.get_best_zone(ns, ew)
-    return Coords.get_best_zone_in_region(1, ns, ew)
-end
-
 function Coords.get_best_zone_in_region(region_id, ns, ew)
-    local region = Coords.DATA[region_id]
-    if region == nil or region.zones == nil then
-        return nil
-    end
-
-    local zones = region.zones
+    local zones = Coords.DATA[region_id].zones
     for i = 1, #zones do
         local zone = zones[i]
-        if type(zone) == "table" and type(zone.coords) == "table" and rect_contains_point(zone.coords, ns, ew) then
+        if rect_contains_point(zone.coords, ns, ew) then
             return zone, find_deepest(zone, ns, ew)
         end
     end
@@ -172,10 +156,8 @@ end
 
 local function _node_names(node)
     local names = { node.name }
-    if type(node.aliases) == "table" then
-        for i = 1, #node.aliases do
-            names[#names + 1] = node.aliases[i]
-        end
+    for i = 1, #node.aliases do
+        names[#names + 1] = node.aliases[i]
     end
     return names
 end
@@ -189,13 +171,11 @@ local function _zone_names(zone, ns, ew)
     while node ~= nil do
         table.insert(path, 1, _node_names(node))
         local next_node = nil
-        if type(node.sub_zones) == "table" then
-            for i = 1, #node.sub_zones do
-                local child = node.sub_zones[i]
-                if type(child) == "table" and type(child.coords) == "table" and rect_contains_point(child.coords, ns, ew) then
-                    next_node = child
-                    break
-                end
+        for i = 1, #node.sub_zones do
+            local child = node.sub_zones[i]
+            if rect_contains_point(child.coords, ns, ew) then
+                next_node = child
+                break
             end
         end
         node = next_node
@@ -211,13 +191,11 @@ local function _all_zone_paths(zone, ns, ew, above, out)
         chain[#chain + 1] = above[i]
     end
     local deeper = false
-    if type(zone.sub_zones) == "table" then
-        for i = 1, #zone.sub_zones do
-            local child = zone.sub_zones[i]
-            if type(child) == "table" and type(child.coords) == "table" and rect_contains_point(child.coords, ns, ew) then
-                deeper = true
-                _all_zone_paths(child, ns, ew, chain, out)
-            end
+    for i = 1, #zone.sub_zones do
+        local child = zone.sub_zones[i]
+        if rect_contains_point(child.coords, ns, ew) then
+            deeper = true
+            _all_zone_paths(child, ns, ew, chain, out)
         end
     end
     if deeper ~= true then
@@ -228,13 +206,10 @@ end
 
 function Coords.get_zones_in_region(region_id, ns, ew)
     local out = {}
-    local region = Coords.DATA[region_id]
-    if region == nil or region.zones == nil then
-        return out
-    end
-    for i = 1, #region.zones do
-        local zone = region.zones[i]
-        if type(zone) == "table" and type(zone.coords) == "table" and rect_contains_point(zone.coords, ns, ew) then
+    local zones = Coords.DATA[region_id].zones
+    for i = 1, #zones do
+        local zone = zones[i]
+        if rect_contains_point(zone.coords, ns, ew) then
             out[#out + 1] = zone
         end
     end
@@ -268,19 +243,7 @@ function Coords.get_zone_from_loc(loc_text)
     }
 end
 
-function Coords.get_zone_name_from_loc(loc_text)
-    local result, err = Coords.get_zone_from_loc(loc_text)
-    if result == nil then
-        return nil, nil, err
-    end
-    return result.zone, result.sub_zone, nil
-end
-
 function Coords.resolve_location_from_chat(loc_text)
-    return Coords.resolve_location_from_loc(loc_text)
-end
-
-function Coords.resolve_location_from_loc(loc_text)
     local result, err = Coords.get_zone_from_loc(loc_text)
     if result == nil then
         return nil, err

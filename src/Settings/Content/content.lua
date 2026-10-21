@@ -823,6 +823,10 @@ function ConfigContent:layout()
             end
 
             local h = field.height or custom_default_h
+            -- optional hook: entries whose height follows the width (wrapped text)
+            if field.measure_height ~= nil then
+                h = field:measure_height(inner_width)
+            end
             if type(h) ~= "number" then
                 h = custom_default_h
             end

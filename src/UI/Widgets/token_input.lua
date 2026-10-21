@@ -17,11 +17,16 @@
 --       from, to: character range of `text` that `value` replaces; text
 --       after `to` is kept. No range = the whole text; no `to` = to the end.
 --   FormatToken(sender, token)      -> icon_name_or_nil, label
--- Clicking a chip puts its text back in the field for editing (Enter adds
--- it again). Chips that do not fit scroll (mouse wheel) behind "< +N" / "> +N" markers;
--- clicking a marker lists the hidden chips. The suggestion list opens when
+--   KeywordOf(sender, text)         -> key of the keyword `text` starts
+--       with (nil for plain text), and its value (nil when empty)
+-- Double-clicking a chip puts its text back in the field for editing (Enter
+-- adds it again). The bar shows the newest chips; older ones that do not
+-- fit hide behind a "< +N" marker, which lists them on click. The suggestion list opens when
 -- typing, on a click in the empty field, on Down, or on double-click;
--- Up/Down move, Enter or a click picks; Enter with no list adds the token.
+-- Up/Down move, Enter or a click picks the highlighted entry. Only a
+-- keyword's values start highlighted: over plain text, Enter adds the
+-- typed text (Down first to pick a keyword). A keyword with no value
+-- ("lvl:") is no token: Enter keeps it in the field.
 
 local LUI = _G.LUI
 local UI = LUI.UI
@@ -35,6 +40,7 @@ import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.menu"
+import "LUI.src.UI.Widgets.tooltip"
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.Utils.font"
 import "LUI.src.Utils.text_width"
@@ -46,6 +52,7 @@ local Image = Widgets.Image
 local LuiLabel = Widgets.LuiLabel
 local LuiButton = Widgets.LuiButton
 local LuiMenu = Widgets.LuiMenu
+local LuiTooltip = Widgets.LuiTooltip
 local FONT_TO_LOTRO = Utils.FONT_TO_LOTRO
 local measure_text_width = Utils.measure_text_width
 
@@ -53,25 +60,29 @@ local measure_text_width = Utils.measure_text_width
 local TokenInput = class(Turbine.UI.Control)
 Widgets.TokenInput = TokenInput
 
--- base sizes (scaled): COMPACT matches the 22px search / filter rows, LARGE
--- is a roomier 30px bar; both even so the 1px border leaves an even inner
+-- base sizes (scaled): COMPACT matches the 22px search / filter rows; even
+-- so the 1px border leaves an even inner
 TokenInput.COMPACT = {
     bar = 22, chip = 17, gap = 4, chip_pad = 5, lead = 13, lead_x = 5, lead_w = 22,
     marker_w = 30, marker_icon = 10, chip_icon = 11, chip_icon_w = 15,
     close_btn = 13, close_icon = 7, close_w = 16, clear_btn = 19, clear_icon = 10, clear_w = 24,
     text_h = 17, font = 0, edge = 4,
 }
-TokenInput.LARGE = {
-    bar = 30, chip = 22, gap = 5, chip_pad = 6, lead = 16, lead_x = 7, lead_w = 28,
-    marker_w = 34, marker_icon = 12, chip_icon = 14, chip_icon_w = 18,
-    close_btn = 16, close_icon = 9, close_w = 20, clear_btn = 24, clear_icon = 12, clear_w = 32,
-    text_h = 20, font = 1, edge = 6,
-}
 
 local MIN_TEXT_W = 100
+-- widest chip (a long label ends with ELLIPSIS), so a chip never takes
+-- the text box's room on a usual bar
+local MAX_CHIP_W = 220
+local ELLIPSIS = "..."
+-- one UTF-8 character (as the text measuring)
+local UTF8_CHAR = "[%z\1-\127\194-\244][\128-\191]*"
 -- key actions a focused TextBox receives (measured in game)
 local ACTION_UP = 29
 local ACTION_DOWN = 113
+-- Enter (EnterChatMode): arrives as KeyDown on a single-line TextBox only;
+-- the client then enters chat mode, so the box takes the focus back on the
+-- next frame
+local ACTION_ENTER = 162
 
 local function _set_alpha_blend(control)
     control:SetBlendMode(Turbine.UI.BlendMode.AlphaBlend)
@@ -130,28 +141,38 @@ function TokenInput:Constructor()
     self.TokensChanged = nil
     self.Suggestions = nil
     self.FormatToken = nil
+    self.KeywordOf = nil
 
     self._scale = 1
     self._variant = TokenInput.COMPACT
     self._width = 200
-    self._tokens = {} -- { text, icon, label, width }
+    -- { text, icon, label, full_label, cut, label_w, width, chip, chip_w }:
+    -- chip is the bar's control, built on first show and kept until the
+    -- token goes
+    self._tokens = {}
+    -- full label of a cut chip on hover, created on the first one
+    self._chip_hint = nil
     self._lead_icon = nil
     self._placeholder = ""
     self._host = nil
 
-    self._first_visible = nil -- nil = follow the newest token
+    -- first chip shown in the bar (the newest ones); the older ones are
+    -- behind the marker
     self._shown_first = 1
-    self._hidden = { left = {}, right = {} }
-    self._chip_controls = {}
-    self._overflow_side = nil
+    -- marker width, measured for this token count
+    self._marker_w = nil
+    self._marker_count = nil
     self._overflow_chips = {}
     self._suggest_from = nil
     self._suggest_to = nil
+    -- entries the suggestion menu shows (compared on each refresh)
+    self._suggest_entries = nil
     self._completed_text = nil
     -- true while the widget sets the field text itself (no TextChanged work)
     self._setting_text = false
     self._overflow_open = false
     self._pending_refresh = false
+    self._pending_focus = false
 
     self._inner = Turbine.UI.Control()
     self._inner:SetParent(self)
@@ -163,16 +184,14 @@ function TokenInput:Constructor()
     self._lead:SetParent(self)
     self._lead:SetVisible(false)
 
-    self._chip_layer = Turbine.UI.Control()
-    self._chip_layer:SetParent(self)
-    self._chip_layer:SetMouseVisible(false)
-
-    self._left_marker = self:_make_marker("chevron_left", "left")
-    self._right_marker = self:_make_marker("chevron_right", "right")
+    self._marker = self:_make_marker("chevron_left")
 
     self._text_box = Turbine.UI.TextBox()
     self._text_box:SetParent(self)
     _set_alpha_blend(self._text_box)
+    -- one line: long text scrolls with the caret instead of wrapping onto a
+    -- hidden second line (Enter comes through KeyDown, ACTION_ENTER)
+    self._text_box:SetMultiline(false)
     self._text_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
 
     self._placeholder_label = LuiLabel()
@@ -232,28 +251,20 @@ end
 function TokenInput:set_scale(scale)
     self._scale = scale
     self._menu:set_scale(scale)
-    self:_remeasure_tokens()
-    self:_apply_style()
-    self:_layout()
-end
-
--- TokenInput.COMPACT or TokenInput.LARGE
-function TokenInput:set_variant(variant)
-    self._variant = variant
+    if self._chip_hint ~= nil then
+        self._chip_hint:set_scale(scale)
+    end
     self:_remeasure_tokens()
     self:_apply_style()
     self:_layout()
 end
 
 -- the height follows the variant and scale (always even); only the width
--- is taken from the caller
+-- is taken from the caller. Window resizes call this every frame: the
+-- chips are only moved (see _layout)
 function TokenInput:SetSize(w, _)
     self._width = w
-    self:_layout()
-end
-
-function TokenInput:SetWidth(w)
-    self:SetSize(w)
+    self:_layout(true)
 end
 
 function TokenInput:get_height()
@@ -292,11 +303,11 @@ end
 
 -- replaces all tokens; fires TokensChanged only when fire_event is true
 function TokenInput:set_tokens(texts, fire_event)
+    self:_discard_chips()
     self._tokens = {}
     for i = 1, #texts do
         self._tokens[i] = self:_make_token(texts[i])
     end
-    self._first_visible = nil
     self:_layout()
     if fire_event == true then
         self:_fire_changed()
@@ -305,13 +316,12 @@ end
 
 function TokenInput:add_token(text)
     self._tokens[#self._tokens + 1] = self:_make_token(text)
-    self._first_visible = nil
     self:_layout()
     self:_fire_changed()
 end
 
 function TokenInput:remove_token(index)
-    table.remove(self._tokens, index)
+    self:_drop_token(index)
     self:_layout()
     self:_fire_changed()
 end
@@ -320,7 +330,7 @@ end
 -- removed (TokensChanged) and Enter adds the edited text again
 function TokenInput:edit_token(index)
     local text = self._tokens[index].text
-    table.remove(self._tokens, index)
+    self:_drop_token(index)
     self:_close_lists()
     self:_set_field_text(text)
     self._text_box:Focus()
@@ -330,8 +340,8 @@ function TokenInput:edit_token(index)
 end
 
 function TokenInput:clear()
+    self:_discard_chips()
     self._tokens = {}
-    self._first_visible = nil
     self._completed_text = nil
     self:_close_lists()
     self:_set_field_text("")
@@ -345,6 +355,7 @@ end
 
 function TokenInput:destroy()
     self:_close_lists()
+    self:_hide_chip_hint()
     self:SetWantsUpdates(false)
     _discard(self._click_away)
     _discard(self._overflow)
@@ -376,30 +387,97 @@ function TokenInput:_font(size)
     return font
 end
 
+-- measured width of a chip label (the font the game draws at this
+-- scale), +2 for glyph edges
+function TokenInput:_label_width(label)
+    return measure_text_width(label, Style.CONTROL_FONT_NAME, self:_small_font_size() * self._scale) + 2
+end
+
+-- `label` cut to the characters that fit `max_w` with ELLIPSIS after them
+function TokenInput:_ellipsize(label, max_w)
+    local size = self:_small_font_size() * self._scale
+    local room = max_w - measure_text_width(ELLIPSIS, Style.CONTROL_FONT_NAME, size)
+    local used = 0
+    local cut = 0
+    for position, ch in string.gmatch(label, "()(" .. UTF8_CHAR .. ")") do
+        used = used + measure_text_width(ch, Style.CONTROL_FONT_NAME, size)
+        if used > room then
+            break
+        end
+        cut = position + string.len(ch) - 1
+    end
+    return _trim(string.sub(label, 1, cut)) .. ELLIPSIS
+end
+
 -- formatted once per token (and again on scale/variant/formatter change),
--- so layouts never re-measure
+-- so layouts never re-measure. A label too long for MAX_CHIP_W ends with
+-- ELLIPSIS.
 function TokenInput:_make_token(text)
     local icon, label = nil, text
     if type(self.FormatToken) == "function" then
         icon, label = self:FormatToken(text)
     end
     local v = self._variant
-    -- measured advances of the chip label font, +2 for glyph edges
-    local text_w = measure_text_width(label, Style.CONTROL_FONT_NAME, self:_small_font_size() * self._scale) + 2
+    local text_w = self:_label_width(label)
     local icon_w = icon ~= nil and self:_s(v.chip_icon_w) or 0
+    local frame_w = self:_s(v.chip_pad) + icon_w + self:_s(v.close_w)
+    local max_label_w = self:_s(MAX_CHIP_W) - frame_w
+    local full_label = label
+    local cut = text_w > max_label_w
+    if cut == true then
+        label = self:_ellipsize(label, max_label_w - 2)
+        text_w = self:_label_width(label)
+    end
     return {
         text = text,
         icon = icon,
         label = label,
+        full_label = full_label,
+        cut = cut,
         label_w = text_w,
-        width = self:_s(v.chip_pad) + icon_w + text_w + self:_s(v.close_w),
+        width = frame_w + text_w,
+        chip = nil,
+        chip_w = nil,
     }
 end
 
 function TokenInput:_remeasure_tokens()
+    self:_discard_chips()
     for i = 1, #self._tokens do
         self._tokens[i] = self:_make_token(self._tokens[i].text)
     end
+end
+
+-- the bar chips are rebuilt on the next layout (tokens replaced, or
+-- remeasured for a new scale / formatter)
+function TokenInput:_discard_chips()
+    self:_hide_chip_hint()
+    for i = 1, #self._tokens do
+        local token = self._tokens[i]
+        if token.chip ~= nil then
+            _discard(token.chip)
+            token.chip = nil
+        end
+    end
+end
+
+function TokenInput:_drop_token(index)
+    self:_hide_chip_hint()
+    local token = self._tokens[index]
+    if token.chip ~= nil then
+        _discard(token.chip)
+    end
+    table.remove(self._tokens, index)
+end
+
+-- current index of a token (chips keep their token, indexes shift)
+function TokenInput:_token_index(token)
+    for i = 1, #self._tokens do
+        if self._tokens[i] == token then
+            return i
+        end
+    end
+    error("TokenInput: token is not in the bar")
 end
 
 ---------------------------------------------------------------------
@@ -456,7 +534,7 @@ function TokenInput:_flat_button(parent, x, y, size, icon_size)
     return button
 end
 
-function TokenInput:_make_marker(icon_name, side)
+function TokenInput:_make_marker(icon_name)
     local marker = Turbine.UI.Control()
     marker:SetParent(self)
     marker:SetMouseVisible(true)
@@ -464,7 +542,6 @@ function TokenInput:_make_marker(icon_name, side)
     marker:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     marker:SetVisible(false)
     marker._icon_name = icon_name
-    marker._side = side
     marker.MouseEnter = function()
         marker._hover = true
         self:_paint_marker(marker)
@@ -474,15 +551,11 @@ function TokenInput:_make_marker(icon_name, side)
         self:_paint_marker(marker)
     end
     marker.MouseClick = function()
-        if self._overflow_side == side then
-            self._overflow_side = nil
+        if self._overflow_open == true then
+            self:_close_overflow()
         else
-            self._overflow_side = side
+            self:_refresh_overflow()
         end
-        self:_refresh_overflow()
-    end
-    marker.MouseWheel = function(_, args)
-        self:_on_wheel(args)
     end
     return marker
 end
@@ -508,7 +581,7 @@ function TokenInput:_build_marker_content(marker)
 end
 
 -- marker width: room for "+N" of the largest possible count (every token
--- hidden on one side), so the count is never cut
+-- hidden), so the count is never cut
 function TokenInput:_marker_width()
     local icon_x = self:_s(5) + _fit(self:_s(self._variant.marker_icon), self:_chip_height())
     local text_w = measure_text_width("+" .. tostring(#self._tokens), Style.CONTROL_FONT_NAME,
@@ -524,7 +597,7 @@ function TokenInput:_size_marker(marker, w)
 end
 
 function TokenInput:_paint_marker(marker)
-    if self._overflow_side == marker._side then
+    if self._overflow_open == true then
         marker:SetBackColor(Style.CONTROL_BACKGROUND_ACTIVE)
     elseif marker._hover == true then
         marker:SetBackColor(Style.CONTROL_BACKGROUND_HOVER)
@@ -563,20 +636,19 @@ function TokenInput:_apply_style()
     self._clear:set_tinted_icon(Icons.path(Icons.CLEAR), v.clear_icon)
     Style.apply_transparent_button(self._clear)
 
-    self:_build_marker_content(self._left_marker)
-    self:_build_marker_content(self._right_marker)
+    self:_build_marker_content(self._marker)
+    -- the rebuilt markers are sized again by the next layout
+    self._marker_count = nil
 end
 
-function TokenInput:_make_chip(index, parent, x, y, full_width)
-    local token = self._tokens[index]
+-- a chip `w` wide; the bar's chips are kept by their token and only
+-- resized (_size_chip) while the bar resizes
+function TokenInput:_make_chip(token, parent, w)
     local v = self._variant
     local chip_h = self:_chip_height()
-    local w = full_width or token.width
 
     local chip = Turbine.UI.Control()
     chip:SetParent(parent)
-    chip:SetPosition(x, y)
-    chip:SetSize(w, chip_h)
     _set_alpha_blend(chip)
     chip:SetBackColor(Style.CONTROL_BACKGROUND)
 
@@ -586,24 +658,64 @@ function TokenInput:_make_chip(index, parent, x, y, full_width)
         self:_icon(chip, token.icon, icon_size, tx, (chip_h - icon_size) / 2)
         tx = tx + self:_s(v.chip_icon_w)
     end
-    self:_label(chip, token.label, tx, 0, token.label_w, chip_h, Style.CONTROL_FOREGROUND)
+    chip._label_x = tx
+    chip._label = self:_label(chip, token.label, tx, 0, token.label_w, chip_h, Style.CONTROL_FOREGROUND)
 
-    local close = _fit(self:_s(v.close_btn), chip_h)
-    local remove = self:_flat_button(chip, w - close - self:_s(3), (chip_h - close) / 2, close, v.close_icon)
-    remove.Click = function()
-        self:remove_token(index)
+    chip._close = _fit(self:_s(v.close_btn), chip_h)
+    chip._remove = self:_flat_button(chip, 0, (chip_h - chip._close) / 2, chip._close, v.close_icon)
+    chip._remove.Click = function()
+        self:remove_token(self:_token_index(token))
     end
+    -- a single click only focuses the field: one that misses the X must
+    -- not take the chip apart
     chip.MouseClick = function()
-        self:edit_token(index)
+        self._text_box:Focus()
     end
-    if parent == self._chip_layer then
-        local wheel = function(_, args)
-            self:_on_wheel(args)
+    chip.MouseDoubleClick = function()
+        self:edit_token(self:_token_index(token))
+    end
+    -- a cut chip (ellipsis, or a bar too narrow for it) shows its full
+    -- label on hover
+    chip.MouseEnter = function()
+        if token.cut == true or chip:GetWidth() < token.width then
+            self:_show_chip_hint(chip, token.full_label)
         end
-        chip.MouseWheel = wheel
-        remove.MouseWheel = wheel
     end
+    chip.MouseLeave = function()
+        self:_hide_chip_hint()
+    end
+    self:_size_chip(chip, w)
     return chip
+end
+
+function TokenInput:_show_chip_hint(chip, text)
+    if self._chip_hint == nil then
+        self._chip_hint = LuiTooltip()
+        self._chip_hint:set_scale(self._scale)
+        -- above the overflow list (3000), whose chips show it too
+        self._chip_hint:SetZOrder(3100)
+    end
+    -- the chip font (set each time: the scale may have changed)
+    self._chip_hint:SetFont(self:_font(self:_small_font_size()))
+    self._chip_hint:ShowFor(chip, text)
+    -- Update hides it when the bar's window closes under the mouse
+    self:_sync_updates()
+end
+
+function TokenInput:_hide_chip_hint()
+    if self._chip_hint ~= nil and self._chip_hint:IsVisible() == true then
+        self._chip_hint:Hide()
+        self:_sync_updates()
+    end
+end
+
+-- the close button stays at the right edge; a chip cut below its width
+-- (a bar too narrow for it) clips its label
+function TokenInput:_size_chip(chip, w)
+    local chip_h = self:_chip_height()
+    chip:SetSize(w, chip_h)
+    chip._label:SetSize(math.max(0, w - chip._label_x - self:_s(self._variant.close_w)), chip_h)
+    chip._remove:SetPosition(w - chip._close - self:_s(3), (chip_h - chip._close) / 2)
 end
 
 ---------------------------------------------------------------------
@@ -626,23 +738,25 @@ function TokenInput:_fit_from(first, space)
     return last
 end
 
-function TokenInput:_layout()
+-- resized: only the width changed (SetSize), no token did: an open
+-- overflow list is rebuilt only when the hidden chips change. Per frame
+-- during window resizes: chips are kept, moved and resized, never rebuilt
+-- or measured.
+function TokenInput:_layout(resized)
     local v = self._variant
     local w = self._width
     local h = self:_bar_height()
     Turbine.UI.Control.SetSize(self, w, h)
     self._inner:SetSize(math.max(0, w - 2), h - 2)
-    self._chip_layer:SetSize(w, h)
-
-    for i = 1, #self._chip_controls do
-        _discard(self._chip_controls[i])
-    end
-    self._chip_controls = {}
 
     local gap = self:_s(v.gap)
-    local marker_w = self:_marker_width()
-    self:_size_marker(self._left_marker, marker_w)
-    self:_size_marker(self._right_marker, marker_w)
+    local count = #self._tokens
+    if self._marker_count ~= count then
+        self._marker_count = count
+        self._marker_w = self:_marker_width()
+        self:_size_marker(self._marker, self._marker_w)
+    end
+    local marker_w = self._marker_w
     local chip_h = self:_chip_height()
     local chip_y = (h - chip_h) / 2
     local chips_x = self._lead_icon ~= nil and self:_s(v.lead_w) or self:_s(v.edge)
@@ -653,52 +767,53 @@ function TokenInput:_layout()
     if has_content == true then
         clear_w = self:_s(v.clear_w)
     end
-    local count = #self._tokens
 
+    -- the text box keeps MIN_TEXT_W: a chip wider than the room left (a
+    -- narrow bar) is cut to it
     local space = w - chips_x - clear_w - self:_s(MIN_TEXT_W)
+    local limit = space
     local first = 1
-    local last = self:_fit_from(1, space)
-    if last < count then
-        -- not everything fits: room for both markers, then pick the window
-        local window_space = space - (2 * (marker_w + gap))
-        if self._first_visible == nil then
-            first = count
-            local total = self._tokens[first].width
-            while first > 1 and total + gap + self._tokens[first - 1].width <= window_space do
-                first = first - 1
-                total = total + gap + self._tokens[first].width
-            end
-        else
-            first = math.max(1, math.min(self._first_visible, count))
+    if self:_fit_from(1, space) < count then
+        -- not everything fits: the newest chips that fill the room after
+        -- the marker (the newest one always shows, cut on a narrow bar)
+        limit = space - marker_w - gap
+        first = count
+        local total = self._tokens[first].width
+        while first > 1 and total + gap + self._tokens[first - 1].width <= limit do
+            first = first - 1
+            total = total + gap + self._tokens[first].width
         end
-        last = self:_fit_from(first, window_space)
     end
+    limit = math.max(limit, self:_s(v.chip_pad) + self:_s(v.close_w))
+    local range_changed = first ~= self._shown_first
     self._shown_first = first
 
     local x = chips_x
-    self._left_marker:SetVisible(first > 1)
+    self._marker:SetVisible(first > 1)
     if first > 1 then
-        self._left_marker:SetPosition(x, chip_y)
-        self._left_marker._label:SetText("+" .. tostring(first - 1))
+        self._marker:SetPosition(x, chip_y)
+        self:_set_marker_count(self._marker, first - 1)
         x = x + marker_w + gap
     end
-    for i = first, last do
-        self._chip_controls[#self._chip_controls + 1] = self:_make_chip(i, self._chip_layer, x, chip_y)
-        x = x + self._tokens[i].width + gap
-    end
-    self._hidden.left = {}
-    for i = 1, first - 1 do
-        self._hidden.left[#self._hidden.left + 1] = i
-    end
-    self._hidden.right = {}
-    for i = last + 1, count do
-        self._hidden.right[#self._hidden.right + 1] = i
-    end
-    self._right_marker:SetVisible(last < count)
-    if last < count then
-        self._right_marker:SetPosition(x, chip_y)
-        self._right_marker._label:SetText("+" .. tostring(count - last))
-        x = x + marker_w
+    for i = 1, count do
+        local token = self._tokens[i]
+        if i >= first then
+            local chip_w = math.min(token.width, limit)
+            if token.chip == nil then
+                -- on the bar itself: a chip under a mouse-invisible parent
+                -- gets clicks but no hover (MouseEnter / MouseLeave)
+                token.chip = self:_make_chip(token, self, chip_w)
+                token.chip_w = chip_w
+            elseif token.chip_w ~= chip_w then
+                self:_size_chip(token.chip, chip_w)
+                token.chip_w = chip_w
+            end
+            token.chip:SetPosition(x, chip_y)
+            token.chip:SetVisible(true)
+            x = x + chip_w + gap
+        elseif token.chip ~= nil then
+            token.chip:SetVisible(false)
+        end
     end
 
     local tx = x + self:_s(2)
@@ -712,8 +827,16 @@ function TokenInput:_layout()
     local clear_size = self._clear:GetWidth()
     self._clear:SetPosition(w - clear_size - self:_s(4), (h - clear_size) / 2)
 
-    if self._overflow_side ~= nil then
+    if self._overflow_open == true and (resized ~= true or range_changed == true) then
         self:_refresh_overflow()
+    end
+end
+
+-- "+N" written only when N changes (layouts run per resize frame)
+function TokenInput:_set_marker_count(marker, n)
+    if marker._count ~= n then
+        marker._count = n
+        marker._label:SetText("+" .. tostring(n))
     end
 end
 
@@ -725,12 +848,14 @@ function TokenInput:_sync_placeholder()
     self._placeholder_label:SetVisible(#self._tokens == 0 and (self._text_box:GetText() or "") == "")
 end
 
-function TokenInput:_on_wheel(args)
-    if #self._hidden.left == 0 and #self._hidden.right == 0 then
-        return
+-- the clear X and the placeholder follow the content; for every content
+-- change, typed or not (a pick, Enter)
+function TokenInput:_sync_content()
+    if self:_has_content() ~= self._clear:IsVisible() then
+        self:_layout(true)
+    else
+        self:_sync_placeholder()
     end
-    self._first_visible = math.max(1, math.min(self._shown_first - args.Direction, #self._tokens))
-    self:_layout()
 end
 
 ---------------------------------------------------------------------
@@ -741,7 +866,9 @@ end
 -- while a list is open, closing it once the bar is no longer on screen
 -- (window hidden by Escape, tab switched, global UI hide...)
 function TokenInput:_sync_updates()
-    self:SetWantsUpdates(self._pending_refresh == true or self._menu:is_open() == true or self._overflow_open == true)
+    self:SetWantsUpdates(self._pending_refresh == true or self._pending_focus == true
+        or self._menu:is_open() == true or self._overflow_open == true
+        or (self._chip_hint ~= nil and self._chip_hint:IsVisible() == true))
 end
 
 function TokenInput:_sync_click_away()
@@ -765,6 +892,7 @@ end
 -- hidden first: a control detached while visible keeps drawing at the
 -- screen's top-left
 function TokenInput:_clear_overflow_rows()
+    self:_hide_chip_hint()
     for i = 1, #self._overflow_chips do
         self._overflow_chips[i]:SetVisible(false)
     end
@@ -774,18 +902,19 @@ end
 
 function TokenInput:_close_overflow()
     self:_clear_overflow_rows()
-    self._overflow_side = nil
     self._overflow:SetVisible(false)
     self._overflow_open = false
     self:_sync_click_away()
-    self:_paint_marker(self._left_marker)
-    self:_paint_marker(self._right_marker)
+    self:_paint_marker(self._marker)
 end
 
 function TokenInput:_refresh_overflow()
-    local side = self._overflow_side
-    local indexes = side ~= nil and self._hidden[side] or {}
-    if side == nil or #indexes == 0 then
+    -- the chips behind the marker
+    local indexes = {}
+    for i = 1, self._shown_first - 1 do
+        indexes[#indexes + 1] = i
+    end
+    if #indexes == 0 then
         self:_close_overflow()
         return
     end
@@ -803,8 +932,8 @@ function TokenInput:_refresh_overflow()
     for k = 1, #indexes do
         local row = Turbine.UI.Control()
         row:SetSize(width, row_h)
-        row:SetMouseVisible(false)
-        self:_make_chip(indexes[k], row, 0, 0, width)
+        -- mouse-visible: the chip's hover (full label hint) needs it
+        self:_make_chip(self._tokens[indexes[k]], row, width)
         self._overflow_list:AddItem(row)
         self._overflow_chips[k] = row
     end
@@ -823,16 +952,14 @@ function TokenInput:_refresh_overflow()
     self._overflow_scroll:SetSize(scroll_w, inner_h)
     self._overflow_inner:SetSize(inner_w, inner_h)
     self._overflow:SetSize(inner_w + 2, inner_h + 2)
-    local marker = side == "left" and self._left_marker or self._right_marker
-    local sx, sy = marker:PointToScreen(0, chip_h + self:_s(6))
+    local sx, sy = self._marker:PointToScreen(0, chip_h + self:_s(6))
     self._overflow:SetPosition(sx, sy)
     self._overflow:SetVisible(true)
     self._overflow_open = true
     -- the list is a fixed screen window: close it once the bar moves
     self._overflow_screen_x, self._overflow_screen_y = self:PointToScreen(0, 0)
     self:_sync_click_away()
-    self:_paint_marker(self._left_marker)
-    self:_paint_marker(self._right_marker)
+    self:_paint_marker(self._marker)
 end
 
 function TokenInput:_close_suggest()
@@ -840,14 +967,55 @@ function TokenInput:_close_suggest()
     self:_sync_updates()
 end
 
-function TokenInput:_open_suggest(entries, from, to)
-    self._menu:clear_items()
+-- same rows: the pick callbacks only read value and final
+local function _same_entries(a, b)
+    if a == nil or #a ~= #b then
+        return false
+    end
+    for i = 1, #b do
+        local x, y = a[i], b[i]
+        if x.text ~= y.text or x.hint ~= y.hint or x.icon ~= y.icon
+            or x.value ~= y.value or x.final ~= y.final then
+            return false
+        end
+    end
+    return true
+end
+
+-- key and value of the keyword `text` starts with (KeywordOf); nil, nil
+-- for plain text
+function TokenInput:_typed_keyword(text)
+    if type(self.KeywordOf) ~= "function" then
+        return nil, nil
+    end
+    return self:KeywordOf(text)
+end
+
+-- a keyword's values start on the first one (Enter picks it); keyword
+-- names over plain text start with none, so Enter adds the typed text
+-- and Down reaches the list
+function TokenInput:_default_highlight(text)
+    if self:_typed_keyword(text) ~= nil then
+        self._menu:set_highlight(1)
+    else
+        self._menu:clear_highlight()
+    end
+end
+
+-- runs on every keystroke: an open list with the same entries is kept as
+-- is, other entries are written into the menu's existing rows
+function TokenInput:_open_suggest(text, entries, from, to)
     if #entries == 0 then
-        self:_sync_updates()
+        self:_close_suggest()
         return
     end
     self._suggest_from = from
     self._suggest_to = to
+    if self._menu:is_open() == true and _same_entries(self._suggest_entries, entries) then
+        self:_default_highlight(text)
+        return
+    end
+    self._suggest_entries = entries
     local specs = {}
     for _, entry in ipairs(entries) do
         local icon = nil
@@ -865,8 +1033,11 @@ function TokenInput:_open_suggest(entries, from, to)
             end,
         }
     end
-    self._menu:add_actions(specs)
-    self._menu:open_below(self._text_box)
+    self._menu:set_actions(specs)
+    if self._menu:is_open() ~= true then
+        self._menu:open_below(self._text_box)
+    end
+    self:_default_highlight(text)
     self:_sync_updates()
 end
 
@@ -882,7 +1053,8 @@ function TokenInput:_refresh_suggest(requested)
         self:_close_suggest()
         return
     end
-    self:_open_suggest(self:Suggestions(text))
+    local entries, from, to = self:Suggestions(text)
+    self:_open_suggest(text, entries, from, to)
 end
 
 -- a pick happens inside a row click (or the Enter TextChanged), where
@@ -920,7 +1092,7 @@ function TokenInput:_pick(entry, text)
     self:_set_field_text(value)
     self._text_box:Focus()
     self._text_box:SetSelection(caret, 0)
-    self._placeholder_label:SetVisible(false)
+    self:_sync_content()
     self:_refresh_suggest_later()
 end
 
@@ -928,14 +1100,30 @@ end
 -- Private: events
 ---------------------------------------------------------------------
 
-function TokenInput:_wire_events()
-    local wheel = function(_, args)
-        self:_on_wheel(args)
+-- Enter: picks the highlighted suggestion, else adds the typed text as a
+-- token ("lvl:" alone stays in the field to type the value)
+function TokenInput:_submit()
+    local current = self._text_box:GetText() or ""
+    local value = _trim(current)
+    if self._menu:is_open() == true and self._menu:trigger_highlight() == true then
+        return
     end
-    self.MouseWheel = wheel
-    self._text_box.MouseWheel = wheel
-    self._clear.MouseWheel = wheel
+    local key, keyword_value = self:_typed_keyword(value)
+    if key ~= nil and keyword_value == nil then
+        self._text_box:SetSelection(string.len(current) + 1, 0)
+        return
+    end
+    self:_set_field_text("")
+    self:_close_suggest()
+    self._completed_text = nil
+    if value ~= "" then
+        self:add_token(value)
+    else
+        self:_layout()
+    end
+end
 
+function TokenInput:_wire_events()
     local open_on_request = function()
         self._text_box:Focus()
         self:_refresh_suggest(true)
@@ -955,12 +1143,22 @@ function TokenInput:_wire_events()
     self._text_box.MouseDoubleClick = open_on_request
 
     self.Update = function()
+        if self._pending_focus == true then
+            -- after Enter: the client moved the focus to the chat
+            self._pending_focus = false
+            if self:IsDisplayed() == true then
+                self._text_box:Focus()
+            end
+        end
         if self._pending_refresh == true then
             self._pending_refresh = false
             self:_refresh_suggest()
         end
-        if (self._menu:is_open() == true or self._overflow_open == true) and self:IsDisplayed() ~= true then
-            self:_close_lists()
+        if self:IsDisplayed() ~= true then
+            if self._menu:is_open() == true or self._overflow_open == true then
+                self:_close_lists()
+            end
+            self:_hide_chip_hint()
         elseif self._overflow_open == true then
             local x, y = self:PointToScreen(0, 0)
             if x ~= self._overflow_screen_x or y ~= self._overflow_screen_y then
@@ -972,6 +1170,16 @@ function TokenInput:_wire_events()
 
     self._text_box:SetWantsKeyEvents(true)
     self._text_box.KeyDown = function(_, args)
+        -- key events reach every control that wants them, focused or not
+        if self._text_box:HasFocus() ~= true then
+            return
+        end
+        if args.Action == ACTION_ENTER then
+            self:_submit()
+            self._pending_focus = true
+            self:_sync_updates()
+            return
+        end
         if self._menu:is_open() ~= true then
             -- Down opens the list (empty field included)
             if args.Action == ACTION_DOWN then
@@ -992,31 +1200,11 @@ function TokenInput:_wire_events()
         end
         local text = self._text_box:GetText() or ""
         if string.find(text, "\n", 1, true) ~= nil then
-            local value = _trim(string.gsub(text, "\n", ""))
-            -- Enter with an open list picks the highlighted entry
-            if self._menu:is_open() == true then
-                -- the field text without the newline Enter inserted, then
-                -- the highlighted suggestion is picked from it
-                local current = string.gsub(text, "\n", "")
-                self:_set_field_text(current)
-                self._menu:trigger_highlight()
-                return
-            end
-            self:_set_field_text("")
-            self:_close_suggest()
-            self._completed_text = nil
-            if value ~= "" then
-                self:add_token(value)
-            else
-                self:_layout()
-            end
+            -- a pasted line break: the field is one line (Enter is KeyDown)
+            self:_set_field_text((string.gsub(text, "\n", "")))
             return
         end
-        if self:_has_content() ~= self._clear:IsVisible() then
-            self:_layout()
-        else
-            self:_sync_placeholder()
-        end
+        self:_sync_content()
         self:_refresh_suggest()
     end
 end

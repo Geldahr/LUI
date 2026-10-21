@@ -9,6 +9,7 @@ import "Turbine.UI"
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.style"
+import "LUI.src.Utils.text_width"
 
 local Widgets = _G.LUI.UI.Widgets
 local LuiBaseWindow = Widgets.LuiBaseWindow
@@ -16,10 +17,9 @@ local LuiLabel = Widgets.LuiLabel
 local Style = Widgets.Style
 local BASE_PADDING_X = 6
 local BASE_PADDING_Y = 4
+local Utils = _G.LUI.Utils
 local BASE_MAX_WIDTH = 311
-local BASE_MIN_HEIGHT = 44
 local BASE_MAX_HEIGHT = 178
-local BASE_LINE_HEIGHT = 12
 local BASE_OFFSET = 1
 local BASE_SCREEN_MARGIN = 4
 local BASE_Z_ORDER = 2000
@@ -32,14 +32,6 @@ local function _scaled_int(scale, value)
     return math.floor(_scaled_size(scale, value) + 0.5)
 end
 
-local function _line_count(text)
-    local count = 1
-    for _ in tostring(text or ""):gmatch("\n") do
-        count = count + 1
-    end
-    return count
-end
-
 ---@class LuiTooltip : LuiBaseWindow
 local LuiTooltip = class(LuiBaseWindow)
 Widgets.LuiTooltip = LuiTooltip
@@ -50,6 +42,8 @@ function LuiTooltip:Constructor()
     self._scale = 1
     self._anchor = nil
     self._text = nil
+    -- the label's font object: ShowFor measures the text with it
+    self._font = nil
 
     self:SetVisible(false)
     self:SetMouseVisible(false)
@@ -137,6 +131,7 @@ function LuiTooltip:SetFont(font)
     if font == nil then
         return
     end
+    self._font = font
     self._label:SetFont(font)
 end
 
@@ -153,24 +148,24 @@ function LuiTooltip:ShowFor(control, text)
     self._anchor = control
     self._text = text
 
-    local max_width = math.max(1, _scaled_int(self._scale, BASE_MAX_WIDTH))
-    local min_height = math.max(1, _scaled_int(self._scale, BASE_MIN_HEIGHT))
-    local max_height = math.max(min_height, _scaled_int(self._scale, BASE_MAX_HEIGHT))
-    local line_height = math.max(1, _scaled_int(self._scale, BASE_LINE_HEIGHT))
-    local pad_y = self:_padding_y()
-    local border = self:_border()
-    local height_extra = _scaled_int(self._scale, 7)
-    local desired_height = math.min(
-        max_height,
-        math.max(min_height, (_line_count(text) * line_height) + (pad_y * 2) + (border * 2) + height_extra)
-    )
+    -- sized to the text: wrapped as the label wraps it (inside its width),
+    -- as wide as its widest line up to the max, one font size per line
+    local frame_x = 2 * (self:_border() + self:_padding_x())
+    local frame_y = 2 * (self:_border() + self:_padding_y())
+    local inset = _scaled_int(self._scale, Utils.LABEL_WRAP_INSET)
+    local max_label_w = _scaled_int(self._scale, BASE_MAX_WIDTH) - frame_x
+    local lines, widest = Utils.wrap_text(text, max_label_w - inset, Utils.font_object_char_widths(self._font))
+    -- +2: glyph edges
+    local width = math.min(max_label_w, widest + inset + 2) + frame_x
+    local height = math.min(_scaled_int(self._scale, BASE_MAX_HEIGHT),
+        lines * Utils.font_object_size(self._font) + frame_y)
 
     self:_sync_style()
     self._label:SetText(text)
     self._label:SetVisible(true)
-    self:SetSize(max_width, desired_height)
-    self:_layout(max_width, desired_height)
-    self:_position_for(control, max_width, desired_height)
+    self:SetSize(width, height)
+    self:_layout(width, height)
+    self:_position_for(control, width, height)
     self:SetVisible(true)
 end
 

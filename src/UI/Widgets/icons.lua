@@ -18,8 +18,10 @@ Widgets.Icons = Icons
 
 Icons.WEIGHTS = { "thin", "bold" }
 
--- icon of every clear button (search bars, TokenInput); "x" switches them
--- all to the Lucide X
+-- icon of every clear button (search bars, TokenInput); must be a sized icon:
+-- the chip remove buttons draw it pre-scaled (they are also listed in the
+-- scrolling overflow popup). Another shape needs a `sized` line in
+-- tools/icons/icons.txt and a sized entry in assets.lua first
 Icons.CLEAR = "window_close"
 
 -- the icon of a name of UI.AssetIds.icons in the current line weight (Lucide

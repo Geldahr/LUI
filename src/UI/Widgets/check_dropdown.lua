@@ -59,6 +59,8 @@ function LuiCheckDropdown:Constructor()
     self._enabled = true
     self._popup_host = nil
     self._popup_overlay = nil
+    self._host_overlay = nil
+    self._host_overlay_parent = nil
     self._labels = {}
     self._values = {}
     self._selected = {}
@@ -345,34 +347,54 @@ function LuiCheckDropdown:Open()
 
     if self._popup_host ~= nil then
         local host = self._popup_host
-        local overlay = Turbine.UI.Control()
-        overlay:SetParent(host)
+        -- one overlay per dropdown, not one per open: a hidden control
+        -- stays parented to the host
+        local overlay = self._host_overlay
+        if overlay == nil then
+            overlay = self:_make_host_overlay()
+        end
+        if self._host_overlay_parent ~= host then
+            -- hidden first: a control moved while shown draws at the
+            -- screen's top-left
+            overlay:SetVisible(false)
+            overlay:SetParent(host)
+            self._host_overlay_parent = host
+        end
         local ox, oy, ow, oh = Widgets.popup_catcher_rect(host)
         overlay:SetPosition(ox, oy)
         overlay:SetSize(ow, oh)
-        overlay:SetMouseVisible(true)
-        overlay:SetZOrder(9999)
         overlay:SetVisible(true)
-        overlay.MouseDown = function(_, args)
-            local cx = args ~= nil and args.X or nil
-            local cy = args ~= nil and args.Y or nil
-            if type(cx) == "number" and type(cy) == "number" then
-                -- click is in overlay coordinates
-                local over_sx, over_sy = overlay:PointToScreen(0, 0)
-                local popup_x, popup_y = self.popup:GetPosition()
-                local rel_x = popup_x - over_sx
-                local rel_y = popup_y - over_sy
-                local popup_w, popup_h = self.popup:GetSize()
-                if cx >= rel_x and cx <= (rel_x + popup_w) and cy >= rel_y and cy <= (rel_y + popup_h) then
-                    return
-                end
-            end
-            self:Close()
-        end
         self._popup_overlay = overlay
     end
 
     self.popup:SetVisible(true)
+end
+
+-- the host's click-away overlay: a click outside the popup closes it
+function LuiCheckDropdown:_make_host_overlay()
+    local overlay = Turbine.UI.Control()
+    overlay:SetVisible(false)
+    overlay:SetMouseVisible(true)
+    overlay:SetZOrder(9999)
+    overlay.MouseDown = function(_, args)
+        local cx = args ~= nil and args.X or nil
+        local cy = args ~= nil and args.Y or nil
+        if type(cx) == "number" and type(cy) == "number" then
+            -- click is in overlay coordinates
+            local over_sx, over_sy = overlay:PointToScreen(0, 0)
+            local popup_x, popup_y = self.popup:GetPosition()
+            local rel_x = popup_x - over_sx
+            local rel_y = popup_y - over_sy
+            local popup_w, popup_h = self.popup:GetSize()
+            if cx >= rel_x and cx <= (rel_x + popup_w) and cy >= rel_y and cy <= (rel_y + popup_h) then
+                return
+            end
+        end
+        self:Close()
+    end
+
+    self._host_overlay = overlay
+    return overlay
 end
 
 function LuiCheckDropdown:Toggle()

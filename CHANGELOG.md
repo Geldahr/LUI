@@ -4,37 +4,51 @@
 
 ### Added
 
-- New `Tokens` search mode for the `Encyclopedia` (every tab), `Crafting` and `Assets` search bars, chosen per window with the new `Search bar` setting in each one's settings (default `Classic`). Enter turns the typed text into a chip, the search runs only when chips change, and clicking a chip puts it back for editing. Keyword chips such as `loc:`, `type:`, `rar:`, `prof:` or `owner:` show an icon and suggest their values as you type (`loc:` lists regions, then their areas). In this mode the chips replace the filter dropdowns and level boxes.
-- New search keywords, also usable as typed text in `Classic` mode: `type:`, `rar:` and `lvl:` on the item tabs (plus `class:` and `ilvl:` on `Traceries`), `cat:` and `lvl:` on `Quests` and `Deeds`, and `mat:` in `Crafting` to pick the material sources.
-- Every search bar now has a clear `X` inside it, shown only while there is something to clear. It replaces the separate `Clear` buttons.
-- New `Global > UI` settings for icons: `Icon line weight` (thin or bold), `Legacy menu icons`, `Modern coin icons`, and icon colors on `Colors > Icons` (normal, hover, pressed, disabled, accent, `Menu icons color` and the gold, silver and copper coin colors).
+- New `Tokens` search mode for the `Encyclopedia`, `Crafting` and `Assets` search bars, chosen per window with the new `Search bar` setting (default `Classic`).
+- In `Tokens` mode, Enter turns the typed text into a chip, and the search runs only when chips change.
+- Double-clicking a chip puts it back in the field for editing.
+- A chip matches its exact text and every chip must match, so one chip per word finds words in any order.
+- Keyword chips such as `loc:`, `type:`, `rar:`, `prof:` or `owner:` show an icon and suggest their values as you type.
+- In `Tokens` mode, the chips replace the filter dropdowns and level boxes.
+- New search keywords, in both modes: `type:`, `rar:` and `lvl:` on item tabs, `class:` and `ilvl:` on `Traceries`, `cat:` and `lvl:` on `Quests` and `Deeds`, `mat:` in `Crafting`.
+- `loc:` accepts several places separated by `|`.
+- `loc:` now finds instance creatures, such as `loc:The Icy Crevasse`.
+- Every search bar has a clear `X` inside it, shown only when there is something to clear; it replaces the separate `Clear` buttons.
+- New `Global > UI` icon settings: `Icon line weight` (thin or bold), `Legacy menu icons` and `Modern coin icons`.
+- New icon colors on `Colors > Icons`: normal, hover, pressed, disabled, accent, menu icons, and the gold, silver and copper coins.
 - The `LUI Configuration` window now shows an icon in its title bar.
-- Instance creatures can now be found by location: `loc:` lists every instance, such as `loc:The Icy Crevasse`.
-- The quick setup now asks which search bar you prefer (`Classic` or `Tokens`, for `Encyclopedia`, `Crafting` and `Assets`) and which menu icons (`Modern` or `Legacy`), with a preview of each answer.
+- The quick setup now asks which search bar (`Classic` or `Tokens`) and which menu icons (`Modern` or `Legacy`) you prefer, with a preview.
 
 ### Changed
 
-- The item, quest, NPC and skill databases were refreshed from the current game data, picking up the content of the latest game update (about 400 new items, 122 quests and deeds, 62 NPCs and 23 skills), in all three languages.
-- LUI's icons were redrawn as one tinted set based on Lucide icons (credited on the `About` page): dropdown and menu arrows, check marks, spin box, pager and tab arrows, the `Crafting` favorite star, the `Bestiary` location button, the resize cursors, the menu icons on the status bar, the LUI Menu and window titles, and the status bar inventory (backpack) and durability (hammer) icons, drawn in the text color or, with the new `Colored icon` option (on by default), in the bag space and wear colors. The gold, silver and copper coins of the status bar and the inventory keep the game's art; tick `Modern coin icons` for tinted Lucide coins, with their own colors on `Colors > Icons`. Icons built into controls (check marks, dropdown and menu arrows, spin box, pager and tab arrows, search bar icons, window title buttons) and the `Crafting` bestiary book in its lists are drawn from pre-scaled images, so they no longer draw outside a list when it scrolls. Tick `Legacy menu icons` to keep the previous menu artwork.
+- The item, quest, NPC and skill databases were refreshed for the latest game update (about 400 items, 122 quests and deeds, 62 NPCs, 23 skills).
+- LUI's icons were redrawn as one tinted set based on Lucide (credited on the `About` page); tick `Legacy menu icons` to keep the old menu artwork.
+- The status bar backpack and durability icons take the bag space and wear colors, with the new `Colored icon` option (on by default).
+- Coins keep the game's art; tick `Modern coin icons` for tinted Lucide coins.
+- Icons inside controls and lists are drawn from pre-scaled images, so they no longer draw outside a list when it scrolls.
 - Text widths are now measured from the game's real fonts, so labels, chips and columns no longer clip or leave uneven gaps.
 - Search bars stay on one line: long text scrolls sideways with the cursor instead of wrapping.
 - The `Bestiary` search in `Classic` mode waits for 2 characters before filtering, like the item tabs.
-- Menus, dropdowns and color pickers no longer block a window's title bar: you can drag, close or maximize the window while one is open, and it closes instead of staying behind.
+- Menus, dropdowns and color pickers no longer block a window's title bar, so you can drag, close or maximize the window while one is open.
 - The `Assets` `Recipes` button passes only the search text to `Crafting`, not the `owner:` and `store:` filters.
-- Effect icons on the vitals frames are much cheaper to update when many effects change at once, as on a raid boss: a changed effect no longer re-sorts and re-measures the whole icon row each time, and icons that shrink to fit are resized instead of being rebuilt.
-- The target frame, boss frame, `Target Expiring Effects` window and `Upkeep` slots set to `Target` now share a single effect tracker per target, instead of each tracking the same target separately.
+- Effect icons on the vitals frames are much cheaper to update when many effects change at once, as on a raid boss.
+- The target frame, boss frame, `Target Expiring Effects` window and `Upkeep` target slots now share one effect tracker per target.
 
 ### Fixed
 
-- The `Bestiary` location button now finds the creatures of far more places, on every client. It previously filtered on the zone name as given, so a zone the bestiary files as an area (`Wildwood` for `Bree-land > The Wildwood`), as an instance, or under a slightly different spelling showed no creatures, and on French and German clients most zones failed. Typed `loc:` and `gen:` values also ignore case and a leading article (`Angle of Mitheithel` finds `The Angle of Mitheithel`), and places with no known creatures leave the search unchanged instead of emptying it. Where map zones overlap, the button now searches every zone containing your position (for example `loc:"Bree-land | The Great River"`), so it shows more rather than missing the place you are in; `loc:` accepts several places separated by `|`.
+- The `Bestiary` location button now finds the creatures of far more places, on every client language.
+- Where map zones overlap, the location button searches every zone containing your position.
+- Typed `loc:` and `gen:` values ignore case and a leading article (`Angle of Mitheithel` finds `The Angle of Mitheithel`).
+- A place with no known creatures now leaves the search unchanged instead of emptying it.
 - A dropdown no longer stays on screen after its window is closed.
 - Effect icons on the vitals frames no longer stay in the top-left corner of the screen after the plugin is reloaded.
-- Disabling target vitals now really stops the target frame: it previously kept tracking the target's effects and building their icons behind the hidden frame. The `Target Expiring Effects` window keeps working on its own, and with every target feature off nothing tracks the target at all.
+- Disabling target vitals now really stops the target frame, which kept tracking the target's effects while hidden.
 - A boss is no longer tracked twice, once by the boss frame and once by the hidden target frame.
+- About 80 labels still in English on French and German clients are now translated (`Crafting`, `Travel`, `LUI Menu`, group vitals settings).
 
 ### Removed
 
-- Removed the `Use native LotRO UI scaling` option from `Global` settings. It had no effect since game Update 49.6; LUI keeps using its own UI scale.
+- Removed the `Use native LotRO UI scaling` option from `Global` settings: it had no effect since game Update 49.6.
 
 ## v2.3.1
 

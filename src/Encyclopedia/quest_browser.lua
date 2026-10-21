@@ -34,8 +34,8 @@ local FILTER_ALL_CODE = 0
 local BrowserShared = Encyclopedia.BrowserShared
 local BASE_DROPDOWN_MAX_W = 220
 
-local function _dropdown_base_w(labels)
-    return BrowserShared.dropdown_base_w(labels, BASE_DROPDOWN_MAX_W)
+local function _dropdown_w(labels)
+    return BrowserShared.dropdown_w(labels, BASE_DROPDOWN_MAX_W)
 end
 
 local _scaled_font = BrowserShared.scaled_font
@@ -106,7 +106,6 @@ function QuestBrowserPanel:Constructor(kind, popup_host)
     local category_labels, category_values = self:_category_options()
     self.category_dropdown:SetMappedOptions(category_labels, category_values)
     self._category_labels, self._category_values = category_labels, category_values
-    self._category_dd_base_w = _dropdown_base_w(category_labels)
     self.category_dropdown.ValueChanged = function(_, value)
         self._category_filter = tonumber(value) or FILTER_ALL_CODE
         self:_on_filters_changed()
@@ -266,6 +265,8 @@ function QuestBrowserPanel:apply_fonts()
     self.category_label:SetFont(font)
     self.category_dropdown:SetFont(font)
     self.category_dropdown:set_scale(State.settings.global.scale)
+    -- dropdown width follows the rendered (snapped) font size
+    self._category_dd_w = _dropdown_w(self._category_labels)
     self.table:set_header_font(font)
     for slot = 1, #self._table_cells do
         local cells = self._table_cells[slot]
@@ -506,7 +507,7 @@ function QuestBrowserPanel:layout()
     local margin_b = scaled_int(margins.bottom)
     local inner_w = width - margin_l - margin_r
     local level_w = scaled_int(BASE_LEVEL_W)
-    local category_w = scaled_int(self._category_dd_base_w)
+    local category_w = self._category_dd_w
 
     -- row 1: Category left, Level range flush right
     local category_label_w = scaled_int(64)

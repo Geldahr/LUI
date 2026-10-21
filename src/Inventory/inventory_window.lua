@@ -338,10 +338,6 @@ function InventoryWindow:capture_geometry()
     window_state.tile = geometry.tile
 end
 
-function InventoryWindow:persist_geometry()
-    self:capture_geometry()
-end
-
 function InventoryWindow:get_needed_rows(cols)
     local c = cols
     if type(c) ~= "number" then

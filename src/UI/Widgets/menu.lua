@@ -93,12 +93,11 @@ function LuiAction:Constructor()
     self._checkable = false
     self._checked = false
     self._enabled = true
-    self._hover = false
     self._submenu_open = false
     self._owner_menu = nil
     self._submenu = nil
     self._hint = nil
-    -- keyboard / hover highlight, set by the owning menu
+    -- the one lit row: hover and keyboard both move it (owning menu)
     self._highlighted = false
     self._font = _scaled_font(self._scale)
 
@@ -140,20 +139,13 @@ function LuiAction:Constructor()
     self._hint_label:SetFont(self._font)
     self._hint_label:SetVisible(false)
 
+    -- hover moves the menu's highlight (no separate hover look: a hovered
+    -- row and a keyboard-highlighted row would both light up)
     self.MouseEnter = function()
         if self._enabled ~= true then
             return
         end
-        self._hover = true
-        self:_update_visual_state()
-        if self._owner_menu ~= nil then
-            self._owner_menu:_action_hovered(self)
-        end
-    end
-
-    self.MouseLeave = function()
-        self._hover = false
-        self:_update_visual_state()
+        self._owner_menu:_action_hovered(self)
     end
 
     self.MouseClick = function(_, args)
@@ -256,6 +248,29 @@ function LuiAction:set_enabled(enabled)
     self:_update_visual_state()
 end
 
+-- rewrites a reused row with a spec (as add_action builds a fresh one);
+-- the owning menu lays it out
+function LuiAction:_apply_spec(spec)
+    self:set_text(spec.text or spec.title)
+    self._checkable = spec.checkable == true
+    if self._checkable == true then
+        self._icon_asset = nil
+        self._icon_tinted = false
+    else
+        self._icon_asset = spec.icon
+        self._icon_tinted = spec.icon_tinted == true
+    end
+    self._checked = spec.checked == true
+    self._enabled = spec.enabled ~= false
+    self:SetMouseVisible(self._enabled)
+    self._hint = spec.hint
+    self._hint_label:SetText(spec.hint or "")
+    self._hint_label:SetVisible(spec.hint ~= nil)
+    self._highlighted = false
+    self:set_triggered(spec.triggered or spec.action)
+    self:_update_visual_state()
+end
+
 function LuiAction:set_action(callback)
     self._callback = type(callback) == "function" and callback or nil
 end
@@ -355,7 +370,7 @@ function LuiAction:_update_visual_state()
         back = Style.CONTROL_BACKGROUND_DISABLED
         text = Style.CONTROL_FOREGROUND_DISABLED
         icon = Style.ICON_FOREGROUND_DISABLED
-    elseif self._hover == true or self._highlighted == true or self._submenu_open == true then
+    elseif self._highlighted == true or self._submenu_open == true then
         back = Style.CONTROL_BACKGROUND_HOVER
         text = Style.CONTROL_FOREGROUND_HOVER
         icon = Style.ICON_FOREGROUND_HOVER
@@ -447,6 +462,12 @@ function LuiMenu:Constructor()
     self._parent_action = nil
     self._open_child = nil
     self._popup_overlay = nil
+    -- click-away overlays, created on the first open and reused after
+    self._host_overlay = nil
+    self._host_overlay_parent = nil
+    self._screen_overlay = nil
+    -- detached rows set_actions keeps for a later longer list
+    self._spare_actions = {}
     self._scroll_enabled = false
     self._max_visible = DEFAULT_MAX_VISIBLE
     self._scroll_options = nil
@@ -566,6 +587,9 @@ function LuiMenu:set_scale(scale)
             submenu:set_scale(self._scale)
         end
     end
+    for i = 1, #self._spare_actions do
+        self._spare_actions[i]:set_scale(self._scale)
+    end
 end
 
 function LuiMenu:set_font(font)
@@ -576,6 +600,9 @@ function LuiMenu:set_font(font)
     self.button:set_font(font)
     for i = 1, #self._items do
         self._items[i]:set_font(font)
+    end
+    for i = 1, #self._spare_actions do
+        self._spare_actions[i]:set_font(font)
     end
 end
 
@@ -600,6 +627,56 @@ function LuiMenu:add_actions(specs)
     end
     self._batch_adding = false
     self:_layout_popup()
+end
+
+-- Replaces the items with one action per spec (add_action specs), reusing
+-- the existing rows: suggestion lists are rewritten on every keystroke.
+-- Flat action menus only (no separators, no submenus). An open popup is
+-- laid out and placed again; a closed one is laid out by open().
+function LuiMenu:set_actions(specs)
+    local items = self._items
+    local spare = self._spare_actions
+    local scroll = self._scroll_enabled == true
+    self:_set_highlight_item(nil)
+    -- surplus rows are hidden before they are detached: a control detached
+    -- while visible keeps drawing at the screen's top-left
+    for i = #items, #specs + 1, -1 do
+        local action = items[i]
+        action:SetVisible(false)
+        if scroll == true then
+            self.popup_list:RemoveItemAt(i)
+        else
+            action:SetParent(nil)
+        end
+        items[i] = nil
+        spare[#spare + 1] = action
+    end
+    for i = 1, #specs do
+        local action = items[i]
+        if action == nil then
+            action = spare[#spare]
+            if action ~= nil then
+                spare[#spare] = nil
+            else
+                action = LuiAction()
+                action:_set_owner_menu(self)
+                action:set_scale(self._scale)
+                action:set_font(self._font)
+            end
+            if scroll == true then
+                self.popup_list:AddItem(action)
+            else
+                action:SetParent(self.popup_inner)
+            end
+            action:SetVisible(true)
+            items[i] = action
+        end
+        action:_apply_spec(specs[i])
+    end
+    if self:is_open() == true then
+        self:_layout_popup()
+        self:_position_popup()
+    end
 end
 
 function LuiMenu:add_action(spec)
@@ -665,6 +742,11 @@ end
 
 function LuiMenu:clear_items()
     self:close()
+    -- hidden first: a control detached while visible keeps drawing at the
+    -- screen's top-left
+    for i = 1, #self._items do
+        self._items[i]:SetVisible(false)
+    end
     self.popup_list:ClearItems()
     for i = 1, #self._items do
         local action = self._items[i]
@@ -724,15 +806,14 @@ end
 
 -- Open under `control` (any control inside the host window), without taking
 -- the keyboard focus: the control keeps receiving key input (autocomplete).
--- Dismissal uses the host-window overlay. The first action is highlighted.
+-- Dismissal uses the host-window overlay. Nothing is highlighted: the
+-- caller decides (set_highlight).
 function LuiMenu:open_below(control)
     self._anchor = control
     self:open()
     if self:is_open() ~= true then
         self._anchor = nil
-        return
     end
-    self:set_highlight(1)
 end
 
 local function _is_action(item)
@@ -752,6 +833,10 @@ function LuiMenu:set_highlight(index)
         end
     end
     self:_set_highlight_item(target, true)
+end
+
+function LuiMenu:clear_highlight()
+    self:_set_highlight_item(nil)
 end
 
 -- reveal: scroll mode scrolls the row into view (list index = item index,
@@ -821,6 +906,10 @@ function LuiMenu:close()
     self._context_x = nil
     self._context_y = nil
     self._anchor = nil
+    -- a reopened menu starts unlit (the mouse may have left a row while
+    -- the popup closed)
+    self:_set_highlight_item(nil)
+    -- the overlay stays attached, hidden, for the next open
     if self._popup_overlay ~= nil then
         self._popup_overlay:SetVisible(false)
         self._popup_overlay = nil
@@ -915,16 +1004,19 @@ function LuiMenu:_open_host_overlay()
     -- would only dismiss on clicks over the host itself. Like the native
     -- context menu, the dismissing click is swallowed.
     if self._context_x ~= nil then
-        local overlay = Turbine.UI.Window()
-        local display_w, display_h = Turbine.UI.Display.GetSize()
-        overlay:SetPosition(0, 0)
-        overlay:SetSize(display_w, display_h)
-        overlay:SetMouseVisible(true)
-        overlay:SetZOrder(3090)
-        overlay:SetVisible(true)
-        overlay.MouseDown = function()
-            self:close()
+        local overlay = self._screen_overlay
+        if overlay == nil then
+            overlay = Turbine.UI.Window()
+            overlay:SetPosition(0, 0)
+            overlay:SetMouseVisible(true)
+            overlay:SetZOrder(3090)
+            overlay.MouseDown = function()
+                self:close()
+            end
+            self._screen_overlay = overlay
         end
+        overlay:SetSize(Turbine.UI.Display.GetSize())
+        overlay:SetVisible(true)
         self._popup_overlay = overlay
         return
     end
@@ -934,8 +1026,17 @@ function LuiMenu:_open_host_overlay()
         return
     end
 
-    local overlay = Turbine.UI.Control()
-    overlay:SetParent(host)
+    -- one overlay per menu, not one per open: a hidden control stays
+    -- parented to the host (the suggestion menu opens on every keystroke)
+    local overlay = self._host_overlay
+    if overlay == nil then
+        overlay = self:_make_host_overlay()
+    end
+    if self._host_overlay_parent ~= host then
+        -- still hidden here: safe to move between hosts
+        overlay:SetParent(host)
+        self._host_overlay_parent = host
+    end
     if self._in_menu_bar ~= true then
         -- in-content menus leave the title bar usable (close, maximize,
         -- drag); LuiWindow closes the menu when it moves or resizes
@@ -946,9 +1047,15 @@ function LuiMenu:_open_host_overlay()
         overlay:SetPosition(0, 0)
         overlay:SetSize(host:GetWidth(), host:GetHeight())
     end
+    overlay:SetVisible(true)
+    self._popup_overlay = overlay
+end
+
+function LuiMenu:_make_host_overlay()
+    local overlay = Turbine.UI.Control()
+    overlay:SetVisible(false)
     overlay:SetMouseVisible(true)
     overlay:SetZOrder(9999)
-    overlay:SetVisible(true)
     overlay.MouseMove = function(_, args)
         if args == nil or type(args.X) ~= "number" or type(args.Y) ~= "number" then
             return
@@ -966,7 +1073,8 @@ function LuiMenu:_open_host_overlay()
         self:close()
     end
 
-    self._popup_overlay = overlay
+    self._host_overlay = overlay
+    return overlay
 end
 
 function LuiMenu:_set_open_child(child)

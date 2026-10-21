@@ -21,14 +21,6 @@ local TEXT_GAP_RATIO = 0.35
 local FONT_WIDTH_CACHE = {}
 local WIDEST_DIGIT_CACHE = {}
 
-local function _normalize_font_size(font_size)
-    local size = tonumber(font_size)
-    if size == nil or size <= 0 then
-        return 12
-    end
-    return size
-end
-
 local function _normalize_font_name(font_name)
     if type(font_name) == "number" then
         font_name = LUI_ENUMS.font_name_to_string[font_name]
@@ -147,14 +139,14 @@ end
 local function _time_width_cache_key(font_name, font_size, threshold, time_format)
     return table.concat({
         tostring(_normalize_font_name(font_name)),
-        tostring(_normalize_font_size(font_size)),
+        tostring(font_size),
         tostring(_normalized_threshold(threshold)),
         tostring(time_format),
     }, "|")
 end
 
 local function lui_timed_row_resolved_font_size(font_name, font_size)
-    return resolve_font_size(_normalize_font_name(font_name), _normalize_font_size(font_size))
+    return resolve_font_size(_normalize_font_name(font_name), font_size)
 end
 
 -- measured glyph advances plus the label side padding
@@ -175,8 +167,7 @@ local function lui_timed_row_format_time(seconds, time_format)
 end
 
 local function lui_timed_row_text_gap(font_size)
-    local size = _normalize_font_size(font_size)
-    return math.max(4, math.floor((size * TEXT_GAP_RATIO) + 0.5))
+    return math.max(4, math.floor((font_size * TEXT_GAP_RATIO) + 0.5))
 end
 
 local function lui_timed_row_time_label_width(font_name, font_size, threshold, time_format)
@@ -196,9 +187,8 @@ local function lui_timed_row_time_label_width(font_name, font_size, threshold, t
 end
 
 local function lui_timed_row_min_name_width(font_name, font_size)
-    local size = _normalize_font_size(font_size)
-    local ellipsis_width = lui_timed_row_estimate_text_width("...", font_name, size)
-    local short_name_width = math.floor((lui_timed_row_resolved_font_size(font_name, size) * 2.5) + 0.5)
+    local ellipsis_width = lui_timed_row_estimate_text_width("...", font_name, font_size)
+    local short_name_width = math.floor((lui_timed_row_resolved_font_size(font_name, font_size) * 2.5) + 0.5)
     if short_name_width > ellipsis_width then
         return short_name_width
     end

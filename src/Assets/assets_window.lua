@@ -855,10 +855,6 @@ function AssetsWindow:capture_geometry()
     raw.stack_items = self.stack_items
 end
 
-function AssetsWindow:persist_geometry()
-    self:capture_geometry()
-end
-
 function AssetsWindow:set_view_mode(mode, persist)
     if mode ~= LUI_ENUMS.assets_view_mode.ICONS and mode ~= LUI_ENUMS.assets_view_mode.DETAILS then
         mode = LUI_ENUMS.assets_view_mode.DETAILS

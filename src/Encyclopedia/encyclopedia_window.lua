@@ -13,6 +13,7 @@ local Flags = _G.LUI.Runtime.Flags
 local State = _G.LUI.Settings.State
 local UI = _G.LUI.UI
 local Encyclopedia = _G.LUI.Features.Encyclopedia
+local Lore = _G.LUI.Data.Lore
 local Windows = _G.LUI.Runtime.Windows
 local class = _G.LUI.Core.class
 import "Turbine.UI"
@@ -239,14 +240,16 @@ local function _record_matches_location_paths(record, paths_keys)
 end
 
 -- /loc zone path (deepest level first, each level { name, alias... }) ->
--- the Bestiary region and area it names (area nil for a region), from the
--- loc suggestion index (Bestiary paths + captures); nil when no level names
--- a Bestiary region or area. The zone table and the Bestiary disagree on
--- levels ("Wildwood" is a zone, the Bestiary has Bree-land > The Wildwood)
--- and on language (the zone table is English), so each level is tried as
--- an area, then as a region, by localized and English name, case /
--- article-insensitive. An area found under several regions prefers the
--- region an outer level names.
+-- the Bestiary places it names, a list of { region, area } (area nil for
+-- a whole region), from the baked Bestiary loc paths; empty when no level
+-- names a Bestiary region or area. The zone table and the Bestiary
+-- disagree on levels ("Wildwood" is a zone, the Bestiary has Bree-land >
+-- The Wildwood) and on language (the zone table is English), so each level
+-- is tried as an area, then as a region, by localized and English name,
+-- case / article-insensitive. An area found under several regions
+-- resolves to the region an outer level names, else to every region
+-- holding it ("Kings' End" is a top-level zone, the Bestiary lists it
+-- under both Far and Old Anórien).
 local function _resolve_location(index, levels)
     local keyed = {}
     for i = 1, #levels do
@@ -257,8 +260,8 @@ local function _resolve_location(index, levels)
         keyed[i] = keys
     end
     local function named(keys, text, english)
-        return (text ~= nil and keys[SearchQuery.match_key(text)] == true)
-            or (english ~= nil and keys[SearchQuery.match_key(english)] == true)
+        return keys[SearchQuery.match_key(text)] == true
+            or keys[SearchQuery.match_key(english)] == true
     end
     local function outer_region(from)
         for j = from, #keyed do
@@ -272,26 +275,42 @@ local function _resolve_location(index, levels)
     end
     for i = 1, #keyed do
         local preferred = outer_region(i + 1)
-        local found_entry, found_area = nil, nil
+        local places = {}
+        local preferred_places = {}
+        local seen = {}
         for _, entry in ipairs(index) do
             for c = 1, #entry.children do
-                local english = entry.children_en ~= nil and entry.children_en[c] or nil
-                if named(keyed[i], entry.children[c], english)
-                    and (found_entry == nil or entry == preferred) then
-                    found_entry, found_area = entry, entry.children[c]
+                local area = entry.children[c]
+                if named(keyed[i], area, entry.children_en[c]) then
+                    -- every matching area of a region (a level and its
+                    -- aliases: Archet Dale / Archet; untranslated twins:
+                    -- Havens of Belfalas / Les Havres de Belfalas), once
+                    -- per match key ("Fallows", "The Fallows")
+                    local key = entry.name .. ">" .. SearchQuery.match_key(area)
+                    if seen[key] ~= true then
+                        seen[key] = true
+                        local target = places
+                        if entry == preferred then
+                            target = preferred_places
+                        end
+                        target[#target + 1] = { entry.name, area }
+                    end
                 end
             end
         end
-        if found_entry ~= nil then
-            return found_entry.name, found_area
+        if #preferred_places > 0 then
+            return preferred_places
+        end
+        if #places > 0 then
+            return places
         end
         for _, entry in ipairs(index) do
             if named(keyed[i], entry.name, entry.en) then
-                return entry.name, nil
+                return { { entry.name } }
             end
         end
     end
-    return nil, nil
+    return {}
 end
 
 -- tinted location icon centred over the /loc quickslot, hover-aware
@@ -601,7 +620,6 @@ end
 -- Session-captured mobs missing from the packed DB (few) are the only
 -- insertions.
 local function _build_records()
-    local Lore = _G.LUI.Data.Lore
     local LoreBestiary = Lore.Bestiary
     Lore.load_bestiary()
     local cache = DATA_ACCESS.ensure_cache()
@@ -737,8 +755,8 @@ local function _match_record_query(record, groups)
     return query_ok, matched
 end
 
--- every chip must match (AND across chips, OR inside one); drop highlights
--- merge. Classic search is a single chip.
+-- every entry of chip_groups must match (a Tokens chip is one exact term,
+-- all in one entry); drop highlights merge. Classic search is one entry.
 local function _match_record_chips(record, chip_groups)
     if #chip_groups == 1 then
         return _match_record_query(record, chip_groups[1])
@@ -1294,7 +1312,6 @@ function EncyclopediaWindow:Constructor()
     self.query_location_filter_valid = false
     self.query_location_parts = nil
     self.filter_chip_groups = {}
-    self._suggest_index = {}
     self.genus_filter = FILTER_ALL
     self.subcategory_filter = FILTER_NONE
     self._suppress_genus_changed = false
@@ -1436,8 +1453,11 @@ function EncyclopediaWindow:Constructor()
             icon = "map_pinned",
             hint = TR["Location: region or area"],
             aliases = { "location", "area", "region", "zone" },
+            -- the baked list (Lore.Bestiary.paths): captures add no region,
+            -- area, genus or subcategory the pack lacks (the cache keeps
+            -- only levels and drops), so it is exact
             values = function()
-                return self:_query_suggest_index("loc")
+                return Lore.Bestiary.paths("loc")
             end,
             child_hint = TR["%d areas"],
         },
@@ -1453,7 +1473,7 @@ function EncyclopediaWindow:Constructor()
             hint = TR["Genus: genus or subcategory"],
             aliases = { "genus", "family", "type", TR["Genus"] },
             values = function()
-                return self:_query_suggest_index("gen")
+                return Lore.Bestiary.paths("gen")
             end,
             child_hint = TR["%d subcategories"],
         },
@@ -1628,10 +1648,6 @@ function EncyclopediaWindow:capture_geometry()
     window.width = geometry.width
     window.height = geometry.height
     window.tile = geometry.tile
-end
-
-function EncyclopediaWindow:persist_geometry()
-    self:capture_geometry()
 end
 
 function EncyclopediaWindow:_minimum_window_size()
@@ -1850,112 +1866,6 @@ function EncyclopediaWindow:_replace_keyword_chip(key, value)
     self:update_filter()
 end
 
--- record fields behind each keyword's suggestions
-local SUGGEST_INDEX_FIELDS = {
-    loc = { "region", "area" },
-    gen = { "genus", "subcategory" },
-}
-
--- name inserted into a list sorted like the baked one (string.lower)
-local function _insert_sorted(list, item, name_of)
-    local needle = _lower_text(name_of(item))
-    local pos = #list + 1
-    for i = 1, #list do
-        if needle < _lower_text(name_of(list[i])) then
-            pos = i
-            break
-        end
-    end
-    table.insert(list, pos, item)
-end
-
-local function _entry_name(entry)
-    return entry.name
-end
-
-local function _same_name(name)
-    return name
-end
-
--- suggestion values of one keyword: the baked list (Lore.Bestiary.paths),
--- plus the values of creatures known only from the capture cache (the
--- pack's own values always win the merge, so the baked list is exact for
--- packed creatures); built on first use, cached until the record set
--- changes. The baked tables are shared: merged entries are copies.
-function EncyclopediaWindow:_query_suggest_index(key)
-    local index = self._suggest_index[key]
-    if index ~= nil then
-        return index
-    end
-    local baked = _G.LUI.Data.Lore.Bestiary.paths(key)
-    local fields = SUGGEST_INDEX_FIELDS[key]
-    index = baked
-    local copied = false
-    local by_name = nil
-    for name in pairs(DATA_ACCESS.ensure_cache()) do
-        local position = self._record_index_by_key[name]
-        local record = position ~= nil and self.all_records[position] or nil
-        local parent = record ~= nil and record[fields[1]] or nil
-        -- an instance is a loc entry of its own (as in the bake)
-        if key == "loc" and record ~= nil and (parent == nil or parent == "") then
-            parent = record.instance
-        end
-        if parent ~= nil and parent ~= "" then
-            if by_name == nil then
-                by_name = {}
-                for i = 1, #index do
-                    by_name[index[i].name] = index[i]
-                end
-            end
-            local child = record[fields[2]]
-            local entry = by_name[parent]
-            if entry == nil or (child ~= nil and child ~= "" and child ~= parent
-                and self:_suggest_has_child(entry, child) ~= true) then
-                if copied ~= true then
-                    local list = {}
-                    for i = 1, #index do
-                        list[i] = index[i]
-                    end
-                    index = list
-                    copied = true
-                end
-                if entry == nil then
-                    entry = { name = parent, children = {} }
-                    _insert_sorted(index, entry, _entry_name)
-                else
-                    -- copy the shared baked entry before adding to it
-                    local own = { name = entry.name, children = {} }
-                    for i = 1, #entry.children do
-                        own.children[i] = entry.children[i]
-                    end
-                    for i = 1, #index do
-                        if index[i] == entry then
-                            index[i] = own
-                        end
-                    end
-                    entry = own
-                end
-                by_name[parent] = entry
-                if child ~= nil and child ~= "" and child ~= parent
-                    and self:_suggest_has_child(entry, child) ~= true then
-                    _insert_sorted(entry.children, child, _same_name)
-                end
-            end
-        end
-    end
-    self._suggest_index[key] = index
-    return index
-end
-
-function EncyclopediaWindow:_suggest_has_child(entry, child)
-    for i = 1, #entry.children do
-        if entry.children[i] == child then
-            return true
-        end
-    end
-    return false
-end
-
 function EncyclopediaWindow:update_filter()
     local state = self.search_field:get_query_state()
     local level_filter = SearchQuery.read_level_filter(state, "lvl")
@@ -2034,33 +1944,20 @@ function EncyclopediaWindow:apply_current_area_filter(force)
         return
     end
 
-    local query_paths = _parse_location_paths(query)
-    if query_paths == nil then
-        error("Invalid bestiary area filter query")
-    end
     -- the zone paths of every zone containing the position when the
     -- location button set them (zones overlap: all are searched, better
-    -- more than less), else the query's own places; deepest part first
+    -- more than less); deepest part first
     local candidates = BestiaryCache.area_filter_candidates
-    if candidates == nil then
-        candidates = {}
-        for p = 1, #query_paths do
-            local levels = {}
-            for i = #query_paths[p], 1, -1 do
-                levels[#levels + 1] = { query_paths[p][i] }
-            end
-            candidates[p] = levels
-        end
-    end
-    local index = self:_query_suggest_index("loc")
+    local index = Lore.Bestiary.paths("loc")
     local places = {}
     local whole_regions = {}
     for c = 1, #candidates do
-        local region, area = _resolve_location(index, candidates[c])
-        if region ~= nil then
-            places[#places + 1] = { region, area }
-            if area == nil then
-                whole_regions[region] = true
+        local resolved = _resolve_location(index, candidates[c])
+        for r = 1, #resolved do
+            local place = resolved[r]
+            places[#places + 1] = place
+            if place[2] == nil then
+                whole_regions[place[1]] = true
             end
         end
     end
@@ -2103,18 +2000,6 @@ end
 
 function EncyclopediaWindow:on_location_resolved()
     self:sync_area_filter_query()
-    self:apply_current_area_filter(true)
-end
-
-function EncyclopediaWindow:set_area_filter_query(query)
-    if type(query) ~= "string" or query == "" then
-        return
-    end
-
-    BestiaryCache.area_filter_query = query
-    -- a typed area resolves from the query itself, not stale /loc paths
-    BestiaryCache.area_filter_candidates = nil
-    self.current_area = query
     self:apply_current_area_filter(true)
 end
 
@@ -2479,7 +2364,6 @@ local BUCKET_TAB_BY_CODE = { [1] = 2, [2] = 4, [3] = 3, [4] = 5, [5] = 6 }
 -- browsable item (unknown name or bucket "other"). Shared probe for every
 -- surface that decides whether an item link makes sense.
 function Encyclopedia.encyclopedia_tab_for_item(item_name)
-    local Lore = _G.LUI.Data.Lore
     -- the items DB is staged in the background by the bestiary prewarm
     -- pump; a link probe must never pay the full synchronous import
     -- (bestiary cards bind chips on target double-click, combat-adjacent).
@@ -2558,7 +2442,6 @@ function EncyclopediaWindow:_rebuild_record_index()
         by_key[self.all_records[i].key] = i
     end
     self._record_index_by_key = by_key
-    self._suggest_index = {}
 end
 
 function EncyclopediaWindow:_refresh_dirty_records(dirty_names)

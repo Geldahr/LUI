@@ -90,11 +90,7 @@ local function _resolve(family, font_size)
     end
     local resolved = sizes[font_size]
     if resolved == nil then
-        local size = tonumber(font_size)
-        if size == nil or size <= 0 then
-            size = 12
-        end
-        resolved = _choose_size(size, FONT_SIZES[family])
+        resolved = _choose_size(font_size, FONT_SIZES[family])
         sizes[font_size] = resolved
     end
     return resolved
@@ -146,19 +142,28 @@ function Utils.measure_text_width(text, font_name, font_size)
     return _sum_widths(text, Utils.font_char_widths(font_name, font_size))
 end
 
--- game font object (Turbine.UI.Lotro.Font.*) -> character width map; built
--- once, for widgets that only keep the font object they were given
+-- game font object (Turbine.UI.Lotro.Font.*) -> character width map and
+-- rendered size; built once, for widgets that only keep the font object
+-- they were given
 local OBJECT_WIDTHS = nil
+local OBJECT_SIZES = nil
+
+local function _index_font_objects()
+    OBJECT_WIDTHS = {}
+    OBJECT_SIZES = {}
+    for family, sizes in pairs(FONT_SIZES) do
+        for i = 1, #sizes do
+            local key = family .. tostring(sizes[i])
+            local font = Turbine.UI.Lotro.Font[key]
+            OBJECT_WIDTHS[font] = FONT_CHAR_WIDTHS[key]
+            OBJECT_SIZES[font] = sizes[i]
+        end
+    end
+end
 
 function Utils.font_object_char_widths(font)
     if OBJECT_WIDTHS == nil then
-        OBJECT_WIDTHS = {}
-        for family, sizes in pairs(FONT_SIZES) do
-            for i = 1, #sizes do
-                local key = family .. tostring(sizes[i])
-                OBJECT_WIDTHS[Turbine.UI.Lotro.Font[key]] = FONT_CHAR_WIDTHS[key]
-            end
-        end
+        _index_font_objects()
     end
     local widths = OBJECT_WIDTHS[font]
     if widths == nil then
@@ -170,6 +175,57 @@ end
 -- whole pixels for a text drawn with a game font object
 function Utils.measure_text_width_in_font(text, font)
     return _sum_widths(text, Utils.font_object_char_widths(font))
+end
+
+-- rendered size of a game font object: a multiline label steps its lines
+-- by it (measured in game: Verdana18 at 18 px)
+function Utils.font_object_size(font)
+    if OBJECT_SIZES == nil then
+        _index_font_objects()
+    end
+    local size = OBJECT_SIZES[font]
+    if size == nil then
+        error("No rendered size for font object: " .. tostring(font))
+    end
+    return size
+end
+
+-- a label wraps this many px (scaled) inside its width (measured in game:
+-- a 1010 px line wrapped in a 1018 px label, text drawn ~4 px in): wrap
+-- predictions use the label width minus it
+Utils.LABEL_WRAP_INSET = 8
+
+-- a label's word wrap of `text` at `max_width` (greedy, as the client
+-- wraps): the lines it takes and its widest line. `widths` is a character
+-- width map (font_char_widths / font_object_char_widths). An empty line
+-- still takes a line; a word wider than max_width breaks inside it.
+function Utils.wrap_text(text, max_width, widths)
+    local space_w = _sum_widths(" ", widths)
+    local count = 0
+    local widest = 0
+    for line in string.gmatch(text .. "\n", "(.-)\n") do
+        count = count + 1
+        local line_w = 0
+        for word in string.gmatch(line, "%S+") do
+            local word_w = _sum_widths(word, widths)
+            if line_w > 0 and line_w + space_w + word_w <= max_width then
+                line_w = line_w + space_w + word_w
+            else
+                if line_w > 0 then
+                    widest = math.max(widest, line_w)
+                    count = count + 1
+                end
+                line_w = word_w
+                while line_w > max_width do
+                    widest = max_width
+                    count = count + 1
+                    line_w = line_w - max_width
+                end
+            end
+        end
+        widest = math.max(widest, line_w)
+    end
+    return count, widest
 end
 
 -- memoized measure_text_width for texts that are measured over and over
