@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## v2.4.0
+
+### Added
+
 - New `Tokens` search mode for the `Encyclopedia`, `Crafting` and `Assets` search bars, chosen per window with the new `Search bar` setting (default `Classic`).
 - In `Tokens` mode, Enter turns the typed text into a chip, and the search runs only when chips change.
 - Double-clicking a chip puts it back in the field for editing.
