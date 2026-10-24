@@ -33,11 +33,11 @@ local REFRESH_INTERVAL = 2
 local RESIZE_LEFT = 1
 
 local function _ui_scale()
-    return UI.NativeScaling.get_ui_scale()
+    return UI.NativeScaling.get_configured_scale()
 end
 
 local function _scaled_int(value)
-    return UI.NativeScaling.scaled_ui_int(value)
+    return UI.NativeScaling.scaled_int(value)
 end
 
 local function _scaled_font(size)

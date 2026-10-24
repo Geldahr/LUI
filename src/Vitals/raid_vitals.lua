@@ -309,7 +309,7 @@ function RaidVitals:update_visibility(active, visible_members)
 end
 
 function RaidVitals:apply_settings()
-    self:apply_native_scaling()
+    self:disable_native_scaling()
     self:apply_hud_position()
 
     for i = 1, #self.members do

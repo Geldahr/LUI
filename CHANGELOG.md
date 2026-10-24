@@ -42,8 +42,9 @@
 - A place with no known creatures now leaves the search unchanged instead of emptying it.
 - A dropdown no longer stays on screen after its window is closed.
 - Effect icons on the vitals frames no longer stay in the top-left corner of the screen after the plugin is reloaded.
-- Disabling target vitals now really stops the target frame, which kept tracking the target's effects while hidden.
+- Disabling target vitals now stops the hidden target frame from tracking the target's effects.
 - A boss is no longer tracked twice, once by the boss frame and once by the hidden target frame.
+- A new effect icon size now applies at once, even while the icons are shrunk to fit many effects.
 - About 80 labels still in English on French and German clients are now translated (`Crafting`, `Travel`, `LUI Menu`, group vitals settings).
 
 ### Removed

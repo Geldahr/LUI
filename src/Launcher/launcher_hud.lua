@@ -93,7 +93,7 @@ function LauncherMenu:destroy()
 end
 
 function LauncherMenu:apply_settings()
-    self:apply_native_scaling()
+    self:disable_native_scaling()
     self:_rebuild_shortcut_buttons()
     self:_resize_window()
     self:apply_hud_position()

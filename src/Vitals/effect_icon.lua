@@ -26,14 +26,14 @@ function EffectIcon:Constructor(effect, size, font, font_style, font_color, outl
     self.ending = 0
 
     self.last_update_at = 0
-    self.update_every = 1.0 / State.settings.global.refresh_rate
+    self.update_every = nil
 
     self.icon = Turbine.UI.Lotro.EffectDisplay()
     self.icon:SetParent(self)
     self.icon:SetZOrder(1)
 
     self.label_back = Turbine.UI.Window()
-    self:apply_native_scaling(self.label_back)
+    self:disable_native_scaling(self.label_back)
     self.label_back:SetParent(self)
     self.label_back:SetVisible(true)
     self.label_back:SetMouseVisible(false)
@@ -66,11 +66,18 @@ function EffectIcon:destroy()
     self:SetVisible(false)
 end
 
--- Size and timer font; also used to restyle a live icon in place (compact
--- mode, settings apply) instead of recreating it.
+-- Size, timer font and timer rate; also used to restyle a live icon in place
+-- (compact mode, settings apply) instead of recreating it.
 function EffectIcon:apply_style(size, font, font_style, font_color, outline_color)
+    self.update_every = 1.0 / State.settings.global.refresh_rate
     self:SetSize(size, size)
     self.icon:SetSize(size, size)
+    -- a new icon gets its effect after its size: give a live one its effect
+    -- again so the display is drawn at the new size the same way
+    if self.effect ~= nil then
+        self.icon:SetEffect(nil)
+        self.icon:SetEffect(self.effect)
+    end
     self.label_back:SetSize(size, size)
     self.timer:SetSize(size, size)
     self.timer:SetFont(font)

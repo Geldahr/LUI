@@ -85,7 +85,7 @@ function LuiCheckDropdown:Constructor()
     end
 
     self.popup = Turbine.UI.Window()
-    UI.NativeScaling.apply_window(self.popup)
+    UI.NativeScaling.disable(self.popup)
     self.popup:SetVisible(false)
     self.popup:SetZOrder(3000)
     self.popup:SetMouseVisible(true)
@@ -342,7 +342,7 @@ function LuiCheckDropdown:Open()
     end
     if x < 0 then x = 0 end
     if y < 0 then y = 0 end
-    UI.NativeScaling.apply_window(self.popup)
+    UI.NativeScaling.disable(self.popup)
     self.popup:SetPosition(x, y)
 
     if self._popup_host ~= nil then

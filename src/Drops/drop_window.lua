@@ -338,7 +338,7 @@ function DropsWindow:set_move_mode(enabled)
 end
 
 function DropsWindow:apply_settings()
-    self:apply_native_scaling()
+    self:disable_native_scaling()
     self.update_every = 1.0 / State.settings.global.refresh_rate
 
     local s = State.settings.drops

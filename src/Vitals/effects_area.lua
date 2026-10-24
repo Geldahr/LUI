@@ -248,21 +248,23 @@ function EffectsArea:apply_settings(frame_width, effects_settings, effects_heigh
         self.max_height = _as_number(self.effects_height, 0) / 2
     end
 
-    if self.is_compact == true then
-        local count = self:_current_count()
-        if self:_needs_compact_for_count(count) == true then
-            local compact_icon, compact_font = self:_compute_compact_profile(count)
-            if type(compact_icon) ~= "number" then
-                self.is_compact = false
-                self.compact_icon_size = nil
-                self.compact_timer_font_size = nil
-                self.upsize_due_at = nil
-            else
-                self.compact_icon_size = compact_icon
-                self.compact_timer_font_size = compact_font
-            end
-        end
+    -- sized for the current count now: the upsize delay only smooths effects
+    -- coming and going, a settings apply does not wait for it
+    local count = self:_current_count()
+    local compact_icon, compact_font = nil, nil
+    if self:_needs_compact_for_count(count) == true then
+        compact_icon, compact_font = self:_compute_compact_profile(count)
     end
+    if type(compact_icon) == "number" then
+        self.is_compact = true
+        self.compact_icon_size = compact_icon
+        self.compact_timer_font_size = compact_font
+    else
+        self.is_compact = false
+        self.compact_icon_size = nil
+        self.compact_timer_font_size = nil
+    end
+    self.upsize_due_at = nil
 
     local width = _as_number(self.frame_width, 1)
     self.items_per_row = self:_active_items_per_row()

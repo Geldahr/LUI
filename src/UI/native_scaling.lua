@@ -60,12 +60,8 @@ function NativeScaling.get_configured_scale(settings)
     return n
 end
 
-function NativeScaling.get_effective_scale(settings)
-    return NativeScaling.get_configured_scale(settings)
-end
-
 function NativeScaling.scale_value(value, settings)
-    return _to_number(value, 0) * NativeScaling.get_effective_scale(settings)
+    return _to_number(value, 0) * NativeScaling.get_configured_scale(settings)
 end
 
 function NativeScaling.scaled_int(value, settings)
@@ -80,20 +76,4 @@ end
 function NativeScaling.disable(window)
     _safe_window_call(window, "SetScalingOriginPoint", DEFAULT_ORIGIN_LEFT, DEFAULT_ORIGIN_TOP)
     _safe_window_call(window, "UnregisterForGlobalScaling")
-end
-
-function NativeScaling.apply_window(window)
-    NativeScaling.disable(window)
-end
-
-function NativeScaling.get_ui_scale(settings)
-    return NativeScaling.get_effective_scale(settings)
-end
-
-function NativeScaling.scale_ui_value(value, settings)
-    return NativeScaling.scale_value(value, settings)
-end
-
-function NativeScaling.scaled_ui_int(value, settings)
-    return NativeScaling.scaled_int(value, settings)
 end

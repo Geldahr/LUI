@@ -244,7 +244,7 @@ function BossVitals:self_wrath_changed()
 end
 
 function BossVitals:resize()
-    self:apply_native_scaling()
+    self:disable_native_scaling()
 
     local v = self:get_vitals_settings()
     local frame = v.frame
@@ -403,9 +403,13 @@ function BossVitals:_setup_effect_tracking()
     end
 
     self.em = Vitals.TargetEffectManager.acquire(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
-    self.em_added_event = self.em:register_added_event(function(effect)
+    -- kept by our own reference: register_added_event returns nothing while the
+    -- manager's list is not up yet, and the shared manager outlives this handler
+    local added = function(effect)
         self:_upsert_effect(effect)
-    end)
+    end
+    self.em:register_added_event(added)
+    self.em_added_event = added
     self.em_removed_event = self.em:register_removed_event(function(effect)
         self:_remove_effect(effect)
         self:_request_effects_resync(0.05, 6)

@@ -91,7 +91,7 @@ function TargetsTargetVitalsWindow:set_move_mode(enabled)
 end
 
 function TargetsTargetVitalsWindow:apply_settings()
-    self:apply_native_scaling()
+    self:disable_native_scaling()
 
     local v = State.settings.target.vitals
     local tt = v.targets_target

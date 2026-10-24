@@ -126,6 +126,8 @@ function VitalsBase:Constructor(vital_key, entity, title, opts)
 
     self.vital_key = vital_key
     self.entity = entity
+    -- drawn in the no-entity state with the current settings (see set_entity)
+    self.unbound_drawn = false
     self.show_effects = opts.show_effects ~= false
     self.show_move_ui = opts.move_ui ~= false
     self.managed_position = opts.managed_position == true
@@ -896,6 +898,13 @@ function VitalsBase:set_entity(entity)
     if self.entity == entity and self.events ~= nil and self.events.mmc ~= nil then
         return
     end
+    -- Already drawn without an entity: the target and boss frames are unbound
+    -- again on each target change while hidden. resize() redraws the bars from
+    -- the settings, so it clears the mark.
+    if entity == nil and self.entity == nil and self.unbound_drawn == true then
+        return
+    end
+    self.unbound_drawn = false
 
     if self.entity ~= nil and self.entity ~= entity then
         remove_callback(self.entity, "MaxMoraleChanged", self.events.mmc)
@@ -954,6 +963,7 @@ function VitalsBase:set_entity(entity)
 
         self:on_target_changed()
 
+        self.unbound_drawn = true
         return
     end
 
@@ -1002,7 +1012,8 @@ function VitalsBase:set_entity(entity)
 end
 
 function VitalsBase:resize()
-    self:apply_native_scaling()
+    self.unbound_drawn = false
+    self:disable_native_scaling()
 
     local v = self:get_vitals_settings()
     local frame = v.frame

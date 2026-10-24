@@ -115,7 +115,7 @@ end
 
 local function _popup_window()
     local window = Turbine.UI.Window()
-    UI.NativeScaling.apply_window(window)
+    UI.NativeScaling.disable(window)
     window:SetVisible(false)
     window:SetZOrder(3000)
     _set_alpha_blend(window)

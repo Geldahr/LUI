@@ -79,10 +79,9 @@ function UpkeepWindow:Constructor()
     self._watch_target = {}
     -- precomputed so nothing target-related runs without a Target-mode slot
     self._watch_target_any = false
-    -- shared TargetEffectManager for the current target, held only while a
-    -- Target-mode slot exists (see _sync_target_manager)
-    self._target_em = nil
-    self._target_em_added = nil
+    -- live handle on the shared TargetEffectManager for the current target,
+    -- held only while a Target-mode slot exists (see _sync_target_manager)
+    self._target_hold = nil
     -- auto-order working buffers (slot index per display position)
     self._display_order = {}
     self._order_buf = {}
@@ -175,7 +174,7 @@ function UpkeepWindow:set_move_mode(enabled)
 end
 
 function UpkeepWindow:apply_settings()
-    self:apply_native_scaling()
+    self:disable_native_scaling()
 
     local s = self:get_settings()
     self.update_every = 1.0 / State.settings.global.refresh_rate
@@ -432,8 +431,8 @@ function UpkeepWindow:_poll_effects(now)
         end
     end
 
-    local em = self._target_em
-    if em ~= nil then
+    if self._target_hold ~= nil then
+        local em = self._target_hold.manager
         -- drives the manager's ghost sweep and its refetch-after-remove
         em:poll()
         if self:_sweep_manager_effects(em.effects, self._watch_target, now, gen) then
@@ -496,15 +495,13 @@ function UpkeepWindow:_sweep_manager_effects(effects, watch, now, gen)
 end
 
 function UpkeepWindow:_release_target_manager()
-    if self._target_em == nil then
+    if self._target_hold == nil then
         return
     end
-    self._target_em:unregister_added_event(self._target_em_added)
-    self._target_em_added = nil
     -- live handle: the manager returns to its background entity (group
     -- member, pet) once the last live handle is released
-    self._target_em:release_live()
-    self._target_em = nil
+    Vitals.TargetEffectManagerCache.release_selected(self._target_hold)
+    self._target_hold = nil
 end
 
 -- Target effects go through the shared TargetEffectManager, NEVER through a
@@ -512,10 +509,11 @@ end
 -- through the manager's single held instance (removals ghost, the instance
 -- dies on every remove/clear -- see target_effect_manager.lua), and any
 -- GetEffects() call from outside while a manager runs on that entity can
--- break it. This function therefore only checks that the METHOD exists
--- (capability probe, no call) and hands the entity to acquire(); the manager
--- is the sole reader of the list. Re-synced on TargetChanged and on settings
--- apply; released whenever no Target-mode slot needs it.
+-- break it. TargetEffectManagerCache.hold_selected therefore only checks that
+-- the METHOD exists (capability probe, no call) and hands the entity to
+-- acquire(); the manager is the sole reader of the list. Re-synced on
+-- TargetChanged and on settings apply; released whenever no Target-mode slot
+-- needs it.
 function UpkeepWindow:_sync_target_manager()
     self:_release_target_manager()
     -- held only while the bar actually consumes it: a disabled bar (or one
@@ -524,31 +522,10 @@ function UpkeepWindow:_sync_target_manager()
         return
     end
 
-    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    if player == nil or player.GetTarget == nil then
-        return
-    end
-    local target = player:GetTarget()
-    if target == nil or target.GetEffects == nil then
-        return
-    end
-    -- targeting yourself: the manager exists for OTHER entities only (same
-    -- name check as target vitals), so Target-mode slots see no effects and
-    -- read as ready -- you cannot reapply a debuff to yourself anyway
-    if target.GetName ~= nil and player.GetName ~= nil and
-        target:GetName() == player:GetName() then
-        return
-    end
-
-    self._target_em = Vitals.TargetEffectManager.acquire(player, target)
-    -- registering the added event snapshots the target's current effects
-    -- into the manager's map; the per-tick sweep reads the map directly, so
-    -- the callback itself has nothing left to do. Kept in a local because
-    -- register_added_event returns nothing when the manager's effect list
-    -- is not up yet -- unregistering by our own reference always works.
-    local added = function() end
-    self._target_em:register_added_event(added)
-    self._target_em_added = added
+    -- with yourself selected there is no handle, so Target-mode slots see no
+    -- effects and read as ready -- you cannot reapply a debuff to yourself
+    -- anyway; the per-tick sweep reads the manager's map directly
+    self._target_hold = Vitals.TargetEffectManagerCache.hold_selected(Turbine.Gameplay.LocalPlayer.GetInstance())
 end
 
 function UpkeepWindow:_discover_skills(force)

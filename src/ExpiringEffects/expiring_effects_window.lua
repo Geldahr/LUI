@@ -147,7 +147,7 @@ function ExpiringEffectsWindow:set_move_mode(enabled)
 end
 
 function ExpiringEffectsWindow:apply_settings()
-    self:apply_native_scaling()
+    self:disable_native_scaling()
 
     local s = self:get_settings()
     local cols = s.columns

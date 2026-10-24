@@ -34,17 +34,6 @@ local function _target_is_player(target)
     return target:IsPlayer() == true
 end
 
-local function _target_is_local_player(target)
-    local lp = Turbine.Gameplay.LocalPlayer.GetInstance()
-    if target == nil or lp == nil then
-        return false
-    end
-    if target.GetName == nil or lp.GetName == nil then
-        return false
-    end
-    return target:GetName() == lp:GetName()
-end
-
 local _gradient_morale_color = lui_gradient_morale_color
 
 local function _target_vitals_enabled()
@@ -69,6 +58,8 @@ function TargetVitals:Constructor(entity)
     self.em = nil
     self.em_added_event = nil
     self.em_removed_event = nil
+    -- off while the frame is hidden but stays bound for its target's-target window
+    self.tracks_effects = true
 
     Vitals.VitalsBase.Constructor(self, "target", entity, TR["Target Vitals"])
 
@@ -85,6 +76,11 @@ end
 ---------------------------------------------------------------------
 -- Public functions
 ---------------------------------------------------------------------
+
+-- Set before set_entity: a hidden frame builds no effect icons.
+function TargetVitals:set_tracks_effects(enabled)
+    self.tracks_effects = enabled
+end
 
 function TargetVitals:set_entity(entity)
     if self.em ~= nil and self.entity ~= entity then
@@ -475,12 +471,13 @@ function TargetVitals:_setup_effect_tracking()
     self.effects_ending_at = {}
     self.effects_objects = {}
 
-    if self.entity == nil or self.entity.GetEffects == nil then
+    if self.tracks_effects ~= true or self.entity == nil or self.entity.GetEffects == nil then
         self:SetWantsUpdates(false)
         return
     end
 
-    if _target_is_local_player(self.entity) == true then
+    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
+    if Vitals.TargetEffectManagerCache.is_local_player(player, self.entity) == true then
         self:_setup_effect_tracking_default()
         return
     end
@@ -490,10 +487,14 @@ function TargetVitals:_setup_effect_tracking()
         return
     end
 
-    self.em = Vitals.TargetEffectManager.acquire(Turbine.Gameplay.LocalPlayer.GetInstance(), self.entity)
-    self.em_added_event = self.em:register_added_event(function(effect)
+    self.em = Vitals.TargetEffectManager.acquire(player, self.entity)
+    -- kept by our own reference: register_added_event returns nothing while the
+    -- manager's list is not up yet, and the shared manager outlives this handler
+    local added = function(effect)
         self:_upsert_effect(effect)
-    end)
+    end
+    self.em:register_added_event(added)
+    self.em_added_event = added
     self.em_removed_event = self.em:register_removed_event(function(effect)
         self:_remove_effect(effect)
         self:_request_effects_resync(0.05, 6)

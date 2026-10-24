@@ -55,8 +55,7 @@ end
 
 function Settings.rebuild()
     local raw = State.loaded_settings
-    local configured_scaling = UI.NativeScaling.get_configured_scale(raw)
-    local scaling = UI.NativeScaling.get_effective_scale(raw)
+    local scaling = UI.NativeScaling.get_configured_scale(raw)
     local refresh_rate = raw.global.refresh_rate
 
     local function scaled_int(value)
@@ -249,7 +248,6 @@ function Settings.rebuild()
     }
 
     State.settings.global.scale = scaling
-    State.settings.global.configured_scale = configured_scaling
     State.settings.global.refresh_rate = refresh_rate
     State.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
     State.settings.global.close_windows_with_esc = raw.global.close_windows_with_esc == true

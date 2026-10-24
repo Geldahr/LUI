@@ -298,7 +298,7 @@ function LuiWindow:Constructor(opts)
     }
 
     self._resize_handle_window = Turbine.UI.Window()
-    self:apply_native_scaling(self._resize_handle_window)
+    self:disable_native_scaling(self._resize_handle_window)
     self._resize_handle_window:SetMouseVisible(false)
     self._resize_handle_window:SetZOrder(10000)
     self._resize_handle_window:SetVisible(false)
@@ -686,9 +686,9 @@ function LuiWindow:set_scale(scale)
 end
 
 function LuiWindow:apply_settings(scale)
-    self:apply_native_scaling()
+    self:disable_native_scaling()
     if self._resize_handle_window ~= nil then
-        self:apply_native_scaling(self._resize_handle_window)
+        self:disable_native_scaling(self._resize_handle_window)
     end
     if scale ~= nil then
         self:set_scale(scale)

@@ -187,8 +187,13 @@ end
 -- The game returns a new entity object on every player:GetTarget() call, so an acquire
 -- cannot tell "same target again" from "another mob with the same identity". Acquire
 -- therefore always shares, and the one case where the shared manager is stale -- the
--- selection moved to an identity-identical mob while another handler still holds it --
--- is handled when the player's TargetChanged fires (_on_target_changed).
+-- selection moved to an identity-identical entity while handlers still hold it -- is
+-- handled when the player's TargetChanged fires (_on_target_changed).
+--
+-- Cache-maintained fields on a manager: live_refs (live handles), live_fetched_at (game
+-- time its list was last fetched from the selection), live_acquired_at (game time of its
+-- last live acquire) and live_stale (still on the previous selection, re-pointed by the
+-- next live acquire).
 
 local function _find_other_entry(name, target)
     local bucket = _other_manager_cache[name]
@@ -206,49 +211,90 @@ local function _find_other_entry(name, target)
     return nil
 end
 
--- Live managers, to re-point on TargetChanged. Weak keys: a released manager drops out.
-local _live_managers = setmetatable({}, { __mode = "k" })
+-- The cached manager `target` resolves to, or nil.
+local function _find_manager(target)
+    local name = _entity_name(target)
+    if name == nil then
+        return nil
+    end
+
+    local cached = _player_manager_cache[name]
+    if cached ~= nil then
+        return cached
+    end
+
+    local entry = _find_other_entry(name, target)
+    if entry ~= nil then
+        return entry.manager
+    end
+
+    return nil
+end
+
+-- The selection moved to another entity that resolves to this live manager. A live-only
+-- manager drops what it tracked and follows the new entity. A manager with a background
+-- source (pet, group member) goes back to that entity, then follows the selection again,
+-- as a full release and re-acquire would: its silent handlers keep their effects.
+local function _repoint_live(manager, target, now)
+    if manager.background_source_target == nil then
+        if manager.cache_kind == OTHER_CACHE_KIND then
+            -- keep the identity (and its NameChanged hook) on the entity now tracked
+            local entry = manager.cache_entry
+            _detach_other_entry_name_changed(entry)
+            entry.identity_entity = target
+            _attach_other_entry_name_changed(entry)
+        end
+        manager:retarget_live()
+    else
+        manager:set_source_target(manager.background_source_target)
+        manager:set_source_target(nil)
+    end
+    manager.live_fetched_at = now
+    manager.live_stale = false
+end
+
 local _target_changed_hooked = false
 
--- Runs on the player's TargetChanged, before or after the consumers' own handlers (the
--- order does not matter: consumers only release and re-acquire). A live manager that the
--- NEW target resolves to is about to be shared again by the re-acquiring consumers, but
--- it still tracks the previous entity: re-point it. Managers with a background source
--- (group member, pet) track that one entity and are left alone, as are managers the new
--- target does not resolve to (their handlers are releasing them).
+-- Runs on the player's TargetChanged, where every live handler also releases and
+-- re-acquires. Only the manager the new target resolves to matters: the handlers end up
+-- sharing it, and it is still on the previous entity. This handler goes first, so it marks
+-- the manager and the first re-acquire re-points it (none happens if the handlers all
+-- release it). Should handlers run before it anyway: a list they fetched this frame is
+-- already the new selection's, and a manager they re-acquired this frame is re-pointed here.
 local function _on_target_changed(player)
     local target = player:GetTarget()
-    local name = _entity_name(target)
+    local manager = _find_manager(target)
+    if manager == nil or manager.live_refs == 0 then
+        return
+    end
 
-    for manager in pairs(_live_managers) do
-        if manager.live_refs == 0 or manager.source_target ~= nil then
-            _live_managers[manager] = nil
-        elseif name ~= nil
-            and manager.cache_kind == OTHER_CACHE_KIND
-            and manager.background_source_target == nil then
-            local entry = manager.cache_entry
-            if entry.name == name and _other_entities_match(entry.identity_entity, target) == true then
-                -- keep the identity (and its NameChanged hook) on the entity now tracked
-                _detach_other_entry_name_changed(entry)
-                entry.identity_entity = target
-                _attach_other_entry_name_changed(entry)
-                manager:retarget_live()
-            end
-        end
+    local now = Turbine.Engine.GetGameTime()
+    if manager.live_fetched_at == now then
+        return
+    end
+
+    if manager.live_acquired_at == now then
+        _repoint_live(manager, target, now)
+    else
+        manager.live_stale = true
     end
 end
 
-local function _track_live(player, manager)
-    _live_managers[manager] = true
-    if _target_changed_hooked ~= true then
-        _target_changed_hooked = true
-        add_callback(player, "TargetChanged", function()
-            _on_target_changed(player)
-        end)
+local function _hook_target_changed(player)
+    if _target_changed_hooked == true then
+        return
     end
+    _target_changed_hooked = true
+    local handler = add_callback(player, "TargetChanged", function()
+        _on_target_changed(player)
+    end)
+    -- ahead of the handlers that release and re-acquire (add_callback appends)
+    local handlers = player.TargetChanged
+    table.remove(handlers)
+    table.insert(handlers, 1, handler)
 end
 
-local function _reuse_manager(player, cached, source_target)
+local function _reuse_manager(player, cached, target, source_target)
     cached.ref_count = cached.ref_count + 1
     -- Group and companion vitals pass a stable source for background tracking.
     if source_target ~= nil then
@@ -259,9 +305,19 @@ local function _reuse_manager(player, cached, source_target)
 
     -- Live handle: follows player:GetTarget() while selected. A manager that is already
     -- live is shared as it is; its tracked effects stay.
+    local now = Turbine.Engine.GetGameTime()
+    if cached.source_target ~= nil then
+        -- reading a background entity's list (no live handle yet, or a silent acquire
+        -- since): switch to the selection's
+        cached:set_source_target(nil)
+        cached.live_fetched_at = now
+        cached.live_stale = false
+    elseif cached.live_stale == true then
+        _repoint_live(cached, target, now)
+    end
     cached.live_refs = cached.live_refs + 1
-    cached:set_source_target(nil)
-    _track_live(player, cached)
+    cached.live_acquired_at = now
+    _hook_target_changed(player)
 
     return cached
 end
@@ -269,8 +325,11 @@ end
 local function _new_manager(player, source_target)
     local manager = Vitals.TargetEffectManager(player, source_target)
     if source_target == nil then
+        local now = Turbine.Engine.GetGameTime()
         manager.live_refs = 1
-        _track_live(player, manager)
+        manager.live_fetched_at = now
+        manager.live_acquired_at = now
+        _hook_target_changed(player)
     end
     return manager
 end
@@ -315,22 +374,14 @@ end
 -- Classification only decides where a NEW manager is filed (players by name; pets/mobs in
 -- the identity-matched cache).
 function TargetEffectManagerCache.acquire(player, target, source_target)
+    local cached = _find_manager(target)
+    if cached ~= nil then
+        return _reuse_manager(player, cached, target, source_target)
+    end
+
     local name = _entity_name(target)
-
-    if name ~= nil then
-        local cached = _player_manager_cache[name]
-        if cached ~= nil then
-            return _reuse_manager(player, cached, source_target)
-        end
-
-        local entry = _find_other_entry(name, target)
-        if entry ~= nil then
-            return _reuse_manager(player, entry.manager, source_target)
-        end
-
-        if _entity_is_player(target) == true then
-            return _new_player_manager(player, source_target, name)
-        end
+    if name ~= nil and _entity_is_player(target) == true then
+        return _new_player_manager(player, source_target, name)
     end
 
     -- name may be nil here (e.g. freshly-summoned pet); the OTHER cache attaches a
@@ -359,10 +410,17 @@ function TargetEffectManagerCache.release(manager)
     manager.cache_entry = nil
 end
 
+local _swept_at = nil
+
 -- Walk the floating (still-nameless) entries: bucket any whose name has resolved, and drop
 -- any that never got a name within the timeout so the list cannot grow with dead entries.
--- Driven from TargetEffectManager:poll().
+-- Driven from TargetEffectManager:poll(), which every manager runs: once per frame is enough.
 function TargetEffectManagerCache.sweep(now)
+    if now == _swept_at then
+        return
+    end
+    _swept_at = now
+
     for i = #_pending_other_entries, 1, -1 do
         local record = _pending_other_entries[i]
         if _entity_name(record.entry.identity_entity) ~= nil then
@@ -371,4 +429,42 @@ function TargetEffectManagerCache.sweep(now)
             table.remove(_pending_other_entries, i)
         end
     end
+end
+
+-- The managers are for entities other than the player: with yourself selected, the
+-- player's own effect list is read instead.
+function TargetEffectManagerCache.is_local_player(player, entity)
+    if entity.GetName == nil or player.GetName == nil then
+        return false
+    end
+    return entity:GetName() == player:GetName()
+end
+
+-- A live handle for a window that reads the selected target's effects from the manager's
+-- map instead of through callbacks (Target Expiring Effects, Upkeep). Registering the no-op
+-- added callback snapshots the target's current effects into the map. Returns the handle,
+-- or nil when nothing with effects is selected; the second value is true when the player
+-- selected themselves. Give it back with release_selected.
+function TargetEffectManagerCache.hold_selected(player)
+    if player == nil or player.GetTarget == nil then
+        return nil, false
+    end
+    local target = player:GetTarget()
+    -- capability probe only: the manager is the sole reader of the target's list
+    if target == nil or target.GetEffects == nil then
+        return nil, false
+    end
+    if TargetEffectManagerCache.is_local_player(player, target) == true then
+        return nil, true
+    end
+
+    local manager = TargetEffectManagerCache.acquire(player, target, nil)
+    local added = function() end
+    manager:register_added_event(added)
+    return { manager = manager, added = added }, false
+end
+
+function TargetEffectManagerCache.release_selected(hold)
+    hold.manager:unregister_added_event(hold.added)
+    hold.manager:release_live()
 end

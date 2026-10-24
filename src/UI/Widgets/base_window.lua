@@ -39,7 +39,7 @@ function LuiBaseWindow:Constructor(opts)
     self._global_hide_active = false
     self._global_hide_restore_visible = nil
 
-    self:apply_native_scaling()
+    self:disable_native_scaling()
 
     if opts.hideable == true then
         self:set_hideable(true)
@@ -47,7 +47,7 @@ function LuiBaseWindow:Constructor(opts)
 end
 
 -- LUI scales itself: keep the game's UI scaling off this window.
-function LuiBaseWindow:apply_native_scaling(target_window)
+function LuiBaseWindow:disable_native_scaling(target_window)
     NativeScaling.disable(target_window or self)
 end
 

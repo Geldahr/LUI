@@ -26,8 +26,7 @@ ExpiringEffects.TargetExpiringEffectsWindow = TargetExpiringEffectsWindow
 ---------------------------------------------------------------------
 
 function TargetExpiringEffectsWindow:Constructor()
-    self._target_em = nil
-    self._target_em_added = nil
+    self._target_hold = nil
     self._target_is_self = false
 
     -- the base constructor runs apply_settings, which syncs the manager
@@ -67,16 +66,14 @@ end
 function TargetExpiringEffectsWindow:Update()
     -- drives the manager's refetch-after-remove (a no-op when another
     -- handler of the shared manager already polled this frame)
-    if self._target_em ~= nil then
-        self._target_em:poll()
+    if self._target_hold ~= nil then
+        self._target_hold.manager:poll()
     end
 
     ExpiringEffects.ExpiringEffectsWindow.Update(self)
 end
 
 function TargetExpiringEffectsWindow:get_effect_objects()
-    local em = self._target_em
-
     local out = {}
     if self._target_is_self == true then
         local list = Turbine.Gameplay.LocalPlayer.GetInstance():GetEffects()
@@ -92,11 +89,11 @@ function TargetExpiringEffectsWindow:get_effect_objects()
             end
         end
     else
-        if em == nil then
+        if self._target_hold == nil then
             return {}
         end
 
-        for _, o in pairs(em.effects) do
+        for _, o in pairs(self._target_hold.manager.effects) do
             if o ~= nil then
                 table.insert(out, o.effect)
             end
@@ -110,19 +107,17 @@ end
 ---------------------------------------------------------------------
 
 function TargetExpiringEffectsWindow:_release_target_manager()
-    if self._target_em == nil then
+    if self._target_hold == nil then
         return
     end
-    self._target_em:unregister_added_event(self._target_em_added)
-    self._target_em_added = nil
-    self._target_em:release_live()
-    self._target_em = nil
+    Vitals.TargetEffectManagerCache.release_selected(self._target_hold)
+    self._target_hold = nil
 end
 
 -- Holds a handle on the shared target manager only while this window is
--- enabled, independently of target vitals. Target effects are never read with a
--- raw GetEffects() on the target; the method check below is a capability
--- probe only. Re-synced on TargetChanged and on settings apply.
+-- enabled, independently of target vitals; get_effect_objects reads its map.
+-- With yourself selected, the player's own list is read instead. Re-synced on
+-- TargetChanged and on settings apply.
 function TargetExpiringEffectsWindow:_sync_target_manager()
     self:_release_target_manager()
     self._target_is_self = false
@@ -131,27 +126,6 @@ function TargetExpiringEffectsWindow:_sync_target_manager()
         return
     end
 
-    local player = Turbine.Gameplay.LocalPlayer.GetInstance()
-    if player == nil or player.GetTarget == nil then
-        return
-    end
-    local target = player:GetTarget()
-    if target == nil or target.GetEffects == nil then
-        return
-    end
-    -- targeting yourself: the manager is for OTHER entities only, the
-    -- player's own list is read directly in get_effect_objects
-    if target.GetName ~= nil and player.GetName ~= nil and
-        target:GetName() == player:GetName() then
-        self._target_is_self = true
-        return
-    end
-
-    self._target_em = Vitals.TargetEffectManager.acquire(player, target)
-    -- registering the added event snapshots the target's current effects
-    -- into the manager's map, which get_effect_objects reads; the callback
-    -- itself has nothing to do
-    local added = function() end
-    self._target_em:register_added_event(added)
-    self._target_em_added = added
+    self._target_hold, self._target_is_self =
+        Vitals.TargetEffectManagerCache.hold_selected(Turbine.Gameplay.LocalPlayer.GetInstance())
 end

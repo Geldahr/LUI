@@ -183,9 +183,7 @@ local function _scaled_font(name, size)
 end
 
 local function _favorite_icon_size()
-    local global = State.settings ~= nil and State.settings.global or nil
-    local scale = global ~= nil and tonumber(global.configured_scale or global.scale) or 1
-    return scale > FAVORITE_SCALE_BREAKPOINT and FAVORITE_ICON_LARGE or FAVORITE_ICON_SMALL
+    return State.settings.global.scale > FAVORITE_SCALE_BREAKPOINT and FAVORITE_ICON_LARGE or FAVORITE_ICON_SMALL
 end
 
 local function _apply_favorite_icon(button, favorite)

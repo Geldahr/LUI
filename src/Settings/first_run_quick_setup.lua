@@ -483,7 +483,7 @@ function FirstRunQuickSetup:Constructor(options)
     _apply_runtime_settings()
 
     self.preview_overlay = Turbine.UI.Window()
-    self:apply_native_scaling(self.preview_overlay)
+    self:disable_native_scaling(self.preview_overlay)
     self.preview_overlay:SetVisible(false)
     self.preview_overlay:SetMouseVisible(true)
     self.preview_overlay:SetZOrder(1000)

@@ -77,10 +77,16 @@ function SelfVitals:on_target_changed()
         is_boss_target(t, self.entity) == true
 
     if self.target_vitals ~= nil then
-        -- A frame that is not shown stays unbound (disabled, or replaced by
-        -- the boss frame): binding it would track the target and build every
-        -- effect icon behind a hidden window.
-        self.target_vitals:set_entity((target_vitals_enabled == true and is_boss ~= true) and t or nil)
+        -- A frame that is not shown (disabled, or replaced by the boss frame)
+        -- builds no effect icons, and stays bound only for the target's-target
+        -- window it owns.
+        local shows_frame = target_vitals_enabled == true and is_boss ~= true
+        local bound = nil
+        if shows_frame == true or State.loaded_settings.target.vitals.targets_target.enabled == true then
+            bound = t
+        end
+        self.target_vitals:set_tracks_effects(shows_frame)
+        self.target_vitals:set_entity(bound)
         if target_vitals_enabled ~= true then
             self.target_vitals:SetVisible(false)
         elseif t ~= nil and is_boss ~= true then

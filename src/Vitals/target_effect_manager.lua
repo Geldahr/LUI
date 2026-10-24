@@ -76,13 +76,17 @@ function TargetEffectManager:Constructor(player, source_target)
     self.background_source_target = source_target
     self.ref_count = 1
     -- Live handles (source nil, following player:GetTarget()). Maintained by
-    -- the cache.
+    -- the cache, with the live_* fields below.
     self.live_refs = 0
+    self.live_fetched_at = nil
+    self.live_acquired_at = nil
+    self.live_stale = false
     self.cache_kind = nil
     self.cache_name = nil
     self.cache_entry = nil
 
     self.call_in_s = nil
+    self.polled_at = nil
 
     -- /!\ IMPORTANT /!\
     -- DO NOT COPY THE INSTANCE OF THAT VARIABLE IN ANOTHER PLACE
@@ -376,8 +380,15 @@ end
 -- Call in a loop the faster the loop the quicker the remove events will trigger
 -- If no refresh is scheduled then this function does nothing.
 function TargetEffectManager:poll()
+    -- A shared manager is polled by each of its handlers: once per frame is enough.
+    local now = Turbine.Engine.GetGameTime()
+    if self.polled_at == now then
+        return
+    end
+    self.polled_at = now
+
     -- Bucket freshly-summoned pets once their name resolves (pet cache maintenance).
-    Vitals.TargetEffectManagerCache.sweep(Turbine.Engine.GetGameTime())
+    Vitals.TargetEffectManagerCache.sweep(now)
 
     if self.instance_effects == nil then
         self.instance_effects = _get_target_effects(self.player, self.source_target)
@@ -397,7 +408,7 @@ function TargetEffectManager:poll()
         end
     end
 
-    if self.call_in_s and Turbine.Engine.GetGameTime() >= self.call_in_s then
+    if self.call_in_s and now >= self.call_in_s then
         self.call_in_s = nil
         self:refresh()
     end
