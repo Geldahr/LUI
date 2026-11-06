@@ -119,7 +119,7 @@ function BagOrderWindow:_request_marker_move()
     self._move_wanted = false
     self.waiting = false
     local target = self:_wanted_marker_slot()
-    if self.closed == true or self.moving == true or self.marker_error ~= nil or self.move_error ~= nil or
+    if self.moving == true or self.marker_error ~= nil or self.move_error ~= nil or
         self.size_error ~= nil or target == nil or target == self.marker.slot then
         self:_sync_updates()
         self:_refresh_status()
@@ -132,6 +132,7 @@ function BagOrderWindow:_request_marker_move()
     if Windows.inventory:run_inventory_operation(operation, TR["Moving the bag order marker..."]) == true then
         self.moving = true
         self.moving_to = target
+        self._operation = operation
     else
         -- a Sort or Merge is running: ask again shortly
         self.waiting = true
@@ -144,9 +145,7 @@ end
 
 function BagOrderWindow:_move_done(result)
     self.moving = false
-    if self.closed == true then
-        return
-    end
+    self._operation = nil
     if result.failed == true then
         self.move_error = TR[result.message_key]
     end

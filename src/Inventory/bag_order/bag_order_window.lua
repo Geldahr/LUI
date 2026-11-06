@@ -72,7 +72,8 @@ function BagOrderWindow:Constructor()
     self.moving_to = nil
     self.waiting = false
     self.put_back = false
-    self.closed = false
+    -- the marker move running in the inventory window, nil when none
+    self._operation = nil
     self._progress = 0
     -- the marker the box shows; false = never drawn (nil is "no marker")
     self._box_marker = false
@@ -161,14 +162,18 @@ function BagOrderWindow:open()
     self:show()
 end
 
--- a pending marker move still finishes in the inventory window; `closed`
--- makes its callback a no-op
+-- One-shot window: once closed nothing may keep it alive. A running marker
+-- move finishes in the inventory window without calling back.
 function BagOrderWindow:destroy()
-    self.closed = true
+    if self._operation ~= nil then
+        self._operation.on_done = nil
+        self._operation = nil
+    end
     self:SetWantsUpdates(false)
     for i = 1, #BACKPACK_EVENTS do
         Utils.remove_callback(self.backpack, BACKPACK_EVENTS[i], self._backpack_callback)
     end
+    self:unregister_hideable()
     self.tooltip:Hide()
     self:hide()
 end
