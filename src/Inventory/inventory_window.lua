@@ -1190,6 +1190,18 @@ function InventoryWindow:_get_total_money()
     return a:GetMoney()
 end
 
+-- Runs another feature's bag operation (the Bag Order Guide's moves) in
+-- this window's operation slot, so Sort / Merge wait for it; false while
+-- an operation already runs. The operation's optional on_done(result) is
+-- called when it finishes.
+function InventoryWindow:run_inventory_operation(operation, status_text)
+    if self.inventory_operation ~= nil then
+        return false
+    end
+    self:_begin_inventory_operation(operation, status_text)
+    return true
+end
+
 function InventoryWindow:_begin_inventory_operation(operation, status_text)
     self.inventory_operation = operation
     self:_set_inventory_actions_enabled(false)
@@ -1198,9 +1210,13 @@ function InventoryWindow:_begin_inventory_operation(operation, status_text)
 end
 
 function InventoryWindow:_update_inventory_operation(now)
-    local result = self.inventory_operation:tick(now)
+    local operation = self.inventory_operation
+    local result = operation:tick(now)
     if result.done == true then
         self:_finish_inventory_operation(TR[result.message_key])
+        if operation.on_done ~= nil then
+            operation.on_done(result)
+        end
     end
 end
 

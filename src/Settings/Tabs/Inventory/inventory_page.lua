@@ -3,6 +3,8 @@
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 local TR = _G.LUI.Locale.TR
+local UI = _G.LUI.UI
+local Windows = _G.LUI.Runtime.Windows
 local Pages = _G.LUI.Settings.Pages
 local ConfigContent = _G.LUI.Settings.Content.ConfigContent
 local ConfigTabs = _G.LUI.Settings.Content.ConfigTabs
@@ -45,6 +47,12 @@ function InventoryPage:Constructor(window)
         function()
             return self._settings.inventory.replace == true
         end, true)
+    general:add_row_break()
+    self.bag_order_entry = general:add_button("inventory_bag_order_guide", TR["Open the bag order guide"],
+        function()
+            UI.Shortcuts.open_bag_order_guide()
+        end,
+        TR["Guides you step by step to put the rows of the game's bags back in slot order. Needs the LUI inventory (enable it and Apply first)."])
     self:add_tab(TR["General"], "general", general)
 
     local layout = ConfigContent(window, 4)
@@ -56,6 +64,12 @@ function InventoryPage:Constructor(window)
             return self._settings.inventory.tile_size
         end)
     self:add_tab(TR["Layout"], "layout", layout)
+end
+
+-- the guide's marker moves run in the LUI inventory window
+function InventoryPage:load()
+    ConfigTabs.load(self)
+    self.bag_order_entry.button:set_enabled(Windows.inventory ~= nil)
 end
 
 function InventoryPage:apply_ui_scale()

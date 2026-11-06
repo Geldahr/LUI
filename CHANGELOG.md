@@ -4,6 +4,8 @@
 
 ### Added
 
+- New `Bag Order Guide` (`Settings` > `Inventory` > `General`): walks you step by step through putting the rows of the game's bags back in slot order.
+
 ### Changed
 
 ### Fixed
