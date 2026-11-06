@@ -22,7 +22,9 @@ HUD_ACTION_SINK:SetVisible(false)
 HUD_ACTION_SINK.KeyDown = function(_, args)
     if args.Action == BACKPACK_ACTION then
         local inv = State.settings ~= nil and State.settings.inventory or nil
-        if inv ~= nil and inv.enabled == true and inv.replace == true and Windows.inventory ~= nil then
+        -- while the Bag Order Guide is open the key opens the game's bags only
+        if inv ~= nil and inv.enabled == true and inv.replace == true and Windows.inventory ~= nil and
+            Windows.bag_order_guide == nil then
             Shortcuts.toggle_inventory()
             return
         end

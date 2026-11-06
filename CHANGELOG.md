@@ -4,6 +4,9 @@
 
 ### Added
 
+- New `Bag Order Guide` (`Settings` > `Inventory` > `General` > `Open the bag order guide`): it walks you, step by step, through putting the rows of the game's bags back in slot order, moving a marker item into each row so you can spot it. A list shows your backpack in slot order, grouped as your bags will be at the end.
+- While the guide is open, the bag key opens the game's bags instead of the LUI inventory.
+
 ### Changed
 
 ### Fixed

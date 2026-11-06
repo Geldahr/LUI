@@ -218,6 +218,7 @@ local function _new_features_section(window)
         "",
         TR["Inventory and Assets"],
         TR["The inventory window can replace the default backpack and accepts normal item drag/drop between slots."],
+        TR["Settings > Inventory > General > Open the bag order guide walks you through putting the rows of the game's bags back in slot order."],
         TR["Assets indexes backpack, bank, vault, and shared storage items by character, storage, owner, quantity, and source."],
         TR["Assets can stack matching items, switch icon/detail view, and open Crafting for materials used by recipes."],
         "",

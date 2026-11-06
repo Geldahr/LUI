@@ -309,22 +309,21 @@ local function _merge_key(name_key, category_id, quality, icon_id, background_id
     }, UNIT_SEPARATOR)
 end
 
-local function _entry_for_slot(backpack, slot)
-    local item = backpack:GetItem(slot)
-    if item == nil then
-        return {
-            slot = slot,
-            original_slot = slot,
-            empty = true,
-            quantity = 0,
-            quality = 0,
-            category_id = 0,
-            category_group = 9999,
-            merge_key = "",
-            exact_key = "",
-        }
-    end
+local function _empty_entry(slot)
+    return {
+        slot = slot,
+        original_slot = slot,
+        empty = true,
+        quantity = 0,
+        quality = 0,
+        category_id = 0,
+        category_group = 9999,
+        merge_key = "",
+        exact_key = "",
+    }
+end
 
+local function _entry_for_item(item, slot)
     local info = _item_info(item)
     local name = _item_name(item, info)
     local name_key = _normalized_name(name)
@@ -356,6 +355,14 @@ local function _entry_for_slot(backpack, slot)
         merge_key = merge_key,
         exact_key = merge_key .. UNIT_SEPARATOR .. tostring(quantity),
     }
+end
+
+local function _entry_for_slot(backpack, slot)
+    local item = backpack:GetItem(slot)
+    if item == nil then
+        return _empty_entry(slot)
+    end
+    return _entry_for_item(item, slot)
 end
 
 local function _backpack_size(backpack)
@@ -1096,6 +1103,18 @@ function MergeOperation:tick(now)
     end
 
     return self:_done(MESSAGE_MERGE_COMPLETE)
+end
+
+-- slot snapshot helpers shared with the Bag Order Guide's marker move
+Operations.snapshot = _snapshot
+Operations.entry_for_slot = _entry_for_slot
+Operations.entries_match = _entries_match
+Operations.can_merge = _can_merge
+Operations.drop_item = _drop_item
+
+-- an item's entry (name, keys, images) as the snapshot builds it
+function Operations.entry_for_item(item)
+    return _entry_for_item(item, 0)
 end
 
 function Operations.create_sort(backpack, mode)

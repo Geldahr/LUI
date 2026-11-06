@@ -30,6 +30,7 @@ local Cooldowns = Features.Cooldowns
 local Crafting = Features.Crafting
 local Drops = Features.Drops
 local ExpiringEffects = Features.ExpiringEffects
+local Inventory = Features.Inventory
 local Travel = Features.Travel
 local Upkeep = Features.Upkeep
 local StatusBar = Features.StatusBar
@@ -204,6 +205,32 @@ function Shortcuts.toggle_inventory()
     Windows.inventory:toggle()
 end
 
+-- the game's own bags: off while the LUI inventory replaces them, on while
+-- the Bag Order Guide is open (the player compares with them)
+function Apply.game_bags()
+    local inventory = State.settings.inventory
+    local replace = inventory.enabled == true and inventory.replace == true
+    set_backpacks_enabled(replace ~= true or Windows.bag_order_guide ~= nil)
+end
+
+-- needs the LUI inventory: the marker moves run in its operation slot
+function Shortcuts.open_bag_order_guide()
+    if Windows.inventory == nil then
+        return
+    end
+    if Windows.bag_order_guide == nil then
+        Windows.bag_order_guide = Inventory.BagOrderWindow()
+        Apply.game_bags()
+    end
+    Windows.bag_order_guide:open()
+end
+
+function Shortcuts.close_bag_order_guide()
+    Windows.bag_order_guide:destroy()
+    Windows.bag_order_guide = nil
+    Apply.game_bags()
+end
+
 function Shortcuts.toggle_encyclopedia()
     local window = _ensure_encyclopedia_window()
     if window == nil then
@@ -313,7 +340,6 @@ end
 
 function Apply.inventory_settings()
     local enabled = State.settings.inventory.enabled == true
-    local replace = enabled and State.settings.inventory.replace == true
 
     if enabled then
         if Windows.inventory == nil then
@@ -322,17 +348,17 @@ function Apply.inventory_settings()
             Windows.inventory:apply_settings()
         end
     else
+        if Windows.bag_order_guide ~= nil then
+            Windows.bag_order_guide:destroy()
+            Windows.bag_order_guide = nil
+        end
         if Windows.inventory ~= nil then
             Windows.inventory:SetVisible(false)
         end
         Windows.inventory = nil
     end
 
-    if replace then
-        set_backpacks_enabled(false)
-    else
-        set_backpacks_enabled(true)
-    end
+    Apply.game_bags()
 end
 
 function Apply.assets_settings()
@@ -626,6 +652,12 @@ Plugins["LUI"].Unload = function()
     if Windows.drops ~= nil then
         Windows.drops:destroy()
         Windows.drops = nil
+    end
+
+    -- the game's bags stay enabled: the plugin is going away
+    if Windows.bag_order_guide ~= nil then
+        Windows.bag_order_guide:destroy()
+        Windows.bag_order_guide = nil
     end
 
     if Stores.assets ~= nil then
