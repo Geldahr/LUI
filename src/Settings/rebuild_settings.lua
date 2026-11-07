@@ -251,6 +251,7 @@ function Settings.rebuild()
     State.settings.global.refresh_rate = refresh_rate
     State.settings.global.move_mode_shortcut = raw.global.move_mode_shortcut
     State.settings.global.close_windows_with_esc = raw.global.close_windows_with_esc == true
+    State.settings.global.fade_out_toasts = raw.global.fade_out_toasts == true
     State.settings.global.style = raw.global.style
     State.settings.encyclopedia.bestiary_capture = raw.encyclopedia.bestiary_capture == true
     State.settings.encyclopedia.search_mode = raw.encyclopedia.search_mode

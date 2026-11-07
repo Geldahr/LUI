@@ -2152,6 +2152,7 @@ _G.LUI.Settings.Defaults.Schema =
 	},
 	["global"] = {
 		["close_windows_with_esc"] = true,
+		["fade_out_toasts"] = false,
 		["move_mode_shortcut"] = true,
 		["number_abbrev"] = {
 			["enabled"] = true,

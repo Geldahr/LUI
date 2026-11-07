@@ -114,7 +114,7 @@ function LuiMenuBar:add_menu(title_or_menu, options)
     end
 
     menu:SetParent(self)
-    -- menu-bar menus cover the whole host window (title bar included) so
+    -- menu-bar menus cover the whole host window (header bar included) so
     -- hovering across the bar switches menus
     menu._in_menu_bar = true
     if type(title_or_menu) ~= "table" then

@@ -177,6 +177,84 @@ function Utils.measure_text_width_in_font(text, font)
     return _sum_widths(text, Utils.font_object_char_widths(font))
 end
 
+Utils.ELLIPSIS = "..."
+
+-- `text` as it fits `max_width` px drawn with a game font object: unchanged
+-- when it fits, else cut to the characters that fit with ELLIPSIS after
+-- them; "" when not even one character and the ELLIPSIS fit
+function Utils.ellipsize_in_font(text, font, max_width)
+    local widths = Utils.font_object_char_widths(font)
+    if _sum_widths(text, widths) <= max_width then
+        return text
+    end
+    local room = max_width - _sum_widths(Utils.ELLIPSIS, widths)
+    local fallback = widths[FALLBACK_CHAR]
+    local used = 0
+    local cut = 0
+    for position, ch in string.gmatch(text, "()(" .. UTF8_CHAR .. ")") do
+        local width = widths[ch]
+        if width == nil then
+            width = fallback
+        end
+        used = used + width
+        if used > room then
+            break
+        end
+        cut = position + string.len(ch) - 1
+    end
+    local kept = string.gsub(string.sub(text, 1, cut), "%s+$", "")
+    if kept == "" then
+        return ""
+    end
+    return kept .. Utils.ELLIPSIS
+end
+
+-- `text` word-wrapped at `max_width` px in a game font object, kept to
+-- `max_lines` lines: the last line takes the rest of the text and ends with
+-- ELLIPSIS when it does not fit. Returns the text to show (lines joined by
+-- "\n"), its line count, its widest line in px and whether it was cut.
+function Utils.clamp_text_lines(text, font, max_width, max_lines)
+    local widths = Utils.font_object_char_widths(font)
+    local space_w = _sum_widths(" ", widths)
+    local words = {}
+    for word in string.gmatch(text, "%S+") do
+        words[#words + 1] = word
+    end
+
+    local lines = {}
+    local widest = 0
+    local cut = false
+    local i = 1
+    while i <= #words do
+        local line
+        if #lines == max_lines - 1 then
+            line = table.concat(words, " ", i)
+            i = #words + 1
+        else
+            line = words[i]
+            local line_w = _sum_widths(line, widths)
+            i = i + 1
+            while i <= #words do
+                local word_w = _sum_widths(words[i], widths)
+                if line_w + space_w + word_w > max_width then
+                    break
+                end
+                line = line .. " " .. words[i]
+                line_w = line_w + space_w + word_w
+                i = i + 1
+            end
+        end
+        -- the last line's rest, or one word wider than the line
+        local shown = Utils.ellipsize_in_font(line, font, max_width)
+        if shown ~= line then
+            cut = true
+        end
+        lines[#lines + 1] = shown
+        widest = math.max(widest, _sum_widths(shown, widths))
+    end
+    return table.concat(lines, "\n"), #lines, widest, cut
+end
+
 -- rendered size of a game font object: a multiline label steps its lines
 -- by it (measured in game: Verdana18 at 18 px)
 function Utils.font_object_size(font)

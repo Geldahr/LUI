@@ -32,11 +32,11 @@ local BASE_DEFAULT_W = 420
 local BASE_DEFAULT_H = 280
 local BASE_MIN_W = 160
 local BASE_MIN_H = 90
-local BASE_TITLE_BAR_H = 20
+local BASE_HEADER_BAR_H = 20
 local BASE_GAP = 4
 local BASE_MARGIN = 8
 local BASE_ICON = 20
-local BASE_TITLE_ACTION_ICON = 10
+local BASE_HEADER_ACTION_ICON = 10
 local BASE_RESIZE_EDGE = 4
 local BASE_RESIZE_CORNER = 8
 local BASE_RESIZE_HANDLE = 32
@@ -179,7 +179,20 @@ function LuiWindow:Constructor(opts)
     self._margin_top = BASE_MARGIN
     self._margin_right = BASE_MARGIN
     self._margin_bottom = BASE_MARGIN
-    self._title_bar_divider_visible = true
+    self._header_bar_divider_visible = true
+    -- status bar, toast and hint tooltip (window_status_bar.lua,
+    -- window_toast.lua): made on first use
+    self._status_bar = nil
+    self._status_visible = false
+    self._toast = nil
+    self._hint = nil
+    -- content area as last laid out, in window coordinates (content_rect),
+    -- and its bottom in inner coordinates (the toast sits above it)
+    self._content_rect_x = 0
+    self._content_rect_y = 0
+    self._content_rect_w = 0
+    self._content_rect_h = 0
+    self._content_bottom = 0
     self._close_handler = nil
     self._draggable = true
     self._dragging = false
@@ -225,21 +238,21 @@ function LuiWindow:Constructor(opts)
     self._inner:SetMouseVisible(false)
     _set_blend(self._inner)
 
-    self._title_bar = Turbine.UI.Control()
-    self._title_bar:SetParent(self._inner)
-    self._title_bar:SetMouseVisible(false)
-    _set_blend(self._title_bar)
+    self._header_bar = Turbine.UI.Control()
+    self._header_bar:SetParent(self._inner)
+    self._header_bar:SetMouseVisible(false)
+    _set_blend(self._header_bar)
 
-    self._title_drag_left = _make_drag_region(self._title_bar, self)
-    self._title_drag_body = _make_drag_region(self._title_bar, self)
+    self._header_drag_left = _make_drag_region(self._header_bar, self)
+    self._header_drag_body = _make_drag_region(self._header_bar, self)
 
     self._icon = Image()
-    self._icon:SetParent(self._title_bar)
+    self._icon:SetParent(self._header_bar)
     self._icon:SetMouseVisible(false)
     self._icon:SetVisible(false)
 
     self._menu_bar = LuiMenuBar()
-    self._menu_bar:SetParent(self._title_bar)
+    self._menu_bar:SetParent(self._header_bar)
     self._menu_bar:SetZOrder(10)
     self._menu_bar.on_change = function()
         self:_layout()
@@ -247,7 +260,7 @@ function LuiWindow:Constructor(opts)
     _attach_drag_handlers(self._menu_bar, self)
 
     self._title_label = LuiLabel()
-    self._title_label:SetParent(self._title_bar)
+    self._title_label:SetParent(self._header_bar)
     self._title_label:SetMouseVisible(false)
     self._title_label:SetSelectable(false)
     self._title_label:SetMultiline(false)
@@ -256,7 +269,7 @@ function LuiWindow:Constructor(opts)
     self._title_label:SetZOrder(1)
 
     self._maximize_button = LuiButton()
-    self._maximize_button:SetParent(self._title_bar)
+    self._maximize_button:SetParent(self._header_bar)
     self._maximize_button:SetZOrder(10)
     self._maximize_button:set_text("")
     self._maximize_button.Click = function()
@@ -264,7 +277,7 @@ function LuiWindow:Constructor(opts)
     end
 
     self._close_button = LuiButton()
-    self._close_button:SetParent(self._title_bar)
+    self._close_button:SetParent(self._header_bar)
     self._close_button:SetZOrder(10)
     self._close_button:set_text("")
     self._close_button.Click = function()
@@ -409,8 +422,8 @@ function LuiWindow:set_margin(left, top, right, bottom)
     self:_layout()
 end
 
-function LuiWindow:set_title_bar_divider_visible(visible)
-    self._title_bar_divider_visible = visible == true
+function LuiWindow:set_header_bar_divider_visible(visible)
+    self._header_bar_divider_visible = visible == true
     self:_layout()
 end
 
@@ -530,14 +543,11 @@ function LuiWindow:is_maximized()
     return self:get_tile() == TILE_MAXIMIZED
 end
 
--- content area (below the title bar and divider) in window coordinates:
--- in-content popups (menus, lists) cover only this, so the title bar stays
--- usable while they are open
+-- content area (below the header bar and divider, status bar included) in
+-- window coordinates, as _layout last placed it: in-content popups (menus,
+-- lists) cover only this, so the header bar stays usable while they are open
 function LuiWindow:content_rect()
-    local width, height = self:GetSize()
-    local border = self:_border()
-    local top = border + _scaled_int(self._scale, BASE_TITLE_BAR_H) + self:_divider_h()
-    return border, top, math.max(0, width - (2 * border)), math.max(0, height - top - border)
+    return self._content_rect_x, self._content_rect_y, self._content_rect_w, self._content_rect_h
 end
 
 -- menu / dropdown / picker popups are separate windows fixed on screen:
@@ -694,7 +704,7 @@ function LuiWindow:apply_settings(scale)
     self:_apply_style()
 end
 
-function LuiWindow:_style_title_button(button)
+function LuiWindow:_style_header_button(button)
     if button == nil then
         return
     end
@@ -717,24 +727,31 @@ function LuiWindow:_apply_style()
     self:SetBackColor(Style.CONTROL_BORDER)
     self._frame:SetBackColor(Style.CONTROL_BORDER)
     self._inner:SetBackColor(Style.BACKGROUND)
-    self._title_bar:SetBackColor(Style.CONTROL_BACKGROUND)
+    self._header_bar:SetBackColor(Style.CONTROL_BACKGROUND)
     self._divider:SetBackColor(Style.CONTROL_BORDER)
     self._menu_bar:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self._title_label:SetForeColor(Style.FOREGROUND)
-    -- kept for the title-fit measure (window_title_bar.lua)
+    -- kept for the title-fit measure (window_header_bar.lua)
     self._title_font = _scaled_font(self._scale, Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE)
     self._title_label:SetFont(self._title_font)
     self._menu_bar:set_scale(self._scale)
     self._menu_bar:set_font(_scaled_font(self._scale, Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE))
     self:_sync_resize_handle_icons()
 
-    self:_style_title_button(self._maximize_button)
-    self:_style_title_button(self._close_button)
+    if self._status_bar ~= nil then
+        self:_style_status_bar()
+    end
+    if self._toast ~= nil then
+        self:_style_toast()
+    end
+
+    self:_style_header_button(self._maximize_button)
+    self:_style_header_button(self._close_button)
     self:_sync_maximize_button_icon()
     self._close_button:set_tinted_icon(
         Icons.path("window_close"),
-        BASE_TITLE_ACTION_ICON,
-        BASE_TITLE_ACTION_ICON,
+        BASE_HEADER_ACTION_ICON,
+        BASE_HEADER_ACTION_ICON,
         LuiButton.icon_position.RIGHT
     )
 
@@ -765,6 +782,8 @@ end
 function LuiWindow:SetVisible(visible)
     if visible ~= true then
         self:_close_open_menu()
+        self:_hide_window_hint()
+        self:hide_toast()
     end
     LuiBaseWindow.SetVisible(self, visible)
 end
@@ -788,12 +807,16 @@ function LuiWindow:bring_to_front()
     end
 end
 
+function LuiWindow:_header_bar_h()
+    return _scaled_int(self._scale, BASE_HEADER_BAR_H)
+end
+
 function LuiWindow:_border()
     return math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH) or 1))
 end
 
 function LuiWindow:_divider_h()
-    if self._title_bar_divider_visible ~= true then
+    if self._header_bar_divider_visible ~= true then
         return 0
     end
     return 1
@@ -817,8 +840,8 @@ function LuiWindow:_sync_maximize_button_icon()
 
     self._maximize_button:set_tinted_icon(
         icon,
-        BASE_TITLE_ACTION_ICON,
-        BASE_TITLE_ACTION_ICON,
+        BASE_HEADER_ACTION_ICON,
+        BASE_HEADER_ACTION_ICON,
         LuiButton.icon_position.RIGHT
     )
 end
@@ -833,7 +856,7 @@ function LuiWindow:_start_drag(args)
 
     self:_close_open_menu()
     self._dragging = true
-    self._drag_start_screen_x, self._drag_start_screen_y = self._title_bar:PointToScreen(
+    self._drag_start_screen_x, self._drag_start_screen_y = self._header_bar:PointToScreen(
         args ~= nil and args.X or 0,
         args ~= nil and args.Y or 0
     )
@@ -846,7 +869,7 @@ function LuiWindow:_drag_to(args)
         return
     end
 
-    local screen_x, screen_y = self._title_bar:PointToScreen(
+    local screen_x, screen_y = self._header_bar:PointToScreen(
         args ~= nil and args.X or 0,
         args ~= nil and args.Y or 0
     )
@@ -879,7 +902,7 @@ end
 
 function LuiWindow:_minimum_size()
     local min_w = self._minimum_width or _scaled_int(self._scale, BASE_MIN_W)
-    local min_h = self._minimum_height or _scaled_int(self._scale, BASE_MIN_H)
+    local min_h = self._minimum_height or (_scaled_int(self._scale, BASE_MIN_H) + self:_status_bar_h())
     return math.max(1, min_w), math.max(1, min_h)
 end
 
@@ -1028,7 +1051,7 @@ function LuiWindow:_restore_for_drag(screen_x, screen_y)
     if old_w > 0 then
         offset_x = math.floor((offset_x / old_w) * restore_w)
     end
-    offset_y = math.min(offset_y, _scaled_int(self._scale, BASE_TITLE_BAR_H))
+    offset_y = math.min(offset_y, _scaled_int(self._scale, BASE_HEADER_BAR_H))
     offset_x = _clamp(offset_x, 0, math.max(0, restore_w - 1))
     offset_y = _clamp(offset_y, 0, math.max(0, restore_h - 1))
 
@@ -1289,11 +1312,11 @@ function LuiWindow:_layout()
 
     local width, height = self:GetSize()
     local border = self:_border()
-    local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
+    local header_h = _scaled_int(self._scale, BASE_HEADER_BAR_H)
     local gap = _scaled_int(self._scale, BASE_GAP)
     local icon_size = _scaled_int(self._scale, self._icon_size or BASE_ICON)
     local chrome_margin = math.max(1, _scaled_int(self._scale, tonumber(Style.BORDER_WIDTH_THIN) or 1))
-    local chrome_square = math.max(0, title_h - (chrome_margin * 2))
+    local chrome_square = math.max(0, header_h - (chrome_margin * 2))
     local divider_h = self:_divider_h()
 
     self._frame:SetPosition(0, 0)
@@ -1304,14 +1327,14 @@ function LuiWindow:_layout()
     self._inner:SetPosition(border, border)
     self._inner:SetSize(inner_w, inner_h)
 
-    self._title_bar:SetPosition(0, 0)
-    self._title_bar:SetSize(inner_w, math.min(title_h, inner_h))
+    self._header_bar:SetPosition(0, 0)
+    self._header_bar:SetSize(inner_w, math.min(header_h, inner_h))
 
     local close_x = math.max(0, inner_w - chrome_margin - chrome_square)
     local close_y = chrome_margin
     self._close_button:SetPosition(close_x, close_y)
     self._close_button:SetSize(chrome_square, chrome_square)
-    local title_actions_x = close_x
+    local header_actions_x = close_x
     if self._maximize_button ~= nil then
         local maximize_visible = self._maximize_enabled == true
         local maximize_x = math.max(0, close_x - chrome_margin - chrome_square)
@@ -1319,20 +1342,20 @@ function LuiWindow:_layout()
         self._maximize_button:SetSize(chrome_square, chrome_square)
         self._maximize_button:SetVisible(maximize_visible)
         if maximize_visible == true then
-            title_actions_x = maximize_x
+            header_actions_x = maximize_x
         end
     end
 
     local left_used = chrome_margin
     if self._icon_asset ~= nil and icon_size > 0 and chrome_square > 0 then
-        local title_icon_size = math.min(icon_size, chrome_square)
-        self._icon:set_icon(self._icon_asset, title_icon_size)
+        local header_icon_size = math.min(icon_size, chrome_square)
+        self._icon:set_icon(self._icon_asset, header_icon_size)
         if self._icon_tint ~= nil then
             self._icon:set_tint(self._icon_tint)
         end
         local actual_w, actual_h = self._icon:get_size()
-        actual_w = actual_w or title_icon_size
-        actual_h = actual_h or title_icon_size
+        actual_w = actual_w or header_icon_size
+        actual_h = actual_h or header_icon_size
         local icon_x = chrome_margin + math.floor((chrome_square - actual_w) / 2)
         local icon_y = chrome_margin + math.floor((chrome_square - actual_h) / 2)
         self._icon:SetPosition(icon_x, icon_y)
@@ -1342,15 +1365,22 @@ function LuiWindow:_layout()
         self._icon:SetVisible(false)
     end
 
-    self:_layout_title_bar(inner_w, title_h, gap, left_used, title_actions_x)
+    self:_layout_header_bar(inner_w, header_h, gap, left_used, header_actions_x)
 
-    local divider_y = title_h
+    local divider_y = header_h
     self._divider:SetPosition(0, divider_y)
     self._divider:SetSize(inner_w, divider_h)
     self._divider:SetVisible(divider_h > 0)
 
-    local content_y = title_h + divider_h
-    local content_h = math.max(0, inner_h - content_y)
+    local content_y = header_h + divider_h
+    local status_h = self:_layout_status_bar(inner_w, inner_h, content_y)
+    local content_h = math.max(0, inner_h - content_y - status_h)
+    -- popups opened in the content cover the status bar too
+    self._content_rect_x = border
+    self._content_rect_y = border + content_y
+    self._content_rect_w = inner_w
+    self._content_rect_h = math.max(0, inner_h - content_y)
+    self._content_bottom = content_y + content_h
     local central = self._central_widget
     if central ~= nil then
         local margin_l = _scaled_int(self._scale, self._margin_left)
@@ -1361,6 +1391,9 @@ function LuiWindow:_layout()
         local central_h = math.max(0, content_h - margin_t - margin_b)
         central:SetPosition(margin_l, content_y + margin_t)
         central:SetSize(central_w, central_h)
+    end
+    if self._toast ~= nil then
+        self:_layout_toast()
     end
 
     self:_layout_resize_regions()
@@ -1374,9 +1407,9 @@ function LuiWindow:_layout_resize_regions()
     local width, height = self:GetSize()
     local edge = self:_border() + _scaled_int(self._scale, BASE_RESIZE_EDGE)
     local corner = math.max(edge, _scaled_int(self._scale, BASE_RESIZE_CORNER))
-    local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
+    local header_h = _scaled_int(self._scale, BASE_HEADER_BAR_H)
     -- the side edges start below the header bar
-    local side_top = math.min(height, title_h + edge)
+    local side_top = math.min(height, header_h + edge)
     local edge_visible = self._resizable == true and self:is_maximized() ~= true
     if edge_visible ~= true then
         self:_hide_resize_handle()
@@ -1465,5 +1498,8 @@ end
 
 UI.Widgets.LuiWindow = LuiWindow
 
--- title-bar layout (menu collapse, title fit): needs LuiWindow defined
-import "LUI.src.UI.Widgets.window_title_bar"
+-- header-bar layout (menu collapse, title fit): needs LuiWindow defined
+import "LUI.src.UI.Widgets.window_header_bar"
+-- status bar and toast (made on first use)
+import "LUI.src.UI.Widgets.window_status_bar"
+import "LUI.src.UI.Widgets.window_toast"

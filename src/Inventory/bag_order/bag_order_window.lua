@@ -93,7 +93,7 @@ function BagOrderWindow:Constructor()
     local central = Turbine.UI.Control()
     central:SetMouseVisible(true)
     self:set_central_widget(central)
-    -- the frame around the central widget (title bar, borders) is fixed:
+    -- the frame around the central widget (header bar, borders) is fixed:
     -- measured once, on a window big enough to hold it
     self:SetSize(400, 300)
     UI.Widgets.LuiWindow._layout(self)

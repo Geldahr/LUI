@@ -53,7 +53,7 @@ end
 --     shows a faint square on a light opaque background.
 -- Rule: an icon goes sized when its control can sit in a scrolling area.
 -- Icons built into widgets (checkbox, dropdown, spin box, pager, tab bar,
--- menu) are sized; the window title bar and the search bars never scroll
+-- menu) are sized; the window header bar and the search bars never scroll
 -- and stay stretched. A standalone button's icon (toolbar, shortcut,
 -- favorite star) is stretched unless the button sits in a scrolling area.
 -- No blend mode, window or layer gives both (measured in game 2026-10-18).
