@@ -8,6 +8,9 @@
 
 ### Changed
 
+- On narrow windows the title hides when it no longer fits, then the menus collapse into a single `Menu`.
+- Windows no longer resize from their top edge.
+
 ### Fixed
 
 ### Removed

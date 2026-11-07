@@ -11,6 +11,7 @@ import "LUI.src.UI.Widgets.button"
 import "LUI.src.UI.Widgets.image"
 import "LUI.src.UI.Widgets.label"
 import "LUI.src.UI.Widgets.menu"
+import "LUI.src.UI.Widgets.menu_bar"
 import "LUI.src.UI.Widgets.style"
 import "LUI.src.UI.Widgets.icons"
 import "LUI.src.UI.Widgets.base_window"
@@ -275,16 +276,12 @@ function LuiWindow:Constructor(opts)
     self._divider:SetMouseVisible(false)
     _set_blend(self._divider)
 
+    -- no top edge or top corners: the header bar (menus, title, buttons)
+    -- never resizes the window
     self._resize_regions = {
-        top = _make_resize_region(self, self, RESIZE_TOP),
         bottom = _make_resize_region(self, self, RESIZE_BOTTOM),
         left = _make_resize_region(self, self, RESIZE_LEFT),
         right = _make_resize_region(self, self, RESIZE_RIGHT),
-        top_left = _make_resize_region(
-            self,
-            self,
-            RESIZE_TOP + RESIZE_LEFT
-        ),
         bottom_right = _make_resize_region(
             self,
             self,
@@ -724,7 +721,9 @@ function LuiWindow:_apply_style()
     self._divider:SetBackColor(Style.CONTROL_BORDER)
     self._menu_bar:SetBackColor(Style.TRANSPARENT_BACKGROUND)
     self._title_label:SetForeColor(Style.FOREGROUND)
-    self._title_label:SetFont(_scaled_font(self._scale, Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE))
+    -- kept for the title-fit measure (window_title_bar.lua)
+    self._title_font = _scaled_font(self._scale, Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE)
+    self._title_label:SetFont(self._title_font)
     self._menu_bar:set_scale(self._scale)
     self._menu_bar:set_font(_scaled_font(self._scale, Style.WINDOW_TITLE_FONT_NAME, Style.WINDOW_TITLE_FONT_SIZE))
     self:_sync_resize_handle_icons()
@@ -1343,26 +1342,7 @@ function LuiWindow:_layout()
         self._icon:SetVisible(false)
     end
 
-    local menu_w = math.min(self._menu_bar:preferred_width(), math.max(0, title_actions_x - gap - left_used))
-    local menu_x = left_used
-    self._menu_bar:SetPosition(menu_x, 0)
-    self._menu_bar:SetSize(menu_w, title_h)
-    self._menu_bar:SetZOrder(20)
-    self._menu_bar:SetVisible(menu_w > 0)
-    if menu_w > 0 then
-        left_used = menu_x + menu_w + gap
-    end
-
-    self._title_drag_left:SetPosition(0, 0)
-    self._title_drag_left:SetSize(math.max(0, menu_x), title_h)
-
-    local drag_body_x = menu_x + menu_w + gap
-    local drag_body_w = math.max(0, title_actions_x - gap - drag_body_x)
-    self._title_drag_body:SetPosition(drag_body_x, 0)
-    self._title_drag_body:SetSize(drag_body_w, title_h)
-
-    self._title_label:SetPosition(0, 0)
-    self._title_label:SetSize(inner_w, title_h)
+    self:_layout_title_bar(inner_w, title_h, gap, left_used, title_actions_x)
 
     local divider_y = title_h
     self._divider:SetPosition(0, divider_y)
@@ -1395,30 +1375,24 @@ function LuiWindow:_layout_resize_regions()
     local edge = self:_border() + _scaled_int(self._scale, BASE_RESIZE_EDGE)
     local corner = math.max(edge, _scaled_int(self._scale, BASE_RESIZE_CORNER))
     local title_h = _scaled_int(self._scale, BASE_TITLE_BAR_H)
-    local right_edge_top = math.min(height, title_h + edge)
+    -- the side edges start below the header bar
+    local side_top = math.min(height, title_h + edge)
     local edge_visible = self._resizable == true and self:is_maximized() ~= true
     if edge_visible ~= true then
         self:_hide_resize_handle()
     end
 
     local top_w = math.max(0, width - (corner * 2))
-    local side_h = math.max(0, height - right_edge_top - corner)
-    local vertical_h = math.max(0, height - (corner * 2))
-
-    self._resize_regions.top:SetPosition(corner, 0)
-    self._resize_regions.top:SetSize(top_w, edge)
+    local side_h = math.max(0, height - side_top - corner)
 
     self._resize_regions.bottom:SetPosition(corner, math.max(0, height - edge))
     self._resize_regions.bottom:SetSize(top_w, edge)
 
-    self._resize_regions.left:SetPosition(0, corner)
-    self._resize_regions.left:SetSize(edge, vertical_h)
+    self._resize_regions.left:SetPosition(0, side_top)
+    self._resize_regions.left:SetSize(edge, side_h)
 
-    self._resize_regions.right:SetPosition(math.max(0, width - edge), right_edge_top)
+    self._resize_regions.right:SetPosition(math.max(0, width - edge), side_top)
     self._resize_regions.right:SetSize(edge, side_h)
-
-    self._resize_regions.top_left:SetPosition(0, 0)
-    self._resize_regions.top_left:SetSize(corner, corner)
 
     self._resize_regions.bottom_right:SetPosition(math.max(0, width - corner), math.max(0, height - corner))
     self._resize_regions.bottom_right:SetSize(corner, corner)
@@ -1490,3 +1464,6 @@ function LuiWindow:_layout_resize_handle(region)
 end
 
 UI.Widgets.LuiWindow = LuiWindow
+
+-- title-bar layout (menu collapse, title fit): needs LuiWindow defined
+import "LUI.src.UI.Widgets.window_title_bar"
