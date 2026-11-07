@@ -327,8 +327,11 @@ function LuiWindow:Constructor(opts)
     end
 
     self:SetWantsKeyEvents(true)
+    -- hidden windows get key events too: only a shown one closes on Esc
+    -- (a closed one-shot window must not run its close handler again)
     self.KeyDown = function(_, args)
         if args.Action == Turbine.UI.Lotro.Action.Escape
+            and self:IsVisible() == true
             and _G.LUI.Settings.State.settings.global.close_windows_with_esc == true then
             self:request_close()
         end
