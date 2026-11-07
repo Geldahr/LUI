@@ -359,6 +359,7 @@ LUI.src.Languages.fr.FR = {
     ["Inventory space"] = "Espace d'inventaire",
     ["In my area"] = "Dans ma zone",
     ["Edit"] = "Édition",
+    ["Menu"] = "Menu",
     ["It focuses on combat-related UI such as self vitals, target vitals, boss vitals, fellowship vitals, raid vitals, expiring effects, cooldowns elements and also inventory, and status bar."] = "Il se concentre sur les éléments d'interface liés au combat comme les vitals personnels, de la cible, du boss, de communauté et de raid, les effets expirants, les temps de recharge, ainsi que l'inventaire et la barre d'état.",
     ["It is separate from the built-in LotRO UI scaling."] = "Elle est distincte de la mise à l'échelle intégrée de l'interface de LotRO.",
     ["Item length"] = "Longueur d'élément",

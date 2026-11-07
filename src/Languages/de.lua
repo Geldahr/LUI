@@ -359,6 +359,7 @@ LUI.src.Languages.de.DE = {
     ["Inventory space"] = "Inventarplatz",
     ["In my area"] = "In meinem Gebiet",
     ["Edit"] = "Bearbeiten",
+    ["Menu"] = "Menü",
     ["It focuses on combat-related UI such as self vitals, target vitals, boss vitals, fellowship vitals, raid vitals, expiring effects, cooldowns elements and also inventory, and status bar."] = "Es konzentriert sich auf kampfbezogene UI-Elemente wie eigene Vitalwerte, Ziel-Vitalwerte, Boss-Vitalwerte, Gefährten-Vitalwerte, Schlachtzug-Vitalwerte, auslaufende Effekte, Abklingzeiten sowie Inventar und Statusleiste.",
     ["It is separate from the built-in LotRO UI scaling."] = "Sie ist von der eingebauten LotRO-UI-Skalierung getrennt.",
     ["Item length"] = "Elementlänge",

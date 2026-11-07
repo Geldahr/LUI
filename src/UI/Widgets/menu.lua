@@ -456,6 +456,8 @@ function LuiMenu:Constructor()
 
     self._scale = 1
     self._title = ""
+    -- cached preferred_width(), nil = measure again
+    self._preferred_w = nil
     self._font = _scaled_font(self._scale)
     self._items = {}
     self._parent_menu = nil
@@ -552,6 +554,7 @@ end
 
 function LuiMenu:set_title(title)
     self._title = tostring(title or "")
+    self._preferred_w = nil
     self.button:set_text(self._title)
 end
 
@@ -576,6 +579,7 @@ end
 function LuiMenu:set_scale(scale)
     self._scale = tonumber(scale) or 1
     self._font = _scaled_font(self._scale)
+    self._preferred_w = nil
     self.button:set_scale(self._scale)
     self.button:set_font(self._font)
     Style.apply_embedded_button(self.button)
@@ -597,6 +601,7 @@ function LuiMenu:set_font(font)
         return
     end
     self._font = font
+    self._preferred_w = nil
     self.button:set_font(font)
     for i = 1, #self._items do
         self._items[i]:set_font(font)
@@ -762,11 +767,16 @@ function LuiMenu:clear_items()
     self:_layout_popup()
 end
 
+-- the title button's width; measured once per title / font / scale (the
+-- window layout asks on every resize step)
 function LuiMenu:preferred_width()
-    return math.max(
-        _scaled_int(self._scale, BASE_TOP_MENU_MIN_W),
-        _scaled_int(self._scale, BASE_TOP_PAD_X * 2) + _text_width(self._font, self._title)
-    )
+    if self._preferred_w == nil then
+        self._preferred_w = math.max(
+            _scaled_int(self._scale, BASE_TOP_MENU_MIN_W),
+            _scaled_int(self._scale, BASE_TOP_PAD_X * 2) + _text_width(self._font, self._title)
+        )
+    end
+    return self._preferred_w
 end
 
 function LuiMenu:is_open()
@@ -1193,113 +1203,6 @@ function LuiMenu:_position_popup()
     self.popup:SetPosition(x, y)
 end
 
----@class LuiMenuBar : Turbine.UI.Control
-local LuiMenuBar = class(Turbine.UI.Control)
-Widgets.LuiMenuBar = LuiMenuBar
-
-function LuiMenuBar:Constructor()
-    Turbine.UI.Control.Constructor(self)
-
-    self._scale = 1
-    self._font = _scaled_font(self._scale)
-    self._menus = {}
-    self.on_change = nil
-
-    self:SetMouseVisible(true)
-    self:SetBackColor(Style.TRANSPARENT_BACKGROUND)
-    _set_blend(self)
-
-    self.SizeChanged = function()
-        self:_layout()
-    end
-end
-
-function LuiMenuBar:set_scale(scale)
-    self._scale = tonumber(scale) or 1
-    self._font = _scaled_font(self._scale)
-    for i = 1, #self._menus do
-        self._menus[i]:set_scale(self._scale)
-        self._menus[i]:set_font(self._font)
-    end
-    self:_layout()
-end
-
-function LuiMenuBar:set_font(font)
-    if font == nil then
-        return
-    end
-    self._font = font
-    for i = 1, #self._menus do
-        self._menus[i]:set_font(font)
-    end
-end
-
-function LuiMenuBar:add_menu(title_or_menu, options)
-    local menu = title_or_menu
-    if type(title_or_menu) ~= "table" then
-        menu = LuiMenu()
-        menu:set_title(title_or_menu)
-    elseif options ~= nil then
-        menu:set_scroll_options(options)
-    end
-
-    menu:SetParent(self)
-    -- menu-bar menus cover the whole host window (title bar included) so
-    -- hovering across the bar switches menus
-    menu._in_menu_bar = true
-    if type(title_or_menu) ~= "table" then
-        menu:set_scroll_options(options)
-    end
-    menu:set_scale(self._scale)
-    menu:set_font(self._font)
-
-    self._menus[#self._menus + 1] = menu
-    self:_layout()
-    if self.on_change ~= nil then
-        self:on_change()
-    end
-    return menu
-end
-
-function LuiMenuBar:remove_menu(menu)
-    for i = 1, #self._menus do
-        if self._menus[i] == menu then
-            menu:close()
-            menu:SetParent(nil)
-            table.remove(self._menus, i)
-            self:_layout()
-            if self.on_change ~= nil then
-                self:on_change()
-            end
-            return menu
-        end
-    end
-    error("LuiMenuBar:remove_menu menu is not registered")
-end
-
-function LuiMenuBar:preferred_width()
-    local width = 0
-    for i = 1, #self._menus do
-        width = width + self._menus[i]:preferred_width()
-    end
-    return width
-end
-
-function LuiMenuBar:_layout()
-    local x = 0
-    local height = self:GetHeight()
-    local width = self:GetWidth()
-    for i = 1, #self._menus do
-        local menu = self._menus[i]
-        local menu_w = math.min(menu:preferred_width(), math.max(0, width - x))
-        menu:SetPosition(x, 0)
-        menu:SetSize(menu_w, height)
-        menu:SetVisible(menu_w > 0)
-        x = x + menu_w
-    end
-end
-
 UI.Widgets.LuiAction = LuiAction
 UI.Widgets.LuiSeparator = LuiSeparator
 UI.Widgets.LuiMenu = LuiMenu
-UI.Widgets.LuiMenuBar = LuiMenuBar
