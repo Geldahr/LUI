@@ -1048,7 +1048,7 @@ function LuiMenu:_open_host_overlay()
         self._host_overlay_parent = host
     end
     if self._in_menu_bar ~= true then
-        -- in-content menus leave the title bar usable (close, maximize,
+        -- in-content menus leave the header bar usable (close, maximize,
         -- drag); LuiWindow closes the menu when it moves or resizes
         local x, y, w, h = Widgets.popup_catcher_rect(host)
         overlay:SetPosition(x, y)

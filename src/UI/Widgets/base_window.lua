@@ -14,7 +14,7 @@ local NativeScaling = LUI.UI.NativeScaling
 local Hidable = LUI.UI.Hidable
 
 -- rect (host coordinates) a popup's click-away catcher covers: inside a
--- LuiWindow only the content area, so the title bar (close, maximize, drag)
+-- LuiWindow only the content area, so the header bar (close, maximize, drag)
 -- stays usable while a dropdown / menu / picker is open; LuiWindow closes
 -- open popups when it moves, resizes or changes maximize state
 function Widgets.popup_catcher_rect(host)

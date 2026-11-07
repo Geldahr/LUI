@@ -2,7 +2,7 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at https://mozilla.org/MPL/2.0/.
 --
--- LuiWindow's title bar between the icon and the title buttons: the menu
+-- LuiWindow's header bar between the icon and the header buttons: the menu
 -- bar, the drag regions and the title. A narrow window degrades in two
 -- steps: the title hides when it no longer fits, centered, clear of the
 -- menus and the buttons; when even the menus do not fit, they collapse into
@@ -33,22 +33,22 @@ function LuiWindow:_title_width()
 end
 
 -- left_x: right of the icon; actions_x: left of the title buttons
-function LuiWindow:_layout_title_bar(inner_w, title_h, gap, left_x, actions_x)
+function LuiWindow:_layout_header_bar(inner_w, header_h, gap, left_x, actions_x)
     local bar = self._menu_bar
     local free_w = math.max(0, actions_x - gap - left_x)
     bar:set_collapsed(bar:expanded_width() > free_w)
     local menu_w = math.min(bar:preferred_width(), free_w)
     bar:SetPosition(left_x, 0)
-    bar:SetSize(menu_w, title_h)
+    bar:SetSize(menu_w, header_h)
     bar:SetZOrder(20)
     bar:SetVisible(menu_w > 0)
 
-    self._title_drag_left:SetPosition(0, 0)
-    self._title_drag_left:SetSize(math.max(0, left_x), title_h)
+    self._header_drag_left:SetPosition(0, 0)
+    self._header_drag_left:SetSize(math.max(0, left_x), header_h)
 
     local drag_body_x = left_x + menu_w + gap
-    self._title_drag_body:SetPosition(drag_body_x, 0)
-    self._title_drag_body:SetSize(math.max(0, actions_x - gap - drag_body_x), title_h)
+    self._header_drag_body:SetPosition(drag_body_x, 0)
+    self._header_drag_body:SetSize(math.max(0, actions_x - gap - drag_body_x), header_h)
 
     local clear_left = left_x
     if menu_w > 0 then
@@ -57,6 +57,6 @@ function LuiWindow:_layout_title_bar(inner_w, title_h, gap, left_x, actions_x)
     local title_w = self:_title_width()
     local title_x = math.floor((inner_w - title_w) / 2)
     self._title_label:SetPosition(0, 0)
-    self._title_label:SetSize(inner_w, title_h)
+    self._title_label:SetSize(inner_w, header_h)
     self._title_label:SetVisible(title_w > 0 and title_x >= clear_left and title_x + title_w <= actions_x - gap)
 end

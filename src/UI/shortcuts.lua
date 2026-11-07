@@ -107,7 +107,7 @@ function Shortcuts.api_button_icon(image)
     return image, nil
 end
 
--- a shortcut's icon in a LuiWindow title bar
+-- a shortcut's icon in a LuiWindow header bar
 function Shortcuts.apply_window_icon(window, shortcut_key)
     window:set_icon(Shortcuts.get_icon(shortcut_key))
     if Shortcuts.icons_tinted() == true then

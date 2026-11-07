@@ -873,7 +873,7 @@ end
 
 function TokenInput:_sync_click_away()
     if self._overflow_open == true then
-        -- leave a LuiWindow's title bar usable (close, maximize, drag)
+        -- leave a LuiWindow's header bar usable (close, maximize, drag)
         local x, y, w, h = Widgets.popup_catcher_rect(self._host)
         self._click_away:SetPosition(x, y)
         self._click_away:SetSize(w, h)

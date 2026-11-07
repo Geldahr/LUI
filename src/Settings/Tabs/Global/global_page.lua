@@ -609,6 +609,14 @@ function GlobalPage:Constructor(window)
         function()
             return self._settings.global.close_windows_with_esc == true
         end, 2)
+    general:add_row_break()
+    general:add_checkbox("fade_out_toasts", TR["Fade out window notifications"],
+        function(value)
+            self._settings.global.fade_out_toasts = value == true
+        end,
+        function()
+            return self._settings.global.fade_out_toasts == true
+        end, 2)
     self:add_tab(TR["General"], "general", general)
 
     local numbers = ConfigContent(window, 4)
