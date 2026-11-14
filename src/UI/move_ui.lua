@@ -9,6 +9,7 @@ import "Turbine.UI"
 import "Turbine.UI.Lotro"
 import "LUI.src.UI.native_scaling"
 import "LUI.src.UI.Widgets"
+import "LUI.src.UI.move_panel"
 
 local LUI = _G.LUI
 local UI = LUI.UI
@@ -344,19 +345,19 @@ end
 local move_ui_return_to_config = false
 
 local function _refresh_move_ui_chrome()
+    local show_chrome = move_enabled == true and
+        GRID.hud_visible ~= false and
+        MOVE_UI_PREVIEW_LOCKED ~= true
+
     if GRID.window ~= nil then
-        local show_grid = move_enabled == true and
-            GRID.hud_visible ~= false and
-            MOVE_UI_PREVIEW_LOCKED ~= true and
-            (GRID.active_count or 0) > 0
+        local show_grid = show_chrome and (GRID.active_count or 0) > 0
         GRID.window:SetVisible(show_grid)
     end
 
+    MoveMode.set_panel_visible(show_chrome)
+
     if MOVE_UI_DONE_WINDOW ~= nil then
-        local show_done = move_enabled == true and
-            GRID.hud_visible ~= false and
-            MOVE_UI_PREVIEW_LOCKED ~= true and
-            move_ui_show_done_button == true
+        local show_done = show_chrome and move_ui_show_done_button == true
         MOVE_UI_DONE_WINDOW:SetVisible(show_done)
         if show_done then
             _apply_done_window_style()
@@ -425,6 +426,7 @@ function MoveMode.refresh_snapshot()
     end
 
     _capture_move_settings_snapshot()
+    MoveMode.reset_start_positions()
 end
 
 function MoveMode.set_preview_lock(locked)
@@ -456,6 +458,7 @@ function MoveMode.set_mode(enabled, return_to_config, cancel_changes, show_done_
     if enabled then
         _capture_move_settings_snapshot()
     end
+    MoveMode.reset_start_positions()
 
     Windows.player_vital:set_move_mode(enabled)
     Windows.target_vital:set_move_mode(enabled)
