@@ -78,7 +78,7 @@ git clone https://github.com/Geldahr/LUI.git
 - `/lui inventory` or `/lui inv` - Toggle the inventory window
 - `/lui assets` or `/lui a` - Toggle the assets window
 - `/lui craft` - Toggle the crafting window
-- `/lui bestiary`, `/lui beast`, or `/lui b` - Toggle the bestiary window
+- `/lui pedia`, `/lui bestiary`, `/lui beast`, or `/lui b` - Toggle the encyclopedia window
 - `/lui card [monster name]` - Open the bestiary card for a monster
 - `/lui api.sb --add -k "key" -t "Title" [-d "Description"] -i "0x11223344|path/to/icon.tga" -c "/command args"` - Register a status bar API button
 
