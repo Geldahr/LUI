@@ -8,7 +8,6 @@ import "Turbine.UI"
 
 import "LUI.src.UI.Widgets.base_window"
 import "LUI.src.UI.Widgets.label"
-import "LUI.src.UI.Widgets.line_edit"
 import "LUI.src.UI.Widgets.style"
 
 local LUI = _G.LUI
@@ -18,7 +17,6 @@ local Widgets = UI.Widgets
 local MoveMode = UI.MoveMode
 local LuiBaseWindow = Widgets.LuiBaseWindow
 local LuiLabel = Widgets.LuiLabel
-local LuiLineEdit = Widgets.LuiLineEdit
 local Style = Widgets.Style
 
 local DEFAULT_TITLE = "HUD"
@@ -72,34 +70,6 @@ local function _clamp(n, min, max)
     return n
 end
 
-local function _trim_submit_suffix(text)
-    if type(text) ~= "string" then
-        return nil
-    end
-
-    if string.sub(text, -1) ~= "\n" then
-        return nil
-    end
-
-    return string.gsub(text, "[\r\n]+$", "")
-end
-
-local function _nudge_delta(action)
-    if action == 29 then
-        return 0, -1
-    end
-    if action == 113 then
-        return 0, 1
-    end
-    if action == 127 then
-        return -1, 0
-    end
-    if action == 108 then
-        return 1, 0
-    end
-    return nil, nil
-end
-
 ---@class LuiHUD : LuiBaseWindow
 local LuiHUD = class(LuiBaseWindow)
 Widgets.LuiHUD = LuiHUD
@@ -124,8 +94,7 @@ function LuiHUD:Constructor(opts)
     self._move_drag_start_screen_y = 0
     self._move_drag_start_window_x = 0
     self._move_drag_start_window_y = 0
-    self._move_updating_xy = false
-    self._move_focused_input = nil
+    self._move_focused = false
     self._move_grid_shown = false
     self._move_ui_scale = nil
 
@@ -141,47 +110,25 @@ function LuiHUD:Constructor(opts)
     self._move_layer:SetZOrder(999)
     self._move_layer:SetBackColor(Style.MOVE_OVERLAY_BACKGROUND)
 
-    self._move_header = Turbine.UI.Control()
-    self._move_header:SetParent(self._move_layer)
-    self._move_header:SetMouseVisible(false)
-    self._move_header:SetBackColor(Style.MOVE_OVERLAY_HEADER_BACKGROUND)
-
+    -- the element's title, centered; the position controls live in the
+    -- shared move panel (move_panel.lua) docked beside the clicked element
     self._move_title_label = LuiLabel()
-    self._move_title_label:SetParent(self._move_header)
+    self._move_title_label:SetParent(self._move_layer)
     self._move_title_label:SetMouseVisible(false)
     self._move_title_label:SetSelectable(false)
     self._move_title_label:SetForeColor(Style.MOVE_OVERLAY_FOREGROUND)
-    self._move_title_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
+    self._move_title_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
 
-    self._move_xy_container = Turbine.UI.Control()
-    self._move_xy_container:SetParent(self._move_header)
-    self._move_xy_container:SetMouseVisible(false)
-
-    self._move_x_label = LuiLabel()
-    self._move_x_label:SetParent(self._move_xy_container)
-    self._move_x_label:SetMouseVisible(false)
-    self._move_x_label:SetSelectable(false)
-    self._move_x_label:SetForeColor(Style.MOVE_OVERLAY_FOREGROUND)
-    self._move_x_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self._move_x_label:SetText("X")
-
-    self._move_x_box = LuiLineEdit()
-    self._move_x_box:SetParent(self._move_xy_container)
-    self._move_x_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self._move_x_box:SetWantsKeyEvents(true)
-
-    self._move_y_label = LuiLabel()
-    self._move_y_label:SetParent(self._move_xy_container)
-    self._move_y_label:SetMouseVisible(false)
-    self._move_y_label:SetSelectable(false)
-    self._move_y_label:SetForeColor(Style.MOVE_OVERLAY_FOREGROUND)
-    self._move_y_label:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleLeft)
-    self._move_y_label:SetText("Y")
-
-    self._move_y_box = LuiLineEdit()
-    self._move_y_box:SetParent(self._move_xy_container)
-    self._move_y_box:SetTextAlignment(Turbine.UI.ContentAlignment.MiddleCenter)
-    self._move_y_box:SetWantsKeyEvents(true)
+    -- frame of every element in move mode: a thin subtle grey line, the
+    -- active border on the element the move panel is docked to
+    self._move_frame = {}
+    for i = 1, 4 do
+        local edge = Turbine.UI.Control()
+        edge:SetParent(self._move_layer)
+        edge:SetMouseVisible(false)
+        edge:SetBackColor(Style.SUBTLE_FOREGROUND)
+        self._move_frame[i] = edge
+    end
 
     self:_bind_move_chrome()
     self:set_move_title(self._move_title)
@@ -206,6 +153,10 @@ function LuiHUD:set_move_title(title)
     if self._move_title_label ~= nil then
         self._move_title_label:SetText(self._move_title)
     end
+end
+
+function LuiHUD:get_move_title()
+    return self._move_title
 end
 
 function LuiHUD:set_hud_mouse_visible(visible)
@@ -266,9 +217,12 @@ function LuiHUD:set_move_mode(enabled)
         return
     end
 
+    if want ~= true then
+        MoveMode.release_hud(self)
+    end
+
     self._move_enabled = want
     self._move_dragging = false
-    self._move_focused_input = nil
     self:SetMouseVisible(want or self._hud_mouse_visible)
     self._move_layer:SetVisible(want)
     self._move_layer:SetMouseVisible(want)
@@ -304,10 +258,6 @@ function LuiHUD:_sync_move_ui_scale()
 
     self._move_ui_scale = scale
     self._move_title_label:SetFont(_scaled_font(Style.CONTROL_FONT_NAME, Style.CONTROL_FONT_SIZE))
-    self._move_x_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self._move_x_box:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self._move_y_label:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
-    self._move_y_box:SetFont(_scaled_font(Style.CONTENT_SMALL_FONT_NAME, Style.CONTENT_SMALL_FONT_SIZE))
 end
 
 function LuiHUD:apply_move_ui_scale()
@@ -325,83 +275,47 @@ function LuiHUD:layout_move_chrome()
     local w, h = self:GetSize()
     self._move_layer:SetPosition(0, 0)
     self._move_layer:SetSize(w, h)
+    self._move_title_label:SetPosition(0, 0)
+    self._move_title_label:SetSize(w, h)
+    self:_layout_move_frame()
 
-    local padding = _scaled_int(4)
-    local input_w = _scaled_int(52)
-    local input_h = _scaled_int(16)
-    local gap = _scaled_int(4)
-    local label_w = _scaled_int(10)
-    local single_header_h = _scaled_int(22)
-    local title_row_h = _scaled_int(19)
-    local row_h = _scaled_int(19)
-    local xy_single_w = ((label_w + input_w) * 2) + (gap * 3)
-    local min_title_w = _scaled_int(59)
-    local need_single_w = (padding * 2) + xy_single_w + min_title_w
-    local stacked = w < need_single_w
-    local header_h = stacked and (title_row_h + (row_h * 2)) or single_header_h
-
-    self._move_header:SetPosition(0, 0)
-    self._move_header:SetSize(w, header_h)
-
-    if stacked then
-        self._move_title_label:SetPosition(padding, 0)
-        self._move_title_label:SetSize(w - (padding * 2), title_row_h)
-
-        local xy_w = w - (padding * 2)
-        if xy_w < _scaled_int(30) then xy_w = _scaled_int(30) end
-        self._move_xy_container:SetPosition(padding, title_row_h)
-        self._move_xy_container:SetSize(xy_w, row_h * 2)
-
-        local box_w = xy_w - label_w - gap
-        if box_w < _scaled_int(15) then box_w = _scaled_int(15) end
-
-        self._move_x_label:SetPosition(0, 0)
-        self._move_x_label:SetSize(label_w, row_h)
-        self._move_x_box:SetPosition(label_w + gap, math.floor((row_h - input_h) / 2))
-        self._move_x_box:SetSize(box_w, input_h)
-
-        self._move_y_label:SetPosition(0, row_h)
-        self._move_y_label:SetSize(label_w, row_h)
-        self._move_y_box:SetPosition(label_w + gap, row_h + math.floor((row_h - input_h) / 2))
-        self._move_y_box:SetSize(box_w, input_h)
-    else
-        local xy_w = xy_single_w
-        if xy_w > (w - _scaled_int(7)) then
-            xy_w = w - _scaled_int(7)
-            if xy_w < _scaled_int(30) then xy_w = _scaled_int(30) end
-        end
-        self._move_xy_container:SetSize(xy_w, header_h)
-        self._move_xy_container:SetPosition(w - xy_w - padding, 0)
-
-        local x = gap
-        local y = math.floor((header_h - input_h) / 2)
-        self._move_x_label:SetPosition(x, 0)
-        self._move_x_label:SetSize(label_w, header_h)
-        x = x + label_w
-        self._move_x_box:SetPosition(x, y)
-        self._move_x_box:SetSize(input_w, input_h)
-        x = x + input_w + gap
-        self._move_y_label:SetPosition(x, 0)
-        self._move_y_label:SetSize(label_w, header_h)
-        x = x + label_w
-        self._move_y_box:SetPosition(x, y)
-        self._move_y_box:SetSize(input_w, input_h)
-
-        self._move_title_label:SetPosition(padding, 0)
-        self._move_title_label:SetSize(w - xy_w - (padding * 2), header_h)
-    end
+    MoveMode.hud_geometry_changed(self)
 end
 
-function LuiHUD:sync_move_inputs_from_position()
-    if self._move_enabled ~= true or self._move_updating_xy == true then
-        return
+function LuiHUD:_layout_move_frame()
+    local w, h = self:GetSize()
+    local width = Style.BORDER_WIDTH_THIN
+    if self._move_focused == true then
+        width = Style.BORDER_WIDTH_LARGE
     end
+    local t = math.max(1, _scaled_int(width))
+    local frame = self._move_frame
+    frame[1]:SetPosition(0, 0)
+    frame[1]:SetSize(w, t)
+    frame[2]:SetPosition(0, h - t)
+    frame[2]:SetSize(w, t)
+    frame[3]:SetPosition(0, 0)
+    frame[3]:SetSize(t, h)
+    frame[4]:SetPosition(w - t, 0)
+    frame[4]:SetSize(t, h)
+end
 
-    self._move_updating_xy = true
-    local x, y = self:GetPosition()
-    self._move_x_box:SetText(tostring(_int(x) or 0))
-    self._move_y_box:SetText(tostring(_int(y) or 0))
-    self._move_updating_xy = false
+-- the move panel is docked to this element (or left it)
+function LuiHUD:set_move_focused(focused)
+    self._move_focused = focused == true
+    local color = Style.SUBTLE_FOREGROUND
+    if self._move_focused then
+        color = Style.CONTROL_BORDER_ACTIVE
+    end
+    for i = 1, 4 do
+        self._move_frame[i]:SetBackColor(color)
+    end
+    self:_layout_move_frame()
+end
+
+-- refresh the move panel's fields when it is docked to this element
+function LuiHUD:sync_move_inputs_from_position()
+    MoveMode.hud_geometry_changed(self)
 end
 
 function LuiHUD:move_to(x, y, commit)
@@ -431,93 +345,13 @@ function LuiHUD:commit_move()
     end
 end
 
-function LuiHUD:apply_move_inputs(commit)
-    local cur_x, cur_y = self:GetPosition()
-    local x = _int(self._move_x_box:GetText())
-    local y = _int(self._move_y_box:GetText())
-    if x == nil then x = _int(cur_x) or 0 end
-    if y == nil then y = _int(cur_y) or 0 end
-    self:move_to(x, y, commit == true)
-end
-
 function LuiHUD:_bind_move_chrome()
-    self._move_x_box.FocusGained = function()
-        self._move_focused_input = "x"
-    end
-    self._move_y_box.FocusGained = function()
-        self._move_focused_input = "y"
-    end
-
-    self._move_x_box.FocusLost = function()
-        if self._move_focused_input == "x" then
-            self._move_focused_input = nil
-        end
-        self:apply_move_inputs(true)
-    end
-    self._move_y_box.FocusLost = function()
-        if self._move_focused_input == "y" then
-            self._move_focused_input = nil
-        end
-        self:apply_move_inputs(true)
-    end
-
-    self._move_x_box.TextChanged = function()
-        if self._move_updating_xy then
-            return
-        end
-
-        local trimmed = _trim_submit_suffix(self._move_x_box:GetText())
-        if trimmed ~= nil then
-            self._move_updating_xy = true
-            self._move_x_box:SetText(trimmed)
-            self._move_updating_xy = false
-            self:apply_move_inputs(true)
-        end
-    end
-    self._move_y_box.TextChanged = function()
-        if self._move_updating_xy then
-            return
-        end
-
-        local trimmed = _trim_submit_suffix(self._move_y_box:GetText())
-        if trimmed ~= nil then
-            self._move_updating_xy = true
-            self._move_y_box:SetText(trimmed)
-            self._move_updating_xy = false
-            self:apply_move_inputs(true)
-        end
-    end
-
-    local function nudge_from_key(input_name, args)
-        if self._move_focused_input ~= input_name or args == nil then
-            return
-        end
-        if Turbine.UI.Control.IsControlKeyDown() then
-            return
-        end
-
-        local dx, dy = _nudge_delta(args.Action)
-        if dx == nil or dy == nil then
-            return
-        end
-
-        local step = Turbine.UI.Control.IsAltKeyDown() and 10 or 1
-        local x, y = self:GetPosition()
-        self:move_to(x + (dx * step), y + (dy * step), true)
-    end
-
-    self._move_x_box.KeyDown = function(_, args)
-        nudge_from_key("x", args)
-    end
-    self._move_y_box.KeyDown = function(_, args)
-        nudge_from_key("y", args)
-    end
-
     local function start_drag(_, args)
         if self._move_enabled ~= true or args == nil or args.Button ~= Turbine.UI.MouseButton.Left then
             return
         end
 
+        MoveMode.focus_hud(self)
         self._move_dragging = true
         self._move_drag_start_x = args.X
         self._move_drag_start_y = args.Y

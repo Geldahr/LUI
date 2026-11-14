@@ -244,7 +244,7 @@ local function _new_interactions_section(window)
     local interactions_text = table.concat({
         TR["General"],
         TR["LUI windows with header bars can be dragged by the header bar, resized from edges/corners, closed from the close button, and maximized/restored when the maximize button is visible."],
-        TR["/lui move toggles HUD move mode; drag HUD frames to place them. /lui move cancel exits without saving the current positions."],
+        TR["/lui move toggles HUD move mode; drag HUD frames to place them. Click a frame to edit its position in the panel beside it: X/Y (the arrow keys nudge while a field has focus), nudge arrows (1 px, Alt: 10 px) and Reset (back to where it was). /lui move cancel exits without saving the current positions."],
         TR["When enabled, the LotRO move-mode action can toggle LUI move mode."],
         TR["The LotRO hide-UI action also toggles LUI HUD visibility."],
         TR["If the LUI inventory replacement is enabled, the backpack key opens the LUI inventory window."],

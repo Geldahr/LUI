@@ -10,6 +10,7 @@
 
 - On narrow windows the title hides when it no longer fits, then the menus collapse into a single `Menu`.
 - Windows no longer resize from their top edge.
+- In move mode, every HUD element has a thin frame, and clicking one opens a single position panel beside it with its title, `X`/`Y`, `Reset` (back to where it was when move mode started) and nudge arrows (1 px, `Alt`: 10 px; the arrow keys nudge too while `X` or `Y` has focus). The selected element's frame takes the active border color. The X/Y bar inside each element is gone, so small elements show their real size.
 
 ### Fixed
 
