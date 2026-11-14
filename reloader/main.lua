@@ -59,6 +59,6 @@ function Reloader.reload_command:Execute(_, arguments)
     Reloader.async:SetWantsUpdates(true)
 end
 
-Turbine.Shell.AddCommand("LUIReloader", Reloader.reload_command)
+Turbine.Shell.AddCommand("LUIReloader;LUIReload", Reloader.reload_command)
 
 _register_button()

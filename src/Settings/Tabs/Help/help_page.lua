@@ -195,6 +195,7 @@ local function _new_commands_section(window)
         TR["/lui travel - Toggle the travel window."],
         TR["/lui trav - Short alias for /lui travel."],
         TR["/lui bestiary - Toggle the encyclopedia window."],
+        TR["/lui pedia - Toggle the encyclopedia window."],
         TR["/lui beast - Alias for /lui bestiary."],
         TR["/lui b - Short alias for /lui bestiary."],
         TR["/lui card [monster name] - Open the bestiary card for a monster."],
