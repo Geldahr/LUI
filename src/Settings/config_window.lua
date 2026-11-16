@@ -675,6 +675,12 @@ function ConfigWindow:refresh_runtime_settings()
     if Windows.inventory ~= nil then
         Windows.inventory:apply_settings()
     end
+    -- Apply.inventory_settings above may have created or removed the LUI
+    -- inventory the Bag Order Guide needs
+    self.inventory_page:sync_bag_order_button()
+    if Windows.bag_order_guide ~= nil then
+        Windows.bag_order_guide:apply_settings()
+    end
     if Windows.assets ~= nil then
         Windows.assets:apply_settings()
     end

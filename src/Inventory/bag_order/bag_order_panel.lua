@@ -69,7 +69,6 @@ function BagOrderWindow:_build_panel()
     self.marker_frame = block(self.panel, Style.CONTROL_BORDER)
     self.marker_inner = block(self.marker_frame, Style.BACKGROUND)
     self.marker_inner:SetPosition(1, 1)
-    self.marker_inner:SetSize(self.box_size, self.box_size)
     -- a plain drop area, never a quickslot (same reason as Upkeep)
     self.marker_drop = Turbine.UI.Control()
     self.marker_drop:SetParent(self.panel)
@@ -149,6 +148,42 @@ function BagOrderWindow:_build_panel()
     self.key_note:SetText(TR["While this window is open, the bag key opens the game's bags, not the LUI inventory."])
 
     self.panel_separator = block(self.content, Style.SEPARATOR)
+    self:_size_panel()
+end
+
+-- the panel's fonts and fixed sizes: when built and after a scale change
+-- (positions come from _layout_panel)
+function BagOrderWindow:_size_panel()
+    local scale = State.settings.global.scale
+    local labels = {
+        self.marker_help, self.marker_name, self.marker_status, self.bags_question, self.rows_info,
+        self.last_rows_label, self.how_label, self.done_label, self.status_label,
+    }
+    for i = 1, #labels do
+        labels[i]:SetFont(self.font)
+    end
+    for bag = 1, Model.MAX_BAGS do
+        self.bag_labels[bag]:SetFont(self.font)
+        self.bag_spins[bag]:set_scale(scale)
+    end
+    self.step_label:SetFont(self.small_font)
+    self.key_note:SetFont(self.small_font)
+    self.title_label:SetFont(self.title_font)
+    self.action_label:SetFont(self.action_font)
+    self.bags_spin:set_scale(scale)
+
+    local buttons = {
+        self.clear_button, self.back_button, self.retry_button, self.next_button, self.restart_button,
+        self.put_back_button, self.close_button,
+    }
+    for i = 1, #buttons do
+        buttons[i]:set_scale(scale)
+        buttons[i]:set_font(self.font)
+    end
+
+    self.marker_inner:SetSize(self.box_size, self.box_size)
+    -- the marker's images are drawn again at the new box size
+    self._box_marker = false
 end
 
 ---------------------------------------------------------------------

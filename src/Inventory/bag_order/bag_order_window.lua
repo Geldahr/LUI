@@ -8,7 +8,8 @@
 -- order, 5 slots per row, laid out as the target bags (bag_order_list,
 -- read-only). The marker item is moved into each row's first slot in turn
 -- (bag_order_marker); the player finds it in the game's bags and drags its
--- row. This file: construction, lifecycle, backpack state, navigation.
+-- row. This file: construction, lifecycle, scale, backpack state,
+-- navigation.
 
 local TR = _G.LUI.Locale.TR
 local State = _G.LUI.Settings.State
@@ -77,7 +78,12 @@ function BagOrderWindow:Constructor()
     self._progress = 0
     -- the marker the box shows; false = never drawn (nil is "no marker")
     self._box_marker = false
+    -- entries older than the last backpack event: read again when needed
+    self._read_due = false
+    -- the view waits for the next shown frame
     self._refresh_due = false
+    -- _layout_state() of the last layout
+    self._laid_out_state = nil
     self._move_wanted = false
     self._retry_at = 0
     self._positioned = false
@@ -90,18 +96,12 @@ function BagOrderWindow:Constructor()
     self.tooltip:SetFont(self.font)
     self.tooltip:SetZOrder(2200)
 
-    local central = Turbine.UI.Control()
-    central:SetMouseVisible(true)
-    self:set_central_widget(central)
-    -- the frame around the central widget (header bar, borders) is fixed:
-    -- measured once, on a window big enough to hold it
-    self:SetSize(400, 300)
-    UI.Widgets.LuiWindow._layout(self)
-    local central_w, central_h = central:GetSize()
-    self._chrome_w = 400 - central_w
-    self._chrome_h = 300 - central_h
+    self._central = Turbine.UI.Control()
+    self._central:SetMouseVisible(true)
+    self:set_central_widget(self._central)
+    self:_measure_chrome()
     self.content = Turbine.UI.Control()
-    self.content:SetParent(central)
+    self.content:SetParent(self._central)
     self.content:SetMouseVisible(true)
 
     self:_build_panel()
@@ -113,9 +113,23 @@ function BagOrderWindow:Constructor()
     for i = 1, #BACKPACK_EVENTS do
         Utils.add_callback(self.backpack, BACKPACK_EVENTS[i], self._backpack_callback)
     end
+    -- hidden by the hide-UI key: a view refresh held back runs once shown
+    self.VisibleChanged = function()
+        self:_sync_updates()
+    end
 
     self:_refresh_tiles()
     self:_refresh_view()
+end
+
+-- the frame around the central widget (header bar, borders) is fixed for a
+-- scale: measured on a window big enough to hold it
+function BagOrderWindow:_measure_chrome()
+    self:SetSize(400, 300)
+    UI.Widgets.LuiWindow._layout(self)
+    local central_w, central_h = self._central:GetSize()
+    self._chrome_w = 400 - central_w
+    self._chrome_h = 300 - central_h
 end
 
 function BagOrderWindow:_build_sizes()
@@ -165,6 +179,10 @@ end
 -- One-shot window: once closed nothing may keep it alive. A running marker
 -- move finishes in the inventory window without calling back.
 function BagOrderWindow:destroy()
+    -- the hide below must not wake Update again
+    self.VisibleChanged = nil
+    self._move_wanted = false
+    self._refresh_due = false
     if self._operation ~= nil then
         self._operation.on_done = nil
         self._operation = nil
@@ -178,12 +196,30 @@ function BagOrderWindow:destroy()
     self:hide()
 end
 
+-- A scale change while the guide is open (Settings Apply): sizes, fonts
+-- and images again, then the layout. Styles need a plugin reload.
+-- (self._scale is LuiWindow's, set by its apply_settings)
+function BagOrderWindow:apply_settings()
+    local scale = State.settings.global.scale
+    if scale == self._scale then
+        return
+    end
+    UI.Widgets.LuiWindow.apply_settings(self, scale)
+    self:_build_sizes()
+    self.tooltip:set_scale(scale)
+    self.tooltip:SetFont(self.font)
+    self:_measure_chrome()
+    self:_size_panel()
+    for row = 1, self.row_count do
+        self:_size_row(self.row_views[row])
+    end
+    self:_refresh_tiles()
+    self:_refresh_view()
+end
+
 function BagOrderWindow:Update()
-    if self._refresh_due == true then
-        self._refresh_due = false
-        self:_read_entries()
-        self:_refresh_tiles()
-        self:_refresh_view()
+    if self._refresh_due == true and self:IsVisible() == true then
+        self:_refresh_backpack_view()
     end
     if self._move_wanted == true and Turbine.Engine.GetGameTime() >= self._retry_at then
         self:_request_marker_move()
@@ -195,19 +231,29 @@ end
 -- Backpack state
 ---------------------------------------------------------------------
 
--- backpack events come in bursts: refresh once, on the next frame
+-- Backpack events come in bursts and only mark things stale: the entries
+-- are read when a marker move needs them or the view refreshes, on the
+-- next shown frame (a hidden window touches no UI).
 function BagOrderWindow:_backpack_changed()
+    self._read_due = true
     self._refresh_due = true
     self:_sync_updates()
 end
 
 function BagOrderWindow:_sync_updates()
-    self:SetWantsUpdates(self._refresh_due == true or self._move_wanted == true)
+    self:SetWantsUpdates((self._refresh_due == true and self:IsVisible() == true) or self._move_wanted == true)
+end
+
+function BagOrderWindow:_ensure_entries()
+    if self._read_due == true then
+        self:_read_entries()
+    end
 end
 
 -- reads the bag and follows the marker (the guide moves it, the player may
 -- move it, a second one may arrive)
 function BagOrderWindow:_read_entries()
+    self._read_due = false
     local entries = Operations.snapshot(self.backpack)
     if #entries ~= self.slot_count then
         self.size_error = TR["Your backpack size changed. Close the guide and open it again."]
@@ -321,6 +367,7 @@ function BagOrderWindow:_restart()
     self.put_back = false
     self.move_error = nil
     self:_refresh_view()
+    self:_request_marker_move()
 end
 
 ---------------------------------------------------------------------
@@ -332,6 +379,34 @@ function BagOrderWindow:_refresh_view()
     self:_refresh_status()
     self:_layout_content()
     self:_refresh_highlight()
+end
+
+-- what the panel layout depends on besides the phase and the setup: the
+-- marker error block and the Try again button
+function BagOrderWindow:_layout_state()
+    local state = 0
+    if self.marker_error ~= nil then
+        state = state + 1
+    end
+    if self.move_error ~= nil then
+        state = state + 2
+    end
+    return state
+end
+
+-- After backpack changes: the changed tiles, the marker's frame and the
+-- status lines. The whole view only when the layout changes with them.
+function BagOrderWindow:_refresh_backpack_view()
+    self._refresh_due = false
+    self:_ensure_entries()
+    self:_refresh_tiles()
+    if self:_layout_state() ~= self._laid_out_state then
+        self:_refresh_view()
+        return
+    end
+    self.marker_status:SetText(self.marker_error or "")
+    self:_refresh_status()
+    self:_refresh_marker_frame()
 end
 
 -- panel, separator, list; the window sizes itself to them (not named
@@ -347,6 +422,8 @@ function BagOrderWindow:_layout_content()
     place(self.panel, 0, 0, self.panel_w, panel_h)
     place(self.panel_separator, sep_x, 0, 1, content_h)
     place(self.list, list_x, 0, list_w, list_h)
+
+    self._laid_out_state = self:_layout_state()
 
     -- window = content + margins + chrome
     self:SetSize(content_w + (2 * self.margin) + self._chrome_w, content_h + (2 * self.margin) + self._chrome_h)

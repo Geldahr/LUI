@@ -1148,6 +1148,10 @@ function InventoryWindow:Update()
     if self.inventory_operation ~= nil then
         self:_update_inventory_operation(now)
     end
+    -- hidden: only the operation runs; showing the window refreshes it
+    if self:IsVisible() ~= true then
+        return
+    end
 
     if (now - (self.last_update_at or 0)) < self.update_every then
         return
@@ -1236,11 +1240,11 @@ end
 function InventoryWindow:_set_inventory_actions_enabled(enabled)
     local is_enabled = enabled == true
     if is_enabled ~= true then
-        self.edit_menu:close()
         self.sort_menu:close()
         self.merge_menu:close()
     end
-    self.edit_menu.button:set_enabled(is_enabled)
+    -- also greys the Edit row of the collapsed "Menu", even while it is open
+    self:get_menu_bar():set_menu_enabled(self.edit_menu, is_enabled)
     self.sort_category_action:set_enabled(is_enabled)
     self.sort_az_action:set_enabled(is_enabled)
     self.sort_quantity_action:set_enabled(is_enabled)

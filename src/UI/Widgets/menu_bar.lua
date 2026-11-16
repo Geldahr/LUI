@@ -202,6 +202,26 @@ function LuiMenuBar:set_collapsed(collapsed)
     self:_layout()
 end
 
+-- Enables or disables a bar menu (a disabled one closes). The collapsed
+-- "Menu" row follows at once, even while the host is open.
+function LuiMenuBar:set_menu_enabled(menu, enabled)
+    enabled = enabled == true
+    if enabled ~= true then
+        menu:close()
+    end
+    menu.button:set_enabled(enabled)
+    if self._collapse_menu == nil then
+        return
+    end
+    for i = 1, #self._menus do
+        if self._menus[i] == menu then
+            self._collapse_rows[i]:set_enabled(enabled)
+            return
+        end
+    end
+    error("LuiMenuBar:set_menu_enabled menu is not registered")
+end
+
 function LuiMenuBar:_close_all()
     for i = 1, #self._menus do
         self._menus[i]:close()

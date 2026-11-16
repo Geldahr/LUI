@@ -5,9 +5,11 @@
 -- Bag Order Guide window, the marker: picked by a drop on the marker box or
 -- a click in the list, refused when not unique (name or icon), then moved
 -- into the current row's first slot through the inventory window's
--- operation slot. One move at a time: clicks made meanwhile only change the
--- step, and the finished move asks again, so fast clicking ends in a single
--- move to the latest row.
+-- operation slot. Every move is a swap, so the marker goes back home first:
+-- that swap puts back the item its last move displaced, and every row keeps
+-- its items. One move at a time: clicks made meanwhile only change the
+-- step, and the finished move asks again, so fast clicking ends in the
+-- moves to the latest row.
 
 local TR = _G.LUI.Locale.TR
 local Inventory = _G.LUI.Features.Inventory
@@ -99,7 +101,8 @@ function BagOrderWindow:_clear_marker()
     self:_refresh_view()
 end
 
--- where the marker should be now, nil when it stays put
+-- where the marker should be now, nil when it stays put: the current Add
+-- step's row, home during the setup and once put back
 function BagOrderWindow:_wanted_marker_slot()
     if self.marker == nil or self.marker.slot == nil then
         return nil
@@ -109,23 +112,41 @@ function BagOrderWindow:_wanted_marker_slot()
         if step.kind == "add" then
             return Model.first_slot(step.row)
         end
-    elseif self.phase == Common.PHASE_DONE and self.put_back == true then
-        return self.marker.home
+        return nil
     end
-    return nil
+    if self.phase == Common.PHASE_DONE and self.put_back ~= true then
+        return nil
+    end
+    return self.marker.home
+end
+
+-- the status line now, or with the rest of the view once shown
+function BagOrderWindow:_status_changed()
+    if self:IsVisible() == true then
+        self:_refresh_status()
+    else
+        self._refresh_due = true
+    end
 end
 
 function BagOrderWindow:_request_marker_move()
     self._move_wanted = false
     self.waiting = false
+    self:_ensure_entries()
     local target = self:_wanted_marker_slot()
     if self.moving == true or self.marker_error ~= nil or self.move_error ~= nil or
         self.size_error ~= nil or target == nil or target == self.marker.slot then
+        self:_status_changed()
         self:_sync_updates()
-        self:_refresh_status()
         return
     end
-    local operation = MarkerMove.create(self.backpack, self.marker.slot, target)
+    -- away from home, the marker swaps back there first (the finished move
+    -- asks again for the target)
+    local to = target
+    if self.marker.slot ~= self.marker.home then
+        to = self.marker.home
+    end
+    local operation = MarkerMove.create(self.backpack, self.marker.slot, to)
     operation.on_done = function(result)
         self:_move_done(result)
     end
@@ -139,18 +160,18 @@ function BagOrderWindow:_request_marker_move()
         self._move_wanted = true
         self._retry_at = Turbine.Engine.GetGameTime() + MOVE_RETRY_SECONDS
     end
+    self:_status_changed()
     self:_sync_updates()
-    self:_refresh_status()
 end
 
+-- the bag changed: the view follows on the next shown frame
 function BagOrderWindow:_move_done(result)
     self.moving = false
     self._operation = nil
     if result.failed == true then
         self.move_error = TR[result.message_key]
     end
-    self:_read_entries()
-    self:_refresh_tiles()
-    self:_refresh_view()
+    self._read_due = true
+    self._refresh_due = true
     self:_request_marker_move()
 end
