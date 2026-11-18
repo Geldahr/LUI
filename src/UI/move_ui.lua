@@ -492,6 +492,9 @@ function MoveMode.set_mode(enabled, return_to_config, cancel_changes, show_done_
     if Windows.launcher ~= nil then
         Windows.launcher:set_move_mode(enabled)
     end
+    if not enabled then
+        MoveMode.clear_focus()
+    end
 
     if enabled and move_ui_show_done_button == true then
         _ensure_move_ui_done_window()

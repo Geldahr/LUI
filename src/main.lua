@@ -213,11 +213,9 @@ function Apply.game_bags()
     set_backpacks_enabled(replace ~= true or Windows.bag_order_guide ~= nil)
 end
 
--- needs the LUI inventory: the marker moves run in its operation slot
+-- needs the LUI inventory: the marker moves run in its operation slot (the
+-- settings button is disabled without it)
 function Shortcuts.open_bag_order_guide()
-    if Windows.inventory == nil then
-        return
-    end
     if Windows.bag_order_guide == nil then
         Windows.bag_order_guide = Inventory.BagOrderWindow()
         Apply.game_bags()

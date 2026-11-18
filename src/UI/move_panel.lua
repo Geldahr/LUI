@@ -428,6 +428,14 @@ function MoveMode.release_hud(hud)
     _refresh_panel()
 end
 
+-- move mode ended: nothing stays selected, so the next one starts fresh
+-- (no element framed, panel hidden)
+function MoveMode.clear_focus()
+    if FOCUSED ~= nil then
+        MoveMode.release_hud(FOCUSED)
+    end
+end
+
 -- a HUD element moved or resized
 function MoveMode.hud_geometry_changed(hud)
     if FOCUSED ~= hud then

@@ -66,9 +66,14 @@ function InventoryPage:Constructor(window)
     self:add_tab(TR["Layout"], "layout", layout)
 end
 
--- the guide's marker moves run in the LUI inventory window
 function InventoryPage:load()
     ConfigTabs.load(self)
+    self:sync_bag_order_button()
+end
+
+-- the guide's marker moves run in the LUI inventory window: the button
+-- follows it on load and after every Apply (ConfigWindow)
+function InventoryPage:sync_bag_order_button()
     self.bag_order_entry.button:set_enabled(Windows.inventory ~= nil)
 end
 

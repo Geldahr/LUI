@@ -46,26 +46,24 @@ function BagOrderWindow:_build_list()
     self.header_views = {}
     self.separators = {}
     self._header_count = 0
+    -- the slot whose tile has the marker frame
+    self._framed_slot = nil
 end
 
 function BagOrderWindow:_build_row(row)
     local view = {}
     view.band = block(self.list, Style.TRANSPARENT_BACKGROUND)
-    view.band:SetSize(self.column_w, self.row_h)
     view.band:SetVisible(false)
 
     local first = Model.first_slot(row)
     view.range = label(view.band, self.small_font, Style.SUBTLE_FOREGROUND, Turbine.UI.ContentAlignment.MiddleRight, false)
     view.range:SetText(string.format("%d-%d", first, Model.last_slot(row, self.slot_count)))
-    view.range:SetPosition(0, 0)
-    view.range:SetSize(self.range_w, self.row_h)
 
     view.tiles = {}
     for i = 1, ROW_SIZE do
         local slot = first + i - 1
         if slot <= self.slot_count then
             local tile = self:_build_tile(view.band, slot)
-            tile.frame:SetPosition(self.range_w + self.gap + ((i - 1) * (self.tile_size + self.tile_gap)), self.row_pad)
             view.tiles[i] = tile
             self.tiles[slot] = tile
         end
@@ -73,11 +71,34 @@ function BagOrderWindow:_build_row(row)
 
     view.check = UI.Widgets.Image()
     view.check:SetParent(view.band)
+    self:_size_row(view)
+    view.check:SetVisible(false)
+    return view
+end
+
+-- a row's sizes, fonts and check icon: when built and after a scale change
+function BagOrderWindow:_size_row(view)
+    view.band:SetSize(self.column_w, self.row_h)
+    view.range:SetFont(self.small_font)
+    view.range:SetPosition(0, 0)
+    view.range:SetSize(self.range_w, self.row_h)
+    for i = 1, #view.tiles do
+        local tile = view.tiles[i]
+        tile.frame:SetPosition(self.range_w + self.gap + ((i - 1) * (self.tile_size + self.tile_gap)), self.row_pad)
+        self:_size_tile(tile)
+    end
     view.check:set_icon(Icons.sized("check"), self.check_size)
     view.check:set_tint(Style.ICON_ACCENT)
     view.check:SetPosition(self.column_w - self.check_size, math.floor((self.row_h - self.check_size) / 2))
-    view.check:SetVisible(false)
-    return view
+end
+
+-- a tile's sizes; its images are drawn again by the next _refresh_tiles
+function BagOrderWindow:_size_tile(tile)
+    tile.key = nil
+    tile.frame:SetSize(self.tile_size, self.tile_size)
+    tile.inner:SetSize(self.icon_size, self.icon_size)
+    tile.qty:SetFont(self.small_font)
+    tile.qty:SetSize(self.icon_size - 1, self.icon_size - 1)
 end
 
 function BagOrderWindow:_build_tile(parent, slot)
@@ -85,10 +106,8 @@ function BagOrderWindow:_build_tile(parent, slot)
     tile.key = nil
     tile.frame = block(parent, Style.CONTROL_BORDER)
     tile.frame:SetMouseVisible(true)
-    tile.frame:SetSize(self.tile_size, self.tile_size)
     tile.inner = block(tile.frame, Style.BACKGROUND)
     tile.inner:SetPosition(1, 1)
-    tile.inner:SetSize(self.icon_size, self.icon_size)
     tile.back = UI.Widgets.Image()
     tile.back:SetParent(tile.frame)
     tile.back:SetPosition(1, 1)
@@ -100,7 +119,6 @@ function BagOrderWindow:_build_tile(parent, slot)
     tile.qty:SetFontStyle(Turbine.UI.FontStyle.Outline)
     tile.qty:SetZOrder(3)
     tile.qty:SetPosition(1, 1)
-    tile.qty:SetSize(self.icon_size - 1, self.icon_size - 1)
     tile.frame.MouseClick = function(_, args)
         if args.Button == Turbine.UI.MouseButton.Left and self.phase == Common.PHASE_MARKER then
             self:_pick_slot(slot)
@@ -231,6 +249,7 @@ end
 
 -- The current row (Add step) or bag (Empty step) is highlighted, finished
 -- rows are dimmed with a check, the marker's tile is framed.
+-- (navigation and layout changes; backpack events only move the frame)
 function BagOrderWindow:_refresh_highlight()
     local current_row = nil
     local current_bag = nil
@@ -251,10 +270,6 @@ function BagOrderWindow:_refresh_highlight()
     elseif self.phase == Common.PHASE_DONE then
         done_before = self.row_count + 1
     end
-    local marker_slot = nil
-    if self.marker ~= nil then
-        marker_slot = self.marker.slot
-    end
 
     for row = 1, self.row_count do
         local view = self.row_views[row]
@@ -269,17 +284,11 @@ function BagOrderWindow:_refresh_highlight()
         if done == true then
             opacity = DONE_OPACITY
         end
-        local first = Model.first_slot(row)
         for i = 1, #view.tiles do
             local tile = view.tiles[i]
             tile.back:SetOpacity(opacity)
             tile.icon:SetOpacity(opacity)
             tile.qty:SetOpacity(opacity)
-            if first + i - 1 == marker_slot then
-                tile.frame:SetBackColor(Style.ACCENT_BACKGROUND)
-            else
-                tile.frame:SetBackColor(Style.CONTROL_BORDER)
-            end
         end
     end
     for i = 1, self._header_count do
@@ -290,4 +299,23 @@ function BagOrderWindow:_refresh_highlight()
             view.band:SetBackColor(Style.TRANSPARENT_BACKGROUND)
         end
     end
+    self:_refresh_marker_frame()
+end
+
+-- moves the marker frame: only the tiles it leaves and reaches
+function BagOrderWindow:_refresh_marker_frame()
+    local slot = nil
+    if self.marker ~= nil then
+        slot = self.marker.slot
+    end
+    if slot == self._framed_slot then
+        return
+    end
+    if self._framed_slot ~= nil then
+        self.tiles[self._framed_slot].frame:SetBackColor(Style.CONTROL_BORDER)
+    end
+    if slot ~= nil then
+        self.tiles[slot].frame:SetBackColor(Style.ACCENT_BACKGROUND)
+    end
+    self._framed_slot = slot
 end

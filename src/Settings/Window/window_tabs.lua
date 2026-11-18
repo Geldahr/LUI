@@ -158,6 +158,8 @@ function ConfigWindow:build_tabs()
     local inventory_page = InventoryPage(self)
     inventory_page._tab_key = "inventory"
     self.main_tab_bar:add_tab(TR["Inventory"], inventory_page)
+    -- refresh_runtime_settings syncs its guide button with the runtime
+    self.inventory_page = inventory_page
 
     local crafting_page = CraftingPage(self)
     crafting_page._tab_key = "crafting"

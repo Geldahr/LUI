@@ -299,6 +299,9 @@ function DropsWindow:Constructor()
 end
 
 function DropsWindow:destroy()
+    -- base only (no view refresh): releases the move panel docked here
+    -- and this element's share of the move grid
+    UI.Widgets.LuiHUD.set_move_mode(self, false)
     self:_detach_callbacks()
     for i = 1, #self._active_drops do
         local record = self._active_drops[i]

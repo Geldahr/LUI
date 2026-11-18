@@ -139,6 +139,9 @@ end
 ---------------------------------------------------------------------
 
 function UpkeepWindow:destroy()
+    -- base only (no view refresh): releases the move panel docked here
+    -- and this element's share of the move grid
+    UI.Widgets.LuiHUD.set_move_mode(self, false)
     remove_callback(self._lp, "TargetChanged", self._cb_target_changed)
     self._cb_target_changed = nil
     self:_release_target_manager()

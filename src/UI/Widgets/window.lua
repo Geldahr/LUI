@@ -58,7 +58,7 @@ WindowConstants.RESIZE_BOTH = RESIZE_MODE_BOTH
 
 local RESIZE_LEFT = 1
 local RESIZE_RIGHT = 2
-local RESIZE_TOP = 4
+-- no top edge: windows resize from the sides and the bottom only
 local RESIZE_BOTTOM = 8
 
 local function _scaled_int(scale, value)
@@ -487,7 +487,7 @@ function LuiWindow:_resize_mode_allows_mask(mask)
     end
 
     local has_horizontal = _has_resize_dir(mask, RESIZE_LEFT) or _has_resize_dir(mask, RESIZE_RIGHT)
-    local has_vertical = _has_resize_dir(mask, RESIZE_TOP) or _has_resize_dir(mask, RESIZE_BOTTOM)
+    local has_vertical = _has_resize_dir(mask, RESIZE_BOTTOM)
     if has_horizontal == true and has_vertical == true then
         return false
     end
@@ -1087,13 +1087,8 @@ function LuiWindow:_clamp_resize_to_screen(x, y, width, height)
         end
     end
 
-    if work_h > 0 then
-        if _has_resize_dir(mask, RESIZE_TOP) and y < work_y then
-            height = height + (y - work_y)
-            y = work_y
-        elseif _has_resize_dir(mask, RESIZE_BOTTOM) and y + height > work_y + work_h then
-            height = work_y + work_h - y
-        end
+    if work_h > 0 and _has_resize_dir(mask, RESIZE_BOTTOM) and y + height > work_y + work_h then
+        height = work_y + work_h - y
     end
 
     if width < min_w then
@@ -1103,9 +1098,6 @@ function LuiWindow:_clamp_resize_to_screen(x, y, width, height)
         width = min_w
     end
     if height < min_h then
-        if _has_resize_dir(mask, RESIZE_TOP) then
-            y = y + height - min_h
-        end
         height = min_h
     end
 
@@ -1166,15 +1158,7 @@ function LuiWindow:_calculate_resize_bounds(region, args)
         w = math.max(min_w, self._resize_start_window_w + dx)
     end
 
-    if _has_resize_dir(self._resize_mask, RESIZE_TOP) then
-        h = self._resize_start_window_h - dy
-        if h < min_h then
-            h = min_h
-            y = self._resize_start_window_y + self._resize_start_window_h - min_h
-        else
-            y = self._resize_start_window_y + dy
-        end
-    elseif _has_resize_dir(self._resize_mask, RESIZE_BOTTOM) then
+    if _has_resize_dir(self._resize_mask, RESIZE_BOTTOM) then
         h = math.max(min_h, self._resize_start_window_h + dy)
     end
 
@@ -1291,7 +1275,7 @@ function LuiWindow:_resize_handle_for_region(region)
         return self._resize_handles.diagonal_tr_bl
     elseif region._resize_mask == RESIZE_LEFT or region._resize_mask == RESIZE_RIGHT then
         return self._resize_handles.horizontal
-    elseif region._resize_mask == RESIZE_TOP or region._resize_mask == RESIZE_BOTTOM then
+    elseif region._resize_mask == RESIZE_BOTTOM then
         return self._resize_handles.vertical
     end
     return self._resize_handles.diagonal_tl_br
@@ -1418,11 +1402,11 @@ function LuiWindow:_layout_resize_regions()
         self:_hide_resize_handle()
     end
 
-    local top_w = math.max(0, width - (corner * 2))
+    local bottom_w = math.max(0, width - (corner * 2))
     local side_h = math.max(0, height - side_top - corner)
 
     self._resize_regions.bottom:SetPosition(corner, math.max(0, height - edge))
-    self._resize_regions.bottom:SetSize(top_w, edge)
+    self._resize_regions.bottom:SetSize(bottom_w, edge)
 
     self._resize_regions.left:SetPosition(0, side_top)
     self._resize_regions.left:SetSize(edge, side_h)
@@ -1458,10 +1442,8 @@ function LuiWindow:_layout_resize_handle(region)
     local mask = region._resize_mask or 0
     local has_left = _has_resize_dir(mask, RESIZE_LEFT)
     local has_right = _has_resize_dir(mask, RESIZE_RIGHT)
-    local has_top = _has_resize_dir(mask, RESIZE_TOP)
     local has_bottom = _has_resize_dir(mask, RESIZE_BOTTOM)
     local has_horizontal = has_left or has_right
-    local has_vertical = has_top or has_bottom
     local x = math.floor((width - handle) / 2)
     local y = math.floor((height - handle) / 2)
     local cursor_x = nil
@@ -1477,13 +1459,11 @@ function LuiWindow:_layout_resize_handle(region)
         x = 0
     elseif has_right then
         x = width - handle
-    elseif cursor_x ~= nil and has_vertical then
+    elseif cursor_x ~= nil and has_bottom then
         x = math.floor(cursor_x - (handle / 2))
     end
 
-    if has_top then
-        y = 0
-    elseif has_bottom then
+    if has_bottom then
         y = height - handle
     elseif cursor_y ~= nil and has_horizontal then
         y = math.floor(cursor_y - (handle / 2))
